@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RDO Express | SRE</title>
+    <title>RDO Express | High-End SRE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -12,58 +12,56 @@
 
     <div id="admin-panel">
         <aside class="sidebar">
-            <div class="py-4 text-center">
-                <h4 class="fw-bold m-0"><span class="text-danger">RDO</span> EXPRESS</h4>
+            <div class="py-4 text-center mb-2">
+                <h4 class="fw-bold m-0" style="letter-spacing: -1px;"><span class="text-danger">RDO</span> EXPRESS</h4>
             </div>
             
             <nav class="flex-grow-1">
                 <div class="nav-item">
                     <a class="nav-link" onclick="toggleMenu('m-gestao')">
-                        <i class="bi bi-layers-half"></i> <span>Gestão</span>
+                        <i class="bi bi-stack main-icon"></i> <span>Gestão</span>
                     </a>
                     <ul class="submenu" id="m-gestao">
-                        <li><a class="nav-link" onclick="loadModule('gestao', 'entregas', 'Gestão / Entregas')">Entrega</a></li>
+                        <li><a class="nav-link" onclick="loadModule('gestao', 'entregas', 'Gestão / Entregas')">Entregas</a></li>
                         <li><a class="nav-link" onclick="loadModule('gestao', 'coletas', 'Gestão / Coletas')">Coletas</a></li>
                     </ul>
                 </div>
 
                 <div class="nav-item">
                     <a class="nav-link" onclick="toggleMenu('m-relat')">
-                        <i class="bi bi-bar-chart-steps"></i> <span>Relatório</span>
+                        <i class="bi bi-clipboard-data main-icon"></i> <span>Relatórios</span>
                     </a>
                     <ul class="submenu" id="m-relat">
-                        <li><a class="nav-link" onclick="loadModule('relatorios', 'geral', 'Relatórios / Geral')">Geral</a></li>
+                        <li><a class="nav-link" onclick="loadModule('relatorios', 'geral', 'Relatórios / Geral')">Visão Geral</a></li>
                     </ul>
                 </div>
 
                 <div class="nav-item">
                     <a class="nav-link" onclick="toggleMenu('m-admin')">
-                        <i class="bi bi-cpu-fill"></i> <span>Administração</span>
+                        <i class="bi bi-terminal-fill main-icon"></i> <span>Administração</span>
                     </a>
                     <ul class="submenu" id="m-admin">
                         <li><a class="nav-link" onclick="loadModule('admin', 'config', 'Administração / WhatsApp')">WhatsApp Bot</a></li>
+                        <li><a class="nav-link" onclick="loadModule('admin', 'users', 'Administração / Usuários')">Usuários</a></li>
                     </ul>
                 </div>
             </nav>
 
-            <div class="pb-4">
-                <a class="nav-link text-danger" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                    <i class="bi bi-power"></i> <span>Sair do Sistema</span>
+            <div class="pb-3 px-2">
+                <a class="nav-link text-danger border-0" data-bs-toggle="modal" data-bs-target="#logoutModal" style="background: #fff5f5;">
+                    <i class="bi bi-power main-icon" style="background: #fee2e2; color: #ef4444;"></i> <span>Sair</span>
                 </a>
             </div>
         </aside>
 
         <header class="top-header">
-            <div class="d-flex align-items-center">
-                <h5 class="fw-bold m-0 text-secondary" id="dynamic-title">Dashboard</h5>
-            </div>
-
+            <h5 class="fw-bold m-0 text-dark" id="dynamic-title">Dashboard</h5>
             <div class="user-profile d-flex align-items-center gap-3" data-bs-toggle="modal" data-bs-target="#logoutModal" style="cursor:pointer">
                 <div class="text-end d-none d-sm-block">
                     <div class="fw-bold small lh-1">SRE Wellerson</div>
                     <small class="text-danger fw-bold" style="font-size: 0.65rem;">MASTER</small>
                 </div>
-                <div class="user-avatar" style="width:40px; height:40px; border:2px solid #dc3545; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#dc3545; font-weight:bold;">W</div>
+                <div class="user-avatar" style="width:40px; height:40px; border:2px solid #dc3545; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#dc3545; font-weight:bold; background:#fff;">W</div>
             </div>
         </header>
 
@@ -74,13 +72,16 @@
 
     <div class="modal fade" id="logoutModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
                 <div class="modal-body p-5 text-center">
-                    <h4 class="fw-bold">Deseja sair da aplicação?</h4>
-                    <p class="text-muted">Confirme para encerrar sua sessão.</p>
+                    <div class="mb-4">
+                        <i class="bi bi-door-open text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="fw-bold">Encerrar Sessão?</h4>
+                    <p class="text-muted">Você será desconectado do RDO Express.</p>
                     <div class="d-flex gap-3 justify-content-center mt-4">
-                        <button class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Voltar</button>
-                        <button class="btn btn-danger rounded-pill px-4" onclick="logout()">Sair Agora</button>
+                        <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Voltar</button>
+                        <button class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm" onclick="logout()">Sim, Sair</button>
                     </div>
                 </div>
             </div>
