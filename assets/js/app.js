@@ -1,5 +1,10 @@
-async function loadModule(folder, page) {
+async function loadModule(folder, page, title) {
     const view = document.getElementById('router-view');
+    const titleEl = document.getElementById('dynamic-title');
+    
+    // Atualiza o título no Header
+    if(title) titleEl.innerText = title;
+    
     view.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-danger"></div></div>';
     
     try {
@@ -8,6 +13,9 @@ async function loadModule(folder, page) {
         const html = await res.text();
         view.innerHTML = html;
         
+        // Mobile: fecha sidebar ao clicar
+        if(window.innerWidth < 992) document.querySelector('.sidebar').classList.remove('active');
+
         const scripts = view.querySelectorAll("script");
         scripts.forEach(oldScript => {
             const newScript = document.createElement("script");
@@ -32,16 +40,20 @@ document.getElementById('login-form')?.addEventListener('submit', (e) => {
         document.getElementById('pass').value === CONFIG.MASTER_PASS) {
         localStorage.setItem('rdo_auth', 'true');
         init();
-    } else { alert('Erro!'); }
+    } else { alert('Credenciais inválidas!'); }
 });
 
 function init() {
     if (localStorage.getItem('rdo_auth') === 'true') {
         document.getElementById('landing-page').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'flex';
-        loadModule('gestao', 'coletas');
+        loadModule('gestao', 'coletas', 'Gestão: Coletas');
     }
 }
 
-function logout() { localStorage.removeItem('rdo_auth'); location.reload(); }
+function logout() { 
+    localStorage.removeItem('rdo_auth'); 
+    location.reload(); 
+}
+
 window.onload = init;
