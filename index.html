@@ -9,47 +9,50 @@
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+    
+    <div class="mobile-overlay" id="overlay" onclick="toggleSidebar()"></div>
 
     <div id="admin-panel">
-        <aside class="sidebar">
-            <div class="py-4 text-center mb-2">
+        <aside class="sidebar" id="sidebar">
+            <div class="py-4 text-center mb-2 d-flex align-items-center justify-content-center">
                 <h4 class="fw-bold m-0" style="letter-spacing: -1px;"><span class="text-danger">RDO</span> EXPRESS</h4>
+                <button class="btn d-lg-none ms-2 text-danger" onclick="toggleSidebar()"><i class="bi bi-x-lg fs-4"></i></button>
             </div>
             
             <nav class="flex-grow-1">
                 <div class="nav-item">
-                    <a class="nav-link" onclick="loadModule('dashboard', 'index', 'Painel / Dashboard')">
+                    <a class="nav-link" onclick="handleMenuClick('dashboard', 'index', 'Painel / Dashboard')">
                         <i class="bi bi-grid-1x2-fill main-icon"></i> <span>Painel</span>
                     </a>
                 </div>
 
                 <div class="nav-item">
-                    <a class="nav-link" onclick="toggleMenu('m-gestao')">
+                    <a class="nav-link" onclick="toggleSubmenu('m-gestao')">
                         <i class="bi bi-stack main-icon"></i> <span>Gestão</span>
                     </a>
                     <ul class="submenu" id="m-gestao">
-                        <li><a class="nav-link" onclick="loadModule('gestao', 'usuarios', 'Gestão / Usuários')">Usuários</a></li>
-                        <li><a class="nav-link" onclick="loadModule('gestao', 'coletas', 'Gestão / Coletas')">Coletas</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'usuarios', 'Gestão / Usuários')">Usuários</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'coletas', 'Gestão / Coletas')">Coletas</a></li>
                     </ul>
                 </div>
 
                 <div class="nav-item">
-                    <a class="nav-link" onclick="toggleMenu('m-relat')">
+                    <a class="nav-link" onclick="toggleSubmenu('m-relat')">
                         <i class="bi bi-clipboard-data main-icon"></i> <span>Relatórios</span>
                     </a>
                     <ul class="submenu" id="m-relat">
-                        <li><a class="nav-link" onclick="loadModule('relatorios', 'relatorio', 'Relatórios / Geral')">Relatório Geral</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('relatorios', 'relatorio', 'Relatórios / Geral')">Relatório</a></li>
                     </ul>
                 </div>
 
                 <div class="nav-item">
-                    <a class="nav-link" onclick="toggleMenu('m-auto')">
+                    <a class="nav-link" onclick="toggleSubmenu('m-auto')">
                         <i class="bi bi-robot main-icon"></i> <span>Automação</span>
                     </a>
                     <ul class="submenu" id="m-auto">
-                        <li><a class="nav-link" onclick="loadModule('automacao', 'seguranca', 'Automação / Segurança')">Segurança</a></li>
-                        <li><a class="nav-link" onclick="loadModule('automacao', 'whatsapp', 'Automação / WhatsApp')">WhatsApp</a></li>
-                        <li><a class="nav-link" onclick="loadModule('automacao', 'logs', 'Automação / Logs')">Logs de Sistema</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'seguranca', 'Automação / Segurança')">Segurança</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'whatsapp', 'Automação / WhatsApp')">WhatsApp</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'logs', 'Automação / Logs')">Logs</a></li>
                     </ul>
                 </div>
             </nav>
@@ -62,22 +65,21 @@
         </aside>
 
         <header class="top-header">
-            <h5 class="fw-bold m-0 text-dark" id="dynamic-title">Dashboard</h5>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-light d-lg-none me-3" onclick="toggleSidebar()">
+                    <i class="bi bi-list fs-3 text-danger"></i>
+                </button>
+                <h5 class="fw-bold m-0 text-dark" id="dynamic-title">Dashboard</h5>
+            </div>
             
             <div class="user-profile d-flex align-items-center gap-3 p-1 rounded-pill" 
-                 data-bs-toggle="modal" 
-                 data-bs-target="#logoutModal" 
-                 style="cursor: pointer; transition: all 0.3s ease;"
-                 onmouseover="this.style.background='#fff5f5'"
-                 onmouseout="this.style.background='transparent'">
-                
+                 data-bs-toggle="modal" data-bs-target="#logoutModal" 
+                 style="cursor: pointer;" title="Sair do Sistema">
                 <div class="text-end d-none d-sm-block">
                     <div class="fw-bold small lh-1">SRE Wellerson</div>
-                    <small class="text-danger fw-bold" style="font-size: 0.65rem;">SAIR DO SISTEMA</small>
+                    <small class="text-danger fw-bold" style="font-size: 0.65rem;">SAIR</small>
                 </div>
-                
-                <div class="user-avatar shadow-sm" 
-                     style="width:40px; height:40px; border:2px solid #dc3545; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#dc3545; font-weight:bold; background:#fff;">
+                <div class="user-avatar shadow-sm" style="width:40px; height:40px; border:2px solid #dc3545; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#dc3545; font-weight:bold; background:#fff;">
                     <i class="bi bi-power"></i>
                 </div>
             </div>
@@ -85,9 +87,10 @@
 
         <main class="main-content">
             <div id="router-view">
-                <div class="p-4 text-center text-muted">
-                    <h5>Bem-vindo ao RDO Express</h5>
-                    <p>Selecione uma opção no menu ao lado para começar.</p>
+                <div class="p-4 text-center text-muted animate-in">
+                    <i class="bi bi-truck fs-1 text-danger opacity-25"></i>
+                    <h5 class="mt-3">RDO Express v2.6.0</h5>
+                    <p>Selecione uma funcionalidade para iniciar.</p>
                 </div>
             </div>
         </main>
@@ -99,7 +102,6 @@
                 <div class="modal-body p-5 text-center">
                     <div class="mb-4"><i class="bi bi-door-open text-danger" style="font-size: 3rem;"></i></div>
                     <h4 class="fw-bold">Encerrar Sessão?</h4>
-                    <p class="text-muted">Você será desconectado do RDO Express.</p>
                     <div class="d-flex gap-3 justify-content-center mt-4">
                         <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Voltar</button>
                         <button class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm" onclick="logout()">Sim, Sair</button>
@@ -113,11 +115,24 @@
     <script src="assets/js/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleMenu(id) {
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function toggleSubmenu(id) {
             const menu = document.getElementById(id);
             const isOpen = menu.classList.contains('show');
             document.querySelectorAll('.submenu').forEach(m => m.classList.remove('show'));
             if (!isOpen) menu.classList.add('show');
+        }
+
+        function handleMenuClick(folder, file, title) {
+            loadModule(folder, file, title);
+            // Se estiver no mobile, fecha a sidebar automaticamente ao clicar no link
+            if (window.innerWidth <= 992) {
+                toggleSidebar();
+            }
         }
     </script>
 </body>

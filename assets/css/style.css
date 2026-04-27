@@ -5,14 +5,15 @@
     --top-height: 70px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
-    /* Hierarquia de Camadas Cirúrgica */
+    /* Hierarquia de Camadas */
     --z-header: 1000;
-    --z-sidebar: 1010;
+    --z-sidebar: 1050;
+    --z-mobile-overlay: 1040;
     --z-backdrop: 2000;
     --z-modal: 2010;
 }
 
-body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; margin: 0; }
+body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
 
 /* Sidebar Moderna */
 .sidebar {
@@ -20,6 +21,7 @@ body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; margin: 0; }
     height: 100vh; position: fixed; left: 0; top: 0; 
     z-index: var(--z-sidebar);
     display: flex; flex-direction: column; padding: 15px;
+    transition: var(--transition);
 }
 
 .nav-link { 
@@ -34,14 +36,13 @@ body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; margin: 0; }
     margin-right: 15px; color: #4a5568; transition: var(--transition);
 }
 
-.nav-link:hover { background: #fff5f5; color: var(--accent-red); }
-.nav-link:hover i.main-icon { 
+.nav-link:hover, .nav-link.active { background: #fff5f5; color: var(--accent-red); }
+.nav-link:hover i.main-icon, .nav-link.active i.main-icon { 
     background: var(--accent-red); color: #fff; 
     box-shadow: 0 8px 15px rgba(220, 53, 69, 0.25);
-    transform: translateY(-2px) rotate(-5deg);
+    transform: translateY(-2px);
 }
 
-/* Submenu Estilo Árvore */
 .submenu {
     list-style: none; padding: 0; margin: 0 0 10px 36px;
     display: none; overflow: hidden;
@@ -54,32 +55,40 @@ body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; margin: 0; }
     to { opacity: 1; transform: translateX(0); }
 }
 
-.submenu .nav-link { 
-    padding: 8px 20px; font-size: 0.88rem; font-weight: 500; color: #718096;
-    border-radius: 0 10px 10px 0; margin: 0;
-}
-
 /* Header e Main Content */
 .top-header {
     height: var(--top-height); background: #fff; border-bottom: 1px solid #edf2f7;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 2rem; position: fixed; top: 0; right: 0; left: var(--sidebar-width); 
     z-index: var(--z-header);
+    transition: var(--transition);
 }
 
-.main-content { margin-left: var(--sidebar-width); margin-top: var(--top-height); padding: 2rem; }
+.main-content { margin-left: var(--sidebar-width); margin-top: var(--top-height); padding: 2rem; transition: var(--transition); }
 
-/* CORREÇÃO CIRÚRGICA DA PELÍCULA (MODAL) */
-/* Forçamos o Backdrop e o Modal a ficarem acima de Sidebar e Header */
-.modal-backdrop {
-    z-index: var(--z-backdrop) !important;
+/* RESPONSIVIDADE (MOBILE) */
+@media (max-width: 992px) {
+    .sidebar {
+        left: calc(var(--sidebar-width) * -1); /* Esconde a sidebar */
+    }
+    
+    .sidebar.mobile-open {
+        left: 0; /* Desliza para dentro */
+        box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+    }
+
+    .top-header { left: 0; padding: 0 1rem; }
+    .main-content { margin-left: 0; padding: 1.5rem; }
+
+    /* Overlay (Sombra quando a sidebar abre no mobile) */
+    .mobile-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.4); z-index: var(--z-mobile-overlay);
+        display: none;
+    }
+    .mobile-overlay.show { display: block; }
 }
 
-.modal {
-    z-index: var(--z-modal) !important;
-}
-
-/* Ajuste para garantir que o body não "escape" por baixo */
-.modal-open {
-    overflow: hidden;
-}
+/* CORREÇÃO CIRÚRGICA MODAIS */
+.modal-backdrop { z-index: var(--z-backdrop) !important; }
+.modal { z-index: var(--z-modal) !important; }
