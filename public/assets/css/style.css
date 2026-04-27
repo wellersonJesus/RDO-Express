@@ -1,0 +1,5 @@
+:root { --primary: #0d6efd; --dark: #121212; }
+body { font-family: 'Inter', sans-serif; background: #f8f9fa; }
+.hero { background: linear-gradient(135deg, var(--dark) 0%, #222 100%); color: white; padding: 100px 0; }
+.card-login { max-width: 400px; margin: 100px auto; border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.main-card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }

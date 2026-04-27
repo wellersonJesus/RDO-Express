@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piloto GMS - GitHub Pages</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body>
+
+    <div id="page-home">
+        <nav class="navbar navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="#">PILOTO <span class="text-primary">GMS</span></a>
+                <button onclick="showPage('login')" class="btn btn-primary">Acessar Painel</button>
+            </div>
+        </nav>
+        <header class="hero-section text-center">
+            <div class="container">
+                <h1 class="display-3 fw-bold">Gestão em Nuvem</h1>
+                <p class="lead text-muted">Sua planilha como banco de dados, hospedada no GitHub.</p>
+                <button onclick="showPage('login')" class="btn btn-primary btn-lg mt-4">Começar Agora</button>
+            </div>
+        </header>
+    </div>
+
+    <div id="page-login" class="hidden">
+        <div class="container">
+            <div class="login-box shadow-lg text-center">
+                <h3 class="mb-4">Master Access</h3>
+                <input type="text" id="user" class="form-control mb-3 bg-dark text-white border-secondary" placeholder="Usuário">
+                <input type="password" id="pass" class="form-control mb-4 bg-dark text-white border-secondary" placeholder="Senha">
+                <button onclick="doLogin()" class="btn btn-primary w-100">ENTRAR</button>
+                <button onclick="showPage('home')" class="btn btn-link btn-sm mt-3 text-muted">Voltar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-painel" class="hidden">
+        <nav class="navbar navbar-light bg-white border-bottom">
+            <div class="container">
+                <span class="navbar-brand fw-bold">PILOTO <span class="text-primary">GMS</span></span>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm">Sair</button>
+            </div>
+        </nav>
+        <div class="container mt-4">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="main-card">
+                        <h5>Novo Registro</h5>
+                        <input type="text" id="inputNome" class="form-control mb-2" placeholder="Nome">
+                        <input type="email" id="inputEmail" class="form-control mb-3" placeholder="E-mail">
+                        <button onclick="addData()" class="btn btn-primary w-100">Salvar na Planilha</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="main-card">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h5 class="m-0">Dados Atualizados</h5>
+                            <button onclick="loadData()" class="btn btn-sm btn-light"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead><tr><th>Nome</th><th>E-mail</th><th>Ações</th></tr></thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
