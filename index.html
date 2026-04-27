@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDO Express - Logística</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --primary: #0d6efd; --dark: #212529; }
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Landing Page Style */
+        .hero-section { background: white; padding: 100px 0; border-bottom: 1px solid #dee2e6; }
+        .navbar-brand fw-bold { letter-spacing: -1px; }
+
+        /* Painel Administrativo Style */
+        #admin-panel { display: none; }
+        .table-gms { background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+        .nav-tabs .nav-link { color: #6c757d; font-weight: 500; border: none; cursor: pointer; }
+        .nav-tabs .nav-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: transparent; }
+        
+        .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="landing-page">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
+            <div class="container">
+                <a class="navbar-brand fw-bold text-dark" href="#">GMS <span class="text-primary">RDO EXPRESS</span></a>
+                <button class="btn btn-primary px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#loginModal">LOGIN</button>
+            </div>
+        </nav>
+
+        <section class="hero-section text-center">
+            <div class="container">
+                <h1 class="display-4 fw-bold mb-3">Monitoramento de Logística</h1>
+                <p class="lead text-muted mb-5">Acesse o painel administrativo para gerenciar coletas, entregas e relatórios diários.</p>
+                <img src="https://img.freepik.com/free-vector/delivery-service-illustrated_23-2148505081.jpg" alt="Logística" style="max-width: 400px; opacity: 0.8;">
+            </div>
+        </section>
+    </div>
+
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+                <div class="modal-body p-5 text-center">
+                    <h3 class="fw-bold mb-4">Acesso Restrito</h3>
+                    <div id="login-error" class="alert alert-danger d-none small py-2">Usuário ou senha incorretos!</div>
+                    <form id="login-form">
+                        <input type="text" id="user" class="form-control mb-3 py-2" placeholder="Usuário" required>
+                        <input type="password" id="pass" class="form-control mb-4 py-2" placeholder="Senha" required>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">ENTRAR NO PAINEL</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-panel">
+        <nav class="navbar navbar-dark bg-dark py-3">
+            <div class="container-fluid px-4">
+                <span class="navbar-brand fw-bold">PAINEL <span class="text-primary">ADMINISTRATIVO</span></span>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm px-3">Sair</button>
+            </div>
+        </nav>
+
+        <div class="container-fluid mt-4 px-4">
+            <ul class="nav nav-tabs mb-4 border-0" id="sheetTabs">
+                <li class="nav-item"><a class="nav-link active" onclick="loadSheet('dados', this)">GERAL</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="loadSheet('relatorio-diario', this)">DIÁRIO</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="loadSheet('relatorio-semanal', this)">SEMANAL</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="loadSheet('relatorio-quinzenal', this)">QUINZENAL</a></li>
+            </ul>
+
+            <div class="table-gms p-2 bg-white">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead id="table-head" class="table-light"></thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/config.js"></script> <script>
+        const loginForm = document.getElementById('login-form');
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        
+        // Verifica autenticação ao carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('rdo_auth') === 'true') showPanel();
+        });
+
+        loginForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+
+            if (u === CONFIG.MASTER_USER && p === CONFIG.MASTER_PASS) {
+                localStorage.setItem('rdo_auth', 'true');
+                loginModal.hide();
+                showPanel();
+            } else {
+                document.getElementById('login-error').classList.remove('d-none');
+            }
+        });
+
+        function showPanel() {
+            document.getElementById('landing-page').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            loadSheet('dados');
+        }
+
+        function logout() {
+            localStorage.removeItem('rdo_auth');
+            location.reload();
+        }
+
+        async function loadSheet(sheetName, element = null) {
+            if (element) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+            }
+
+            const tableBody = document.getElementById('table-body');
+            const tableHead = document.getElementById('table-head');
+            tableBody.innerHTML = '<tr><td colspan="10" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+            try {
+                const res = await fetch(`${CONFIG.API_URL}?action=read&sheet=${sheetName}`);
+                const data = await res.json();
+
+                if (!data || data.error) {
+                    tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-5 text-danger">${data.error || 'Erro nos dados'}</td></tr>`;
+                    return;
+                }
+
+                const headers = Object.keys(data[0]);
+                tableHead.innerHTML = `<tr>${headers.map(h => `<th class="py-3">${h.toUpperCase().replace(/_/g, ' ')}</th>`).join('')}</tr>`;
+                
+                tableBody.innerHTML = data.map(row => {
+                    return `<tr>${headers.map(h => `<td class="py-3">${row[h] || '---'}</td>`).join('')}</tr>`;
+                }).join('');
+
+            } catch (err) {
+                tableBody.innerHTML = '<tr><td colspan="10" class="text-center p-5 text-danger">Falha na API. Verifique o Script do Google.</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>
