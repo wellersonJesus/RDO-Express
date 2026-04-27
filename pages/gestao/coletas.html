@@ -1,95 +1,119 @@
 <div class="animate-in">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="fw-bold m-0 text-dark">Gestão de Coletas</h4>
-            <p class="text-muted small m-0">Operações registradas no sistema</p>
+            <h5 class="fw-bold m-0 text-dark">Gestão de Coletas</h5>
+            <p class="text-muted small m-0" id="count-info">Carregando...</p>
         </div>
         <button class="btn btn-danger btn-sm rounded-pill px-3 fw-bold shadow-sm" onclick="novaColeta()">
             <i class="bi bi-plus-lg me-1"></i> NOVO
         </button>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-3">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+            <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
-                    <tr class="text-muted small text-uppercase">
-                        <th class="px-3 py-2">CLIENTE</th>
-                        <th class="px-3 py-2">SOLICITAÇÃO</th>
-                        <th class="px-3 py-2">TIPO DE SERVIÇO</th>
-                        <th class="text-end px-3">AÇÕES</th>
+                    <tr class="text-muted small text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                        <th class="px-3 py-2">Cliente</th>
+                        <th class="px-3 py-2">Solicitação</th>
+                        <th class="px-3 py-2">Serviço</th>
+                        <th class="text-end px-3 py-2">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="b-col" class="border-top-0">
-                    <tr><td colspan="4" class="text-center p-4">Carregando dados...</td></tr>
-                </tbody>
+                <tbody id="b-col" class="border-top-0" style="font-size: 0.82rem;">
+                    </tbody>
             </table>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-top">
+            <div style="font-size: 0.75rem;" class="text-muted" id="page-label">Página 1</div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0 gap-1" id="pagination">
+                    </ul>
+            </nav>
         </div>
     </div>
 </div>
 
 <script>
-    async function renderColetas() {
-        // Buscando da aba "dados" conforme seu doGet
-        const data = await fetchSheetData('dados');
-        const tbody = document.getElementById('b-col');
-        
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Nenhum registro encontrado.</td></tr>';
+    let allData = [];
+    let currentPage = 1;
+    const rowsPerPage = 15;
+
+    async function initColetas() {
+        const raw = await fetchSheetData('dados');
+        if (!raw || raw.length === 0) {
+            document.getElementById('b-col').innerHTML = '<tr><td colspan="4" class="text-center p-4">Sem dados.</td></tr>';
             return;
         }
+        allData = raw;
+        renderTable();
+    }
 
-        tbody.innerHTML = data.map(row => {
+    function renderTable() {
+        const tbody = document.getElementById('b-col');
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedItems = allData.slice(start, end);
+
+        document.getElementById('count-info').innerText = `${allData.length} registros`;
+        document.getElementById('page-label').innerText = `${start + 1}-${Math.min(end, allData.length)} de ${allData.length}`;
+
+        tbody.innerHTML = paginatedItems.map(row => {
+            const clienteNome = row.clientes || row.cliente || '---';
+            const servico = row.tipo_do_servico || row.tipo_de_servico || '-';
+            
             return `
             <tr>
-                <td class="px-3 fw-bold text-dark">${row.cliente || '-'}</td>
-                <td class="px-3 text-muted" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td class="px-3 py-1 fw-bold text-dark">${clienteNome}</td>
+                <td class="px-3 py-1 text-muted" style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     ${row.solicitacao || '-'}
                 </td>
-                <td class="px-3">
-                    <span class="badge rounded-pill bg-light text-dark border fw-normal" style="font-size: 0.75rem;">
-                        ${row.tipo_do_servico || '-'}
+                <td class="px-3 py-1">
+                    <span class="badge rounded-pill ${servico.toLowerCase().includes('coleta') ? 'bg-primary' : 'bg-success'} bg-opacity-10 ${servico.toLowerCase().includes('coleta') ? 'text-primary' : 'text-success'} border-0" style="font-size: 0.7rem; font-weight: 600;">
+                        ${servico.toUpperCase()}
                     </span>
                 </td>
-                <td class="text-end px-3">
+                <td class="text-end px-3 py-1">
                     <div class="d-flex justify-content-end gap-1">
-                        <button class="btn btn-icon" title="Visualizar" onclick="acao('view', ${row.row_index})"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-icon" title="Editar" onclick="acao('edit', ${row.row_index})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-icon" title="Copiar" onclick="acao('copy', ${row.row_index})"><i class="bi bi-copy"></i></button>
-                        <button class="btn btn-icon text-danger" title="Excluir" onclick="acao('delete', ${row.row_index})"><i class="bi bi-trash3"></i></button>
+                        <button class="btn btn-link btn-sm text-secondary p-0 mx-1" onclick="acao('edit', ${row.row_index})"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-link btn-sm text-danger p-0 mx-1" onclick="acao('delete', ${row.row_index})"><i class="bi bi-trash3"></i></button>
                     </div>
                 </td>
             </tr>
-        `}).join('');
+            `;
+        }).join('');
+
+        renderPagination();
     }
 
-    // Chama a função ao carregar
-    renderColetas();
+    function renderPagination() {
+        const totalPages = Math.ceil(allData.length / rowsPerPage);
+        const nav = document.getElementById('pagination');
+        let html = '';
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link border-0 rounded-1 mx-1" href="javascript:void(0)" onclick="changePage(${i})">${i}</a></li>`;
+        }
+        nav.innerHTML = html;
+    }
+
+    function changePage(p) { currentPage = p; renderTable(); }
+    initColetas();
 </script>
 
 <style>
-    .btn-icon {
-        padding: 6px 10px;
-        border: none;
-        background: #f8f9fa;
-        border-radius: 8px;
-        color: #495057;
-        font-size: 0.95rem;
-        transition: 0.2s;
+    .table > :not(caption) > * > * { 
+        padding-top: 0.4rem !important; 
+        padding-bottom: 0.4rem !important; 
+        border-bottom-color: #f1f5f9; 
     }
-    .btn-icon:hover { 
-        background: #e9ecef; 
-        color: #000; 
-        transform: translateY(-1px);
+    .pagination .page-link { 
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem; 
+        color: #64748b; 
     }
-    .table thead th { 
-        font-size: 0.75rem; 
-        letter-spacing: 0.5px;
-        border-bottom: none; 
-    }
-    .table tbody td { 
-        border-bottom: 1px solid #f8f9fa; 
-        padding-top: 12px;
-        padding-bottom: 12px;
+    .pagination .active .page-link { 
+        background-color: var(--accent-red) !important; 
+        color: #fff !important; 
     }
 </style>
