@@ -5,63 +5,57 @@
     --top-height: 70px;
 }
 
-body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; margin: 0; }
+body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; }
 
-/* Sidebar Premium */
+/* Sidebar Premium Alinhada */
 .sidebar {
     width: var(--sidebar-width); background: #fff; border-right: 1px solid var(--gray-border);
-    height: 100vh; position: fixed; left: 0; top: 0; z-index: 1060;
-    display: flex; flex-direction: column; padding: 0 15px; /* Alinhamento centralizado */
+    height: 100vh; position: fixed; left: 0; top: 0; z-index: 1100;
+    display: flex; flex-direction: column; padding: 10px;
 }
 
-/* Itens do Menu Principal */
+/* Item de Menu Principal */
+.nav-item { margin-bottom: 5px; }
+
 .nav-link { 
-    color: #4b4b4b; padding: 12px 20px; display: flex; align-items: center;
-    text-decoration: none; border-radius: 12px; margin: 8px 0; transition: all 0.3s ease;
-    font-weight: 500; cursor: pointer; position: relative;
+    color: #4b4b4b; padding: 12px 15px; display: flex; align-items: center;
+    text-decoration: none; border-radius: 12px; transition: all 0.3s ease;
+    font-weight: 500; cursor: pointer;
 }
 
-/* Ícones Maiores e Elegantes */
-.nav-link i:first-child { 
-    font-size: 1.4rem; margin-right: 15px; color: #b2bec3; transition: 0.3s;
+/* Ícones Premium Antes do Título */
+.nav-link i { 
+    font-size: 1.5rem; margin-right: 15px; color: #b2bec3; transition: 0.3s;
 }
 
 .nav-link:hover { background: #fdf2f2; color: var(--accent-red); }
-.nav-link:hover i:first-child { color: var(--accent-red); transform: scale(1.1); }
+.nav-link:hover i { color: var(--accent-red); transform: scale(1.1); }
 
-/* Submenu com Efeito de Deslize */
+/* Submenu - Oculto por Padrão */
 .submenu {
     list-style: none; padding: 0; margin: 0;
     max-height: 0; overflow: hidden;
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background: #fafafa; border-radius: 12px;
+    background: #fafafa; border-radius: 10px;
 }
-.submenu.show { max-height: 300px; padding: 5px 0; margin-bottom: 10px; }
+
+/* Classe para exibir o submenu */
+.submenu.show { max-height: 200px; padding: 5px 0; margin-top: 5px; }
 
 .submenu .nav-link { 
-    padding-left: 55px; font-size: 0.95rem; margin: 2px 0;
+    padding-left: 52px; font-size: 0.95rem; margin: 2px 5px; color: #636e72;
 }
 
-/* Header Fixo */
+/* Header e Layout */
 .top-header {
     height: var(--top-height); background: #fff; border-bottom: 1px solid var(--gray-border);
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 2rem; position: fixed; top: 0; right: 0; left: var(--sidebar-width);
-    z-index: 1050;
+    z-index: 1000;
 }
 
-.main-content { margin-left: var(--sidebar-width); margin-top: var(--top-height); padding: 2rem; }
+.main-content { margin-left: var(--sidebar-width); margin-top: var(--top-height); padding: 2rem; overflow-y: auto; height: calc(100vh - var(--top-height)); }
 
-/* Avatar Redondo */
-.user-avatar {
-    width: 42px; height: 42px; border: 2px solid var(--accent-red);
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    color: var(--accent-red); font-weight: bold; font-size: 1.1rem;
-}
-
-@media (max-width: 991px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.active { transform: translateX(0); }
-    .top-header { left: 0; }
-    .main-content { margin-left: 0; }
-}
+/* Modal de Logout cobrindo TUDO */
+.modal-backdrop { z-index: 2000 !important; }
+.modal { z-index: 2001 !important; }
