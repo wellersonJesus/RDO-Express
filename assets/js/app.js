@@ -1,65 +1,47 @@
-const loginForm = document.getElementById('login-form');
-const loginScreen = document.getElementById('login-screen');
-const mainPanel = document.getElementById('main-panel');
-const tableBody = document.getElementById('table-body');
-const tableHead = document.getElementById('table-head');
+async function loadModule(folder, page) {
+    const view = document.getElementById('router-view');
+    view.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-danger"></div></div>';
+    
+    try {
+        const res = await fetch(`pages/${folder}/${page}.html`);
+        if (!res.ok) throw new Error('Página não encontrada');
+        const html = await res.text();
+        view.innerHTML = html;
+        
+        const scripts = view.querySelectorAll("script");
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement("script");
+            newScript.text = oldScript.text;
+            document.body.appendChild(newScript).parentNode.removeChild(newScript);
+        });
+    } catch (e) {
+        view.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+    }
+}
 
-loginForm?.addEventListener('submit', (e) => {
+async function fetchSheetData(sheetName) {
+    try {
+        const res = await fetch(`${CONFIG.API_URL}?sheet=${sheetName}`);
+        return await res.json();
+    } catch (e) { return null; }
+}
+
+document.getElementById('login-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const u = document.getElementById('user').value;
-    const p = document.getElementById('pass').value;
-
-    if (u === CONFIG.MASTER_USER && p === CONFIG.MASTER_PASS) {
+    if (document.getElementById('user').value === CONFIG.MASTER_USER && 
+        document.getElementById('pass').value === CONFIG.MASTER_PASS) {
         localStorage.setItem('rdo_auth', 'true');
         init();
-    } else {
-        document.getElementById('login-error').classList.remove('d-none');
-    }
+    } else { alert('Erro!'); }
 });
-
-function logout() {
-    localStorage.removeItem('rdo_auth');
-    location.reload();
-}
 
 function init() {
     if (localStorage.getItem('rdo_auth') === 'true') {
-        loginScreen.classList.add('d-none');
-        mainPanel.classList.remove('d-none');
-        loadSheet('dados'); // Carrega a padrão
+        document.getElementById('landing-page').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'flex';
+        loadModule('gestao', 'coletas');
     }
 }
 
-async function loadSheet(sheetName, element = null) {
-    // UI: Muda aba ativa
-    if (element) {
-        document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
-    }
-
-    tableBody.innerHTML = '<tr><td colspan="10" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>';
-
-    try {
-        const res = await fetch(`${CONFIG.API_URL}?action=read&sheet=${sheetName}`);
-        const data = await res.json();
-
-        if (!data || data.error || data.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-5 text-danger font-monospace">${data.error || 'Nenhum dado encontrado'}</td></tr>`;
-            return;
-        }
-
-        // Monta Cabeçalho dinâmico baseado nas chaves do primeiro objeto
-        const headers = Object.keys(data[0]);
-        tableHead.innerHTML = `<tr>${headers.map(h => `<th>${h.toUpperCase().replace(/_/g, ' ')}</th>`).join('')}</tr>`;
-
-        // Monta Linhas
-        tableBody.innerHTML = data.map(row => {
-            return `<tr>${headers.map(h => `<td>${row[h] || '---'}</td>`).join('')}</tr>`;
-        }).join('');
-
-    } catch (err) {
-        tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-5 text-danger">Erro de conexão com o Google Sheets.</td></tr>`;
-    }
-}
-
-init();
+function logout() { localStorage.removeItem('rdo_auth'); location.reload(); }
+window.onload = init;

@@ -4,46 +4,19 @@
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Fundo com Imagem Única e Movimento Suave */
+body { background-color: #fdfdfd; font-family: 'Inter', sans-serif; margin: 0; }
+
 #landing-page {
-    position: relative;
-    height: 100vh;
-    width: 100%;
-    background-color: #000; /* Fundo base para profundidade */
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative; height: 100vh; width: 100%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: #000;
 }
 
-/* A Imagem Única com Animação de Movimento */
 #landing-page::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 110%; height: 110%; /* 10% maior para o movimento não mostrar as bordas */
+    content: ""; position: absolute; top: 0; left: 0; width: 110%; height: 110%;
     background-image: url('https://img.freepik.com/fotos-gratis/ainda-vida-da-representacao-da-cadeia-de-suprimentos_23-2149827282.jpg?semt=ais_hybrid&w=1080&q=90');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    
-    /* Película quase invisível (Aumentamos a nitidez conforme pedido) */
-    opacity: 0.95; 
-    filter: brightness(1.05) contrast(1.1);
-    
-    /* Animação de movimento suave (Ken Burns Effect) */
-    animation: smoothMove 20s ease-in-out infinite alternate;
-    z-index: 1;
-}
-
-/* Overlay de Vidro quase transparente */
-#landing-page::after {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(255, 255, 255, 0.05); /* Praticamente transparente */
-    z-index: 2;
+    background-size: cover; background-position: center; opacity: 0.95;
+    animation: smoothMove 20s ease-in-out infinite alternate; z-index: 1;
 }
 
 @keyframes smoothMove {
@@ -51,48 +24,25 @@
     100% { transform: translate(-2%, -2%) scale(1.05); }
 }
 
-/* Modal de Login Premium (RDO Express) */
 .card-gms {
-    position: relative;
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.9); /* Branco com transparência leve */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 28px;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
-    padding: 3.5rem;
-    width: 100%;
-    max-width: 420px;
-    backdrop-filter: blur(12px); /* Mantém o efeito de vidro */
-    text-align: center;
+    position: relative; z-index: 10; background: rgba(255, 255, 255, 0.92);
+    border-radius: 28px; padding: 3rem; width: 100%; max-width: 400px;
+    backdrop-filter: blur(12px); box-shadow: 0 30px 60px rgba(0,0,0,0.3);
 }
 
-/* Estrutura do Painel Lateral (Sidebar) */
 .sidebar {
-    width: 280px;
-    background: #fff;
-    border-right: 1px solid var(--gray-border);
-    height: 100vh;
-    position: fixed;
-    z-index: 1050;
-    transition: var(--transition-smooth);
+    width: 280px; background: #fff; border-right: 1px solid var(--gray-border);
+    height: 100vh; position: fixed; z-index: 1050; transition: var(--transition-smooth);
 }
 
-.main-content { margin-left: 280px; padding: 2rem; }
+.main-content { margin-left: 280px; padding: 2rem; flex: 1; }
 
-.btn-primary {
-    background-color: var(--accent-red);
-    border: none;
-    padding: 0.8rem;
-    border-radius: 12px;
-    font-weight: 600;
-    width: 100%;
-    transition: 0.3s;
+.nav-link { 
+    color: #636e72; padding: 0.8rem 1.5rem; display: flex; align-items: center;
+    text-decoration: none; border-radius: 8px; margin: 0.2rem 1rem; transition: 0.3s;
 }
 
-.btn-primary:hover {
-    background-color: #bd2130;
-    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
-}
+.nav-link:hover { background: #f8f9fa; color: var(--accent-red); }
 
 @media (max-width: 991px) {
     .sidebar { transform: translateX(-100%); }

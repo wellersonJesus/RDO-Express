@@ -3,133 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RDO Express | Logística Inteligente</title>
+    <title>RDO Express | SRE Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-
-    <div id="landing-page" class="d-flex align-items-center justify-content-center">
-        <div class="card-gms" style="width: 400px;">
-            <div class="text-center mb-4">
-                <h2 class="fw-bold m-0"><span class="text-danger">RDO</span> EXPRESS</h2>
-                <p class="text-muted small mt-2">SISTEMA DE GESTÃO DE ENTREGAS</p>
-            </div>
+    <div id="landing-page">
+        <div class="card-gms">
+            <h3 class="fw-bold text-center mb-4"><span class="text-danger">RDO</span> EXPRESS</h3>
             <form id="login-form">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary">USUÁRIO</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-0"><i class="bi bi-person"></i></span>
-                        <input type="text" id="user" class="form-control bg-light border-0 py-2" placeholder="Digite seu usuário" required>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary">SENHA</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-0"><i class="bi bi-lock"></i></span>
-                        <input type="password" id="pass" class="form-control bg-light border-0 py-2" placeholder="••••••••" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 shadow-sm">
-                    ENTRAR NO PAINEL <i class="bi bi-arrow-right-short ms-2"></i>
-                </button>
+                <input type="text" id="user" class="form-control mb-3" placeholder="Usuário">
+                <input type="password" id="pass" class="form-control mb-4" placeholder="Senha">
+                <button class="btn btn-danger w-100 fw-bold">ACESSAR SISTEMA</button>
             </form>
-            <div class="text-center mt-4">
-                <small class="text-muted" style="font-size: 0.7rem;">&copy; 2026 RDO Express - Belo Horizonte</small>
-            </div>
         </div>
     </div>
 
     <div id="admin-panel" style="display: none;">
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4 class="fw-bold mb-0 text-dark"><span class="text-danger">RDO</span> EXPRESS</h4>
+            <div class="p-4 border-bottom">
+                <h4 class="fw-bold m-0"><span class="text-danger">RDO</span> LOG</h4>
             </div>
             <nav class="mt-4">
-                <div class="px-4 mb-2 small text-uppercase text-muted fw-bold" style="letter-spacing: 1px; font-size: 0.65rem;">Logística</div>
-                <a href="#" class="nav-link" onclick="toggleSub('gestao')">
-                    <i class="bi bi-geo-alt"></i> GESTÃO <i class="bi bi-chevron-down ms-auto small"></i>
-                </a>
-                <ul class="submenu list-unstyled" id="gestao">
-                    <li><a href="#" class="nav-link small" onclick="loadSheet('coletas')">Coletas</a></li>
-                    <li><a href="#" class="nav-link small" onclick="loadSheet('entregas')">Entregas</a></li>
-                </ul>
-
-                <a href="#" class="nav-link mt-2" onclick="toggleSub('relatorios')">
-                    <i class="bi bi-bar-chart"></i> RELATÓRIOS <i class="bi bi-chevron-down ms-auto small"></i>
-                </a>
-                <ul class="submenu list-unstyled" id="relatorios">
-                    <li><a href="#" class="nav-link small" onclick="loadSheet('dados')">Geral</a></li>
-                    <li><a href="#" class="nav-link small" onclick="loadSheet('relatorio-diario')">RDO Diário</a></li>
-                </ul>
-
-                <div class="px-4 mt-4 mb-2 small text-uppercase text-muted fw-bold" style="letter-spacing: 1px; font-size: 0.65rem;">SRE & Automação</div>
-                <a href="#" class="nav-link"><i class="bi bi-whatsapp"></i> WhatsApp Bot</a>
-                <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-door-open"></i> Sair</a>
+                <a href="#" class="nav-link" onclick="loadModule('gestao', 'coletas')"><i class="bi bi-truck me-2"></i> Coletas</a>
+                <a href="#" class="nav-link" onclick="loadModule('gestao', 'entregas')"><i class="bi bi-geo-alt me-2"></i> Entregas</a>
+                <a href="#" class="nav-link" onclick="loadModule('relatorios', 'geral')"><i class="bi bi-bar-chart me-2"></i> Relatórios</a>
+                <hr>
+                <a href="#" class="nav-link text-danger" onclick="logout()"><i class="bi bi-door-open me-2"></i> Sair</a>
             </nav>
         </aside>
-
-        <main class="main-content">
-            <header class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold" id="title-display">Painel Administrativo</h4>
-                <button class="btn btn-light d-lg-none" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-            </header>
-
-            <div class="card-gms">
-                <div id="table-container">
-                    <table class="table table-hover align-middle">
-                        <thead class="text-muted small border-bottom">
-                            <tr id="table-head"></tr>
-                        </thead>
-                        <tbody id="table-body">
-                            <tr><td class="text-center p-5">Selecione uma categoria no menu lateral...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
+        <main class="main-content" id="router-view"></main>
     </div>
 
     <script src="assets/js/config.js"></script>
-    <script>
-        function toggleSub(id) { document.getElementById(id).classList.toggle('show'); }
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-        function logout() { localStorage.removeItem('rdo_auth'); location.reload(); }
-
-        document.getElementById('login-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if(document.getElementById('user').value === CONFIG.MASTER_USER && document.getElementById('pass').value === CONFIG.MASTER_PASS) {
-                localStorage.setItem('rdo_auth', 'true');
-                init();
-            } else { alert('Acesso negado.'); }
-        });
-
-        function init() {
-            if(localStorage.getItem('rdo_auth') === 'true') {
-                document.getElementById('landing-page').style.setProperty('display', 'none', 'important');
-                document.getElementById('admin-panel').style.display = 'flex';
-                loadSheet('dados');
-            }
-        }
-
-        async function loadSheet(sheetName) {
-            document.getElementById('title-display').innerText = "Gestão: " + sheetName.toUpperCase();
-            const tbody = document.getElementById('table-body');
-            const thead = document.getElementById('table-head');
-            tbody.innerHTML = '<tr><td class="text-center p-5"><div class="spinner-border text-danger"></div></td></tr>';
-
-            try {
-                const res = await fetch(`${CONFIG.API_URL}?action=read&sheet=${sheetName}`);
-                const data = await res.json();
-                const headers = Object.keys(data[0]).filter(h => h !== 'row_index');
-                thead.innerHTML = headers.map(h => `<th class="py-3">${h.replace(/_/g, ' ')}</th>`).join('');
-                tbody.innerHTML = data.map(row => `<tr>${headers.map(h => `<td>${row[h] || '-'}</td>`).join('')}</tr>`).join('');
-            } catch (e) { tbody.innerHTML = '<tr><td>Erro ao carregar dados.</td></tr>'; }
-        }
-
-        init();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/app.js"></script>
 </body>
 </html>

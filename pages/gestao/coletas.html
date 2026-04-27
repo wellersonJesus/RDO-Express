@@ -1,0 +1,24 @@
+<div class="animate-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold">Gestão de Coletas</h3>
+        <button class="btn btn-outline-danger btn-sm" onclick="render()"><i class="bi bi-arrow-clockwise"></i></button>
+    </div>
+    <div class="bg-white p-3 rounded shadow-sm border">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead id="h-col" class="small text-muted"></thead>
+                <tbody id="b-col"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    async function render() {
+        const data = await fetchSheetData('coletas');
+        if(!data) return;
+        const headers = Object.keys(data[0]).filter(h => h !== 'row_index');
+        document.getElementById('h-col').innerHTML = `<tr>${headers.map(h => `<th>${h.toUpperCase()}</th>`).join('')}</tr>`;
+        document.getElementById('b-col').innerHTML = data.map(row => `<tr>${headers.map(h => `<td>${row[h] || '-'}</td>`).join('')}</tr>`).join('');
+    }
+    render();
+</script>
