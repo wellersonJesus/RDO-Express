@@ -1,81 +1,67 @@
 :root {
     --accent-red: #dc3545;
     --gray-border: #ececec;
-    --sidebar-bg: #ffffff;
+    --sidebar-width: 280px;
     --top-height: 70px;
 }
 
 body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; margin: 0; }
 
-/* Estrutura Principal */
-#admin-panel { display: flex; min-height: 100vh; }
-
-/* Sidebar Fixa */
+/* Sidebar Premium */
 .sidebar {
-    width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--gray-border);
+    width: var(--sidebar-width); background: #fff; border-right: 1px solid var(--gray-border);
     height: 100vh; position: fixed; left: 0; top: 0; z-index: 1060;
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: column; padding: 0 15px; /* Alinhamento centralizado */
 }
 
-/* Header Fixo no Topo */
+/* Itens do Menu Principal */
+.nav-link { 
+    color: #4b4b4b; padding: 12px 20px; display: flex; align-items: center;
+    text-decoration: none; border-radius: 12px; margin: 8px 0; transition: all 0.3s ease;
+    font-weight: 500; cursor: pointer; position: relative;
+}
+
+/* Ícones Maiores e Elegantes */
+.nav-link i:first-child { 
+    font-size: 1.4rem; margin-right: 15px; color: #b2bec3; transition: 0.3s;
+}
+
+.nav-link:hover { background: #fdf2f2; color: var(--accent-red); }
+.nav-link:hover i:first-child { color: var(--accent-red); transform: scale(1.1); }
+
+/* Submenu com Efeito de Deslize */
+.submenu {
+    list-style: none; padding: 0; margin: 0;
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #fafafa; border-radius: 12px;
+}
+.submenu.show { max-height: 300px; padding: 5px 0; margin-bottom: 10px; }
+
+.submenu .nav-link { 
+    padding-left: 55px; font-size: 0.95rem; margin: 2px 0;
+}
+
+/* Header Fixo */
 .top-header {
-    height: var(--top-height);
-    background: #fff;
-    border-bottom: 1px solid var(--gray-border);
+    height: var(--top-height); background: #fff; border-bottom: 1px solid var(--gray-border);
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 2rem;
-    position: fixed;
-    top: 0;
-    right: 0;
-    left: 280px; /* Alinhado após a sidebar */
+    padding: 0 2rem; position: fixed; top: 0; right: 0; left: var(--sidebar-width);
     z-index: 1050;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 
-/* Área de Conteúdo (Abaixo do Header) */
-.main-content {
-    flex: 1;
-    margin-left: 280px;
-    margin-top: var(--top-height); /* Espaço para não ficar sob o header */
-    padding: 2rem;
-    min-height: calc(100vh - var(--top-height));
-    overflow-y: auto;
-}
+.main-content { margin-left: var(--sidebar-width); margin-top: var(--top-height); padding: 2rem; }
 
-/* Perfil do Usuário (Lado Direito) */
-.user-profile {
-    display: flex; align-items: center; gap: 12px;
-    cursor: pointer; padding: 6px 15px; border-radius: 50px;
-    border: 1px solid transparent; transition: 0.3s;
-}
-.user-profile:hover { background: #f8f9fa; border-color: var(--gray-border); }
-
+/* Avatar Redondo */
 .user-avatar {
-    width: 40px; height: 40px; background: #fff;
-    border: 2px solid var(--accent-red); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--accent-red); font-weight: bold;
+    width: 42px; height: 42px; border: 2px solid var(--accent-red);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--accent-red); font-weight: bold; font-size: 1.1rem;
 }
-
-/* Modal e Tabelas */
-.card-gms { background: #fff; border-radius: 15px; border: 1px solid var(--gray-border); padding: 1.5rem; }
 
 @media (max-width: 991px) {
-    .sidebar { transform: translateX(-100%); width: 280px; }
+    .sidebar { transform: translateX(-100%); }
     .sidebar.active { transform: translateX(0); }
-    .top-header { left: 0; padding: 0 1rem; }
+    .top-header { left: 0; }
     .main-content { margin-left: 0; }
 }
-
-/* Login Animado */
-#landing-page {
-    position: relative; height: 100vh; width: 100%; overflow: hidden;
-    display: flex; align-items: center; justify-content: center; background: #000;
-}
-#landing-page::before {
-    content: ""; position: absolute; top: 0; left: 0; width: 110%; height: 110%;
-    background-image: url('https://img.freepik.com/fotos-gratis/ainda-vida-da-representacao-da-cadeia-de-suprimentos_23-2149827282.jpg?semt=ais_hybrid&w=1080&q=90');
-    background-size: cover; background-position: center; opacity: 0.95;
-    animation: smoothMove 20s ease-in-out infinite alternate; z-index: 1;
-}
-@keyframes smoothMove { 0% { transform: scale(1); } 100% { transform: scale(1.05) translate(-1%, -1%); } }
