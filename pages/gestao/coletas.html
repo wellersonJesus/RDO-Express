@@ -1,24 +1,81 @@
 <div class="animate-in">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold">Gestão de Coletas</h3>
-        <button class="btn btn-outline-danger btn-sm" onclick="render()"><i class="bi bi-arrow-clockwise"></i></button>
+        <div>
+            <h3 class="fw-bold m-0">Gestão de Coletas</h3>
+            <small class="text-muted">Listagem de solicitações ativas</small>
+        </div>
+        <button class="btn btn-danger rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm" onclick="novaColeta()">
+            <i class="bi bi-plus-lg"></i> <span class="fw-bold">NOVO</span>
+        </button>
     </div>
-    <div class="bg-white p-3 rounded shadow-sm border">
+
+    <div class="card-gms shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead id="h-col" class="small text-muted"></thead>
-                <tbody id="b-col"></tbody>
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr id="h-col" class="text-muted small text-uppercase">
+                        </tr>
+                </thead>
+                <tbody id="b-col" class="border-top-0">
+                    <tr><td colspan="5" class="text-center p-5 text-muted">Carregando coletas...</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
+
 <script>
-    async function render() {
+    async function renderColetas() {
         const data = await fetchSheetData('coletas');
-        if(!data) return;
-        const headers = Object.keys(data[0]).filter(h => h !== 'row_index');
-        document.getElementById('h-col').innerHTML = `<tr>${headers.map(h => `<th>${h.toUpperCase()}</th>`).join('')}</tr>`;
-        document.getElementById('b-col').innerHTML = data.map(row => `<tr>${headers.map(h => `<td>${row[h] || '-'}</td>`).join('')}</tr>`).join('');
+        const tbody = document.getElementById('b-col');
+        const thead = document.getElementById('h-col');
+        
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-5">Nenhuma coleta encontrada.</td></tr>';
+            return;
+        }
+
+        // 1. Definimos as colunas que QUEREMOS exibir (exatamente como no Sheets)
+        // O JS vai procurar essas chaves (normalizadas pelo seu App Script)
+        const colunasVisiveis = ['data', 'cliente', 'solicitacao', 'tipo_de_servico'];
+        
+        // 2. Montar Cabeçalho (com coluna extra para Ações)
+        thead.innerHTML = `
+            ${colunasVisiveis.map(c => `<th>${c.replace(/_/g, ' ')}</th>`).join('')}
+            <th class="text-end">Ações</th>
+        `;
+
+        // 3. Montar Linhas
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                ${colunasVisiveis.map(c => `<td>${row[c] || '-'}</td>`).join('')}
+                <td class="text-end">
+                    <div class="btn-group shadow-sm border rounded-pill bg-white px-2">
+                        <button class="btn btn-link text-dark p-2" title="Visualizar" onclick="acao('view', ${row.row_index})"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-link text-primary p-2" title="Editar" onclick="acao('edit', ${row.row_index})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-link text-warning p-2" title="Duplicar" onclick="acao('copy', ${row.row_index})"><i class="bi bi-copy"></i></button>
+                        <button class="btn btn-link text-danger p-2" title="Remover" onclick="acao('delete', ${row.row_index})"><i class="bi bi-trash3"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     }
-    render();
+
+    function acao(tipo, id) {
+        console.log(`Ação: ${tipo} no registro ID: ${id}`);
+        // Aqui integraremos com as funções do doPost no futuro
+    }
+
+    function novaColeta() {
+        alert("Abrir formulário de Nova Coleta");
+    }
+
+    renderColetas();
 </script>
+
+<style>
+    .table thead th { border-top: none; padding: 15px; }
+    .table tbody td { padding: 15px; font-size: 0.95rem; }
+    .btn-link { text-decoration: none; border: none; background: none; }
+    .btn-link:hover { transform: scale(1.2); transition: 0.2s; }
+</style>
