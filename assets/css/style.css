@@ -1,101 +1,97 @@
 :root {
-    --bg-light: #fdfdfd;
-    --sidebar-bg: #ffffff;
     --accent-red: #dc3545;
-    --text-dark: #2d3436;
-    --gray-soft: #f1f2f6;
     --gray-border: #ececec;
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body { 
-    background-color: var(--bg-light);
-    color: var(--text-dark);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+/* Fundo com Imagem Única e Movimento Suave */
+#landing-page {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    background-color: #000; /* Fundo base para profundidade */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Sidebar Estilizada */
+/* A Imagem Única com Animação de Movimento */
+#landing-page::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 110%; height: 110%; /* 10% maior para o movimento não mostrar as bordas */
+    background-image: url('https://img.freepik.com/fotos-gratis/ainda-vida-da-representacao-da-cadeia-de-suprimentos_23-2149827282.jpg?semt=ais_hybrid&w=1080&q=90');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* Película quase invisível (Aumentamos a nitidez conforme pedido) */
+    opacity: 0.95; 
+    filter: brightness(1.05) contrast(1.1);
+    
+    /* Animação de movimento suave (Ken Burns Effect) */
+    animation: smoothMove 20s ease-in-out infinite alternate;
+    z-index: 1;
+}
+
+/* Overlay de Vidro quase transparente */
+#landing-page::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.05); /* Praticamente transparente */
+    z-index: 2;
+}
+
+@keyframes smoothMove {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-2%, -2%) scale(1.05); }
+}
+
+/* Modal de Login Premium (RDO Express) */
+.card-gms {
+    position: relative;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9); /* Branco com transparência leve */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 28px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    padding: 3.5rem;
+    width: 100%;
+    max-width: 420px;
+    backdrop-filter: blur(12px); /* Mantém o efeito de vidro */
+    text-align: center;
+}
+
+/* Estrutura do Painel Lateral (Sidebar) */
 .sidebar {
     width: 280px;
-    background: var(--sidebar-bg);
+    background: #fff;
     border-right: 1px solid var(--gray-border);
     height: 100vh;
     position: fixed;
-    transition: var(--transition-smooth);
     z-index: 1050;
-}
-
-.sidebar-header {
-    padding: 2rem 1.5rem;
-    border-bottom: 1px solid var(--gray-soft);
-}
-
-.nav-link {
-    color: #636e72;
-    padding: 0.8rem 1.5rem;
-    margin: 0.2rem 1rem;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    transition: var(--transition-smooth);
-    font-weight: 500;
-}
-
-.nav-link i { margin-right: 12px; font-size: 1.1rem; }
-
-.nav-link:hover {
-    background: var(--gray-soft);
-    color: var(--accent-red);
-}
-
-.nav-link.active {
-    background: rgba(220, 53, 69, 0.05);
-    color: var(--accent-red);
-}
-
-/* Submenus */
-.submenu {
-    list-style: none;
-    padding-left: 1rem;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-}
-
-.submenu.show { max-height: 200px; }
-
-/* Main Content */
-.main-content {
-    margin-left: 280px;
-    padding: 2rem;
     transition: var(--transition-smooth);
 }
 
-.card-gms {
-    background: #ffffff;
-    border: 1px solid var(--gray-border);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-    padding: 1.5rem;
-}
-
-/* Efeito Hover na Tabela */
-.table hover tbody tr:hover {
-    background-color: rgba(220, 53, 69, 0.02) !important;
-}
+.main-content { margin-left: 280px; padding: 2rem; }
 
 .btn-primary {
     background-color: var(--accent-red);
     border: none;
-    padding: 0.6rem 1.5rem;
-    border-radius: 8px;
-    transition: var(--transition-smooth);
+    padding: 0.8rem;
+    border-radius: 12px;
+    font-weight: 600;
+    width: 100%;
+    transition: 0.3s;
 }
 
 .btn-primary:hover {
-    background-color: #c82333;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    background-color: #bd2130;
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
 }
 
 @media (max-width: 991px) {
