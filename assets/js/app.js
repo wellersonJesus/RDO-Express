@@ -1,19 +1,23 @@
+// Proteção de Rota: Verifica se está logado
+(function() {
+    if (localStorage.getItem('rdo_auth') !== 'true' && !window.location.href.includes('login.html')) {
+        window.location.href = 'login.html';
+    }
+})();
+
 async function loadModule(folder, file, title) {
     const routerView = document.getElementById('router-view');
     const dynamicTitle = document.getElementById('dynamic-title');
-    
     if (dynamicTitle) dynamicTitle.innerText = title;
     
     try {
         const path = `pages/${folder}/${file}.html`;
         const response = await fetch(path);
-        
-        if (!response.ok) throw new Error(`Página ${file} não encontrada.`);
+        if (!response.ok) throw new Error(`Módulo ${file} não encontrado.`);
         
         const html = await response.text();
         routerView.innerHTML = html;
 
-        // Executa scripts inseridos no HTML manualmente
         const scripts = routerView.querySelectorAll('script');
         scripts.forEach(oldScript => {
             const newScript = document.createElement('script');
@@ -21,9 +25,13 @@ async function loadModule(folder, file, title) {
             newScript.appendChild(document.createTextNode(oldScript.innerHTML));
             oldScript.parentNode.replaceChild(newScript, oldScript);
         });
-
     } catch (err) {
-        console.error(err);
-        routerView.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar módulo: ${err.message}</div>`;
+        routerView.innerHTML = `<div class="alert alert-danger m-3">Erro SRE: ${err.message}</div>`;
     }
+}
+
+// Função de Logout corrigida
+function logout() {
+    localStorage.removeItem('rdo_auth');
+    window.location.href = 'login.html';
 }
