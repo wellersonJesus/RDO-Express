@@ -1,0 +1,109 @@
+<div class="animate-in">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold m-0 text-dark">Relatórios de Movimentação</h5>
+            <p class="text-muted small m-0" id="rel-status">Conectando ao SRE Database...</p>
+        </div>
+        <button class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" onclick="window.modRel.fetch()">
+            <i class="bi bi-arrow-clockwise me-1"></i> ATUALIZAR
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-muted small text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                        <th class="px-3 py-2 text-center" style="width: 60px;">Qtd</th>
+                        <th class="px-3 py-2">Data</th>
+                        <th class="px-3 py-2">Cliente</th>
+                        <th class="px-3 py-2">Serviço / Endereço</th>
+                    </tr>
+                </thead>
+                <tbody id="rel-list" class="border-top-0" style="font-size: 0.82rem;">
+                    <tr><td colspan="4" class="text-center p-4">Aguardando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-top">
+            <div style="font-size: 0.75rem;" class="text-muted" id="rel-pagination-label">Página 1</div>
+            <nav><ul class="pagination pagination-sm mb-0 gap-1" id="rel-nav"></ul></nav>
+        </div>
+    </div>
+</div>
+
+<script>
+window.modRel = {
+    records: [],
+    page: 1,
+    limit: 15,
+
+    fetch: async function() {
+        const tbody = document.getElementById('rel-list');
+        const status = document.getElementById('rel-status');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Carregando aba relatorios...</td></tr>';
+        
+        try {
+            // Usa a API_URL global definida no config.js
+            const url = `${window.API_URL}?sheet=relatorios`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if(data.error) throw new Error(data.error);
+            
+            this.records = data;
+            status.innerText = `${data.length} registros encontrados`;
+            this.render();
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-danger">Erro: ${err.message}</td></tr>`;
+        }
+    },
+
+    render: function() {
+        const tbody = document.getElementById('rel-list');
+        const start = (this.page - 1) * this.limit;
+        const end = start + this.limit;
+        const items = this.records.slice(start, end);
+
+        tbody.innerHTML = items.map(row => `
+            <tr>
+                <td class="px-3 py-2 fw-bold text-danger text-center">${row.quantidade || '1'}</td>
+                <td class="px-3 py-2 text-secondary">${row.datas || '-'}</td>
+                <td class="px-3 py-2 fw-bold text-dark">${row.cliente || '---'}</td>
+                <td class="px-3 py-2 text-muted">
+                    <div style="max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span class="badge bg-danger bg-opacity-10 text-danger border-0 me-1" style="font-size: 0.6rem;">
+                            ${(row.tipos_de_servicos || 'N/A').toUpperCase()}
+                        </span>
+                        ${row.enderecos || '-'}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        this.paginate();
+    },
+
+    paginate: function() {
+        const total = Math.ceil(this.records.length / this.limit);
+        const nav = document.getElementById('rel-nav');
+        document.getElementById('rel-pagination-label').innerText = `Página ${this.page} de ${total}`;
+        
+        let html = '';
+        for (let i = 1; i <= total; i++) {
+            html += `<li class="page-item ${i === this.page ? 'active' : ''}">
+                <a class="page-link border-0 mx-1" href="javascript:void(0)" onclick="modRel.go(${i})">${i}</a>
+            </li>`;
+        }
+        nav.innerHTML = html;
+    },
+
+    go: function(p) {
+        this.page = p;
+        this.render();
+    }
+};
+
+// Inicialização automática
+modRel.fetch();
+</script>

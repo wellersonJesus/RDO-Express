@@ -1,5 +1,8 @@
-const CONFIG = {
-    API_URL: "https://script.google.com/macros/s/AKfycbyoFqI6ufUt0IhcCpRpB4lx8VHz6PW69lE9XGwjVisIdAUrZ2BI2fi1coXjU-HcO4eI/exec",
-    MASTER_USER: "master",
-    MASTER_PASS: "123456"
-};
+// Configurações do Google Sheets App-Web
+window.API_URL = "https://script.google.com/macros/s/AKfycbyK2RbbHI-vvxAjLkSlkfj8W-WFXrvmvqJLEz74ci6ABXQfuum30PeZXAL0jdjq3wiu/exec";
+
+// Credenciais de Acesso
+window.MASTER_USER = "master";
+window.MASTER_PASS = "123456";
+
+console.log("SRE Config: API_URL carregada com sucesso.");
