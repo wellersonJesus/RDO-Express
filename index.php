@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>RDO Express | SRE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/global.css">
+</head>
+<body>
+    <div id="admin-panel">
+        <aside class="sidebar">
+            <div class="py-4 text-center border-bottom">
+                <h4 class="fw-bold"><span class="text-danger">RDO</span> <span class="text-dark">EXPRESS</span></h4>
+            </div>
+            <nav class="pt-3">
+                <a onclick="toggleSubmenu('m-painel')"><i class="bi bi-grid me-2"></i> Painel</a>
+                <ul class="submenu" id="m-painel">
+                    <li><a onclick="loadModule('dashboard', 'dashboard', 'Visão Geral')">Visão Geral</a></li>
+                    <li><a onclick="loadModule('comunicacao', 'chat', 'Chat')">Chat</a></li>
+                </ul>
+                <a onclick="toggleSubmenu('m-cad')"><i class="bi bi-people me-2"></i> Cadastros</a>
+                <ul class="submenu" id="m-cad">
+                    <li><a onclick="loadModule('gestao', 'clientes', 'Clientes')">Clientes</a></li>
+                    <li><a onclick="loadModule('gestao', 'motoboys', 'Motoboys')">Motoboys</a></li>
+                </ul>
+                <a onclick="toggleSubmenu('m-rdo')"><i class="bi bi-speedometer2 me-2"></i> RDO Express</a>
+                <ul class="submenu" id="m-rdo">
+                    <li><a onclick="loadModule('gestao', 'operacao', 'Operação Fast')">Operação</a></li>
+                </ul>
+                <a onclick="toggleSubmenu('m-rel')"><i class="bi bi-graph-up me-2"></i> Relatórios</a>
+                <ul class="submenu" id="m-rel">
+                    <li><a onclick="loadModule('relatorios', 'relatorio', 'Relatórios')">Gerar</a></li>
+                </ul>
+                <a onclick="toggleSubmenu('m-adm')"><i class="bi bi-gear me-2"></i> Adm</a>
+                <ul class="submenu" id="m-adm">
+                    <li><a onclick="loadModule('adm', 'usuarios', 'Usuários')">Usuários</a></li>
+                    <li><a onclick="loadModule('adm', 'crm', 'CRM')">CRM</a></li>
+                </ul>
+                <a onclick="toggleSubmenu('m-seg')"><i class="bi bi-shield-lock me-2"></i> Segurança</a>
+                <ul class="submenu" id="m-seg">
+                    <li><a onclick="loadModule('automacao', 'configuracoes', 'Configurações')">Configurações</a></li>
+                    <li><a onclick="loadModule('automacao', 'ia', 'IA')">IA</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="flex-grow-1 d-flex flex-column">
+            <header class="top-header">
+                <h5 class="fw-bold text-dark m-0" id="dynamic-title">Dashboard</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end">
+                        <div class="fw-bold text-dark lh-1">Gestor</div>
+                        <small class="text-danger fw-bold">Master</small>
+                    </div>
+                    <div class="user-avatar-btn" onclick="openModal('sairModal')"><i class="bi bi-person-circle"></i></div>
+                </div>
+            </header>
+            <main class="main-content" id="router-view"><h5>Bem-vindo, Gestor.</h5></main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="sairModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-box-arrow-right fs-1 text-danger"></i><h5 class="mt-3">Deseja sair do sistema?</h5></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger" onclick="location.reload()">Confirmar Sair</button></div></div></div></div>
+    
+    <div class="modal fade" id="atencaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-exclamation-triangle fs-1 text-warning"></i><h5 class="mt-3">Atenção!</h5><p>Ação requer confirmação.</p></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-warning" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
+    
+    <div class="modal fade" id="exclusaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-trash fs-1 text-danger"></i><h5 class="mt-3">Confirmar Exclusão?</h5></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger">Remover</button></div></div></div></div>
+
+    <script src="assets/js/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

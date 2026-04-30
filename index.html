@@ -3,36 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RDO Express | High-End SRE</title>
+    <title>RDO Express | High-End SRE Fast Logistics</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #fee2e2; color: #dc3545; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #dc3545; }
+        #module-description { font-size: 0.85rem; color: #6c757d; margin-top: 5px; font-style: italic; }
+        /* Ajuste para o ícone de velocímetro */
+        .main-icon.bi-speedometer2 { font-size: 1.2rem; }
+    </style>
 </head>
 <body>
-    
     <div class="mobile-overlay" id="overlay" onclick="toggleSidebar()"></div>
 
     <div id="admin-panel">
         <aside class="sidebar" id="sidebar">
-            <div class="py-4 text-center mb-2 d-flex align-items-center justify-content-center">
-                <h4 class="fw-bold m-0" style="letter-spacing: -1px;"><span class="text-danger">RDO</span> EXPRESS</h4>
-                <button class="btn d-lg-none ms-2 text-danger" onclick="toggleSidebar()"><i class="bi bi-x-lg fs-4"></i></button>
+            <div class="py-4 text-center mb-2">
+                <h4 class="fw-bold m-0"><span class="text-danger">RDO</span> <span class="text-dark">EXPRESS</span></h4>
             </div>
             
             <nav class="flex-grow-1">
                 <div class="nav-item">
-                    <a class="nav-link" onclick="handleMenuClick('dashboard', 'index', 'Painel / Dashboard')">
+                    <a class="nav-link" onclick="toggleSubmenu('m-painel')">
                         <i class="bi bi-grid-1x2-fill main-icon"></i> <span>Painel</span>
                     </a>
+                    <ul class="submenu" id="m-painel">
+                        <li><a class="nav-link" onclick="handleMenuClick('dashboard', 'dashboard', 'Visão Geral', 'Monitoramento centralizado de KPIs, volume de pedidos e status da frota fast em tempo real.')">Visão Geral</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('comunicacao', 'chat', 'Chat', 'Orquestração de comunicação instantânea entre o despacho e os motociclistas em campo.')">Chat</a></li>
+                    </ul>
                 </div>
 
                 <div class="nav-item">
-                    <a class="nav-link" onclick="toggleSubmenu('m-gestao')">
-                        <i class="bi bi-stack main-icon"></i> <span>Gestão</span>
+                    <a class="nav-link" onclick="toggleSubmenu('m-cadastros')">
+                        <i class="bi bi-people main-icon"></i> <span>Cadastros</span>
                     </a>
-                    <ul class="submenu" id="m-gestao">
-                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'usuarios', 'Gestão / Usuários')">Usuários</a></li>
-                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'coletas', 'Gestão / Coletas')">Coletas</a></li>
+                    <ul class="submenu" id="m-cadastros">
+                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'clientes', 'Clientes', 'Gerenciamento da base de clientes e locais frequentes de coleta/entrega fast.')">Clientes</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'motoboys', 'Motoboys', 'Gestão de cadastro, documentação e status operacional da frota de motocicletas.')">Motoboys</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-item">
+                    <a class="nav-link" onclick="toggleSubmenu('m-rdo')">
+                        <i class="bi bi-speedometer2 main-icon"></i> <span>RDO Express</span>
+                    </a>
+                    <ul class="submenu" id="m-rdo">
+                        <li><a class="nav-link" onclick="handleMenuClick('gestao', 'operacao', 'Operação Fast Logistics', 'Central unificada de processamento de pedidos rápidos. Utilize as abas para gerenciar o fluxo.')">Operação</a></li>
                     </ul>
                 </div>
 
@@ -41,56 +58,61 @@
                         <i class="bi bi-clipboard-data main-icon"></i> <span>Relatórios</span>
                     </a>
                     <ul class="submenu" id="m-relat">
-                        <li><a class="nav-link" onclick="handleMenuClick('relatorios', 'relatorio', 'Relatórios / Geral')">Relatório</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('relatorios', 'relatorio', 'Relatórios de Performance', 'Análise detalhada de tempos de entrega, produtividade por moto e métricas de eficiência fast.')">Gerar Relatórios</a></li>
                     </ul>
                 </div>
 
                 <div class="nav-item">
-                    <a class="nav-link" onclick="toggleSubmenu('m-auto')">
-                        <i class="bi bi-robot main-icon"></i> <span>Automação</span>
+                    <a class="nav-link" onclick="toggleSubmenu('m-adm')">
+                        <i class="bi bi-person-gear main-icon"></i> <span>Administração</span>
                     </a>
-                    <ul class="submenu" id="m-auto">
-                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'seguranca', 'Automação / Segurança')">Segurança</a></li>
-                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'whatsapp', 'Automação / WhatsApp')">WhatsApp</a></li>
-                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'logs', 'Automação / Logs')">Logs</a></li>
+                    <ul class="submenu" id="m-adm">
+                        <li><a class="nav-link" onclick="handleMenuClick('adm', 'usuarios', 'Usuários', 'Controle de acessos, permissões e gestão da equipe interna do sistema de despacho.')">Usuários</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('adm', 'crm', 'CRM', 'Gestão comercial e relacionamento com clientes corporativos (Contas Fast).')">CRM</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-item">
+                    <a class="nav-link" onclick="toggleSubmenu('m-seg')">
+                        <i class="bi bi-shield-lock main-icon"></i> <span>Segurança</span>
+                    </a>
+                    <ul class="submenu" id="m-seg">
+                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'configuracoes', 'Configurações', 'Ajustes globais do sistema de despacho e infraestrutura de alta disponibilidade.')">Configurações</a></li>
+                        <li><a class="nav-link" onclick="handleMenuClick('automacao', 'ia', 'IA', 'Orquestração de Inteligência Artificial RDO para otimização de rotas e despacho fast.')">IA</a></li>
                     </ul>
                 </div>
             </nav>
 
-            <div class="pb-3 px-2">
-                <a class="nav-link text-danger border-0" data-bs-toggle="modal" data-bs-target="#logoutModal" style="background: #fff5f5; cursor: pointer;">
-                    <i class="bi bi-power main-icon" style="background: #fee2e2; color: #ef4444;"></i> <span>Sair</span>
-                </a>
+            <div class="pb-4 px-3">
+                <button class="btn btn-outline-danger w-100 rounded-pill" onclick="openLogoutModal()">
+                    <i class="bi bi-power me-2"></i> Sair
+                </button>
             </div>
         </aside>
 
-        <header class="top-header">
+        <header class="top-header d-flex justify-content-between align-items-center px-4">
             <div class="d-flex align-items-center">
-                <button class="btn btn-light d-lg-none me-3" onclick="toggleSidebar()">
-                    <i class="bi bi-list fs-3 text-danger"></i>
-                </button>
-                <h5 class="fw-bold m-0 text-dark" id="dynamic-title">Dashboard</h5>
+                <button class="btn btn-light d-lg-none me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+                <div>
+                    <h5 class="fw-bold m-0" id="dynamic-title">Dashboard</h5>
+                    <div id="module-description">Selecione uma operação para iniciar o fluxo fast.</div>
+                </div>
             </div>
             
-            <div class="user-profile d-flex align-items-center gap-3 p-1 rounded-pill" 
-                 data-bs-toggle="modal" data-bs-target="#logoutModal" 
-                 style="cursor: pointer;" title="Sair do Sistema">
+            <div class="user-profile d-flex align-items-center gap-3" style="cursor: pointer;" onclick="openLogoutModal()">
                 <div class="text-end d-none d-sm-block">
                     <div class="fw-bold small lh-1">SRE Wellerson</div>
-                    <small class="text-danger fw-bold" style="font-size: 0.65rem;">SAIR</small>
+                    <small class="text-danger fw-bold" style="font-size: 0.7rem;">USUÁRIO MASTER</small>
                 </div>
-                <div class="user-avatar shadow-sm" style="width:40px; height:40px; border:2px solid #dc3545; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#dc3545; font-weight:bold; background:#fff;">
-                    <i class="bi bi-power"></i>
-                </div>
+                <div class="user-avatar shadow-sm"><i class="bi bi-person-fill"></i></div>
             </div>
         </header>
 
         <main class="main-content">
-            <div id="router-view">
-                <div class="p-4 text-center text-muted animate-in">
-                    <i class="bi bi-truck fs-1 text-danger opacity-25"></i>
-                    <h5 class="mt-3">RDO Express v2.6.0</h5>
-                    <p>Selecione uma funcionalidade para iniciar.</p>
+            <div id="router-view" class="p-4">
+                <div class="text-center text-muted mt-5">
+                    <i class="bi bi-speedometer2 fs-1 text-danger opacity-25"></i>
+                    <h5 class="mt-3">Fluxo RDO Express pronto para Entregas Fast com Motos.</h5>
                 </div>
             </div>
         </main>
@@ -98,13 +120,13 @@
 
     <div class="modal fade" id="logoutModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-                <div class="modal-body p-5 text-center">
-                    <div class="mb-4"><i class="bi bi-door-open text-danger" style="font-size: 3rem;"></i></div>
-                    <h4 class="fw-bold">Encerrar Sessão?</h4>
-                    <div class="d-flex gap-3 justify-content-center mt-4">
-                        <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Voltar</button>
-                        <button class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm" onclick="logout()">Sim, Sair</button>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-door-open text-danger fs-1"></i>
+                    <h5 class="mt-3">Encerrar sessão?</h5>
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="btn btn-danger px-4" onclick="logout()">Sim, Sair</button>
                     </div>
                 </div>
             </div>
@@ -115,24 +137,19 @@
     <script src="assets/js/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('mobile-open');
-            document.getElementById('overlay').classList.toggle('show');
-        }
-
+        function openLogoutModal() { new bootstrap.Modal(document.getElementById('logoutModal')).show(); }
+        function logout() { window.location.href = 'login.html'; }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); }
         function toggleSubmenu(id) {
             const menu = document.getElementById(id);
-            const isOpen = menu.classList.contains('show');
             document.querySelectorAll('.submenu').forEach(m => m.classList.remove('show'));
-            if (!isOpen) menu.classList.add('show');
+            menu.classList.toggle('show');
         }
-
-        function handleMenuClick(folder, file, title) {
+        function handleMenuClick(folder, file, title, description) {
+            document.getElementById('dynamic-title').innerText = title;
+            document.getElementById('module-description').innerText = description;
             loadModule(folder, file, title);
-            // Se estiver no mobile, fecha a sidebar automaticamente ao clicar no link
-            if (window.innerWidth <= 992) {
-                toggleSidebar();
-            }
+            if (window.innerWidth <= 992) toggleSidebar();
         }
     </script>
 </body>

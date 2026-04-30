@@ -1,37 +1,14 @@
-// Proteção de Rota: Verifica se está logado
-(function() {
-    if (localStorage.getItem('rdo_auth') !== 'true' && !window.location.href.includes('login.html')) {
-        window.location.href = 'login.html';
-    }
-})();
-
 async function loadModule(folder, file, title) {
-    const routerView = document.getElementById('router-view');
-    const dynamicTitle = document.getElementById('dynamic-title');
-    if (dynamicTitle) dynamicTitle.innerText = title;
-    
+    const route = `pages/${folder}/${file}.php`;
+    const view = document.getElementById('router-view');
+    document.getElementById('dynamic-title').innerText = title;
     try {
-        const path = `pages/${folder}/${file}.html`;
-        const response = await fetch(path);
-        if (!response.ok) throw new Error(`Módulo ${file} não encontrado.`);
-        
-        const html = await response.text();
-        routerView.innerHTML = html;
-
-        const scripts = routerView.querySelectorAll('script');
-        scripts.forEach(oldScript => {
-            const newScript = document.createElement('script');
-            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-            oldScript.parentNode.replaceChild(newScript, oldScript);
-        });
-    } catch (err) {
-        routerView.innerHTML = `<div class="alert alert-danger m-3">Erro SRE: ${err.message}</div>`;
-    }
+        const response = await fetch(route);
+        view.innerHTML = await response.text();
+    } catch (e) { view.innerHTML = `<div class="text-danger">Erro de carregamento.</div>`; }
 }
-
-// Função de Logout corrigida
-function logout() {
-    localStorage.removeItem('rdo_auth');
-    window.location.href = 'login.html';
+function toggleSubmenu(id) {
+    document.querySelectorAll('.submenu').forEach(m => { if (m.id !== id) m.classList.remove('show'); });
+    document.getElementById(id).classList.toggle('show');
 }
+function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
