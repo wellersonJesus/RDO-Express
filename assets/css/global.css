@@ -1,35 +1,29 @@
 :root { --bg-white: #ffffff; --text-black: #212529; --accent-red: #dc3545; --sidebar-width: 260px; }
-body { background-color: var(--bg-white); font-family: 'Inter', -apple-system, sans-serif; color: var(--text-black); }
+body { background-color: var(--bg-white); font-family: 'Inter', sans-serif; color: var(--text-black); }
 
 #admin-panel { display: flex; min-height: 100vh; }
 .sidebar { width: var(--sidebar-width); background: var(--bg-white); border-right: 1px solid #e9ecef; transition: 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
-
-@media (max-width: 768px) {
-    .sidebar { position: fixed; left: -260px; height: 100%; box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
-    .sidebar.show { left: 0; }
-    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; display: none; }
-    .overlay.show { display: block; }
+@media (max-width: 768px) { 
+    .sidebar { position: fixed; left: -260px; height: 100%; box-shadow: 5px 0 15px rgba(0,0,0,0.1); } 
+    .sidebar.show { left: 0; } 
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; display: none; } 
+    .overlay.show { display: block; } 
 }
 
 .sidebar nav { flex-grow: 1; overflow-y: auto; }
 .sidebar a { text-decoration: none; padding: 14px 20px; display: block; color: var(--text-black); font-weight: 500; cursor: pointer; transition: 0.2s; }
 .sidebar a:hover { color: var(--accent-red); background: #f8f9fa; }
+.sidebar a i { color: var(--accent-red); margin-right: 10px; }
 
-/* AJUSTE: Todos os ícones da sidebar vermelhos */
-.sidebar a i { color: var(--accent-red); }
-
-.submenu { display: none; list-style: none; padding-left: 25px; }
+.submenu { display: none; list-style: none; padding-left: 45px; }
 .submenu.show { display: block; }
 .submenu a { color: #6c757d; padding: 8px 0; display: inline-block; position: relative; cursor: pointer; text-decoration: none; }
 .submenu a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background-color: var(--accent-red); transform: scaleX(0); transition: transform 0.4s ease-out; transform-origin: left; }
 .submenu a:hover::after { transform: scaleX(1); }
 
 .top-header { background: var(--bg-white); border-bottom: 1px solid #e9ecef; height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
-
-/* AJUSTE: Ícone Hambúrguer Mobile Maior e Vermelho */
 .btn-toggle-menu { color: var(--accent-red); padding: 0; border: none; background: transparent; }
-.btn-toggle-menu i { font-size: 2.2rem; } /* Aumentado */
-
+.btn-toggle-menu i { font-size: 2.2rem; }
 .user-avatar-btn { width: 45px; height: 45px; border-radius: 50%; background: #f8f9fa; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center; color: var(--text-black); cursor: pointer; transition: 0.3s; }
 .user-avatar-btn:hover { background: var(--accent-red); color: #fff; }
 .main-content { flex: 1; padding: 40px; }
