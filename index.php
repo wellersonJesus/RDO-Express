@@ -32,12 +32,20 @@
                 <ul class="submenu" id="m-rel">
                     <li><a onclick="loadModule('relatorios', 'relatorio', 'Relatórios')">Gerar</a></li>
                 </ul>
-                <a onclick="toggleSubmenu('m-adm')"><i class="bi bi-gear me-2"></i> Adm</a>
+                <a onclick="toggleSubmenu('m-adm')"><i class="bi bi-gear me-2"></i> Administração</a>
                 <ul class="submenu" id="m-adm">
                     <li><a onclick="loadModule('adm', 'usuarios', 'Usuários')">Usuários</a></li>
                     <li><a onclick="loadModule('adm', 'crm', 'CRM')">CRM</a></li>
                 </ul>
+                <a onclick="toggleSubmenu('m-config')"><i class="bi bi-sliders me-2"></i> Configuração</a>
+                <ul class="submenu" id="m-config">
+                    <li><a onclick="loadModule('configuracao', 'ia', 'IA')">IA</a></li>
+                    <li><a onclick="loadModule('configuracao', 'seguranca', 'Segurança')">Segurança</a></li>
+                </ul>
             </nav>
+            <div class="mt-auto border-top">
+                <a onclick="openModal('sairModal')" class="text-danger"><i class="bi bi-box-arrow-left me-2"></i> Sair</a>
+            </div>
         </aside>
         <div class="flex-grow-1 d-flex flex-column">
             <header class="top-header">
@@ -55,10 +63,6 @@
     </div>
 
     <div class="modal fade" id="sairModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-box-arrow-right fs-1 text-danger"></i><h5 class="mt-3">Deseja sair do sistema?</h5></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger px-4" onclick="location.reload()">Confirmar Sair</button></div></div></div></div>
-    
-    <div class="modal fade" id="atencaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-exclamation-triangle fs-1 text-warning"></i><h5 class="mt-3">Atenção!</h5><p>Ação requer confirmação.</p></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-warning px-4" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
-    
-    <div class="modal fade" id="exclusaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-trash fs-1 text-danger"></i><h5 class="mt-3">Confirmar Exclusão?</h5></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger px-4">Remover</button></div></div></div></div>
 
     <script src="assets/js/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
