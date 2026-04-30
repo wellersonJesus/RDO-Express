@@ -18,7 +18,6 @@ function toggleSidebar() {
 }
 function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
 
-// Motor de Interpolação de Botões (CRUD)
 function renderActions(id) {
     return `
         <div class="d-flex justify-content-center">
