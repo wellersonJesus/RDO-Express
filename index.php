@@ -11,7 +11,7 @@
     <div id="admin-panel">
         <aside class="sidebar">
             <div class="py-4 text-center border-bottom">
-                <h4 class="fw-bold"><span class="text-danger">RDO</span> <span class="text-dark">EXPRESS</span></h4>
+                <h4 class="fw-bold m-0"><span class="text-danger">RDO</span> <span class="text-dark">EXPRESS</span></h4>
             </div>
             <nav class="pt-3">
                 <a onclick="toggleSubmenu('m-painel')"><i class="bi bi-grid me-2"></i> Painel</a>
@@ -37,11 +37,6 @@
                     <li><a onclick="loadModule('adm', 'usuarios', 'Usuários')">Usuários</a></li>
                     <li><a onclick="loadModule('adm', 'crm', 'CRM')">CRM</a></li>
                 </ul>
-                <a onclick="toggleSubmenu('m-seg')"><i class="bi bi-shield-lock me-2"></i> Segurança</a>
-                <ul class="submenu" id="m-seg">
-                    <li><a onclick="loadModule('automacao', 'configuracoes', 'Configurações')">Configurações</a></li>
-                    <li><a onclick="loadModule('automacao', 'ia', 'IA')">IA</a></li>
-                </ul>
             </nav>
         </aside>
         <div class="flex-grow-1 d-flex flex-column">
@@ -52,18 +47,18 @@
                         <div class="fw-bold text-dark lh-1">Gestor</div>
                         <small class="text-danger fw-bold">Master</small>
                     </div>
-                    <div class="user-avatar-btn" onclick="openModal('sairModal')"><i class="bi bi-person-circle"></i></div>
+                    <div class="user-avatar-btn" onclick="openModal('sairModal')"><i class="bi bi-person-fill"></i></div>
                 </div>
             </header>
             <main class="main-content" id="router-view"><h5>Bem-vindo, Gestor.</h5></main>
         </div>
     </div>
 
-    <div class="modal fade" id="sairModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-box-arrow-right fs-1 text-danger"></i><h5 class="mt-3">Deseja sair do sistema?</h5></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger" onclick="location.reload()">Confirmar Sair</button></div></div></div></div>
+    <div class="modal fade" id="sairModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-box-arrow-right fs-1 text-danger"></i><h5 class="mt-3">Deseja sair do sistema?</h5></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger px-4" onclick="location.reload()">Confirmar Sair</button></div></div></div></div>
     
-    <div class="modal fade" id="atencaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-exclamation-triangle fs-1 text-warning"></i><h5 class="mt-3">Atenção!</h5><p>Ação requer confirmação.</p></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-warning" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
+    <div class="modal fade" id="atencaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-exclamation-triangle fs-1 text-warning"></i><h5 class="mt-3">Atenção!</h5><p>Ação requer confirmação.</p></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-warning px-4" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
     
-    <div class="modal fade" id="exclusaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><i class="bi bi-trash fs-1 text-danger"></i><h5 class="mt-3">Confirmar Exclusão?</h5></div><div class="modal-footer justify-content-center border-0"><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger">Remover</button></div></div></div></div>
+    <div class="modal fade" id="exclusaoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-5"><i class="bi bi-trash fs-1 text-danger"></i><h5 class="mt-3">Confirmar Exclusão?</h5></div><div class="modal-footer justify-content-center border-0 pb-4"><button class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger px-4">Remover</button></div></div></div></div>
 
     <script src="assets/js/app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

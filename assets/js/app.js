@@ -5,7 +5,7 @@ async function loadModule(folder, file, title) {
     try {
         const response = await fetch(route);
         view.innerHTML = await response.text();
-    } catch (e) { view.innerHTML = `<div class="text-danger">Erro de carregamento.</div>`; }
+    } catch (e) { view.innerHTML = `<div class="text-danger p-3 border">Erro ao carregar módulo.</div>`; }
 }
 function toggleSubmenu(id) {
     document.querySelectorAll('.submenu').forEach(m => { if (m.id !== id) m.classList.remove('show'); });
