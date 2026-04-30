@@ -5,23 +5,21 @@ body { background-color: var(--bg-white); font-family: 'Poppins', sans-serif; co
 
 /* Layout Base */
 #admin-panel { display: flex; min-height: 100vh; }
-.sidebar { width: var(--sidebar-width); background: var(--bg-white); border-right: 1px solid #e9ecef; transition: 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
-@media (max-width: 768px) { .sidebar { position: fixed; left: -260px; height: 100%; box-shadow: 5px 0 15px rgba(0,0,0,0.1); } .sidebar.show { left: 0; } .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; display: none; } .overlay.show { display: block; } }
+.sidebar { width: var(--sidebar-width); background: var(--bg-white); border-right: 1px solid #e9ecef; transition: 0.3s ease; height: 100vh; position: fixed; display: flex; flex-direction: column; }
+.main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); padding: 20px; transition: 0.3s; }
 
-/* Sidebar & Submenu Íntimo com Efeito de Linha */
-.sidebar nav { flex-grow: 1; overflow-y: auto; }
-.sidebar a { text-decoration: none; padding: 14px 20px; display: block; color: var(--text-black); font-weight: 600; cursor: pointer; transition: 0.2s; }
+/* Header Elegante */
+.top-header { background: #fff; border-bottom: 1px solid #e9ecef; height: 80px; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; }
+.user-avatar-btn { width: 45px; height: 45px; border-radius: 50%; background: #f8f9fa; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+/* Sidebar */
+.sidebar a { text-decoration: none; padding: 14px 20px; display: block; color: var(--text-black); font-weight: 600; cursor: pointer; }
 .sidebar a:hover { color: var(--accent-red); background: #f8f9fa; }
 .sidebar a i { color: var(--accent-red); margin-right: 12px; }
 
+/* Submenu "Íntimo" com Efeito Linha */
 .submenu { display: none; list-style: none; padding-left: 45px; }
 .submenu.show { display: block; }
 .submenu a { color: #6c757d; padding: 8px 0; font-size: 0.85rem; font-weight: 300; position: relative; display: inline-block; }
-.submenu a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background-color: var(--accent-red); transform: scaleX(0); transition: transform 0.4s ease-out; transform-origin: left; }
+.submenu a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background-color: var(--accent-red); transform: scaleX(0); transition: 0.4s; }
 .submenu a:hover::after { transform: scaleX(1); }
-
-/* Header Elegante (Restaurado) */
-.top-header { background: var(--bg-white); border-bottom: 1px solid #e9ecef; height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
-.btn-toggle-menu { color: var(--accent-red); padding: 0; border: none; background: transparent; font-size: 2rem; }
-.user-avatar-btn { width: 45px; height: 45px; border-radius: 50%; background: #f8f9fa; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
-.user-avatar-btn:hover { background: var(--accent-red); color: #fff; }
