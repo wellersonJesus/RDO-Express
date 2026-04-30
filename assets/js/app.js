@@ -17,3 +17,14 @@ function toggleSidebar() {
     document.querySelector('.overlay').classList.toggle('show');
 }
 function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+
+// Motor de Interpolação de Botões (CRUD)
+function renderActions(id) {
+    return `
+        <div class="d-flex justify-content-center">
+            <button class="btn-action btn-view" title="Visualizar" onclick="console.log('Ver ${id}')"><i class="bi bi-eye"></i></button>
+            <button class="btn-action btn-edit" title="Editar" onclick="console.log('Editar ${id}')"><i class="bi bi-pencil"></i></button>
+            <button class="btn-action btn-delete" title="Remover" onclick="openModal('exclusaoModal')"><i class="bi bi-trash"></i></button>
+        </div>
+    `;
+}
