@@ -2,12 +2,14 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDO Express | SRE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/global.css">
 </head>
 <body>
+    <div class="overlay" onclick="toggleSidebar()"></div>
     <div id="admin-panel">
         <aside class="sidebar">
             <div class="py-4 text-center border-bottom">
@@ -43,15 +45,16 @@
                     <li><a onclick="loadModule('configuracao', 'seguranca', 'Segurança')">Segurança</a></li>
                 </ul>
             </nav>
-            <div class="mt-auto border-top">
-                <a onclick="openModal('sairModal')" class="text-danger"><i class="bi bi-box-arrow-left me-2"></i> Sair</a>
-            </div>
+            <div class="mt-auto border-top"><a onclick="openModal('sairModal')" class="text-danger"><i class="bi bi-box-arrow-left me-2"></i> Sair</a></div>
         </aside>
         <div class="flex-grow-1 d-flex flex-column">
             <header class="top-header">
-                <h5 class="fw-bold text-dark m-0" id="dynamic-title">Dashboard</h5>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-toggle-menu d-md-none me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+                    <h5 class="fw-bold text-dark m-0" id="dynamic-title">Dashboard</h5>
+                </div>
                 <div class="d-flex align-items-center gap-3">
-                    <div class="text-end">
+                    <div class="text-end d-none d-sm-block">
                         <div class="fw-bold text-dark lh-1">Gestor</div>
                         <small class="text-danger fw-bold">Master</small>
                     </div>
