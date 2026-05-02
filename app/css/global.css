@@ -8,23 +8,32 @@ body { background: var(--gray-light); margin: 0; font-family: 'Segoe UI', sans-s
 
 /* Sidebar */
 .sidebar { width: 280px; height: 100vh; position: fixed; background: #fff; z-index: 1050; display: flex; flex-direction: column; border-right: 1px solid #eee; }
-.menu-group { margin: 15px 0; }
-.menu-title { padding: 5px 25px; font-size: 0.70rem; color: #999; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.menu-group { margin: 18px 0; }
 
-/* Ícones Vermelhos */
-.nav-link i { color: var(--primary); margin-right: 10px; }
+/* Módulos (Título) - Maior, Bold e Preto */
+.menu-title { 
+    padding: 10px 25px; font-size: 0.95rem; color: var(--black); 
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 700; 
+    display: flex; align-items: center; 
+}
+.menu-title i { margin-right: 12px; color: var(--primary); font-size: 1.25rem; }
 
-/* Submenu Efeito Linha */
-.submenu { display: none; padding-left: 45px; }
+/* Submódulos - Vertical, Preto e Maior */
+.submenu { display: none; padding-left: 55px; }
 .menu-group:hover .submenu { display: block; }
-.submenu .nav-link { padding: 8px 0; font-size: 0.85rem; color: #555 !important; position: relative; display: inline-block; }
-.submenu .nav-link::after { content: ''; position: absolute; bottom: 4px; left: 0; width: 0; height: 1px; background: var(--primary); transition: width 0.4s ease; }
-.submenu .nav-link:hover::after { width: 100%; }
+.submenu .nav-link { 
+    display: block; padding: 10px 0; font-size: 0.9rem; color: var(--black) !important; 
+    font-weight: 500; position: relative; transition: color 0.3s;
+}
+
+/* Efeito Linha Crescente */
+.submenu .nav-link::after { content: ''; position: absolute; bottom: 5px; left: 0; width: 0; height: 1.5px; background: var(--primary); transition: width 0.4s ease; }
+.submenu .nav-link:hover::after { width: 40px; }
 
 /* Botão Sair Sidebar */
 .btn-circular-hover { 
-    border: 1px solid #ddd; border-radius: 50px; padding: 8px 20px; transition: all 0.3s; 
-    background: transparent; cursor: pointer; color: #555; width: 100%;
+    border: 1px solid #ddd; border-radius: 50px; padding: 10px 25px; transition: all 0.3s; 
+    background: transparent; cursor: pointer; color: #555; width: 100%; font-weight: 600;
 }
 .btn-circular-hover:hover { border-color: var(--primary); background: var(--soft-red); color: var(--primary); }
 
