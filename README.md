@@ -7,6 +7,7 @@ Interface de gestão de entregas.
 ```bash
 #run projeto
 php -S localhost:8000
+php -S localhost:8000 -t client
 ```
 
 --- 
