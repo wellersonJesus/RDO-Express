@@ -4,56 +4,40 @@
 <body>
     <aside class="sidebar" id="sidebar">
         <div class="logo-text p-4"><span class="text-danger fw-bold">RDO</span><span class="text-dark fw-bold">Express</span></div>
-        
-        <div class="menu-group">
-            <div class="menu-title">Painel</div>
+        <div class="menu-group"><div class="menu-title">Painel</div>
             <div class="submenu">
                 <a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')">Dashboard</a>
                 <a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')">Chat</a>
             </div>
         </div>
-
-        <div class="menu-group">
-            <div class="menu-title">Gestão</div>
+        <div class="menu-group"><div class="menu-title">Gestão</div>
             <div class="submenu">
                 <a class="nav-link" href="#" onclick="loadPage('usuarios', 'Usuários', 'Controle de acesso')">Usuários</a>
                 <a class="nav-link" href="#" onclick="loadPage('clientes', 'Clientes', 'Gerenciamento de base')">Clientes</a>
                 <a class="nav-link" href="#" onclick="loadPage('coleta', 'Coleta', 'Monitoramento')">Coleta</a>
             </div>
         </div>
-
-        <div class="menu-group">
-            <div class="menu-title">Administração</div>
+        <div class="menu-group"><div class="menu-title">Administração</div>
             <div class="submenu">
                 <a class="nav-link" href="#" onclick="loadPage('financeiro', 'Financeiro', 'Controle de fluxo')">Financeiro</a>
                 <a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatório', 'Dados operacionais')">Relatório</a>
             </div>
         </div>
-
-        <div class="menu-group">
-            <div class="menu-title">Automatização</div>
+        <div class="menu-group"><div class="menu-title">Automatização</div>
             <div class="submenu">
                 <a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')">Segurança</a>
                 <a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')">Logs</a>
             </div>
         </div>
-
         <div class="p-4 mt-auto">
-            <button class="btn-circular-hover w-100" onclick="logout()">Sair do painel</button>
+            <button class="btn-circular-hover" onclick="logout()">Sair do painel</button>
         </div>
     </aside>
-
     <main class="main-content">
         <header class="top-navbar">
-            <div>
-                <h1 id="page-title">Dashboard</h1>
-                <p id="page-subtitle">Visão geral operacional</p>
-            </div>
+            <div><h1 id="page-title">Dashboard</h1><p id="page-subtitle">Visão geral operacional</p></div>
             <div class="d-flex align-items-center gap-3">
-                <div class="user-info">
-                    <div class="user-name">Wellerson</div>
-                    <div class="user-role">Software Architect</div>
-                </div>
+                <div class="text-end"><div class="fw-bold small">Wellerson</div><div class="text-muted small">SRE Architect</div></div>
                 <button class="profile-btn" onclick="logout()"><i class="bi bi-power"></i></button>
             </div>
         </header>

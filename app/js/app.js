@@ -6,4 +6,16 @@ function loadPage(page, title, subtitle) {
         .then(html => document.getElementById('router-view').innerHTML = html)
         .catch(() => document.getElementById('router-view').innerHTML = "<h3>Página em construção</h3>");
 }
-function logout() { window.location.href = 'login.html'; }
+
+// O logout agora sempre passa pelo modal
+function logout() {
+    UI.confirm(
+        "Encerrar Sessão", 
+        "Deseja realmente sair do sistema?", 
+        () => {
+            window.location.href = 'login.html';
+        }
+    );
+}
+
+loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
