@@ -1,34 +1,9 @@
-function loadPage(page, title) {
-    const container = document.getElementById('router-view');
+function loadPage(page, title, subtitle) {
     document.getElementById('page-title').innerText = title;
-    if(window.innerWidth <= 768) toggleSidebar();
-    
-    // Simula carregamento
+    document.getElementById('page-subtitle').innerText = subtitle;
     fetch(`pages/${page}.html`)
         .then(res => res.text())
-        .then(html => container.innerHTML = html)
-        .catch(() => container.innerHTML = "<h3>Módulo em desenvolvimento</h3>");
+        .then(html => document.getElementById('router-view').innerHTML = html)
+        .catch(() => document.getElementById('router-view').innerHTML = "<h3>Página em construção</h3>");
 }
-
-function toggleSubmenu(el) {
-    const submenu = el.nextElementSibling;
-    if (submenu.classList.contains('submenu')) {
-        submenu.style.display = (submenu.style.display === 'block') ? 'none' : 'block';
-    }
-}
-
-function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
-    document.querySelector('.overlay').classList.toggle('active');
-}
-
-function logout() {
-    UI.confirm(
-        "Encerrar Sessão", 
-        "Deseja realmente sair do sistema?", 
-        () => window.location.href = 'login.html'
-    );
-}
-
-// Init
-loadPage('dashboard', 'Dashboard');
+function logout() { window.location.href = 'login.html'; }
