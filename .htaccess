@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /
+
+# Não redirecionar arquivos físicos existentes (CSS, JS)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirecionar tudo para index.php
+RewriteRule ^(.*)$ index.php [QSA,L]

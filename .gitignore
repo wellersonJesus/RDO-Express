@@ -2,3 +2,4 @@
 .php_history
 public/assets/js/config.js
 .env
+app/js/config.js
