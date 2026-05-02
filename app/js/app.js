@@ -1,17 +1,19 @@
-async function loadPage(page, title) {
+function loadPage(page, title) {
     const container = document.getElementById('router-view');
-    const pageTitle = document.getElementById('page-title');
-    
-    // Atualiza título e fecha menu mobile
-    pageTitle.innerText = title;
+    document.getElementById('page-title').innerText = title;
     if(window.innerWidth <= 768) toggleSidebar();
     
-    try {
-        const response = await fetch(`pages/${page}.html`);
-        const html = await response.text();
-        container.innerHTML = html;
-    } catch (e) {
-        container.innerHTML = "<h3>Erro ao carregar página.</h3>";
+    // Simula carregamento
+    fetch(`pages/${page}.html`)
+        .then(res => res.text())
+        .then(html => container.innerHTML = html)
+        .catch(() => container.innerHTML = "<h3>Módulo em desenvolvimento</h3>");
+}
+
+function toggleSubmenu(el) {
+    const submenu = el.nextElementSibling;
+    if (submenu.classList.contains('submenu')) {
+        submenu.style.display = (submenu.style.display === 'block') ? 'none' : 'block';
     }
 }
 
@@ -22,13 +24,11 @@ function toggleSidebar() {
 
 function logout() {
     UI.confirm(
-        "Sair do Painel", 
-        "Deseja realmente encerrar a sessão?", 
-        () => {
-            window.location.href = 'login.html';
-        }
+        "Encerrar Sessão", 
+        "Deseja realmente sair do sistema?", 
+        () => window.location.href = 'login.html'
     );
 }
 
-// Inicializa
+// Init
 loadPage('dashboard', 'Dashboard');

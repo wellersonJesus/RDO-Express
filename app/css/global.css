@@ -1,31 +1,41 @@
 :root {
-    --primary: #dc3545; /* Vermelho RDO */
-    --black: #000000;   /* Preto Express */
+    --primary: #dc3545;
+    --black: #000000;
+    --gray-light: #f8f9fa;
     --sidebar-width: 280px;
+    --font-clean: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-body { background: #f8f9fa; margin: 0; font-family: 'Segoe UI', sans-serif; }
 
-/* Sidebar */
+body { background: var(--gray-light); margin: 0; font-family: var(--font-clean); }
+
+/* Layout Sidebar */
 .sidebar { 
     width: var(--sidebar-width); height: 100vh; position: fixed; top: 0; left: 0;
-    background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.05); z-index: 1050;
-    transition: all 0.3s ease;
+    background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.05); z-index: 1050;
+    display: flex; flex-direction: column; transition: all 0.3s ease;
 }
+.sidebar-footer { padding: 20px; margin-top: auto; border-top: 1px solid #eee; }
+
+/* Tipografia e Menus */
+.logo-text { font-weight: 800; font-size: 1.6rem; padding: 20px; }
+.nav-link { color: var(--black) !important; font-weight: 400; padding: 12px 20px; position: relative; transition: 0.3s; }
+.nav-link i { color: var(--primary); margin-right: 10px; }
+.nav-link::after { content: ''; position: absolute; bottom: 8px; left: 20px; width: 0; height: 2px; background: var(--primary); transition: width 0.4s ease; }
+.nav-link:hover::after { width: 40px; }
+
+/* Submenu */
+.submenu { display: none; padding-left: 40px; background: #fff; }
+.submenu .nav-link { font-size: 0.9rem; padding: 8px 20px; }
+
+/* Header Premium */
+.main-content { margin-left: var(--sidebar-width); }
+.top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+#page-title { font-weight: 700; font-size: 1.4rem; color: var(--black); }
+.burger-btn { font-size: 1.8rem; border: none; background: none; }
+.profile-circle { width: 45px; height: 45px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; }
+
 @media (max-width: 768px) {
     .sidebar { left: -100%; }
     .sidebar.active { left: 0; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1040; display: none; }
-    .overlay.active { display: block; }
+    .main-content { margin-left: 0; }
 }
-
-/* Header */
-.main-content { margin-left: var(--sidebar-width); transition: all 0.3s; }
-@media (max-width: 768px) { .main-content { margin-left: 0; } }
-
-.top-navbar { background: #fff; border-bottom: 1px solid #dee2e6; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-
-/* Botões e Tipografia */
-.logo-text { font-weight: 800; font-size: 1.5rem; }
-.text-rdo { color: var(--primary); }
-.text-express { color: var(--black); }
-.profile-circle { width: 40px; height: 40px; background: var(--black); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
