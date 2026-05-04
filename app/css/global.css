@@ -1,39 +1,52 @@
-:root { --primary: #dc3545; --sidebar-w: 280px; --sidebar-c: 70px; }
+:root { --primary: #dc3545; --sidebar-w: 280px; --sidebar-c: 80px; }
 body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
 
 /* Sidebar */
 .sidebar { width: var(--sidebar-w); height: 100vh; position: fixed; background: #fff; z-index: 1050; border-right: 1px solid #eee; transition: all 0.3s ease; display: flex; flex-direction: column; }
 .sidebar.collapsed { width: var(--sidebar-c); }
 
-/* Logo Toggle */
+/* Logo Box & Icon Relampago */
+.logo-icon-circle { 
+    display: none; width: 40px; height: 40px; background: var(--primary); 
+    border-radius: 50%; align-items: center; justify-content: center; 
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
 .sidebar.collapsed .logo-full { display: none; }
-.sidebar.collapsed .logo-icon { display: block; font-size: 1.2rem; }
-.logo-icon { display: none; }
+.sidebar.collapsed .logo-icon-circle { display: flex; }
 
-/* Menu */
+/* Menu Groups */
 .menu-title { padding: 15px 25px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; }
-.menu-title i { margin-right: 12px; color: var(--primary); }
+.menu-title i { margin-right: 12px; color: var(--primary); font-size: 1.1rem; }
 .sidebar.collapsed .menu-text { display: none; }
-.sidebar.collapsed .menu-title { justify-content: center; }
+.sidebar.collapsed .menu-title { justify-content: center; padding: 15px 0; }
 .sidebar.collapsed .menu-title i { margin-right: 0; }
 
-/* Submenu Hover */
-.nav-link { display: block; padding: 8px 0; font-size: 0.85rem; color: #000; text-decoration: none; position: relative; }
-.nav-link::after { content: ''; position: absolute; bottom: 2px; left: 0; width: 0; height: 2px; background: var(--primary); transition: width 0.3s ease; }
-.nav-link:hover::after { width: 30px; }
+/* Submenu */
+.nav-link { display: block; padding: 8px 0; font-size: 0.85rem; color: #333; text-decoration: none; position: relative; }
+.nav-link:hover { color: var(--primary); }
 .submenu { display: none; padding-left: 55px; }
 .menu-group:hover .submenu { display: block; }
 .sidebar.collapsed .menu-group:hover .submenu { display: none; }
 
-/* Botão Sair Premium */
-.btn-circular-hover { width: 90%; border: 1px solid var(--primary); color: var(--primary); background: transparent; border-radius: 50px; padding: 8px; transition: 0.3s; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* Botão Sair Circular */
+.btn-circular-hover { 
+    width: 100%; border: 1px solid var(--primary); color: var(--primary); 
+    background: transparent; border-radius: 50px; padding: 10px; 
+    transition: 0.3s; display: flex; align-items: center; 
+    justify-content: center; gap: 10px; overflow: hidden;
+}
 .btn-circular-hover:hover { background: var(--primary); color: #fff; }
+
+.sidebar.collapsed .btn-circular-hover { 
+    width: 45px; height: 45px; border-radius: 50%; padding: 0; margin: 0 auto;
+}
+.sidebar.collapsed .btn-circular-hover .menu-text { display: none; }
 
 /* Main & Header */
 .main-content { margin-left: var(--sidebar-w); transition: all 0.3s ease; }
 .sidebar.collapsed + .main-content { margin-left: var(--sidebar-c); }
 .top-navbar { height: 70px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
-.profile-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--primary); color: var(--primary); background: rgba(220,53,69,0.1); cursor: pointer; }
+.profile-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--primary); color: var(--primary); background: rgba(220,53,69,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
 @media (max-width: 768px) {
     .sidebar { left: -280px; }
