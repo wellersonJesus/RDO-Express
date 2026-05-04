@@ -15,6 +15,7 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 .sidebar.collapsed .logo-icon-circle { display: flex !important; }
 
 /* Menu Groups */
+.menu-group { position: relative; }
 .menu-title { padding: 15px 25px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; }
 .menu-title i { margin-right: 12px; color: var(--primary); font-size: 1.1rem; }
 .sidebar.collapsed .menu-text { display: none; }
@@ -22,15 +23,31 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 .sidebar.collapsed .menu-title i { margin-right: 0; }
 
 /* Submenu e Efeito de Linha */
-.nav-link { display: block; padding: 8px 0; font-size: 0.85rem; color: #333; text-decoration: none; position: relative; width: fit-content; }
+.nav-link { display: block; padding: 8px 0; font-size: 0.85rem; color: #333; text-decoration: none; position: relative; width: fit-content; transition: 0.3s; }
 .nav-link::after { 
     content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; 
     background: var(--primary); transition: width 0.3s ease; 
 }
 .nav-link:hover::after { width: 100%; }
 .submenu { display: none; padding-left: 55px; }
-.menu-group:hover .submenu { display: block; }
-.sidebar.collapsed .menu-group:hover .submenu { display: none; }
+
+/* Pop-out do Submenu (Sidebar Colapsado) */
+.sidebar.collapsed .menu-group:hover .submenu { 
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 200px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-left: none;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+    padding: 10px 20px;
+    z-index: 9999;
+}
+/* Força exibição do texto no pop-out */
+.sidebar.collapsed .menu-group:hover .submenu .menu-text { display: block !important; color: #333; }
+.sidebar.collapsed .submenu .nav-link { width: 100%; padding: 5px 0; }
 
 /* Botão Sair */
 .btn-circular-hover { 
@@ -43,7 +60,7 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 .sidebar.collapsed .btn-circular-hover { width: 45px; height: 45px; border-radius: 50%; padding: 0; margin: 0 auto; }
 .sidebar.collapsed .btn-circular-hover .menu-text { display: none; }
 
-/* Main & Header - Sem logos extras */
+/* Main & Header */
 .main-content { margin-left: var(--sidebar-w); transition: all 0.3s ease; }
 .sidebar.collapsed + .main-content { margin-left: var(--sidebar-c); }
 .top-navbar { height: 70px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
