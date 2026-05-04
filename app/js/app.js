@@ -7,14 +7,23 @@ function loadPage(page, title, subtitle) {
         .catch(() => document.getElementById('router-view').innerHTML = "<h3>Página em construção</h3>");
 }
 
-// O logout agora sempre passa pelo modal
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('toggle-btn');
+
+toggleBtn.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('active'); // Mobile Slide
+    } else {
+        sidebar.classList.toggle('collapsed'); // Desktop Collapse
+    }
+});
+
 function logout() {
+    // Uso do seu componente UI.confirm aprovado
     UI.confirm(
         "Encerrar Sessão", 
         "Deseja realmente sair do sistema?", 
-        () => {
-            window.location.href = 'login.html';
-        }
+        () => { window.location.href = 'login.html'; }
     );
 }
 
