@@ -28,7 +28,7 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 .nav-link:hover::after { width: 100%; }
 .submenu { display: none; padding-left: 55px; }
 
-/* Exibir submenu via Hover ou Clique (via classe .active no JS) */
+/* Exibir submenu via Hover ou Clique */
 .menu-group:hover .submenu, .menu-group.active .submenu { display: block; }
 
 /* Desktop: Flyout do Submenu quando colapsado */
@@ -54,9 +54,12 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 .top-navbar { height: 70px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
 .profile-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--primary); color: var(--primary); background: rgba(220,53,69,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-/* Mobile Overlay */
+/* Mobile Overlay Refinado */
 @media (max-width: 768px) {
-    .sidebar { left: -280px; box-shadow: none; }
+    /* Esconde completamente a sidebar off-canvas */
+    .sidebar { left: -100%; box-shadow: none; width: var(--sidebar-w); }
+    /* Quando ativo, desliza para a tela (z-index garante sobreposição) */
     .sidebar.active { left: 0; box-shadow: 10px 0 25px rgba(0,0,0,0.3); }
+    /* Remove margem da página no mobile para ocupar tudo */
     .main-content { margin-left: 0 !important; }
 }
