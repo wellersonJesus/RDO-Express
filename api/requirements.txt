@@ -1,5 +1,5 @@
 fastapi
 uvicorn
-pydantic
-sqlalchemy
+requests
+bcrypt
 python-dotenv

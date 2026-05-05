@@ -5,8 +5,8 @@ Interface de gestão de entregas.
 # RUN
 
 ```bash
-#run projeto
-php -S localhost:8000 index.php
+#run api projeto
+npm start
 
 #Sempre que alterar o .env, rode o comando:
 ./build_config.sh

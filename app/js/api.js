@@ -1,19 +1,19 @@
 const API = {
+    // Aponta para a porta 3000 (local ou Render)
+    BASE_URL: window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000' 
+        : 'https://rdo-express-backend.onrender.com',
+
     call: async (action, data = {}) => {
-        const payload = { action: action, ...data };
         try {
-            console.log("Enviando para API:", action, payload);
-            const response = await fetch(CONFIG.API_URL, {
+            const response = await fetch(`${API.BASE_URL}/api/usuarios`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...data })
             });
-            
-            const result = await response.json();
-            console.log("Resposta recebida da API:", result);
-            return result;
+            return await response.json();
         } catch (error) {
-            console.error("Erro CRÍTICO na chamada da API:", error);
+            console.error("Erro na comunicação:", error);
             return { status: 'error', message: error.message };
         }
     }
