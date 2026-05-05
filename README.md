@@ -5,7 +5,7 @@ Interface de gestão de entregas.
 # RUN
 
 ```bash
-#run api projeto
+#Run api/app projeto
 npm start
 
 #Sempre que alterar o .env, rode o comando:

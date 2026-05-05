@@ -1,5 +1,14 @@
-.env
+# Historico
 .php_history
+
+# Config
 public/assets/js/config.js
+
+# Credenciais
 .env
+
+# Config
 app/js/config.js
+
+#Apps Script
+api/data/modeloAppsScritp.js
