@@ -72,3 +72,27 @@ body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow-x: hid
 /* Header e Main Content */
 .top-navbar { height: 70px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
 .profile-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--primary); color: var(--primary); background: rgba(220,53,69,0.1); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* Refinamento do Logo: Double Circle */
+.logo-icon-container { display: none; }
+.sidebar.collapsed .logo-icon-container { display: flex !important; align-items: center; justify-content: center; }
+
+.outer-circle { 
+    width: 48px; 
+    height: 48px; 
+    border: 2px solid rgba(220, 53, 69, 0.2); 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.inner-circle { 
+    width: 32px; 
+    height: 32px; 
+    background: var(--primary); 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.inner-circle i { font-size: 1rem; }

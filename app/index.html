@@ -14,7 +14,13 @@
                 <i class="bi bi-lightning-charge-fill text-danger fs-4"></i>
                 <span class="text-danger fw-bold">RDO <span class="text-dark">Express</span></span>
             </div>
-            <div class="logo-icon-circle"><i class="bi bi-lightning-charge-fill text-white"></i></div>
+            <div class="logo-icon-container">
+                <div class="outer-circle">
+                    <div class="inner-circle">
+                        <i class="bi bi-lightning-charge-fill text-white"></i>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="menu-group"><div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div><div class="submenu"><a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')"><span class="menu-text">Dashboard</span></a><a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')"><span class="menu-text">Chat</span></a></div></div>
@@ -28,17 +34,32 @@
     </aside>
 
     <main class="main-content">
-        <header class="top-navbar">
-            <div class="d-flex align-items-center"><button id="toggle-btn" class="btn btn-light me-3"><i class="bi bi-list"></i></button><div><h1 id="page-title" class="h6 mb-0">Dashboard</h1><p id="page-subtitle" class="small text-muted mb-0">Visão geral operacional</p></div></div>
-            <div class="d-flex align-items-center gap-3"><div class="text-end d-none d-md-block"><div class="fw-bold small">Wellerson</div><div class="text-muted small">SRE Architect</div></div><button class="profile-btn" onclick="logout()"><i class="bi bi-person-circle"></i></button></div>
-        </header>
-        <div class="p-4" id="router-view"></div>
-    </main>
+    <header class="top-navbar">
+        <div class="d-flex align-items-center">
+            <button id="toggle-btn" class="btn btn-light me-3"><i class="bi bi-list"></i></button>
+            <div>
+                <h1 id="page-title" class="h6 mb-0">Dashboard</h1>
+                <p id="page-subtitle" class="small text-muted mb-0">Visão geral operacional</p>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end d-none d-md-block">
+                <div class="fw-bold small">Wellerson</div>
+                <div class="text-muted small">SRE Architect</div>
+            </div>
+            <button class="profile-btn border-0 bg-transparent p-0" onclick="logout()">
+                <div class="inner-circle" style="width: 40px; height: 40px;">
+                    <i class="bi bi-person-fill text-white"></i>
+                </div>
+            </button>
+        </div>
+    </header>
+    <div class="p-4" id="router-view"></div>
+</main>
 
     <script>
-        window.CONFIG = {
-            API_URL: "https://script.google.com/macros/s/AKfycbwPHzJWsZjy0Y8Jd_XPxNV2IoZawkwNy_Suuum86Xf8KB1VNjXmPcwswobatLSUIiJU/exec"
-        };
+        window.CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbwPHzJWsZjy0Y8Jd_XPxNV2IoZawkwNy_Suuum86Xf8KB1VNjXmPcwswobatLSUIiJU/exec" };
     </script>
     <script src="js/api.js"></script>
     <script src="js/ui.js"></script>
