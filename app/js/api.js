@@ -3,12 +3,21 @@ const API = {
 
     call: async (action, data = {}) => {
         try {
-            // A chave é injetada no backend, aqui enviamos apenas os dados da ação
+            const token = localStorage.getItem('rdo_auth') || '';
             const response = await fetch(`${API.BASE_URL}/api/proxy`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': token 
+                },
                 body: JSON.stringify({ action, ...data })
             });
+            
+            if (response.status === 401) {
+                window.location.href = 'login.html';
+                return { status: 'error', message: 'Sessão expirada' };
+            }
+            
             return await response.json();
         } catch (error) {
             console.error("Erro API:", error);

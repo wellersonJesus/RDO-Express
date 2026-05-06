@@ -9,7 +9,7 @@ Interface de gestão de entregas.
 npm start
 
 #Gerar senha hash
-node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("SUA_SENHA_AQUI", 10));'
+node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("master@123", 10));'
 ```
 --- 
 

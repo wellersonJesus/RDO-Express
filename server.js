@@ -9,18 +9,59 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('app'));
 
+// Middleware de Autenticação Simples
+const authMiddleware = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader === 'true') {
+        next();
+    } else {
+        res.status(401).json({ success: false, message: "Não autorizado" });
+    }
+};
+
+const callSheetAPI = async (action, data = {}) => {
+    return await axios.post(process.env.API_URL, {
+        ...data,
+        action: action,
+        apiKey: process.env.SECRET_KEY
+    });
+};
+
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    // Validação usando bcrypt e variáveis de ambiente
     const isMatch = await bcrypt.compare(password, process.env.MASTER_PASS_HASH);
     
-    if (username === process.env.MASTER_LOGIN && isMatch) {
-        return res.json({ success: true });
+    if (username !== process.env.MASTER_LOGIN || !isMatch) {
+        return res.status(401).json({ success: false, message: "Credenciais inválidas" });
     }
-    res.status(401).json({ success: false });
+
+    try {
+        const sheetData = await callSheetAPI('getusuarios');
+        const users = sheetData.data || [];
+        
+        let userExists = users.find(u => u.username === process.env.MASTER_LOGIN);
+
+        if (!userExists) {
+            await callSheetAPI('addusuarios', {
+                id: Date.now(),
+                username: process.env.MASTER_LOGIN,
+                cargo: process.env.MASTER_CARGO,
+                password: process.env.MASTER_PASS_HASH
+            });
+            userExists = { username: process.env.MASTER_LOGIN, cargo: process.env.MASTER_CARGO };
+        }
+
+        return res.json({ 
+            success: true, 
+            user: { name: userExists.username, role: userExists.cargo } 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Erro interno" });
+    }
 });
 
-app.post('/api/proxy', async (req, res) => {
+// Aplicando o middleware aqui para proteger o proxy
+app.post('/api/proxy', authMiddleware, async (req, res) => {
     try {
         const response = await axios.post(process.env.API_URL, { 
             ...req.body, 
@@ -32,4 +73,4 @@ app.post('/api/proxy', async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log('💤 Server UP port 3000'));
+app.listen(3000, () => console.log('💤 Server ON port 3000'));
