@@ -15,7 +15,28 @@
                 </tr>
             </thead>
             <tbody id="user-table-body">
-                </tbody>
+                <tr><td colspan="5" class="text-center py-4">Carregando...</td></tr>
+            </tbody>
         </table>
     </div>
 </div>
+<script>
+    async function carregarUsuarios() {
+        const tbody = document.getElementById('user-table-body');
+        const data = await API.call('getusuarios');
+        if (!data || data.status === 'error') {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = data.map(u => `
+            <tr>
+                <td class="ps-4">${u.id || '-'}</td>
+                <td>${u.nome || '-'}</td>
+                <td>${u.login || '-'}</td>
+                <td>${u.cargo || '-'}</td>
+                <td class="text-end pe-4">Ações</td>
+            </tr>
+        `).join('');
+    }
+    carregarUsuarios();
+</script>

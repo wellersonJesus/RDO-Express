@@ -1,4 +1,51 @@
-<div class="card p-4 shadow-sm border-0">
-    <h3>Página: CLIENTES</h3>
-    <p class="text-muted">Esta funcionalidade está em desenvolvimento.</p>
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-danger fw-bold">Gerenciamento de Clientes</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-muted">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>Nome</th>
+                    <th>Responsável</th>
+                    <th>CNPJ</th>
+                    <th>Contato</th>
+                    <th>Email</th>
+                    <th>Endereço</th>
+                    <th>Bairro</th>
+                </tr>
+            </thead>
+            <tbody id="clientes-body">
+                <tr><td colspan="8" class="text-center py-4">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+<script>
+    async function carregarClientes() {
+        const tbody = document.getElementById('clientes-body');
+        const data = await API.call('getclientes');
+        if (!data || data.status === 'error') {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center py-4">Erro: ${data?.message || 'Falha'}</td></tr>`;
+            return;
+        }
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum registro.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td class="ps-4">${c.id || '-'}</td>
+                <td>${c.nome || '-'}</td>
+                <td>${c.responsavel || '-'}</td>
+                <td>${c.cnpj || '-'}</td>
+                <td>${c.contato || '-'}</td>
+                <td>${c.email || '-'}</td>
+                <td>${c.endereco || '-'}</td>
+                <td>${c.bairro || '-'}</td>
+            </tr>
+        `).join('');
+    }
+    carregarClientes();
+</script>
