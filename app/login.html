@@ -56,7 +56,7 @@
             <div class="mt-5 text-center"><small class="text-muted">v2.6.0 | © 2026 High-End SRE</small></div>
         </div>
     </div>
-    <script src="js/config.js"></script>
+
     <script>
         function togglePass() {
             const p = document.getElementById('pass');
@@ -64,24 +64,33 @@
             if (p.type === 'password') { p.type = 'text'; icon.classList.replace('bi-eye', 'bi-eye-slash'); }
             else { p.type = 'password'; icon.classList.replace('bi-eye-slash', 'bi-eye'); }
         }
-        document.getElementById('loginForm').onsubmit = function(e) {
+
+        document.getElementById('loginForm').onsubmit = async function(e) {
             e.preventDefault();
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
             const msg = document.getElementById('login-msg');
             
-            // Verifica se o CONFIG carregou corretamente
-            if(typeof CONFIG === 'undefined') { msg.innerText = "Erro: Configuração não carregada."; return; }
-            
-            // Lógica de validação baseada no config.js gerado
-            if(u === CONFIG.MASTER_USER && p === CONFIG.MASTER_PASS) { 
-                localStorage.setItem('rdo_auth', 'true'); 
-                window.location.href = '/index.html'; 
-            } else { 
-                msg.innerText = "Usuário ou senha incorretos!"; 
-                const card = document.querySelector('.login-card'); 
-                card.style.animation = 'none'; 
-                setTimeout(() => card.style.animation = 'shake 0.4s', 10); 
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('rdo_auth', 'true');
+                    window.location.href = '/index.html';
+                } else {
+                    throw new Error("Credenciais inválidas");
+                }
+            } catch (error) {
+                msg.innerText = "Usuário ou senha incorretos!";
+                const card = document.querySelector('.login-card');
+                card.style.animation = 'none';
+                setTimeout(() => card.style.animation = 'shake 0.4s', 10);
             }
         };
     </script>
