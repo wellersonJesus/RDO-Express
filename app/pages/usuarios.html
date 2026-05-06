@@ -1,11 +1,39 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3"><h5>Gerenciamento de Usuários</h5></div>
-    <div class="table-responsive"><table class="table"><tbody id="usuarios-body"><tr><td>Carregando...</td></tr></tbody></table></div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Login</th>
+                    <th>Senha</th>
+                    <th>Cargo</th>
+                </tr>
+            </thead>
+            <tbody id="usuarios-body">
+                <tr><td colspan="5">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 <script>
     window.carregarUsuarios = async () => {
         const tbody = document.getElementById('usuarios-body');
         const data = await API.call('getusuarios');
-        tbody.innerHTML = data.map(u => `<tr><td>${u.id}</td><td>${u.nome}</td></tr>`).join('');
+        
+        if (!data || data.status === 'error') {
+            return tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+        }
+        
+        tbody.innerHTML = data.map(u => `
+            <tr>
+                <td>${u.id || '-'}</td>
+                <td>${u.nome || '-'}</td>
+                <td>${u.login || '-'}</td>
+                <td>${u.senha || '-'}</td>
+                <td>${u.cargo || '-'}</td>
+            </tr>
+        `).join('');
     };
 </script>

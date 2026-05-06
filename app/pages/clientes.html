@@ -1,12 +1,45 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3"><h5>Gerenciamento de Clientes</h5></div>
-    <div class="table-responsive"><table class="table"><tbody id="clientes-body"><tr><td>Carregando...</td></tr></tbody></table></div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Responsável</th>
+                    <th>CNPJ</th>
+                    <th>Contato</th>
+                    <th>Email</th>
+                    <th>Endereço</th>
+                    <th>Bairro</th>
+                </tr>
+            </thead>
+            <tbody id="clientes-body">
+                <tr><td colspan="8">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 <script>
     window.carregarClientes = async () => {
         const tbody = document.getElementById('clientes-body');
         const data = await API.call('getclientes');
-        if (data.status === 'error') return tbody.innerHTML = `<tr><td>Erro: ${data.message}</td></tr>`;
-        tbody.innerHTML = data.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td></tr>`).join('');
+        
+        if (!data || data.status === 'error') {
+            return tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+        }
+        
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td>${c.id || '-'}</td>
+                <td>${c.nome || '-'}</td>
+                <td>${c.responsavel || '-'}</td>
+                <td>${c.cnpj || '-'}</td>
+                <td>${c.contato || '-'}</td>
+                <td>${c.email || '-'}</td>
+                <td>${c.endereco || '-'}</td>
+                <td>${c.bairro || '-'}</td>
+            </tr>
+        `).join('');
     };
 </script>

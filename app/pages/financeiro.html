@@ -1,11 +1,23 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3"><h5>Relatório Financeiro</h5></div>
     <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr><th>ID</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Data</th></tr>
+        <table class="table table-hover table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Data Pgt</th>
+                    <th>ID Pedido</th>
+                    <th>Tipo</th>
+                    <th>Entrada</th>
+                    <th>Saída Colab</th>
+                    <th>Taxa ADM</th>
+                    <th>Origem</th>
+                    <th>Status</th>
+                </tr>
             </thead>
-            <tbody id="financeiro-body"><tr><td colspan="5">Carregando...</td></tr></tbody>
+            <tbody id="financeiro-body">
+                <tr><td colspan="9">Carregando...</td></tr>
+            </tbody>
         </table>
     </div>
 </div>
@@ -13,7 +25,23 @@
     window.carregarFinanceiro = async () => {
         const tbody = document.getElementById('financeiro-body');
         const data = await API.call('getfinanceiro');
-        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="5">Erro: ${data.message}</td></tr>`;
-        tbody.innerHTML = data.map(f => `<tr><td>${f.id}</td><td>${f.descricao}</td><td>${f.tipo}</td><td>${f.valor}</td><td>${f.data}</td></tr>`).join('');
+        
+        if (!data || data.status === 'error') {
+            return tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Erro: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+        }
+        
+        tbody.innerHTML = data.map(f => `
+            <tr>
+                <td>${f.id || '-'}</td>
+                <td>${f.data_pagamento || '-'}</td>
+                <td>${f.id_pedido || '-'}</td>
+                <td>${f.tipo_pgt || '-'}</td>
+                <td>${f.valor_entrada || '0'}</td>
+                <td>${f.valor_saida_colab || '0'}</td>
+                <td>${f.taxa_adm || '0'}</td>
+                <td>${f.caixa_origem || '-'}</td>
+                <td>${f.status_pgt || '-'}</td>
+            </tr>
+        `).join('');
     };
 </script>

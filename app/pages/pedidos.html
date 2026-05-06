@@ -1,11 +1,26 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3"><h5>Gerenciamento de Pedidos</h5></div>
     <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr><th>ID</th><th>Cliente</th><th>Data</th><th>Status</th><th>Valor</th></tr>
+        <table class="table table-hover table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Data Solicit.</th>
+                    <th>ID Cliente</th>
+                    <th>ID Colab.</th>
+                    <th>Origem</th>
+                    <th>Destino</th>
+                    <th>Solicitação</th>
+                    <th>Tipo Serv.</th>
+                    <th>Endereço</th>
+                    <th>Tarifa</th>
+                    <th>Total</th>
+                    <th>Repasse</th>
+                </tr>
             </thead>
-            <tbody id="pedidos-body"><tr><td colspan="5">Carregando...</td></tr></tbody>
+            <tbody id="pedidos-body">
+                <tr><td colspan="12">Carregando...</td></tr>
+            </tbody>
         </table>
     </div>
 </div>
@@ -13,7 +28,26 @@
     window.carregarPedidos = async () => {
         const tbody = document.getElementById('pedidos-body');
         const data = await API.call('getpedidos');
-        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="5">Erro: ${data.message}</td></tr>`;
-        tbody.innerHTML = data.map(p => `<tr><td>${p.id}</td><td>${p.cliente}</td><td>${p.data}</td><td>${p.status}</td><td>${p.valor}</td></tr>`).join('');
+        
+        if (!data || data.status === 'error') {
+            return tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Erro ao carregar: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+        }
+        
+        tbody.innerHTML = data.map(p => `
+            <tr>
+                <td>${p.id || '-'}</td>
+                <td>${p.data_solicitacao || '-'}</td>
+                <td>${p.id_cliente || '-'}</td>
+                <td>${p.id_colaborador || '-'}</td>
+                <td>${p.origem || '-'}</td>
+                <td>${p.destino || '-'}</td>
+                <td>${p.solicitacao || '-'}</td>
+                <td>${p.tipo_servico || '-'}</td>
+                <td>${p.endereco || '-'}</td>
+                <td>${p.tipo_tarifa || '-'}</td>
+                <td>${p.valor_total_pedido || '0'}</td>
+                <td>${p.valor_repasse_colaborador || '0'}</td>
+            </tr>
+        `).join('');
     };
 </script>
