@@ -1,20 +1,33 @@
-const UI = {
-    // Modal de Confirmação (Remover, Sair, etc)
-    confirm: (title, message, onConfirm) => {
-        const modalHtml = `
-            <div class="modal fade show" style="display:block; background:rgba(0,0,0,0.5);">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content p-3">
-                        <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle"></i> ${title}</h5>
-                        <p class="mt-3">${message}</p>
-                        <div class="d-flex gap-2 justify-content-end">
-                            <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
-                            <button class="btn btn-rdo btn-rdo-danger" id="confirmAction">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        document.getElementById('confirmAction').onclick = () => { onConfirm(); document.querySelector('.modal').remove(); };
+document.addEventListener('DOMContentLoaded', () => {
+    // Toggle Sidebar
+    const toggleBtn = document.getElementById('toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        });
     }
+
+    // Toggle Submenus
+    document.querySelectorAll('.menu-title').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const group = this.parentElement;
+            document.querySelectorAll('.menu-group').forEach(g => {
+                if (g !== group) g.classList.remove('active');
+            });
+            group.classList.toggle('active');
+        });
+    });
+});
+
+window.logout = () => {
+    if(confirm("Deseja realmente sair?")) window.location.href = 'login.html';
 };
