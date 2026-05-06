@@ -23,10 +23,51 @@
             </div>
         </div>
         
-        <div class="menu-group"><div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div><div class="submenu"><a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')"><span class="menu-text">Dashboard</span></a><a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')"><span class="menu-text">Chat</span></a></div></div>
-        <div class="menu-group"><div class="menu-title"><i class="bi bi-people"></i> <span class="menu-text">Gestão</span></div><div class="submenu"><a class="nav-link" href="#" onclick="loadPage('usuarios', 'Usuários', 'Controle de acesso')"><span class="menu-text">Usuários</span></a><a class="nav-link" href="#" onclick="loadPage('clientes', 'Clientes', 'Gerenciamento de base')"><span class="menu-text">Clientes</span></a><a class="nav-link" href="#" onclick="loadPage('coleta', 'Coleta', 'Monitoramento')"><span class="menu-text">Coleta</span></a></div></div>
-        <div class="menu-group"><div class="menu-title"><i class="bi bi-bank"></i> <span class="menu-text">Administração</span></div><div class="submenu"><a class="nav-link" href="#" onclick="loadPage('financeiro', 'Financeiro', 'Controle de fluxo')"><span class="menu-text">Financeiro</span></a><a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatório', 'Dados operacionais')"><span class="menu-text">Relatório</span></a></div></div>
-        <div class="menu-group"><div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span class="menu-text">Automatização</span></div><div class="submenu"><a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')"><span class="menu-text">Segurança</span></a><a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')"><span class="menu-text">Logs</span></a></div></div>
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')"><span class="menu-text">Dashboard</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')"><span class="menu-text">Chat</span></a>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-people"></i> <span class="menu-text">Gestão</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('pedidos', 'Pedidos', 'Gestão de solicitações')"><span class="menu-text">Pedidos</span></a>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-bank"></i> <span class="menu-text">Administração</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('usuarios', 'Usuários', 'Controle de acesso')"><span class="menu-text">Usuarios</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('colaboradores', 'Colaboradores', 'Gestão de equipe')"><span class="menu-text">Colaboradores</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('clientes', 'Clientes', 'Gerenciamento de base')"><span class="menu-text">Clientes</span></a>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-file-earmark-bar-graph"></i> <span class="menu-text">Relatorio</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatórios', 'Dados operacionais')"><span class="menu-text">Relatórios</span></a>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-currency-dollar"></i> <span class="menu-text">Financeiro</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('financeiro', 'Financeiro', 'Controle de fluxo')"><span class="menu-text">Financeiro</span></a>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span class="menu-text">Automatização</span></div>
+            <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')"><span class="menu-text">Segurança</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')"><span class="menu-text">Logs</span></a>
+            </div>
+        </div>
         
         <div class="mt-auto p-3 text-center">
             <button class="btn-circular-hover" onclick="abrirModalLogout()" title="Sair"><i class="bi bi-box-arrow-left"></i> <span class="menu-text">Sair</span></button>
