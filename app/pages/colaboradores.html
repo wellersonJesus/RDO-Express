@@ -1,11 +1,19 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3"><h5>Gerenciamento de Colaboradores</h5></div>
-    <div class="table-responsive"><table class="table"><tbody id="colaboradores-body"><tr><td>Carregando...</td></tr></tbody></table></div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>ID</th><th>Nome</th><th>Cargo</th><th>Status</th></tr>
+            </thead>
+            <tbody id="colaboradores-body"><tr><td colspan="4">Carregando...</td></tr></tbody>
+        </table>
+    </div>
 </div>
 <script>
     window.carregarColaboradores = async () => {
         const tbody = document.getElementById('colaboradores-body');
         const data = await API.call('getcolaboradores');
-        tbody.innerHTML = data.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td></tr>`).join('');
+        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="4">Erro: ${data.message}</td></tr>`;
+        tbody.innerHTML = data.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td><td>${c.cargo}</td><td>${c.status}</td></tr>`).join('');
     };
 </script>

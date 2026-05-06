@@ -1,0 +1,19 @@
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3"><h5>Gerenciamento de Pedidos</h5></div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>ID</th><th>Cliente</th><th>Data</th><th>Status</th><th>Valor</th></tr>
+            </thead>
+            <tbody id="pedidos-body"><tr><td colspan="5">Carregando...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+<script>
+    window.carregarPedidos = async () => {
+        const tbody = document.getElementById('pedidos-body');
+        const data = await API.call('getpedidos');
+        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="5">Erro: ${data.message}</td></tr>`;
+        tbody.innerHTML = data.map(p => `<tr><td>${p.id}</td><td>${p.cliente}</td><td>${p.data}</td><td>${p.status}</td><td>${p.valor}</td></tr>`).join('');
+    };
+</script>

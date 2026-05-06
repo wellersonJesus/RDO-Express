@@ -1,4 +1,19 @@
-<div class="card p-4 shadow-sm border-0">
-    <h3>Página: FINANCEIRO</h3>
-    <p class="text-muted">Esta funcionalidade está em desenvolvimento.</p>
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3"><h5>Relatório Financeiro</h5></div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>ID</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Data</th></tr>
+            </thead>
+            <tbody id="financeiro-body"><tr><td colspan="5">Carregando...</td></tr></tbody>
+        </table>
+    </div>
 </div>
+<script>
+    window.carregarFinanceiro = async () => {
+        const tbody = document.getElementById('financeiro-body');
+        const data = await API.call('getfinanceiro');
+        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="5">Erro: ${data.message}</td></tr>`;
+        tbody.innerHTML = data.map(f => `<tr><td>${f.id}</td><td>${f.descricao}</td><td>${f.tipo}</td><td>${f.valor}</td><td>${f.data}</td></tr>`).join('');
+    };
+</script>

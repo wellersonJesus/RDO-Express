@@ -7,36 +7,24 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'app')));
 
-// Rota de comunicação com o Google
-app.post('/api/usuarios', async (req, res) => {
-    // Definimos a URL aqui para garantir que ela exista
+// Rota genérica para qualquer requisição de dados
+app.post('/api/proxy', async (req, res) => {
     const url = process.env.API_URL;
     const key = process.env.SECRET_KEY;
 
-    if (!url) {
-        return res.status(500).json({ status: "error", message: "Configuração API_URL ausente no .env" });
-    }
+    if (!url) return res.status(500).json({ status: "error", message: "API_URL não configurada no .env" });
 
     try {
-        // Envia os dados para o Google
         const response = await axios.post(url, { ...req.body, apiKey: key });
         res.json(response.data);
     } catch (error) {
-        // Log do erro real no terminal
-        if (error.response) {
-            console.error("❌ Erro do Google:", error.response.status, error.response.data);
-        } else {
-            console.error("❌ Erro de Conexão:", error.message);
-        }
-        res.status(500).json({ status: "error", message: "Falha na comunicação com o servidor Google." });
+        console.error("❌ Erro no Proxy:", error.message);
+        res.status(500).json({ status: "error", message: "Falha na comunicação: " + error.message });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`💤 RUN API & App in port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Servidor RDO-Express rodando na porta ${PORT}`));
