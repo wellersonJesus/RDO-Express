@@ -1,41 +1,103 @@
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3"><h5>Gerenciamento de Pedidos</h5></div>
-    <div class="table-responsive">
-        <table class="table table-hover table-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-secondary"><i class="bi bi-people text-danger me-2"></i>Gerenciamento de Pedidos</h5>
+        <button class="btn btn-secondary btn-sm"><i class="bi bi-plus-lg"></i> Novo Pedido</button>
+    </div>
+    <div class="table-responsive px-3">
+        <table class="table table-hover table-sm" style="font-size: 0.75rem;">
             <thead class="table-light">
                 <tr>
                     <th>Data</th>
                     <th>Cliente</th>
-                    <th>Origem</th>
                     <th>Destino</th>
-                    <th>Solicitação</th>
                     <th>Tipo</th>
+                    <th class="text-center">Ações</th>
                 </tr>
             </thead>
             <tbody id="pedidos-body">
-                <tr><td colspan="6">Carregando...</td></tr>
+                <tr><td colspan="5" class="text-center">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <div id="pagination-info" class="small text-muted" style="font-size: 0.75rem;"></div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination-controls"></ul>
+        </nav>
+    </div>
 </div>
+
 <script>
+    let allData = [];
+    let clientesMap = {};
+    let currentPage = 1;
+    const limit = 20;
+
     window.carregarPedidos = async () => {
-        const tbody = document.getElementById('pedidos-body');
-        const data = await API.call('getpedidos');
+        const [pedidos, clientes] = await Promise.all([
+            API.call('getpedidos'),
+            API.call('getclientes')
+        ]);
         
-        if (!data || data.status === 'error') {
-            return tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ao carregar: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+        if (!pedidos || pedidos.status === 'error') {
+            return document.getElementById('pedidos-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>`;
+        }
+
+        if (Array.isArray(clientes)) {
+            clientes.forEach(c => {
+                clientesMap[c.id] = c.username || "Sem nome";
+            });
         }
         
-        tbody.innerHTML = data.map(p => `
+        allData = pedidos;
+        renderizarPagina(1);
+    };
+
+    function renderizarPagina(page) {
+        currentPage = page;
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        const paginatedItems = allData.slice(start, end);
+        const tbody = document.getElementById('pedidos-body');
+
+        tbody.innerHTML = paginatedItems.map(p => `
             <tr>
                 <td>${p.data_solicitacao ? p.data_solicitacao.substring(0, 10) : '-'}</td>
-                <td>${p.id_cliente || '-'}</td>
-                <td>${p.origem || '-'}</td>
+                <td>${clientesMap[p.id_cliente] || 'ID: ' + (p.id_cliente || '-')}</td>
                 <td>${p.destino || '-'}</td>
-                <td>${p.solicitacao || '-'}</td>
                 <td>${p.tipo_servico || '-'}</td>
+                <td class="text-center">
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 border-0" title="Visualizar"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 border-0" title="Editar"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 border-0" title="Remover"><i class="bi bi-trash"></i></button>
+                </td>
             </tr>
         `).join('');
-    };
+
+        renderPaginationControls();
+    }
+
+    function renderPaginationControls() {
+        const totalPages = Math.ceil(allData.length / limit);
+        const controls = document.getElementById('pagination-controls');
+        
+        let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage - 1})">Anterior</a>
+        </li>`;
+        
+        for(let i = 1; i <= totalPages; i++) {
+            if(i === currentPage || i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="event.preventDefault(); renderizarPagina(${i})">${i}</a>
+                </li>`;
+            }
+        }
+        
+        html += `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage + 1})">Próximo</a>
+        </li>`;
+        
+        controls.innerHTML = html;
+        document.getElementById('pagination-info').innerText = `Total: ${allData.length} registros`;
+    }
 </script>
