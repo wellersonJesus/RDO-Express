@@ -8,8 +8,8 @@ Interface de gestão de entregas.
 #Run api/app projeto
 npm start
 
-#Sempre que alterar o .env, rode o comando:
-./build_config.sh
+#Gerar senha hash
+node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("SUA_SENHA_AQUI", 10));'
 ```
 --- 
 
