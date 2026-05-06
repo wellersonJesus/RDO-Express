@@ -1,12 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Toggle Sidebar
     const toggleBtn = document.getElementById('toggle-btn');
     const sidebar = document.getElementById('sidebar');
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             if (window.innerWidth <= 768) {
                 sidebar.classList.toggle('active');
             } else {
@@ -15,9 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Toggle Submenus
     document.querySelectorAll('.menu-title').forEach(item => {
         item.addEventListener('click', function(e) {
+            if (sidebar.classList.contains('collapsed') && window.innerWidth > 768) return;
             e.preventDefault();
             const group = this.parentElement;
             document.querySelectorAll('.menu-group').forEach(g => {
@@ -28,6 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-window.logout = () => {
-    if(confirm("Deseja realmente sair?")) window.location.href = 'login.html';
+// Função centralizada para abrir o modal
+window.abrirModalLogout = () => {
+    const modalElement = document.getElementById('logoutModal');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
 };
