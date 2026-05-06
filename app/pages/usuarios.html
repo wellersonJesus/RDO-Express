@@ -1,42 +1,11 @@
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 text-danger fw-bold"><i class="bi bi-people-fill me-2"></i>Gerenciamento de Usuários</h5>
-        <button class="btn btn-danger btn-sm px-3" onclick="UI.novoUsuario()"><i class="bi bi-plus-lg me-1"></i>Novo Usuário</button>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light text-uppercase small text-muted">
-                <tr>
-                    <th class="ps-4">ID</th>
-                    <th>Nome</th>
-                    <th>Login</th>
-                    <th>Cargo</th>
-                    <th class="text-end pe-4">Ações</th>
-                </tr>
-            </thead>
-            <tbody id="user-table-body">
-                <tr><td colspan="5" class="text-center py-4">Carregando...</td></tr>
-            </tbody>
-        </table>
-    </div>
+    <div class="card-header bg-white py-3"><h5>Gerenciamento de Usuários</h5></div>
+    <div class="table-responsive"><table class="table"><tbody id="usuarios-body"><tr><td>Carregando...</td></tr></tbody></table></div>
 </div>
 <script>
-    async function carregarUsuarios() {
-        const tbody = document.getElementById('user-table-body');
+    window.carregarUsuarios = async () => {
+        const tbody = document.getElementById('usuarios-body');
         const data = await API.call('getusuarios');
-        if (!data || data.status === 'error') {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = data.map(u => `
-            <tr>
-                <td class="ps-4">${u.id || '-'}</td>
-                <td>${u.nome || '-'}</td>
-                <td>${u.login || '-'}</td>
-                <td>${u.cargo || '-'}</td>
-                <td class="text-end pe-4">Ações</td>
-            </tr>
-        `).join('');
-    }
-    carregarUsuarios();
+        tbody.innerHTML = data.map(u => `<tr><td>${u.id}</td><td>${u.nome}</td></tr>`).join('');
+    };
 </script>

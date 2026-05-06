@@ -5,42 +5,35 @@ window.loadPage = function(page, title, subtitle) {
     fetch(`pages/${page}.html`)
         .then(res => res.text())
         .then(html => {
-            document.getElementById('router-view').innerHTML = html;
-            if(page === 'usuarios') {
-                console.log("Página de usuários carregada, iniciando busca de dados...");
-                carregarUsuarios();
+            const container = document.getElementById('router-view');
+            container.innerHTML = html;
+            
+            // --- CORREÇÃO: Executar scripts injetados ---
+            const scripts = container.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+                try {
+                    // Executa o conteúdo do script no escopo global (window)
+                    new Function(scripts[i].innerText)();
+                } catch (err) {
+                    console.error("Erro ao executar script da página:", err);
+                }
+            }
+            // -------------------------------------------
+            
+            // Converte 'clientes' para 'carregarClientes'
+            const funcName = 'carregar' + page.charAt(0).toUpperCase() + page.slice(1);
+            
+            if (typeof window[funcName] === 'function') {
+                console.log(`Executando: ${funcName}...`);
+                window[funcName]();
+            } else {
+                console.warn(`Função ${funcName} não encontrada após carregamento.`);
             }
         })
         .catch(err => {
             console.error(err);
             document.getElementById('router-view').innerHTML = "<h3>Página em construção</h3>";
         });
-};
-
-window.carregarUsuarios = async function() {
-    const tbody = document.getElementById('user-table-body');
-    if (!tbody) {
-        console.error("ERRO: Elemento #user-table-body não encontrado no HTML!");
-        return;
-    }
-    
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Buscando no banco...</td></tr>';
-    
-    const users = await API.call('getUsuarios');
-    
-    if (!users || users.status === 'error') {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Erro: ${users?.message || 'Resposta vazia'}</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = users.map(u => `
-        <tr>
-            <td>${u.id}</td>
-            <td>${u.nome}</td>
-            <td>${u.login}</td>
-            <td><span class="badge bg-light text-dark border">${u.cargo}</span></td>
-        </tr>
-    `).join('');
 };
 
 // --- SIDEBAR E UI ---
@@ -51,4 +44,4 @@ if (toggleBtn) {
         window.innerWidth <= 768 ? sidebar.classList.toggle('active') : sidebar.classList.toggle('collapsed');
     });
 }
-window.logout = function() { UI.confirm("Encerrar Sessão", "Sair?", () => { window.location.href = 'login.html'; }); };
+window.logout = function() { window.location.href = 'login.html'; };

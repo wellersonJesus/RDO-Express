@@ -1,0 +1,11 @@
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3"><h5>Gerenciamento de Colaboradores</h5></div>
+    <div class="table-responsive"><table class="table"><tbody id="colaboradores-body"><tr><td>Carregando...</td></tr></tbody></table></div>
+</div>
+<script>
+    window.carregarColaboradores = async () => {
+        const tbody = document.getElementById('colaboradores-body');
+        const data = await API.call('getcolaboradores');
+        tbody.innerHTML = data.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td></tr>`).join('');
+    };
+</script>
