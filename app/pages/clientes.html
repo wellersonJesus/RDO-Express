@@ -1,45 +1,105 @@
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3"><h5>Gerenciamento de Clientes</h5></div>
-    <div class="table-responsive">
-        <table class="table table-hover table-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
+            <i class="bi bi-buildings text-danger me-3 fs-3"></i>Gerenciamento de Clientes
+        </h4>
+        <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Cliente</button>
+    </div>
+    <div class="table-responsive px-3">
+        <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Responsável</th>
-                    <th>CNPJ</th>
-                    <th>Contato</th>
-                    <th>Email</th>
-                    <th>Endereço</th>
-                    <th>Bairro</th>
+                    <th class="py-3 text-secondary">Cliente</th>
+                    <th class="py-3 text-secondary">Responsável</th>
+                    <th class="py-3 text-secondary">Contato</th>
+                    <th class="text-center py-3 text-secondary">Ações</th>
                 </tr>
             </thead>
             <tbody id="clientes-body">
-                <tr><td colspan="8">Carregando...</td></tr>
+                <tr><td colspan="4" class="text-center py-4 text-muted">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
+    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+        <div id="pagination-info-cli" class="small text-muted" style="font-size: 0.75rem;"></div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination-controls-cli"></ul>
+        </nav>
+    </div>
 </div>
+
 <script>
+    let clientesData = [];
+    let currentCliPage = 1;
+    const cliLimit = 20;
+
     window.carregarClientes = async () => {
-        const tbody = document.getElementById('clientes-body');
         const data = await API.call('getclientes');
         
         if (!data || data.status === 'error') {
-            return tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+            return document.getElementById('clientes-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>`;
         }
-        
-        tbody.innerHTML = data.map(c => `
+
+        clientesData = Array.isArray(data) ? data : [];
+        renderizarPaginaCli(1);
+    };
+
+    function renderizarPaginaCli(page) {
+        currentCliPage = page;
+        const start = (page - 1) * cliLimit;
+        const end = start + cliLimit;
+        const paginatedItems = clientesData.slice(start, end);
+        const tbody = document.getElementById('clientes-body');
+
+        if (paginatedItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = paginatedItems.map(c => `
             <tr>
-                <td>${c.id || '-'}</td>
-                <td>${c.nome || '-'}</td>
-                <td>${c.responsavel || '-'}</td>
-                <td>${c.cnpj || '-'}</td>
-                <td>${c.contato || '-'}</td>
-                <td>${c.email || '-'}</td>
-                <td>${c.endereco || '-'}</td>
-                <td>${c.bairro || '-'}</td>
+                <td class="fw-bold text-dark">${c.username || '-'}</td>
+                <td class="text-secondary">${c.responsavel || '-'}</td>
+                <td>
+                    <span class="d-flex align-items-center">
+                        <i class="bi bi-whatsapp text-success me-2"></i>
+                        ${c.contato || '-'}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
+                </td>
             </tr>
         `).join('');
-    };
+
+        renderPaginationControlsCli();
+    }
+
+    function renderPaginationControlsCli() {
+        const totalPages = Math.ceil(clientesData.length / cliLimit);
+        const controls = document.getElementById('pagination-controls-cli');
+        
+        let html = `<li class="page-item ${currentCliPage === 1 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaCli(${currentCliPage - 1})">Anterior</a>
+        </li>`;
+        
+        for(let i = 1; i <= totalPages; i++) {
+            if(i === currentCliPage || i === 1 || i === totalPages || (i >= currentCliPage - 2 && i <= currentCliPage + 2)) {
+                html += `<li class="page-item ${i === currentCliPage ? 'active' : ''}">
+                    <a class="page-link border-0 rounded-circle mx-1 ${i === currentCliPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPaginaCli(${i})">${i}</a>
+                </li>`;
+            }
+        }
+        
+        html += `<li class="page-item ${currentCliPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaCli(${currentCliPage + 1})">Próximo</a>
+        </li>`;
+        
+        controls.innerHTML = html;
+        document.getElementById('pagination-info-cli').innerText = `Total: ${clientesData.length} clientes`;
+    }
+
+    carregarClientes();
 </script>

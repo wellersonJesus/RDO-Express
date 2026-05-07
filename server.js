@@ -9,7 +9,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('app'));
 
-// Middleware de Autenticação Simples
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     if (authHeader === 'true') {
@@ -29,38 +28,40 @@ const callSheetAPI = async (action, data = {}) => {
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    const isMatch = await bcrypt.compare(password, process.env.MASTER_PASS_HASH);
     
-    if (username !== process.env.MASTER_LOGIN || !isMatch) {
-        return res.status(401).json({ success: false, message: "Credenciais inválidas" });
-    }
-
     try {
-        const sheetData = await callSheetAPI('getusuarios');
-        const users = sheetData.data || [];
+        // Busca todos os usuários da planilha para validar
+        const sheetResponse = await callSheetAPI('getusuarios');
+        const users = sheetResponse.data || [];
         
-        let userExists = users.find(u => u.username === process.env.MASTER_LOGIN);
+        // Procura o usuário exato pelo username vindo da planilha
+        const userFound = users.find(u => u.username === username);
 
-        if (!userExists) {
-            await callSheetAPI('addusuarios', {
-                id: Date.now(),
-                username: process.env.MASTER_LOGIN,
-                cargo: process.env.MASTER_CARGO,
-                password: process.env.MASTER_PASS_HASH
-            });
-            userExists = { username: process.env.MASTER_LOGIN, cargo: process.env.MASTER_CARGO };
+        if (!userFound) {
+            return res.status(401).json({ success: false, message: "Usuário não encontrado" });
         }
 
+        // Valida a senha (comparando com o hash da planilha ou senha mestra)
+        const isMatch = await bcrypt.compare(password, userFound.password || process.env.MASTER_PASS_HASH);
+        
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Senha incorreta" });
+        }
+
+        // Retorna exatamente os campos 'username' e 'cargo' da planilha
         return res.json({ 
             success: true, 
-            user: { name: userExists.username, role: userExists.cargo } 
+            user: { 
+                name: userFound.username, 
+                role: userFound.cargo 
+            } 
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Erro interno" });
+        console.error("Erro no login:", error);
+        res.status(500).json({ success: false, message: "Erro interno no servidor" });
     }
 });
 
-// Aplicando o middleware aqui para proteger o proxy
 app.post('/api/proxy', authMiddleware, async (req, res) => {
     try {
         const response = await axios.post(process.env.API_URL, { 
@@ -73,4 +74,4 @@ app.post('/api/proxy', authMiddleware, async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log('💤 Server ON port 3000'));
+app.listen(3000, () => console.log('🚀 RDO-Express rodando na porta 3000'));

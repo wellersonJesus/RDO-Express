@@ -1,19 +1,111 @@
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3"><h5>Gerenciamento de Colaboradores</h5></div>
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr><th>ID</th><th>Nome</th><th>Cargo</th><th>Status</th></tr>
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
+            <i class="bi bi-person-vcard text-danger me-3 fs-3"></i>Gerenciamento de Colaboradores
+        </h4>
+        <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Colaborador</button>
+    </div>
+    <div class="table-responsive px-3">
+        <table class="table table-hover align-middle" style="font-size: 0.85rem;">
+            <thead class="table-light">
+                <tr>
+                    <th class="py-3 text-secondary">Nome</th>
+                    <th class="py-3 text-secondary">Cargo</th>
+                    <th class="py-3 text-secondary">Status</th>
+                    <th class="text-center py-3 text-secondary">Ações</th>
+                </tr>
             </thead>
-            <tbody id="colaboradores-body"><tr><td colspan="4">Carregando...</td></tr></tbody>
+            <tbody id="colaboradores-body">
+                <tr><td colspan="4" class="text-center py-4 text-muted">Carregando...</td></tr>
+            </tbody>
         </table>
     </div>
+    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+        <div id="pagination-info-colab" class="small text-muted" style="font-size: 0.75rem;"></div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination-controls-colab"></ul>
+        </nav>
+    </div>
 </div>
+
 <script>
+    let colabData = [];
+    let currentColabPage = 1;
+    const colabLimit = 20;
+
     window.carregarColaboradores = async () => {
-        const tbody = document.getElementById('colaboradores-body');
         const data = await API.call('getcolaboradores');
-        if (data.status === 'error') return tbody.innerHTML = `<tr><td colspan="4">Erro: ${data.message}</td></tr>`;
-        tbody.innerHTML = data.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td><td>${c.cargo}</td><td>${c.status}</td></tr>`).join('');
+        
+        if (!data || data.status === 'error') {
+            return document.getElementById('colaboradores-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>`;
+        }
+
+        colabData = Array.isArray(data) ? data : [];
+        renderizarPaginaColab(1);
     };
+
+    function renderizarPaginaColab(page) {
+        currentColabPage = page;
+        const start = (page - 1) * colabLimit;
+        const end = start + colabLimit;
+        const paginatedItems = colabData.slice(start, end);
+        const tbody = document.getElementById('colaboradores-body');
+
+        if (paginatedItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = paginatedItems.map(c => {
+            // Mapeamento conforme solicitado: username e status_contrato
+            const nomeExibicao = c.username || '-';
+            const statusExibicao = c.status_contrato || '-';
+            
+            // Badge dinâmico baseado no status do contrato
+            const statusClass = statusExibicao.toLowerCase().includes('ativo') 
+                ? 'bg-success-subtle text-success' 
+                : 'bg-light text-secondary';
+            
+            return `
+                <tr>
+                    <td class="fw-medium text-dark">${nomeExibicao}</td>
+                    <td><span class="text-secondary border-bottom border-secondary border-opacity-25">${c.cargo || '-'}</span></td>
+                    <td><span class="badge ${statusClass} border-0 px-2">${statusExibicao}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        renderPaginationControlsColab();
+    }
+
+    function renderPaginationControlsColab() {
+        const totalPages = Math.ceil(colabData.length / colabLimit);
+        const controls = document.getElementById('pagination-controls-colab');
+        
+        let html = `<li class="page-item ${currentColabPage === 1 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaColab(${currentColabPage - 1})">Anterior</a>
+        </li>`;
+        
+        for(let i = 1; i <= totalPages; i++) {
+            if(i === currentColabPage || i === 1 || i === totalPages || (i >= currentColabPage - 2 && i <= currentColabPage + 2)) {
+                html += `<li class="page-item ${i === currentColabPage ? 'active' : ''}">
+                    <a class="page-link border-0 rounded-circle mx-1 ${i === currentColabPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPaginaColab(${i})">${i}</a>
+                </li>`;
+            }
+        }
+        
+        html += `<li class="page-item ${currentColabPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaColab(${currentColabPage + 1})">Próximo</a>
+        </li>`;
+        
+        controls.innerHTML = html;
+        document.getElementById('pagination-info-colab').innerText = `Total: ${colabData.length} colaboradores`;
+    }
+
+    carregarColaboradores();
 </script>

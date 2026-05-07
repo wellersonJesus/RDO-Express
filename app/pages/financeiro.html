@@ -1,47 +1,139 @@
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3"><h5>Relatório Financeiro</h5></div>
-    <div class="table-responsive">
-        <table class="table table-hover table-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
+            <i class="bi bi-cash-coin text-danger me-3 fs-3"></i>RDO Financeiro
+        </h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm px-3 shadow-sm"><i class="bi bi-download me-1"></i> Exportar</button>
+            <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Lançamento</button>
+        </div>
+    </div>
+    <div class="table-responsive px-3">
+        <table class="table table-hover align-middle table-sm" style="font-size: 0.8rem;">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Data Pgt</th>
-                    <th>ID Pedido</th>
-                    <th>Tipo</th>
-                    <th>Entrada</th>
-                    <th>Saída Colab</th>
-                    <th>Taxa ADM</th>
-                    <th>Origem</th>
-                    <th>Status</th>
+                    <th class="py-3 text-secondary">Data</th>
+                    <th class="py-3 text-secondary">Pedido</th>
+                    <th class="py-3 text-secondary">Tipo</th>
+                    <th class="py-3 text-secondary">Entrada</th>
+                    <th class="py-3 text-secondary">Saida</th>
+                    <th class="py-3 text-secondary">Taxa</th>
+                    <th class="py-3 text-secondary">Origem</th>
+                    <th class="py-3 text-secondary">Status</th>
+                    <th class="text-center py-3 text-secondary">Ações</th>
                 </tr>
             </thead>
             <tbody id="financeiro-body">
-                <tr><td colspan="9">Carregando...</td></tr>
+                <tr><td colspan="9" class="text-center py-4 text-muted">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
+    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+        <div id="pagination-info-fin" class="small text-muted" style="font-size: 0.75rem;"></div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination-controls-fin"></ul>
+        </nav>
+    </div>
 </div>
+
 <script>
+    let financeiroData = [];
+    let clientesMap = {};
+    let currentFinPage = 1;
+    const finLimit = 20;
+
+    const formatCurrency = (valor) => {
+        const n = parseFloat(valor) || 0;
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
     window.carregarFinanceiro = async () => {
-        const tbody = document.getElementById('financeiro-body');
+        // Carrega clientes primeiro para fazer o de-para do Pedido/Cliente
+        const resClientes = await API.call('getclientes');
+        if (resClientes && !resClientes.status) {
+            resClientes.forEach(c => {
+                clientesMap[c.id] = c.username;
+            });
+        }
+
         const data = await API.call('getfinanceiro');
         
         if (!data || data.status === 'error') {
-            return tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Erro: ${data ? data.message : 'Sem resposta'}</td></tr>`;
+            return document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>`;
+        }
+
+        financeiroData = Array.isArray(data) ? data : [];
+        renderizarPaginaFin(1);
+    };
+
+    function renderizarPaginaFin(page) {
+        currentFinPage = page;
+        const start = (page - 1) * finLimit;
+        const end = start + finLimit;
+        const paginatedItems = financeiroData.slice(start, end);
+        const tbody = document.getElementById('financeiro-body');
+
+        if (paginatedItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = paginatedItems.map(f => {
+            const statusClass = f.status_pgt?.toLowerCase().includes('pago') 
+                ? 'bg-success-subtle text-success' 
+                : 'bg-warning-subtle text-warning';
+
+            // Formata data para YYYY-MM-DD (pega os primeiros 10 caracteres)
+            const dataFormatada = f.data_pagamento ? f.data_pagamento.substring(0, 10) : '-';
+            
+            // Busca o username do cliente baseado no ID do pedido (ajuste conforme a relação da sua API)
+            const clienteExibicao = clientesMap[f.id_pedido] || f.id_pedido || '-';
+
+            return `
+                <tr>
+                    <td class="text-nowrap">${dataFormatada}</td>
+                    <td class="fw-medium text-dark">${clienteExibicao}</td>
+                    <td class="text-secondary small">${f.tipo_pgt || '-'}</td>
+                    <td class="text-success fw-bold">${formatCurrency(f.valor_entrada)}</td>
+                    <td class="text-danger">${formatCurrency(f.valor_saida_colab)}</td>
+                    <td class="text-muted small">${formatCurrency(f.taxa_adm)}</td>
+                    <td><span class="badge bg-light text-dark border fw-normal">${f.caixa_origem || '-'}</span></td>
+                    <td><span class="badge ${statusClass} border-0 px-2">${f.status_pgt || '-'}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        renderPaginationControlsFin();
+    }
+
+    function renderPaginationControlsFin() {
+        const totalPages = Math.ceil(financeiroData.length / finLimit);
+        const controls = document.getElementById('pagination-controls-fin');
+        
+        let html = `<li class="page-item ${currentFinPage === 1 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaFin(${currentFinPage - 1})">Anterior</a>
+        </li>`;
+        
+        for(let i = 1; i <= totalPages; i++) {
+            if(i === currentFinPage || i === 1 || i === totalPages || (i >= currentFinPage - 2 && i <= currentFinPage + 2)) {
+                html += `<li class="page-item ${i === currentFinPage ? 'active' : ''}">
+                    <a class="page-link border-0 rounded-circle mx-1 ${i === currentFinPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPaginaFin(${i})">${i}</a>
+                </li>`;
+            }
         }
         
-        tbody.innerHTML = data.map(f => `
-            <tr>
-                <td>${f.id || '-'}</td>
-                <td>${f.data_pagamento || '-'}</td>
-                <td>${f.id_pedido || '-'}</td>
-                <td>${f.tipo_pgt || '-'}</td>
-                <td>${f.valor_entrada || '0'}</td>
-                <td>${f.valor_saida_colab || '0'}</td>
-                <td>${f.taxa_adm || '0'}</td>
-                <td>${f.caixa_origem || '-'}</td>
-                <td>${f.status_pgt || '-'}</td>
-            </tr>
-        `).join('');
-    };
+        html += `<li class="page-item ${currentFinPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaFin(${currentFinPage + 1})">Próximo</a>
+        </li>`;
+        
+        controls.innerHTML = html;
+        document.getElementById('pagination-info-fin').innerText = `Total: ${financeiroData.length} lançamentos`;
+    }
+
+    carregarFinanceiro();
 </script>
