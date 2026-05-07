@@ -1,4 +1,44 @@
-<div class="card p-4 shadow-sm border-0">
-    <h3>Página: CHAT</h3>
-    <p class="text-muted">Esta funcionalidade está em desenvolvimento.</p>
+<div class="card shadow-sm border-0 vh-100">
+    <div class="row g-0 h-100">
+        <div class="col-md-4 border-end h-100 overflow-auto">
+            <div class="p-3 bg-light fw-bold border-bottom">Mensagens Recentes</div>
+            <div id="chat-list" class="list-group list-group-flush"></div>
+        </div>
+        <div class="col-md-8 d-flex flex-column">
+            <div id="chat-window" class="p-4 flex-grow-1 bg-white overflow-auto" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');">
+                <div class="text-center text-muted mt-5">Selecione uma conversa para ver os detalhes</div>
+            </div>
+        </div>
+    </div>
 </div>
+<script>
+    async function atualizarChat() {
+        const msgs = await API.call('getchatlive');
+        if(!msgs) return;
+        document.getElementById('chat-list').innerHTML = msgs.reverse().map(m => `
+            <button onclick="verMsg('${m.id}')" class="list-group-item list-group-item-action p-3">
+                <div class="d-flex justify-content-between"><strong>${m.cliente.split('@')[0]}</strong> <small>${m.hora}</small></div>
+                <div class="small text-truncate">${m.ultima_msg}</div>
+                <span class="badge bg-danger mt-2">${m.status || 'Aberto'}</span>
+            </button>
+        `).join('');
+        setTimeout(atualizarChat, 5000);
+    }
+    window.verMsg = async (id) => {
+        const msgs = await API.call('getchatlive');
+        const m = msgs.find(x => x.id == id);
+        document.getElementById('chat-window').innerHTML = `
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold border-bottom pb-2">Conteúdo da Mensagem</h6>
+                    <pre style="white-space: pre-wrap;">${m.ultima_msg}</pre>
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-dark" onclick="alert('Gerando Pedido...')">Criar Pedido</button>
+                        <button class="btn btn-sm btn-outline-secondary">Concluir</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    atualizarChat();
+</script>

@@ -17,7 +17,9 @@
             <div class="logo-icon-container">
                 <div class="outer-circle">
                     <div class="inner-circle">
-                        <i class="bi bi-lightning-charge-fill text-white"></i>
+                        <div class="inner-circle">
+                            <i class="bi bi-lightning-charge-fill text-white"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -64,6 +66,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span class="menu-text">Automatização</span></div>
             <div class="submenu">
+                <a class="nav-link" href="#" onclick="loadPage('bot', 'Configuração Bot', 'Monitoramento WhatsApp')"><span class="menu-text">Bot</span></a>
                 <a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')"><span class="menu-text">Segurança</span></a>
                 <a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')"><span class="menu-text">Logs</span></a>
             </div>
@@ -127,7 +130,6 @@
                 window.location.href = 'login.html';
                 return;
             }
-            // Recupera e exibe as informações salvas no login
             const user = localStorage.getItem('user_name') || 'Usuário';
             const cargo = localStorage.getItem('user_role') || 'Colaborador';
             
@@ -145,7 +147,8 @@
         }
 
         function abrirModalLogout() {
-            const myModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+            const modalEl = document.getElementById('logoutModal');
+            const myModal = new bootstrap.Modal(modalEl);
             myModal.show();
         }
     </script>
