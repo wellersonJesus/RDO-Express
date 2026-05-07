@@ -9,15 +9,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('app'));
 
-const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (authHeader === 'true') {
-        next();
-    } else {
-        res.status(401).json({ success: false, message: "Não autorizado" });
-    }
-};
-
 const callSheetAPI = async (action, data = {}) => {
     return await axios.post(process.env.API_URL, {
         ...data,
@@ -28,50 +19,50 @@ const callSheetAPI = async (action, data = {}) => {
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
+    console.log("\n--- TENTATIVA DE LOGIN ---");
+    console.log(`👤 Usuário digitado: [${username}]`);
     
     try {
-        // Busca todos os usuários da planilha para validar
         const sheetResponse = await callSheetAPI('getusuarios');
-        const users = sheetResponse.data || [];
+        const users = Array.isArray(sheetResponse.data) ? sheetResponse.data : [];
         
-        // Procura o usuário exato pelo username vindo da planilha
-        const userFound = users.find(u => u.username === username);
+        console.log(`📊 Usuários encontrados na planilha: ${users.length}`);
+        // Log para debug visual no terminal
+        console.log("LISTA DE USUÁRIOS NO BANCO:", JSON.stringify(users, null, 2));
+
+        const userFound = users.find(u => 
+            u.username && u.username.toString().trim().toLowerCase() === username.trim().toLowerCase()
+        );
 
         if (!userFound) {
-            return res.status(401).json({ success: false, message: "Usuário não encontrado" });
+            console.log("❌ ERRO: Usuário não existe na lista acima.");
+            return res.status(401).json({ success: false, message: "Acesso negado!" });
         }
 
-        // Valida a senha (comparando com o hash da planilha ou senha mestra)
-        const isMatch = await bcrypt.compare(password, userFound.password || process.env.MASTER_PASS_HASH);
-        
+        console.log(`✅ Usuário localizado: ${userFound.username}`);
+        console.log(`🔑 Hash no banco: ${userFound.password ? "Sim (presente)" : "Não (vazio!)"}`);
+
+        // Validação de senha
+        const isMatch = await bcrypt.compare(password, userFound.password).catch(e => {
+            console.log("⚠️ Erro no Bcrypt (Hash inválido?):", e.message);
+            return false;
+        });
+
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Senha incorreta" });
+            console.log("❌ ERRO: Senha não confere com o hash.");
+            return res.status(401).json({ success: false, message: "Acesso negado!" });
         }
 
-        // Retorna exatamente os campos 'username' e 'cargo' da planilha
+        console.log("🚀 LOGIN SUCESSO!");
         return res.json({ 
             success: true, 
-            user: { 
-                name: userFound.username, 
-                role: userFound.cargo 
-            } 
+            user: { name: userFound.username, role: userFound.cargo || 'Membro' } 
         });
+
     } catch (error) {
-        console.error("Erro no login:", error);
-        res.status(500).json({ success: false, message: "Erro interno no servidor" });
+        console.error("💥 Erro Crítico:", error.message);
+        res.status(500).json({ success: false, message: "Erro de conexão" });
     }
 });
 
-app.post('/api/proxy', authMiddleware, async (req, res) => {
-    try {
-        const response = await axios.post(process.env.API_URL, { 
-            ...req.body, 
-            apiKey: process.env.SECRET_KEY 
-        });
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ status: "error", message: error.message });
-    }
-});
-
-app.listen(3000, () => console.log('🚀 RDO-Express rodando na porta 3000'));
+app.listen(3000, () => console.log('🚀 Server Debug Mode ON - Porta 3000'));

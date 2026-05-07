@@ -127,17 +127,26 @@
                 window.location.href = 'login.html';
                 return;
             }
+            // Recupera e exibe as informações salvas no login
             const user = localStorage.getItem('user_name') || 'Usuário';
             const cargo = localStorage.getItem('user_role') || 'Colaborador';
+            
             document.getElementById('display-username').innerText = user;
             document.getElementById('display-cargo').innerText = cargo;
+
             if(typeof window.loadPage === 'function'){
                 window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
             }
         });
+
         function logout() {
             localStorage.clear();
             window.location.href = 'login.html';
+        }
+
+        function abrirModalLogout() {
+            const myModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+            myModal.show();
         }
     </script>
 </body>

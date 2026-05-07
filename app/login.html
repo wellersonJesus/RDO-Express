@@ -68,6 +68,7 @@
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
             const msg = document.getElementById('login-msg');
+            msg.innerText = "Autenticando...";
             
             try {
                 const response = await fetch('/api/login', {
@@ -75,16 +76,19 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: u, password: p })
                 });
+                
                 const data = await response.json();
                 
                 if(data.success) {
                     localStorage.setItem('rdo_auth', 'true');
+                    localStorage.setItem('user_name', data.user.name);
+                    localStorage.setItem('user_role', data.user.role);
                     window.location.href = '/index.html';
                 } else {
-                    throw new Error();
+                    throw new Error(data.message || 'Erro no login');
                 }
             } catch(err) {
-                msg.innerText = "Usuário ou senha incorretos!";
+                msg.innerText = "Acesso negado! Verifique Usuário/Senha.";
                 const card = document.querySelector('.login-card');
                 card.style.animation = 'none';
                 setTimeout(() => card.style.animation = 'shake 0.4s', 10);

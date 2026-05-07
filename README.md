@@ -10,6 +10,9 @@ npm start
 
 #Gerar senha hash
 node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("master@123", 10));'
+
+#Popular banco
+npm run seed
 ```
 --- 
 

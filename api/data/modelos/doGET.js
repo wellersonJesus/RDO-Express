@@ -10,10 +10,13 @@ function doPost(e) {
     if (!data.apiKey || data.apiKey !== SECRET_KEY) {
       return response({ status: "error", message: "Acesso Negado: Chave Inválida" });
     }
+    
     var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Extrai o nome da aba (ex: addusuarios -> usuarios)
     var entity = action.replace(/get|add|delete|update/, '').toLowerCase();
     var sheet = ss.getSheetByName(entity);
+    
     if (!sheet) return response({ status: "error", message: "Aba '" + entity + "' não encontrada." });
 
     var result;
@@ -22,6 +25,7 @@ function doPost(e) {
     else if (action.startsWith('update')) result = handleUpdate(sheet, data);
     else if (action.startsWith('delete')) result = handleDelete(sheet, data.id);
     else return response({ status: "error", message: "Ação não mapeada" });
+    
     return response(result);
   } catch (err) {
     return response({ status: "error", message: "Erro no servidor: " + err.toString() });
@@ -30,15 +34,13 @@ function doPost(e) {
 
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
-  if (rows.length < 1) return [];
-  var headers = rows[0];
+  if (rows.length <= 1) return [];
+  var headers = rows[0].map(function(h) { return h.toString().toLowerCase(); });
   var data = [];
   for (var i = 1; i < rows.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      // Força a primeira coluna a ser sempre 'id' e as outras em minúsculo
-      var key = (j === 0) ? 'id' : headers[j].toString().toLowerCase();
-      obj[key] = rows[i][j];
+      obj[headers[j]] = rows[i][j];
     }
     data.push(obj);
   }
@@ -46,15 +48,22 @@ function handleGet(sheet) {
 }
 
 function handleAdd(sheet, data) {
+  var action = data.action;
   delete data.action;
   delete data.apiKey;
-  sheet.appendRow(Object.values(data));
-  return { status: "success" };
+  
+  // Mapeia os dados de acordo com a ordem das colunas na planilha (id, username, cargo, password)
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var newRow = headers.map(function(header) {
+    return data[header.toLowerCase()] !== undefined ? data[header.toLowerCase()] : "";
+  });
+  
+  sheet.appendRow(newRow);
+  return { status: "success", message: "Registro adicionado com sucesso." };
 }
 
 function handleUpdate(sheet, data) {
   var rows = sheet.getDataRange().getValues();
-  // Normaliza cabeçalhos para busca
   var headers = rows[0].map(function(h) { return h.toString().toLowerCase(); });
   for (var i = 1; i < rows.length; i++) {
     if (rows[i][0] == data.id) {

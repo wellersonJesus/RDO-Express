@@ -14,7 +14,7 @@
                 <tr>
                     <th class="py-3 text-secondary">Data</th>
                     <th class="py-3 text-secondary">Pedido</th>
-                    <th class="py-3 text-secondary">Tipo</th>
+                    <th class="py-3 text-secondary">Pagamento</th>
                     <th class="py-3 text-secondary">Entrada</th>
                     <th class="py-3 text-secondary">Saida</th>
                     <th class="py-3 text-secondary">Taxa</th>
@@ -48,7 +48,7 @@
     };
 
     window.carregarFinanceiro = async () => {
-        // Carrega clientes primeiro para fazer o de-para do Pedido/Cliente
+        // Carrega clientes para o de-para do Pedido/Cliente
         const resClientes = await API.call('getclientes');
         if (resClientes && !resClientes.status) {
             resClientes.forEach(c => {
@@ -83,10 +83,7 @@
                 ? 'bg-success-subtle text-success' 
                 : 'bg-warning-subtle text-warning';
 
-            // Formata data para YYYY-MM-DD (pega os primeiros 10 caracteres)
             const dataFormatada = f.data_pagamento ? f.data_pagamento.substring(0, 10) : '-';
-            
-            // Busca o username do cliente baseado no ID do pedido (ajuste conforme a relação da sua API)
             const clienteExibicao = clientesMap[f.id_pedido] || f.id_pedido || '-';
 
             return `
