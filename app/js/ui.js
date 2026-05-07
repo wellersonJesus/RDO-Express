@@ -1,34 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('toggle-btn');
     const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggle-btn');
 
-    if (toggleBtn) {
+    if (toggleBtn && sidebar) {
         toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (window.innerWidth <= 768) {
-                sidebar.classList.toggle('active');
-            } else {
-                sidebar.classList.toggle('collapsed');
-            }
+            sidebar.classList.toggle(window.innerWidth <= 768 ? 'active' : 'collapsed');
         });
     }
 
     document.querySelectorAll('.menu-title').forEach(item => {
-        item.addEventListener('click', function(e) {
-            if (sidebar.classList.contains('collapsed') && window.innerWidth > 768) return;
-            e.preventDefault();
+        item.addEventListener('click', function() {
             const group = this.parentElement;
-            document.querySelectorAll('.menu-group').forEach(g => {
-                if (g !== group) g.classList.remove('active');
-            });
             group.classList.toggle('active');
         });
     });
 });
 
-// Função centralizada para abrir o modal
-window.abrirModalLogout = () => {
-    const modalElement = document.getElementById('logoutModal');
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-};
+function logout() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+}

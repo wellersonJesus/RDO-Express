@@ -1,8 +1,8 @@
 const API = {
     call: async (action, data = {}) => {
         try {
-            const token = localStorage.getItem('rdo_auth');
-            if (!token) {
+            const isAuth = localStorage.getItem('rdo_auth');
+            if (!isAuth && !window.location.pathname.includes('login.html')) {
                 window.location.href = 'login.html';
                 return;
             }
@@ -14,14 +14,12 @@ const API = {
             });
             
             const result = await response.json();
-            
             if (result.status === 'error') {
-                console.error("❌ Erro retornado pela Planilha:", result.message);
+                console.error("❌ Erro na Planilha:", result.message);
             }
-            
             return result;
         } catch (error) {
-            console.error("❌ Erro de conexão com o servidor:", error);
+            console.error("❌ Erro de conexão:", error);
             return { status: 'error', message: 'Erro de rede' };
         }
     }

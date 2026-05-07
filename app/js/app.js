@@ -1,14 +1,19 @@
 window.loadPage = function(page, title, subtitle) {
-    document.getElementById('page-title').innerText = title;
-    document.getElementById('page-subtitle').innerText = subtitle;
+    const pageTitle = document.getElementById('page-title');
+    const pageSubtitle = document.getElementById('page-subtitle');
+    if(pageTitle) pageTitle.innerText = title;
+    if(pageSubtitle) pageSubtitle.innerText = subtitle;
+
     const container = document.getElementById('router-view');
+    if (!container) return;
 
     fetch(`pages/${page}.html`)
-        .then(res => res.text())
+        .then(res => {
+            if (!res.ok) throw new Error('Página não encontrada');
+            return res.text();
+        })
         .then(html => {
             container.innerHTML = html;
-            
-            // Re-executa os scripts da página carregada
             const scripts = container.querySelectorAll('script');
             scripts.forEach(oldScript => {
                 const newScript = document.createElement("script");
@@ -17,6 +22,13 @@ window.loadPage = function(page, title, subtitle) {
             });
         })
         .catch(err => {
-            container.innerHTML = "<h3>Erro ao carregar módulo.</h3>";
+            container.innerHTML = "<div class='alert alert-danger'>Erro ao carregar módulo: " + page + "</div>";
         });
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const user = localStorage.getItem('user_name');
+    if (!user && !window.location.pathname.includes('login.html')) {
+        window.location.href = 'login.html';
+    }
+});

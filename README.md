@@ -27,6 +27,15 @@ sudo docker rmi rdo-express_rdo_app atendai/evolution-api:latest
 # Tenta subir do zero
 sudo docker-compose up -d --build
 ```
+# Apenas atualizar
+
+```bash
+# Para o container e remove os antigos
+sudo docker-compose down
+
+# Sobe novamente aplicando as novas variáveis do .env
+sudo docker-compose up -d
+```
 --- 
 
 <div align="center">
