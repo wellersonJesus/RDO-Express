@@ -13,7 +13,7 @@
             <thead class="table-light">
                 <tr>
                     <th class="py-3 text-secondary">Data</th>
-                    <th class="py-3 text-secondary">Pedido/Cliente</th>
+                    <th class="py-3 text-secondary">Cliente</th>
                     <th class="py-3 text-secondary">Pagamento</th>
                     <th class="py-3 text-secondary">Entrada</th>
                     <th class="py-3 text-secondary">Saída</th>
@@ -26,7 +26,7 @@
             <tbody id="financeiro-body">
                 <tr>
                     <td colspan="9" class="text-center py-4 text-muted">
-                        <div class="spinner-border spinner-border-sm text-danger me-2"></div> Carregando lançamentos...
+                        <div class="spinner-border spinner-border-sm text-danger me-2"></div> Otimizando visualização...
                     </td>
                 </tr>
             </tbody>
@@ -42,8 +42,7 @@
 
 <script>
     (function() {
-        let financeiroData = [];
-        let clientesMap = {};
+        let financeiroComNomes = [];
         let currentFinPage = 1;
         const finLimit = 20;
 
@@ -54,31 +53,49 @@
 
         async function init() {
             try {
-                console.log("💰 Carregando financeiro...");
-                
-                // Carregamento paralelo para otimizar tempo
-                const [resFin, resCli] = await Promise.all([
+                const [resFin, resPed, resCli] = await Promise.all([
                     API.call('getfinanceiro'),
+                    API.call('getpedidos'),
                     API.call('getclientes')
                 ]);
 
-                // Mapeia clientes para exibir nomes em vez de IDs
-                if (resCli && Array.isArray(resCli)) {
-                    resCli.forEach(c => {
-                        clientesMap[c.id] = c.username || c.nome;
-                    });
-                }
-
                 if (!resFin || resFin.status === 'error') {
-                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao carregar dados financeiros.</td></tr>`;
+                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>`;
                     return;
                 }
 
-                financeiroData = Array.isArray(resFin) ? resFin.reverse() : [];
+                // Mapa de Pedido para ID de Cliente
+                const pedToCli = {};
+                if (Array.isArray(resPed)) {
+                    resPed.forEach(p => pedToCli[String(p.id).trim()] = String(p.id_cliente).trim());
+                }
+
+                // Mapa de ID de Cliente para Primeiro Nome
+                const cliToName = {};
+                if (Array.isArray(resCli)) {
+                    resCli.forEach(c => {
+                        const fullUsername = c.username || c.nome || "Usuário";
+                        // Pega apenas a primeira parte do nome
+                        cliToName[String(c.id).trim()] = fullUsername.trim().split(' ')[0];
+                    });
+                }
+
+                // Cruzamento de dados
+                financeiroComNomes = resFin.map(f => {
+                    const idPed = String(f.id_pedido).trim();
+                    const idCli = pedToCli[idPed];
+                    const primeiroNome = idCli ? (cliToName[idCli] || "N/D") : "Avulso";
+
+                    return {
+                        ...f,
+                        clienteExibicao: primeiroNome
+                    };
+                }).reverse();
+
                 renderizarPaginaFin(1);
             } catch (err) {
-                console.error("Erro no financeiro:", err);
-                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Falha de comunicação com o servidor.</td></tr>`;
+                console.error("Erro no processamento:", err);
+                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao processar nomes.</td></tr>`;
             }
         }
 
@@ -86,11 +103,11 @@
             currentFinPage = page;
             const start = (page - 1) * finLimit;
             const end = start + finLimit;
-            const paginatedItems = financeiroData.slice(start, end);
+            const paginatedItems = financeiroComNomes.slice(start, end);
             const tbody = document.getElementById('financeiro-body');
 
             if (paginatedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Nenhum lançamento encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Nenhum registro.</td></tr>`;
                 return;
             }
 
@@ -100,12 +117,11 @@
                     : 'bg-warning-subtle text-warning';
 
                 const dataFormatada = f.data_pagamento ? f.data_pagamento.substring(0, 10).split('-').reverse().join('/') : '-';
-                const clienteExibicao = clientesMap[f.id_pedido] || f.id_pedido || '-';
 
                 return `
                     <tr>
                         <td class="text-nowrap text-secondary">${dataFormatada}</td>
-                        <td class="fw-medium text-dark">${clienteExibicao}</td>
+                        <td class="fw-bold text-dark text-uppercase" style="letter-spacing: 0.5px;">${f.clienteExibicao}</td>
                         <td class="text-secondary small">${f.tipo_pgt || '-'}</td>
                         <td class="text-success fw-bold">${formatCurrency(f.valor_entrada)}</td>
                         <td class="text-danger">${formatCurrency(f.valor_saida_colab)}</td>
@@ -113,7 +129,6 @@
                         <td><span class="badge bg-light text-dark border fw-normal">${f.caixa_origem || '-'}</span></td>
                         <td><span class="badge ${statusClass} border-0 px-2">${f.status_pgt || '-'}</span></td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-search"></i></button>
                             <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-pencil-square"></i></button>
                             <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-trash3"></i></button>
                         </td>
@@ -125,7 +140,7 @@
         };
 
         function renderPaginationControlsFin() {
-            const totalPages = Math.ceil(financeiroData.length / finLimit);
+            const totalPages = Math.ceil(financeiroComNomes.length / finLimit);
             const controls = document.getElementById('pagination-controls-fin');
             let html = '';
             
@@ -146,7 +161,7 @@
             </li>`;
             
             controls.innerHTML = html;
-            document.getElementById('pagination-info-fin').innerText = `Total: ${financeiroData.length} lançamentos`;
+            document.getElementById('pagination-info-fin').innerText = `Total: ${financeiroComNomes.length} lançamentos`;
         }
 
         init();
