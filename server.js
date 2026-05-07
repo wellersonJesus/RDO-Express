@@ -14,6 +14,7 @@ const AUTH_USER = process.env.MASTER_LOGIN || "Master";
 const AUTH_PASS = process.env.MASTER_PASS || "master@123";
 const AUTH_CARGO = process.env.MASTER_CARGO || "SRE Architect";
 
+// Login Local
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     if (username === AUTH_USER && password === AUTH_PASS) {
@@ -22,9 +23,16 @@ app.post('/api/login', (req, res) => {
     res.status(401).json({ success: false, message: 'Usuário ou senha inválidos' });
 });
 
+// Proxy para o Google Sheets
 app.post('/api/proxy', async (req, res) => {
     try {
-        const response = await axios.post(TARGET_URL, { ...req.body, secret_key: MASTER_KEY });
+        // CORREÇÃO: Enviando como 'apiKey' para bater com o GAS
+        const payload = { 
+            ...req.body, 
+            apiKey: MASTER_KEY 
+        };
+        
+        const response = await axios.post(TARGET_URL, payload);
         res.json(response.data);
     } catch (error) {
         console.error('❌ Erro no Proxy:', error.message);
@@ -37,5 +45,5 @@ app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'app', 'index.htm
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log('💤 Servidor RDO rodando em http://localhost:' + PORT);
+    console.log('🚀 Servidor RDO Online em http://localhost:' + PORT);
 });
