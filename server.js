@@ -1,62 +1,58 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
-const bcrypt = require('bcryptjs');
-
+const path = require('path');
 const app = express();
-app.use(cors());
+
 app.use(express.json());
 app.use(express.static('app'));
 
-// Helper para chamadas ao Google Apps Script
-const callSheetAPI = async (action, data = {}) => {
-    try {
-        const response = await axios.post(process.env.API_URL, {
-            ...data,
-            action: action,
-            apiKey: process.env.SECRET_KEY
-        });
-        return response.data;
-    } catch (error) {
-        console.error(`❌ Erro na API Google (${action}):`, error.message);
-        throw error;
-    }
-};
+const TARGET_URL = process.env.API_URL;
 
-// Rota de Login
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        const users = await callSheetAPI('getusuarios');
-        const userFound = Array.isArray(users) ? users.find(u => 
-            u.username && u.username.toString().trim().toLowerCase() === username.trim().toLowerCase()
-        ) : null;
-
-        if (!userFound || !(await bcrypt.compare(password, userFound.password))) {
-            return res.status(401).json({ success: false, message: "Acesso negado!" });
-        }
-
-        res.json({ 
-            success: true, 
-            user: { name: userFound.username, role: userFound.cargo || 'Membro' } 
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Erro no servidor" });
-    }
-});
-
-// Rota de Proxy (FUNDAMENTAL para carregar as listas)
+// Proxy para Google Sheets / Backend
 app.post('/api/proxy', async (req, res) => {
+    const { action, ...data } = req.body;
+    console.log(`[RDO-LOG] Ação: ${action}`);
     try {
-        const { action, ...data } = req.body;
-        console.log(`📡 Proxy requisitando: ${action}`);
-        const result = await callSheetAPI(action, data);
-        res.json(result);
+        const response = await axios.post(TARGET_URL, { action, ...data });
+        res.json(response.data);
     } catch (error) {
-        res.status(500).json({ status: "error", message: error.message });
+        console.error('❌ Erro no Proxy:', error.message);
+        res.status(500).json({ status: 'error', message: 'Erro na comunicação' });
     }
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`🚀 RDO-Express Operacional na porta ${PORT}`));
+// WEBHOOK: Recebe as mensagens do WhatsApp (Evolution API)
+app.post('/webhook/whatsapp', async (req, res) => {
+    const payload = req.body;
+    if (payload.event === "messages.upsert") {
+        const msg = {
+            action: "save_whatsapp_msg",
+            sender: payload.data.pushName || payload.data.key.remoteJid,
+            remoteJid: payload.data.key.remoteJid,
+            message: payload.data.message?.conversation || 
+                     payload.data.message?.extendedTextMessage?.text || "Mídia"
+        };
+        try {
+            await axios.post(TARGET_URL, msg);
+            console.log(`✅ MSG Capturada: ${msg.sender}`);
+        } catch (err) {
+            console.error("❌ Erro ao salvar mensagem");
+        }
+    }
+    res.status(200).send("OK");
+});
+
+// Keep-alive interno para o Render
+setInterval(() => {
+    axios.get(`http://localhost:${process.env.PORT || 3000}`).catch(() => {});
+}, 600000); // 10 minutos
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'app', 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 RDO-Express Online na porta ${PORT}`);
+});

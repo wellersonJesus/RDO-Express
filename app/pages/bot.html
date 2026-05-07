@@ -1,26 +1,54 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h4 class="mb-0 fw-bold text-secondary">
-            <i class="bi bi-cpu text-danger me-2"></i>Bot
+            <i class="bi bi-cpu text-danger me-2"></i>Configuração do Bot
         </h4>
+        <button class="btn btn-outline-info btn-sm rounded-circle" type="button" data-bs-toggle="collapse" data-bs-target="#helpBot" aria-expanded="false" title="Como obter IDs?">
+            <i class="bi bi-info-lg"></i>
+        </button>
     </div>
+    
     <div class="card-body">
+        <!-- Painel de Ajuda Didático -->
+        <div class="collapse mb-4" id="helpBot">
+            <div class="card card-body bg-light border-info">
+                <h6 class="fw-bold text-info"><i class="bi bi-lightbulb me-2"></i>Como capturar o ID correto?</h6>
+                <p class="small mb-2">No WhatsApp Web, selecione a conversa e use o código abaixo no console (F12):</p>
+                
+                <div class="bg-dark p-3 rounded mb-3 position-relative">
+                    <code id="code-snippet" class="text-info" style="font-size: 0.75rem; display: block; word-break: break-all;">
+var chatData = document.querySelector('#main header')?.parentElement?.parentElement?.__reactFiber$?.return?.memoizedProps?.children?.props?.chat;
+console.log("--- DADOS PARA O SEU BOT ---");
+console.log("Nome:", chatData?.name);
+console.log("ID para copiar:", chatData?.id._serialized);
+console.log("----------------------------");
+                    </code>
+                </div>
+                
+                <div class="alert alert-warning py-2 mb-0" style="font-size: 0.75rem;">
+                    <strong>Importante:</strong> Grupos terminam em <code>@g.us</code> e Contatos em <code>@c.us</code>. Não use o ID da mensagem (A5F8...), use o ID da conversa acima.
+                </div>
+            </div>
+        </div>
+
         <!-- Formulário de Cadastro -->
-        <div class="p-3 mb-4 border rounded bg-light">
-            <h6 class="fw-bold mb-3 small text-uppercase text-muted">Cadastrar Novo Monitoramento</h6>
+        <div class="p-3 mb-4 border rounded bg-light shadow-sm">
+            <h6 class="fw-bold mb-3 small text-uppercase text-muted">Monitorar Novo Grupo/Contato</h6>
             <div class="row g-2">
-                <div class="col-md-5">
-                    <input type="text" id="bot-val" class="form-control form-control-sm" placeholder="ID do WhatsApp (ex: 120363...)">
+                <div class="col-md-6">
+                    <label class="small fw-bold">ID da Conversa (WhatsApp)</label>
+                    <input type="text" id="bot-val" class="form-control form-control-sm" placeholder="Ex: 12036332...@g.us">
                 </div>
                 <div class="col-md-3">
+                    <label class="small fw-bold">Tipo</label>
                     <select id="bot-tipo" class="form-select form-select-sm">
-                        <option value="grupo">Grupo</option>
-                        <option value="atendente">Atendente</option>
+                        <option value="grupo">Grupo (@g.us)</option>
+                        <option value="atendente">Atendente (@c.us)</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button class="btn btn-danger btn-sm w-100" onclick="salvarBot()">
-                        <i class="bi bi-plus-lg me-1"></i>Salvar
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-danger btn-sm w-100 fw-bold" onclick="salvarBot()">
+                        <i class="bi bi-save me-1"></i>CADASTRAR
                     </button>
                 </div>
             </div>
@@ -29,15 +57,15 @@
         <!-- Lista de Configurações -->
         <div class="table-responsive">
             <table class="table table-hover align-middle">
-                <thead class="table-light">
+                <thead class="table-dark">
                     <tr>
                         <th class="small text-uppercase" style="width: 20%">Tipo</th>
-                        <th class="small text-uppercase">Identificador do WhatsApp</th>
+                        <th class="small text-uppercase">Identificador Registrado</th>
                         <th class="small text-uppercase text-end" style="width: 15%">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="bot-list">
-                    <!-- Dados carregados via API -->
+                    <!-- Dinâmico -->
                 </tbody>
             </table>
         </div>
@@ -46,17 +74,23 @@
 
 <script>
     (function() {
+        // Função para Salvar
         window.salvarBot = async () => {
-            const valor = document.getElementById('bot-val').value;
+            const valor = document.getElementById('bot-val').value.trim();
             const tipo = document.getElementById('bot-tipo').value;
             
             if (!valor) {
-                alert("Por favor, insira o ID do WhatsApp.");
+                alert("Por favor, insira o ID capturado no console.");
                 return;
             }
 
+            // Validação simples para evitar erros comuns de ID de mensagem
+            if (valor.includes('_')) {
+                alert("Atenção: Você parece ter colado um ID de mensagem. Cole o ID da conversa (que termina em @g.us ou @c.us).");
+            }
+
             const res = await API.call('addbotconfig', { 
-                id: Date.now().toString(), // Gerando um ID simples caso o backend precise
+                id: "BOT-" + Date.now(),
                 tipo: tipo, 
                 valor: valor 
             });
@@ -67,6 +101,7 @@
             }
         };
 
+        // Função para Carregar
         window.carregarBot = async () => {
             const listContainer = document.getElementById('bot-list');
             listContainer.innerHTML = '<tr><td colspan="3" class="text-center py-3"><div class="spinner-border spinner-border-sm text-danger"></div></td></tr>';
@@ -74,7 +109,7 @@
             const data = await API.call('getbotconfig');
             
             if (!data || data.length === 0) {
-                listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Nenhuma configuração encontrada.</td></tr>';
+                listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Nenhum monitoramento configurado no momento.</td></tr>';
                 return;
             }
 
@@ -82,12 +117,12 @@
                 <tr>
                     <td>
                         <span class="badge ${i.tipo === 'grupo' ? 'bg-info' : 'bg-dark'} text-uppercase" style="font-size: 0.65rem;">
-                            ${i.tipo}
+                            <i class="bi ${i.tipo === 'grupo' ? 'bi-people-fill' : 'bi-person-badge-fill'} me-1"></i>${i.tipo}
                         </span>
                     </td>
-                    <td class="fw-medium text-secondary small">${i.valor}</td>
+                    <td class="fw-medium text-secondary small" style="letter-spacing: 0.5px; font-family: monospace;">${i.valor}</td>
                     <td class="text-end">
-                        <button class="btn btn-outline-danger btn-sm border-0" title="Excluir" onclick="excluirBot('${i.id}')">
+                        <button class="btn btn-outline-danger btn-sm border-0" title="Remover" onclick="excluirBot('${i.id}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -95,6 +130,7 @@
             `).join('');
         };
 
+        // Função para Excluir
         window.excluirBot = async (id) => {
             if (confirm('Deseja remover este monitoramento?')) {
                 await API.call('deletebotconfig', { id: id });
