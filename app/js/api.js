@@ -1,27 +1,28 @@
 const API = {
-    BASE_URL: window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://rdo-express-backend.onrender.com',
-
     call: async (action, data = {}) => {
         try {
-            const token = localStorage.getItem('rdo_auth') || '';
-            const response = await fetch(`${API.BASE_URL}/api/proxy`, {
+            const token = localStorage.getItem('rdo_auth');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const response = await fetch('/api/proxy', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': token 
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action, ...data })
             });
             
-            if (response.status === 401) {
-                window.location.href = 'login.html';
-                return { status: 'error', message: 'Sessão expirada' };
+            const result = await response.json();
+            
+            if (result.status === 'error') {
+                console.error("❌ Erro retornado pela Planilha:", result.message);
             }
             
-            return await response.json();
+            return result;
         } catch (error) {
-            console.error("Erro API:", error);
-            return { status: 'error', message: error.message };
+            console.error("❌ Erro de conexão com o servidor:", error);
+            return { status: 'error', message: 'Erro de rede' };
         }
     }
 };

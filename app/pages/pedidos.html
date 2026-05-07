@@ -1,7 +1,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
-            <i class="bi bi-people text-danger me-3 fs-3"></i>Gerenciamento de Pedidos
+            <i class="bi bi-people text-danger me-3 fs-3"></i>Lista de Pedidos
         </h4>
         <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Pedido</button>
     </div>
@@ -17,7 +17,11 @@
                 </tr>
             </thead>
             <tbody id="pedidos-body">
-                <tr><td colspan="5" class="text-center py-4 text-muted">Carregando...</td></tr>
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-danger me-2"></div> Carregando...
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -30,77 +34,95 @@
 </div>
 
 <script>
-    let allData = [];
-    let clientesMap = {};
-    let currentPage = 1;
-    const limit = 20;
+    (function() {
+        let allData = [];
+        let clientesMap = {};
+        let currentPage = 1;
+        const limit = 20;
 
-    window.carregarPedidos = async () => {
-        const [pedidos, clientes] = await Promise.all([
-            API.call('getpedidos'),
-            API.call('getclientes')
-        ]);
-        
-        if (!pedidos || pedidos.status === 'error') {
-            return document.getElementById('pedidos-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>`;
-        }
+        async function init() {
+            try {
+                // Busca paralela para ganhar tempo
+                const [pedidos, clientes] = await Promise.all([
+                    API.call('getpedidos'),
+                    API.call('getclientes')
+                ]);
 
-        if (Array.isArray(clientes)) {
-            clientes.forEach(c => {
-                clientesMap[c.id] = c.username || "Sem nome";
-            });
-        }
-        
-        allData = pedidos;
-        renderizarPagina(1);
-    };
+                if (!pedidos || pedidos.status === 'error') {
+                    document.getElementById('pedidos-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados da planilha.</td></tr>`;
+                    return;
+                }
 
-    function renderizarPagina(page) {
-        currentPage = page;
-        const start = (page - 1) * limit;
-        const end = start + limit;
-        const paginatedItems = allData.slice(start, end);
-        const tbody = document.getElementById('pedidos-body');
-
-        // Ícones Premium: Search (Visualizar), Pencil-Square (Editar), Trash3 (Remover)
-        tbody.innerHTML = paginatedItems.map(p => `
-            <tr>
-                <td class="text-nowrap text-secondary">${p.data_solicitacao ? p.data_solicitacao.substring(0, 10) : '-'}</td>
-                <td class="fw-medium">${clientesMap[p.id_cliente] || 'ID: ' + (p.id_cliente || '-')}</td>
-                <td class="text-secondary">${p.destino || '-'}</td>
-                <td><span class="text-secondary border-bottom border-secondary border-opacity-25">${p.tipo_servico || '-'}</span></td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
-                    <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
-                    <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
-                </td>
-            </tr>
-        `).join('');
-
-        renderPaginationControls();
-    }
-
-    function renderPaginationControls() {
-        const totalPages = Math.ceil(allData.length / limit);
-        const controls = document.getElementById('pagination-controls');
-        
-        let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage - 1})">Anterior</a>
-        </li>`;
-        
-        for(let i = 1; i <= totalPages; i++) {
-            if(i === currentPage || i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link border-0 rounded-circle mx-1 ${i === currentPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPagina(${i})">${i}</a>
-                </li>`;
+                // Mapeia os clientes para exibição de nomes
+                if (Array.isArray(clientes)) {
+                    clientes.forEach(c => {
+                        clientesMap[c.id] = c.username || c.nome || "Sem nome";
+                    });
+                }
+                
+                allData = Array.isArray(pedidos) ? pedidos.reverse() : [];
+                renderizarPagina(1);
+            } catch (err) {
+                console.error("Erro ao inicializar página de pedidos:", err);
+                document.getElementById('pedidos-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro de conexão.</td></tr>`;
             }
         }
-        
-        html += `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
-            <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage + 1})">Próximo</a>
-        </li>`;
-        
-        controls.innerHTML = html;
-        document.getElementById('pagination-info').innerText = `Total: ${allData.length} registros`;
-    }
+
+        window.renderizarPagina = function(page) {
+            currentPage = page;
+            const start = (page - 1) * limit;
+            const end = start + limit;
+            const paginatedItems = allData.slice(start, end);
+            const tbody = document.getElementById('pedidos-body');
+
+            if (paginatedItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = paginatedItems.map(p => `
+                <tr>
+                    <td class="text-nowrap text-secondary">${p.data_solicitacao ? p.data_solicitacao.substring(0, 10) : '-'}</td>
+                    <td class="fw-medium text-dark">${clientesMap[p.id_cliente] || 'ID: ' + (p.id_cliente || '-')}</td>
+                    <td class="text-secondary">${p.destino || '-'}</td>
+                    <td><span class="text-secondary border-bottom border-secondary border-opacity-25">${p.tipo_servico || '-'}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            renderPaginationControls();
+        };
+
+        function renderPaginationControls() {
+            const totalPages = Math.ceil(allData.length / limit);
+            const controls = document.getElementById('pagination-controls');
+            let html = '';
+            
+            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage - 1})">Anterior</a>
+            </li>`;
+            
+            for(let i = 1; i <= totalPages; i++) {
+                if(i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link border-0 rounded-circle mx-1 ${i === currentPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPagina(${i})">${i}</a>
+                    </li>`;
+                }
+            }
+            
+            html += `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPagina(${currentPage + 1})">Próximo</a>
+            </li>`;
+            
+            controls.innerHTML = html;
+            document.getElementById('pagination-info').innerText = `Total: ${allData.length} registros`;
+        }
+
+        // Executa a carga de dados assim que o script é lido
+        init();
+    })();
 </script>
