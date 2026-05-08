@@ -46,19 +46,15 @@ Atualização Rápida (Hot Reload)
 Para aplicar alterações no código ou variáveis de ambiente sem derrubar todo o gateway:
 ```
 
-- Reconstruir Docker
+- Atualização reconstruir Docker
 
 ```bash
 # Reconstrói apenas o container da aplicação RDO
 sudo docker-compose up -d --build rdo_app
-```
-
-- Monitoramento de Logs
-
-```bash
 # Acompanhar mensagens do Webhook e requisições em tempo real
 sudo docker logs -f rdo_app
 ```
+
 ---
 
 <div align="center">
