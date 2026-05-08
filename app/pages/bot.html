@@ -1,98 +1,70 @@
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
-                <i class="bi bi-cpu text-danger me-3 fs-3"></i>Bot RDO
-            </h4>
-            <div class="d-flex align-items-center mt-1">
-                <span class="text-muted small fw-medium">Configuração de monitoramento e instâncias</span>
-                <button class="btn btn-link text-info p-0 ms-2" data-bs-toggle="modal" data-bs-target="#modalInfoBot">
-                    <i class="bi bi-info-circle fs-6"></i>
+<div class="card shadow-sm border-0 bg-white">
+    <div class="card-header bg-white py-3 border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="fw-bold text-dark mb-1 d-flex align-items-center">
+                    <i class="bi bi-gear-wide-connected text-danger me-2"></i> Bot RDO Express
+                    <button class="btn btn-sm ms-2 rounded-pill shadow-sm d-flex align-items-center gap-1" 
+                            style="background: linear-gradient(45deg, #17a2b8, #007bff); color: white; font-size: 0.65rem; border: none; padding: 2px 10px;"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoManual">
+                        <i class="bi bi-lightbulb-fill"></i> AJUDA RÁPIDA
+                    </button>
+                </h4>
+                <div class="d-flex align-items-center gap-2">
+                    <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.2;">
+                        Gerencie conexões e monitoramento de grupos.
+                    </p>
+                    <div id="status-loop" class="d-flex align-items-center gap-1 fw-bold" style="font-size: 0.7rem;">
+                        </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button id="btn-status-bot" class="btn btn-sm px-2 fw-bold shadow-sm" style="font-size: 0.7rem;" onclick="toggleStatusBot()"></button>
+                <button class="btn btn-dark btn-sm px-2 shadow-sm" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#modalNovoGrupo">
+                    <i class="bi bi-plus-lg me-1"></i> CADASTRAR
                 </button>
             </div>
         </div>
-        <div>
-            <button class="btn btn-dark btn-sm px-3 shadow-sm me-2" style="background-color: #6c757d; border: none;" onclick="ativarMonitoramento()">
-                <i class="bi bi-broadcast me-1"></i> Ativar Bot
-            </button>
-            <button class="btn btn-dark btn-sm px-3 shadow-sm" style="background-color: #6c757d; border: none;" data-bs-toggle="modal" data-bs-target="#modalNovoGrupo">
-                <i class="bi bi-plus-lg me-1"></i> Novo Grupo
-            </button>
-        </div>
     </div>
     
-    <div class="table-responsive px-3">
+    <div class="table-responsive px-3 pb-3">
         <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
-                <tr>
-                    <th class="py-3 text-secondary">Tipo</th>
-                    <th class="py-3 text-secondary">Identificador (JID)</th>
-                    <th class="text-center py-3 text-secondary">Ações</th>
+                <tr class="text-secondary" style="font-size: 0.75rem;">
+                    <th class="border-0">STATUS</th>
+                    <th class="border-0">AVATAR</th>
+                    <th class="border-0">NOME</th>
+                    <th class="border-0">JID/NÚMERO</th>
+                    <th class="border-0 text-center">AÇÕES</th>
                 </tr>
             </thead>
-            <tbody id="bot-list">
-                <tr>
-                    <td colspan="3" class="text-center py-4 text-muted">
-                        <div class="spinner-border spinner-border-sm text-danger me-2"></div> Carregando...
-                    </td>
-                </tr>
-            </tbody>
+            <tbody id="bot-list" class="border-top-0"></tbody>
         </table>
     </div>
 </div>
 
-<!-- Modal de Informação (Ajuda) -->
-<div class="modal fade" id="modalInfoBot" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalInfoManual" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-secondary"><i class="bi bi-question-circle me-2 text-info"></i>Ajuda Técnica</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white border-0">
+                <h6 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>Como Configurar</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="p-3 bg-light rounded shadow-sm border-start border-4 border-info">
-                    <p class="small text-muted mb-3">Como capturar o <strong>JID</strong> no WhatsApp Web:</p>
-                    <ol class="small text-secondary mb-0">
-                        <li class="mb-2">Clique na conversa do grupo ou contato.</li>
-                        <li class="mb-2">Pressione <strong>F12</strong> e selecione a aba <strong>Console</strong>.</li>
-                        <li class="mb-2">Execute o comando: <br>
-                            <code class="d-block bg-dark text-warning p-2 rounded mt-1" style="font-size: 0.75rem;">window.Store.Chat.getActive().id._serialized</code>
-                        </li>
-                        <li>Copie o código gerado (ex: @g.us ou @c.us) e cadastre no sistema.</li>
-                    </ol>
+            <div class="modal-body p-4">
+                <div class="mb-3 d-flex align-items-start gap-3">
+                    <div class="bg-primary text-white rounded-circle p-2 px-3 fw-bold">1</div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Atendentes</h6>
+                        <p class="small text-muted">Use o formato internacional: 55 + DDD + Numero. Ex: 5531988887777</p>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Cadastro -->
-<div class="modal fade" id="modalNovoGrupo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-white py-3">
-                <h5 class="modal-title fw-bold text-secondary">Novo Monitoramento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body px-4">
-                <div class="mb-3">
-                    <label class="form-label text-secondary small fw-bold">ID DO WHATSAPP (JID)</label>
-                    <input type="text" id="bot-val" class="form-control form-control-sm border-0 bg-light" placeholder="Ex: 120363...@g.us">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="bg-danger text-white rounded-circle p-2 px-3 fw-bold">2</div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Grupos</h6>
+                        <p class="small text-muted">Cole o ID (JID) que termina em @g.us ou o link de convite.</p>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-secondary small fw-bold">TIPO DE ALVO</label>
-                    <select id="bot-tipo" class="form-select form-select-sm border-0 bg-light">
-                        <option value="grupo">Grupo (@g.us)</option>
-                        <option value="atendente">Atendente (@c.us)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-dark btn-sm px-3 shadow-sm" onclick="salvarBot()">Cadastrar</button>
             </div>
         </div>
     </div>
@@ -100,72 +72,50 @@
 
 <script>
     (function() {
-        window.ativarMonitoramento = async () => {
-            const instance = prompt("Instância Evolution (Ex: rdo_bot):", "rdo_bot");
-            if(!instance) return;
-            try {
-                const res = await fetch('/api/bot/configurar-webhook', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ instanceName: instance })
-                });
-                const data = await res.json();
-                alert(data.message);
-            } catch (e) { alert("Erro ao conectar com o serviço."); }
+        let botAtivo = localStorage.getItem('bot_status') === 'true';
+        
+        window.toggleStatusBot = () => {
+            botAtivo = !botAtivo;
+            localStorage.setItem('bot_status', botAtivo);
+            renderBotUI();
         };
 
-        window.salvarBot = async () => {
-            const valor = document.getElementById('bot-val').value.trim();
-            const tipo = document.getElementById('bot-tipo').value;
-            if(!valor) return;
-
-            const res = await API.call('addbotconfig', { 
-                id: "BOT-" + Date.now(), 
-                tipo: tipo, 
-                valor: valor 
-            });
-
-            if(res.status === 'success') {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovoGrupo'));
-                modal.hide();
-                document.getElementById('bot-val').value = '';
-                carregarBot();
+        function renderBotUI() {
+            const btn = document.getElementById('btn-status-bot');
+            const loop = document.getElementById('status-loop');
+            
+            if(botAtivo) {
+                btn.className = "btn btn-danger btn-sm px-2 shadow-sm";
+                btn.innerHTML = '<i class="bi bi-broadcast"></i> ATIVADO';
+                loop.innerHTML = '<i class="bi bi-arrow-repeat spin text-success"></i> <span class="text-success">CONECTADO</span>';
+            } else {
+                btn.className = "btn btn-outline-secondary btn-sm px-2 shadow-sm";
+                btn.innerHTML = '<i class="bi bi-power"></i> DESATIVADO';
+                loop.innerHTML = '<i class="bi bi-arrow-repeat text-danger"></i> <span class="text-danger">OFFLINE</span>';
             }
-        };
+        }
 
         window.carregarBot = async () => {
-            try {
-                const data = await API.call('getbotconfig');
-                const list = document.getElementById('bot-list');
-                
-                if(!data || data.length === 0) {
-                    list.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted small">Nenhum alvo configurado.</td></tr>';
-                    return;
-                }
-
-                list.innerHTML = data.map(i => `
-                    <tr>
-                        <td><span class="text-secondary border-bottom border-secondary border-opacity-25">${i.tipo}</span></td>
-                        <td class="text-secondary font-monospace" style="font-size: 0.8rem;">${i.valor}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-link text-secondary p-1" title="Remover" onclick="excluirBot('${i.id}')">
-                                <i class="bi bi-trash3"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                document.getElementById('bot-list').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro nos dados.</td></tr>';
-            }
+            const data = await API.call('getbotconfig') || [];
+            document.getElementById('bot-list').innerHTML = data.map(i => `
+                <tr class="${!i.ativo ? 'opacity-50' : ''}">
+                    <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${i.ativo ? 'checked' : ''} onchange="API.call('updatebotstatus',{id:'${i.id}',ativo:this.checked}).then(carregarBot)"></div></td>
+                    <td><img src="${i.logo}" class="rounded-circle border" width="30" height="30" style="object-fit:cover"></td>
+                    <td class="fw-bold text-dark">${i.nome}</td>
+                    <td class="text-muted small">${i.valor}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm text-danger" onclick="API.call('deletebotconfig',{id:'${i.id}'}).then(carregarBot)"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
         };
 
-        window.excluirBot = async (id) => {
-            if(confirm('Remover este monitoramento?')) {
-                await API.call('deletebotconfig', { id });
-                carregarBot();
-            }
-        };
-
+        renderBotUI();
         carregarBot();
     })();
 </script>
+
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin { display: inline-block; animation: spin 2s linear infinite; }
+</style>
