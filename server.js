@@ -10,7 +10,7 @@ app.use(express.static('app'));
 const TARGET_URL = process.env.API_URL;
 const MASTER_KEY = process.env.SECRET_KEY;
 
-// Proxy Genérico para Planilha (Incluindo as novas ações)
+// Proxy Genérico para Planilha / Banco RDO
 app.post('/api/proxy', async (req, res) => {
     try {
         const payload = { ...req.body, apiKey: MASTER_KEY };

@@ -3,80 +3,14 @@
   "sistemas_integrados": ["Smart-afiliado", "Connects-pro"],
   "ultima_atualizacao": "2026-05-08",
   "entidades": {
-    "clientes": {
-      "descricao": "Cadastro de empresas e contratantes de logística",
-      "campos": {
-        "id": "UUID ou Auto-increment",
-        "username": "Identificação no sistema",
-        "responsavel": "Nome do contato principal",
-        "cnpj": "CNPJ da empresa",
-        "contato": "WhatsApp",
-        "email": "E-mail corporativo",
-        "endereco": "Logradouro e número",
-        "bairro": "Região para roteirização"
-      }
-    },
-    "colaboradores": {
-      "descricao": "Cadastro de motoristas e equipe operacional",
-      "campos": {
-        "id": "Identificador único",
-        "username": "Nome completo ou guerra",
-        "cargo": "Função (Motoboy, Motorista, ADM)",
-        "cnpj": "CNPJ do colaborador (MEI)",
-        "moto_placa": "Identificação do veículo",
-        "email": "Contato eletrônico",
-        "endereco": "Residência",
-        "bairro": "Região de atuação",
-        "chave_pix": "Dados para repasse",
-        "tipo_comissao": "Fixo ou Porcentagem",
-        "valor_base_comissao": "Valor de referência",
-        "status_contrato": "Ativo, Suspenso ou Desligado"
-      }
-    },
-    "pedidos": {
-      "descricao": "Registro de solicitações de serviço",
-      "campos": {
-        "id": "Código do pedido",
-        "data_solicitacao": "Timestamp da abertura",
-        "id_cliente": "Chave Estrangeira (FK)",
-        "id_colaborador": "Chave Estrangeira (FK)",
-        "origem": "Ponto de coleta",
-        "destino": "Ponto de entrega",
-        "solicitacao": "Descrição do serviço",
-        "tipo_servico": "Express, Agendado ou Coleta",
-        "endereco": "Local da execução",
-        "tipo_tarifa": "KM, Ponto ou Fixo",
-        "valor_total_pedido": "Valor bruto cliente",
-        "valor_repasse_colaborador": "Valor líquido entregador"
-      }
-    },
-    "financeiro": {
-      "descricao": "Controle de fluxo de caixa e taxas",
-      "campos": {
-        "id": "ID da transação",
-        "data_pagamento": "Data de efetivação",
-        "id_pedido": "Referência ao pedido",
-        "tipo_pgt": "Pix, Dinheiro, Cartão ou Boleto",
-        "valor_entrada": "Recebimento bruto",
-        "valor_saida_colab": "Repasse realizado",
-        "taxa_adm": "Lucro retido pela RDO",
-        "caixa_origem": "Conta de destino",
-        "status_pgt": "Pendente, Pago ou Conciliado"
-      }
-    },
     "automacao_chat": {
       "botConfig": {
-        "id": "Identificador",
+        "id": "Identificador Único",
+        "username": "Nome do Atendente ou Grupo",
+        "imagem": "URL da foto de perfil",
         "tipo": "atendente, grupo ou sistema",
-        "valor": "token, número ou credencial"
-      },
-      "chatLive": {
-        "id": "ID da mensagem",
-        "data_hora": "Timestamp",
-        "cliente": "ID do grupo ou contato",
-        "ultima_msg": "Conteúdo capturado",
-        "status": "Aberto ou Concluído",
-        "id_whatsapp": "ID de referência no servidor WA"
+        "status": "true ou false (ativo/inativo)",
+        "valor": "JID do WhatsApp ou número"
       }
     }
   }
