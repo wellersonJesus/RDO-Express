@@ -7,10 +7,10 @@
       "botConfig": {
         "id": "Identificador Único",
         "username": "Nome do Atendente ou Grupo",
+        "jid_numero": "JID do WhatsApp ou número (Ex: 5531... ou @g.us)",
         "imagem": "URL da foto de perfil",
         "tipo": "atendente, grupo ou sistema",
-        "status": "true ou false (ativo/inativo)",
-        "valor": "JID do WhatsApp ou número"
+        "status": "true ou false (ativo/inativo)"
       }
     }
   }
