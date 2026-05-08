@@ -1,52 +1,53 @@
 <div class="row g-3 h-100">
-    <!-- Header RDO Express - Fundo Vermelho Reativado -->
+    <!-- Header RDO Express -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-danger text-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex flex-column">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-whatsapp fs-4 me-2 text-white"></i>
-                        <h5 class="fw-bold mb-0 text-white">RDO <span style="color: #ffcccc;">Express</span></h5>
+                        <h5 class="fw-bold mb-0 text-white tracking-tight">RDO <span class="fw-light opacity-75">Express</span></h5>
                     </div>
                     
-                    <!-- INFO ATENDENTE (Somente Leitura - Definido no Bot) -->
-                    <div id="atendente-ativo-card" class="d-flex align-items-center mt-2 bg-white text-dark rounded-pill px-2 py-1 shadow-sm" style="width: fit-content; min-width: 160px;">
+                    <!-- Atendente Selecionado -->
+                    <div id="atendente-ativo-card" class="d-flex align-items-center mt-2 bg-white text-dark rounded-pill px-2 py-1 shadow-sm" style="width: fit-content; min-width: 180px; border-left: 4px solid #ffc107;">
                         <img id="atendente-foto" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle me-2" width="22" height="22" style="object-fit:cover;">
                         <div class="d-flex flex-column" style="line-height: 1;">
-                            <span id="atendente-nome" class="fw-bold text-dark" style="font-size: 0.65rem;">Carregando...</span>
-                            <small id="atendente-num" class="text-muted" style="font-size: 0.6rem;">Aguardando Gestão</small>
+                            <span id="atendente-nome" class="fw-bold text-dark" style="font-size: 0.65rem;">Sincronizando...</span>
+                            <small id="atendente-num" class="text-muted" style="font-size: 0.6rem;">Atendente Ativo</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Área de Pedidos -->
-                <div class="d-flex align-items-center gap-2 w-50">
-                    <div class="input-group">
-                        <input type="text" id="input-colar" class="form-control border-0 bg-white shadow-none" placeholder="Cole a mensagem aqui..." style="border-radius: 10px 0 0 10px; font-size: 0.8rem;">
-                        <button class="btn btn-dark px-3 shadow-sm btn-gerar" style="border-radius: 0 10px 10px 0;" onclick="criarPedido()">Gerar Pedido</button>
+                <!-- Input Minimalista -->
+                <div class="d-flex align-items-center gap-2" style="width: 45%;">
+                    <div class="input-group bg-white rounded-pill p-1 shadow-lg">
+                        <span class="input-group-text bg-transparent border-0"><i class="bi bi-clipboard-check text-danger"></i></span>
+                        <input type="text" id="input-colar" class="form-control border-0 shadow-none" placeholder="Cole o conteúdo aqui..." style="font-size: 0.85rem;">
+                        <button class="btn btn-danger rounded-pill px-4 fw-bold btn-gerar" onclick="criarPedido()">
+                            <i class="bi bi-magic me-1"></i> GERAR
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Lista Lateral de Grupos -->
+    <!-- Lista Lateral -->
     <div class="col-md-4 h-100">
-        <div class="card border-0 shadow-sm overflow-hidden bg-white" style="height: 600px; border-radius: 15px;">
-            <div class="p-2 bg-white border-bottom">
-                <div class="d-flex gap-1 overflow-auto pb-1 scrollbar-hidden">
-                    <button class="btn btn-light btn-sm rounded-pill fw-bold active-filter" style="font-size: 0.65rem;">Tudo</button>
-                    <button class="btn btn-light btn-sm rounded-pill fw-bold text-nowrap" style="font-size: 0.65rem;">Não lidas</button>
-                </div>
+        <div class="card border-0 shadow-sm overflow-hidden bg-white" style="height: 600px; border-radius: 20px;">
+            <div class="p-3 bg-light border-bottom text-center">
+                <h6 class="fw-bold text-dark mb-0" style="font-size: 0.75rem; letter-spacing: 1px;">GRUPOS MONITORADOS</h6>
             </div>
-            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto"></div>
+            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto p-2"></div>
         </div>
     </div>
 
-    <!-- Área de Mensagens (WhatsApp Style) -->
+    <!-- Feed de Mensagens com Fundo WhatsApp Real -->
     <div class="col-md-8 h-100">
-        <div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto d-flex flex-row flex-wrap gap-3 align-content-start" 
-             style="height: 600px; border-radius: 15px; background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay;">
+        <div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto d-flex flex-column gap-3 whatsapp-bg" 
+             style="height: 600px; border-radius: 20px;">
+             <!-- Balões injetados aqui -->
         </div>
     </div>
 </div>
@@ -55,61 +56,56 @@
     let jidSelecionado = null;
 
     async function carregarDados() {
-        // Busca as configurações e os pedidos
         const [configs, pedidos] = await Promise.all([
             API.call('getbotconfig'),
             API.call('getchatlive')
         ]);
 
-        // LÓGICA DO ATENDENTE: Busca no banco quem é do tipo atendente e está ATIVO
         const atendenteAtivo = configs.find(c => c.tipo === 'atendente' && c.ativo === true);
-        
         if(atendenteAtivo) {
             document.getElementById('atendente-foto').src = atendenteAtivo.logo;
             document.getElementById('atendente-nome').innerText = atendenteAtivo.nome;
             document.getElementById('atendente-num').innerText = atendenteAtivo.valor;
-        } else {
-            document.getElementById('atendente-nome').innerText = "Nenhum Ativo";
-            document.getElementById('atendente-num').innerText = "Configure no Bot";
         }
 
-        // Renderiza lista de GRUPOS na lateral (ignorando atendentes aqui)
         const lista = document.getElementById('lista-contatos-chat');
         lista.innerHTML = configs.filter(g => g.tipo === 'grupo').map(g => `
-            <button onclick="setFiltro('${g.valor}')" class="list-group-item list-group-item-action py-3 ${jidSelecionado === g.valor ? 'bg-light border-start border-danger border-3' : ''} ${!g.ativo ? 'opacity-50' : ''}">
+            <button onclick="setFiltro('${g.valor}')" class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 ${jidSelecionado === g.valor ? 'bg-danger text-white shadow' : ''}">
                 <div class="d-flex align-items-center">
-                    <img src="${g.logo}" class="rounded-circle me-3 border" width="38" height="38" style="object-fit:cover;">
+                    <img src="${g.logo}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
                     <div class="flex-grow-1 overflow-hidden">
-                        <span class="fw-bold small text-dark d-block text-truncate">${g.nome}</span>
-                        <small class="text-muted" style="font-size: 0.65rem;">Monitorando...</small>
+                        <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${g.nome}</span>
+                        <small class="${jidSelecionado === g.valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.65rem;">ID: ${g.valor}</small>
                     </div>
                 </div>
             </button>
         `).join('');
 
-        // Cards de Pedidos
         const container = document.getElementById('chat-messages-container');
         const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
         
         container.innerHTML = filtrados.reverse().map(p => {
             const grp = configs.find(g => g.valor === p.cliente) || {nome: 'RDO', logo: 'https://cdn-icons-png.flaticon.com/512/124/124034.png'};
+            const isConcluido = p.status === 'Concluído';
+
             return `
-                <div class="card border-0 shadow-sm animate__animated animate__fadeIn" style="width: 250px; border-radius: 12px; height: fit-content;">
-                    <div class="card-header bg-white border-0 py-2 d-flex align-items-center border-bottom">
-                        <img src="${grp.logo}" class="rounded-circle me-2" width="18" height="18">
-                        <span class="small fw-bold text-truncate" style="font-size: 0.7rem;">${grp.nome}</span>
-                    </div>
-                    <div class="card-body py-2">
-                        <p class="small mb-2" style="font-size: 0.75rem; white-space: pre-wrap;">${p.ultima_msg}</p>
-                        <div class="d-flex justify-content-between align-items-center pt-2">
-                            <span class="badge ${p.status === 'Concluído' ? 'bg-success' : 'bg-danger'}" style="font-size:0.55rem">${p.status}</span>
+                <div class="d-flex flex-column ${isConcluido ? 'align-items-end' : 'align-items-start'} animate__animated animate__fadeIn">
+                    <div class="whatsapp-bubble p-2 px-3 shadow-sm position-relative" style="max-width: 75%; border-radius: 12px; background: ${isConcluido ? '#e7ffdb' : '#ffffff'};">
+                        <div class="d-flex align-items-center mb-1 gap-2 border-bottom pb-1 mb-1" style="opacity: 0.6;">
+                            <img src="${grp.logo}" class="rounded-circle" width="14" height="14">
+                            <strong style="font-size: 0.6rem;">${grp.nome}</strong>
+                        </div>
+                        <p class="mb-1 text-dark" style="font-size: 0.82rem; line-height: 1.4; white-space: pre-wrap;">${p.ultima_msg}</p>
+                        <div class="d-flex justify-content-end align-items-center gap-1">
+                            <span class="text-muted" style="font-size: 0.55rem;">${p.hora || '12:00'}</span>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light p-0 px-1" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                                <i class="bi bi-chevron-down text-muted" style="cursor:pointer; font-size: 0.6rem;" data-bs-toggle="dropdown"></i>
                                 <ul class="dropdown-menu shadow border-0 small">
-                                    <li><a class="dropdown-item" onclick="setStat('${p.id}','Aberto')">Aberto</a></li>
-                                    <li><a class="dropdown-item text-success" onclick="setStat('${p.id}','Concluído')">Concluído</a></li>
+                                    <li><a class="dropdown-item" onclick="setStat('${p.id}','Aberto')">Pendente</a></li>
+                                    <li><a class="dropdown-item text-success fw-bold" onclick="setStat('${p.id}','Concluído')">Concluir</a></li>
                                 </ul>
                             </div>
+                            <i class="bi bi-check2-all ${isConcluido ? 'text-primary' : 'text-muted'}" style="font-size: 0.75rem;"></i>
                         </div>
                     </div>
                 </div>
@@ -135,7 +131,7 @@
             cliente: jidSelecionado || 'GERAL',
             ultima_msg: msg,
             status: 'Aberto',
-            hora: new Date().toLocaleTimeString('pt-BR')
+            hora: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
         });
         document.getElementById('input-colar').value = '';
         carregarDados();
@@ -146,11 +142,28 @@
 </script>
 
 <style>
+    /* Fundo clássico do WhatsApp com o padrão de doodles */
+    .whatsapp-bg {
+        background-color: #efe7de !important;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') !important;
+        background-repeat: repeat !important;
+        background-attachment: local !important;
+        position: relative;
+    }
+
+    /* Ajuste fino das sombras e bordas dos balões */
+    .whatsapp-bubble {
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13) !important;
+    }
+
     .btn-gerar { 
         font-family: 'Segoe UI', Roboto, sans-serif; 
-        font-weight: 500; 
-        font-size: 0.85rem;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
     }
-    .active-filter { background-color: #212529 !important; color: white !important; }
+    
     .scrollbar-hidden::-webkit-scrollbar { display: none; }
+    
+    .list-group-item { transition: all 0.2s ease; border: none !important; margin-bottom: 5px; }
+    .list-group-item:hover { background-color: #f1f3f4; transform: translateX(4px); }
 </style>
