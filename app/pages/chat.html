@@ -9,12 +9,12 @@
                         <h5 class="fw-bold mb-0 text-white tracking-tight">RDO <span class="fw-light opacity-75">Express</span></h5>
                     </div>
                     
-                    <!-- Atendente Selecionado -->
-                    <div id="atendente-ativo-card" class="d-flex align-items-center mt-2 bg-white text-dark rounded-pill px-2 py-1 shadow-sm" style="width: fit-content; min-width: 180px; border-left: 4px solid #ffc107;">
+                    <!-- Atendente Selecionado (Exibido apenas quando bot_status é true) -->
+                    <div id="atendente-ativo-card" class="d-none align-items-center mt-2 bg-white text-dark rounded-pill px-2 py-1 shadow-sm" style="width: fit-content; min-width: 180px; border-left: 4px solid #dc3545;">
                         <img id="atendente-foto" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle me-2" width="22" height="22" style="object-fit:cover;">
                         <div class="d-flex flex-column" style="line-height: 1;">
-                            <span id="atendente-nome" class="fw-bold text-dark" style="font-size: 0.65rem;">Sincronizando...</span>
-                            <small id="atendente-num" class="text-muted" style="font-size: 0.6rem;">Atendente Ativo</small>
+                            <span id="atendente-nome" class="fw-bold text-dark" style="font-size: 0.65rem;">...</span>
+                            <small id="atendente-num" class="text-muted" style="font-size: 0.6rem;">...</small>
                         </div>
                     </div>
                 </div>
@@ -43,11 +43,10 @@
         </div>
     </div>
 
-    <!-- Feed de Mensagens com Fundo WhatsApp Real -->
+    <!-- Feed de Mensagens -->
     <div class="col-md-8 h-100">
         <div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto d-flex flex-column gap-3 whatsapp-bg" 
              style="height: 600px; border-radius: 20px;">
-             <!-- Balões injetados aqui -->
         </div>
     </div>
 </div>
@@ -61,39 +60,53 @@
             API.call('getchatlive')
         ]);
 
-        const atendenteAtivo = configs.find(c => c.tipo === 'atendente' && c.ativo === true);
-        if(atendenteAtivo) {
-            document.getElementById('atendente-foto').src = atendenteAtivo.logo;
-            document.getElementById('atendente-nome').innerText = atendenteAtivo.nome;
-            document.getElementById('atendente-num').innerText = atendenteAtivo.valor;
+        const botAtivo = localStorage.getItem('bot_status') === 'true';
+        const cardAtendente = document.getElementById('atendente-ativo-card');
+
+        if(botAtivo) {
+            const atendente = configs.find(c => (c.tipo || c.TIPO).toLowerCase() === 'atendente' && (c.status || c.STATUS) == true);
+            if(atendente) {
+                cardAtendente.classList.replace('d-none', 'd-flex');
+                document.getElementById('atendente-foto').src = atendente.imagem || atendente.IMAGEM;
+                document.getElementById('atendente-nome').innerText = atendente.username || atendente.USERNAME;
+                document.getElementById('atendente-num').innerText = atendente.jid_numero || atendente.JID_NUMERO;
+            } else {
+                cardAtendente.classList.replace('d-flex', 'd-none');
+            }
+        } else {
+            cardAtendente.classList.replace('d-flex', 'd-none');
         }
 
         const lista = document.getElementById('lista-contatos-chat');
-        lista.innerHTML = configs.filter(g => g.tipo === 'grupo').map(g => `
-            <button onclick="setFiltro('${g.valor}')" class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 ${jidSelecionado === g.valor ? 'bg-danger text-white shadow' : ''}">
+        lista.innerHTML = configs.filter(g => (g.tipo || g.TIPO).toLowerCase() === 'grupo').map(g => {
+            const valor = g.jid_numero || g.JID_NUMERO;
+            const nome = g.username || g.USERNAME;
+            const logo = g.imagem || g.IMAGEM;
+            return `
+            <button onclick="setFiltro('${valor}')" class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 ${jidSelecionado === valor ? 'bg-danger text-white shadow' : ''}">
                 <div class="d-flex align-items-center">
-                    <img src="${g.logo}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
+                    <img src="${logo}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
                     <div class="flex-grow-1 overflow-hidden">
-                        <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${g.nome}</span>
-                        <small class="${jidSelecionado === g.valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.65rem;">ID: ${g.valor}</small>
+                        <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${nome}</span>
+                        <small class="${jidSelecionado === valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.65rem;">ID: ${valor}</small>
                     </div>
                 </div>
-            </button>
-        `).join('');
+            </button>`;
+        }).join('');
 
         const container = document.getElementById('chat-messages-container');
         const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
         
         container.innerHTML = filtrados.reverse().map(p => {
-            const grp = configs.find(g => g.valor === p.cliente) || {nome: 'RDO', logo: 'https://cdn-icons-png.flaticon.com/512/124/124034.png'};
+            const grp = configs.find(g => (g.jid_numero || g.JID_NUMERO) === p.cliente) || {username: 'RDO', imagem: 'https://cdn-icons-png.flaticon.com/512/124/124034.png'};
             const isConcluido = p.status === 'Concluído';
 
             return `
                 <div class="d-flex flex-column ${isConcluido ? 'align-items-end' : 'align-items-start'} animate__animated animate__fadeIn">
                     <div class="whatsapp-bubble p-2 px-3 shadow-sm position-relative" style="max-width: 75%; border-radius: 12px; background: ${isConcluido ? '#e7ffdb' : '#ffffff'};">
                         <div class="d-flex align-items-center mb-1 gap-2 border-bottom pb-1 mb-1" style="opacity: 0.6;">
-                            <img src="${grp.logo}" class="rounded-circle" width="14" height="14">
-                            <strong style="font-size: 0.6rem;">${grp.nome}</strong>
+                            <img src="${grp.imagem || grp.IMAGEM}" class="rounded-circle" width="14" height="14">
+                            <strong style="font-size: 0.6rem;">${grp.username || grp.USERNAME}</strong>
                         </div>
                         <p class="mb-1 text-dark" style="font-size: 0.82rem; line-height: 1.4; white-space: pre-wrap;">${p.ultima_msg}</p>
                         <div class="d-flex justify-content-end align-items-center gap-1">
@@ -142,28 +155,14 @@
 </script>
 
 <style>
-    /* Fundo clássico do WhatsApp com o padrão de doodles */
     .whatsapp-bg {
         background-color: #efe7de !important;
         background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') !important;
         background-repeat: repeat !important;
         background-attachment: local !important;
-        position: relative;
     }
-
-    /* Ajuste fino das sombras e bordas dos balões */
-    .whatsapp-bubble {
-        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13) !important;
-    }
-
-    .btn-gerar { 
-        font-family: 'Segoe UI', Roboto, sans-serif; 
-        font-size: 0.75rem;
-        letter-spacing: 1px;
-    }
-    
-    .scrollbar-hidden::-webkit-scrollbar { display: none; }
-    
+    .whatsapp-bubble { box-shadow: 0 1px 0.5px rgba(0,0,0,0.13) !important; }
+    .btn-gerar { font-family: sans-serif; font-size: 0.75rem; letter-spacing: 1px; }
     .list-group-item { transition: all 0.2s ease; border: none !important; margin-bottom: 5px; }
     .list-group-item:hover { background-color: #f1f3f4; transform: translateX(4px); }
 </style>

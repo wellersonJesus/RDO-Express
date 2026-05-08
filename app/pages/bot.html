@@ -137,20 +137,6 @@
                 return;
             }
 
-            // NOVA LÓGICA: Permite número repetido, mas bloqueia Nome ou Imagem idênticos
-            if(!idExistente) {
-                const conflitoIdentidade = listaAtual.find(i => 
-                    (i.username || i.USERNAME).toLowerCase() === nome.toLowerCase() || 
-                    (i.imagem || i.IMAGEM) === imagem
-                );
-
-                if(conflitoIdentidade) {
-                    erroDiv.innerText = "Erro: Já existe um bot com este NOME ou IMAGEM!";
-                    erroDiv.classList.remove('d-none');
-                    return;
-                }
-            }
-
             const payload = {
                 action: idExistente ? 'updatebotconfig' : 'addbotconfig',
                 id: idExistente || "ID-" + Date.now(),
