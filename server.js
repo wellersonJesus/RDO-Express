@@ -92,4 +92,4 @@ app.post('/api/login', (req, res) => {
 app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'app', 'index.html')); });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => { console.log('🚀 RDO System Online na porta ' + PORT); });
+app.listen(PORT, '0.0.0.0', () => { console.log('💤 RDO System Online na porta ' + PORT); });

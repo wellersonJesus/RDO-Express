@@ -50,9 +50,7 @@ Para aplicar alterações no código ou variáveis de ambiente sem derrubar todo
 
 ```bash
 # Reconstrói apenas o container da aplicação RDO
-sudo docker-compose up -d --build rdo_app
-# Acompanhar mensagens do Webhook e requisições em tempo real
-sudo docker logs -f rdo_app
+sudo docker-compose up -d --build rdo_app && sudo docker logs -f rdo_app
 ```
 
 ---
