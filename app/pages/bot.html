@@ -76,7 +76,7 @@
     </div>
 </div>
 
-<!-- Modal Confirmação Delete (Mesmo anterior) -->
+<!-- Modal Confirmação Delete -->
 <div class="modal fade" id="modalConfirmDelete" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 1.5rem;">
@@ -114,7 +114,6 @@
         window.abrirModalEditar = (id) => {
             const item = listaAtual.find(i => (i.id || i.ID) === id);
             if(!item) return;
-
             document.getElementById('reg-id').value = id;
             document.getElementById('reg-nome').value = item.username || item.USERNAME;
             document.getElementById('reg-numero').value = item.jid_numero || item.JID_NUMERO;
@@ -129,6 +128,7 @@
             const idExistente = document.getElementById('reg-id').value;
             const nome = document.getElementById('reg-nome').value.trim();
             const numero = document.getElementById('reg-numero').value.trim();
+            const imagem = document.getElementById('reg-logo').value.trim() || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
             const erroDiv = document.getElementById('msg-erro-bot');
 
             if(!nome || !numero) {
@@ -137,15 +137,15 @@
                 return;
             }
 
-            // Validação de Duplicidade (apenas se for novo cadastro)
+            // NOVA LÓGICA: Permite número repetido, mas bloqueia Nome ou Imagem idênticos
             if(!idExistente) {
-                const duplicado = listaAtual.find(i => 
+                const conflitoIdentidade = listaAtual.find(i => 
                     (i.username || i.USERNAME).toLowerCase() === nome.toLowerCase() || 
-                    (i.jid_numero || i.JID_NUMERO) === numero
+                    (i.imagem || i.IMAGEM) === imagem
                 );
 
-                if(duplicado) {
-                    erroDiv.innerText = "Erro: Nome ou Número já cadastrado!";
+                if(conflitoIdentidade) {
+                    erroDiv.innerText = "Erro: Já existe um bot com este NOME ou IMAGEM!";
                     erroDiv.classList.remove('d-none');
                     return;
                 }
@@ -155,8 +155,8 @@
                 action: idExistente ? 'updatebotconfig' : 'addbotconfig',
                 id: idExistente || "ID-" + Date.now(),
                 username: nome,
-                jid_numero: numero, // Aceita +55 31 7139-7172 sem erro
-                imagem: document.getElementById('reg-logo').value.trim() || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+                jid_numero: numero,
+                imagem: imagem,
                 tipo: document.getElementById('reg-tipo').value,
                 status: true
             };
@@ -172,7 +172,6 @@
             const data = await API.call('getbotconfig') || [];
             listaAtual = data;
             const list = document.getElementById('bot-list');
-            
             list.innerHTML = data.map(i => {
                 const id = i.id || i.ID;
                 const nome = i.username || i.USERNAME || 'Sem Nome';
@@ -180,7 +179,6 @@
                 const logo = i.imagem || i.IMAGEM || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 const tipo = (i.tipo || i.TIPO || 'GERAL').toUpperCase();
                 const ativo = (String(i.status || i.STATUS).toLowerCase() === 'true');
-
                 return `
                     <tr class="${!ativo ? 'opacity-50' : ''}">
                         <td>
@@ -195,12 +193,8 @@
                         <td><span class="badge bg-light text-dark border" style="font-size:0.6rem">${tipo}</span></td>
                         <td class="text-center">
                             <div class="btn-group">
-                                <button class="btn btn-sm text-primary" onclick="abrirModalEditar('${id}')">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button class="btn btn-sm text-danger" onclick="abrirModalRemover('${id}')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                <button class="btn btn-sm text-primary" onclick="abrirModalEditar('${id}')"><i class="bi bi-pencil-square"></i></button>
+                                <button class="btn btn-sm text-danger" onclick="abrirModalRemover('${id}')"><i class="bi bi-trash"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -208,7 +202,6 @@
             }).join('');
         };
 
-        // ... demais funções (toggleStatusBot, abrirModalRemover, confirmDelete) mantidas ...
         window.toggleStatusBot = () => {
             botAtivo = !botAtivo;
             localStorage.setItem('bot_status', botAtivo);
@@ -242,3 +235,7 @@
         carregarBot();
     })();
 </script>
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin { display: inline-block; animation: spin 2s linear infinite; }
+</style>
