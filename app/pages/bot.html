@@ -14,13 +14,12 @@
                     <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.2;">
                         Gerencie conexões e monitoramento de grupos.
                     </p>
-                    <div id="status-loop" class="d-flex align-items-center gap-1 fw-bold" style="font-size: 0.7rem;">
-                        </div>
+                    <div id="status-loop" class="d-flex align-items-center gap-1 fw-bold" style="font-size: 0.7rem;"></div>
                 </div>
             </div>
             <div class="d-flex gap-2">
                 <button id="btn-status-bot" class="btn btn-sm px-2 fw-bold shadow-sm" style="font-size: 0.7rem;" onclick="toggleStatusBot()"></button>
-                <button class="btn btn-dark btn-sm px-2 shadow-sm" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#modalNovoGrupo">
+                <button class="btn btn-dark btn-sm px-2 shadow-sm" style="font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#modalNovoCadastro">
                     <i class="bi bi-plus-lg me-1"></i> CADASTRAR
                 </button>
             </div>
@@ -35,6 +34,7 @@
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
                     <th class="border-0">JID/NÚMERO</th>
+                    <th class="border-0">TIPO</th>
                     <th class="border-0 text-center">AÇÕES</th>
                 </tr>
             </thead>
@@ -43,28 +43,36 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalInfoManual" tabindex="-1" aria-hidden="true">
+<!-- Modal Cadastro Refinado (RDO Express) -->
+<div class="modal fade" id="modalNovoCadastro" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-info text-white border-0">
-                <h6 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>Como Configurar</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 pb-0 justify-content-center">
+                <h5 class="fw-bold text-dark mt-3">RDO <span class="text-danger">Express</span></h5>
             </div>
-            <div class="modal-body p-4">
-                <div class="mb-3 d-flex align-items-start gap-3">
-                    <div class="bg-primary text-white rounded-circle p-2 px-3 fw-bold">1</div>
-                    <div>
-                        <h6 class="fw-bold mb-0">Atendentes</h6>
-                        <p class="small text-muted">Use o formato internacional: 55 + DDD + Numero. Ex: 5531988887777</p>
-                    </div>
+            <div class="modal-body px-4 pt-0">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Nome</label>
+                    <input type="text" id="reg-nome" class="form-control bg-light border-0" placeholder="Nome do atendente ou grupo">
                 </div>
-                <div class="d-flex align-items-start gap-3">
-                    <div class="bg-danger text-white rounded-circle p-2 px-3 fw-bold">2</div>
-                    <div>
-                        <h6 class="fw-bold mb-0">Grupos</h6>
-                        <p class="small text-muted">Cole o ID (JID) que termina em @g.us ou o link de convite.</p>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">WhatsApp / JID</label>
+                    <input type="text" id="reg-valor" class="form-control bg-light border-0" placeholder="55319...">
                 </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">URL da Logo</label>
+                    <input type="text" id="reg-logo" class="form-control bg-light border-0" placeholder="https://...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Tipo</label>
+                    <select id="reg-tipo" class="form-select bg-light border-0">
+                        <option value="atendente">Atendente</option>
+                        <option value="grupo">Grupo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-danger w-100 py-2 fw-bold" onclick="executarCadastro()">FINALIZAR</button>
             </div>
         </div>
     </div>
@@ -73,17 +81,14 @@
 <script>
     (function() {
         let botAtivo = localStorage.getItem('bot_status') === 'true';
-        
         window.toggleStatusBot = () => {
             botAtivo = !botAtivo;
             localStorage.setItem('bot_status', botAtivo);
             renderBotUI();
         };
-
         function renderBotUI() {
             const btn = document.getElementById('btn-status-bot');
             const loop = document.getElementById('status-loop');
-            
             if(botAtivo) {
                 btn.className = "btn btn-danger btn-sm px-2 shadow-sm";
                 btn.innerHTML = '<i class="bi bi-broadcast"></i> ATIVADO';
@@ -94,7 +99,20 @@
                 loop.innerHTML = '<i class="bi bi-arrow-repeat text-danger"></i> <span class="text-danger">OFFLINE</span>';
             }
         }
-
+        window.executarCadastro = async () => {
+            const payload = {
+                id: "ID-" + Date.now(),
+                nome: document.getElementById('reg-nome').value,
+                valor: document.getElementById('reg-valor').value,
+                logo: document.getElementById('reg-logo').value || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+                tipo: document.getElementById('reg-tipo').value,
+                ativo: true
+            };
+            if(!payload.nome || !payload.valor) return alert("Preencha os campos!");
+            await API.call('addbotconfig', payload);
+            bootstrap.Modal.getInstance(document.getElementById('modalNovoCadastro')).hide();
+            carregarBot();
+        };
         window.carregarBot = async () => {
             const data = await API.call('getbotconfig') || [];
             document.getElementById('bot-list').innerHTML = data.map(i => `
@@ -103,13 +121,13 @@
                     <td><img src="${i.logo}" class="rounded-circle border" width="30" height="30" style="object-fit:cover"></td>
                     <td class="fw-bold text-dark">${i.nome}</td>
                     <td class="text-muted small">${i.valor}</td>
+                    <td><span class="badge bg-light text-dark border" style="font-size:0.6rem">${i.tipo.toUpperCase()}</span></td>
                     <td class="text-center">
                         <button class="btn btn-sm text-danger" onclick="API.call('deletebotconfig',{id:'${i.id}'}).then(carregarBot)"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
         };
-
         renderBotUI();
         carregarBot();
     })();
