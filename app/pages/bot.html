@@ -1,143 +1,116 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h4 class="mb-0 fw-bold text-secondary">
-            <i class="bi bi-cpu text-danger me-2"></i>Configuração do Bot
+            <i class="bi bi-robot text-danger me-2"></i>Gestão do Bot RDO
         </h4>
-        <button class="btn btn-outline-info btn-sm rounded-circle" type="button" data-bs-toggle="collapse" data-bs-target="#helpBot" aria-expanded="false" title="Como obter IDs?">
-            <i class="bi bi-info-lg"></i>
-        </button>
+        <div>
+            <button class="btn btn-success btn-sm fw-bold me-2" onclick="ativarMonitoramento()">
+                <i class="bi bi-broadcast me-1"></i> ATIVAR BOT
+            </button>
+            <button class="btn btn-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalNovoGrupo">
+                <i class="bi bi-plus-circle me-1"></i> NOVO GRUPO
+            </button>
+        </div>
     </div>
     
     <div class="card-body">
-        <!-- Painel de Ajuda Didático -->
-        <div class="collapse mb-4" id="helpBot">
-            <div class="card card-body bg-light border-info">
-                <h6 class="fw-bold text-info"><i class="bi bi-lightbulb me-2"></i>Como capturar o ID correto?</h6>
-                <p class="small mb-2">No WhatsApp Web, selecione a conversa e use o código abaixo no console (F12):</p>
-                
-                <div class="bg-dark p-3 rounded mb-3 position-relative">
-                    <code id="code-snippet" class="text-info" style="font-size: 0.75rem; display: block; word-break: break-all;">
-var chatData = document.querySelector('#main header')?.parentElement?.parentElement?.__reactFiber$?.return?.memoizedProps?.children?.props?.chat;
-console.log("--- DADOS PARA O SEU BOT ---");
-console.log("Nome:", chatData?.name);
-console.log("ID para copiar:", chatData?.id._serialized);
-console.log("----------------------------");
-                    </code>
-                </div>
-                
-                <div class="alert alert-warning py-2 mb-0" style="font-size: 0.75rem;">
-                    <strong>Importante:</strong> Grupos terminam em <code>@g.us</code> e Contatos em <code>@c.us</code>. Não use o ID da mensagem (A5F8...), use o ID da conversa acima.
-                </div>
-            </div>
-        </div>
-
-        <!-- Formulário de Cadastro -->
-        <div class="p-3 mb-4 border rounded bg-light shadow-sm">
-            <h6 class="fw-bold mb-3 small text-uppercase text-muted">Monitorar Novo Grupo/Contato</h6>
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <label class="small fw-bold">ID da Conversa (WhatsApp)</label>
-                    <input type="text" id="bot-val" class="form-control form-control-sm" placeholder="Ex: 12036332...@g.us">
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold">Tipo</label>
-                    <select id="bot-tipo" class="form-select form-select-sm">
-                        <option value="grupo">Grupo (@g.us)</option>
-                        <option value="atendente">Atendente (@c.us)</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-danger btn-sm w-100 fw-bold" onclick="salvarBot()">
-                        <i class="bi bi-save me-1"></i>CADASTRAR
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Lista de Configurações -->
         <div class="table-responsive">
             <table class="table table-hover align-middle">
-                <thead class="table-dark">
+                <thead class="table-light">
                     <tr>
-                        <th class="small text-uppercase" style="width: 20%">Tipo</th>
-                        <th class="small text-uppercase">Identificador Registrado</th>
-                        <th class="small text-uppercase text-end" style="width: 15%">Ações</th>
+                        <th>Tipo</th>
+                        <th>Identificador (JID)</th>
+                        <th class="text-end">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="bot-list">
-                    <!-- Dinâmico -->
-                </tbody>
+                <tbody id="bot-list"></tbody>
             </table>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="modalNovoGrupo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Cadastrar Monitoramento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ID do WhatsApp (JID)</label>
+                    <input type="text" id="bot-val" class="form-control" placeholder="Ex: 120363...@g.us">
+                    <div class="form-text">Use o F12 no WhatsApp Web para capturar o ID da conversa.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tipo de Alvo</label>
+                    <select id="bot-tipo" class="form-select">
+                        <option value="grupo">Grupo (@g.us)</option>
+                        <option value="atendente">Atendente (@c.us)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-danger" onclick="salvarBot()">CADASTRAR AGORA</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    (function() {
-        // Função para Salvar
-        window.salvarBot = async () => {
-            const valor = document.getElementById('bot-val').value.trim();
-            const tipo = document.getElementById('bot-tipo').value;
-            
-            if (!valor) {
-                alert("Por favor, insira o ID capturado no console.");
-                return;
-            }
-
-            // Validação simples para evitar erros comuns de ID de mensagem
-            if (valor.includes('_')) {
-                alert("Atenção: Você parece ter colado um ID de mensagem. Cole o ID da conversa (que termina em @g.us ou @c.us).");
-            }
-
-            const res = await API.call('addbotconfig', { 
-                id: "BOT-" + Date.now(),
-                tipo: tipo, 
-                valor: valor 
+    window.ativarMonitoramento = async () => {
+        const instance = prompt("Digite o nome da instância na Evolution (Ex: rdo_bot):", "rdo_bot");
+        if(!instance) return;
+        
+        try {
+            const res = await fetch('/api/bot/configurar-webhook', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ instanceName: instance })
             });
+            const data = await res.json();
+            alert(data.message);
+        } catch (e) { alert("Erro ao ativar monitoramento"); }
+    };
 
-            if (res.status === 'success') {
-                document.getElementById('bot-val').value = '';
-                carregarBot();
-            }
-        };
+    window.salvarBot = async () => {
+        const valor = document.getElementById('bot-val').value;
+        const tipo = document.getElementById('bot-tipo').value;
+        if(!valor) return alert("Insira o ID");
 
-        // Função para Carregar
-        window.carregarBot = async () => {
-            const listContainer = document.getElementById('bot-list');
-            listContainer.innerHTML = '<tr><td colspan="3" class="text-center py-3"><div class="spinner-border spinner-border-sm text-danger"></div></td></tr>';
-            
-            const data = await API.call('getbotconfig');
-            
-            if (!data || data.length === 0) {
-                listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Nenhum monitoramento configurado no momento.</td></tr>';
-                return;
-            }
+        const res = await API.call('addbotconfig', { 
+            id: "BOT-" + Date.now(), 
+            tipo: tipo, 
+            valor: valor 
+        });
 
-            listContainer.innerHTML = data.map(i => `
-                <tr>
-                    <td>
-                        <span class="badge ${i.tipo === 'grupo' ? 'bg-info' : 'bg-dark'} text-uppercase" style="font-size: 0.65rem;">
-                            <i class="bi ${i.tipo === 'grupo' ? 'bi-people-fill' : 'bi-person-badge-fill'} me-1"></i>${i.tipo}
-                        </span>
-                    </td>
-                    <td class="fw-medium text-secondary small" style="letter-spacing: 0.5px; font-family: monospace;">${i.valor}</td>
-                    <td class="text-end">
-                        <button class="btn btn-outline-danger btn-sm border-0" title="Remover" onclick="excluirBot('${i.id}')">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        };
+        if(res.status === 'success') {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovoGrupo'));
+            modal.hide();
+            carregarBot();
+        }
+    };
 
-        // Função para Excluir
-        window.excluirBot = async (id) => {
-            if (confirm('Deseja remover este monitoramento?')) {
-                await API.call('deletebotconfig', { id: id });
-                carregarBot();
-            }
-        };
+    window.carregarBot = async () => {
+        const data = await API.call('getbotconfig');
+        const list = document.getElementById('bot-list');
+        list.innerHTML = data.map(i => `
+            <tr>
+                <td><span class="badge bg-info">${i.tipo}</span></td>
+                <td class="font-monospace small">${i.valor}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirBot('${i.id}')"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    };
 
-        carregarBot();
-    })();
+    window.excluirBot = async (id) => {
+        if(confirm('Remover?')) {
+            await API.call('deletebotconfig', { id });
+            carregarBot();
+        }
+    };
+    carregarBot();
 </script>
