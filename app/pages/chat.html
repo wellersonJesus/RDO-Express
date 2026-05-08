@@ -3,23 +3,35 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-danger text-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex flex-column">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-whatsapp fs-4 me-2 text-white"></i>
-                        <h5 class="fw-bold mb-0 text-white tracking-tight">RDO <span class="fw-light opacity-75">Express</span></h5>
+                <div class="d-flex align-items-center gap-4">
+                    <!-- Branding & Atendentes -->
+                    <div>
+                        <div class="mb-1">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-whatsapp fs-4 me-2 text-white"></i>
+                                <h5 class="fw-bold mb-0 text-white tracking-tight">RDO <span class="fw-light opacity-75">Express</span></h5>
+                            </div>
+                            <!-- Subtítulo atualizado -->
+                            <div class="text-white-50 fw-light" style="font-size: 0.65rem; margin-top: -2px; letter-spacing: 0.5px; text-transform: uppercase;">
+                                Conectando entregas a resultados
+                            </div>
+                        </div>
+                        
+                        <!-- Container de Ícones dos Atendentes -->
+                        <div id="atendentes-status-bar" class="d-flex align-items-center gap-2 mt-2">
+                            <!-- Injetado via JS -->
+                        </div>
                     </div>
                     
-                    <!-- Atendente Selecionado (Exibido apenas quando bot_status é true) -->
-                    <div id="atendente-ativo-card" class="d-none align-items-center mt-2 bg-white text-dark rounded-pill px-2 py-1 shadow-sm" style="width: fit-content; min-width: 180px; border-left: 4px solid #dc3545;">
-                        <img id="atendente-foto" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle me-2" width="22" height="22" style="object-fit:cover;">
-                        <div class="d-flex flex-column" style="line-height: 1;">
-                            <span id="atendente-nome" class="fw-bold text-dark" style="font-size: 0.65rem;">...</span>
-                            <small id="atendente-num" class="text-muted" style="font-size: 0.6rem;">...</small>
-                        </div>
+                    <!-- Mensagem de Bot Desativado -->
+                    <div id="msg-bot-off" class="d-none animate__animated animate__fadeIn">
+                        <span class="badge bg-white text-danger rounded-pill px-3 py-2 fw-bold shadow-sm">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> BOT RDO DESATIVADO
+                        </span>
                     </div>
                 </div>
 
-                <!-- Input Minimalista -->
+                <!-- Input de Geração de Pedidos -->
                 <div class="d-flex align-items-center gap-2" style="width: 45%;">
                     <div class="input-group bg-white rounded-pill p-1 shadow-lg">
                         <span class="input-group-text bg-transparent border-0"><i class="bi bi-clipboard-check text-danger"></i></span>
@@ -37,7 +49,9 @@
     <div class="col-md-4 h-100">
         <div class="card border-0 shadow-sm overflow-hidden bg-white" style="height: 600px; border-radius: 20px;">
             <div class="p-3 bg-light border-bottom text-center">
-                <h6 class="fw-bold text-dark mb-0" style="font-size: 0.75rem; letter-spacing: 1px;">GRUPOS MONITORADOS</h6>
+                <h6 class="text-dark mb-0" style="font-size: 0.75rem;">
+                    <b class="fw-bold">Chat</b> Comunicação interna
+                </h6>
             </div>
             <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto p-2"></div>
         </div>
@@ -54,75 +68,89 @@
 <script>
     let jidSelecionado = null;
 
+    function verificarSessaoAtendente(at) {
+        const nome = (at.username || at.USERNAME || '').toLowerCase();
+        const statusReal = String(at.status || at.STATUS).toLowerCase() === 'true';
+        // Wellerson (Master) sempre online, outros conforme status
+        if (nome === 'wellerson') return true; 
+        return statusReal;
+    }
+
     async function carregarDados() {
         const [configs, pedidos] = await Promise.all([
             API.call('getbotconfig'),
             API.call('getchatlive')
         ]);
 
-        const botAtivo = localStorage.getItem('bot_status') === 'true';
-        const cardAtendente = document.getElementById('atendente-ativo-card');
+        const masterBotAtivo = localStorage.getItem('bot_status') === 'true';
+        const msgOff = document.getElementById('msg-bot-off');
+        const statusBar = document.getElementById('atendentes-status-bar');
+        const listaGrupos = document.getElementById('lista-contatos-chat');
+        const containerMensagens = document.getElementById('chat-messages-container');
 
-        if(botAtivo) {
-            const atendente = configs.find(c => (c.tipo || c.TIPO).toLowerCase() === 'atendente' && (c.status || c.STATUS) == true);
-            if(atendente) {
-                cardAtendente.classList.replace('d-none', 'd-flex');
-                document.getElementById('atendente-foto').src = atendente.imagem || atendente.IMAGEM;
-                document.getElementById('atendente-nome').innerText = atendente.username || atendente.USERNAME;
-                document.getElementById('atendente-num').innerText = atendente.jid_numero || atendente.JID_NUMERO;
-            } else {
-                cardAtendente.classList.replace('d-flex', 'd-none');
-            }
+        if(masterBotAtivo) {
+            msgOff.classList.add('d-none');
+            
+            const atendentes = configs.filter(c => (c.tipo || c.TIPO || '').toLowerCase() === 'atendente');
+            statusBar.innerHTML = atendentes.map(at => {
+                const logado = verificarSessaoAtendente(at);
+                return `
+                    <div class="position-relative" title="${at.username || at.USERNAME} - ${logado ? 'Conectado' : 'Desconectado'}">
+                        <img src="${at.imagem || at.IMAGEM}" 
+                             class="rounded-circle border border-2 avatar-header ${logado ? 'border-success' : 'border-white grayscale opacity-75'}" 
+                             width="28" height="28" style="object-fit:cover;">
+                        <span class="status-dot ${logado ? 'bg-success' : 'bg-warning'}"></span>
+                    </div>
+                `;
+            }).join('');
+
+            listaGrupos.innerHTML = configs.filter(g => (g.tipo || g.TIPO || '').toLowerCase() === 'grupo').map(g => {
+                const valor = g.jid_numero || g.JID_NUMERO;
+                const ativo = String(g.status || g.STATUS).toLowerCase() === 'true';
+                return `
+                <button onclick="${ativo ? `setFiltro('${valor}')` : ''}" 
+                    class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 
+                    ${jidSelecionado === valor ? 'bg-danger text-white shadow' : ''} 
+                    ${!ativo ? 'opacity-25 grayscale' : ''}">
+                    <div class="d-flex align-items-center">
+                        <img src="${g.imagem || g.IMAGEM}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
+                        <div class="flex-grow-1 overflow-hidden">
+                            <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${g.username || g.USERNAME}</span>
+                            <small class="${jidSelecionado === valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.6rem;">${valor}</small>
+                        </div>
+                    </div>
+                </button>`;
+            }).join('');
+
         } else {
-            cardAtendente.classList.replace('d-flex', 'd-none');
+            msgOff.classList.remove('d-none');
+            statusBar.innerHTML = '';
+            listaGrupos.innerHTML = '<div class="text-center p-5 text-muted">Bot Offline</div>';
         }
 
-        const lista = document.getElementById('lista-contatos-chat');
-        lista.innerHTML = configs.filter(g => (g.tipo || g.TIPO).toLowerCase() === 'grupo').map(g => {
-            const valor = g.jid_numero || g.JID_NUMERO;
-            const nome = g.username || g.USERNAME;
-            const logo = g.imagem || g.IMAGEM;
-            return `
-            <button onclick="setFiltro('${valor}')" class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 ${jidSelecionado === valor ? 'bg-danger text-white shadow' : ''}">
-                <div class="d-flex align-items-center">
-                    <img src="${logo}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
-                    <div class="flex-grow-1 overflow-hidden">
-                        <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${nome}</span>
-                        <small class="${jidSelecionado === valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.65rem;">ID: ${valor}</small>
-                    </div>
-                </div>
-            </button>`;
-        }).join('');
+        if(!masterBotAtivo) {
+            containerMensagens.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted">SISTEMA DESCONECTADO</div>';
+            return;
+        }
 
-        const container = document.getElementById('chat-messages-container');
         const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
-        
-        container.innerHTML = filtrados.reverse().map(p => {
-            const grp = configs.find(g => (g.jid_numero || g.JID_NUMERO) === p.cliente) || {username: 'RDO', imagem: 'https://cdn-icons-png.flaticon.com/512/124/124034.png'};
+        containerMensagens.innerHTML = filtrados.reverse().map(p => {
+            const grp = configs.find(g => (g.jid_numero || g.JID_NUMERO) === p.cliente) || {username: 'RDO', imagem: ''};
             const isConcluido = p.status === 'Concluído';
-
             return `
                 <div class="d-flex flex-column ${isConcluido ? 'align-items-end' : 'align-items-start'} animate__animated animate__fadeIn">
-                    <div class="whatsapp-bubble p-2 px-3 shadow-sm position-relative" style="max-width: 75%; border-radius: 12px; background: ${isConcluido ? '#e7ffdb' : '#ffffff'};">
-                        <div class="d-flex align-items-center mb-1 gap-2 border-bottom pb-1 mb-1" style="opacity: 0.6;">
+                    <div class="whatsapp-bubble p-2 px-3 shadow-sm" style="max-width: 75%; border-radius: 12px; background: ${isConcluido ? '#e7ffdb' : '#ffffff'};">
+                        <div class="d-flex align-items-center mb-1 gap-2 border-bottom pb-1" style="opacity: 0.6; font-size: 0.6rem;">
                             <img src="${grp.imagem || grp.IMAGEM}" class="rounded-circle" width="14" height="14">
-                            <strong style="font-size: 0.6rem;">${grp.username || grp.USERNAME}</strong>
+                            <strong>${grp.username || grp.USERNAME}</strong>
                         </div>
-                        <p class="mb-1 text-dark" style="font-size: 0.82rem; line-height: 1.4; white-space: pre-wrap;">${p.ultima_msg}</p>
+                        <p class="mb-1 text-dark" style="font-size: 0.82rem; line-height: 1.4;">${p.ultima_msg}</p>
                         <div class="d-flex justify-content-end align-items-center gap-1">
-                            <span class="text-muted" style="font-size: 0.55rem;">${p.hora || '12:00'}</span>
-                            <div class="dropdown">
-                                <i class="bi bi-chevron-down text-muted" style="cursor:pointer; font-size: 0.6rem;" data-bs-toggle="dropdown"></i>
-                                <ul class="dropdown-menu shadow border-0 small">
-                                    <li><a class="dropdown-item" onclick="setStat('${p.id}','Aberto')">Pendente</a></li>
-                                    <li><a class="dropdown-item text-success fw-bold" onclick="setStat('${p.id}','Concluído')">Concluir</a></li>
-                                </ul>
-                            </div>
+                            <span class="text-muted" style="font-size: 0.55rem;">${p.hora || ''}</span>
                             <i class="bi bi-check2-all ${isConcluido ? 'text-primary' : 'text-muted'}" style="font-size: 0.75rem;"></i>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }).join('');
     }
 
@@ -131,38 +159,21 @@
         carregarDados();
     };
 
-    window.setStat = async (id, status) => {
-        await API.call('updatechatstatus', { id, status });
-        carregarDados();
-    };
-
-    window.criarPedido = async () => {
-        const msg = document.getElementById('input-colar').value.trim();
-        if(!msg) return;
-        await API.call('addchatlive', {
-            id: "MSG-" + Date.now(),
-            cliente: jidSelecionado || 'GERAL',
-            ultima_msg: msg,
-            status: 'Aberto',
-            hora: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
-        });
-        document.getElementById('input-colar').value = '';
-        carregarDados();
-    };
-
     carregarDados();
     setInterval(carregarDados, 5000);
 </script>
 
 <style>
-    .whatsapp-bg {
-        background-color: #efe7de !important;
-        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') !important;
-        background-repeat: repeat !important;
-        background-attachment: local !important;
+    .whatsapp-bg { background-color: #efe7de; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+    .whatsapp-bubble { box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+    .grayscale { filter: grayscale(1); }
+    .avatar-header { transition: all 0.4s ease; }
+    .status-dot {
+        position: absolute; bottom: 1px; right: 1px;
+        width: 10px; height: 10px;
+        border-radius: 50%; border: 2px solid #dc3545; /* Borda da cor do header para parecer vazado */
     }
-    .whatsapp-bubble { box-shadow: 0 1px 0.5px rgba(0,0,0,0.13) !important; }
-    .btn-gerar { font-family: sans-serif; font-size: 0.75rem; letter-spacing: 1px; }
-    .list-group-item { transition: all 0.2s ease; border: none !important; margin-bottom: 5px; }
-    .list-group-item:hover { background-color: #f1f3f4; transform: translateX(4px); }
+    .bg-success { background-color: #25D366 !important; } /* Verde WhatsApp */
+    .bg-warning { background-color: #ff3b30 !important; } /* Vermelho para Desconectado */
+    .tracking-tight { letter-spacing: -0.5px; }
 </style>
