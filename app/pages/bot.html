@@ -5,7 +5,7 @@
                 <h4 class="fw-bold text-dark mb-1 d-flex align-items-center">
                     <i class="bi bi-lightning-charge-fill text-danger me-2"></i> RDO <span class="text-dark ms-1">Bot Express</span>
                 </h4>
-                <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões.</p>
+                <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões em tempo real.</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-dark btn-sm px-3 fw-bold shadow-sm rounded-pill" onclick="abrirModalForm()">
@@ -32,52 +32,32 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-body text-center p-4">
-                <div class="mb-3"><i id="modal-status-icon" class="bi" style="font-size: 3rem;"></i></div>
-                <h6 class="fw-bold mb-2" id="modal-status-title">Confirmar Ação?</h6>
-                <p id="modal-status-text" class="text-muted small mb-4"></p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-light w-50 small rounded-pill" data-bs-dismiss="modal">Sair</button>
-                    <button id="btn-confirmar-acao" class="btn w-50 small fw-bold rounded-pill">Confirmar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalBotForm" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalBotForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
             <div class="modal-header border-0 pb-0">
                 <h5 class="fw-bold px-2 pt-2" id="modalBotTitle">Configurar Registro</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <form id="form-bot-config" class="needs-validation" novalidate>
+                <form id="form-bot-config">
                     <input type="hidden" id="bot-id">
                     <div class="row g-3">
-                        <div class="col-md-6"><label class="small fw-bold text-muted">Username</label><input type="text" id="bot-username" class="form-control bg-light border-0" required></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">JID / Número</label><input type="text" id="bot-jid" class="form-control bg-light border-0" required></div>
-                        <div class="col-12"><label class="small fw-bold text-muted">URL da Imagem</label><input type="url" id="bot-imagem" class="form-control bg-light border-0" required></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">Username</label><input type="text" id="bot-username" class="form-control bg-light border-0"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">JID / Número</label><input type="text" id="bot-jid" class="form-control bg-light border-0"></div>
+                        <div class="col-12"><label class="small fw-bold text-muted">URL Imagem</label><input type="url" id="bot-imagem" class="form-control bg-light border-0"></div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">Tipo / Cargo</label>
-                            <select id="bot-tipo" class="form-select bg-light border-0" required>
+                            <label class="small fw-bold text-muted">Tipo</label>
+                            <select id="bot-tipo" class="form-select bg-light border-0">
                                 <option value="ATENDENTE">Atendente</option>
                                 <option value="RDOEXPRESS">RDOExpress</option>
                                 <option value="RDOMOTOBOYS">RDOMotoboys</option>
                                 <option value="GRUPO">Grupo</option>
-                                <option value="SRE ARCHITECT">SRE Architect</option>
                                 <option value="ADMINISTRADOR">Administrador</option>
-                                <option value="FINANCEIRO">Financeiro</option>
-                                <option value="COMERCIAL">Comercial</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">Status</label>
-                            <select id="bot-status-val" class="form-select bg-light border-0" required>
+                            <select id="bot-status-val" class="form-select bg-light border-0">
                                 <option value="true">Ativo</option>
                                 <option value="false">Inativo</option>
                             </select>
@@ -86,136 +66,159 @@
                 </form>
             </div>
             <div class="modal-footer border-0 p-4 pt-0">
-                <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="salvarBot()">SALVAR</button>
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Sair</button>
+                <button type="button" id="btn-salvar-form" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="salvarBot()">SALVAR</button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .bg-cargo-atendente { background-color: #fd7e14 !important; color: #fff; }
-    .bg-cargo-rdoexpress { background-color: #dc3545 !important; color: #fff; }
-    .bg-cargo-rdomotoboys { background-color: #f5f5dc !important; color: #333; }
-    .bg-cargo-grupo { background-color: #6c757d !important; color: #fff; }
-    .bg-cargo-sre { background-color: #0d6efd !important; color: #fff; }
-    .bg-cargo-admin { background-color: #adff2f !important; color: #333; }
-    .bg-cargo-financeiro { background-color: #198754 !important; color: #fff; }
-    .bg-cargo-comercial { background-color: #ff69b4 !important; color: #fff; }
-</style>
+<div class="modal fade" id="modalConfirmarAcao" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3"><i id="confirm-icon" class="bi" style="font-size: 3rem;"></i></div>
+                <h6 class="fw-bold mb-2" id="confirm-title">Confirmar?</h6>
+                <p id="confirm-text" class="text-muted small mb-4"></p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light w-50 small rounded-pill" data-bs-dismiss="modal">Sair</button>
+                    <button id="btn-confirmar-final" class="btn w-50 small fw-bold rounded-pill">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-    (function() {
-        const modalStatus = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
-        const modalForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
-        let botsCache = [];
+    if (!window.botState) {
+        window.botState = { cache: null, modalForm: null, modalConfirm: null };
+    }
 
-        window.renderBotUI = () => {
-            const btn = document.getElementById('btn-status-bot');
-            const ativo = localStorage.getItem('bot_status') === 'true';
-            btn.className = ativo ? "btn btn-danger btn-sm shadow-sm rounded-pill" : "btn btn-outline-secondary btn-sm rounded-pill";
-            btn.innerHTML = ativo ? '<i class="bi bi-broadcast"></i> MASTER ONLINE' : '<i class="bi bi-power"></i> MASTER OFFLINE';
-        };
-
-        window.carregarBot = async () => {
-            const data = await API.call('getbotconfig');
-            botsCache = data || [];
-            const list = document.getElementById('bot-list');
-            const colorMap = { 'ATENDENTE': 'bg-cargo-atendente', 'RDOEXPRESS': 'bg-cargo-rdoexpress', 'RDOMOTOBOYS': 'bg-cargo-rdomotoboys', 'GRUPO': 'bg-cargo-grupo', 'SRE ARCHITECT': 'bg-cargo-sre', 'ADMINISTRADOR': 'bg-cargo-admin', 'FINANCEIRO': 'bg-cargo-financeiro', 'COMERCIAL': 'bg-cargo-comercial' };
-
-            list.innerHTML = botsCache.map(i => {
-                const ativo = String(i.status) === 'true';
-                return `
-                <tr>
-                    <td>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} 
-                            onchange="dispararTrocaStatus('${i.id}', ${ativo}, '${i.username}')">
-                        </div>
-                    </td>
-                    <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32"></td>
-                    <td class="fw-bold text-dark">${i.username}</td>
-                    <td><span class="badge ${colorMap[i.tipo?.toUpperCase()] || 'bg-light text-dark'} border-0 px-3">${i.tipo}</span></td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-link text-secondary" onclick="abrirModalForm('${i.id}')"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn-sm btn-link text-secondary" onclick="confirmarRemocao('${i.id}', '${i.username}')"><i class="bi bi-trash3"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-        };
-
-        window.dispararTrocaStatus = (id, statusAtual, nome) => {
-            const novoStatus = !statusAtual;
-            document.getElementById('modal-status-title').innerText = 'Alterar Status';
-            document.getElementById('modal-status-text').innerText = `Deseja ${novoStatus ? 'ATIVAR' : 'DESATIVAR'} ${nome}?`;
-            document.getElementById('modal-status-icon').className = novoStatus ? "bi bi-check-circle text-success" : "bi bi-exclamation-triangle text-warning";
-            
-            const btn = document.getElementById('btn-confirmar-acao');
-            btn.className = novoStatus ? "btn btn-success rounded-pill" : "btn btn-warning rounded-pill";
-            btn.onclick = async () => {
-                btn.disabled = true;
-                await API.call('updatebotstatus', { id, status: novoStatus, action: 'updatebotstatus' });
-                modalStatus.hide();
-                btn.disabled = false;
-                await carregarBot();
-                window.dispatchEvent(new Event('storage'));
-            };
-            modalStatus.show();
-            // Reverte o checkbox visualmente se fechar sem confirmar
-            document.getElementById('modalConfirmarStatus').addEventListener('hidden.bs.modal', () => carregarBot(), {once: true});
-        };
-
-        window.confirmarRemocao = (id, nome) => {
-            document.getElementById('modal-status-title').innerText = 'Remover Registro';
-            document.getElementById('modal-status-text').innerText = `Excluir permanentemente ${nome}?`;
-            document.getElementById('modal-status-icon').className = "bi bi-trash text-danger";
-            const btn = document.getElementById('btn-confirmar-acao');
-            btn.className = "btn btn-danger rounded-pill";
-            btn.onclick = async () => {
-                btn.disabled = true;
-                await API.call('deletebot', { id, action: 'deletebot' });
-                modalStatus.hide();
-                btn.disabled = false;
-                await carregarBot();
-                window.dispatchEvent(new Event('storage'));
-            };
-            modalStatus.show();
-        };
-
-        window.abrirModalForm = (id = null) => {
-            const form = document.getElementById('form-bot-config');
-            form.reset();
-            document.getElementById('bot-id').value = id || '';
-            if (id) {
-                const item = botsCache.find(x => x.id == id);
-                if (item) {
-                    document.getElementById('bot-username').value = item.username;
-                    document.getElementById('bot-jid').value = item.jid_numero;
-                    document.getElementById('bot-imagem').value = item.imagem;
-                    document.getElementById('bot-tipo').value = item.tipo.toUpperCase();
-                    document.getElementById('bot-status-val').value = String(item.status);
-                }
-            }
-            modalForm.show();
-        };
-
-        window.salvarBot = async () => {
-            const id = document.getElementById('bot-id').value;
-            const payload = {
-                id,
-                username: document.getElementById('bot-username').value,
-                jid_numero: document.getElementById('bot-jid').value,
-                imagem: document.getElementById('bot-imagem').value,
-                tipo: document.getElementById('bot-tipo').value,
-                status: document.getElementById('bot-status-val').value,
-                action: id ? 'updatebotconfig' : 'addbotconfig'
-            };
-            await API.call(payload.action, payload);
-            modalForm.hide();
-            await carregarBot();
-            window.dispatchEvent(new Event('storage'));
-        };
-
+    async function initBotPage() {
+        window.botState.modalForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
+        window.botState.modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarAcao'));
+        
+        if (window.botState.cache) renderList(window.botState.cache);
+        await carregarBotData(false);
         renderBotUI();
-        carregarBot();
-    })();
+    }
+
+    async function carregarBotData(loading = true) {
+        if(loading) document.getElementById('bot-list').innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border text-danger"></div></td></tr>';
+        const data = await API.call('getbotconfig');
+        window.botState.cache = data || [];
+        renderList(window.botState.cache);
+    }
+
+    function renderList(data) {
+        const list = document.getElementById('bot-list');
+        if(!list) return;
+        list.innerHTML = data.map(i => {
+            const ativo = String(i.status) === 'true';
+            return `<tr>
+                <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} onchange="confirmarAcaoBot('${i.id}', ${ativo}, '${i.username}', 'status')"></div></td>
+                <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
+                <td class="fw-bold text-dark">${i.username}</td>
+                <td><span class="badge bg-light text-dark border px-3">${i.tipo}</span></td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-link text-secondary" onclick="abrirModalForm('${i.id}')"><i class="bi bi-pencil-square"></i></button>
+                    <button class="btn btn-sm btn-link text-secondary" onclick="confirmarAcaoBot('${i.id}', null, '${i.username}', 'delete')"><i class="bi bi-trash3"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    window.confirmarAcaoBot = (id, status, nome, tipo) => {
+        const icon = document.getElementById('confirm-icon');
+        const title = document.getElementById('confirm-title');
+        const text = document.getElementById('confirm-text');
+        const btn = document.getElementById('btn-confirmar-final');
+
+        if (tipo === 'status') {
+            const novo = !status;
+            title.innerText = "Alterar Status";
+            text.innerText = `Deseja ${novo ? 'ativar' : 'desativar'} o bot ${nome}?`;
+            icon.className = novo ? "bi bi-check-circle text-success" : "bi bi-exclamation-circle text-warning";
+            btn.className = "btn btn-danger w-50 small fw-bold rounded-pill";
+            btn.onclick = () => executarAcao('updatebotstatus', { id, status: novo });
+        } else {
+            title.innerText = "Remover Registro";
+            text.innerText = `Tem certeza que deseja excluir ${nome}?`;
+            icon.className = "bi bi-trash text-danger";
+            btn.className = "btn btn-danger w-50 small fw-bold rounded-pill";
+            btn.onclick = () => executarAcao('deletebot', { id });
+        }
+        window.botState.modalConfirm.show();
+    };
+
+    async function executarAcao(action, payload) {
+        const btn = document.getElementById('btn-confirmar-final');
+        const original = btn.innerText;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        await API.call(action, { ...payload, action });
+        
+        // Invalida caches
+        window.botState.cache = null;
+        if(window.chatState) window.chatState.cacheDados = null;
+
+        window.botState.modalConfirm.hide();
+        btn.disabled = false;
+        btn.innerText = original;
+        await carregarBotData(true);
+    }
+
+    window.abrirModalForm = (id = null) => {
+        const form = document.getElementById('form-bot-config');
+        form.reset();
+        document.getElementById('bot-id').value = id || '';
+        if (id && window.botState.cache) {
+            const item = window.botState.cache.find(x => x.id == id);
+            if (item) {
+                document.getElementById('bot-username').value = item.username;
+                document.getElementById('bot-jid').value = item.jid_numero;
+                document.getElementById('bot-imagem').value = item.imagem;
+                document.getElementById('bot-tipo').value = item.tipo;
+                document.getElementById('bot-status-val').value = String(item.status);
+            }
+        }
+        window.botState.modalForm.show();
+    };
+
+    window.salvarBot = async () => {
+        const btn = document.getElementById('btn-salvar-form');
+        const id = document.getElementById('bot-id').value;
+        const payload = {
+            id,
+            username: document.getElementById('bot-username').value,
+            jid_numero: document.getElementById('bot-jid').value,
+            imagem: document.getElementById('bot-imagem').value,
+            tipo: document.getElementById('bot-tipo').value,
+            status: document.getElementById('bot-status-val').value,
+            action: id ? 'updatebotconfig' : 'addbotconfig'
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        
+        await API.call(payload.action, payload);
+        window.botState.cache = null;
+        if(window.chatState) window.chatState.cacheDados = null;
+
+        window.botState.modalForm.hide();
+        btn.disabled = false;
+        btn.innerText = 'SALVAR';
+        await carregarBotData(true);
+    };
+
+    window.renderBotUI = () => {
+        const btn = document.getElementById('btn-status-bot');
+        if(!btn) return;
+        const ativo = localStorage.getItem('bot_status') === 'true';
+        btn.className = ativo ? "btn btn-danger btn-sm rounded-pill" : "btn btn-outline-secondary btn-sm rounded-pill";
+        btn.innerHTML = ativo ? '<i class="bi bi-broadcast"></i> MASTER ON' : '<i class="bi bi-power"></i> MASTER OFF';
+    };
+
+    initBotPage();
 </script>

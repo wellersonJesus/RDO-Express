@@ -7,7 +7,7 @@
                     <div>
                         <h5 class="fw-bold mb-0">RDO <span class="fw-light opacity-75">Express</span></h5>
                         <div class="d-flex align-items-center gap-1">
-                            <span id="sync-text" class="text-white-50 fst-italic" style="font-size: 0.65rem;">Modo Estático</span>
+                            <span id="sync-text" class="text-white-50 fst-italic" style="font-size: 0.65rem;">Dados em Cache</span>
                             <i id="sync-icon" class="bi bi-arrow-repeat text-white-50" style="cursor:pointer; font-size: 0.7rem;" onclick="carregarDados(true)"></i>
                         </div>
                     </div>
@@ -29,7 +29,6 @@
                 </div>
                 <div class="section-content"><div id="lista-atendentes-chat" class="list-group list-group-flush"></div></div>
             </div>
-
             <div class="dropdown-section">
                 <div class="section-header p-3 bg-light d-flex align-items-center" style="cursor: pointer;">
                     <i class="bi bi-people-fill text-danger me-2"></i>
@@ -53,98 +52,79 @@
                     <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;">Offline</small>
                 </div>
             </div>
-
-            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto">
-                <div class="text-center my-5 text-muted small">Nenhuma mensagem para exibir</div>
-            </div>
-
+            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
                     <button class="btn btn-link text-secondary"><i class="bi bi-emoji-smile"></i></button>
-                    <input type="text" id="msg-input" class="form-control border-0 bg-transparent px-2" placeholder="Digite uma mensagem..." style="font-size: 0.85rem;">
-                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemChat()">
-                        <i class="bi bi-send-fill"></i>
-                    </button>
+                    <input type="text" id="msg-input" class="form-control border-0 bg-transparent px-2" placeholder="Digite uma mensagem...">
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemChat()"><i class="bi bi-send-fill"></i></button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .dropdown-section .section-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; background: #fff; }
-    .dropdown-section:hover .section-content { max-height: 400px; overflow-y: auto; }
-    .section-header:hover { background-color: #f1f1f1 !important; }
-    .section-header { transition: 0.3s; }
-    
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; position: absolute; bottom: 2px; right: 2px; }
-    .grayscale { filter: grayscale(1); opacity: 0.4; }
-    .spin { animation: spin 1s linear infinite; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    
-    .whatsapp-bg { 
-        background-color: #e5ddd5; 
-        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
-        background-repeat: repeat;
-    }
-
-    .msg-bubble {
-        max-width: 75%;
-        padding: 8px 12px;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
-        margin-bottom: 8px;
-        position: relative;
-    }
-    .msg-received { background: #fff; align-self: flex-start; border-top-left-radius: 0; }
-    .msg-sent { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 0; }
-</style>
-
 <script>
-    let jidSelecionado = null;
-    let cacheDados = null;
+    // Cache Global fora da função para persistir enquanto a aba estiver aberta
+    if (!window.chatState) {
+        window.chatState = {
+            jidSelecionado: sessionStorage.getItem('last_jid') || null,
+            cacheDados: null,
+            lastHeader: null
+        };
+    }
 
     async function carregarDados(force = false) {
-        if (cacheDados && !force) {
-            renderizar(cacheDados.configs, cacheDados.pedidos, localStorage.getItem('bot_status') === 'true');
+        const state = window.chatState;
+        const icon = document.getElementById('sync-icon');
+        const text = document.getElementById('sync-text');
+
+        // Se já existe cache e não é um refresh forçado, renderiza direto
+        if (state.cacheDados && !force) {
+            renderizar(state.cacheDados.configs, state.cacheDados.pedidos, localStorage.getItem('bot_status') === 'true');
+            if(state.lastHeader) restaurarHeader();
             return;
         }
-        const icon = document.getElementById('sync-icon');
-        icon.classList.add('spin');
+
+        if(icon) icon.classList.add('spin');
+        if(text) text.innerText = "Sincronizando...";
+
         try {
             const masterOn = localStorage.getItem('bot_status') === 'true';
             const [configs, pedidos] = await Promise.all([API.call('getbotconfig'), API.call('getchatlive')]);
-            cacheDados = { configs, pedidos };
+            state.cacheDados = { configs, pedidos };
             renderizar(configs || [], pedidos || [], masterOn);
-        } finally { icon.classList.remove('spin'); }
+            if(text) text.innerText = "Cache Atualizado";
+        } finally {
+            if(icon) icon.classList.remove('spin');
+        }
     }
 
     function renderizar(configs, pedidos, masterOn) {
+        const state = window.chatState;
         const listaAtendentes = document.getElementById('lista-atendentes-chat');
         const listaGrupos = document.getElementById('lista-grupos-chat');
         const cargosAtendentes = ['SRE ARCHITECT', 'ATENDENTE', 'ADMINISTRADOR'];
 
-        // Renderizar Atendentes
+        if(!listaAtendentes) return;
+
         listaAtendentes.innerHTML = configs.filter(c => cargosAtendentes.includes(c.tipo?.toUpperCase())).map(u => {
             const isOnline = masterOn && String(u.status).toLowerCase() === 'true';
-            return `<button onclick="selecionarJid('${u.jid_numero}', '${u.username}', '${u.imagem}', ${isOnline})" class="list-group-item list-group-item-action p-2 ${jidSelecionado === u.jid_numero ? 'bg-danger text-white' : ''} ${!isOnline ? 'grayscale' : ''}">
+            const active = state.jidSelecionado === u.jid_numero;
+            return `<button onclick="selecionarJid('${u.jid_numero}', '${u.username}', '${u.imagem}', ${isOnline})" class="list-group-item list-group-item-action p-2 ${active ? 'bg-danger text-white' : ''} ${!isOnline ? 'grayscale' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative me-3">
                         <img src="${u.imagem}" class="rounded-circle border" width="35" height="35" style="object-fit:cover">
                         <span class="status-dot ${isOnline ? 'bg-success' : 'bg-secondary'}"></span>
                     </div>
-                    <div class="flex-grow-1">
-                        <span class="fw-bold d-block mb-0" style="font-size: 0.8rem;">${u.username}</span>
-                        <small style="font-size: 0.65rem;">${u.tipo}</small>
-                    </div>
+                    <div class="flex-grow-1"><span class="fw-bold d-block mb-0" style="font-size: 0.8rem;">${u.username}</span><small class="${active?'text-white-50':'text-muted'}" style="font-size: 0.65rem;">${u.tipo}</small></div>
                 </div></button>`;
-        }).join('') || '<div class="p-3 text-center small text-muted">Nenhum atendente</div>';
+        }).join('');
 
-        // Renderizar Grupos
         listaGrupos.innerHTML = configs.filter(c => c.tipo?.toUpperCase() === 'GRUPO' || c.username?.toUpperCase().includes('RDO')).map(g => {
             const isAtivo = masterOn && String(g.status).toLowerCase() === 'true';
-            return `<button onclick="selecionarJid('${g.jid_numero}', '${g.username}', '${g.imagem}', ${isAtivo})" class="list-group-item list-group-item-action p-2 ${jidSelecionado === g.jid_numero ? 'bg-danger text-white' : ''} ${!isAtivo ? 'grayscale' : ''}">
+            const active = state.jidSelecionado === g.jid_numero;
+            return `<button onclick="selecionarJid('${g.jid_numero}', '${g.username}', '${g.imagem}', ${isAtivo})" class="list-group-item list-group-item-action p-2 ${active ? 'bg-danger text-white' : ''} ${!isAtivo ? 'grayscale' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative me-3">
                         <img src="${g.imagem}" class="rounded-circle border" width="35" height="35" style="object-fit:cover">
@@ -152,43 +132,46 @@
                     </div>
                     <div class="flex-grow-1"><span class="fw-bold small d-block mb-0" style="font-size: 0.8rem;">${g.username}</span></div>
                 </div></button>`;
-        }).join('') || '<div class="p-3 text-center small text-muted">Nenhum grupo</div>';
+        }).join('');
 
-        // Renderizar Mensagens
         const container = document.getElementById('chat-messages-container');
-        const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
+        const filtrados = state.jidSelecionado ? pedidos.filter(p => p.cliente === state.jidSelecionado) : [];
         
         if (filtrados.length > 0) {
             container.innerHTML = `<div class="d-flex flex-column">` + filtrados.slice().reverse().map(p => `
-                <div class="msg-bubble ${p.status === 'Concluído' ? 'msg-sent' : 'msg-received'}">
-                    ${p.ultima_msg}
-                </div>`).join('') + `</div>`;
+                <div class="msg-bubble ${p.status === 'Concluído' ? 'msg-sent' : 'msg-received'}">${p.ultima_msg}</div>`).join('') + `</div>`;
             container.scrollTop = container.scrollHeight;
         } else {
-            container.innerHTML = `<div class="text-center my-5 text-muted small">Nenhuma mensagem nesta conversa</div>`;
+            container.innerHTML = `<div class="text-center my-5 text-muted small">Nenhuma mensagem selecionada</div>`;
         }
     }
 
     window.selecionarJid = (jid, nome, imagem, online) => {
-        jidSelecionado = jid;
-        
-        // Atualizar cabeçalho do chat
-        document.getElementById('chat-header-name').innerText = nome;
-        document.getElementById('chat-header-status').innerText = online ? 'Online agora' : 'Offline';
-        document.getElementById('chat-header-status').className = online ? 'text-success fw-bold' : 'text-muted';
-        document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40" style="object-fit:cover">`;
-
-        renderizar(cacheDados.configs, cacheDados.pedidos, localStorage.getItem('bot_status') === 'true');
+        window.chatState.jidSelecionado = jid;
+        window.chatState.lastHeader = { nome, imagem, online };
+        sessionStorage.setItem('last_jid', jid);
+        restaurarHeader();
+        renderizar(window.chatState.cacheDados.configs, window.chatState.cacheDados.pedidos, localStorage.getItem('bot_status') === 'true');
     };
 
-    window.enviarMensagemChat = async () => {
-        const input = document.getElementById('msg-input');
-        if (!input.value.trim() || !jidSelecionado) return;
-        
-        // Simulação de envio ou integração com sua API de mensagens
-        console.log("Enviando para:", jidSelecionado, "Mensagem:", input.value);
-        input.value = '';
-    };
+    function restaurarHeader() {
+        const h = window.chatState.lastHeader;
+        if(!h) return;
+        const nameEl = document.getElementById('chat-header-name');
+        const statusEl = document.getElementById('chat-header-status');
+        const avatarEl = document.getElementById('chat-header-avatar');
+        if(nameEl) nameEl.innerText = h.nome;
+        if(statusEl) {
+            statusEl.innerText = h.online ? 'Online agora' : 'Offline';
+            statusEl.className = h.online ? 'text-success fw-bold' : 'text-muted';
+        }
+        if(avatarEl) avatarEl.innerHTML = `<img src="${h.imagem}" class="rounded-circle border" width="40" height="40" style="object-fit:cover">`;
+    }
+
+    // Ouve mudanças do Bot para invalidar o cache automaticamente
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'bot_status') carregarDados(true);
+    });
 
     carregarDados();
 </script>
