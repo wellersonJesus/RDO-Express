@@ -5,9 +5,9 @@
                 <h4 class="fw-bold text-dark mb-1 d-flex align-items-center">
                     <i class="bi bi-lightning-charge-fill text-danger me-2"></i> RDO <span class="text-dark ms-1">Bot Express</span>
                 </h4>
-                <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões.</p>
+                <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões em tempo real.</p>
             </div>
-            <button id="btn-status-bot" class="btn btn-sm px-3 fw-bold shadow-sm" onclick="toggleStatusBot()"></button>
+            <button id="btn-status-bot" class="btn btn-sm px-3 fw-bold shadow-sm" onclick="confirmarToggleMaster()"></button>
         </div>
     </div>
     
@@ -15,10 +15,10 @@
         <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
                 <tr class="text-secondary" style="font-size: 0.75rem;">
-                    <th class="border-0">MASTER ON/OFF</th>
+                    <th class="border-0">STATUS</th>
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
-                    <th class="border-0">TIPO</th>
+                    <th class="border-0">CARGO / TIPO</th>
                 </tr>
             </thead>
             <tbody id="bot-list"></tbody>
@@ -31,14 +31,12 @@
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
             <div class="modal-body text-center p-4">
-                <div class="mb-3">
-                    <i id="modal-status-icon" class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
-                </div>
+                <div class="mb-3"><i id="modal-status-icon" class="bi" style="font-size: 3rem;"></i></div>
                 <h6 class="fw-bold mb-2">Confirmar Alteração?</h6>
                 <p id="modal-status-text" class="text-muted small mb-4"></p>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-light w-50 small" data-bs-dismiss="modal">Cancelar</button>
-                    <button id="btn-confirmar-acao" class="btn btn-danger w-50 small fw-bold">Confirmar</button>
+                    <button class="btn btn-light w-50 small" data-bs-dismiss="modal">Sair</button>
+                    <button id="btn-confirmar-acao" class="btn w-50 small fw-bold">Confirmar</button>
                 </div>
             </div>
         </div>
@@ -47,39 +45,38 @@
 
 <script>
     (function() {
-        let pendingUpdate = null;
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
 
-        window.toggleStatusBot = () => {
+        window.confirmarToggleMaster = () => {
             const atual = localStorage.getItem('bot_status') === 'true';
-            abrirModalConfirmacao(!atual, 'MASTER', (novoStatus) => {
-                localStorage.setItem('bot_status', novoStatus);
+            exibirModal(!atual, 'SISTEMA MASTER', (novoSt) => {
+                localStorage.setItem('bot_status', novoSt);
                 renderBotUI();
                 window.dispatchEvent(new Event('storage'));
             });
         };
 
-        window.abrirModalConfirmacao = (novoStatus, nome, callback) => {
-            const modalEl = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
+        window.exibirModal = (novoStatus, nome, onConfirm) => {
             const textEl = document.getElementById('modal-status-text');
             const iconEl = document.getElementById('modal-status-icon');
             const btn = document.getElementById('btn-confirmar-acao');
 
             textEl.innerText = `Deseja ${novoStatus ? 'ATIVAR' : 'DESATIVAR'} o status de ${nome}?`;
-            iconEl.className = novoStatus ? "bi bi-check-circle text-success" : "bi bi-power text-danger";
-            btn.className = novoStatus ? "btn btn-success w-50 small fw-bold" : "btn btn-danger w-50 small fw-bold";
+            iconEl.className = novoStatus ? "bi bi-check-circle text-success" : "bi bi-exclamation-triangle text-danger";
+            btn.className = novoStatus ? "btn btn-success" : "btn btn-danger";
 
-            btn.onclick = () => {
-                callback(novoStatus);
-                modalEl.hide();
+            btn.onclick = async () => {
+                await onConfirm(novoStatus);
+                modal.hide();
             };
-            modalEl.show();
+            modal.show();
         };
 
         window.renderBotUI = () => {
             const btn = document.getElementById('btn-status-bot');
-            const botAtivo = localStorage.getItem('bot_status') === 'true';
-            btn.className = botAtivo ? "btn btn-danger btn-sm" : "btn btn-outline-secondary btn-sm";
-            btn.innerHTML = botAtivo ? '<i class="bi bi-broadcast"></i> BOT ONLINE' : '<i class="bi bi-power"></i> BOT OFFLINE';
+            const ativo = localStorage.getItem('bot_status') === 'true';
+            btn.className = ativo ? "btn btn-danger btn-sm shadow-sm" : "btn btn-outline-secondary btn-sm";
+            btn.innerHTML = ativo ? '<i class="bi bi-broadcast"></i> MASTER ONLINE' : '<i class="bi bi-power"></i> MASTER OFFLINE';
         };
 
         window.carregarBot = async () => {
@@ -89,7 +86,7 @@
                 const ativo = String(i.status).toLowerCase() === 'true';
                 const tipo = (i.tipo || '').toUpperCase();
                 let badgeStyle = "bg-light text-dark";
-                if (tipo.includes('ADMIN') || tipo.includes('SRE')) badgeStyle = "bg-success text-white";
+                if (['ADMINISTRADOR', 'SRE ARCHITECT', 'WELLERSON', 'RODRIGO'].includes(tipo)) badgeStyle = "bg-success text-white";
                 if (tipo === 'GRUPO') badgeStyle = "bg-warning text-white";
 
                 return `
@@ -97,20 +94,20 @@
                     <td>
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} 
-                            onchange="this.checked = !this.checked; abrirModalConfirmacao(!${ativo}, '${i.username}', (st) => atualizarStatusNoBanco('${i.id}', st))">
+                            onchange="this.checked = !this.checked; exibirModal(!${ativo}, '${i.username}', (st) => atualizarBanco('${i.id}', st))">
                         </div>
                     </td>
-                    <td><img src="${i.imagem}" class="rounded-circle border" width="30" height="30"></td>
-                    <td class="fw-bold">${i.username}</td>
+                    <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
+                    <td class="fw-bold text-dark">${i.username}</td>
                     <td><span class="badge ${badgeStyle}" style="${tipo === 'GRUPO' ? 'background:#fd7e14' : ''}">${tipo}</span></td>
                 </tr>`;
             }).join('');
         };
 
-        window.atualizarStatusNoBanco = async (id, status) => {
+        window.atualizarBanco = async (id, status) => {
             await API.call('updatebotstatus', {id, status, action: 'updatebotstatus'});
-            carregarBot();
-            window.dispatchEvent(new Event('storage'));
+            await carregarBot(); // Recarrega a lista para mostrar o switch na posição certa
+            window.dispatchEvent(new Event('storage')); // Atualiza o Chat
         };
 
         renderBotUI();

@@ -1,48 +1,58 @@
 <div class="row g-3 h-100">
     <div class="col-12">
-        <div class="card border-0 shadow-sm bg-danger text-white rounded-4 overflow-hidden">
+        <div class="card border-0 shadow-sm bg-danger text-white rounded-4">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-whatsapp fs-3"></i>
                     <div>
                         <h5 class="fw-bold mb-0">RDO <span class="fw-light opacity-75">Express</span></h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <span id="sync-text" class="text-white-50 small fst-italic" style="font-size: 0.7rem;">Chat atualizado</span>
-                            <i id="sync-icon" class="bi bi-arrow-repeat text-white-50" style="cursor:pointer; font-size: 0.8rem;" onclick="carregarDados(true)"></i>
+                        <div class="d-flex align-items-center gap-1 mt-1">
+                            <span id="sync-text" class="text-white-50 fst-italic" style="font-size: 0.65rem;">Chat atualizado</span>
+                            <i id="sync-icon" class="bi bi-arrow-repeat text-white-50" style="cursor:pointer; font-size: 0.7rem;" onclick="carregarDados(true)"></i>
                         </div>
                     </div>
                 </div>
-                <div id="atendentes-status-bar" class="d-flex gap-2"></div>
-                <div class="input-group bg-white rounded-pill p-1 shadow-sm" style="width: 40%;">
-                    <input type="text" id="input-colar" class="form-control border-0 bg-transparent px-3" placeholder="Colar pedido..." style="font-size: 0.85rem;">
+
+                <!-- Quadrado de Busca (Administradores) -->
+                <div id="admin-bar" class="d-flex gap-2 bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-10"></div>
+
+                <div class="input-group bg-white rounded-pill p-1 shadow-sm" style="width: 35%;">
+                    <input type="text" id="input-colar" class="form-control border-0 bg-transparent px-3" placeholder="Pedido..." style="font-size: 0.8rem;">
                     <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="criarPedido()">GERAR</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4"><div id="lista-contatos-chat" class="list-group overflow-auto bg-white rounded-4 shadow-sm" style="height: 550px;"></div></div>
-    <div class="col-md-8"><div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto whatsapp-bg rounded-4" style="height: 550px;"></div></div>
+    <!-- Barra de Atendentes e Grupos -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden" style="height: 550px;">
+            <div class="p-3 border-bottom bg-light">
+                <small class="fw-bold text-muted text-uppercase" style="font-size: 0.6rem;">Atendentes Online</small>
+                <div id="atendentes-list" class="d-flex gap-2 mt-2 overflow-auto pb-1"></div>
+            </div>
+            <div id="lista-grupos-chat" class="list-group list-group-flush overflow-auto"></div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div id="chat-messages-container" class="card border-0 shadow-sm p-4 whatsapp-bg rounded-4 overflow-auto" style="height: 550px;"></div>
+    </div>
 </div>
 
 <style>
-    .status-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid white; position: absolute; bottom: 0; right: 0; }
-    .grayscale { filter: grayscale(1); opacity: 0.4; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid white; position: absolute; bottom: 0; right: 0; }
+    .grayscale { filter: grayscale(1); opacity: 0.3; }
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
 
 <script>
-    let isFetching = false;
     let jidSelecionado = null;
 
-    async function carregarDados(force = false) {
-        if (isFetching) return;
-        isFetching = true;
-        
+    async function carregarDados() {
         const icon = document.getElementById('sync-icon');
         const text = document.getElementById('sync-text');
-        
         icon.classList.add('spin');
         text.innerText = "Chat atualizando...";
 
@@ -53,44 +63,54 @@
                 API.call('getchatlive')
             ]);
 
-            renderizarChat(configs || [], pedidos || [], masterOn);
+            renderizarInterface(configs || [], pedidos || [], masterOn);
             text.innerText = "Chat atualizado";
-        } catch (e) {
-            text.innerText = "Erro ao sincronizar";
         } finally {
             icon.classList.remove('spin');
-            isFetching = false;
         }
     }
 
-    function renderizarChat(configs, pedidos, masterOn) {
-        const statusBar = document.getElementById('atendentes-status-bar');
-        const listaGrupos = document.getElementById('lista-contatos-chat');
+    function renderizarInterface(configs, pedidos, masterOn) {
+        const adminBar = document.getElementById('admin-bar');
+        const atendentesList = document.getElementById('atendentes-list');
+        const listaGrupos = document.getElementById('lista-grupos-chat');
 
-        // Renderizar Atendentes no Topo
-        statusBar.innerHTML = configs.filter(c => c.tipo !== 'GRUPO').map(at => {
+        // 1. ADMINS na barra superior (RDO Express)
+        const admins = ['ADMINISTRADOR', 'WELLERSON', 'RODRIGO', 'RTX'];
+        adminBar.innerHTML = configs.filter(c => admins.includes(c.tipo.toUpperCase())).map(adm => {
+            const online = masterOn && String(adm.status).toLowerCase() === 'true';
+            return `
+                <div class="position-relative" title="${adm.username}">
+                    <img src="${adm.imagem}" class="rounded-circle border border-white ${online ? '' : 'grayscale'}" width="30" height="30">
+                    <span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>
+                </div>`;
+        }).join('') || '<small class="text-white-50">Sem Admins</small>';
+
+        // 2. ATENDENTES (SRE Architect, Atendente)
+        const atendentes = ['SRE ARCHITECT', 'ATENDENTE'];
+        atendentesList.innerHTML = configs.filter(c => atendentes.includes(c.tipo.toUpperCase())).map(at => {
             const online = masterOn && String(at.status).toLowerCase() === 'true';
             return `
-                <div class="position-relative">
-                    <img src="${at.imagem}" class="rounded-circle border ${online ? 'border-success' : 'grayscale'}" width="30" height="30">
+                <div class="text-center position-relative" style="min-width: 45px;">
+                    <img src="${at.imagem}" class="rounded-circle border ${online ? 'border-success' : 'grayscale'}" width="35" height="35">
                     <span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>
                 </div>`;
         }).join('');
 
-        // Renderizar Lista Lateral
-        listaGrupos.innerHTML = configs.filter(g => g.tipo === 'GRUPO').map(g => {
+        // 3. GRUPOS (Lista Inferior)
+        listaGrupos.innerHTML = configs.filter(c => c.tipo.toUpperCase() === 'GRUPO').map(g => {
             const online = masterOn && String(g.status).toLowerCase() === 'true';
             const active = jidSelecionado === g.jid_numero;
             return `
                 <button onclick="selecionarGrupo('${g.jid_numero}')" class="list-group-item list-group-item-action border-0 p-3 ${active ? 'bg-danger text-white' : ''} ${!online ? 'grayscale' : ''}">
                     <div class="d-flex align-items-center">
                         <img src="${g.imagem}" class="rounded-circle me-3" width="35" height="35">
-                        <span class="fw-bold small">${g.username}</span>
+                        <div class="flex-grow-1"><span class="fw-bold small d-block">${g.username}</span></div>
                     </div>
                 </button>`;
         }).join('');
 
-        // Renderizar Mensagens
+        // 4. MENSAGENS
         const container = document.getElementById('chat-messages-container');
         const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
         container.innerHTML = filtrados.slice().reverse().map(p => `
