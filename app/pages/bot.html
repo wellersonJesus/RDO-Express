@@ -24,7 +24,7 @@
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
                     <th class="border-0">CARGO / TIPO</th>
-                    <th class="border-0 text-end">AÇÕES</th>
+                    <th class="border-0 text-center">AÇÕES</th>
                 </tr>
             </thead>
             <tbody id="bot-list"></tbody>
@@ -102,16 +102,14 @@
 </div>
 
 <style>
-    /* Validação Visual: Linha vermelha para campos vazios */
     .was-validated .form-control:invalid, .was-validated .form-select:invalid {
         border: 1px solid #dc3545 !important;
         background-image: none;
     }
-    /* Cores Customizadas para os Badges */
-    .badge-atendente { background-color: #ffc107 !important; color: #000; } /* Amarelo */
-    .badge-grupo { background-color: #6c757d !important; color: #fff; }     /* Cinza */
-    .badge-administrador { background-color: #198754 !important; color: #fff; } /* Verde */
-    .badge-ti { background-color: #0d6efd !important; color: #fff; }           /* Azul */
+    .badge-atendente { background-color: #ffc107 !important; color: #000; }
+    .badge-grupo { background-color: #6c757d !important; color: #fff; }
+    .badge-administrador { background-color: #198754 !important; color: #fff; }
+    .badge-ti { background-color: #0d6efd !important; color: #fff; }
 </style>
 
 <script>
@@ -172,11 +170,11 @@
                     </td>
                     <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
                     <td class="fw-bold text-dark">${i.username}</td>
-                    <td><span class="badge ${badgeClass} border-0 px-3">${tipo}</span></td>
-                    <td class="text-end">
-                        <button class="btn btn-light btn-sm rounded-pill px-3" onclick="abrirModalForm('${i.id}')">
-                            <i class="bi bi-pencil-square text-danger"></i> Editar
-                        </button>
+                    <td><span class="badge ${badgeClass} border-0 px-3" style="font-size:0.7rem">${tipo}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Editar" onclick="abrirModalForm('${i.id}')"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
                     </td>
                 </tr>`;
             }).join('');
