@@ -7,7 +7,12 @@
                 </h4>
                 <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões em tempo real.</p>
             </div>
-            <button id="btn-status-bot" class="btn btn-sm px-3 fw-bold shadow-sm" onclick="confirmarToggleMaster()"></button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-dark btn-sm px-3 fw-bold shadow-sm rounded-pill" onclick="abrirModalForm()">
+                    <i class="bi bi-plus-lg"></i> NOVO
+                </button>
+                <button id="btn-status-bot" class="btn btn-sm px-3 fw-bold shadow-sm rounded-pill" onclick="confirmarToggleMaster()"></button>
+            </div>
         </div>
     </div>
     
@@ -19,6 +24,7 @@
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
                     <th class="border-0">CARGO / TIPO</th>
+                    <th class="border-0 text-end">AÇÕES</th>
                 </tr>
             </thead>
             <tbody id="bot-list"></tbody>
@@ -26,7 +32,59 @@
     </div>
 </div>
 
-<!-- Modal Premium de Confirmação -->
+<!-- Modal Formulário Novo/Editar -->
+<div class="modal fade" id="modalBotForm" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold px-2 pt-2" id="modalBotTitle">Configurar Registro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="form-bot-config" class="needs-validation" novalidate>
+                    <input type="hidden" id="bot-id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">Username</label>
+                            <input type="text" id="bot-username" class="form-control bg-light border-0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">JID / Número</label>
+                            <input type="text" id="bot-jid" class="form-control bg-light border-0" placeholder="5531..." required>
+                        </div>
+                        <div class="col-12">
+                            <label class="small fw-bold text-muted">URL da Imagem</label>
+                            <input type="url" id="bot-imagem" class="form-control bg-light border-0" placeholder="https://..." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">Tipo</label>
+                            <select id="bot-tipo" class="form-select bg-light border-0" required>
+                                <option value="">Selecione...</option>
+                                <option value="ATENDENTE">Atendente</option>
+                                <option value="GRUPO">Grupo</option>
+                                <option value="ADMINISTRADOR">Administrador</option>
+                                <option value="TI">TI</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">Status</label>
+                            <select id="bot-status-val" class="form-select bg-light border-0" required>
+                                <option value="true">Ativo</option>
+                                <option value="false">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="salvarBot()">SALVAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Premium de Confirmação Status -->
 <div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -35,17 +93,31 @@
                 <h6 class="fw-bold mb-2">Confirmar Alteração?</h6>
                 <p id="modal-status-text" class="text-muted small mb-4"></p>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-light w-50 small" data-bs-dismiss="modal">Sair</button>
-                    <button id="btn-confirmar-acao" class="btn w-50 small fw-bold">Confirmar</button>
+                    <button class="btn btn-light w-50 small rounded-pill" data-bs-dismiss="modal">Sair</button>
+                    <button id="btn-confirmar-acao" class="btn w-50 small fw-bold rounded-pill">Confirmar</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    /* Validação Visual: Linha vermelha para campos vazios */
+    .was-validated .form-control:invalid, .was-validated .form-select:invalid {
+        border: 1px solid #dc3545 !important;
+        background-image: none;
+    }
+    /* Cores Customizadas para os Badges */
+    .badge-atendente { background-color: #ffc107 !important; color: #000; } /* Amarelo */
+    .badge-grupo { background-color: #6c757d !important; color: #fff; }     /* Cinza */
+    .badge-administrador { background-color: #198754 !important; color: #fff; } /* Verde */
+    .badge-ti { background-color: #0d6efd !important; color: #fff; }           /* Azul */
+</style>
+
 <script>
     (function() {
-        const modal = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
+        const modalStatus = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
+        const modalForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
 
         window.confirmarToggleMaster = () => {
             const atual = localStorage.getItem('bot_status') === 'true';
@@ -63,19 +135,19 @@
 
             textEl.innerText = `Deseja ${novoStatus ? 'ATIVAR' : 'DESATIVAR'} o status de ${nome}?`;
             iconEl.className = novoStatus ? "bi bi-check-circle text-success" : "bi bi-exclamation-triangle text-danger";
-            btn.className = novoStatus ? "btn btn-success" : "btn btn-danger";
+            btn.className = novoStatus ? "btn btn-success rounded-pill" : "btn btn-danger rounded-pill";
 
             btn.onclick = async () => {
                 await onConfirm(novoStatus);
-                modal.hide();
+                modalStatus.hide();
             };
-            modal.show();
+            modalStatus.show();
         };
 
         window.renderBotUI = () => {
             const btn = document.getElementById('btn-status-bot');
             const ativo = localStorage.getItem('bot_status') === 'true';
-            btn.className = ativo ? "btn btn-danger btn-sm shadow-sm" : "btn btn-outline-secondary btn-sm";
+            btn.className = ativo ? "btn btn-danger btn-sm shadow-sm rounded-pill" : "btn btn-outline-secondary btn-sm rounded-pill";
             btn.innerHTML = ativo ? '<i class="bi bi-broadcast"></i> MASTER ONLINE' : '<i class="bi bi-power"></i> MASTER OFFLINE';
         };
 
@@ -85,9 +157,10 @@
             list.innerHTML = data.map(i => {
                 const ativo = String(i.status).toLowerCase() === 'true';
                 const tipo = (i.tipo || '').toUpperCase();
-                let badgeStyle = "bg-light text-dark";
-                if (['ADMINISTRADOR', 'SRE ARCHITECT', 'WELLERSON', 'RODRIGO'].includes(tipo)) badgeStyle = "bg-success text-white";
-                if (tipo === 'GRUPO') badgeStyle = "bg-warning text-white";
+                let badgeClass = "badge-atendente";
+                if (tipo === 'ADMINISTRADOR') badgeClass = "badge-administrador";
+                if (tipo === 'TI') badgeClass = "badge-ti";
+                if (tipo === 'GRUPO') badgeClass = "badge-grupo";
 
                 return `
                 <tr>
@@ -99,15 +172,65 @@
                     </td>
                     <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
                     <td class="fw-bold text-dark">${i.username}</td>
-                    <td><span class="badge ${badgeStyle}" style="${tipo === 'GRUPO' ? 'background:#fd7e14' : ''}">${tipo}</span></td>
+                    <td><span class="badge ${badgeClass} border-0 px-3">${tipo}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-light btn-sm rounded-pill px-3" onclick="abrirModalForm('${i.id}')">
+                            <i class="bi bi-pencil-square text-danger"></i> Editar
+                        </button>
+                    </td>
                 </tr>`;
             }).join('');
         };
 
+        window.abrirModalForm = async (id = null) => {
+            const form = document.getElementById('form-bot-config');
+            form.reset();
+            form.classList.remove('was-validated');
+            document.getElementById('bot-id').value = id || '';
+            document.getElementById('modalBotTitle').innerText = id ? 'Editar Configuração' : 'Novo Registro';
+
+            if (id) {
+                const data = await API.call('getbotconfig');
+                const item = data.find(x => x.id == id);
+                if (item) {
+                    document.getElementById('bot-username').value = item.username;
+                    document.getElementById('bot-jid').value = item.jid_numero;
+                    document.getElementById('bot-imagem').value = item.imagem;
+                    document.getElementById('bot-tipo').value = item.tipo.toUpperCase();
+                    document.getElementById('bot-status-val').value = String(item.status);
+                }
+            }
+            modalForm.show();
+        };
+
+        window.salvarBot = async () => {
+            const form = document.getElementById('form-bot-config');
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const id = document.getElementById('bot-id').value;
+            const payload = {
+                id,
+                username: document.getElementById('bot-username').value,
+                jid_numero: document.getElementById('bot-jid').value,
+                imagem: document.getElementById('bot-imagem').value,
+                tipo: document.getElementById('bot-tipo').value,
+                status: document.getElementById('bot-status-val').value,
+                action: id ? 'updatebotconfig' : 'addbotconfig'
+            };
+
+            await API.call(payload.action, payload);
+            modalForm.hide();
+            await carregarBot();
+            window.dispatchEvent(new Event('storage'));
+        };
+
         window.atualizarBanco = async (id, status) => {
             await API.call('updatebotstatus', {id, status, action: 'updatebotstatus'});
-            await carregarBot(); // Recarrega a lista para mostrar o switch na posição certa
-            window.dispatchEvent(new Event('storage')); // Atualiza o Chat
+            await carregarBot();
+            window.dispatchEvent(new Event('storage'));
         };
 
         renderBotUI();
