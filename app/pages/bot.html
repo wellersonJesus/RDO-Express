@@ -57,17 +57,21 @@
                             <input type="url" id="bot-imagem" class="form-control bg-light border-0" placeholder="https://..." required>
                         </div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">Tipo</label>
+                            <label class="small fw-bold text-muted">Tipo / Cargo</label>
                             <select id="bot-tipo" class="form-select bg-light border-0" required>
                                 <option value="">Selecione...</option>
                                 <option value="ATENDENTE">Atendente</option>
+                                <option value="RDOEXPRESS">RDOExpress</option>
+                                <option value="RDOMOTOBOYS">RDOMotoboys</option>
                                 <option value="GRUPO">Grupo</option>
+                                <option value="SRE ARCHITECT">SRE Architect</option>
                                 <option value="ADMINISTRADOR">Administrador</option>
-                                <option value="TI">TI</option>
+                                <option value="FINANCEIRO">Financeiro</option>
+                                <option value="COMERCIAL">Comercial</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">Status</label>
+                            <label class="small fw-bold text-muted">Status Inicial</label>
                             <select id="bot-status-val" class="form-select bg-light border-0" required>
                                 <option value="true">Ativo</option>
                                 <option value="false">Inativo</option>
@@ -84,7 +88,7 @@
     </div>
 </div>
 
-<!-- Modal Premium de Confirmação Status -->
+<!-- Modal Confirmação Status -->
 <div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -106,10 +110,15 @@
         border: 1px solid #dc3545 !important;
         background-image: none;
     }
-    .badge-atendente { background-color: #ffc107 !important; color: #000; }
-    .badge-grupo { background-color: #6c757d !important; color: #fff; }
-    .badge-administrador { background-color: #198754 !important; color: #fff; }
-    .badge-ti { background-color: #0d6efd !important; color: #fff; }
+    /* Mapeamento de Cores solicitado */
+    .bg-cargo-atendente { background-color: #fd7e14 !important; color: #fff; }    /* Laranja */
+    .bg-cargo-rdoexpress { background-color: #dc3545 !important; color: #fff; }   /* Vermelho */
+    .bg-cargo-rdomotoboys { background-color: #f5f5dc !important; color: #333; }  /* Bege */
+    .bg-cargo-grupo { background-color: #6c757d !important; color: #fff; }        /* Cinza */
+    .bg-cargo-sre { background-color: #0d6efd !important; color: #fff; }          /* Azul */
+    .bg-cargo-admin { background-color: #adff2f !important; color: #333; }        /* Amarelo Verde (GreenYellow) */
+    .bg-cargo-financeiro { background-color: #198754 !important; color: #fff; }   /* Verde */
+    .bg-cargo-comercial { background-color: #ff69b4 !important; color: #fff; }    /* Rosa */
 </style>
 
 <script>
@@ -152,13 +161,22 @@
         window.carregarBot = async () => {
             const data = await API.call('getbotconfig') || [];
             const list = document.getElementById('bot-list');
+            
+            const colorMap = {
+                'ATENDENTE': 'bg-cargo-atendente',
+                'RDOEXPRESS': 'bg-cargo-rdoexpress',
+                'RDOMOTOBOYS': 'bg-cargo-rdomotoboys',
+                'GRUPO': 'bg-cargo-grupo',
+                'SRE ARCHITECT': 'bg-cargo-sre',
+                'ADMINISTRADOR': 'bg-cargo-admin',
+                'FINANCEIRO': 'bg-cargo-financeiro',
+                'COMERCIAL': 'bg-cargo-comercial'
+            };
+
             list.innerHTML = data.map(i => {
                 const ativo = String(i.status).toLowerCase() === 'true';
                 const tipo = (i.tipo || '').toUpperCase();
-                let badgeClass = "badge-atendente";
-                if (tipo === 'ADMINISTRADOR') badgeClass = "badge-administrador";
-                if (tipo === 'TI') badgeClass = "badge-ti";
-                if (tipo === 'GRUPO') badgeClass = "badge-grupo";
+                const badgeClass = colorMap[tipo] || 'bg-light text-dark';
 
                 return `
                 <tr>
