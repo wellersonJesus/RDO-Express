@@ -93,7 +93,7 @@
                     <div id="display-cargo" class="text-danger small" style="font-size: 0.7rem; font-weight: 600;">...</div>
                 </div>
                 <button class="profile-btn border-0 bg-transparent p-0" onclick="abrirModalLogout()">
-                    <div class="inner-circle" style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <div id="avatar-container" class="inner-circle" style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <i class="bi bi-person-fill text-white"></i>
                     </div>
                 </button>
@@ -132,9 +132,17 @@
             }
             const user = localStorage.getItem('user_name') || 'Usuário';
             const cargo = localStorage.getItem('user_role') || 'Colaborador';
+            const imagem = localStorage.getItem('user_img');
             
             document.getElementById('display-username').innerText = user;
             document.getElementById('display-cargo').innerText = cargo;
+
+            // Logica para exibir a imagem no icone de login
+            const avatarContainer = document.getElementById('avatar-container');
+            if (imagem && imagem !== 'null' && imagem !== '') {
+                avatarContainer.innerHTML = `<img src="${imagem}" alt="User">`;
+                avatarContainer.style.background = 'transparent';
+            }
 
             if(typeof window.loadPage === 'function'){
                 window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');

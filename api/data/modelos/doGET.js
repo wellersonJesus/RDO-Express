@@ -14,7 +14,7 @@ function doPost(e) {
     var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // Entidades: usuarios, clientes, colaboradores, pedidos, financeiro, botconfig, chatlive
+    // Extrai o nome da aba (ex: getUsuarios -> usuarios)
     var entity = action.replace(/get|add|delete|update/, '').toLowerCase();
     var sheet = ss.getSheetByName(entity);
     
@@ -33,13 +33,10 @@ function doPost(e) {
   }
 }
 
-// Funções handleGet, handleUpdate, handleDelete permanecem as mesmas do seu arquivo...
-// (Mantendo sua lógica original para não quebrar a aplicação)
-
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
-  var headers = rows[0].map(function(h) { return h.toString().toLowerCase(); });
+  var headers = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); });
   var data = [];
   for (var i = 1; i < rows.length; i++) {
     var obj = {};
@@ -56,7 +53,7 @@ function handleAdd(sheet, data) {
   delete data.apiKey;
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var newRow = headers.map(function(header) {
-    var key = header.toLowerCase();
+    var key = header.toLowerCase().trim();
     return data[key] !== undefined ? data[key] : (key === "id" ? Utilities.getUuid() : "");
   });
   sheet.appendRow(newRow);
