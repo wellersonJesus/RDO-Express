@@ -8,6 +8,9 @@
                 <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões em tempo real.</p>
             </div>
             <div class="d-flex gap-2">
+                <button id="btn-bulk-action" class="btn btn-outline-danger btn-sm px-3 rounded-pill d-none" onclick="confirmarMassa()">
+                    AÇÃO EM MASSA (<span id="selected-count">0</span>)
+                </button>
                 <button class="btn btn-dark btn-sm px-3 fw-bold shadow-sm rounded-pill" onclick="abrirModalForm()">
                     <i class="bi bi-plus-lg"></i> NOVO
                 </button>
@@ -20,6 +23,9 @@
         <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
                 <tr class="text-secondary" style="font-size: 0.75rem;">
+                    <th class="border-0" width="40">
+                        <input class="form-check-input" type="checkbox" id="check-all" onclick="toggleSelectAll(this)">
+                    </th>
                     <th class="border-0">STATUS</th>
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
@@ -32,6 +38,7 @@
     </div>
 </div>
 
+<!-- Modal Formulário Atualizado com novos Cargos -->
 <div class="modal fade" id="modalBotForm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -44,15 +51,17 @@
                     <div class="row g-3">
                         <div class="col-md-6"><label class="small fw-bold text-muted">Username</label><input type="text" id="bot-username" class="form-control bg-light border-0"></div>
                         <div class="col-md-6"><label class="small fw-bold text-muted">JID / Número</label><input type="text" id="bot-jid" class="form-control bg-light border-0"></div>
-                        <div class="col-12"><label class="small fw-bold text-muted">URL Imagem</label><input type="url" id="bot-imagem" class="form-control bg-light border-0"></div>
+                        <div class="col-12"><label class="small fw-bold text-muted">URL Avatar</label><input type="url" id="bot-imagem" class="form-control bg-light border-0"></div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">Tipo</label>
+                            <label class="small fw-bold text-muted">Tipo/Cargo</label>
                             <select id="bot-tipo" class="form-select bg-light border-0">
-                                <option value="ATENDENTE">Atendente</option>
-                                <option value="RDOEXPRESS">RDOExpress</option>
-                                <option value="RDOMOTOBOYS">RDOMotoboys</option>
-                                <option value="GRUPO">Grupo</option>
-                                <option value="ADMINISTRADOR">Administrador</option>
+                                <option value="SRE Architect">SRE Architect</option>
+                                <option value="atendente">Atendente</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="grupo">Grupo</option>
+                                <option value="rdoMotoboy">rdoMotoboy</option>
+                                <option value="ADMINISTRADOR">Admin</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -66,159 +75,136 @@
                 </form>
             </div>
             <div class="modal-footer border-0 p-4 pt-0">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Sair</button>
-                <button type="button" id="btn-salvar-form" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="salvarBot()">SALVAR</button>
+                <button class="btn btn-light rounded-pill" data-bs-dismiss="modal">Sair</button>
+                <button id="btn-salvar-bot" class="btn btn-danger rounded-pill px-4" onclick="salvarBot()">SALVAR</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalConfirmarAcao" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-body text-center p-4">
-                <div class="mb-3"><i id="confirm-icon" class="bi" style="font-size: 3rem;"></i></div>
-                <h6 class="fw-bold mb-2" id="confirm-title">Confirmar?</h6>
-                <p id="confirm-text" class="text-muted small mb-4"></p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-light w-50 small rounded-pill" data-bs-dismiss="modal">Sair</button>
-                    <button id="btn-confirmar-final" class="btn w-50 small fw-bold rounded-pill">Confirmar</button>
-                </div>
+<!-- Modal Ação em Massa -->
+<div class="modal fade" id="modalBulkAction" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg text-center p-3" style="border-radius:20px">
+            <div class="mb-2"><i class="bi bi-layers-fill text-danger" style="font-size:2.5rem"></i></div>
+            <h6 class="fw-bold">Ação em Massa</h6>
+            <p class="small text-muted">O que deseja fazer com os itens selecionados?</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-dark btn-sm rounded-pill" onclick="executarMassa('ativar')">ATIVAR TODOS</button>
+                <button class="btn btn-outline-dark btn-sm rounded-pill" onclick="executarMassa('desativar')">DESATIVAR TODOS</button>
+                <button class="btn btn-danger btn-sm rounded-pill" onclick="executarMassa('remover')">REMOVER TODOS</button>
+                <button class="btn btn-light btn-sm rounded-pill" data-bs-dismiss="modal">CANCELAR</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    if (!window.botState) {
-        window.botState = { cache: null, modalForm: null, modalConfirm: null };
-    }
+    if (!window.botState) { window.botState = { cache: null, modForm: null, modConf: null, modBulk: null }; }
 
-    async function initBotPage() {
-        window.botState.modalForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
-        window.botState.modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarAcao'));
-        
-        if (window.botState.cache) renderList(window.botState.cache);
-        await carregarBotData(false);
+    async function initBot() {
+        window.botState.modForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
+        window.botState.modBulk = new bootstrap.Modal(document.getElementById('modalBulkAction'));
+        await reloadBot();
         renderBotUI();
     }
 
-    async function carregarBotData(loading = true) {
-        if(loading) document.getElementById('bot-list').innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border text-danger"></div></td></tr>';
+    async function reloadBot() {
         const data = await API.call('getbotconfig');
-        window.botState.cache = data || [];
+        window.botState.cache = Array.isArray(data) ? data : [];
         renderList(window.botState.cache);
+        updateBulkUI();
     }
 
     function renderList(data) {
-        const list = document.getElementById('bot-list');
-        if(!list) return;
-        list.innerHTML = data.map(i => {
+        document.getElementById('bot-list').innerHTML = data.map(i => {
             const ativo = String(i.status) === 'true';
-            return `<tr>
-                <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} onchange="confirmarAcaoBot('${i.id}', ${ativo}, '${i.username}', 'status')"></div></td>
-                <td><img src="${i.imagem}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
-                <td class="fw-bold text-dark">${i.username}</td>
+            return `
+            <tr>
+                <td><input class="form-check-input item-check" type="checkbox" value="${i.id}" onchange="updateBulkUI()"></td>
+                <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} onchange="alterarStatusDireto('${i.id}', ${ativo})"></div></td>
+                <td><img src="${i.imagem}" class="rounded-circle border" width="30" height="30" style="object-fit:cover"></td>
+                <td class="fw-bold">${i.username}</td>
                 <td><span class="badge bg-light text-dark border px-3">${i.tipo}</span></td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-link text-secondary" onclick="abrirModalForm('${i.id}')"><i class="bi bi-pencil-square"></i></button>
-                    <button class="btn btn-sm btn-link text-secondary" onclick="confirmarAcaoBot('${i.id}', null, '${i.username}', 'delete')"><i class="bi bi-trash3"></i></button>
+                    <button class="btn btn-sm text-secondary" onclick="abrirModalForm('${i.id}')"><i class="bi bi-pencil-square"></i></button>
                 </td>
             </tr>`;
         }).join('');
     }
 
-    window.confirmarAcaoBot = (id, status, nome, tipo) => {
-        const icon = document.getElementById('confirm-icon');
-        const title = document.getElementById('confirm-title');
-        const text = document.getElementById('confirm-text');
-        const btn = document.getElementById('btn-confirmar-final');
-
-        if (tipo === 'status') {
-            const novo = !status;
-            title.innerText = "Alterar Status";
-            text.innerText = `Deseja ${novo ? 'ativar' : 'desativar'} o bot ${nome}?`;
-            icon.className = novo ? "bi bi-check-circle text-success" : "bi bi-exclamation-circle text-warning";
-            btn.className = "btn btn-danger w-50 small fw-bold rounded-pill";
-            btn.onclick = () => executarAcao('updatebotstatus', { id, status: novo });
-        } else {
-            title.innerText = "Remover Registro";
-            text.innerText = `Tem certeza que deseja excluir ${nome}?`;
-            icon.className = "bi bi-trash text-danger";
-            btn.className = "btn btn-danger w-50 small fw-bold rounded-pill";
-            btn.onclick = () => executarAcao('deletebot', { id });
-        }
-        window.botState.modalConfirm.show();
+    window.toggleSelectAll = (el) => {
+        document.querySelectorAll('.item-check').forEach(c => c.checked = el.checked);
+        updateBulkUI();
     };
 
-    async function executarAcao(action, payload) {
-        const btn = document.getElementById('btn-confirmar-final');
-        const original = btn.innerText;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    window.updateBulkUI = () => {
+        const selecionados = document.querySelectorAll('.item-check:checked').length;
+        const btn = document.getElementById('btn-bulk-action');
+        document.getElementById('selected-count').innerText = selecionados;
+        selecionados > 0 ? btn.classList.remove('d-none') : btn.classList.add('d-none');
+    };
 
-        await API.call(action, { ...payload, action });
+    window.confirmarMassa = () => window.botState.modBulk.show();
+
+    async function executarMassa(tipo) {
+        const ids = Array.from(document.querySelectorAll('.item-check:checked')).map(c => c.value);
+        if(!confirm(`Confirma aplicar "${tipo}" em ${ids.length} itens?`)) return;
         
-        // Invalida caches
-        window.botState.cache = null;
-        if(window.chatState) window.chatState.cacheDados = null;
+        // Loop para processar em massa (Idealmente seu Apps Script receberia um array, mas aqui simulamos o loop)
+        for(let id of ids) {
+            if(tipo === 'remover') await API.call('deletebotconfig', { id });
+            else await API.call('updatebotconfig', { id, status: (tipo === 'ativar') });
+        }
+        
+        window.botState.modBulk.hide();
+        await reloadBot();
+    }
 
-        window.botState.modalConfirm.hide();
-        btn.disabled = false;
-        btn.innerText = original;
-        await carregarBotData(true);
+    async function alterarStatusDireto(id, statusAtual) {
+        await API.call('updatebotconfig', { id, status: !statusAtual });
+        await reloadBot();
     }
 
     window.abrirModalForm = (id = null) => {
-        const form = document.getElementById('form-bot-config');
-        form.reset();
+        const f = document.getElementById('form-bot-config');
+        f.reset();
         document.getElementById('bot-id').value = id || '';
-        if (id && window.botState.cache) {
+        if(id) {
             const item = window.botState.cache.find(x => x.id == id);
-            if (item) {
-                document.getElementById('bot-username').value = item.username;
-                document.getElementById('bot-jid').value = item.jid_numero;
-                document.getElementById('bot-imagem').value = item.imagem;
-                document.getElementById('bot-tipo').value = item.tipo;
+            if(item) {
+                document.getElementById('bot-username').value = item.username || '';
+                document.getElementById('bot-jid').value = item.jid_numero || '';
+                document.getElementById('bot-imagem').value = item.imagem || '';
+                document.getElementById('bot-tipo').value = item.tipo || 'atendente';
                 document.getElementById('bot-status-val').value = String(item.status);
             }
         }
-        window.botState.modalForm.show();
+        window.botState.modForm.show();
     };
 
     window.salvarBot = async () => {
-        const btn = document.getElementById('btn-salvar-form');
         const id = document.getElementById('bot-id').value;
         const payload = {
-            id,
+            id, 
+            action: id ? 'updatebotconfig' : 'addbotconfig',
             username: document.getElementById('bot-username').value,
             jid_numero: document.getElementById('bot-jid').value,
             imagem: document.getElementById('bot-imagem').value,
             tipo: document.getElementById('bot-tipo').value,
-            status: document.getElementById('bot-status-val').value,
-            action: id ? 'updatebotconfig' : 'addbotconfig'
+            status: document.getElementById('bot-status-val').value
         };
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        
         await API.call(payload.action, payload);
-        window.botState.cache = null;
-        if(window.chatState) window.chatState.cacheDados = null;
-
-        window.botState.modalForm.hide();
-        btn.disabled = false;
-        btn.innerText = 'SALVAR';
-        await carregarBotData(true);
+        await reloadBot();
+        window.botState.modForm.hide();
     };
 
     window.renderBotUI = () => {
         const btn = document.getElementById('btn-status-bot');
-        if(!btn) return;
         const ativo = localStorage.getItem('bot_status') === 'true';
         btn.className = ativo ? "btn btn-danger btn-sm rounded-pill" : "btn btn-outline-secondary btn-sm rounded-pill";
-        btn.innerHTML = ativo ? '<i class="bi bi-broadcast"></i> MASTER ON' : '<i class="bi bi-power"></i> MASTER OFF';
+        btn.innerHTML = ativo ? 'MASTER ON' : 'MASTER OFF';
     };
 
-    initBotPage();
+    initBot();
 </script>
