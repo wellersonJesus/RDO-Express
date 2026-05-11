@@ -1,179 +1,109 @@
 <div class="row g-3 h-100">
-    <!-- Header RDO Express -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-danger text-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-4">
-                    <!-- Branding & Atendentes -->
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-whatsapp fs-3"></i>
                     <div>
-                        <div class="mb-1">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-whatsapp fs-4 me-2 text-white"></i>
-                                <h5 class="fw-bold mb-0 text-white tracking-tight">RDO <span class="fw-light opacity-75">Express</span></h5>
-                            </div>
-                            <!-- Subtítulo atualizado -->
-                            <div class="text-white-50 fw-light" style="font-size: 0.65rem; margin-top: -2px; letter-spacing: 0.5px; text-transform: uppercase;">
-                                Conectando entregas a resultados
-                            </div>
+                        <h5 class="fw-bold mb-0">RDO <span class="fw-light opacity-75">Express</span></h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="sync-text" class="text-white-50 small fst-italic" style="font-size: 0.7rem;">Chat atualizado</span>
+                            <i id="sync-icon" class="bi bi-arrow-repeat text-white-50" style="cursor:pointer; font-size: 0.8rem;" onclick="carregarDados(true)"></i>
                         </div>
-                        
-                        <!-- Container de Ícones dos Atendentes -->
-                        <div id="atendentes-status-bar" class="d-flex align-items-center gap-2 mt-2">
-                            <!-- Injetado via JS -->
-                        </div>
-                    </div>
-                    
-                    <!-- Mensagem de Bot Desativado -->
-                    <div id="msg-bot-off" class="d-none animate__animated animate__fadeIn">
-                        <span class="badge bg-white text-danger rounded-pill px-3 py-2 fw-bold shadow-sm">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i> BOT RDO DESATIVADO
-                        </span>
                     </div>
                 </div>
-
-                <!-- Input de Geração de Pedidos -->
-                <div class="d-flex align-items-center gap-2" style="width: 45%;">
-                    <div class="input-group bg-white rounded-pill p-1 shadow-lg">
-                        <span class="input-group-text bg-transparent border-0"><i class="bi bi-clipboard-check text-danger"></i></span>
-                        <input type="text" id="input-colar" class="form-control border-0 shadow-none" placeholder="Cole o conteúdo aqui..." style="font-size: 0.85rem;">
-                        <button class="btn btn-danger rounded-pill px-4 fw-bold btn-gerar" onclick="criarPedido()">
-                            <i class="bi bi-magic me-1"></i> GERAR
-                        </button>
-                    </div>
+                <div id="atendentes-status-bar" class="d-flex gap-2"></div>
+                <div class="input-group bg-white rounded-pill p-1 shadow-sm" style="width: 40%;">
+                    <input type="text" id="input-colar" class="form-control border-0 bg-transparent px-3" placeholder="Colar pedido..." style="font-size: 0.85rem;">
+                    <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="criarPedido()">GERAR</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Lista Lateral -->
-    <div class="col-md-4 h-100">
-        <div class="card border-0 shadow-sm overflow-hidden bg-white" style="height: 600px; border-radius: 20px;">
-            <div class="p-3 bg-light border-bottom text-center">
-                <h6 class="text-dark mb-0" style="font-size: 0.75rem;">
-                    <b class="fw-bold">Chat</b> Comunicação interna
-                </h6>
-            </div>
-            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto p-2"></div>
-        </div>
-    </div>
-
-    <!-- Feed de Mensagens -->
-    <div class="col-md-8 h-100">
-        <div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto d-flex flex-column gap-3 whatsapp-bg" 
-             style="height: 600px; border-radius: 20px;">
-        </div>
-    </div>
+    <div class="col-md-4"><div id="lista-contatos-chat" class="list-group overflow-auto bg-white rounded-4 shadow-sm" style="height: 550px;"></div></div>
+    <div class="col-md-8"><div id="chat-messages-container" class="card border-0 shadow-sm p-4 overflow-auto whatsapp-bg rounded-4" style="height: 550px;"></div></div>
 </div>
 
+<style>
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid white; position: absolute; bottom: 0; right: 0; }
+    .grayscale { filter: grayscale(1); opacity: 0.4; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+
 <script>
+    let isFetching = false;
     let jidSelecionado = null;
 
-    function verificarSessaoAtendente(at) {
-        const nome = (at.username || at.USERNAME || '').toLowerCase();
-        const statusReal = String(at.status || at.STATUS).toLowerCase() === 'true';
-        // Wellerson (Master) sempre online, outros conforme status
-        if (nome === 'wellerson') return true; 
-        return statusReal;
+    async function carregarDados(force = false) {
+        if (isFetching) return;
+        isFetching = true;
+        
+        const icon = document.getElementById('sync-icon');
+        const text = document.getElementById('sync-text');
+        
+        icon.classList.add('spin');
+        text.innerText = "Chat atualizando...";
+
+        try {
+            const masterOn = localStorage.getItem('bot_status') === 'true';
+            const [configs, pedidos] = await Promise.all([
+                API.call('getbotconfig'),
+                API.call('getchatlive')
+            ]);
+
+            renderizarChat(configs || [], pedidos || [], masterOn);
+            text.innerText = "Chat atualizado";
+        } catch (e) {
+            text.innerText = "Erro ao sincronizar";
+        } finally {
+            icon.classList.remove('spin');
+            isFetching = false;
+        }
     }
 
-    async function carregarDados() {
-        const [configs, pedidos] = await Promise.all([
-            API.call('getbotconfig'),
-            API.call('getchatlive')
-        ]);
-
-        const masterBotAtivo = localStorage.getItem('bot_status') === 'true';
-        const msgOff = document.getElementById('msg-bot-off');
+    function renderizarChat(configs, pedidos, masterOn) {
         const statusBar = document.getElementById('atendentes-status-bar');
         const listaGrupos = document.getElementById('lista-contatos-chat');
-        const containerMensagens = document.getElementById('chat-messages-container');
 
-        if(masterBotAtivo) {
-            msgOff.classList.add('d-none');
-            
-            const atendentes = configs.filter(c => (c.tipo || c.TIPO || '').toLowerCase() === 'atendente');
-            statusBar.innerHTML = atendentes.map(at => {
-                const logado = verificarSessaoAtendente(at);
-                return `
-                    <div class="position-relative" title="${at.username || at.USERNAME} - ${logado ? 'Conectado' : 'Desconectado'}">
-                        <img src="${at.imagem || at.IMAGEM}" 
-                             class="rounded-circle border border-2 avatar-header ${logado ? 'border-success' : 'border-white grayscale opacity-75'}" 
-                             width="28" height="28" style="object-fit:cover;">
-                        <span class="status-dot ${logado ? 'bg-success' : 'bg-warning'}"></span>
-                    </div>
-                `;
-            }).join('');
-
-            listaGrupos.innerHTML = configs.filter(g => (g.tipo || g.TIPO || '').toLowerCase() === 'grupo').map(g => {
-                const valor = g.jid_numero || g.JID_NUMERO;
-                const ativo = String(g.status || g.STATUS).toLowerCase() === 'true';
-                return `
-                <button onclick="${ativo ? `setFiltro('${valor}')` : ''}" 
-                    class="list-group-item list-group-item-action border-0 rounded-4 mb-1 py-3 
-                    ${jidSelecionado === valor ? 'bg-danger text-white shadow' : ''} 
-                    ${!ativo ? 'opacity-25 grayscale' : ''}">
-                    <div class="d-flex align-items-center">
-                        <img src="${g.imagem || g.IMAGEM}" class="rounded-circle me-3 border" width="40" height="40" style="object-fit:cover;">
-                        <div class="flex-grow-1 overflow-hidden">
-                            <span class="fw-bold d-block text-truncate" style="font-size: 0.8rem;">${g.username || g.USERNAME}</span>
-                            <small class="${jidSelecionado === valor ? 'text-white-50' : 'text-muted'}" style="font-size: 0.6rem;">${valor}</small>
-                        </div>
-                    </div>
-                </button>`;
-            }).join('');
-
-        } else {
-            msgOff.classList.remove('d-none');
-            statusBar.innerHTML = '';
-            listaGrupos.innerHTML = '<div class="text-center p-5 text-muted">Bot Offline</div>';
-        }
-
-        if(!masterBotAtivo) {
-            containerMensagens.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted">SISTEMA DESCONECTADO</div>';
-            return;
-        }
-
-        const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
-        containerMensagens.innerHTML = filtrados.reverse().map(p => {
-            const grp = configs.find(g => (g.jid_numero || g.JID_NUMERO) === p.cliente) || {username: 'RDO', imagem: ''};
-            const isConcluido = p.status === 'Concluído';
+        // Renderizar Atendentes no Topo
+        statusBar.innerHTML = configs.filter(c => c.tipo !== 'GRUPO').map(at => {
+            const online = masterOn && String(at.status).toLowerCase() === 'true';
             return `
-                <div class="d-flex flex-column ${isConcluido ? 'align-items-end' : 'align-items-start'} animate__animated animate__fadeIn">
-                    <div class="whatsapp-bubble p-2 px-3 shadow-sm" style="max-width: 75%; border-radius: 12px; background: ${isConcluido ? '#e7ffdb' : '#ffffff'};">
-                        <div class="d-flex align-items-center mb-1 gap-2 border-bottom pb-1" style="opacity: 0.6; font-size: 0.6rem;">
-                            <img src="${grp.imagem || grp.IMAGEM}" class="rounded-circle" width="14" height="14">
-                            <strong>${grp.username || grp.USERNAME}</strong>
-                        </div>
-                        <p class="mb-1 text-dark" style="font-size: 0.82rem; line-height: 1.4;">${p.ultima_msg}</p>
-                        <div class="d-flex justify-content-end align-items-center gap-1">
-                            <span class="text-muted" style="font-size: 0.55rem;">${p.hora || ''}</span>
-                            <i class="bi bi-check2-all ${isConcluido ? 'text-primary' : 'text-muted'}" style="font-size: 0.75rem;"></i>
-                        </div>
-                    </div>
+                <div class="position-relative">
+                    <img src="${at.imagem}" class="rounded-circle border ${online ? 'border-success' : 'grayscale'}" width="30" height="30">
+                    <span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>
                 </div>`;
         }).join('');
+
+        // Renderizar Lista Lateral
+        listaGrupos.innerHTML = configs.filter(g => g.tipo === 'GRUPO').map(g => {
+            const online = masterOn && String(g.status).toLowerCase() === 'true';
+            const active = jidSelecionado === g.jid_numero;
+            return `
+                <button onclick="selecionarGrupo('${g.jid_numero}')" class="list-group-item list-group-item-action border-0 p-3 ${active ? 'bg-danger text-white' : ''} ${!online ? 'grayscale' : ''}">
+                    <div class="d-flex align-items-center">
+                        <img src="${g.imagem}" class="rounded-circle me-3" width="35" height="35">
+                        <span class="fw-bold small">${g.username}</span>
+                    </div>
+                </button>`;
+        }).join('');
+
+        // Renderizar Mensagens
+        const container = document.getElementById('chat-messages-container');
+        const filtrados = jidSelecionado ? pedidos.filter(p => p.cliente === jidSelecionado) : pedidos;
+        container.innerHTML = filtrados.slice().reverse().map(p => `
+            <div class="d-flex flex-column ${p.status === 'Concluído' ? 'align-items-end' : 'align-items-start'} mb-2">
+                <div class="p-2 px-3 bg-white shadow-sm rounded-3 small" style="max-width: 80%;">${p.ultima_msg}</div>
+            </div>`).join('');
     }
 
-    window.setFiltro = (jid) => {
+    window.selecionarGrupo = (jid) => {
         jidSelecionado = (jidSelecionado === jid) ? null : jid;
         carregarDados();
     };
 
+    window.addEventListener('storage', carregarDados);
     carregarDados();
-    setInterval(carregarDados, 5000);
 </script>
-
-<style>
-    .whatsapp-bg { background-color: #efe7de; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .whatsapp-bubble { box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
-    .grayscale { filter: grayscale(1); }
-    .avatar-header { transition: all 0.4s ease; }
-    .status-dot {
-        position: absolute; bottom: 1px; right: 1px;
-        width: 10px; height: 10px;
-        border-radius: 50%; border: 2px solid #dc3545; /* Borda da cor do header para parecer vazado */
-    }
-    .bg-success { background-color: #25D366 !important; } /* Verde WhatsApp */
-    .bg-warning { background-color: #ff3b30 !important; } /* Vermelho para Desconectado */
-    .tracking-tight { letter-spacing: -0.5px; }
-</style>

@@ -1,115 +1,50 @@
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0 fw-bold text-secondary d-flex align-items-center">
-            <i class="bi bi-person-badge text-danger me-3 fs-3"></i>Lista de Usuários
+<div class="card shadow-sm border-0 bg-white">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-0">
+        <h4 class="mb-0 fw-bold text-dark d-flex align-items-center">
+            <i class="bi bi-person-badge text-danger me-2"></i> Usuários do Sistema
         </h4>
-        <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Usuário</button>
+        <button class="btn btn-dark btn-sm shadow-sm" onclick="novoUsuario()">
+            <i class="bi bi-plus-lg me-1"></i> NOVO ACESSO
+        </button>
     </div>
-    <div class="table-responsive px-3">
+    <div class="table-responsive px-3 pb-3">
         <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
-                <tr>
-                    <th class="py-3 text-secondary">Username</th>
-                    <th class="py-3 text-secondary">Cargo</th>
-                    <th class="py-3 text-secondary">Senha</th>
-                    <th class="text-center py-3 text-secondary">Ações</th>
+                <tr class="text-secondary" style="font-size: 0.75rem;">
+                    <th>AVATAR</th>
+                    <th>USERNAME</th>
+                    <th>TIPO (CARGO)</th>
+                    <th>SENHA</th>
+                    <th class="text-center">AÇÕES</th>
                 </tr>
             </thead>
-            <tbody id="usuarios-body">
-                <tr>
-                    <td colspan="4" class="text-center py-4 text-muted">
-                        <div class="spinner-border spinner-border-sm text-danger me-2"></div> Carregando...
-                    </td>
-                </tr>
-            </tbody>
+            <tbody id="usuarios-body"></tbody>
         </table>
-    </div>
-    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
-        <div id="pagination-info-users" class="small text-muted" style="font-size: 0.75rem;"></div>
-        <nav>
-            <ul class="pagination pagination-sm mb-0" id="pagination-controls-users"></ul>
-        </nav>
     </div>
 </div>
 
 <script>
     (function() {
-        let usersData = [];
-        let currentUsersPage = 1;
-        const usersLimit = 20;
-
-        async function init() {
-            try {
-                console.log("👥 Carregando lista de usuários...");
-                const data = await API.call('getusuarios');
-                
-                if (!data || data.status === 'error') {
-                    document.getElementById('usuarios-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao carregar usuários da planilha.</td></tr>`;
-                    return;
-                }
-
-                usersData = Array.isArray(data) ? data : [];
-                renderizarPaginaUsuarios(1);
-            } catch (err) {
-                console.error("Erro ao inicializar usuários:", err);
-                document.getElementById('usuarios-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Falha na conexão com o servidor.</td></tr>`;
-            }
-        }
-
-        window.renderizarPaginaUsuarios = function(page) {
-            currentUsersPage = page;
-            const start = (page - 1) * usersLimit;
-            const end = start + usersLimit;
-            const paginatedItems = usersData.slice(start, end);
+        async function carregarUsuarios() {
             const tbody = document.getElementById('usuarios-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-danger"></div></td></tr>';
+            
+            const data = await API.call('getusuarios');
+            if (!data || data.status === 'error') return;
 
-            if (paginatedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum usuário cadastrado.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = paginatedItems.map(u => `
+            tbody.innerHTML = data.map(u => `
                 <tr>
-                    <td class="fw-medium text-dark">${u.username || u.nome || '-'}</td>
-                    <td><span class="badge bg-light text-secondary border fw-normal">${u.cargo || 'Membro'}</span></td>
-                    <td class="text-muted" style="letter-spacing: 2px;">***************</td>
+                    <td><img src="${u.imagem || 'https://via.placeholder.com/30'}" class="rounded-circle border" width="30" height="30"></td>
+                    <td class="fw-bold">${u.username}</td>
+                    <td><span class="badge bg-light text-danger border">${u.tipo.toUpperCase()}</span></td>
+                    <td class="text-muted small">••••••••</td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar"><i class="bi bi-search"></i></button>
-                        <button class="btn btn-sm btn-link text-secondary p-1" title="Editar"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover"><i class="bi bi-trash3"></i></button>
+                        <button class="btn btn-sm btn-link text-secondary"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
-
-            renderPaginationControlsUsers();
-        };
-
-        function renderPaginationControlsUsers() {
-            const totalPages = Math.ceil(usersData.length / usersLimit);
-            const controls = document.getElementById('pagination-controls-users');
-            let html = '';
-            
-            html += `<li class="page-item ${currentUsersPage === 1 ? 'disabled' : ''}">
-                <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaUsuarios(${currentUsersPage - 1})">Anterior</a>
-            </li>`;
-            
-            for(let i = 1; i <= totalPages; i++) {
-                if(i === 1 || i === totalPages || (i >= currentUsersPage - 1 && i <= currentUsersPage + 1)) {
-                    html += `<li class="page-item ${i === currentUsersPage ? 'active' : ''}">
-                        <a class="page-link border-0 rounded-circle mx-1 ${i === currentUsersPage ? 'bg-secondary text-white' : 'text-secondary'}" href="#" onclick="event.preventDefault(); renderizarPaginaUsuarios(${i})">${i}</a>
-                    </li>`;
-                }
-            }
-            
-            html += `<li class="page-item ${currentUsersPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
-                <a class="page-link border-0 text-secondary" href="#" onclick="event.preventDefault(); renderizarPaginaUsuarios(${currentUsersPage + 1})">Próximo</a>
-            </li>`;
-            
-            controls.innerHTML = html;
-            document.getElementById('pagination-info-users').innerText = `Total: ${usersData.length} usuários`;
         }
-
-        // Disparo imediato da carga de dados
-        init();
+        carregarUsuarios();
     })();
 </script>

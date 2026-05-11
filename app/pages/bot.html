@@ -3,19 +3,11 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h4 class="fw-bold text-dark mb-1 d-flex align-items-center">
-                    <i class="bi bi-gear-wide-connected text-danger me-2"></i> Bot RDO Express
+                    <i class="bi bi-lightning-charge-fill text-danger me-2"></i> RDO <span class="text-dark ms-1">Bot Express</span>
                 </h4>
-                <div class="d-flex align-items-center gap-2">
-                    <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerencie conexões de atendentes e grupos.</p>
-                    <div id="status-loop" class="d-flex align-items-center gap-1 fw-bold" style="font-size: 0.7rem;"></div>
-                </div>
+                <p class="text-muted mb-0" style="font-size: 0.75rem;">Gerenciamento de instâncias e permissões.</p>
             </div>
-            <div class="d-flex gap-2">
-                <button id="btn-status-bot" class="btn btn-sm px-2 fw-bold shadow-sm" style="font-size: 0.7rem;" onclick="toggleStatusBot()"></button>
-                <button class="btn btn-dark btn-sm px-2 shadow-sm" style="font-size: 0.7rem;" onclick="abrirModalCadastro()">
-                    <i class="bi bi-plus-lg me-1"></i> CADASTRAR
-                </button>
-            </div>
+            <button id="btn-status-bot" class="btn btn-sm px-3 fw-bold shadow-sm" onclick="toggleStatusBot()"></button>
         </div>
     </div>
     
@@ -23,71 +15,31 @@
         <table class="table table-hover align-middle" style="font-size: 0.85rem;">
             <thead class="table-light">
                 <tr class="text-secondary" style="font-size: 0.75rem;">
-                    <th class="border-0">STATUS</th>
+                    <th class="border-0">MASTER ON/OFF</th>
                     <th class="border-0">AVATAR</th>
                     <th class="border-0">NOME</th>
-                    <th class="border-0">JID/NÚMERO</th>
                     <th class="border-0">TIPO</th>
-                    <th class="border-0 text-center">AÇÕES</th>
                 </tr>
             </thead>
-            <tbody id="bot-list" class="border-top-0"></tbody>
+            <tbody id="bot-list"></tbody>
         </table>
     </div>
 </div>
 
-<!-- Modal Cadastro/Edição -->
-<div class="modal fade" id="modalBot" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0 justify-content-center">
-                <h5 class="fw-bold text-dark mt-3" id="modalBotTitle">Configuração RDO <span class="text-danger">Express</span></h5>
-            </div>
-            <div class="modal-body px-4 pt-3">
-                <input type="hidden" id="reg-id">
+<!-- Modal Premium de Confirmação -->
+<div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body text-center p-4">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Nome</label>
-                    <input type="text" id="reg-nome" class="form-control bg-light border-0" placeholder="Nome do atendente ou grupo">
+                    <i id="modal-status-icon" class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">WhatsApp / JID</label>
-                    <input type="text" id="reg-numero" class="form-control bg-light border-0" placeholder="+55 31 9999-9999 ou @g.us">
+                <h6 class="fw-bold mb-2">Confirmar Alteração?</h6>
+                <p id="modal-status-text" class="text-muted small mb-4"></p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light w-50 small" data-bs-dismiss="modal">Cancelar</button>
+                    <button id="btn-confirmar-acao" class="btn btn-danger w-50 small fw-bold">Confirmar</button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">URL da Foto</label>
-                    <input type="text" id="reg-logo" class="form-control bg-light border-0" placeholder="https://...">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Tipo</label>
-                    <select id="reg-tipo" class="form-select bg-light border-0">
-                        <option value="atendente">Atendente</option>
-                        <option value="grupo">Grupo</option>
-                    </select>
-                </div>
-                <div id="msg-erro-bot" class="alert alert-danger d-none py-2 small fw-bold"></div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">CANCELAR</button>
-                <button id="btn-salvar-bot" class="btn btn-danger px-4 py-2 fw-bold shadow" onclick="salvarCadastro()">
-                    <i class="bi bi-save me-2"></i> SALVAR
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Confirmação Delete -->
-<div class="modal fade" id="modalConfirmDelete" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 1.5rem;">
-            <div class="modal-body p-4">
-                <div class="text-danger mb-3"><i class="bi bi-exclamation-octagon-fill" style="font-size: 3rem;"></i></div>
-                <h5 class="fw-bold text-dark mb-2">Tem certeza?</h5>
-                <p class="text-muted small mb-0">Esta ação irá remover o registro permanentemente.</p>
-            </div>
-            <div class="d-flex border-top">
-                <button type="button" class="btn btn-link text-secondary fw-bold text-decoration-none border-end w-100 py-3 m-0 rounded-0" data-bs-dismiss="modal">NÃO</button>
-                <button type="button" id="confirmDeleteBtn" class="btn btn-link text-danger fw-bold text-decoration-none w-100 py-3 m-0 rounded-0">SIM</button>
             </div>
         </div>
     </div>
@@ -95,133 +47,73 @@
 
 <script>
     (function() {
-        let listaAtual = [];
-        let botAtivo = localStorage.getItem('bot_status') === 'true';
-        let idParaRemover = null;
-        const botModal = new bootstrap.Modal(document.getElementById('modalBot'));
-        const deleteModal = new bootstrap.Modal(document.getElementById('modalConfirmDelete'));
+        let pendingUpdate = null;
 
-        window.abrirModalCadastro = () => {
-            document.getElementById('reg-id').value = '';
-            document.getElementById('reg-nome').value = '';
-            document.getElementById('reg-numero').value = '';
-            document.getElementById('reg-logo').value = '';
-            document.getElementById('msg-erro-bot').classList.add('d-none');
-            document.getElementById('modalBotTitle').innerHTML = 'Nova Configuração RDO <span class="text-danger">Express</span>';
-            botModal.show();
+        window.toggleStatusBot = () => {
+            const atual = localStorage.getItem('bot_status') === 'true';
+            abrirModalConfirmacao(!atual, 'MASTER', (novoStatus) => {
+                localStorage.setItem('bot_status', novoStatus);
+                renderBotUI();
+                window.dispatchEvent(new Event('storage'));
+            });
         };
 
-        window.abrirModalEditar = (id) => {
-            const item = listaAtual.find(i => (i.id || i.ID) === id);
-            if(!item) return;
-            document.getElementById('reg-id').value = id;
-            document.getElementById('reg-nome').value = item.username || item.USERNAME;
-            document.getElementById('reg-numero').value = item.jid_numero || item.JID_NUMERO;
-            document.getElementById('reg-logo').value = item.imagem || item.IMAGEM;
-            document.getElementById('reg-tipo').value = (item.tipo || item.TIPO || 'atendente').toLowerCase();
-            document.getElementById('msg-erro-bot').classList.add('d-none');
-            document.getElementById('modalBotTitle').innerHTML = 'Editar Configuração RDO <span class="text-danger">Express</span>';
-            botModal.show();
-        };
+        window.abrirModalConfirmacao = (novoStatus, nome, callback) => {
+            const modalEl = new bootstrap.Modal(document.getElementById('modalConfirmarStatus'));
+            const textEl = document.getElementById('modal-status-text');
+            const iconEl = document.getElementById('modal-status-icon');
+            const btn = document.getElementById('btn-confirmar-acao');
 
-        window.salvarCadastro = async () => {
-            const idExistente = document.getElementById('reg-id').value;
-            const nome = document.getElementById('reg-nome').value.trim();
-            const numero = document.getElementById('reg-numero').value.trim();
-            const imagem = document.getElementById('reg-logo').value.trim() || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-            const erroDiv = document.getElementById('msg-erro-bot');
+            textEl.innerText = `Deseja ${novoStatus ? 'ATIVAR' : 'DESATIVAR'} o status de ${nome}?`;
+            iconEl.className = novoStatus ? "bi bi-check-circle text-success" : "bi bi-power text-danger";
+            btn.className = novoStatus ? "btn btn-success w-50 small fw-bold" : "btn btn-danger w-50 small fw-bold";
 
-            if(!nome || !numero) {
-                erroDiv.innerText = "Preencha Nome e Número!";
-                erroDiv.classList.remove('d-none');
-                return;
-            }
-
-            const payload = {
-                action: idExistente ? 'updatebotconfig' : 'addbotconfig',
-                id: idExistente || "ID-" + Date.now(),
-                username: nome,
-                jid_numero: numero,
-                imagem: imagem,
-                tipo: document.getElementById('reg-tipo').value,
-                status: true
+            btn.onclick = () => {
+                callback(novoStatus);
+                modalEl.hide();
             };
+            modalEl.show();
+        };
 
-            const res = await API.call(payload.action, payload);
-            if(res) {
-                botModal.hide();
-                carregarBot();
-            }
+        window.renderBotUI = () => {
+            const btn = document.getElementById('btn-status-bot');
+            const botAtivo = localStorage.getItem('bot_status') === 'true';
+            btn.className = botAtivo ? "btn btn-danger btn-sm" : "btn btn-outline-secondary btn-sm";
+            btn.innerHTML = botAtivo ? '<i class="bi bi-broadcast"></i> BOT ONLINE' : '<i class="bi bi-power"></i> BOT OFFLINE';
         };
 
         window.carregarBot = async () => {
             const data = await API.call('getbotconfig') || [];
-            listaAtual = data;
             const list = document.getElementById('bot-list');
             list.innerHTML = data.map(i => {
-                const id = i.id || i.ID;
-                const nome = i.username || i.USERNAME || 'Sem Nome';
-                const numero = i.jid_numero || i.JID_NUMERO || 'Sem Dado';
-                const logo = i.imagem || i.IMAGEM || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-                const tipo = (i.tipo || i.TIPO || 'GERAL').toUpperCase();
-                const ativo = (String(i.status || i.STATUS).toLowerCase() === 'true');
+                const ativo = String(i.status).toLowerCase() === 'true';
+                const tipo = (i.tipo || '').toUpperCase();
+                let badgeStyle = "bg-light text-dark";
+                if (tipo.includes('ADMIN') || tipo.includes('SRE')) badgeStyle = "bg-success text-white";
+                if (tipo === 'GRUPO') badgeStyle = "bg-warning text-white";
+
                 return `
-                    <tr class="${!ativo ? 'opacity-50' : ''}">
-                        <td>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} 
-                                onchange="API.call('updatebotstatus',{id:'${id}',status:this.checked, action:'updatebotstatus'}).then(carregarBot)">
-                            </div>
-                        </td>
-                        <td><img src="${logo}" class="rounded-circle border" width="32" height="32" style="object-fit:cover"></td>
-                        <td class="fw-bold text-dark" style="font-size:0.8rem">${nome}</td>
-                        <td class="text-muted small">${numero}</td>
-                        <td><span class="badge bg-light text-dark border" style="font-size:0.6rem">${tipo}</span></td>
-                        <td class="text-center">
-                            <div class="btn-group">
-                                <button class="btn btn-sm text-primary" onclick="abrirModalEditar('${id}')"><i class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-sm text-danger" onclick="abrirModalRemover('${id}')"><i class="bi bi-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                <tr>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" ${ativo ? 'checked' : ''} 
+                            onchange="this.checked = !this.checked; abrirModalConfirmacao(!${ativo}, '${i.username}', (st) => atualizarStatusNoBanco('${i.id}', st))">
+                        </div>
+                    </td>
+                    <td><img src="${i.imagem}" class="rounded-circle border" width="30" height="30"></td>
+                    <td class="fw-bold">${i.username}</td>
+                    <td><span class="badge ${badgeStyle}" style="${tipo === 'GRUPO' ? 'background:#fd7e14' : ''}">${tipo}</span></td>
+                </tr>`;
             }).join('');
         };
 
-        window.toggleStatusBot = () => {
-            botAtivo = !botAtivo;
-            localStorage.setItem('bot_status', botAtivo);
-            renderBotUI();
+        window.atualizarStatusNoBanco = async (id, status) => {
+            await API.call('updatebotstatus', {id, status, action: 'updatebotstatus'});
+            carregarBot();
+            window.dispatchEvent(new Event('storage'));
         };
-
-        function renderBotUI() {
-            const btn = document.getElementById('btn-status-bot');
-            const loop = document.getElementById('status-loop');
-            if(botAtivo) {
-                btn.className = "btn btn-danger btn-sm px-2 shadow-sm";
-                btn.innerHTML = '<i class="bi bi-broadcast"></i> ATIVADO';
-                loop.innerHTML = '<i class="bi bi-arrow-repeat spin text-success"></i> <span class="text-success">CONECTADO</span>';
-            } else {
-                btn.className = "btn btn-outline-secondary btn-sm px-2 shadow-sm";
-                btn.innerHTML = '<i class="bi bi-power"></i> DESATIVADO';
-                loop.innerHTML = '<i class="bi bi-arrow-repeat text-danger"></i> <span class="text-danger">OFFLINE</span>';
-            }
-        }
-
-        window.abrirModalRemover = (id) => { idParaRemover = id; deleteModal.show(); };
-        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-            if(idParaRemover) {
-                await API.call('deletebotconfig', { id: idParaRemover, action: 'deletebotconfig' });
-                deleteModal.hide();
-                carregarBot();
-            }
-        });
 
         renderBotUI();
         carregarBot();
     })();
 </script>
-<style>
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .spin { display: inline-block; animation: spin 2s linear infinite; }
-</style>
