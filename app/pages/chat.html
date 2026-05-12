@@ -1,10 +1,10 @@
 <div class="row g-3 h-100">
-    <!-- Topo Status Master (Ajustado: Fundo Branco e Cores RDO) -->
+    <!-- Topo Status Master (Ícone WhatsApp em Vermelho) -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-whatsapp fs-3 text-success"></i>
+                    <i class="bi bi-whatsapp fs-3 text-danger"></i>
                     <div>
                         <h5 id="master-status-title" class="fw-bold mb-0">
                             <span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express</span>
@@ -135,7 +135,6 @@
     function renderizar(configs) {
         const masterOn = localStorage.getItem('bot_status') === 'true';
         
-        // Render Atendentes
         document.getElementById('lista-atendentes-chat').innerHTML = configs
             .filter(c => c.tipo && c.tipo.toLowerCase() !== 'grupo')
             .map(u => {
@@ -161,7 +160,6 @@
                 </button>`;
             }).join('');
 
-        // Render Grupos (Lógica de exibição no Header unificada)
         document.getElementById('lista-grupos-chat').innerHTML = configs
             .filter(c => c.tipo && c.tipo.toLowerCase() === 'grupo')
             .map(g => {
@@ -198,8 +196,8 @@
         renderizar(window.chatState.cacheDados.configs);
     };
 
-    window.gerarRelatorio = () => { alert("Gerando relatório..."); };
-    window.fechamentoDiario = () => { alert("Iniciando fechamento diário..."); };
+    window.gerarRelatorio = () => { console.log("Relatório..."); };
+    window.fechamentoDiario = () => { console.log("Fechamento..."); };
 
     window.addEventListener('storage', (e) => {
         if(e.key === 'bot_status') carregarDados(true);

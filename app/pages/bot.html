@@ -36,19 +36,23 @@
     </div>
 </div>
 
-<!-- Modal Confirmação Master -->
-<div class="modal fade" id="modalMasterConfirm" tabindex="-1" aria-hidden="true">
+<!-- Modal Genérico de Confirmação (Atenção Premium) -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg text-center p-4" style="border-radius:20px">
-            <div class="mb-3"><i class="bi bi-exclamation-triangle text-danger" style="font-size:3rem"></i></div>
-            <h5 class="fw-bold">Desativar Bot?</h5>
-            <p class="small text-muted mb-4">Isso interromperá todos os atendimentos automáticos do RDO Express.</p>
+            <div class="mb-3" id="confirm-icon-container">
+                <i class="bi bi-exclamation-triangle text-danger" style="font-size:3rem"></i>
+            </div>
+            <h5 class="fw-bold" id="confirm-title">Atenção</h5>
+            <p class="small text-muted mb-4" id="confirm-text">Você deseja realizar esta ação?</p>
             <div class="row g-2">
                 <div class="col-6">
                     <button class="btn btn-light w-100 rounded-pill fw-bold" data-bs-dismiss="modal">CANCELAR</button>
                 </div>
                 <div class="col-6">
-                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="toggleMasterFinal(false)">DESATIVAR</button>
+                    <button id="btn-confirm-execute" class="btn btn-danger w-100 rounded-pill fw-bold">
+                        <span class="btn-text">CONFIRMAR</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -91,18 +95,22 @@
             </div>
             <div class="modal-footer border-0 p-4 pt-0">
                 <button class="btn btn-light rounded-pill" data-bs-dismiss="modal">Sair</button>
-                <button class="btn btn-danger rounded-pill px-4" onclick="salvarBot()">SALVAR</button>
+                <button id="btn-save-bot" class="btn btn-danger rounded-pill px-4" onclick="salvarBot()">
+                    <span class="btn-text">SALVAR</span>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    if (!window.botState) { window.botState = { cache: null, modForm: null, modMaster: null }; }
+    if (!window.botState) { 
+        window.botState = { cache: null, modForm: null, modConfirm: null }; 
+    }
 
     async function initBot() {
         window.botState.modForm = new bootstrap.Modal(document.getElementById('modalBotForm'));
-        window.botState.modMaster = new bootstrap.Modal(document.getElementById('modalMasterConfirm'));
+        window.botState.modConfirm = new bootstrap.Modal(document.getElementById('modalConfirmacao'));
         renderBotUI(); 
         await reloadBot();
     }
@@ -133,7 +141,7 @@
                         <button class="btn btn-sm btn-link text-secondary p-1" title="Editar" onclick="abrirModalForm('${i.id}')">
                             <i class="bi bi-pencil-square"></i>
                         </button>
-                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover" onclick="removerBot('${i.id}')">
+                        <button class="btn btn-sm btn-link text-secondary p-1" title="Remover" onclick="confirmarRemocao('${i.id}')">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </div>
@@ -149,32 +157,70 @@
         btn.innerHTML = ativo ? '<i class="bi bi-power me-1"></i> MASTER ON' : '<i class="bi bi-power me-1"></i> MASTER OFF';
     };
 
+    // --- Lógica de Modais Premium ---
+
+    function toggleBtnLoading(btnId, isLoading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (isLoading) {
+            btn.disabled = true;
+            btn.setAttribute('data-old-html', btn.innerHTML);
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn.getAttribute('data-old-html');
+        }
+    }
+
     window.confirmarToggleMaster = () => {
         const ativo = localStorage.getItem('bot_status') === 'true';
-        if (ativo) {
-            window.botState.modMaster.show();
-        } else {
-            toggleMasterFinal(true);
-        }
+        const title = ativo ? "Desativar Bot Master?" : "Ativar Bot Master?";
+        const text = ativo ? "Isso interromperá todos os atendimentos automáticos do RDO Express." : "Isso habilitará o fluxo automático de mensagens.";
+        
+        exibirConfirmacao(title, text, () => {
+            toggleMasterFinal(!ativo);
+        });
     };
+
+    window.confirmarRemocao = (id) => {
+        exibirConfirmacao("Remover Registro?", "Esta ação não poderá ser desfeita.", async () => {
+            toggleBtnLoading('btn-confirm-execute', true);
+            await API.call('deletebotconfig', { id });
+            await reloadBot();
+            toggleBtnLoading('btn-confirm-execute', false);
+            window.botState.modConfirm.hide();
+        });
+    };
+
+    function exibirConfirmacao(titulo, texto, acaoExecutar) {
+        document.getElementById('confirm-title').innerText = titulo;
+        document.getElementById('confirm-text').innerText = texto;
+        const btnExec = document.getElementById('btn-confirm-execute');
+        
+        // Remove listeners antigos para evitar execução múltipla
+        const novoBtn = btnExec.cloneNode(true);
+        btnExec.parentNode.replaceChild(novoBtn, btnExec);
+        
+        novoBtn.onclick = acaoExecutar;
+        window.botState.modConfirm.show();
+    }
 
     window.toggleMasterFinal = (status) => {
         localStorage.setItem('bot_status', status);
-        if(window.botState.modMaster) window.botState.modMaster.hide();
+        window.botState.modConfirm.hide();
         renderBotUI();
         window.dispatchEvent(new Event('storage'));
     };
 
     window.alterarStatusDireto = async (id, novoStatus) => {
-        await API.call('updatebotconfig', { id, status: String(novoStatus) });
-        await reloadBot();
-    };
-
-    window.removerBot = async (id) => {
-        if(confirm('Deseja realmente remover este registro?')) {
-            await API.call('deletebotconfig', { id });
+        // Exibe modal informativo de alteração de status
+        exibirConfirmacao("Alterar Status?", `Deseja mudar o status deste bot para ${novoStatus ? 'Ativo' : 'Inativo'}?`, async () => {
+            toggleBtnLoading('btn-confirm-execute', true);
+            await API.call('updatebotconfig', { id, status: String(novoStatus) });
             await reloadBot();
-        }
+            toggleBtnLoading('btn-confirm-execute', false);
+            window.botState.modConfirm.hide();
+        });
     };
 
     window.abrirModalForm = (id = null) => {
@@ -206,8 +252,11 @@
             tipo: document.getElementById('bot-tipo').value,
             status: document.getElementById('bot-status-val').value
         };
+        
+        toggleBtnLoading('btn-save-bot', true);
         await API.call(id ? 'updatebotconfig' : 'addbotconfig', payload);
         await reloadBot();
+        toggleBtnLoading('btn-save-bot', false);
         window.botState.modForm.hide();
     };
 
