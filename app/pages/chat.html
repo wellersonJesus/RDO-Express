@@ -1,4 +1,5 @@
 <div class="row g-3 h-100">
+    <!-- Topo Status Master -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -19,11 +20,12 @@
         </div>
     </div>
 
+    <!-- Sidebar Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes" style="cursor: pointer;">
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">
                         ATENDENTES
                     </button>
                 </h2>
@@ -33,7 +35,7 @@
             </div>
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos" style="cursor: pointer;">
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">
                         GRUPOS / OUTROS
                     </button>
                 </h2>
@@ -44,19 +46,20 @@
         </div>
     </div>
 
+    <!-- Janela de Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
                 <div id="chat-header-avatar"></div>
                 <div class="ms-3">
-                    <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
+                    <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
                     <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
                 </div>
             </div>
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..." style="resize: none;"></textarea>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()">
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -66,6 +69,7 @@
     </div>
 </div>
 
+<!-- Modal Checkout -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -105,7 +109,7 @@
                     </div>
                     <div class="d-flex gap-2 mt-4">
                         <button class="btn btn-light w-50 rounded-pill border" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoCompleto()">FINALIZAR</button>
+                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoUnificado()">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
             </div>
@@ -118,8 +122,8 @@
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 2px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-    .msg-mine { align-self: flex-end; background-color: #dcf8c6; }
-    .reply-emoji { position: absolute; bottom: -8px; right: 8px; background: white; padding: 1px 6px; border-radius: 8px; font-size: 0.65rem; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
+    .reply-badge { position: absolute; bottom: -10px; right: 10px; background: #FF0000; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.6rem; font-weight: bold; }
 </style>
 
 <script>
@@ -161,17 +165,16 @@
 
     async function carregarMensagensBanco(nome) {
         const todasMsgs = await API.call('getmensagens_chat') || [];
-        // Filtro por nome de usuário para evitar erros com números longos
-        const filtradas = todasMsgs.filter(m => String(m.jid_numero) === String(nome));
+        const filtradas = todasMsgs.filter(m => String(m.jid_numero).includes(nome));
         
         const container = document.getElementById('chat-messages-container');
         container.innerHTML = filtradas.map(m => {
-            const isMine = m.finalizado === 'true' || m.finalizado === true;
+            const isPedido = m.finalizado === 'true' || m.finalizado === true;
             return `
-            <div class="msg-bubble ${isMine ? 'msg-mine' : ''} mb-3">
-                <div class="text-dark" style="white-space: pre-wrap;">${m.texto}</div>
+            <div class="msg-bubble ${isPedido ? 'msg-mine' : ''} mb-3">
+                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
                 <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
-                ${isMine ? `<div class="reply-emoji">✅ Pedido ${m.pedido_id}</div>` : ''}
+                ${isPedido ? `<div class="reply-badge">ID: ${m.pedido_id}</div>` : ''}
             </div>`;
         }).join('');
         container.scrollTop = container.scrollHeight;
@@ -179,32 +182,32 @@
 
     async function enviarMensagemManual() {
         const nome = window.chatState.currentName;
-        if(!nome) return Swal.fire('Aviso', 'Selecione um chat!', 'warning');
-        
+        if(!nome) return;
         const input = document.getElementById('msg-input');
         const texto = input.value.trim();
         if(!texto) return;
 
-        // O apóstrofo (') antes do ID e Nome garante que o Sheets trate como TEXTO e não dê #ERROR!
-        const payload = {
-            id: "'" + Date.now(),
-            jid_numero: "'" + nome, 
-            texto: texto,
-            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-            finalizado: "false",
-            pedido_id: ""
-        };
-
-        await API.call('addmensagens_chat', payload);
-        input.value = '';
-        await carregarMensagensBanco(nome);
-
-        if (texto.toUpperCase().includes('COLETA')) prepararPedido(texto);
+        if (texto.toUpperCase().includes('COLETA')) {
+            prepararPedido(texto);
+            input.value = '';
+        } else {
+            const payload = {
+                id: "'" + Date.now(),
+                jid_numero: "'" + nome, 
+                texto: texto,
+                hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                finalizado: "false",
+                pedido_id: ""
+            };
+            await API.call('addmensagens_chat', payload);
+            input.value = '';
+            await carregarMensagensBanco(nome);
+        }
     }
 
     function prepararPedido(texto) {
-        const col = (texto.match(/COLETA:\s*\(([^)]+)\)/i) || [])[1] || 'Belo Horizonte';
-        const ent = (texto.match(/ENTREGA:\s*\(([^)]+)\)/i) || [])[1] || 'Belo Horizonte';
+        const col = (texto.match(/COLETA:\s*\(([^)]+)\)/i) || [])[1] || 'Não informado';
+        const ent = (texto.match(/ENTREGA:\s*\(([^)]+)\)/i) || [])[1] || 'Não informado';
         window.chatState.currentLocations = { col, ent };
         
         document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(col)}&daddr=${encodeURIComponent(ent)}&output=embed`;
@@ -229,9 +232,10 @@
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
-    async function salvarPedidoCompleto() {
+    async function salvarPedidoUnificado() {
         const nome = window.chatState.currentName;
         const pedidoId = "RDO-" + Math.floor(1000 + Math.random() * 9000);
+        const valorFinal = document.getElementById('view-valor-final').innerText;
 
         await API.call('addchatlive', {
             id: "'" + pedidoId,
@@ -241,10 +245,13 @@
             status_emoji: "⏳ aguardando ...."
         });
 
+        // Formato ajustado conforme solicitado
+        const msgUnificada = `📦 PEDIDO GERADO COM SUCESSO.\n\nID: ${pedidoId}\nColeta: ${window.chatState.currentLocations.col}\nEntrega: ${window.chatState.currentLocations.ent}\nValor: ${valorFinal}\n\n⏳ Aguardando confirmação do Motoboy!`;
+
         await API.call('addmensagens_chat', {
             id: "'" + Date.now(),
             jid_numero: "'" + nome,
-            texto: `📦 Pedido Confirmado: ${pedidoId}`,
+            texto: msgUnificada,
             hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
             finalizado: "true",
             pedido_id: pedidoId
@@ -252,10 +259,9 @@
 
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         await carregarMensagensBanco(nome);
-        Swal.fire('Sucesso', `Pedido ${pedidoId} registrado!`, 'success');
+        Swal.fire('Sucesso', `Pedido ${pedidoId} gerado!`, 'success');
     }
 
     carregarDados();
-    // Auto-refresh a cada 10 segundos para novas mensagens
-    setInterval(() => { if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName); }, 10000);
+    setInterval(() => { if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName); }, 8000);
 </script>
