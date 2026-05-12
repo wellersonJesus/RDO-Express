@@ -1,5 +1,4 @@
 <div class="row g-3 h-100">
-    <!-- Topo Status Master -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -20,7 +19,6 @@
         </div>
     </div>
 
-    <!-- Sidebar Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
             <div class="accordion-item border-0">
@@ -46,7 +44,6 @@
         </div>
     </div>
 
-    <!-- Janela de Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
@@ -60,7 +57,7 @@
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
                     <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..." style="resize: none;"></textarea>
-                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
@@ -69,7 +66,6 @@
     </div>
 </div>
 
-<!-- Modal Checkout -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -84,7 +80,6 @@
                     </div>
                     <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA VALORES</button>
                 </div>
-
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -110,7 +105,7 @@
                     </div>
                     <div class="d-flex gap-2 mt-4">
                         <button class="btn btn-light w-50 rounded-pill border" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button>
+                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoCompleto()">FINALIZAR</button>
                     </div>
                 </div>
             </div>
@@ -122,33 +117,29 @@
     .no-arrow::after { display: none !important; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 2px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-end; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
-    .reply-emoji { position: absolute; bottom: -8px; left: 15px; background: white; padding: 2px 6px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.65rem; border: 1px solid #eee; }
+    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+    .msg-mine { align-self: flex-end; background-color: #dcf8c6; }
+    .reply-emoji { position: absolute; bottom: -8px; right: 8px; background: white; padding: 1px 6px; border-radius: 8px; font-size: 0.65rem; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 </style>
 
 <script>
-    const BotCore = {
-        getMasterStatus: () => localStorage.getItem('bot_status') === 'true',
-        isOnline: (u) => BotCore.getMasterStatus() && String(u.status) === 'true'
-    };
-
-    if (!window.chatState) window.chatState = { jidSelecionado: null, cacheConfigs: [], historico: {}, currentChatName: "", currentLocations: {} };
+    if (!window.chatState) window.chatState = { currentName: null, currentLocations: {} };
 
     async function carregarDados() {
         const configs = await API.call('getbotconfig');
-        window.chatState.cacheConfigs = configs;
         renderizar(configs);
+        if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
     }
 
     function renderizar(configs) {
+        const isOnline = (u) => localStorage.getItem('bot_status') === 'true' && String(u.status) === 'true';
         const renderItem = (u) => {
-            const online = BotCore.isOnline(u);
-            const sel = window.chatState.jidSelecionado === u.jid_numero;
-            return `<button onclick="selecionarJid('${u.jid_numero}', '${u.username}', '${u.imagem}', ${online}, '${u.tipo}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
+            const sel = window.chatState.currentName === u.username;
+            return `<button onclick="selecionarChat('${u.username}', '${u.imagem}', ${isOnline(u)}, '${u.tipo}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative">
                         <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38">
-                        ${u.tipo !== 'grupo' ? `<span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>` : ''}
+                        ${u.tipo !== 'grupo' ? `<span class="status-dot ${isOnline(u) ? 'bg-success' : 'bg-secondary'}"></span>` : ''}
                     </div>
                     <div class="flex-grow-1 text-truncate">
                         <span class="fw-bold d-block small">${u.username}</span>
@@ -160,48 +151,62 @@
         document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
     }
 
-    function selecionarJid(jid, nome, imagem, online, tipo) {
-        window.chatState.jidSelecionado = jid;
-        window.chatState.currentChatName = nome;
+    async function selecionarChat(nome, imagem, online, tipo) {
+        window.chatState.currentName = nome;
         document.getElementById('chat-header-name').innerText = nome;
         document.getElementById('chat-header-status').innerText = tipo === 'grupo' ? 'Grupo' : (online ? 'Online' : 'Offline');
         document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40">`;
-        renderizar(window.chatState.cacheConfigs);
-        renderizarMensagens();
+        await carregarMensagensBanco(nome);
     }
 
-    function processarMensagemLocal() {
-        const jid = window.chatState.jidSelecionado;
-        if(!jid) return Swal.fire('Aviso', 'Selecione um chat primeiro!', 'warning');
+    async function carregarMensagensBanco(nome) {
+        const todasMsgs = await API.call('getmensagens_chat') || [];
+        // Filtro por nome de usuário para evitar erros com números longos
+        const filtradas = todasMsgs.filter(m => String(m.jid_numero) === String(nome));
+        
+        const container = document.getElementById('chat-messages-container');
+        container.innerHTML = filtradas.map(m => {
+            const isMine = m.finalizado === 'true' || m.finalizado === true;
+            return `
+            <div class="msg-bubble ${isMine ? 'msg-mine' : ''} mb-3">
+                <div class="text-dark" style="white-space: pre-wrap;">${m.texto}</div>
+                <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
+                ${isMine ? `<div class="reply-emoji">✅ Pedido ${m.pedido_id}</div>` : ''}
+            </div>`;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function enviarMensagemManual() {
+        const nome = window.chatState.currentName;
+        if(!nome) return Swal.fire('Aviso', 'Selecione um chat!', 'warning');
         
         const input = document.getElementById('msg-input');
         const texto = input.value.trim();
         if(!texto) return;
 
-        if(!window.chatState.historico[jid]) window.chatState.historico[jid] = [];
-        window.chatState.historico[jid].push({ texto, finalizado: false, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
-        
-        renderizarMensagens();
-        if (texto.toUpperCase().includes('COLETA')) prepararPedido(texto);
-        input.value = '';
-    }
+        // O apóstrofo (') antes do ID e Nome garante que o Sheets trate como TEXTO e não dê #ERROR!
+        const payload = {
+            id: "'" + Date.now(),
+            jid_numero: "'" + nome, 
+            texto: texto,
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+            finalizado: "false",
+            pedido_id: ""
+        };
 
-    function renderizarMensagens() {
-        const container = document.getElementById('chat-messages-container');
-        const msgs = window.chatState.historico[window.chatState.jidSelecionado] || [];
-        container.innerHTML = msgs.map(m => `
-            <div class="msg-bubble mb-3">
-                <div class="text-dark">${m.texto.replace(/\n/g, '<br>')}</div>
-                <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
-                ${m.finalizado ? `<div class="reply-emoji">✅ Pedido ${m.id} Gerado</div>` : ''}
-            </div>`).join('');
-        container.scrollTop = container.scrollHeight;
+        await API.call('addmensagens_chat', payload);
+        input.value = '';
+        await carregarMensagensBanco(nome);
+
+        if (texto.toUpperCase().includes('COLETA')) prepararPedido(texto);
     }
 
     function prepararPedido(texto) {
         const col = (texto.match(/COLETA:\s*\(([^)]+)\)/i) || [])[1] || 'Belo Horizonte';
         const ent = (texto.match(/ENTREGA:\s*\(([^)]+)\)/i) || [])[1] || 'Belo Horizonte';
         window.chatState.currentLocations = { col, ent };
+        
         document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(col)}&daddr=${encodeURIComponent(ent)}&output=embed`;
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
@@ -220,33 +225,37 @@
     }
 
     function atualizarTotal() {
-        const base = 10 * parseFloat(document.getElementById('p-tabela-km').value);
-        const extra = parseFloat(document.getElementById('p-adicionais').value);
-        document.getElementById('view-valor-final').innerText = `R$ ${(base + extra).toFixed(2).replace('.', ',')}`;
+        const total = (10 * parseFloat(document.getElementById('p-tabela-km').value)) + parseFloat(document.getElementById('p-adicionais').value);
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
-    async function salvarPedidoAPI() {
-        const jid = window.chatState.jidSelecionado;
+    async function salvarPedidoCompleto() {
+        const nome = window.chatState.currentName;
         const pedidoId = "RDO-" + Math.floor(1000 + Math.random() * 9000);
 
         await API.call('addchatlive', {
-            id: pedidoId,
-            username: window.chatState.currentChatName,
+            id: "'" + pedidoId,
+            username: nome,
             coleta: window.chatState.currentLocations.col,
             entrega: window.chatState.currentLocations.ent,
             status_emoji: "⏳ aguardando ...."
         });
 
-        const list = window.chatState.historico[jid];
-        if(list && list.length > 0) {
-            list[list.length - 1].finalizado = true;
-            list[list.length - 1].id = pedidoId;
-        }
+        await API.call('addmensagens_chat', {
+            id: "'" + Date.now(),
+            jid_numero: "'" + nome,
+            texto: `📦 Pedido Confirmado: ${pedidoId}`,
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+            finalizado: "true",
+            pedido_id: pedidoId
+        });
 
-        renderizarMensagens();
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-        Swal.fire({ title: 'RDO Express', text: `Pedido ${pedidoId} salvo com sucesso!`, icon: 'success', confirmButtonColor: '#FF0000' });
+        await carregarMensagensBanco(nome);
+        Swal.fire('Sucesso', `Pedido ${pedidoId} registrado!`, 'success');
     }
 
     carregarDados();
+    // Auto-refresh a cada 10 segundos para novas mensagens
+    setInterval(() => { if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName); }, 10000);
 </script>
