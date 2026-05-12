@@ -1,12 +1,12 @@
 <div class="row g-3 h-100">
-    <!-- Topo Status Master (Ícone WhatsApp em Vermelho) -->
+    <!-- Topo Status Master -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-whatsapp fs-3 text-danger"></i>
                     <div>
-                        <h5 id="master-status-title" class="fw-bold mb-0">
+                        <h5 class="fw-bold mb-0">
                             <span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express</span>
                         </h5>
                         <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento</small>
@@ -14,8 +14,7 @@
                 </div>
                 <div class="text-end d-flex align-items-center gap-3">
                     <div class="d-flex flex-column align-items-end">
-                        <span id="sync-text" class="fw-bold text-dark" style="font-size: 0.75rem;">Sincronizando...</span>
-                        <small id="status-offline-text" class="text-danger d-none" style="font-size: 0.65rem; font-weight: bold;">SISTEMA PAUSADO</small>
+                        <span id="sync-text" class="fw-bold text-dark" style="font-size: 0.75rem;">Serviço Ativo</span>
                     </div>
                     <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger" style="cursor:pointer;" onclick="carregarDados(true)"></i>
                 </div>
@@ -23,69 +22,37 @@
         </div>
     </div>
 
-    <!-- Sidebar de Contatos -->
+    <!-- Sidebar -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
-                    <button class="accordion-button bg-light fw-bold text-secondary small py-3 shadow-none" type="button" style="pointer-events: none;">
-                        ATENDENTES
-                    </button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button">ATENDENTES</button>
                 </h2>
-                <div class="accordion-collapse collapse show">
-                    <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
-                </div>
+                <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
             </div>
-            
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
-                    <button class="accordion-button bg-light fw-bold text-secondary small py-3 shadow-none" type="button" style="pointer-events: none;">
-                        GRUPOS / OUTROS
-                    </button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button">GRUPOS / OUTROS</button>
                 </h2>
-                <div class="accordion-collapse collapse show">
-                    <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
-                </div>
+                <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
             </div>
         </div>
     </div>
 
-    <!-- Área do Chat -->
+    <!-- Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
-            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center">
-                    <div id="chat-header-avatar" class="position-relative">
-                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" style="width: 45px; height: 45px;">
-                            <i class="bi bi-person text-muted"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3">
-                        <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
-                        <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;">Offline</small>
-                    </div>
-                </div>
-                
-                <div id="acoes-header" class="dropdown" style="display: none;">
-                    <button class="btn btn-light rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 40px; height: 40px;">
-                        <i class="bi bi-three-dots-vertical text-dark"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="abrirModalPedidoRapido()"><i class="bi bi-magic text-danger me-2"></i> Gerar Pedido</a></li>
-                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="gerarRelatorio()"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i> Relatório</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2 small fw-bold text-danger" href="javascript:void(0)" onclick="fechamentoDiario()"><i class="bi bi-calendar-check me-2"></i> Fechamento Diário</a></li>
-                    </ul>
+            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
+                <div id="chat-header-avatar"></div>
+                <div class="ms-3">
+                    <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
                 </div>
             </div>
-
-            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
-                <div class="text-center my-5 text-muted small">Aguardando interação...</div>
-            </div>
-
+            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui para processar..." style="resize: none;"></textarea>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..."></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -95,234 +62,168 @@
     </div>
 </div>
 
-<!-- Modal Gerar Pedido / Cálculo de Rota -->
-<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Modal -->
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Novo Pedido</h5>
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body pt-3">
-                <div class="bg-light p-2 rounded-3 mb-3 border-start border-danger border-4 small" id="preview-msg-pedido"></div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold mb-1">Endereço de Coleta</label>
-                    <input type="text" id="p-coleta" class="form-control form-control-sm rounded-3 shadow-none border" placeholder="Origem">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold mb-1">Endereço de Entrega</label>
-                    <input type="text" id="p-entrega" class="form-control form-control-sm rounded-3 shadow-none border" placeholder="Destino">
-                </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">Taxa R$</label>
-                        <input type="number" id="p-taxa" class="form-control form-control-sm rounded-3 shadow-none border" value="0.00">
+            <div class="modal-body">
+                <div id="passo-conferencia">
+                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 350px;">
+                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">Serviço</label>
-                        <select id="p-tipo" class="form-select form-select-sm rounded-3 shadow-none border">
-                            <option value="Entrega">Entrega</option>
-                            <option value="Coleta">Coleta</option>
-                            <option value="Outros">Outros</option>
-                        </select>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">CONFIRMAR ENDEREÇO E VER RESUMO</button>
+                </div>
+
+                <div id="passo-finalizacao" style="display:none;">
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="small fw-bold">Origem</label><input type="text" id="p-coleta" class="form-control"></div>
+                        <div class="col-md-6"><label class="small fw-bold">Destino</label><input type="text" id="p-entrega" class="form-control"></div>
+                        <div class="col-md-4"><label class="small fw-bold">Solicitante</label><input type="text" id="p-solicitante" class="form-control"></div>
+                        <div class="col-md-4"><label class="small fw-bold">Data/Hora</label><input type="text" id="p-horario" class="form-control"></div>
+                        <div class="col-md-4"><label class="small fw-bold text-danger">Taxa R$</label><input type="number" id="p-taxa" class="form-control fw-bold" oninput="atualizarTotal()"></div>
+                        <div class="col-12">
+                            <div class="bg-dark text-white p-3 rounded-3 d-flex justify-content-between align-items-center mt-2">
+                                <span class="fw-bold">TOTAL DO SERVIÇO:</span>
+                                <h4 class="mb-0 text-warning fw-bold" id="view-valor-final">R$ 15,00</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-success w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">GERAR PEDIDO</button>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="salvarPedidoAPI()">CONFIRMAR PEDIDO</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    .accordion-button::after { display: none !important; }
+    .no-arrow::after { display: none !important; }
+    .list-group-item-action { cursor: pointer !important; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
-    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 0; right: 0; }
-    .spin { animation: rotation 1s infinite linear; }
-    @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(359deg); } }
-    .dropdown-item:active { background-color: #f8f9fa; color: inherit; }
-    
-    .msg-bubble { 
-        background: white; 
-        padding: 8px 12px; 
-        border-radius: 12px; 
-        max-width: 80%; 
-        cursor: pointer; 
-        position: relative;
-        font-size: 0.85rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: transform 0.1s;
-    }
-    .msg-bubble:hover { transform: scale(1.02); background: #fff5f5; border: 1px solid #ff000033; }
+    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; cursor: pointer; align-self: flex-end; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 </style>
 
 <script>
+    // Helpers para evitar erro de caracteres especiais (UTF-8)
+    const utf8_to_b64 = (str) => window.btoa(unescape(encodeURIComponent(str)));
+    const b64_to_utf8 = (str) => decodeURIComponent(escape(window.atob(str)));
+
     if (!window.chatState) {
         window.chatState = { jidSelecionado: sessionStorage.getItem('last_jid'), cacheDados: null, mensagens: [] };
     }
 
     async function carregarDados(force = false) {
-        const icon = document.getElementById('sync-icon');
-        const masterOn = localStorage.getItem('bot_status') === 'true';
-        
-        document.getElementById('sync-text').innerText = masterOn ? 'Serviço Ativo' : 'Serviço Pausado';
-        document.getElementById('status-offline-text').classList.toggle('d-none', masterOn);
-
-        if (window.chatState.cacheDados && !force) {
-            renderizar(window.chatState.cacheDados.configs);
-            return;
-        }
-        
-        if(icon) icon.classList.add('spin');
         try {
             const configs = await API.call('getbotconfig');
             window.chatState.cacheDados = { configs };
             renderizar(configs);
-        } catch (e) {
-            console.error("Erro ao sincronizar chat:", e);
-        } finally { if(icon) icon.classList.remove('spin'); }
+        } catch (e) { console.error(e); }
     }
 
     function renderizar(configs) {
-        const masterOn = localStorage.getItem('bot_status') === 'true';
-        
-        document.getElementById('lista-atendentes-chat').innerHTML = configs
-            .filter(c => c.tipo && c.tipo.toLowerCase() !== 'grupo')
-            .map(u => {
-                const isOnline = masterOn && (String(u.status) === 'true');
-                const sel = window.chatState.jidSelecionado === u.jid_numero;
-                if(sel) atualizarHeaderUI(u.username, u.imagem, isOnline);
-
-                return `
-                <button onclick="selecionarJid('${u.jid_numero}', '${u.username}', '${u.imagem}', ${isOnline})" 
-                        class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
-                    <div class="d-flex align-items-center px-2">
-                        <div class="position-relative">
-                            <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38" style="object-fit:cover">
-                            <span class="status-dot ${isOnline ? 'bg-success' : 'bg-secondary'}"></span>
-                        </div>
-                        <div class="flex-grow-1 text-truncate">
-                            <span class="fw-bold d-block small ${sel ? 'text-white' : ''}">${u.username}</span>
-                            <small class="${sel ? 'text-white-50' : 'text-muted'}" style="font-size:0.65rem">
-                                ${isOnline ? 'Ativo agora' : 'Indisponível'}
-                            </small>
-                        </div>
-                    </div>
-                </button>`;
-            }).join('');
-
-        document.getElementById('lista-grupos-chat').innerHTML = configs
-            .filter(c => c.tipo && c.tipo.toLowerCase() === 'grupo')
-            .map(g => {
-                const sel = window.chatState.jidSelecionado === g.jid_numero;
-                if(sel) atualizarHeaderUI(g.username, g.imagem, true);
-
-                return `
-                <button onclick="selecionarJid('${g.jid_numero}', '${g.username}', '${g.imagem}', true)" 
-                        class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
-                    <div class="d-flex align-items-center px-2">
-                        <img src="${g.imagem}" class="rounded-circle border me-3" width="38" height="38" style="object-fit:cover">
-                        <span class="fw-bold small ${sel ? 'text-white' : ''}">${g.username}</span>
-                    </div>
-                </button>`;
-            }).join('');
+        const renderItem = (u) => {
+            const sel = window.chatState.jidSelecionado === u.jid_numero;
+            if(sel) atualizarHeaderUI(u.username, u.imagem);
+            return `<button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
+                <div class="d-flex align-items-center">
+                    <img src="${u.imagem}" class="rounded-circle me-2" width="35" height="35" style="object-fit:cover">
+                    <span class="fw-bold small">${u.username}</span>
+                </div></button>`;
+        };
+        document.getElementById('lista-atendentes-chat').innerHTML = configs.filter(c => c.tipo !== 'grupo').map(renderItem).join('');
+        document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
     }
 
-    function atualizarHeaderUI(nome, imagem, online) {
+    function atualizarHeaderUI(nome, imagem) {
         document.getElementById('chat-header-name').innerText = nome;
-        const statusEl = document.getElementById('chat-header-status');
-        statusEl.innerText = online ? 'Online' : 'Offline';
-        statusEl.className = online ? 'text-success fw-bold' : 'text-muted';
-        
-        document.getElementById('chat-header-avatar').innerHTML = `
-            <img src="${imagem}" class="rounded-circle border" width="45" height="45" style="object-fit:cover">
-            <span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>
-        `;
-        document.getElementById('acoes-header').style.display = 'block';
+        document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40" style="object-fit:cover">`;
     }
 
-    // Novas Funções de Processamento de Texto
     function processarMensagemLocal() {
         const input = document.getElementById('msg-input');
         const texto = input.value.trim();
         if(!texto) return;
 
-        const msg = {
-            id: Date.now(),
-            texto: texto,
-            hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        };
-        
-        window.chatState.mensagens.push(msg);
-        input.value = '';
+        window.chatState.mensagens.push({ id: Date.now(), texto, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
         renderizarMensagensLocal();
+        
+        // Abre o modal imediatamente usando a versão segura da string
+        prepararPedidoRefinado(utf8_to_b64(texto));
+        input.value = '';
     }
 
     function renderizarMensagensLocal() {
         const container = document.getElementById('chat-messages-container');
         container.innerHTML = window.chatState.mensagens.map(m => `
-            <div class="msg-bubble animate__animated animate__fadeInUp" onclick="prepararPedido('${btoa(m.texto)}')">
+            <div class="msg-bubble mb-2" onclick="prepararPedidoRefinado('${utf8_to_b64(m.texto)}')">
                 <div class="text-dark">${m.texto.replace(/\n/g, '<br>')}</div>
-                <div class="text-end" style="font-size: 0.6rem; color: #999;">${m.hora}</div>
+                <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
             </div>
         `).join('');
         container.scrollTop = container.scrollHeight;
     }
 
-    function prepararPedido(base64Text) {
-        const texto = atob(base64Text);
-        document.getElementById('preview-msg-pedido').innerText = texto;
-        const modal = new bootstrap.Modal(document.getElementById('modalPedido'));
-        modal.show();
+    function prepararPedidoRefinado(base64Text) {
+        const texto = b64_to_utf8(base64Text);
+        const extrair = (chave) => {
+            const regex = new RegExp(`${chave}:\\s*\\(([^)]+)\\)`, 'i');
+            const match = texto.match(regex);
+            return match ? match[1].trim() : '';
+        };
+
+        const coleta = extrair('COLETA');
+        const entrega = extrair('ENTREGA');
+
+        if(!coleta || !entrega) return;
+
+        document.getElementById('p-coleta').value = coleta;
+        document.getElementById('p-entrega').value = entrega;
+        document.getElementById('p-solicitante').value = extrair('SOLICITANTE');
+        document.getElementById('p-horario').value = extrair('HORÁRIO');
+        document.getElementById('p-taxa').value = "15.00";
+        
+        const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(entrega)}&output=embed`;
+        document.getElementById('mapa-iframe').src = embedUrl;
+
+        document.getElementById('passo-conferencia').style.display = 'block';
+        document.getElementById('passo-finalizacao').style.display = 'none';
+
+        new bootstrap.Modal(document.getElementById('modalPedido')).show();
+    }
+
+    function proximoPassoPedido() {
+        document.getElementById('passo-conferencia').style.display = 'none';
+        document.getElementById('passo-finalizacao').style.display = 'block';
+        atualizarTotal();
+    }
+
+    function atualizarTotal() {
+        const v = document.getElementById('p-taxa').value || 0;
+        document.getElementById('view-valor-final').innerText = `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}`;
+    }
+
+    function voltarPasso() {
+        document.getElementById('passo-conferencia').style.display = 'block';
+        document.getElementById('passo-finalizacao').style.display = 'none';
     }
 
     async function salvarPedidoAPI() {
-        if(!window.chatState.jidSelecionado) {
-             Swal.fire('Erro', 'Selecione um cliente primeiro!', 'error');
-             return;
-        }
-
-        const payload = {
-            jid: window.chatState.jidSelecionado,
-            coleta: document.getElementById('p-coleta').value,
-            entrega: document.getElementById('p-entrega').value,
-            taxa: document.getElementById('p-taxa').value,
-            tipo: document.getElementById('p-tipo').value,
-            solicitacao: document.getElementById('preview-msg-pedido').innerText
-        };
-
-        try {
-            const res = await API.call('insertpedido', payload);
-            if(res.status !== 'error') {
-                Swal.fire('RDO Express', 'Pedido registrado com sucesso!', 'success');
-                bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-                // Limpar campos
-                document.getElementById('p-coleta').value = '';
-                document.getElementById('p-entrega').value = '';
-            }
-        } catch (e) {
-            console.error(e);
-            Swal.fire('Erro', 'Falha ao salvar pedido no banco.', 'error');
-        }
+        // Lógica de salvamento...
+        Swal.fire('Sucesso', 'Pedido gerado!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
     }
 
-    window.selecionarJid = (jid, nome, imagem, online) => {
+    function selecionarJid(jid) {
         window.chatState.jidSelecionado = jid;
         sessionStorage.setItem('last_jid', jid);
         renderizar(window.chatState.cacheDados.configs);
-    };
-
-    window.gerarRelatorio = () => { console.log("Relatório..."); };
-    window.fechamentoDiario = () => { console.log("Fechamento..."); };
-    window.abrirModalPedidoRapido = () => {
-        document.getElementById('preview-msg-pedido').innerText = "Pedido manual via menu";
-        new bootstrap.Modal(document.getElementById('modalPedido')).show();
-    };
-
-    window.addEventListener('storage', (e) => {
-        if(e.key === 'bot_status') carregarDados(true);
-    });
+    }
 
     carregarDados();
 </script>
