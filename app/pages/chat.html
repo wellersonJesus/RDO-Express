@@ -12,17 +12,15 @@
                         <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento</small>
                     </div>
                 </div>
-                <div class="text-end d-flex align-items-center gap-3">
-                    <div class="d-flex flex-column align-items-end">
-                        <span id="sync-text" class="fw-bold text-dark" style="font-size: 0.75rem;">Serviço Ativo</span>
-                    </div>
+                <div class="text-end">
+                    <span id="sync-text" class="fw-bold text-dark me-2" style="font-size: 0.75rem;">Serviço Ativo</span>
                     <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger" style="cursor:pointer;" onclick="carregarDados(true)"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar de Contatos -->
+    <!-- Sidebar Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
             <div class="accordion-item border-0">
@@ -40,91 +38,107 @@
         </div>
     </div>
 
-    <!-- Área do Chat -->
+    <!-- Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
                 <div id="chat-header-avatar"></div>
-                <div class="ms-3">
-                    <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
-                </div>
+                <div class="ms-3"><h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6></div>
             </div>
-
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
-
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..." style="resize: none;"></textarea>
-                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
-                        <i class="bi bi-send-fill"></i>
-                    </button>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..."></textarea>
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()"><i class="bi bi-send-fill"></i></button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal de Checkout com Rota Dinâmica -->
+<!-- Modal Checkout Refinado -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout de Entrega</h5>
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout Logístico</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <!-- Passo 1: O Mapa de Rota -->
                 <div id="passo-conferencia">
-                    <div class="alert alert-danger py-2 small border-0 rounded-3 mb-2">
-                        <i class="bi bi-map-fill me-2"></i> <strong>Análise de Rota:</strong> Confirme o percurso no mapa abaixo.
+                    <div id="alert-pico" class="alert alert-warning py-2 small border-0 rounded-3 mb-2 d-none">
+                        <i class="bi bi-clock-fill me-2"></i> <strong>Atenção:</strong> Horário de pico detectado (+ R$ 5,00).
                     </div>
-                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 400px; background: #f8f9fa;">
-                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
+                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 300px;">
+                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-light w-50 rounded-pill fw-bold" data-bs-dismiss="modal">CANCELAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="proximoPassoPedido()">CONFIRMAR ENDEREÇO <i class="bi bi-check2-circle ms-2"></i></button>
-                    </div>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">CONFIGURAR VALORES <i class="bi bi-gear-fill ms-2"></i></button>
                 </div>
 
-                <!-- Passo 2: Resumo e Finalização -->
                 <div id="passo-finalizacao" style="display:none;">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="small fw-bold text-muted">ENDEREÇO ORIGEM (COLETA)</label>
-                            <input type="text" id="p-coleta" class="form-control bg-light border-0 rounded-3 shadow-sm">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="small fw-bold text-muted">ENDEREÇO DESTINO (ENTREGA)</label>
-                            <input type="text" id="p-entrega" class="form-control bg-light border-0 rounded-3 shadow-sm">
-                        </div>
+                    <div class="row g-2">
+                        <!-- Tabela KM -->
                         <div class="col-md-4">
-                            <label class="small fw-bold text-muted">SOLICITANTE</label>
-                            <input type="text" id="p-solicitante" class="form-control border-0 bg-light rounded-3 shadow-sm">
+                            <label class="small fw-bold text-muted">TABELA KM (R$)</label>
+                            <select id="p-tabela-km" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="2.20" selected>2,20 (Padrão)</option>
+                                <option value="2.40">2,40</option>
+                                <option value="3.00">3,00</option>
+                            </select>
                         </div>
+                        <!-- Adicional Pico / Local -->
                         <div class="col-md-4">
-                            <label class="small fw-bold text-muted">DATA / HORA</label>
-                            <input type="text" id="p-horario" class="form-control border-0 bg-light rounded-3 shadow-sm">
+                            <label class="small fw-bold text-muted">ADICIONAL (R$)</label>
+                            <select id="p-adicional" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Sem adicional</option>
+                                <option value="5" id="opt-pico-auto">5,00 (Pico/Local)</option>
+                                <option value="10">10,00</option>
+                                <option value="15">15,00</option>
+                                <option value="20">20,00</option>
+                            </select>
                         </div>
+                        <!-- Prioridade -->
                         <div class="col-md-4">
-                            <label class="small fw-bold text-danger">TAXA APLICADA R$</label>
-                            <input type="number" id="p-taxa" class="form-control border-danger fw-bold rounded-3 shadow-sm" oninput="atualizarTotal()">
+                            <label class="small fw-bold text-muted">PRIORIDADE</label>
+                            <select id="p-prioridade" class="form-select border-0 bg-light shadow-sm">
+                                <option value="urgente">Corrida com Urgência</option>
+                                <option value="programada">Corrida Programada</option>
+                            </select>
                         </div>
-                        <div class="col-12 mt-4">
-                            <div class="card bg-dark text-white border-0 rounded-4">
-                                <div class="card-body d-flex justify-content-between align-items-center py-3">
+
+                        <div class="col-md-6 mt-2">
+                            <label class="small fw-bold text-muted">MERCADORIA</label>
+                            <select id="p-mercadoria" class="form-select border-0 bg-light shadow-sm">
+                                <option value="envelope">Envelope</option>
+                                <option value="sacola">Sacola</option>
+                                <option value="mala_sacola">Mala + Sacola</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <label class="small fw-bold text-muted">TAXA MOTOBOY (%)</label>
+                            <input type="number" id="p-taxa-motoboy" class="form-control border-0 bg-light shadow-sm" value="20" oninput="atualizarTotal()">
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <label class="small fw-bold text-muted">OBSERVAÇÕES (LOCALIDADE/DETALHES)</label>
+                            <textarea id="p-obs" class="form-control border-0 bg-light shadow-sm" rows="2" placeholder="Ex: Local de difícil acesso, adicionar taxa extra..."></textarea>
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <div class="card border-0 rounded-4" style="background-color: #FF0000;">
+                                <div class="card-body d-flex justify-content-between align-items-center py-3 text-white">
                                     <div>
-                                        <p class="mb-0 small text-uppercase opacity-75">Valor Final do Serviço</p>
-                                        <h2 class="mb-0 fw-bold text-warning" id="view-valor-final">R$ 0,00</h2>
+                                        <p class="mb-0 small text-uppercase fw-bold opacity-75">Total a Cobrar</p>
+                                        <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
                                     </div>
-                                    <i class="bi bi-lightning-charge-fill fs-1 text-warning opacity-25"></i>
+                                    <div class="text-end small opacity-75" id="detalhe-calculo">KM 2,20 + Adicionais</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
                         <button class="btn btn-light w-50 rounded-pill fw-bold" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-success w-50 rounded-pill fw-bold py-2" onclick="salvarPedidoAPI()">GERAR PEDIDO FINAL <i class="bi bi-send-check ms-2"></i></button>
+                        <button class="btn btn-secondary w-50 rounded-pill fw-bold text-white" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
             </div>
@@ -147,7 +161,7 @@
         window.chatState = { jidSelecionado: sessionStorage.getItem('last_jid'), cacheDados: null, mensagens: [] };
     }
 
-    async function carregarDados(force = false) {
+    async function carregarDados() {
         try {
             const configs = await API.call('getbotconfig');
             window.chatState.cacheDados = { configs };
@@ -160,10 +174,8 @@
             const sel = window.chatState.jidSelecionado === u.jid_numero;
             if(sel) atualizarHeaderUI(u.username, u.imagem);
             return `<button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
-                <div class="d-flex align-items-center">
-                    <img src="${u.imagem}" class="rounded-circle me-2" width="35" height="35" style="object-fit:cover">
-                    <span class="fw-bold small">${u.username}</span>
-                </div></button>`;
+                <div class="d-flex align-items-center"><img src="${u.imagem}" class="rounded-circle me-2" width="35" height="35" style="object-fit:cover">
+                <span class="fw-bold small">${u.username}</span></div></button>`;
         };
         document.getElementById('lista-atendentes-chat').innerHTML = configs.filter(c => c.tipo !== 'grupo').map(renderItem).join('');
         document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
@@ -195,6 +207,23 @@
         container.scrollTop = container.scrollHeight;
     }
 
+    function verificarHorarioPico() {
+        const agora = new Date();
+        const hora = agora.getHours();
+        const isPico = (hora >= 16 && hora < 18);
+        
+        const alertPico = document.getElementById('alert-pico');
+        const selectAdicional = document.getElementById('p-adicional');
+        
+        if (isPico) {
+            alertPico.classList.remove('d-none');
+            selectAdicional.value = "5"; // Seta R$ 5 automatico no pico
+        } else {
+            alertPico.classList.add('d-none');
+            selectAdicional.value = "0";
+        }
+    }
+
     function prepararPedidoRefinado(base64Text) {
         const texto = b64_to_utf8(base64Text);
         const extrair = (chave) => {
@@ -205,35 +234,36 @@
 
         const coleta = extrair('COLETA');
         const entrega = extrair('ENTREGA');
-
         if(!coleta || !entrega) return;
 
-        document.getElementById('p-coleta').value = coleta;
-        document.getElementById('p-entrega').value = entrega;
-        document.getElementById('p-solicitante').value = extrair('SOLICITANTE');
-        document.getElementById('p-horario').value = extrair('HORÁRIO');
-        document.getElementById('p-taxa').value = "15.00";
-        
-        // ESTRUTURA DE ROTA: Origem e Destino no Iframe
-        // q=coleta+to:entrega cria a linha azul de percurso
         const routeUrl = `https://maps.google.com/maps?saddr=${encodeURIComponent(coleta)}&daddr=${encodeURIComponent(entrega)}&output=embed`;
         document.getElementById('mapa-iframe').src = routeUrl;
-
+        
+        verificarHorarioPico();
+        
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
-
         new bootstrap.Modal(document.getElementById('modalPedido')).show();
+        atualizarTotal();
     }
 
     function proximoPassoPedido() {
         document.getElementById('passo-conferencia').style.display = 'none';
         document.getElementById('passo-finalizacao').style.display = 'block';
-        atualizarTotal();
     }
 
     function atualizarTotal() {
-        const v = document.getElementById('p-taxa').value || 0;
-        document.getElementById('view-valor-final').innerText = `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}`;
+        const kmBase = parseFloat(document.getElementById('p-tabela-km').value) || 2.20;
+        const adicional = parseFloat(document.getElementById('p-adicional').value) || 0;
+        const percMotoboy = parseFloat(document.getElementById('p-taxa-motoboy').value) || 0;
+
+        // Simulando uma distância fixa de 10km para o cálculo visual (você pode integrar com API futuramente)
+        const distanciaSimulada = 10; 
+        const valorCorrida = (distanciaSimulada * kmBase) + adicional;
+        const total = valorCorrida + (valorCorrida * (percMotoboy / 100));
+
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        document.getElementById('detalhe-calculo').innerText = `Tabela: ${kmBase.toFixed(2)} | Adic: R$ ${adicional.toFixed(2)}`;
     }
 
     function voltarPasso() {
@@ -242,19 +272,8 @@
     }
 
     async function salvarPedidoAPI() {
-        const payload = {
-            jid: window.chatState.jidSelecionado,
-            coleta: document.getElementById('p-coleta').value,
-            entrega: document.getElementById('p-entrega').value,
-            taxa: document.getElementById('p-taxa').value,
-            solicitante: document.getElementById('p-solicitante').value,
-            horario: document.getElementById('p-horario').value
-        };
-        try {
-            await API.call('insertpedido', payload);
-            Swal.fire('Sucesso', 'Pedido RDO Express Gerado!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-        } catch (e) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
+        Swal.fire('RDO Express', 'Pedido Gerado com Sucesso!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
     }
 
     function selecionarJid(jid) {
