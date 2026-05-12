@@ -49,13 +49,11 @@
     <!-- Janela de Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
-            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center">
-                    <div id="chat-header-avatar"></div>
-                    <div class="ms-3">
-                        <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
-                        <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
-                    </div>
+            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
+                <div id="chat-header-avatar"></div>
+                <div class="ms-3">
+                    <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
+                    <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
                 </div>
             </div>
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
@@ -76,18 +74,15 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Checkout Logístico</h5>
+                <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Checkout</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="passo-conferencia">
-                    <div id="alert-pico" class="alert alert-danger py-2 small border-0 rounded-3 mb-2 d-none">
-                        <i class="bi bi-clock-fill me-2"></i> <strong>Pico Detectado:</strong> Taxa de R$ 5,00 aplicada (16h-18h).
-                    </div>
                     <div class="rounded-4 overflow-hidden border mb-3" style="height: 300px;">
                         <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
                     </div>
-                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA VALORES <i class="bi bi-arrow-right ms-2"></i></button>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA VALORES</button>
                 </div>
 
                 <div id="passo-finalizacao" style="display:none;">
@@ -98,65 +93,53 @@
                                 <option value="0" selected>Coleta</option>
                                 <option value="10">Coleta c/ Retorno (+10,00)</option>
                                 <option value="0">Entrega</option>
-                                <option value="10">Entrega c/ Retorno (+10,00)</option>
                                 <option value="5">Entrega Sacola (+5,00)</option>
-                                <option value="15">Cartório (+15,00)</option>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label class="small fw-bold text-muted text-uppercase">Prioridade</label>
-                            <select id="p-prioridade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="0">Entrega Normal</option>
-                                <option value="5">Urgência (+ R$ 5,00)</option>
+                            <select id="p-prioridade" class="form-select" onchange="atualizarTotal()">
+                                <option value="0">Normal</option>
+                                <option value="5">Urgente (+5,00)</option>
                             </select>
                         </div>
                         <div class="col-md-12">
-                            <label class="small fw-bold text-muted text-uppercase">Localidade (Região BH)</label>
-                            <select id="p-localidade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="0" selected>Centro / Área Central</option>
-                                <option value="5">Zona Sul (Sion, Belvedere) +5,00</option>
-                                <option value="5">Zona Norte (Pampulha, V. Nova) +5,00</option>
-                                <option value="7">Zona Leste (Santa Inês) +7,00</option>
-                                <option value="7">Zona Oeste (Barreiro) +7,00</option>
-                                <option value="15">Grande BH (Contagem/Betim) +15,00</option>
+                            <label class="small fw-bold text-muted text-uppercase">Região BH</label>
+                            <select id="p-localidade" class="form-select" onchange="atualizarTotal()">
+                                <option value="0" selected>Centro</option>
+                                <option value="5">Zona Sul/Norte (+5,00)</option>
+                                <option value="15">Grande BH (+15,00)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted text-uppercase">Taxa P/ KM (R$)</label>
-                            <select id="p-tabela-km" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="2.20" selected>2,20 (Padrão)</option>
-                                <option value="2.60">2,60</option>
-                                <option value="2.80">2,80</option>
+                            <label class="small fw-bold text-muted text-uppercase">Taxa P/ KM</label>
+                            <select id="p-tabela-km" class="form-select" onchange="atualizarTotal()">
+                                <option value="2.20" selected>2,20</option>
                                 <option value="3.00">3,00</option>
-                                <option value="3.20">3,20</option>
                             </select>
                         </div>
-                        <div class="col-md-6 d-none"> <!-- Campo removido visualmente, mas mantido para lógica -->
-                            <select id="p-motoboys"><option value="0" selected></option></select>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted text-uppercase">Motoboys</label>
+                            <select id="p-motoboys" class="form-select" onchange="atualizarTotal()">
+                                <option value="0" selected>RDO Próprio</option>
+                                <option value="7">Terceirizado (+7,00)</option>
+                            </select>
                         </div>
-                        <div class="col-12 text-center py-2">
-                             <span class="badge bg-light text-muted border">Status: ⏳ aguardando ....</span>
+                        <div class="col-12">
+                            <textarea id="p-obs" class="form-control" rows="2" placeholder="Observações..." oninput="atualizarTotal()"></textarea>
                         </div>
                         <div class="col-12 mt-2">
-                            <div class="card border-0 rounded-4 overflow-hidden" style="background-color: #FF0000; color: white;">
-                                <div class="card-body p-0">
-                                    <div class="row g-0">
-                                        <div class="col-md-5 d-flex flex-column justify-content-center p-3 border-end border-white border-opacity-25">
-                                            <p class="mb-0 small text-uppercase fw-bold opacity-75">Total do Pedido</p>
-                                            <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
-                                        </div>
-                                        <div class="col-md-7 p-3 bg-white bg-opacity-10">
-                                            <p class="mb-1 fw-bold text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Resumo do Checkout</p>
-                                            <div id="resumo-pedido-texto" style="font-size: 0.75rem; line-height: 1.4;"></div>
-                                        </div>
-                                    </div>
+                            <div class="card border-0 rounded-4" style="background-color: #FF0000; color: white;">
+                                <div class="card-body p-3 text-center">
+                                    <p class="mb-0 small text-uppercase opacity-75">Total Estimado</p>
+                                    <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-light w-50 rounded-pill fw-bold border" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR CHECKOUT</button>
+                        <button class="btn btn-light w-50 rounded-pill border" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button>
                     </div>
                 </div>
             </div>
@@ -167,36 +150,35 @@
 <style>
     .no-arrow::after { display: none !important; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 2px; right: 12px; }
-    .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
+    .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-end; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
     .reply-emoji { position: absolute; bottom: -8px; left: 15px; background: white; padding: 2px 6px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.7rem; border: 1px solid #eee; }
-    .form-select:focus, .form-control:focus { border-color: #FF0000; box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.1); }
 </style>
 
 <script>
     const BotCore = {
         getMasterStatus: () => localStorage.getItem('bot_status') === 'true',
-        isOnline: (item) => BotCore.getMasterStatus() && String(item.status) === 'true'
+        isOnline: (u) => BotCore.getMasterStatus() && String(u.status) === 'true'
     };
 
-    if (!window.chatState) {
-        window.chatState = { jidSelecionado: sessionStorage.getItem('last_jid'), cacheConfigs: [], mensagens: [], locations: {} };
-    }
+    if (!window.chatState) window.chatState = { jidSelecionado: null, cacheConfigs: [], mensagens: [], locations: {} };
 
     async function carregarDados() {
-        try {
-            const configs = await API.call('getbotconfig');
-            window.chatState.cacheConfigs = configs;
-            renderizar(configs);
-        } catch (e) { console.error(e); }
+        const configs = await API.call('getbotconfig');
+        window.chatState.cacheConfigs = configs;
+        renderizar(configs);
     }
 
     function renderizar(configs) {
         const renderItem = (u) => {
             const online = BotCore.isOnline(u);
             const sel = window.chatState.jidSelecionado === u.jid_numero;
-            if(sel) atualizarHeaderUI(u);
-            return `<button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
+            if(sel) {
+                document.getElementById('chat-header-name').innerText = u.username;
+                document.getElementById('chat-header-status').innerText = u.tipo === 'grupo' ? 'Grupo' : (online ? 'Online' : 'Offline');
+                document.getElementById('chat-header-avatar').innerHTML = `<img src="${u.imagem}" class="rounded-circle border" width="40" height="40">`;
+            }
+            return `<button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''} ${!online && u.tipo !== 'grupo' ? 'opacity-50' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative">
                         <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38">
@@ -204,6 +186,7 @@
                     </div>
                     <div class="flex-grow-1 text-truncate">
                         <span class="fw-bold d-block small">${u.username}</span>
+                        <small class="${sel ? 'text-white' : 'text-muted'}" style="font-size:0.6rem">${online ? 'Online' : 'Offline'}</small>
                     </div>
                 </div>
             </button>`;
@@ -212,16 +195,7 @@
         document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
     }
 
-    function selecionarJid(jid) {
-        window.chatState.jidSelecionado = jid;
-        sessionStorage.setItem('last_jid', jid);
-        renderizar(window.chatState.cacheConfigs);
-    }
-
-    function atualizarHeaderUI(u) {
-        document.getElementById('chat-header-name').innerText = u.username;
-        document.getElementById('chat-header-avatar').innerHTML = `<img src="${u.imagem}" class="rounded-circle border" width="40" height="40">`;
-    }
+    function selecionarJid(jid) { window.chatState.jidSelecionado = jid; renderizar(window.chatState.cacheConfigs); }
 
     function processarMensagemLocal() {
         const input = document.getElementById('msg-input');
@@ -229,7 +203,7 @@
         if(!texto) return;
         window.chatState.mensagens.push({ texto, finalizado: false, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
         renderizarMensagensLocal();
-        if (texto.toUpperCase().includes('COLETA') || texto.toUpperCase().includes('ENTREGA')) prepararPedidoRefinado(texto);
+        if (texto.toUpperCase().includes('COLETA') || texto.toUpperCase().includes('ENTREGA')) prepararPedido(texto);
         input.value = '';
     }
 
@@ -244,13 +218,11 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    function prepararPedidoRefinado(texto) {
-        const col = (texto.match(/COLETA:\s*\(([^)]+)\)/i) || [])[1];
-        const ent = (texto.match(/ENTREGA:\s*\(([^)]+)\)/i) || [])[1];
-        window.chatState.locations = { col: col || 'BH', ent: ent || 'BH' };
-        document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(window.chatState.locations.col)}&daddr=${encodeURIComponent(window.chatState.locations.ent)}&output=embed`;
-        const hora = new Date().getHours();
-        document.getElementById('alert-pico').classList.toggle('d-none', !(hora >= 16 && hora <= 18));
+    function prepararPedido(texto) {
+        const col = (texto.match(/COLETA:\s*\(([^)]+)\)/i) || [])[1] || 'BH';
+        const ent = (texto.match(/ENTREGA:\s*\(([^)]+)\)/i) || [])[1] || 'BH';
+        window.chatState.locations = { col, ent };
+        document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(col)}&daddr=${encodeURIComponent(ent)}&output=embed`;
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
         new bootstrap.Modal(document.getElementById('modalPedido')).show();
@@ -261,30 +233,22 @@
     function voltarPasso() { document.getElementById('passo-conferencia').style.display = 'block'; document.getElementById('passo-finalizacao').style.display = 'none'; }
 
     function atualizarTotal() {
-        const srvEl = document.getElementById('p-tipo-servico');
-        const priEl = document.getElementById('p-prioridade');
-        const locEl = document.getElementById('p-localidade');
-        const kmEl = document.getElementById('p-tabela-km');
-        const kmBase = parseFloat(kmEl.value);
-        const total = (10 * kmBase) + parseFloat(locEl.value) + parseFloat(srvEl.value) + parseFloat(priEl.value);
+        const total = (10 * parseFloat(document.getElementById('p-tabela-km').value)) + parseFloat(document.getElementById('p-tipo-servico').value) + parseFloat(document.getElementById('p-prioridade').value) + parseFloat(document.getElementById('p-localidade').value) + parseFloat(document.getElementById('p-motoboys').value);
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-        document.getElementById('resumo-pedido-texto').innerHTML = `${srvEl.options[srvEl.selectedIndex].text} em ${locEl.options[locEl.selectedIndex].text}`;
     }
 
     async function salvarPedidoAPI() {
-        const payload = {
-            data_hora: new Date().toISOString(),
+        await API.call('addchatlive', {
             username: document.getElementById('chat-header-name').innerText,
             coleta: window.chatState.locations.col,
             entrega: window.chatState.locations.ent,
             motoboy: "", 
             status_emoji: "⏳ aguardando ...."
-        };
-        await API.call('addchatlive', payload);
+        });
         if(window.chatState.mensagens.length > 0) window.chatState.mensagens[window.chatState.mensagens.length - 1].finalizado = true;
         renderizarMensagensLocal();
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-        Swal.fire({ title: 'RDO Express', text: 'Pedido em processamento!', icon: 'success', confirmButtonColor: '#FF0000' });
+        Swal.fire({ title: 'RDO Express', text: 'Checkout Finalizado!', icon: 'success', confirmButtonColor: '#FF0000' });
     }
     carregarDados();
 </script>
