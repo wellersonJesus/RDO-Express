@@ -1,31 +1,26 @@
 <div class="row g-3 h-100">
-    <!-- Topo Status Master (Ajustado: Fundo Branco e Cores RDO) -->
+    <!-- Cabeçalho de Status Master -->
     <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
+        <div class="card border-0 shadow-sm bg-danger text-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-whatsapp fs-3 text-success"></i>
+                    <i class="bi bi-whatsapp fs-3"></i>
                     <div>
-                        <h5 id="master-status-title" class="fw-bold mb-0">
-                            <span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express</span>
-                        </h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento</small>
+                        <h5 id="master-status-title" class="fw-bold mb-0">RDO Express</h5>
+                        <small class="opacity-75" style="font-size: 0.75rem;">Painel de Atendimento</small>
                     </div>
                 </div>
-                <div class="text-end d-flex align-items-center gap-3">
-                    <div class="d-flex flex-column align-items-end">
-                        <span id="sync-text" class="fw-bold text-dark" style="font-size: 0.75rem;">Sincronizando...</span>
-                        <small id="status-offline-text" class="text-danger d-none" style="font-size: 0.65rem; font-weight: bold;">SISTEMA PAUSADO</small>
-                    </div>
-                    <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger" style="cursor:pointer;" onclick="carregarDados(true)"></i>
+                <div class="text-end">
+                    <i id="sync-icon" class="bi bi-arrow-repeat fs-4" style="cursor:pointer;" onclick="carregarDados(true)"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar de Contatos -->
+    <!-- Coluna de Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
+            <!-- Atendentes -->
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
                     <button class="accordion-button bg-light fw-bold text-secondary small py-3 shadow-none" type="button" style="pointer-events: none;">
@@ -36,11 +31,11 @@
                     <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
                 </div>
             </div>
-            
+            <!-- Grupos -->
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
                     <button class="accordion-button bg-light fw-bold text-secondary small py-3 shadow-none" type="button" style="pointer-events: none;">
-                        GRUPOS / OUTROS
+                        GRUPOS
                     </button>
                 </h2>
                 <div class="accordion-collapse collapse show">
@@ -50,9 +45,10 @@
         </div>
     </div>
 
-    <!-- Área do Chat -->
+    <!-- Coluna de Conversa -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
+            <!-- Header do Chat -->
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
                     <div id="chat-header-avatar" class="position-relative">
@@ -62,28 +58,30 @@
                     </div>
                     <div class="ms-3">
                         <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
-                        <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;">Offline</small>
+                        <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;">Aguardando...</small>
                     </div>
                 </div>
                 
                 <!-- Menu de Opções (Três Pontinhos) -->
                 <div id="acoes-header" class="dropdown" style="display: none;">
-                    <button class="btn btn-light rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 40px; height: 40px;">
-                        <i class="bi bi-three-dots-vertical text-dark"></i>
+                    <button class="btn btn-link text-dark shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical fs-5"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="criarPedido()"><i class="bi bi-magic text-danger me-2"></i> Gerar Pedido</a></li>
-                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="gerarRelatorio()"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i> Relatório</a></li>
+                        <li><a class="dropdown-item small fw-bold py-2" href="#" onclick="acaoChat('pedido')"><i class="bi bi-cart me-2 text-danger"></i> Gerar Pedido</a></li>
+                        <li><a class="dropdown-item small fw-bold py-2" href="#" onclick="acaoChat('relatorio')"><i class="bi bi-file-earmark-text me-2 text-danger"></i> Relatório</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2 small fw-bold text-danger" href="javascript:void(0)" onclick="fechamentoDiario()"><i class="bi bi-calendar-check me-2"></i> Fechamento Diário</a></li>
+                        <li><a class="dropdown-item small fw-bold py-2 text-danger" href="#" onclick="acaoChat('fechamento')"><i class="bi bi-calendar-check me-2"></i> Fechamento Diário</a></li>
                     </ul>
                 </div>
             </div>
 
+            <!-- Mensagens -->
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto">
-                <div class="text-center my-5 text-muted small">Aguardando interação...</div>
+                <div class="text-center my-5 text-muted small">Clique em um contato ou grupo para iniciar</div>
             </div>
 
+            <!-- Input de Mensagem -->
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
                     <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Escreva aqui..." style="resize: none;"></textarea>
@@ -102,7 +100,7 @@
     .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 0; right: 0; }
     .spin { animation: rotation 1s infinite linear; }
     @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(359deg); } }
-    .dropdown-item:active { background-color: #f8f9fa; color: inherit; }
+    .dropdown-item:active { background-color: #dc3545; }
 </style>
 
 <script>
@@ -112,20 +110,10 @@
 
     async function carregarDados(force = false) {
         const icon = document.getElementById('sync-icon');
-        const masterOn = localStorage.getItem('bot_status') === 'true';
-        
-        document.getElementById('sync-text').innerText = masterOn ? 'Serviço Ativo' : 'Serviço Pausado';
-        document.getElementById('status-offline-text').classList.toggle('d-none', masterOn);
-
-        if (window.chatState.cacheDados && !force) {
-            renderizar(window.chatState.cacheDados.configs);
-            return;
-        }
-        
         if(icon) icon.classList.add('spin');
         try {
             const configs = await API.call('getbotconfig');
-            window.chatState.cacheDados = { configs };
+            window.chatState.cacheDados = configs;
             renderizar(configs);
         } catch (e) {
             console.error("Erro ao sincronizar chat:", e);
@@ -134,49 +122,39 @@
 
     function renderizar(configs) {
         const masterOn = localStorage.getItem('bot_status') === 'true';
+        const listaAtendentes = document.getElementById('lista-atendentes-chat');
+        const listaGrupos = document.getElementById('lista-grupos-chat');
         
-        // Render Atendentes
-        document.getElementById('lista-atendentes-chat').innerHTML = configs
-            .filter(c => c.tipo && c.tipo.toLowerCase() !== 'grupo')
-            .map(u => {
-                const isOnline = masterOn && (String(u.status) === 'true');
-                const sel = window.chatState.jidSelecionado === u.jid_numero;
-                if(sel) atualizarHeaderUI(u.username, u.imagem, isOnline);
+        listaAtendentes.innerHTML = '';
+        listaGrupos.innerHTML = '';
 
-                return `
+        configs.forEach(u => {
+            const isOnline = masterOn && (u.status === true || String(u.status) === 'true' || u.status === 1);
+            const isSel = window.chatState.jidSelecionado === u.jid_numero;
+            const isGrupo = u.tipo && u.tipo.toLowerCase() === 'grupo';
+
+            const html = `
                 <button onclick="selecionarJid('${u.jid_numero}', '${u.username}', '${u.imagem}', ${isOnline})" 
-                        class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
+                        class="list-group-item list-group-item-action border-0 ${isSel ? 'bg-danger text-white' : ''}">
                     <div class="d-flex align-items-center px-2">
                         <div class="position-relative">
                             <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38" style="object-fit:cover">
                             <span class="status-dot ${isOnline ? 'bg-success' : 'bg-secondary'}"></span>
                         </div>
                         <div class="flex-grow-1 text-truncate">
-                            <span class="fw-bold d-block small ${sel ? 'text-white' : ''}">${u.username}</span>
-                            <small class="${sel ? 'text-white-50' : 'text-muted'}" style="font-size:0.65rem">
-                                ${isOnline ? 'Ativo agora' : 'Indisponível'}
+                            <span class="fw-bold d-block small ${isSel ? 'text-white' : ''}">${u.username}</span>
+                            <small class="${isSel ? 'text-white-50' : 'text-muted'}" style="font-size:0.65rem">
+                                ${isOnline ? 'Disponível' : 'Offline'}
                             </small>
                         </div>
                     </div>
                 </button>`;
-            }).join('');
 
-        // Render Grupos (Lógica de exibição no Header unificada)
-        document.getElementById('lista-grupos-chat').innerHTML = configs
-            .filter(c => c.tipo && c.tipo.toLowerCase() === 'grupo')
-            .map(g => {
-                const sel = window.chatState.jidSelecionado === g.jid_numero;
-                if(sel) atualizarHeaderUI(g.username, g.imagem, true);
+            if (isGrupo) listaGrupos.innerHTML += html;
+            else listaAtendentes.innerHTML += html;
 
-                return `
-                <button onclick="selecionarJid('${g.jid_numero}', '${g.username}', '${g.imagem}', true)" 
-                        class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
-                    <div class="d-flex align-items-center px-2">
-                        <img src="${g.imagem}" class="rounded-circle border me-3" width="38" height="38" style="object-fit:cover">
-                        <span class="fw-bold small ${sel ? 'text-white' : ''}">${g.username}</span>
-                    </div>
-                </button>`;
-            }).join('');
+            if(isSel) atualizarHeaderUI(u.username, u.imagem, isOnline);
+        });
     }
 
     function atualizarHeaderUI(nome, imagem, online) {
@@ -195,15 +173,13 @@
     window.selecionarJid = (jid, nome, imagem, online) => {
         window.chatState.jidSelecionado = jid;
         sessionStorage.setItem('last_jid', jid);
-        renderizar(window.chatState.cacheDados.configs);
+        atualizarHeaderUI(nome, imagem, online);
+        renderizar(window.chatState.cacheDados);
     };
 
-    window.gerarRelatorio = () => { alert("Gerando relatório..."); };
-    window.fechamentoDiario = () => { alert("Iniciando fechamento diário..."); };
-
-    window.addEventListener('storage', (e) => {
-        if(e.key === 'bot_status') carregarDados(true);
-    });
+    window.acaoChat = (tipo) => {
+        alert('Ação selecionada: ' + tipo.toUpperCase() + ' para ' + document.getElementById('chat-header-name').innerText);
+    };
 
     carregarDados();
 </script>
