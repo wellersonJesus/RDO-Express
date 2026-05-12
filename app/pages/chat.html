@@ -245,8 +245,8 @@
             status_emoji: "⏳ aguardando ...."
         });
 
-        // Formato ajustado conforme solicitado
-        const msgUnificada = `📦 PEDIDO GERADO COM SUCESSO.\n\nID: ${pedidoId}\nColeta: ${window.chatState.currentLocations.col}\nEntrega: ${window.chatState.currentLocations.ent}\nValor: ${valorFinal}\n\n⏳ Aguardando confirmação do Motoboy!`;
+        // Título dinâmico usando o nome do contato/grupo (jid_numero)
+        const msgUnificada = `📦 PEDIDO ${nome.toUpperCase()} GERADO COM SUCESSO.\n\nID: ${pedidoId}\nColeta: ${window.chatState.currentLocations.col}\nEntrega: ${window.chatState.currentLocations.ent}\nValor: ${valorFinal}\n\n⏳ Aguardando confirmação do Motoboy!`;
 
         await API.call('addmensagens_chat', {
             id: "'" + Date.now(),
