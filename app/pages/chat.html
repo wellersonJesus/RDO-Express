@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar de Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
             <div class="accordion-item border-0">
@@ -40,19 +40,21 @@
         </div>
     </div>
 
-    <!-- Chat -->
+    <!-- Área do Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
                 <div id="chat-header-avatar"></div>
                 <div class="ms-3">
-                    <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
+                    <h6 id="chat-header-name" class="fw-bold mb-0" style="font-size: 0.9rem;">Selecione um contato</h6>
                 </div>
             </div>
+
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
+
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..."></textarea>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..." style="resize: none;"></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -62,39 +64,67 @@
     </div>
 </div>
 
-<!-- Modal -->
+<!-- Modal de Checkout com Rota Dinâmica -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5>
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout de Entrega</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <!-- Passo 1: O Mapa de Rota -->
                 <div id="passo-conferencia">
-                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 350px;">
-                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
+                    <div class="alert alert-danger py-2 small border-0 rounded-3 mb-2">
+                        <i class="bi bi-map-fill me-2"></i> <strong>Análise de Rota:</strong> Confirme o percurso no mapa abaixo.
                     </div>
-                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">CONFIRMAR ENDEREÇO E VER RESUMO</button>
+                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 400px; background: #f8f9fa;">
+                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light w-50 rounded-pill fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="proximoPassoPedido()">CONFIRMAR ENDEREÇO <i class="bi bi-check2-circle ms-2"></i></button>
+                    </div>
                 </div>
 
+                <!-- Passo 2: Resumo e Finalização -->
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
-                        <div class="col-md-6"><label class="small fw-bold">Origem</label><input type="text" id="p-coleta" class="form-control"></div>
-                        <div class="col-md-6"><label class="small fw-bold">Destino</label><input type="text" id="p-entrega" class="form-control"></div>
-                        <div class="col-md-4"><label class="small fw-bold">Solicitante</label><input type="text" id="p-solicitante" class="form-control"></div>
-                        <div class="col-md-4"><label class="small fw-bold">Data/Hora</label><input type="text" id="p-horario" class="form-control"></div>
-                        <div class="col-md-4"><label class="small fw-bold text-danger">Taxa R$</label><input type="number" id="p-taxa" class="form-control fw-bold" oninput="atualizarTotal()"></div>
-                        <div class="col-12">
-                            <div class="bg-dark text-white p-3 rounded-3 d-flex justify-content-between align-items-center mt-2">
-                                <span class="fw-bold">TOTAL DO SERVIÇO:</span>
-                                <h4 class="mb-0 text-warning fw-bold" id="view-valor-final">R$ 15,00</h4>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">ENDEREÇO ORIGEM (COLETA)</label>
+                            <input type="text" id="p-coleta" class="form-control bg-light border-0 rounded-3 shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">ENDEREÇO DESTINO (ENTREGA)</label>
+                            <input type="text" id="p-entrega" class="form-control bg-light border-0 rounded-3 shadow-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">SOLICITANTE</label>
+                            <input type="text" id="p-solicitante" class="form-control border-0 bg-light rounded-3 shadow-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">DATA / HORA</label>
+                            <input type="text" id="p-horario" class="form-control border-0 bg-light rounded-3 shadow-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-danger">TAXA APLICADA R$</label>
+                            <input type="number" id="p-taxa" class="form-control border-danger fw-bold rounded-3 shadow-sm" oninput="atualizarTotal()">
+                        </div>
+                        <div class="col-12 mt-4">
+                            <div class="card bg-dark text-white border-0 rounded-4">
+                                <div class="card-body d-flex justify-content-between align-items-center py-3">
+                                    <div>
+                                        <p class="mb-0 small text-uppercase opacity-75">Valor Final do Serviço</p>
+                                        <h2 class="mb-0 fw-bold text-warning" id="view-valor-final">R$ 0,00</h2>
+                                    </div>
+                                    <i class="bi bi-lightning-charge-fill fs-1 text-warning opacity-25"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-success w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">GERAR PEDIDO</button>
+                        <button class="btn btn-light w-50 rounded-pill fw-bold" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-success w-50 rounded-pill fw-bold py-2" onclick="salvarPedidoAPI()">GERAR PEDIDO FINAL <i class="bi bi-send-check ms-2"></i></button>
                     </div>
                 </div>
             </div>
@@ -110,7 +140,6 @@
 </style>
 
 <script>
-    // Helpers para evitar erro de caracteres especiais (UTF-8)
     const utf8_to_b64 = (str) => window.btoa(unescape(encodeURIComponent(str)));
     const b64_to_utf8 = (str) => decodeURIComponent(escape(window.atob(str)));
 
@@ -149,11 +178,8 @@
         const input = document.getElementById('msg-input');
         const texto = input.value.trim();
         if(!texto) return;
-
         window.chatState.mensagens.push({ id: Date.now(), texto, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
         renderizarMensagensLocal();
-        
-        // Abre o modal imediatamente usando a versão segura da string
         prepararPedidoRefinado(utf8_to_b64(texto));
         input.value = '';
     }
@@ -188,8 +214,10 @@
         document.getElementById('p-horario').value = extrair('HORÁRIO');
         document.getElementById('p-taxa').value = "15.00";
         
-        const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(entrega)}&output=embed`;
-        document.getElementById('mapa-iframe').src = embedUrl;
+        // ESTRUTURA DE ROTA: Origem e Destino no Iframe
+        // q=coleta+to:entrega cria a linha azul de percurso
+        const routeUrl = `https://maps.google.com/maps?saddr=${encodeURIComponent(coleta)}&daddr=${encodeURIComponent(entrega)}&output=embed`;
+        document.getElementById('mapa-iframe').src = routeUrl;
 
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
@@ -214,9 +242,19 @@
     }
 
     async function salvarPedidoAPI() {
-        // Lógica de salvamento...
-        Swal.fire('Sucesso', 'Pedido gerado!', 'success');
-        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+        const payload = {
+            jid: window.chatState.jidSelecionado,
+            coleta: document.getElementById('p-coleta').value,
+            entrega: document.getElementById('p-entrega').value,
+            taxa: document.getElementById('p-taxa').value,
+            solicitante: document.getElementById('p-solicitante').value,
+            horario: document.getElementById('p-horario').value
+        };
+        try {
+            await API.call('insertpedido', payload);
+            Swal.fire('Sucesso', 'Pedido RDO Express Gerado!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+        } catch (e) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
     }
 
     function selecionarJid(jid) {
