@@ -61,7 +61,7 @@
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem de coleta aqui..." style="resize: none;"></textarea>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui..." style="resize: none;"></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -71,7 +71,7 @@
     </div>
 </div>
 
-<!-- Modal Checkout Logístico Refinado -->
+<!-- Modal Checkout Logístico -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -82,7 +82,7 @@
             <div class="modal-body">
                 <div id="passo-conferencia">
                     <div id="alert-pico" class="alert alert-danger py-2 small border-0 rounded-3 mb-2 d-none">
-                        <i class="bi bi-clock-fill me-2"></i> <strong>Horário de Pico:</strong> Adicional de R$ 5,00 aplicado automaticamente (16h-18h).
+                        <i class="bi bi-clock-fill me-2"></i> <strong>Pico Detectado:</strong> Taxa de R$ 5,00 aplicada (16h-18h).
                     </div>
                     <div class="rounded-4 overflow-hidden border mb-3" style="height: 300px;">
                         <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
@@ -104,54 +104,54 @@
                         </div>
                         <div class="col-md-4">
                             <label class="small fw-bold text-muted text-uppercase">Prioridade</label>
-                            <select id="p-prioridade" class="form-select border-danger-subtle" onchange="toggleUrgencia()">
-                                <option value="normal">Entrega Normal</option>
-                                <option value="urgente">Urgência (+ Taxa)</option>
+                            <select id="p-prioridade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
+                                <option value="0">Entrega Normal</option>
+                                <option value="5">Urgência (+ R$ 5,00)</option>
                             </select>
                         </div>
-                        <div class="col-md-4" id="box-taxa-urgencia" style="display:none;">
-                            <label class="small fw-bold text-muted text-uppercase">Taxa Urgência</label>
-                            <select id="p-taxa-urgencia" class="form-select border-danger" onchange="atualizarTotal()">
-                                <option value="5" selected>R$ 5,00</option>
-                                <option value="7">R$ 7,00</option>
-                                <option value="10">R$ 10,00</option>
-                                <option value="15">R$ 15,00</option>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted text-uppercase">Motoboys</label>
+                            <select id="p-motoboys" class="form-select border-danger-subtle" onchange="atualizarTotal()">
+                                <option value="0" selected>RDO (Próprio)</option>
+                                <option value="7">Grupo (+ R$ 7,00)</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
+                            <label class="small fw-bold text-muted text-uppercase">Tipo de Serviço</label>
+                            <select id="p-tipo-servico" class="form-select border-danger" onchange="atualizarTotal()">
+                                <option value="0" selected>Coleta</option>
+                                <option value="10">Coleta c/ Retorno (+10,00)</option>
+                                <option value="0">Entrega</option>
+                                <option value="10">Entrega c/ Retorno (+10,00)</option>
+                                <option value="5">Entrega Sacola (+5,00)</option>
+                                <option value="15">Cartório (+15,00)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
                             <label class="small fw-bold text-muted text-uppercase">Localidade (Região BH)</label>
                             <select id="p-localidade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="0" selected>Centro / Próximos</option>
-                                <option value="5">Zona Sul (Sion, Belvedere, Buritis) +5,00</option>
-                                <option value="5">Zona Norte (Pampulha, Venda Nova) +5,00</option>
-                                <option value="7">Zona Leste (Santa Inês, Horto) +7,00</option>
-                                <option value="7">Zona Oeste (Betânia, Barreiro) +7,00</option>
-                                <option value="15">Contagem / Betim (Grande BH) +15,00</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="small fw-bold text-muted text-uppercase">Mercadoria</label>
-                            <select id="p-mercadoria" class="form-select border-danger-subtle">
-                                <option value="envelope">Envelope / Documento</option>
-                                <option value="sacola">Sacola Pequena</option>
-                                <option value="caixa">Caixa / Volume Grande</option>
+                                <option value="0" selected>Centro / Área Central</option>
+                                <option value="5">Zona Sul (Sion, Belvedere) +5,00</option>
+                                <option value="5">Zona Norte (Pampulha, V. Nova) +5,00</option>
+                                <option value="7">Zona Leste (Santa Inês) +7,00</option>
+                                <option value="7">Zona Oeste (Barreiro) +7,00</option>
+                                <option value="15">Grande BH (Contagem/Betim) +15,00</option>
                             </select>
                         </div>
                         <div class="col-12">
                             <label class="small fw-bold text-muted text-uppercase">Observações do Pedido</label>
-                            <textarea id="p-obs" class="form-control border-danger-subtle" rows="2" placeholder="Ex: Deixar na portaria, procurar por João..."></textarea>
+                            <textarea id="p-obs" class="form-control border-danger-subtle" rows="2" placeholder="Detalhes da mercadoria..."></textarea>
                         </div>
                         
-                        <!-- Bloco de Total Vermelho -->
                         <div class="col-12 mt-2">
                             <div class="card border-0 rounded-4" style="background-color: #FF0000;">
                                 <div class="card-body d-flex justify-content-between align-items-center py-3 text-white">
                                     <div>
-                                        <p class="mb-0 small text-uppercase fw-bold opacity-75">Total do Checkout</p>
+                                        <p class="mb-0 small text-uppercase fw-bold opacity-75">Total do Pedido</p>
                                         <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge bg-white text-danger rounded-pill" id="badge-pico">PICO ATIVO</span>
+                                        <i class="bi bi-truck fs-1 opacity-25"></i>
                                     </div>
                                 </div>
                             </div>
@@ -159,7 +159,7 @@
                     </div>
                     <div class="d-flex gap-2 mt-4">
                         <button class="btn btn-light w-50 rounded-pill fw-bold border" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">CRIAR PEDIDO RDO</button>
+                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR CHECKOUT</button>
                     </div>
                 </div>
             </div>
@@ -169,11 +169,9 @@
 
 <style>
     .no-arrow::after { display: none !important; }
-    .custom-pointer { cursor: pointer !important; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 2px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; cursor: pointer; align-self: flex-end; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .offline-item { filter: grayscale(1); opacity: 0.6; }
+    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-end; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .form-select:focus, .form-control:focus { border-color: #FF0000; box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.1); }
 </style>
 
@@ -202,7 +200,7 @@
             if(sel) atualizarHeaderUI(u);
             
             return `
-            <button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''} ${!online && u.tipo !== 'grupo' ? 'offline-item' : ''}">
+            <button onclick="selecionarJid('${u.jid_numero}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''} ${!online && u.tipo !== 'grupo' ? 'opacity-50' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative">
                         <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38" style="object-fit:cover">
@@ -210,7 +208,7 @@
                     </div>
                     <div class="flex-grow-1 text-truncate">
                         <span class="fw-bold d-block small">${u.username}</span>
-                        <small class="${sel ? 'text-white' : 'text-muted'}" style="font-size:0.65rem">${u.tipo === 'grupo' ? 'Grupo Ativo' : (online ? 'Online' : 'Offline')}</small>
+                        <small class="${sel ? 'text-white' : 'text-muted'}" style="font-size:0.65rem">${u.tipo === 'grupo' ? 'Chat de Grupo' : (online ? 'Online' : 'Offline')}</small>
                     </div>
                 </div>
             </button>`;
@@ -226,9 +224,8 @@
     }
 
     function atualizarHeaderUI(u) {
-        const online = BotCore.isOnline(u);
         document.getElementById('chat-header-name').innerText = u.username;
-        document.getElementById('chat-header-status').innerText = u.tipo === 'grupo' ? 'Conversa em Grupo' : (online ? 'Online' : 'Offline');
+        document.getElementById('chat-header-status').innerText = u.tipo === 'grupo' ? 'Grupo Selecionado' : 'Conversa Privada';
         document.getElementById('chat-header-avatar').innerHTML = `<img src="${u.imagem}" class="rounded-circle border" width="40" height="40">`;
     }
 
@@ -263,21 +260,12 @@
 
         if(col && ent) document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(col)}&daddr=${encodeURIComponent(ent)}&output=embed`;
 
-        // Regra de Horário de Pico (16h às 18h)
         const hora = new Date().getHours();
-        const isPico = (hora >= 16 && hora <= 18);
-        document.getElementById('alert-pico').classList.toggle('d-none', !isPico);
-        document.getElementById('badge-pico').style.display = isPico ? 'block' : 'none';
+        document.getElementById('alert-pico').classList.toggle('d-none', !(hora >= 16 && hora <= 18));
 
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
         new bootstrap.Modal(document.getElementById('modalPedido')).show();
-        atualizarTotal();
-    }
-
-    function toggleUrgencia() {
-        const isUrgente = document.getElementById('p-prioridade').value === 'urgente';
-        document.getElementById('box-taxa-urgencia').style.display = isUrgente ? 'block' : 'none';
         atualizarTotal();
     }
 
@@ -294,25 +282,19 @@
     function atualizarTotal() {
         const kmBase = parseFloat(document.getElementById('p-tabela-km').value);
         const loc = parseFloat(document.getElementById('p-localidade').value);
+        const moto = parseFloat(document.getElementById('p-motoboys').value);
+        const servico = parseFloat(document.getElementById('p-tipo-servico').value);
+        const urgencia = parseFloat(document.getElementById('p-prioridade').value);
         
-        // Adicional de Pico automático
         const hora = new Date().getHours();
         const pico = (hora >= 16 && hora <= 18) ? 5.0 : 0;
-        
-        // Adicional Urgência
-        let urg = 0;
-        if(document.getElementById('p-prioridade').value === 'urgente') {
-            urg = parseFloat(document.getElementById('p-taxa-urgencia').value);
-        }
 
-        const distanciaSimulada = 10; // 10km base para cálculo
-        const total = (distanciaSimulada * kmBase) + loc + pico + urg;
-        
+        const total = (10 * kmBase) + loc + moto + servico + urgencia + pico;
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
     async function salvarPedidoAPI() {
-        Swal.fire({ title: 'RDO Express', text: 'Pedido registrado com sucesso!', icon: 'success', confirmButtonColor: '#FF0000' });
+        Swal.fire({ title: 'RDO Express', text: 'Checkout Logístico finalizado!', icon: 'success', confirmButtonColor: '#FF0000' });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
     }
 
