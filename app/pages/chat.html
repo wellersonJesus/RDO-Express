@@ -66,13 +66,12 @@
                     </div>
                 </div>
                 
-                <!-- Menu de Opções (Três Pontinhos) -->
                 <div id="acoes-header" class="dropdown" style="display: none;">
                     <button class="btn btn-light rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 40px; height: 40px;">
                         <i class="bi bi-three-dots-vertical text-dark"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="criarPedido()"><i class="bi bi-magic text-danger me-2"></i> Gerar Pedido</a></li>
+                        <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="abrirModalPedidoRapido()"><i class="bi bi-magic text-danger me-2"></i> Gerar Pedido</a></li>
                         <li><a class="dropdown-item py-2 small fw-bold" href="javascript:void(0)" onclick="gerarRelatorio()"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i> Relatório</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item py-2 small fw-bold text-danger" href="javascript:void(0)" onclick="fechamentoDiario()"><i class="bi bi-calendar-check me-2"></i> Fechamento Diário</a></li>
@@ -80,17 +79,57 @@
                 </div>
             </div>
 
-            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto">
+            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
                 <div class="text-center my-5 text-muted small">Aguardando interação...</div>
             </div>
 
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Escreva aqui..." style="resize: none;"></textarea>
-                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemChat()">
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a mensagem aqui para processar..." style="resize: none;"></textarea>
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="processarMensagemLocal()">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gerar Pedido / Cálculo de Rota -->
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Novo Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="bg-light p-2 rounded-3 mb-3 border-start border-danger border-4 small" id="preview-msg-pedido"></div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold mb-1">Endereço de Coleta</label>
+                    <input type="text" id="p-coleta" class="form-control form-control-sm rounded-3 shadow-none border" placeholder="Origem">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold mb-1">Endereço de Entrega</label>
+                    <input type="text" id="p-entrega" class="form-control form-control-sm rounded-3 shadow-none border" placeholder="Destino">
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">Taxa R$</label>
+                        <input type="number" id="p-taxa" class="form-control form-control-sm rounded-3 shadow-none border" value="0.00">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold mb-1">Serviço</label>
+                        <select id="p-tipo" class="form-select form-select-sm rounded-3 shadow-none border">
+                            <option value="Entrega">Entrega</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="salvarPedidoAPI()">CONFIRMAR PEDIDO</button>
             </div>
         </div>
     </div>
@@ -103,11 +142,24 @@
     .spin { animation: rotation 1s infinite linear; }
     @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(359deg); } }
     .dropdown-item:active { background-color: #f8f9fa; color: inherit; }
+    
+    .msg-bubble { 
+        background: white; 
+        padding: 8px 12px; 
+        border-radius: 12px; 
+        max-width: 80%; 
+        cursor: pointer; 
+        position: relative;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.1s;
+    }
+    .msg-bubble:hover { transform: scale(1.02); background: #fff5f5; border: 1px solid #ff000033; }
 </style>
 
 <script>
     if (!window.chatState) {
-        window.chatState = { jidSelecionado: sessionStorage.getItem('last_jid'), cacheDados: null };
+        window.chatState = { jidSelecionado: sessionStorage.getItem('last_jid'), cacheDados: null, mensagens: [] };
     }
 
     async function carregarDados(force = false) {
@@ -190,6 +242,71 @@
         document.getElementById('acoes-header').style.display = 'block';
     }
 
+    // Novas Funções de Processamento de Texto
+    function processarMensagemLocal() {
+        const input = document.getElementById('msg-input');
+        const texto = input.value.trim();
+        if(!texto) return;
+
+        const msg = {
+            id: Date.now(),
+            texto: texto,
+            hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        };
+        
+        window.chatState.mensagens.push(msg);
+        input.value = '';
+        renderizarMensagensLocal();
+    }
+
+    function renderizarMensagensLocal() {
+        const container = document.getElementById('chat-messages-container');
+        container.innerHTML = window.chatState.mensagens.map(m => `
+            <div class="msg-bubble animate__animated animate__fadeInUp" onclick="prepararPedido('${btoa(m.texto)}')">
+                <div class="text-dark">${m.texto.replace(/\n/g, '<br>')}</div>
+                <div class="text-end" style="font-size: 0.6rem; color: #999;">${m.hora}</div>
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function prepararPedido(base64Text) {
+        const texto = atob(base64Text);
+        document.getElementById('preview-msg-pedido').innerText = texto;
+        const modal = new bootstrap.Modal(document.getElementById('modalPedido'));
+        modal.show();
+    }
+
+    async function salvarPedidoAPI() {
+        if(!window.chatState.jidSelecionado) {
+             Swal.fire('Erro', 'Selecione um cliente primeiro!', 'error');
+             return;
+        }
+
+        const payload = {
+            jid: window.chatState.jidSelecionado,
+            coleta: document.getElementById('p-coleta').value,
+            entrega: document.getElementById('p-entrega').value,
+            taxa: document.getElementById('p-taxa').value,
+            tipo: document.getElementById('p-tipo').value,
+            solicitacao: document.getElementById('preview-msg-pedido').innerText
+        };
+
+        try {
+            const res = await API.call('insertpedido', payload);
+            if(res.status !== 'error') {
+                Swal.fire('RDO Express', 'Pedido registrado com sucesso!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+                // Limpar campos
+                document.getElementById('p-coleta').value = '';
+                document.getElementById('p-entrega').value = '';
+            }
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Erro', 'Falha ao salvar pedido no banco.', 'error');
+        }
+    }
+
     window.selecionarJid = (jid, nome, imagem, online) => {
         window.chatState.jidSelecionado = jid;
         sessionStorage.setItem('last_jid', jid);
@@ -198,6 +315,10 @@
 
     window.gerarRelatorio = () => { console.log("Relatório..."); };
     window.fechamentoDiario = () => { console.log("Fechamento..."); };
+    window.abrirModalPedidoRapido = () => {
+        document.getElementById('preview-msg-pedido').innerText = "Pedido manual via menu";
+        new bootstrap.Modal(document.getElementById('modalPedido')).show();
+    };
 
     window.addEventListener('storage', (e) => {
         if(e.key === 'bot_status') carregarDados(true);
