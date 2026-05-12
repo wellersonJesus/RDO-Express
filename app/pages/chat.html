@@ -92,31 +92,8 @@
 
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="small fw-bold text-muted text-uppercase">Taxa P/ KM (R$)</label>
-                            <select id="p-tabela-km" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="2.20" selected>2,20 (Padrão)</option>
-                                <option value="2.60">2,60</option>
-                                <option value="2.80">2,80</option>
-                                <option value="3.00">3,00</option>
-                                <option value="3.20">3,20</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold text-muted text-uppercase">Prioridade</label>
-                            <select id="p-prioridade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="0">Entrega Normal</option>
-                                <option value="5">Urgência (+ R$ 5,00)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold text-muted text-uppercase">Motoboys</label>
-                            <select id="p-motoboys" class="form-select border-danger-subtle" onchange="atualizarTotal()">
-                                <option value="0" selected>RDO (Próprio)</option>
-                                <option value="7">Grupo (+ R$ 7,00)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-5">
+                        <!-- 1. Tipo de Serviço -->
+                        <div class="col-md-8">
                             <label class="small fw-bold text-muted text-uppercase">Tipo de Serviço</label>
                             <select id="p-tipo-servico" class="form-select border-danger" onchange="atualizarTotal()">
                                 <option value="0" selected>Coleta</option>
@@ -127,7 +104,18 @@
                                 <option value="15">Cartório (+15,00)</option>
                             </select>
                         </div>
-                        <div class="col-md-7">
+                        
+                        <!-- 2. Prioridade -->
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted text-uppercase">Prioridade</label>
+                            <select id="p-prioridade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
+                                <option value="0">Entrega Normal</option>
+                                <option value="5">Urgência (+ R$ 5,00)</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. Localidade -->
+                        <div class="col-md-12">
                             <label class="small fw-bold text-muted text-uppercase">Localidade (Região BH)</label>
                             <select id="p-localidade" class="form-select border-danger-subtle" onchange="atualizarTotal()">
                                 <option value="0" selected>Centro / Área Central</option>
@@ -138,6 +126,29 @@
                                 <option value="15">Grande BH (Contagem/Betim) +15,00</option>
                             </select>
                         </div>
+
+                        <!-- 4. Taxa P/ KM -->
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted text-uppercase">Taxa P/ KM (R$)</label>
+                            <select id="p-tabela-km" class="form-select border-danger-subtle" onchange="atualizarTotal()">
+                                <option value="2.20" selected>2,20 (Padrão)</option>
+                                <option value="2.60">2,60</option>
+                                <option value="2.80">2,80</option>
+                                <option value="3.00">3,00</option>
+                                <option value="3.20">3,20</option>
+                            </select>
+                        </div>
+
+                        <!-- 5. Motoboys -->
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted text-uppercase">Motoboys</label>
+                            <select id="p-motoboys" class="form-select border-danger-subtle" onchange="atualizarTotal()">
+                                <option value="0" selected>RDO (Próprio)</option>
+                                <option value="7">Grupo (+ R$ 7,00)</option>
+                            </select>
+                        </div>
+
+                        <!-- 6. Observações -->
                         <div class="col-12">
                             <label class="small fw-bold text-muted text-uppercase">Observações do Pedido</label>
                             <textarea id="p-obs" class="form-control border-danger-subtle" rows="2" placeholder="Detalhes da mercadoria..."></textarea>
