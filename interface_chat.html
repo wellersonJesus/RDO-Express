@@ -57,52 +57,22 @@
                         <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
                     </div>
                 </div>
-                <!-- Menu Três Pontinhos -->
+                <!-- Menu de Opções (Três Pontinhos) -->
                 <div class="dropdown">
-                    <button class="btn border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Mensagem</a></li>
-                        <li><a class="dropdown-item py-2 small text-danger" href="#" onclick="limparChatLocal()"><i class="bi bi-trash me-2"></i> Limpar Visualização</a></li>
+                    <i class="bi bi-three-dots-vertical fs-5 text-secondary" style="cursor: pointer;" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm rounded-3">
+                        <li><a class="dropdown-item small py-2" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2 text-danger"></i> Modelo de Mensagem</a></li>
                     </ul>
                 </div>
             </div>
-            
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
-            
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação preenchida aqui..." style="resize: none;"></textarea>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Modelo de Mensagem -->
-<div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0">
-                <h6 class="fw-bold mb-0">Copiável: Modelo de Solicitação</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body pt-0">
-                <div class="bg-light p-3 rounded-3 small text-secondary mb-3" id="texto-modelo-copiar" style="white-space: pre-wrap; cursor: pointer;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
-
-SOLICITANTE: 
-MERCADORIA: 
-COLETA: 
-ENTREGA: 
-HORÁRIO PARA PEGAR ENCOMENDA: 
-OBS: 
-
-Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
-                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="copiarModelo()">COPIAR MODELO <i class="bi bi-clipboard ms-2"></i></button>
             </div>
         </div>
     </div>
@@ -118,10 +88,18 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
             </div>
             <div class="modal-body">
                 <div id="passo-conferencia">
-                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 250px;">
+                    <div class="rounded-4 overflow-hidden border mb-3" style="height: 200px;">
                         <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
                     </div>
                     <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">SOLICITANTE</label>
+                            <input type="text" id="p-solicitante" class="form-control form-control-sm bg-light border-0 shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">HORÁRIO COLETA</label>
+                            <input type="text" id="p-horario-coleta" class="form-control form-control-sm bg-light border-0 shadow-sm">
+                        </div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">ORIGEM</label>
                             <input type="text" id="p-origem" class="form-control form-control-sm bg-light border-0 shadow-sm" oninput="atualizarTotal()">
@@ -137,19 +115,35 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-2">
                         <div class="col-md-4">
-                            <label class="small fw-bold text-muted">SOLICITANTE</label>
-                            <input type="text" id="p-solicitante" class="form-control border-0 bg-light shadow-sm">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold text-muted">HORÁRIO COLETA</label>
-                            <input type="text" id="p-horario-manual" class="form-control border-0 bg-light shadow-sm">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold text-muted">Tabela KM</label>
+                            <label class="small fw-bold text-muted text-uppercase">Tabela KM</label>
                             <select id="p-tabela-km" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
                                 <option value="2.20" selected>2,20</option>
                                 <option value="2.40">2,40</option>
                                 <option value="3.00">3,00</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted text-uppercase">Zona</label>
+                            <select id="p-zona" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Centro / Base</option>
+                                <option value="5">Zona Sul (+5)</option>
+                                <option value="7">Zona Norte (+7)</option>
+                                <option value="10">Zona Leste (+10)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted text-uppercase">Horário</label>
+                            <select id="p-horario-ajuste" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Normal</option>
+                                <option value="5">Pico (+5)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <label class="small fw-bold text-muted text-uppercase">Prioridade</label>
+                            <select id="p-prioridade" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Comum</option>
+                                <option value="5">Programada (+5)</option>
+                                <option value="7.5">Urgência (+7,50)</option>
                             </select>
                         </div>
                         <div class="col-md-6 mt-2">
@@ -161,20 +155,10 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                                 <option value="Bolsa">Bolsa</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mt-2">
-                            <label class="small fw-bold text-muted text-uppercase">Zona/Adicionais</label>
-                            <select id="p-zona" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
-                                <option value="0">Centro / Base</option>
-                                <option value="5">Zona Sul (+5)</option>
-                                <option value="7">Zona Norte (+7)</option>
-                                <option value="10">Zona Leste (+10)</option>
-                            </select>
-                        </div>
                         <div class="col-12 mt-2">
                             <label class="small fw-bold text-muted">OBSERVAÇÕES</label>
                             <textarea id="p-obs" class="form-control border-0 bg-light shadow-sm" rows="1" oninput="atualizarTotal()"></textarea>
                         </div>
-
                         <div class="col-12 mt-3">
                             <div class="card border-0 rounded-4 overflow-hidden" style="background-color: #FF0000; color: white;">
                                 <div class="card-body p-3">
@@ -184,7 +168,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                                             <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
                                         </div>
                                         <div class="col-8">
-                                            <div id="resumo-detalhado" style="font-size: 0.7rem; line-height: 1.2;">Aguardando...</div>
+                                            <div id="resumo-detalhado" style="font-size: 0.7rem; line-height: 1.2;"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -193,8 +177,36 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                     </div>
                     <div class="d-flex gap-2 mt-3">
                         <button class="btn btn-light w-50 rounded-pill fw-bold" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-secondary w-50 rounded-pill fw-bold text-white" onclick="salvarPedidoAPI()">ENVIAR LOGÍSTICA</button>
+                        <button class="btn btn-secondary w-50 rounded-pill fw-bold text-white" onclick="salvarPedidoAPI()">ENVIAR PEDIDO</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Auxiliar Modelo de Copia -->
+<div class="modal fade" id="modalModeloCopia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">Modelo para Cliente</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Copie o texto abaixo e envie para o cliente preencher:</p>
+                <div class="bg-light p-3 rounded-3 position-relative">
+                    <pre id="texto-modelo-copia" class="mb-0 small" style="white-space: pre-wrap;">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
+
+SOLICITANTE: 
+MERCADORIA: 
+COLETA: 
+ENTREGA: 
+HORÁRIO PARA PEGAR ENCOMENDA: 
+OBS: 
+
+Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</pre>
+                    <button class="btn btn-sm btn-dark position-absolute top-0 end-0 m-2" onclick="copiarTextoModelo()">Copiar</button>
                 </div>
             </div>
         </div>
@@ -214,11 +226,6 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
 
-    function formatarMensagem(texto) {
-        if (!texto) return '';
-        return texto.replace(/\*(.*?)\*/g, '<b>$1</b>');
-    }
-
     async function carregarDados() {
         const configs = await API.call('getbotconfig');
         renderizar(configs);
@@ -229,7 +236,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         const isOnline = (u) => localStorage.getItem('bot_status') === 'true' && String(u.status) === 'true';
         const renderItem = (u) => {
             const sel = window.chatState.currentName === u.username;
-            return `<button onclick="selecionarChat('${u.username}', '${u.imagem}', ${isOnline(u)}, '${u.tipo}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
+            return `<button onclick="selecionarChat('${u.username}', '${u.imagem}', ${isOnline(u)})" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative">
                         <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38">
@@ -245,7 +252,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
     }
 
-    async function selecionarChat(nome, imagem, online, tipo) {
+    async function selecionarChat(nome, imagem, online) {
         window.chatState.currentName = nome;
         document.getElementById('chat-header-name').innerText = nome;
         document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40">`;
@@ -259,7 +266,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         container.innerHTML = filtradas.map(m => {
             const isPedido = m.finalizado === 'true' || m.finalizado === true;
             return `<div class="msg-bubble ${isPedido ? 'msg-mine' : ''} mb-3">
-                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${formatarMensagem(m.texto)}</div>
+                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
                 <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
                 ${isPedido ? `<div class="reply-badge">ID: ${m.pedido_id}</div>` : ''}
             </div>`;
@@ -267,28 +274,21 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         container.scrollTop = container.scrollHeight;
     }
 
-    // Modal de Modelo
     function abrirModalModelo() {
-        if(!window.chatState.currentName) {
-            alert('Selecione um chat primeiro.');
-            return;
-        }
-        new bootstrap.Modal(document.getElementById('modalModelo')).show();
+        new bootstrap.Modal(document.getElementById('modalModeloCopia')).show();
     }
 
-    function copiarModelo() {
-        const texto = document.getElementById('texto-modelo-copiar').innerText;
-        navigator.clipboard.writeText(texto).then(() => {
-            alert('Modelo copiado com sucesso!');
-            bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
-        });
+    function copiarTextoModelo() {
+        const texto = document.getElementById('texto-modelo-copia').innerText;
+        navigator.clipboard.writeText(texto);
+        alert('Modelo copiado!');
     }
 
     async function enviarMensagemManual() {
         const input = document.getElementById('msg-input');
         const texto = input.value.trim();
         if(!texto || !window.chatState.currentName) return;
-        if (texto.toUpperCase().includes('COLETA:') && texto.toUpperCase().includes('ENTREGA:')) {
+        if (texto.toUpperCase().includes('COLETA:')) {
             prepararPedido(texto);
             input.value = '';
         } else {
@@ -299,25 +299,18 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     }
 
     function prepararPedido(texto) {
-        const getField = (label) => {
-            const regex = new RegExp(`${label}:\\s*(.*)`, 'i');
-            const match = texto.match(regex);
-            return match ? match[1].trim() : '';
-        };
-        const solicitante = getField('SOLICITANTE');
-        const mercadoria = getField('MERCADORIA');
-        const coleta = getField('COLETA');
-        const entrega = getField('ENTREGA');
-        const horario = getField('HORÁRIO PARA PEGAR ENCOMENDA');
-        const obs = getField('OBS');
+        const getVal = (regex) => (texto.match(regex) || [])[1]?.trim() || '';
+        
+        document.getElementById('p-solicitante').value = getVal(/SOLICITANTE:\s*(.*)/i);
+        document.getElementById('p-origem').value = getVal(/COLETA:\s*(.*)/i);
+        document.getElementById('p-destino').value = getVal(/ENTREGA:\s*(.*)/i);
+        document.getElementById('p-horario-coleta').value = getVal(/HORÁRIO PARA PEGAR ENCOMENDA:\s*(.*)/i);
+        document.getElementById('p-obs').value = getVal(/OBS:\s*(.*)/i);
+        
+        const merc = getVal(/MERCADORIA:\s*(.*)/i);
+        if(merc) document.getElementById('p-mercadoria').value = merc.charAt(0).toUpperCase() + merc.slice(1).toLowerCase();
 
-        document.getElementById('p-solicitante').value = solicitante;
-        document.getElementById('p-mercadoria').value = mercadoria || 'Coleta';
-        document.getElementById('p-origem').value = coleta;
-        document.getElementById('p-destino').value = entrega;
-        document.getElementById('p-horario-manual').value = horario;
-        document.getElementById('p-obs').value = obs;
-        document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(coleta)}&daddr=${encodeURIComponent(entrega)}&output=embed`;
+        document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(document.getElementById('p-origem').value)}&daddr=${encodeURIComponent(document.getElementById('p-destino').value)}&output=embed`;
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
         new bootstrap.Modal(document.getElementById('modalPedido')).show();
@@ -327,6 +320,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     function proximoPassoPedido() {
         document.getElementById('passo-conferencia').style.display = 'none';
         document.getElementById('passo-finalizacao').style.display = 'block';
+        atualizarTotal();
     }
 
     function voltarPasso() {
@@ -337,24 +331,39 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     function atualizarTotal() {
         const vKm = parseFloat(document.getElementById('p-tabela-km').value);
         const vZona = parseFloat(document.getElementById('p-zona').value);
-        const total = (10 * vKm) + vZona;
+        const vPico = parseFloat(document.getElementById('p-horario-ajuste').value);
+        const vPrio = parseFloat(document.getElementById('p-prioridade').value);
+        const total = (10 * vKm) + vZona + vPico + vPrio;
+
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-        const origem = document.getElementById('p-origem').value;
-        const destino = document.getElementById('p-destino').value;
-        document.getElementById('resumo-detalhado').innerHTML = `<b>DE:</b> ${origem.substring(0,30)}...<br><b>PARA:</b> ${destino.substring(0,30)}...`;
+
+        const resumoHtml = `
+            <b>ROTA:</b> ${document.getElementById('p-origem').value.substring(0,20)}... → ${document.getElementById('p-destino').value.substring(0,20)}...<br>
+            <b>SOLICITANTE:</b> ${document.getElementById('p-solicitante').value}<br>
+            <b>CARGA:</b> ${document.getElementById('p-mercadoria').value} | <b>HORÁRIO:</b> ${document.getElementById('p-horario-coleta').value}
+        `;
+        document.getElementById('resumo-detalhado').innerHTML = resumoHtml;
     }
 
     async function salvarPedidoAPI() {
         const pedidoId = "RDO-" + Math.floor(1000 + Math.random() * 9000);
+        const de = document.getElementById('p-origem').value;
+        const para = document.getElementById('p-destino').value;
+        const valor = document.getElementById('view-valor-final').innerText;
+        const sol = document.getElementById('p-solicitante').value;
+        const merc = document.getElementById('p-mercadoria').value;
+        const hor = document.getElementById('p-horario-coleta').value;
+        const obs = document.getElementById('p-obs').value;
+
         const msgFormatada = `📦 *LOGÍSTICA RDO*\n\n` +
             `*ID:* ${pedidoId}\n` +
-            `*Solicitante:* ${document.getElementById('p-solicitante').value}\n` +
-            `*Mercadoria:* ${document.getElementById('p-mercadoria').value}\n` +
-            `*De:* ${document.getElementById('p-origem').value}\n` +
-            `*HORÁRIO PARA PEGAR ENCOMENDA:* ${document.getElementById('p-horario-manual').value}\n` +
-            `*Para:* ${document.getElementById('p-destino').value}\n` +
-            `*OBS:* ${document.getElementById('p-obs').value}\n` +
-            `*Valor:* ${document.getElementById('view-valor-final').innerText}\n\n` +
+            `*Solicitante:* ${sol}\n` +
+            `*Mercadoria:* ${merc}\n` +
+            `*De:* ${de}\n` +
+            `*HORÁRIO P/ PEGAR ENCOMENDA:* ${hor}\n` +
+            `*Para:* ${para}\n` +
+            `*OBS:* ${obs}\n` +
+            `*Valor:* ${valor}\n\n` +
             `⏳ Aguardando confirmação do Motoboy!`;
 
         await API.call('addmensagens_chat', {
@@ -371,5 +380,4 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     }
 
     carregarDados();
-    setInterval(() => { if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName); }, 8000);
 </script>
