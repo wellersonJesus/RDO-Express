@@ -1,5 +1,4 @@
 <div class="row g-3 h-100">
-    <!-- Topo -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -9,22 +8,24 @@
                         <h5 class="fw-bold mb-0">
                             <span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express</span>
                         </h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento</small>
+                        <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento Profissional</small>
                     </div>
                 </div>
                 <div class="text-end">
+                    <span id="sync-text" class="fw-bold text-dark me-2" style="font-size: 0.75rem;">Serviço Ativo</span>
                     <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger" style="cursor:pointer;" onclick="carregarDados()"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="col-md-4">
-        <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 580px; overflow-y: auto;">
+        <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 600px; overflow-y: auto;">
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">ATENDENTES</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">
+                        ATENDENTES
+                    </button>
                 </h2>
                 <div id="collAtendentes" class="accordion-collapse collapse show">
                     <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
@@ -32,7 +33,9 @@
             </div>
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">GRUPOS / OUTROS</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">
+                        GRUPOS / OUTROS
+                    </button>
                 </h2>
                 <div id="collGrupos" class="accordion-collapse collapse show">
                     <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
@@ -41,9 +44,8 @@
         </div>
     </div>
 
-    <!-- Janela de Chat -->
     <div class="col-md-8">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 580px;">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
                     <div id="chat-header-avatar"></div>
@@ -53,56 +55,27 @@
                     </div>
                 </div>
                 <div class="dropdown">
-                    <button class="btn border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Ver Modelo</a></li>
+                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
                     </ul>
                 </div>
             </div>
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Escreva aqui..."></textarea>
-                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Status -->
-<div class="modal fade" id="modalStatusPedido" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="fw-bold mb-0">Atualizar Status</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="status-msg-id">
-                <label class="small fw-bold text-muted mb-1 text-uppercase">Status</label>
-                <select id="status-emoji-sel" class="form-select form-select-sm border-0 bg-light mb-3">
-                    <option value="⏳">⏳ Aguardando confirmação</option>
-                    <option value="📦">📦 Em rota</option>
-                    <option value="✅">✅ Finalizado</option>
-                    <option value="⭕">⭕ Cancelado</option>
-                </select>
-
-                <label class="small fw-bold text-muted mb-1 text-uppercase">Motoboy</label>
-                <select id="status-motoboy-sel" class="form-select form-select-sm border-0 bg-light mb-1">
-                    <option value="">Selecione o motoboy...</option>
-                </select>
-                <div id="motoboy-error" class="text-danger mb-3" style="font-size: 0.65rem; display: none;">* Selecione o motoboy para salvar.</div>
-
-                <button class="btn btn-danger w-100 rounded-pill fw-bold btn-sm mt-2" onclick="salvarStatusMensagem()">SALVAR</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Modelo de Mensagem -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -110,16 +83,112 @@
                 <h6 class="fw-bold mb-0">Modelo de Solicitação</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div id="texto-modelo-copiar" class="p-3 bg-light rounded-3 small mb-3" style="white-space: pre-wrap; cursor: pointer;" onclick="copiarModelo()">
-SOLICITANTE:
-MERCADORIA:
-COLETA:
-HORÁRIO PARA PEGAR ENCOMENDA:
-ENTREGA:
+            <div class="modal-body py-3">
+                <div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
+
+SOLICITANTE: ...
+MERCADORIA: Coleta, Envelope, Sacola, Outros ...
+COLETA: 
+ENTREGA: 
+HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: 
 OBS:
+
+Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
+                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="passo-conferencia">
+                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 300px;">
+                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted" style="font-size: 10px;">COLETA (DE)</label>
+                            <input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm" onchange="atualizarMapa()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted" style="font-size: 10px;">ENTREGA (PARA)</label>
+                            <input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm" onchange="atualizarMapa()">
+                        </div>
+                    </div>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">PREENCHER FORMULÁRIO</button>
                 </div>
-                <button class="btn btn-danger w-100 rounded-pill fw-bold btn-sm" onclick="copiarModelo()">COPIAR MODELO</button>
+
+                <div id="passo-finalizacao" style="display:none;">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">SOLICITANTE</label>
+                            <input type="text" id="p-solicitante" class="form-control border-0 bg-light shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label>
+                            <input type="text" id="p-horario-manual" class="form-control border-0 bg-light shadow-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">VALOR KM</label>
+                            <select id="p-tabela-km" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="2.20">2,20</option>
+                                <option value="2.40">2,40</option>
+                                <option value="3.00">3,00</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">MERCADORIA</label>
+                            <select id="p-mercadoria" class="form-select border-0 bg-light shadow-sm">
+                                <option value="Coleta">Coleta</option>
+                                <option value="Sacola">Sacola</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">PRIORIDADE</label>
+                            <select id="p-prioridade" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Normal</option>
+                                <option value="7">Urgente (+7)</option>
+                                <option value="10">Agendado (+10)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="small fw-bold text-muted">LOCALIDADE</label>
+                            <select id="p-zona" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Centro (Taxa 0)</option>
+                                <option value="5">Zona Sul (Savassi) (+5)</option>
+                                <option value="7">Zona Norte (Venda Nova) (+7)</option>
+                                <option value="7">Zona Leste (Santa Efigênia) (+7)</option>
+                                <option value="7">Zona Oeste (Buritis) (+7)</option>
+                                <option value="10">Pampulha (Castelo) (+10)</option>
+                                <option value="15">Barreiro (Barreiro de Baixo) (+15)</option>
+                                <option value="10">Nordeste (Cidade Nova) (+10)</option>
+                                <option value="10">Noroeste (Caiçara) (+10)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="small fw-bold text-muted">OBSERVAÇÕES</label>
+                            <textarea id="p-obs" class="form-control border-0 bg-light shadow-sm" rows="1"></textarea>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="p-3 rounded-4 text-center" style="background: #FF0000; color: white;">
+                                <h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-light w-50 rounded-pill border" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR LOGÍSTICA</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -127,76 +196,33 @@ OBS:
 
 <style>
     .no-arrow::after { display: none !important; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 2px; right: 12px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-wrapper { position: relative; display: flex; flex-direction: column; max-width: 85%; }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); width: 100%; position: relative; }
-    .msg-mine { align-self: flex-end; }
-    .msg-mine .msg-bubble { background-color: #dcf8c6; border: 1px solid #c7e5b0; }
-    .status-emoji-footer { font-size: 1.2rem; margin-top: 2px; cursor: pointer; display: inline-block; }
-    .chat-date-separator { align-self: center; background: #d1f4fd; padding: 5px 12px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; color: #555; margin: 10px 0; }
-    .input-error { border: 2px solid #FF0000 !important; background-color: #fff5f5 !important; }
-    .cursor-pointer { cursor: pointer; }
+    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+    .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
+    .date-divider { text-align: center; margin: 15px 0; }
+    .date-divider span { background: #e1f3fb; padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; color: #555; font-weight: bold; }
 </style>
 
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
 
-    // Correção de Data ISO para DD-MM-AAAA e Labels Amigáveis
-    function formatarDataInterface(dataBruta) {
-        if(!dataBruta) return "Hoje";
-        
-        let d;
-        if(dataBruta.includes('T')) {
-            d = new Date(dataBruta);
-        } else {
-            const partes = dataBruta.split('/');
-            d = new Date(partes[2], partes[1] - 1, partes[0]);
-        }
-
-        if(isNaN(d.getTime())) return dataBruta;
-
-        const dia = String(d.getDate()).padStart(2, '0');
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const ano = d.getFullYear();
-        const formatada = `${dia}-${mes}-${ano}`;
-
-        const hoje = new Date();
-        hoje.setHours(0,0,0,0);
-        const ontem = new Date(hoje);
-        ontem.setDate(hoje.getDate() - 1);
-        
-        const dCompare = new Date(d);
-        dCompare.setHours(0,0,0,0);
-
-        if (dCompare.getTime() === hoje.getTime()) return "Hoje";
-        if (dCompare.getTime() === ontem.getTime()) return "Ontem";
-        return formatada;
-    }
-
     async function carregarDados() {
         const configs = await API.call('getbotconfig');
         renderizar(configs);
-        await carregarMotoboys();
         if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
     }
 
-    async function carregarMotoboys() {
-        const colab = await API.call('getcolaboradores') || [];
-        const motoboys = colab.filter(c => String(c.cargo || '').toLowerCase() === 'motoboy');
-        document.getElementById('status-motoboy-sel').innerHTML = '<option value="">Selecione o Motoboy...</option>' + 
-            motoboys.map(m => `<option value="${m.username}">${m.username}</option>`).join('');
-    }
-
     function renderizar(configs) {
-        const isOnline = (u) => localStorage.getItem('bot_status') === 'true' && String(u.status) === 'true';
+        const botStatus = localStorage.getItem('bot_status') === 'true';
         const renderItem = (u) => {
             const sel = window.chatState.currentName === u.username;
+            const online = botStatus && (String(u.status) === 'true');
             return `<button onclick="selecionarChat('${u.username}', '${u.imagem}')" class="list-group-item list-group-item-action border-0 ${sel ? 'bg-danger text-white' : ''}">
                 <div class="d-flex align-items-center px-2">
                     <div class="position-relative">
                         <img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38">
-                        <span class="status-dot ${isOnline(u) ? 'bg-success' : 'bg-secondary'}"></span>
+                        <span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span>
                     </div>
                     <span class="fw-bold small">${u.username}</span>
                 </div>
@@ -217,99 +243,91 @@ OBS:
         const todasMsgs = await API.call('getmensagens_chat') || [];
         const filtradas = todasMsgs.filter(m => String(m.jid_numero).includes(nome));
         const container = document.getElementById('chat-messages-container');
-        
-        let html = '';
-        let ultimaDataLabel = '';
-
+        let html = ''; let ultimaData = '';
         filtradas.forEach(m => {
-            const dataLabel = formatarDataInterface(m.data);
-            if (dataLabel !== ultimaDataLabel) {
-                html += `<div class="chat-date-separator text-uppercase">${dataLabel}</div>`;
-                ultimaDataLabel = dataLabel;
-            }
-
-            const isPedido = String(m.finalizado) === 'true';
-            const status = m.status_emoji || '⏳';
-
-            html += `
-            <div class="msg-wrapper ${isPedido ? 'msg-mine' : ''} mb-2">
-                <div class="msg-bubble">
-                    <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto.replace(/\*(.*?)\*/g, '<b>$1</b>')}</div>
-                    <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
-                </div>
-                ${isPedido ? `<div class="status-emoji-footer cursor-pointer" onclick="abrirModalStatus('${m.id}', '${status}', '${m.motoboy}')">${status}</div>` : ''}
+            if (m.data !== ultimaData) { html += `<div class="date-divider"><span>${m.data}</span></div>`; ultimaData = m.data; }
+            const isPedido = String(m.finalizado).toUpperCase() === 'TRUE';
+            html += `<div class="msg-bubble ${isPedido ? 'msg-mine' : ''} mb-2">
+                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
+                <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
             </div>`;
         });
-        
         container.innerHTML = html;
         container.scrollTop = container.scrollHeight;
     }
 
-    function abrirModalStatus(id, emoji, motoboyRaw) {
-        const selMotoboy = document.getElementById('status-motoboy-sel');
-        selMotoboy.classList.remove('input-error');
-        document.getElementById('motoboy-error').style.display = 'none';
-        document.getElementById('status-msg-id').value = id;
-        document.getElementById('status-emoji-sel').value = emoji;
-        
-        let nomeSalvo = "";
-        if (motoboyRaw && motoboyRaw.includes("Motoboy: ")) {
-            nomeSalvo = motoboyRaw.split("Motoboy: ")[1].trim();
-        }
-        
-        selMotoboy.value = nomeSalvo;
-        new bootstrap.Modal(document.getElementById('modalStatusPedido')).show();
-    }
-
-    async function salvarStatusMensagem() {
-        const id = document.getElementById('status-msg-id').value;
-        const emoji = document.getElementById('status-emoji-sel').value;
-        const motoboyNome = document.getElementById('status-motoboy-sel').value;
-
-        if (!motoboyNome) {
-            document.getElementById('status-motoboy-sel').classList.add('input-error');
-            document.getElementById('motoboy-error').style.display = 'block';
-            return;
-        }
-
-        let desc = "";
-        if(emoji === '📦') desc = `Pedido em rota. Motoboy: ${motoboyNome}`;
-        else if(emoji === '⭕') desc = `Pedido CANCELADO! Motoboy: ${motoboyNome}`;
-        else if(emoji === '✅') desc = `Pedido CONCLUÍDO. Motoboy: ${motoboyNome}`;
-        else desc = `Aguardando confirmação! Motoboy: ${motoboyNome}`;
-
-        await API.call('addmensagens_chat', { id: id, status_emoji: emoji, motoboy: desc });
-        bootstrap.Modal.getInstance(document.getElementById('modalStatusPedido')).hide();
-        await carregarMensagensBanco(window.chatState.currentName);
-    }
-
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
-    
-    function copiarModelo() {
-        const texto = document.getElementById('texto-modelo-copiar').innerText;
-        navigator.clipboard.writeText(texto).then(() => {
-            alert('Modelo copiado!');
-            bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
-        });
+
+    function copiarModeloParaChat() {
+        const texto = document.getElementById('texto-modelo-copia').innerText;
+        document.getElementById('msg-input').value = texto;
+        bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
+    }
+
+    function atualizarMapa() {
+        const o = encodeURIComponent(document.getElementById('p-origem').value);
+        const d = encodeURIComponent(document.getElementById('p-destino').value);
+        if(o && d) document.getElementById('mapa-iframe').src = `https://www.google.com/maps?saddr=${o}&daddr=${d}&output=embed`;
     }
 
     function enviarMensagemManual() {
         const input = document.getElementById('msg-input');
-        if(!input.value.trim() || !window.chatState.currentName) return;
-        
-        API.call('addmensagens_chat', { 
-            id: Date.now().toString(), 
-            jid_numero: window.chatState.currentName, 
-            texto: input.value, 
-            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-            data: new Date().toLocaleDateString('pt-BR'),
-            finalizado: "false" 
-        }).then(() => {
-            input.value = '';
-            carregarMensagensBanco(window.chatState.currentName);
-        });
+        const t = input.value.trim();
+        if(!t) return;
+        if(t.toUpperCase().includes('SOLICITANTE:')) {
+            const getF = (label) => {
+                const regex = new RegExp(`${label}:\\s*(.*)`, 'i');
+                const match = t.match(regex);
+                return match ? match[1].trim() : '';
+            };
+            document.getElementById('p-solicitante').value = getF('SOLICITANTE');
+            document.getElementById('p-mercadoria').value = getF('MERCADORIA');
+            document.getElementById('p-origem').value = getF('COLETA');
+            document.getElementById('p-destino').value = getF('ENTREGA');
+            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA');
+            atualizarMapa(); atualizarTotal(); input.value = '';
+            document.getElementById('passo-conferencia').style.display = 'block';
+            document.getElementById('passo-finalizacao').style.display = 'none';
+            new bootstrap.Modal(document.getElementById('modalPedido')).show();
+        } else {
+            API.call('addmensagens_chat', { 
+                id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, 
+                hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+                data: new Date().toLocaleDateString('pt-BR'), finalizado: "false" 
+            }).then(() => { input.value = ''; carregarMensagensBanco(window.chatState.currentName); });
+        }
     }
 
+    function proximoPassoPedido() { 
+        document.getElementById('passo-conferencia').style.display = 'none'; 
+        document.getElementById('passo-finalizacao').style.display = 'block'; 
+    }
+    
+    function voltarPasso() { 
+        document.getElementById('passo-conferencia').style.display = 'block'; 
+        document.getElementById('passo-finalizacao').style.display = 'none'; 
+    }
+
+    function atualizarTotal() {
+        const km = parseFloat(document.getElementById('p-tabela-km').value);
+        const zona = parseFloat(document.getElementById('p-zona').value);
+        const prio = parseFloat(document.getElementById('p-prioridade').value);
+        // Simulação de 10km para o cálculo visual
+        const total = (10 * km) + zona + prio;
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
+
+    async function salvarPedidoAPI() {
+        const pid = "RDO-" + Math.floor(1000 + Math.random() * 9000);
+        const texto = `📦 *LOGÍSTICA RDO*\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO PARA PEGAR ENCOMENDA: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nOBS: ${document.getElementById('p-obs').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        await API.call('addmensagens_chat', { 
+            id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: texto, 
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            data: new Date().toLocaleDateString('pt-BR'), finalizado: "true", 
+            pedido_id: pid, status_emoji: "⏳", motoboy: "Aguardando" 
+        });
+        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+        await carregarMensagensBanco(window.chatState.currentName);
+    }
     carregarDados();
-    setInterval(() => { if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName); }, 10000);
 </script>
