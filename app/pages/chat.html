@@ -69,47 +69,106 @@
     </div>
 </div>
 
-<!-- Modal Checkout -->
+<!-- Modal Checkout Refinado -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Checkout</h5>
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout Logístico</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="passo-conferencia">
+                    <div id="alert-pico-manual" class="alert alert-warning py-2 small border-0 rounded-3 mb-2 d-none">
+                        <i class="bi bi-clock-fill me-2"></i> <strong>Aviso:</strong> Horário de pico selecionado (+ R$ 5,00).
+                    </div>
                     <div class="rounded-4 overflow-hidden border mb-3" style="height: 300px;">
                         <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0" style="border:0"></iframe>
                     </div>
-                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA VALORES</button>
-                </div>
-                <div id="passo-finalizacao" style="display:none;">
-                    <div class="row g-3">
+                    <div class="row g-2 mb-3">
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">TABELA KM</label>
-                            <select id="p-tabela-km" class="form-select border-danger" onchange="atualizarTotal()">
-                                <option value="2.20">2,20</option>
+                            <label class="small fw-bold text-muted text-uppercase">Origem (Coleta)</label>
+                            <input type="text" id="p-origem" class="form-control form-control-sm bg-light border-0 shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted text-uppercase">Destino (Entrega)</label>
+                            <input type="text" id="p-destino" class="form-control form-control-sm bg-light border-0 shadow-sm">
+                        </div>
+                    </div>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">CONFIGURAR VALORES <i class="bi bi-gear-fill ms-2"></i></button>
+                </div>
+
+                <div id="passo-finalizacao" style="display:none;">
+                    <div class="row g-2">
+                        <!-- Tabela KM -->
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">TABELA KM (R$)</label>
+                            <select id="p-tabela-km" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="2.20" selected>2,20 (Padrão)</option>
+                                <option value="2.40">2,40</option>
                                 <option value="3.00">3,00</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="small fw-bold text-muted">ADICIONAIS</label>
-                            <select id="p-adicionais" class="form-select" onchange="atualizarTotal()">
-                                <option value="0">Nenhum</option>
-                                <option value="10">Retorno (+10,00)</option>
-                                <option value="5">Urgência (+5,00)</option>
+                        <!-- Localidade / Zonas -->
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">LOCALIDADE (ZONA)</label>
+                            <select id="p-zona" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Centro / Base (R$ 0)</option>
+                                <option value="5">Zona Sul (+ R$ 5,00)</option>
+                                <option value="7">Zona Norte (+ R$ 7,00)</option>
+                                <option value="10">Zona Leste (+ R$ 10,00)</option>
+                                <option value="12">Zona Oeste (+ R$ 12,00)</option>
                             </select>
                         </div>
+                        <!-- Horário de Pico -->
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">HORÁRIO</label>
+                            <select id="p-horario" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Horário Normal</option>
+                                <option value="5">Pico 16h às 18h (+ R$ 5,00)</option>
+                            </select>
+                        </div>
+
+                        <!-- Prioridade -->
+                        <div class="col-md-6 mt-2">
+                            <label class="small fw-bold text-muted">PRIORIDADE</label>
+                            <select id="p-prioridade" class="form-select border-0 bg-light shadow-sm" onchange="atualizarTotal()">
+                                <option value="0">Comum</option>
+                                <option value="5">Programada (+ R$ 5,00)</option>
+                                <option value="7.5">Urgência (+ R$ 7,50)</option>
+                            </select>
+                        </div>
+                        <!-- Mercadoria -->
+                        <div class="col-md-6 mt-2">
+                            <label class="small fw-bold text-muted">MERCADORIA</label>
+                            <select id="p-mercadoria" class="form-select border-0 bg-light shadow-sm">
+                                <option value="coleta">Coleta</option>
+                                <option value="envelope">Envelope</option>
+                                <option value="sacola">Sacola</option>
+                                <option value="bolsa">Bolsa</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <label class="small fw-bold text-muted">OBSERVAÇÕES (LOCALIDADE/REFERENCIAS/DETALHES)</label>
+                            <textarea id="p-obs" class="form-control border-0 bg-light shadow-sm" rows="2" placeholder="Ex: Próximo ao mercado, interfone estragado..."></textarea>
+                        </div>
+
                         <div class="col-12 mt-3">
-                            <div class="card border-0 rounded-4 bg-danger text-white p-3 text-center">
-                                <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
+                            <div class="card border-0 rounded-4" style="background-color: #FF0000;">
+                                <div class="card-body d-flex justify-content-between align-items-center py-3 text-white">
+                                    <div>
+                                        <p class="mb-0 small text-uppercase fw-bold opacity-75">Total Final</p>
+                                        <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
+                                    </div>
+                                    <div class="text-end small opacity-75" id="detalhe-calculo">Ajuste os valores</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-light w-50 rounded-pill border" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-danger w-50 rounded-pill fw-bold" onclick="salvarPedidoUnificado()">FINALIZAR PEDIDO</button>
+                        <button class="btn btn-light w-50 rounded-pill fw-bold" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-secondary w-50 rounded-pill fw-bold text-white" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
             </div>
@@ -211,8 +270,12 @@
         window.chatState.currentLocations = { col, ent };
         
         document.getElementById('mapa-iframe').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(col)}&daddr=${encodeURIComponent(ent)}&output=embed`;
+        document.getElementById('p-origem').value = col;
+        document.getElementById('p-destino').value = ent;
+
         document.getElementById('passo-conferencia').style.display = 'block';
         document.getElementById('passo-finalizacao').style.display = 'none';
+        
         new bootstrap.Modal(document.getElementById('modalPedido')).show();
         atualizarTotal();
     }
@@ -228,25 +291,51 @@
     }
 
     function atualizarTotal() {
-        const total = (10 * parseFloat(document.getElementById('p-tabela-km').value)) + parseFloat(document.getElementById('p-adicionais').value);
+        const kmPadrao = 10; // KM simulado
+        const vKm = parseFloat(document.getElementById('p-tabela-km').value);
+        const vZona = parseFloat(document.getElementById('p-zona').value);
+        const vPico = parseFloat(document.getElementById('p-horario').value);
+        const vPrio = parseFloat(document.getElementById('p-prioridade').value);
+        
+        const total = (kmPadrao * vKm) + vZona + vPico + vPrio;
+        
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        document.getElementById('detalhe-calculo').innerText = `KM: ${vKm} | Zona: ${vZona} | Pico: ${vPico} | Prio: ${vPrio}`;
+        
+        const alertPico = document.getElementById('alert-pico-manual');
+        if(vPico > 0) alertPico.classList.remove('d-none'); else alertPico.classList.add('d-none');
     }
 
-    async function salvarPedidoUnificado() {
+    async function salvarPedidoAPI() {
         const nome = window.chatState.currentName;
         const pedidoId = "RDO-" + Math.floor(1000 + Math.random() * 9000);
+        
         const valorFinal = document.getElementById('view-valor-final').innerText;
+        const origem = document.getElementById('p-origem').value;
+        const destino = document.getElementById('p-destino').value;
+        const mercadoria = document.getElementById('p-mercadoria').value;
+        const prioText = document.querySelector('#p-prioridade option:checked').text;
+        const zonaText = document.querySelector('#p-zona option:checked').text;
+        const obs = document.getElementById('p-obs').value;
 
         await API.call('addchatlive', {
             id: "'" + pedidoId,
             username: nome,
-            coleta: window.chatState.currentLocations.col,
-            entrega: window.chatState.currentLocations.ent,
+            coleta: origem,
+            entrega: destino,
             status_emoji: "⏳ aguardando ...."
         });
 
-        // Título dinâmico usando o nome do contato/grupo (jid_numero)
-        const msgUnificada = `📦 PEDIDO ${nome.toUpperCase()} GERADO COM SUCESSO.\n\nID: ${pedidoId}\nColeta: ${window.chatState.currentLocations.col}\nEntrega: ${window.chatState.currentLocations.ent}\nValor: ${valorFinal}\n\n⏳ Aguardando confirmação do Motoboy!`;
+        const msgUnificada = `📦 *PEDIDO RDO EXPRESS*\n\n` +
+            `*ID:* ${pedidoId}\n` +
+            `*Origem:* ${origem}\n` +
+            `*Destino:* ${destino}\n` +
+            `*Zona:* ${zonaText}\n` +
+            `*Mercadoria:* ${mercadoria.toUpperCase()}\n` +
+            `*Prioridade:* ${prioText}\n` +
+            `*Valor:* ${valorFinal}\n` +
+            `*Obs:* ${obs || 'Sem observações'}\n\n` +
+            `⏳ Aguardando confirmação do Motoboy!`;
 
         await API.call('addmensagens_chat', {
             id: "'" + Date.now(),
@@ -259,7 +348,7 @@
 
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         await carregarMensagensBanco(nome);
-        Swal.fire('Sucesso', `Pedido ${pedidoId} gerado!`, 'success');
+        Swal.fire('Sucesso', `Pedido ${pedidoId} finalizado!`, 'success');
     }
 
     carregarDados();
