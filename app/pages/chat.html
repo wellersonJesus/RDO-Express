@@ -92,7 +92,14 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow rounded-4"><div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Modelo de Solicitação</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body py-3"><div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Preencha os dados:&#10;&#10;SOLICITANTE: ...&#10;MERCADORIA: ...&#10;COLETA: ...&#10;ENTREGA: ...&#10;HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: ...&#10;OBS:</div><button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button></div></div></div></div>
+<div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow rounded-4"><div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Modelo de Solicitação</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body py-3"><div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Preencha os dados:
+
+SOLICITANTE: ...
+MERCADORIA: ...
+COLETA: ...
+ENTREGA: ...
+HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: ...
+OBS:</div><button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button></div></div></div></div>
 
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow rounded-4"><div class="modal-header border-0 pb-0"><h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="passo-conferencia"><div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 250px;"><iframe id="mapa-iframe" width="100%" height="100%" frameborder="0"></iframe></div><div class="row g-2 mb-3"><div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm" onchange="atualizarMapa()"></div><div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm" onchange="atualizarMapa()"></div></div><button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">PREENCHER FORMULÁRIO</button></div><div id="passo-finalizacao" style="display:none;"><div class="row g-2"><div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div><div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div><div class="col-md-4"><label class="small fw-bold text-muted">VALOR KM</label><select id="p-tabela-km" class="form-select border-0 bg-light" onchange="atualizarTotal()"><option value="2.20">2,20</option><option value="2.40">2,40</option><option value="3.00">3,00</option></select></div><div class="col-md-4"><label class="small fw-bold text-muted">MERCADORIA</label><select id="p-mercadoria" class="form-select border-0 bg-light"><option value="Coleta">Coleta</option><option value="Sacola">Sacola</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option></select></div><div class="col-md-4"><label class="small fw-bold text-muted">PRIORIDADE</label><select id="p-prioridade" class="form-select border-0 bg-light" onchange="atualizarTotal()"><option value="0">Normal</option><option value="7">Urgente (+7)</option><option value="10">Agendado (+10)</option></select></div><div class="col-12"><label class="small fw-bold text-muted">LOCALIDADE</label><select id="p-zona" class="form-select border-0 bg-light" onchange="atualizarTotal()"><option value="0">Centro</option><option value="5">Zona Sul (+5)</option><option value="7">Zona Norte/Leste/Oeste (+7)</option><option value="10">Pampulha/Nordeste (+10)</option><option value="15">Barreiro (+15)</option></select></div><div class="col-12 mt-3"><div class="p-3 rounded-4 text-center bg-danger text-white"><h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1></div></div></div><div class="d-flex gap-2 mt-4"><button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button><button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button></div></div></div></div></div></div>
 
@@ -103,10 +110,11 @@
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
     .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
     .msg-pedido { cursor: pointer; transition: transform 0.2s; }
-    .msg-pedido:hover { transform: scale(1.01); }
+    .msg-pedido:hover { transform: scale(1.005); background-color: #f8f9fa; }
     .date-divider { text-align: center; margin: 15px 0; }
     .date-divider span { background: #e1f3fb; padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; color: #555; font-weight: bold; }
-    .status-footer { font-size: 1.1rem; position: absolute; left: 8px; bottom: 4px; cursor: help; }
+    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; cursor: help; transition: transform 0.2s; }
+    .status-footer:hover { transform: scale(1.3); }
 </style>
 
 <script>
@@ -139,9 +147,11 @@
             const isPedido = String(m.finalizado).toUpperCase() === 'TRUE';
             const emoji = m.status_emoji || '⏳';
             const motoboy = m.motoboy || 'Aguardando';
+            
+            // Alterado title para exibir apenas o dado limpo
             html += `<div class="msg-bubble ${isPedido ? 'msg-mine msg-pedido' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${emoji}', '${motoboy}')"` : ''}>
-                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem; margin-bottom: 5px;">${m.texto}</div>
-                ${isPedido ? `<div class="status-footer" title="Motoboy: ${motoboy}">${emoji}</div>` : ''}
+                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem; margin-bottom: 8px;">${m.texto}</div>
+                ${isPedido ? `<div class="status-footer" title="${motoboy}">${emoji}</div>` : ''}
                 <div class="text-end text-muted" style="font-size: 0.6rem;">${m.hora}</div>
             </div>`;
         });
@@ -149,7 +159,6 @@
         document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight;
     }
 
-    // Busca motoboys dinamicamente no banco
     async function carregarMotoboys(selecionado) {
         const colab = await API.call('getcolaboradores') || [];
         const motoboys = colab.filter(c => c.cargo && c.cargo.toLowerCase() === 'motoboy');
@@ -157,8 +166,7 @@
         select.innerHTML = '<option value="Aguardando">Aguardando...</option>';
         motoboys.forEach(m => {
             const opt = document.createElement('option');
-            opt.value = m.username;
-            opt.innerText = m.username;
+            opt.value = m.username; opt.innerText = m.username;
             if(m.username === selecionado) opt.selected = true;
             select.appendChild(opt);
         });
@@ -184,7 +192,7 @@
         }
     }
 
-    // Handlers Auxiliares
+    // Auxiliares (Mapa, Total, Envio)
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
     function copiarModeloParaChat() { document.getElementById('msg-input').value = document.getElementById('texto-modelo-copia').innerText; bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide(); }
     function atualizarMapa() { const o = encodeURIComponent(document.getElementById('p-origem').value); const d = encodeURIComponent(document.getElementById('p-destino').value); if(o && d) document.getElementById('mapa-iframe').src = `https://www.google.com/maps?saddr=${o}&daddr=${d}&output=embed`; }
