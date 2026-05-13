@@ -106,6 +106,35 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     </div>
 </div>
 
+<!-- Modal Status do Pedido -->
+<div class="modal fade" id="modalStatusPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">Atualizar Status</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="status-msg-id">
+                <label class="small fw-bold text-muted mb-1">STATUS</label>
+                <select id="status-emoji-sel" class="form-select form-select-sm border-0 bg-light mb-3">
+                    <option value="⏳">⏳ Aguardando confirmação</option>
+                    <option value="📦">📦 Em rota</option>
+                    <option value="✅">✅ Finalizado</option>
+                    <option value="⭕">⭕ Cancelado</option>
+                </select>
+
+                <label class="small fw-bold text-muted mb-1">MOTOBOY</label>
+                <select id="status-motoboy-sel" class="form-select form-select-sm border-0 bg-light mb-4">
+                    <option value="">Selecione o Motoboy...</option>
+                </select>
+
+                <button class="btn btn-danger w-100 rounded-pill fw-bold btn-sm" onclick="salvarStatusMensagem()">SALVAR STATUS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Checkout -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -180,7 +209,6 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                             <textarea id="p-obs" class="form-control border-0 bg-light shadow-sm" rows="1" oninput="atualizarTotal()"></textarea>
                         </div>
 
-                        <!-- Card Total Final Centralizado -->
                         <div class="col-12 mt-3">
                             <div class="card border-0 rounded-4 overflow-hidden" style="background-color: #FF0000; color: white;">
                                 <div class="card-body p-4 text-center">
@@ -206,7 +234,10 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
     .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
+    .msg-clickable { cursor: pointer; transition: transform 0.1s; }
+    .msg-clickable:hover { transform: scale(1.01); }
     .reply-badge { position: absolute; bottom: -10px; right: 10px; background: #FF0000; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.6rem; font-weight: bold; }
+    .status-emoji-footer { position: absolute; bottom: 5px; left: 10px; font-size: 0.8rem; }
     .dropdown-item:active { background-color: #FF0000; }
 </style>
 
@@ -221,7 +252,18 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
     async function carregarDados() {
         const configs = await API.call('getbotconfig');
         renderizar(configs);
+        await carregarMotoboys();
         if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
+    }
+
+    async function carregarMotoboys() {
+        const colaboradores = await API.call('getcolaboradores') || [];
+        const motoboys = colaboradores.filter(c => c.identificar === 'motoboy');
+        const select = document.getElementById('status-motoboy-sel');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Selecione o Motoboy...</option>' + 
+            motoboys.map(m => `<option value="${m.username}">${m.username}</option>`).join('');
+        select.value = currentVal;
     }
 
     function renderizar(configs) {
@@ -257,13 +299,41 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         const container = document.getElementById('chat-messages-container');
         container.innerHTML = filtradas.map(m => {
             const isPedido = m.finalizado === 'true' || m.finalizado === true;
-            return `<div class="msg-bubble ${isPedido ? 'msg-mine' : ''} mb-3">
-                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">${formatarMensagem(m.texto)}</div>
+            const msgClass = isPedido ? 'msg-mine msg-clickable' : '';
+            const clickAction = isPedido ? `onclick="abrirModalStatus('${m.id}')"` : '';
+            const statusEmoji = m.status_emoji || '';
+            const motoboy = m.motoboy || '';
+
+            return `<div class="msg-bubble ${msgClass} mb-3" ${clickAction}>
+                ${statusEmoji ? `<div class="status-emoji-footer" title="Motoboy: ${motoboy}">${statusEmoji}</div>` : ''}
+                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem; ${statusEmoji ? 'margin-bottom: 5px;' : ''}">${formatarMensagem(m.texto)}</div>
                 <div class="text-end text-muted mt-1" style="font-size: 0.6rem;">${m.hora}</div>
                 ${isPedido ? `<div class="reply-badge">ID: ${m.pedido_id}</div>` : ''}
             </div>`;
         }).join('');
         container.scrollTop = container.scrollHeight;
+    }
+
+    function abrirModalStatus(msgId) {
+        document.getElementById('status-msg-id').value = msgId;
+        new bootstrap.Modal(document.getElementById('modalStatusPedido')).show();
+    }
+
+    async function salvarStatusMensagem() {
+        const id = document.getElementById('status-msg-id').value;
+        const emoji = document.getElementById('status-emoji-sel').value;
+        const motoboy = document.getElementById('status-motoboy-sel').value;
+
+        if(!motoboy) { alert('Selecione um motoboy'); return; }
+
+        await API.call('addmensagens_chat', { 
+            id: id, 
+            status_emoji: emoji, 
+            motoboy: motoboy 
+        });
+
+        bootstrap.Modal.getInstance(document.getElementById('modalStatusPedido')).hide();
+        await carregarMensagensBanco(window.chatState.currentName);
     }
 
     function abrirModalModelo() {
@@ -326,7 +396,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         const vKm = parseFloat(document.getElementById('p-tabela-km').value);
         const vZona = parseFloat(document.getElementById('p-zona').value);
         const vPrioridade = parseFloat(document.getElementById('p-prioridade').value);
-        const total = (10 * vKm) + vZona + vPrioridade; // 10 é a base de km fixo para exemplo
+        const total = (10 * vKm) + vZona + vPrioridade;
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
@@ -350,7 +420,9 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
             texto: msgFormatada, 
             hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
             finalizado: "true", 
-            pedido_id: pedidoId
+            pedido_id: pedidoId,
+            status_emoji: '⏳',
+            motoboy: 'Aguardando...'
         });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         await carregarMensagensBanco(window.chatState.currentName);
