@@ -46,6 +46,16 @@
                         <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
                     </div>
                 </div>
+                <div class="dropdown">
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()">
+                            <i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
             <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
@@ -53,6 +63,30 @@
                     <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
                     <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">Modelo de Solicitação</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
+
+SOLICITANTE: ...
+MERCADORIA: Coleta, Envelope, Sacola, Outros ...
+COLETA: 
+ENTREGA: 
+HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: 
+OBS:
+
+Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
+                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button>
             </div>
         </div>
     </div>
@@ -97,8 +131,6 @@
     .msg-pedido { cursor: pointer; transition: transform 0.2s; }
     .msg-pedido:hover { background-color: #f1f1f1; transform: scale(1.005); }
     .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; cursor: help; }
-    
-    /* Película clarinha conforme solicitado */
     .modal-backdrop.show { opacity: 0.15 !important; }
 </style>
 
@@ -144,6 +176,14 @@
         document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight;
     }
 
+    function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
+
+    function copiarModeloParaChat() {
+        document.getElementById('msg-input').value = document.getElementById('texto-modelo-copia').innerText;
+        bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
+        setTimeout(removerPelicula, 300);
+    }
+
     async function abrirEdicaoStatus(id, emoji, motoboy) {
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji;
@@ -162,25 +202,16 @@
         const msgAntiga = msgs.find(m => String(m.id) === String(idAntigo));
         
         if(msgAntiga) {
-            // 1. Prepara a nova mensagem (Copia a antiga e muda os dados)
             const novaMsg = { ...msgAntiga };
-            novaMsg.id = Date.now().toString(); // Novo ID para garantir salvamento
+            novaMsg.id = Date.now().toString(); 
             novaMsg.status_emoji = document.getElementById('edit-msg-emoji').value;
             novaMsg.motoboy = document.getElementById('edit-msg-motoboy').value;
             
-            // 2. SALVA PRIMEIRO a nova mensagem
             const saveRes = await API.call('addmensagens_chat', novaMsg);
-            
             if(saveRes.status === 'success') {
-                // 3. SE SALVOU COM SUCESSO, ENTÃO DELETA A ANTIGA
                 await API.call('deletemensagens_chat', { id: idAntigo });
-                
-                // Fecha modal e limpa tudo
                 bootstrap.Modal.getInstance(document.getElementById('modalStatusMensagem')).hide();
-                setTimeout(() => {
-                    removerPelicula();
-                    carregarMensagensBanco(window.chatState.currentName);
-                }, 300);
+                setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
             }
         }
     }
