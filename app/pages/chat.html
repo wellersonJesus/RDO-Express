@@ -148,12 +148,10 @@
                             <div class="card border-0 rounded-4 overflow-hidden" style="background-color: #FF0000; color: white;">
                                 <div class="card-body p-3">
                                     <div class="row align-items-center">
-                                        <!-- Esquerda: Valor -->
                                         <div class="col-4 border-end border-white border-opacity-25">
                                             <p class="mb-0 small text-uppercase fw-bold opacity-75">Total</p>
                                             <h2 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h2>
                                         </div>
-                                        <!-- Direita: Texto Sucinto -->
                                         <div class="col-8">
                                             <div id="resumo-detalhado" style="font-size: 0.7rem; line-height: 1.2;">
                                                 Carregando resumo...
@@ -280,7 +278,6 @@
 
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
 
-        // Construção do Texto Sucinto (Direita)
         const origem = document.getElementById('p-origem').value;
         const destino = document.getElementById('p-destino').value;
         const zona = document.querySelector('#p-zona option:checked').text;
@@ -298,10 +295,25 @@
 
     async function salvarPedidoAPI() {
         const pedidoId = "RDO-" + Math.floor(1000 + Math.random() * 9000);
-        const msg = `📦 *LOGÍSTICA RDO*\n*ID:* ${pedidoId}\n*De:* ${document.getElementById('p-origem').value}\n*Para:* ${document.getElementById('p-destino').value}\n*Valor:* ${document.getElementById('view-valor-final').innerText}`;
+        const de = document.getElementById('p-origem').value;
+        const para = document.getElementById('p-destino').value;
+        const valor = document.getElementById('view-valor-final').innerText;
+        
+        // Modelo de mensagem solicitado
+        const msgFormatada = `📦 *LOGÍSTICA RDO*\n\n` +
+            `*ID:* ${pedidoId}\n` +
+            `*De:* ${de}\n` +
+            `*Para:* ${para}\n` +
+            `*Valor:* ${valor}\n\n` +
+            `⏳ Aguardando confirmação do Motoboy!`;
         
         await API.call('addmensagens_chat', {
-            id: "'" + Date.now(), jid_numero: "'" + window.chatState.currentName, texto: msg, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "true", pedido_id: pedidoId
+            id: "'" + Date.now(), 
+            jid_numero: "'" + window.chatState.currentName, 
+            texto: msgFormatada, 
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            finalizado: "true", 
+            pedido_id: pedidoId
         });
 
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
