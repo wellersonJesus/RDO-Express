@@ -19,23 +19,29 @@
         </div>
     </div>
 
+    <!-- Lista de Contatos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 600px; overflow-y: auto;">
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">ATENDENTES</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes" style="cursor: pointer;">ATENDENTES</button>
                 </h2>
-                <div id="collAtendentes" class="accordion-collapse collapse show"><div id="lista-atendentes-chat" class="list-group list-group-flush"></div></div>
+                <div id="collAtendentes" class="accordion-collapse collapse show">
+                    <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
+                </div>
             </div>
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">GRUPOS / OUTROS</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-3 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos" style="cursor: pointer;">GRUPOS / OUTROS</button>
                 </h2>
-                <div id="collGrupos" class="accordion-collapse collapse show"><div id="lista-grupos-chat" class="list-group list-group-flush"></div></div>
+                <div id="collGrupos" class="accordion-collapse collapse show">
+                    <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Chat -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
@@ -46,7 +52,7 @@
                         <small id="chat-header-status" class="text-muted" style="font-size: 0.7rem;"></small>
                     </div>
                 </div>
-                <div class="dropdown">
+                <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
                     <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
                     </button>
@@ -68,7 +74,7 @@
     </div>
 </div>
 
-<!-- Modal Modelo de Solicitação -->
+<!-- Modal Modelo -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -93,11 +99,11 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     </div>
 </div>
 
-<!-- Modal Edição de Status -->
-<div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true">
+<!-- Modal Status e Motoboy -->
+<div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Atualizar Logística</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Atualizar Logística</h6><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button></div>
             <div class="modal-body py-3">
                 <input type="hidden" id="edit-msg-id">
                 <div class="mb-3">
@@ -122,38 +128,81 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     </div>
 </div>
 
-<!-- Modal Checkout Pedido -->
+<!-- Modal Checkout -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="fw-bold mb-0" id="titulo-modal-checkout">RDO Express - Checkout MAPS</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button>
             </div>
             <div class="modal-body">
+                <!-- Passo 1: MAPS -->
                 <div id="passo-conferencia">
-                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 250px;">
-                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0"></iframe>
+                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 400px;">
+                        <iframe id="google-maps-view" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d58323.00336214534!2d-43.99849204018318!3d-19.8450742511477!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e9!4m5!1s0xa68e47029b65b3%3A0x9062b525efa27cc5!2sRua%20Ismar%20Francisco%20da%20Silva%20-%20Maria%20Helena%2C%20Belo%20Horizonte%20-%20MG%2C%2031680-420!3m2!1d-19.7970218!2d-43.9945431!4m5!1s0xa69a6b0f4f5c8d%3A0xcc02f907aaefc960!2sAv.%20Cristiano%20Machado%2C%201644%20-%20Cidade%20Nova%2C%20Belo%20Horizonte%20-%20MG%2C%2031170-024!3m2!1d-19.8931277!2d-43.9276345!5e0!3m2!1spt-BR!2sbr!4v1715689000000!5m2!1spt-BR!2sbr"></iframe>
                     </div>
                     <div class="row g-2 mb-3">
-                        <div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm" readonly></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm" readonly></div>
                     </div>
-                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">PREENCHER FORMULÁRIO</button>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA LOGISTICS</button>
                 </div>
+
+                <!-- Passo 2: LOGISTICS -->
                 <div id="passo-finalizacao" style="display:none;">
-                    <div class="row g-2">
+                    <div class="row g-3">
                         <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">VALOR KM</label>
+                            <select id="p-valor-km" class="form-select border-0 bg-light" onchange="calcularTudo()">
+                                <option value="2.20">2,20</option>
+                                <option value="2.40">2,40</option>
+                                <option value="3.00">3,00</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">MERCADORIA</label>
+                            <select id="p-mercadoria" class="form-select border-0 bg-light">
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">LOCALIDADE (TAXA)</label>
+                            <select id="p-localidade" class="form-select border-0 bg-light" onchange="calcularTudo()">
+                                <option value="0">Centro → taxa 0</option>
+                                <option value="5">Zona Sul (Savassi) → taxa 5</option>
+                                <option value="7">Zona Norte (Venda Nova) → taxa 7</option>
+                                <option value="7">Zona Leste (Santa Efigênia) → taxa 7</option>
+                                <option value="7">Zona Oeste (Buritis) → 7</option>
+                                <option value="10">Pampulha (Castelo) → taxa 10</option>
+                                <option value="15">Barreiro (Barreiro de Baixo) → taxa 15</option>
+                                <option value="10">Nordeste (Cidade Nova) → taxa 10</option>
+                                <option value="10">Noroeste (Caiçara) → taxa 10</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">PRIORIDADE</label>
+                            <select id="p-prioridade" class="form-select border-0 bg-light" onchange="calcularTudo()">
+                                <option value="0">Normal</option>
+                                <option value="7">Urgente + taxa 7</option>
+                                <option value="10">Agendado + 10</option>
+                            </select>
+                        </div>
                         <div class="col-12 mt-3">
-                            <div class="p-3 rounded-4 text-center bg-danger text-white">
+                            <div class="p-4 rounded-4 text-center bg-danger text-white shadow">
+                                <small class="fw-bold d-block mb-1">VALOR TOTAL ESTIMADO</small>
                                 <h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button>
-                        <button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button>
+                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR AO MAPA</button>
+                        <button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
             </div>
@@ -167,10 +216,11 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
     .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
-    .msg-pedido { cursor: pointer; transition: transform 0.2s; }
-    .msg-pedido:hover { background-color: #f1f1f1; transform: scale(1.005); }
-    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; cursor: help; }
-    .modal-backdrop.show { opacity: 0.15 !important; }
+    .msg-pedido { cursor: pointer !important; transition: transform 0.2s; }
+    .msg-pedido:hover { background-color: #f1f1f1; transform: scale(1.01); }
+    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; cursor: pointer; }
+    .list-group-item { cursor: pointer !important; }
+    .modal-backdrop.show { opacity: 0.3 !important; }
 </style>
 
 <script>
@@ -183,7 +233,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     }
 
     async function carregarDados() {
-        const configs = await API.call('getbotconfig');
+        const configs = await API.call('getbotconfig') || [];
         const botStatus = localStorage.getItem('bot_status') === 'true';
         const renderItem = (u) => {
             const online = botStatus && (String(u.status) === 'true');
@@ -195,7 +245,14 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
     }
 
-    async function selecionarChat(n, i) { window.chatState.currentName = n; document.getElementById('chat-header-name').innerText = n; document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="40" height="40">`; await carregarMensagensBanco(n); }
+    async function selecionarChat(n, i) { 
+        window.chatState.currentName = n; 
+        document.getElementById('chat-header-name').innerText = n; 
+        document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="40" height="40">`; 
+        document.getElementById('menu-opcoes-chat').style.display = 'block';
+        await carregarMensagensBanco(n); 
+        carregarDados();
+    }
 
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat');
@@ -244,18 +301,24 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
             novaMsg.id = Date.now().toString(); 
             novaMsg.status_emoji = document.getElementById('edit-msg-emoji').value;
             novaMsg.motoboy = document.getElementById('edit-msg-motoboy').value;
-            const saveRes = await API.call('addmensagens_chat', novaMsg);
-            if(saveRes.status === 'success') {
-                await API.call('deletemensagens_chat', { id: idAntigo });
-                bootstrap.Modal.getInstance(document.getElementById('modalStatusMensagem')).hide();
-                setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
-            }
+            await API.call('addmensagens_chat', novaMsg);
+            await API.call('deletemensagens_chat', { id: idAntigo });
+            bootstrap.Modal.getInstance(document.getElementById('modalStatusMensagem')).hide();
+            setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
         }
+    }
+
+    function calcularTudo() {
+        const local = parseFloat(document.getElementById('p-localidade').value);
+        const prio = parseFloat(document.getElementById('p-prioridade').value);
+        const km = parseFloat(document.getElementById('p-valor-km').value);
+        const total = (12 * km) + local + prio; 
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
     async function salvarPedidoAPI() {
         const pid = "RDO-" + Math.floor(1000 + Math.random() * 9000);
-        const corpo = `📦 LOGÍSTICA RDO\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: Coleta\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO PARA PEGAR ENCOMENDA: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nOBS: ...\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        const corpo = `📦 LOGÍSTICA RDO\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO COLETA: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
         
         await API.call('addmensagens_chat', { 
             id: Date.now().toString(), 
@@ -269,12 +332,20 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         });
         
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-        setTimeout(removerPelicula, 300);
-        await carregarMensagensBanco(window.chatState.currentName);
+        setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
     }
 
-    function proximoPassoPedido() { document.getElementById('passo-conferencia').style.display='none'; document.getElementById('passo-finalizacao').style.display='block'; }
-    function voltarPasso() { document.getElementById('passo-conferencia').style.display='block'; document.getElementById('passo-finalizacao').style.display='none'; }
+    function proximoPassoPedido() { 
+        document.getElementById('passo-conferencia').style.display='none'; 
+        document.getElementById('passo-finalizacao').style.display='block'; 
+        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout LOGISTICS';
+        calcularTudo();
+    }
+    function voltarPasso() { 
+        document.getElementById('passo-conferencia').style.display='block'; 
+        document.getElementById('passo-finalizacao').style.display='none'; 
+        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout MAPS';
+    }
 
     function enviarMensagemManual() {
         const input = document.getElementById('msg-input');
@@ -284,7 +355,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
-            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA');
+            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA') || getF('HORÁRIO ESTIMADO P/ COLETA');
             input.value = '';
             new bootstrap.Modal(document.getElementById('modalPedido')).show();
         } else {
