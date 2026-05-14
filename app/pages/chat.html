@@ -128,7 +128,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light" placeholder="Digite a hora no formato 00:00"></div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">VALOR KM</label>
                             <select id="p-valor-km" class="form-select border-0 bg-light" onchange="calcularTudo()">
@@ -147,25 +147,32 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">LOCALIDADE</label>
-                            <select id="p-localidade" class="form-select border-0 bg-light" onchange="calcularTudo()">
-                                <option value="0">Centro → taxa 0</option>
-                                <option value="5">Zona Sul (Savassi) → taxa 5</option>
-                                <option value="7">Zona Norte (Venda Nova) → taxa 7</option>
-                                <option value="7">Zona Leste (Santa Efigênia) → taxa 7</option>
-                                <option value="7">Zona Oeste (Buritis) → 7</option>
-                                <option value="10">Pampulha (Castelo) → taxa 10</option>
-                                <option value="15">Barreiro (Barreiro de Baixo) → taxa 15</option>
-                                <option value="10">Nordeste (Cidade Nova) → taxa 10</option>
-                                <option value="10">Noroeste (Caiçara) → taxa 10</option>
+                            <label class="small fw-bold text-muted">TROCA/RETORNO</label>
+                            <select id="p-troca" class="form-select border-0 bg-light">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
                             </select>
                         </div>
                         <div class="col-md-6">
+                            <label class="small fw-bold text-muted">LOCALIDADE</label>
+                            <select id="p-localidade" class="form-select border-0 bg-light" onchange="calcularTudo()">
+                                <option value="0">Centro</option>
+                                <option value="5">Zona Sul (Savassi) + (Taxa 5)</option>
+                                <option value="7">Zona Norte (Venda Nova) + (Taxa 7)</option>
+                                <option value="7">Zona Leste (Santa Efigênia) + (Taxa 7)</option>
+                                <option value="7">Zona Oeste (Buritis) + (Taxa 7)</option>
+                                <option value="10">Pampulha (Castelo) + (Taxa 10)</option>
+                                <option value="15">Barreiro (Barreiro de Baixo) + (Taxa 15)</option>
+                                <option value="10">Nordeste (Cidade Nova) + (Taxa 10)</option>
+                                <option value="10">Noroeste (Caiçara) + (Taxa 10)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
                             <label class="small fw-bold text-muted">PRIORIDADE</label>
                             <select id="p-prioridade" class="form-select border-0 bg-light" onchange="calcularTudo()">
                                 <option value="0">Normal</option>
-                                <option value="7">Urgente + taxa 7</option>
-                                <option value="10">Agendado + 10</option>
+                                <option value="7">Urgente + (Taxa 7)</option>
+                                <option value="10">Agendado + (Taxa 10)</option>
                             </select>
                         </div>
                         <div class="col-12">
@@ -229,16 +236,11 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     function copiarTextoClipboard() {
         const texto = document.getElementById('texto-modelo-copia').innerText;
         navigator.clipboard.writeText(texto).then(() => {
-            // Efeito visual de copiado
             const toast = document.getElementById('toast-copiado');
             toast.classList.remove('d-none');
             toast.classList.add('d-flex');
-            
-            // Fecha o modal
             bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
             setTimeout(removerPelicula, 300);
-
-            // Esconde o efeito após 2 segundos
             setTimeout(() => {
                 toast.classList.add('d-none');
                 toast.classList.remove('d-flex');
@@ -341,7 +343,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     }
 
     async function salvarPedidoAPI() {
-        const corpo = `📦 LOGÍSTICA RDO\nSolicitante: ${document.getElementById('p-solicitante').value}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        const corpo = `📦 LOGÍSTICA RDO\nSolicitante: ${document.getElementById('p-solicitante').value}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nTroca: ${document.getElementById('p-troca').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
         await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: corpo, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "true", status_emoji: "⏳", motoboy: "Aguardando" });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
