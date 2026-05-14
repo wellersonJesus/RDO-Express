@@ -1,4 +1,5 @@
 <div class="row g-3 h-100">
+    <!-- Cabeçalho Principal -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -41,7 +42,7 @@
         </div>
     </div>
 
-    <!-- Chat -->
+    <!-- Chat Principal -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
             <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
@@ -53,13 +54,11 @@
                     </div>
                 </div>
                 <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
-                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown">
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()">
-                            <i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a>
-                        </li>
+                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
                     </ul>
                 </div>
             </div>
@@ -74,7 +73,7 @@
     </div>
 </div>
 
-<!-- Modal Modelo -->
+<!-- MODAL MODELO DE SOLICITAÇÃO (RESTAURADO) -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -93,42 +92,13 @@ HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA:
 OBS: 
 
 Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
-                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button>
+                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarTextoClipboard()">APENAS COPIAR MODELO</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Status e Motoboy -->
-<div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Atualizar Logística</h6><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button></div>
-            <div class="modal-body py-3">
-                <input type="hidden" id="edit-msg-id">
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">STATUS (EMOJI)</label>
-                    <select id="edit-msg-emoji" class="form-select border-0 bg-light">
-                        <option value="⏳">⏳ Aguardando</option>
-                        <option value="🏍️">🏍️ Em Coleta</option>
-                        <option value="📦">📦 Em Rota</option>
-                        <option value="✅">✅ Entregue</option>
-                        <option value="❌">❌ Cancelado</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">MOTOBOY</label>
-                    <select id="edit-msg-motoboy" class="form-select border-0 bg-light">
-                        <option value="Aguardando">Aguardando...</option>
-                    </select>
-                </div>
-                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">SALVAR E ATUALIZAR</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Checkout -->
+<!-- Modal Checkout Logistics -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -137,19 +107,17 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button>
             </div>
             <div class="modal-body">
-                <!-- Passo 1: MAPS -->
                 <div id="passo-conferencia">
-                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 400px;">
-                        <iframe id="google-maps-view" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d58323.00336214534!2d-43.99849204018318!3d-19.8450742511477!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e9!4m5!1s0xa68e47029b65b3%3A0x9062b525efa27cc5!2sRua%20Ismar%20Francisco%20da%20Silva%20-%20Maria%20Helena%2C%20Belo%20Horizonte%20-%20MG%2C%2031680-420!3m2!1d-19.7970218!2d-43.9945431!4m5!1s0xa69a6b0f4f5c8d%3A0xcc02f907aaefc960!2sAv.%20Cristiano%20Machado%2C%201644%20-%20Cidade%20Nova%2C%20Belo%20Horizonte%20-%20MG%2C%2031170-024!3m2!1d-19.8931277!2d-43.9276345!5e0!3m2!1spt-BR!2sbr!4v1715689000000!5m2!1spt-BR!2sbr"></iframe>
+                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 380px;">
+                        <iframe id="google-maps-view" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
                     </div>
                     <div class="row g-2 mb-3">
-                        <div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm" readonly></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm" readonly></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light" readonly></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light" readonly></div>
                     </div>
                     <button class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="proximoPassoPedido()">AVANÇAR PARA LOGISTICS</button>
                 </div>
 
-                <!-- Passo 2: LOGISTICS -->
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div>
@@ -172,7 +140,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="small fw-bold text-muted">LOCALIDADE (TAXA)</label>
+                            <label class="small fw-bold text-muted">LOCALIDADE</label>
                             <select id="p-localidade" class="form-select border-0 bg-light" onchange="calcularTudo()">
                                 <option value="0">Centro → taxa 0</option>
                                 <option value="5">Zona Sul (Savassi) → taxa 5</option>
@@ -193,18 +161,44 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                                 <option value="10">Agendado + 10</option>
                             </select>
                         </div>
-                        <div class="col-12 mt-3">
+                        <div class="col-12">
                             <div class="p-4 rounded-4 text-center bg-danger text-white shadow">
-                                <small class="fw-bold d-block mb-1">VALOR TOTAL ESTIMADO</small>
                                 <h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR AO MAPA</button>
+                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button>
                         <button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edição Status/Motoboy -->
+<div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Atualizar Logística</h6><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button></div>
+            <div class="modal-body py-3">
+                <input type="hidden" id="edit-msg-id">
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">STATUS (EMOJI)</label>
+                    <select id="edit-msg-emoji" class="form-select border-0 bg-light">
+                        <option value="⏳">⏳ Aguardando</option>
+                        <option value="🏍️">🏍️ Em Coleta</option>
+                        <option value="📦">📦 Em Rota</option>
+                        <option value="✅">✅ Entregue</option>
+                        <option value="❌">❌ Cancelado</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">MOTOBOY</label>
+                    <select id="edit-msg-motoboy" class="form-select border-0 bg-light"></select>
+                </div>
+                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">SALVAR ALTERAÇÃO</button>
             </div>
         </div>
     </div>
@@ -214,29 +208,33 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     .no-arrow::after { display: none !important; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-    .msg-mine { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; }
-    .msg-pedido { cursor: pointer !important; transition: transform 0.2s; }
-    .msg-pedido:hover { background-color: #f1f1f1; transform: scale(1.01); }
-    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; cursor: pointer; }
-    .list-group-item { cursor: pointer !important; }
-    .modal-backdrop.show { opacity: 0.3 !important; }
+    .msg-bubble { background: white; padding: 12px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+    /* ESTILO DA MÃOZINHA NAS MENSAGENS DE LOGÍSTICA */
+    .msg-logistics { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; cursor: pointer !important; }
+    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; }
 </style>
 
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
 
-    function removerPelicula() {
-        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-        document.body.classList.remove('modal-open');
-        document.body.style = '';
+    function removerPelicula() { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.classList.remove('modal-open'); document.body.style = ''; }
+
+    function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
+
+    function copiarTextoClipboard() {
+        const texto = document.getElementById('texto-modelo-copia').innerText;
+        navigator.clipboard.writeText(texto).then(() => {
+            alert('Modelo copiado!');
+            bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
+            setTimeout(removerPelicula, 300);
+        });
     }
 
     async function carregarDados() {
         const configs = await API.call('getbotconfig') || [];
-        const botStatus = localStorage.getItem('bot_status') === 'true';
+        const botAtivo = localStorage.getItem('bot_status') === 'true';
         const renderItem = (u) => {
-            const online = botStatus && (String(u.status) === 'true');
+            const online = botAtivo && (String(u.status) === 'true');
             return `<button onclick="selecionarChat('${u.username}', '${u.imagem}')" class="list-group-item list-group-item-action border-0 ${window.chatState.currentName === u.username ? 'bg-danger text-white' : ''}">
                 <div class="d-flex align-items-center px-2"><div class="position-relative"><img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38"><span class="status-dot ${online ? 'bg-success' : 'bg-secondary'}"></span></div><span class="fw-bold small">${u.username}</span></div></button>`;
         };
@@ -245,122 +243,93 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
     }
 
-    async function selecionarChat(n, i) { 
-        window.chatState.currentName = n; 
-        document.getElementById('chat-header-name').innerText = n; 
-        document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="40" height="40">`; 
+    async function selecionarChat(n, i) {
+        window.chatState.currentName = n;
+        document.getElementById('chat-header-name').innerText = n;
+        document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="40" height="40">`;
         document.getElementById('menu-opcoes-chat').style.display = 'block';
-        await carregarMensagensBanco(n); 
+        await carregarMensagensBanco(n);
         carregarDados();
     }
 
     async function carregarMensagensBanco(nome) {
-        const res = await API.call('getmensagens_chat');
-        const filtradas = (res || []).filter(m => String(m.jid_numero).includes(nome));
-        let html = '';
-        filtradas.forEach(m => {
-            const isPedido = String(m.finalizado).toUpperCase() === 'TRUE';
-            const emoji = m.status_emoji || '⏳';
-            const motoboy = m.motoboy || 'Aguardando';
-            html += `<div class="msg-bubble ${isPedido ? 'msg-mine msg-pedido' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${emoji}', '${motoboy}')"` : ''}>
-                <div class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem; margin-bottom: 8px;">${m.texto}</div>
-                ${isPedido ? `<div class="status-footer" title="${motoboy}">${emoji}</div>` : ''}
+        const res = await API.call('getmensagens_chat') || [];
+        const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
+        document.getElementById('chat-messages-container').innerHTML = filtradas.map(m => {
+            const isPedido = m.finalizado === "true";
+            return `<div class="msg-bubble ${isPedido ? 'msg-logistics' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy || 'Aguardando'}')"` : ''}>
+                <div style="white-space: pre-wrap; font-size: 0.85rem; padding-bottom: ${isPedido ? '15px' : '0'};">${m.texto}</div>
+                ${isPedido ? `<div class="status-footer">${m.status_emoji || '⏳'}</div>` : ''}
                 <div class="text-end text-muted" style="font-size: 0.6rem;">${m.hora}</div>
             </div>`;
-        });
-        document.getElementById('chat-messages-container').innerHTML = html;
-        document.getElementById('chat-messages-container').scrollTop = document.getElementById('chat-messages-container').scrollHeight;
-    }
-
-    function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
-
-    function copiarModeloParaChat() {
-        document.getElementById('msg-input').value = document.getElementById('texto-modelo-copia').innerText;
-        bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
-        setTimeout(removerPelicula, 300);
+        }).join('');
+        const c = document.getElementById('chat-messages-container'); c.scrollTop = c.scrollHeight;
     }
 
     async function abrirEdicaoStatus(id, emoji, motoboy) {
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji;
         const colab = await API.call('getcolaboradores') || [];
-        const select = document.getElementById('edit-msg-motoboy');
-        select.innerHTML = '<option value="Aguardando">Aguardando...</option>';
-        colab.filter(c => c.cargo?.toLowerCase() === 'motoboy').forEach(m => {
-            select.innerHTML += `<option value="${m.username}" ${m.username === motoboy ? 'selected' : ''}>${m.username}</option>`;
-        });
+        const sel = document.getElementById('edit-msg-motoboy');
+        sel.innerHTML = '<option value="Aguardando">Aguardando...</option>' + 
+            colab.filter(c => c.cargo?.toLowerCase() === 'motoboy').map(m => `<option value="${m.username}" ${m.username === motoboy ? 'selected' : ''}>${m.username}</option>`).join('');
         new bootstrap.Modal(document.getElementById('modalStatusMensagem')).show();
     }
 
     async function atualizarStatusNoBanco() {
-        const idAntigo = document.getElementById('edit-msg-id').value;
+        const id = document.getElementById('edit-msg-id').value;
         const msgs = await API.call('getmensagens_chat') || [];
-        const msgAntiga = msgs.find(m => String(m.id) === String(idAntigo));
-        if(msgAntiga) {
-            const novaMsg = { ...msgAntiga };
-            novaMsg.id = Date.now().toString(); 
-            novaMsg.status_emoji = document.getElementById('edit-msg-emoji').value;
-            novaMsg.motoboy = document.getElementById('edit-msg-motoboy').value;
-            await API.call('addmensagens_chat', novaMsg);
-            await API.call('deletemensagens_chat', { id: idAntigo });
+        const msg = msgs.find(m => String(m.id) === String(id));
+        if(msg) {
+            const nova = { ...msg, id: Date.now().toString(), status_emoji: document.getElementById('edit-msg-emoji').value, motoboy: document.getElementById('edit-msg-motoboy').value };
+            await API.call('addmensagens_chat', nova);
+            await API.call('deletemensagens_chat', { id: id });
             bootstrap.Modal.getInstance(document.getElementById('modalStatusMensagem')).hide();
             setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
         }
-    }
-
-    function calcularTudo() {
-        const local = parseFloat(document.getElementById('p-localidade').value);
-        const prio = parseFloat(document.getElementById('p-prioridade').value);
-        const km = parseFloat(document.getElementById('p-valor-km').value);
-        const total = (12 * km) + local + prio; 
-        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-    }
-
-    async function salvarPedidoAPI() {
-        const pid = "RDO-" + Math.floor(1000 + Math.random() * 9000);
-        const corpo = `📦 LOGÍSTICA RDO\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO COLETA: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
-        
-        await API.call('addmensagens_chat', { 
-            id: Date.now().toString(), 
-            jid_numero: window.chatState.currentName, 
-            texto: corpo, 
-            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            data: new Date().toLocaleDateString('pt-BR'), 
-            finalizado: "true", 
-            status_emoji: "⏳", 
-            motoboy: "Aguardando" 
-        });
-        
-        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
-        setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
-    }
-
-    function proximoPassoPedido() { 
-        document.getElementById('passo-conferencia').style.display='none'; 
-        document.getElementById('passo-finalizacao').style.display='block'; 
-        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout LOGISTICS';
-        calcularTudo();
-    }
-    function voltarPasso() { 
-        document.getElementById('passo-conferencia').style.display='block'; 
-        document.getElementById('passo-finalizacao').style.display='none'; 
-        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout MAPS';
     }
 
     function enviarMensagemManual() {
         const input = document.getElementById('msg-input');
         const t = input.value.trim(); if(!t) return;
         if(t.toUpperCase().includes('SOLICITANTE:')) {
-            const getF = (label) => (t.match(new RegExp(`${label}:\\s*(.*)`, 'i')) || [null, ''])[1].trim();
+            const getF = (l) => (t.match(new RegExp(`${l}:\\s*(.*)`, 'i')) || [null, ''])[1].trim();
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
             document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA') || getF('HORÁRIO ESTIMADO P/ COLETA');
+            document.getElementById('google-maps-view').src = `https://www.google.com/maps?q=${encodeURIComponent(getF('COLETA'))}+to+${encodeURIComponent(getF('ENTREGA'))}&output=embed`;
             input.value = '';
             new bootstrap.Modal(document.getElementById('modalPedido')).show();
         } else {
-            API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toLocaleDateString('pt-BR'), finalizado: "false" }).then(() => { input.value = ''; carregarMensagensBanco(window.chatState.currentName); });
+            API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "false" }).then(() => { input.value = ''; carregarMensagensBanco(window.chatState.currentName); });
         }
     }
+
+    function calcularTudo() {
+        const total = (4.4 * parseFloat(document.getElementById('p-valor-km').value)) + parseFloat(document.getElementById('p-localidade').value) + parseFloat(document.getElementById('p-prioridade').value);
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
+
+    function proximoPassoPedido() { 
+        document.getElementById('passo-conferencia').style.display='none'; 
+        document.getElementById('passo-finalizacao').style.display='block'; 
+        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout LOGISTIC';
+        calcularTudo();
+    }
+    
+    function voltarPasso() { 
+        document.getElementById('passo-conferencia').style.display='block'; 
+        document.getElementById('passo-finalizacao').style.display='none'; 
+        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout MAPS';
+    }
+
+    async function salvarPedidoAPI() {
+        const corpo = `📦 LOGÍSTICA RDO\nSolicitante: ${document.getElementById('p-solicitante').value}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: corpo, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "true", status_emoji: "⏳", motoboy: "Aguardando" });
+        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+        setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
+    }
+
     carregarDados();
 </script>
