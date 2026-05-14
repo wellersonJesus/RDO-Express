@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <!-- Lista de Contatos -->
+    <!-- Lista de Contatos e Grupos -->
     <div class="col-md-4">
         <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 600px; overflow-y: auto;">
             <div class="accordion-item border-0">
@@ -73,7 +73,7 @@
     </div>
 </div>
 
-<!-- MODAL MODELO DE SOLICITAÇÃO (RESTAURADO) -->
+<!-- Modal Modelo de Solicitação -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -98,7 +98,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     </div>
 </div>
 
-<!-- Modal Checkout Logistics -->
+<!-- Modal Checkout -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -177,7 +177,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     </div>
 </div>
 
-<!-- Modal Edição Status/Motoboy -->
+<!-- Modal Status/Motoboy -->
 <div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow rounded-4">
@@ -209,8 +209,8 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 12px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-    /* ESTILO DA MÃOZINHA NAS MENSAGENS DE LOGÍSTICA */
-    .msg-logistics { align-self: flex-end; background-color: #dcf8c6; border: 1px solid #c7e5b0; cursor: pointer !important; }
+    /* CLASSE CRÍTICA PARA A MÃOZINHA */
+    .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; }
     .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; }
 </style>
 
@@ -218,7 +218,6 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     if (!window.chatState) window.chatState = { currentName: null };
 
     function removerPelicula() { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.classList.remove('modal-open'); document.body.style = ''; }
-
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
 
     function copiarTextoClipboard() {
@@ -256,7 +255,8 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         const res = await API.call('getmensagens_chat') || [];
         const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
         document.getElementById('chat-messages-container').innerHTML = filtradas.map(m => {
-            const isPedido = m.finalizado === "true";
+            // VERIFICAÇÃO FORÇADA: Se finalizado for true ou texto contiver LOGÍSTICA RDO
+            const isPedido = String(m.finalizado) === "true" || m.texto.includes('LOGÍSTICA RDO');
             return `<div class="msg-bubble ${isPedido ? 'msg-logistics' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy || 'Aguardando'}')"` : ''}>
                 <div style="white-space: pre-wrap; font-size: 0.85rem; padding-bottom: ${isPedido ? '15px' : '0'};">${m.texto}</div>
                 ${isPedido ? `<div class="status-footer">${m.status_emoji || '⏳'}</div>` : ''}
@@ -314,7 +314,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     function proximoPassoPedido() { 
         document.getElementById('passo-conferencia').style.display='none'; 
         document.getElementById('passo-finalizacao').style.display='block'; 
-        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout LOGISTIC';
+        document.getElementById('titulo-modal-checkout').innerText = 'RDO Express - Checkout LOGISTICS';
         calcularTudo();
     }
     
