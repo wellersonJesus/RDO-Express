@@ -1,118 +1,97 @@
 <div class="row g-3">
-    <!-- Cabeçalho de Pedidos -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-clipboard2-check fs-3 text-danger"></i>
+                    <i class="bi bi-clipboard2-check fs-4 text-danger"></i>
                     <div>
-                        <h5 class="fw-bold mb-0">
+                        <h6 class="fw-bold mb-0">
                             <span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express</span> - Pedidos
-                        </h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">Logística e Controle de Entregas</small>
+                        </h6>
                     </div>
                 </div>
                 
                 <div class="d-flex gap-2 align-items-center">
-                    <!-- 1. Buscar -->
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <span class="input-group-text border-0 bg-light"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="filtro-pedido" class="form-control border-0 bg-light" placeholder="Buscar..." onkeyup="renderizarTabela()">
+                    <div class="input-group input-group-sm" style="width: 180px;">
+                        <input type="text" id="filtro-pedido" class="form-control border-0 bg-light small" placeholder="Buscar..." onkeyup="paginaAtual=1;renderizarTabela()">
                     </div>
-
-                    <!-- 2. Atualizar -->
-                    <button class="btn btn-light btn-sm rounded-pill border-0 px-3" onclick="carregarPedidos()" title="Atualizar">
+                    <button class="btn btn-light btn-sm rounded-pill border-0" onclick="carregarPedidos()">
                         <i id="sync-pedidos" class="bi bi-arrow-repeat"></i>
                     </button>
-
-                    <!-- 3. Hambúrguer (Dropdown) -->
-                    <div class="dropdown">
-                        <button class="btn btn-light btn-sm rounded-pill border-0 px-3" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-list fs-5"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
-                            <li><h6 class="dropdown-header small fw-bold">OPÇÕES DE FILTRO</h6></li>
-                            <li><a class="dropdown-item active py-2 small" href="#" onclick="setFiltro('TUDO', this)">Ver Tudo</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item py-2 small" href="#" onclick="setFiltro('DATA', this)">Filtrar por Data</a></li>
-                            <li><a class="dropdown-item py-2 small" href="#" onclick="setFiltro('ID', this)">Filtrar por ID</a></li>
-                            <li><a class="dropdown-item py-2 small" href="#" onclick="setFiltro('MOTOBOY', this)">Filtrar por Motoboy</a></li>
-                            <li><a class="dropdown-item py-2 small" href="#" onclick="setFiltro('CLIENTE', this)">Filtrar por Cliente</a></li>
-                        </ul>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tabela de Pedidos -->
     <div class="col-12">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead style="background-color: #f8f9fa;">
+                <table class="table table-sm align-middle mb-0" style="font-size: 0.75rem;">
+                    <thead class="bg-light">
                         <tr>
-                            <th class="border-0 px-4 py-3 small fw-bold text-muted">ID / DATA</th>
-                            <th class="border-0 py-3 small fw-bold text-muted">CLIENTE</th>
-                            <th class="border-0 py-3 small fw-bold text-muted">DESTINO</th>
-                            <th class="border-0 py-3 small fw-bold text-muted">MOTOBOY</th>
-                            <th class="border-0 py-3 small fw-bold text-muted">STATUS</th>
-                            <th class="border-0 px-4 py-3 text-end small fw-bold text-muted">AÇÕES</th>
+                            <th class="border-0 px-3 py-2 fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">N. Pedido</th>
+                            <th class="border-0 py-2 fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data</th>
+                            <th class="border-0 py-2 fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Solicitante</th>
+                            <th class="border-0 py-2 fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Motoboy</th>
+                            <th class="border-0 py-2 fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Status</th>
+                            <th class="border-0 px-3 py-2 text-end fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="tabela-pedidos-body" class="bg-white"></tbody>
+                    <tbody id="tabela-pedidos-body" class="bg-white text-secondary"></tbody>
                 </table>
             </div>
-            <div id="loading-pedidos" class="text-center py-5">
-                <div class="spinner-border text-secondary opacity-25" role="status"></div>
+            
+            <div class="card-footer bg-white border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted" id="info-paginacao"></small>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0 gap-1" id="paginador-ul"></ul>
+                    </nav>
+                </div>
+            </div>
+
+            <div id="loading-pedidos" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
     .bg-status-pending { background-color: #fef3c7; color: #92400e; }
     .bg-status-route { background-color: #e0f2fe; color: #075985; }
     .bg-status-done { background-color: #dcfce7; color: #166534; }
     .bg-status-cancel { background-color: #fee2e2; color: #991b1b; }
 
-    .btn-minimal { background: #f8f9fa; border: none; color: #adb5bd; padding: 6px 12px; border-radius: 8px; transition: all 0.2s; }
-    .btn-minimal:hover { background: #e9ecef; color: #495057; }
+    .btn-action { background: #f1f3f5; border: none; color: #6c757d; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+    .btn-action:hover { background: #e9ecef; color: #dc3545; }
     
-    .loading-spin { animation: spin 1s linear infinite; display: inline-block; }
+    .page-link { border: none; color: #6c757d; background: #f8f9fa; border-radius: 4px !important; margin: 0 2px; }
+    .page-item.active .page-link { background: #6c757d; color: white; }
+    
+    .loading-spin { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    tr:hover { background-color: #fafafa; cursor: default; }
-    .dropdown-item.active { background-color: #dc3545 !important; color: white !important; }
+    tr:hover { background-color: #fcfcfc; }
 </style>
 
 <script>
     let todosPedidos = [];
-    let tipoFiltro = 'TUDO';
-
-    function setFiltro(tipo, element) {
-        tipoFiltro = tipo;
-        document.querySelectorAll('.dropdown-item').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
-        document.getElementById('filtro-pedido').placeholder = `Buscar ${tipo.toLowerCase()}...`;
-        document.getElementById('filtro-pedido').focus();
-        renderizarTabela();
-    }
+    let paginaAtual = 1;
+    const itensPorPagina = 20;
 
     async function carregarPedidos() {
         const icon = document.getElementById('sync-pedidos');
-        const loader = document.getElementById('loading-pedidos');
-        icon.classList.add('loading-spin');
+        if(icon) icon.classList.add('loading-spin');
         try {
             const res = await API.call('getmensagens_chat') || [];
-            // Apenas pedidos finalizados
-            todosPedidos = res.filter(m => String(m.finalizado) === "true");
-            loader.style.display = 'none';
+            todosPedidos = res.filter(m => String(m.finalizado) === "true").reverse();
+            document.getElementById('loading-pedidos').style.display = 'none';
             renderizarTabela();
         } catch (e) {
-            console.error("Erro ao carregar:", e);
+            console.error(e);
         } finally {
-            setTimeout(() => icon.classList.remove('loading-spin'), 600);
+            if(icon) setTimeout(() => icon.classList.remove('loading-spin'), 600);
         }
     }
 
@@ -124,62 +103,55 @@
 
     function renderizarTabela() {
         const query = document.getElementById('filtro-pedido').value.toLowerCase();
-        const body = document.getElementById('tabela-pedidos-body');
+        const filtered = todosPedidos.filter(p => p.texto.toLowerCase().includes(query) || (p.motoboy || '').toLowerCase().includes(query));
         
-        const filtered = todosPedidos.filter(p => {
-            const id = extrairInfo(p.texto, 'ID').toLowerCase();
-            const cliente = extrairInfo(p.texto, 'Solicitante').toLowerCase();
-            const motoboy = (p.motoboy || '').toLowerCase();
-            const dataPed = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '';
+        const totalPaginas = Math.ceil(filtered.length / itensPorPagina);
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const itensExibidos = filtered.slice(inicio, inicio + itensPorPagina);
 
-            if (tipoFiltro === 'ID') return id.includes(query);
-            if (tipoFiltro === 'CLIENTE') return cliente.includes(query);
-            if (tipoFiltro === 'MOTOBOY') return motoboy.includes(query);
-            if (tipoFiltro === 'DATA') return dataPed.includes(query);
+        const statusMap = { "⏳": ["bg-status-pending", "Pendente"], "📦": ["bg-status-route", "Em Rota"], "✅": ["bg-status-done", "Concluído"], "⭕": ["bg-status-cancel", "Cancelado"] };
+
+        document.getElementById('tabela-pedidos-body').innerHTML = itensExibidos.map(p => {
+            const st = statusMap[p.status_emoji] || ["bg-light", "Aguardando"];
+            const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '--/--/--';
+            const id = extrairInfo(p.texto, 'ID');
             
-            return id.includes(query) || cliente.includes(query) || motoboy.includes(query) || dataPed.includes(query);
-        });
-
-        body.innerHTML = filtered.map(p => {
-            const statusMap = { 
-                "⏳": { c: "bg-status-pending", l: "Pendente" }, 
-                "📦": { c: "bg-status-route", l: "Em Rota" }, 
-                "✅": { c: "bg-status-done", l: "Concluído" }, 
-                "⭕": { c: "bg-status-cancel", l: "Cancelado" } 
-            };
-            const st = statusMap[p.status_emoji] || { c: "bg-light", l: "Aguardando" };
-            
-            // Formatação de data 00/00/0000
-            const dataSimples = p.data ? new Date(p.data).toLocaleDateString('pt-BR', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            }) : '00/00/0000';
-
             return `
                 <tr>
-                    <td class="px-4">
-                        <span class="fw-bold text-dark d-block">${extrairInfo(p.texto, 'ID')}</span>
-                        <small class="text-muted" style="font-size: 0.65rem;">${dataSimples}</small>
-                    </td>
-                    <td><span class="fw-bold small text-dark">${extrairInfo(p.texto, 'Solicitante')}</span></td>
-                    <td class="small text-muted" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${extrairInfo(p.texto, 'Para')}</td>
-                    <td><span class="badge bg-light text-dark border fw-normal" style="font-size: 0.7rem;"><i class="bi bi-person me-1"></i>${p.motoboy || 'Pendente'}</span></td>
-                    <td><span class="status-badge ${st.c}">${st.l}</span></td>
-                    <td class="px-4 text-end">
-                        <div class="d-flex justify-content-end gap-2">
-                            <button class="btn-minimal" onclick="visualizarPedido('${p.id}')"><i class="bi bi-eye"></i></button>
-                            <button class="btn-minimal" onclick="abrirEdicaoStatus('${p.id}', '${p.status_emoji}', '${p.motoboy}')"><i class="bi bi-pencil-fill" style="font-size: 0.8rem;"></i></button>
-                        </div>
+                    <td class="px-3"><span class="text-danger fw-bold">${id}</span></td>
+                    <td>${data}</td>
+                    <td>${extrairInfo(p.texto, 'Solicitante')}</td>
+                    <td><span class="text-muted"><i class="bi bi-bicycle me-1"></i>${p.motoboy || 'Pendente'}</span></td>
+                    <td><span class="status-badge ${st[0]}">${st[1]}</span></td>
+                    <td class="px-3 text-end">
+                        <button class="btn-action" onclick="visualizarPedido('${p.id}')"><i class="bi bi-eye"></i></button>
+                        <button class="btn-action" onclick="abrirEdicaoStatus('${p.id}', '${p.status_emoji}', '${p.motoboy}')"><i class="bi bi-pencil"></i></button>
                     </td>
                 </tr>`;
         }).join('');
 
-        if (filtered.length === 0) {
-            body.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted small">Nenhum registro encontrado.</td></tr>`;
+        document.getElementById('info-paginacao').innerText = `Mostrando ${itensExibidos.length} de ${filtered.length} pedidos`;
+        renderizarPaginador(totalPaginas);
+    }
+
+    function renderizarPaginador(total) {
+        let html = '';
+        for(let i=1; i<=total; i++) {
+            html += `<li class="page-item ${i === paginaAtual ? 'active' : ''}"><a class="page-link" href="#" onclick="paginaAtual=${i};renderizarTabela()">${i}</a></li>`;
+        }
+        document.getElementById('paginador-ul').innerHTML = html;
+    }
+
+    function visualizarPedido(id) {
+        const p = todosPedidos.find(x => x.id == id);
+        if(p) {
+            // Se você tiver um modal de visualização pronto, chame-o aqui. 
+            // Caso contrário, o alert exibe o corpo da mensagem:
+            alert("DETALHES DO PEDIDO:\n\n" + p.texto);
         }
     }
 
-    function visualizarPedido(id) { const p = todosPedidos.find(x => x.id == id); if(p) alert(p.texto); }
-
+    // Início
     carregarPedidos();
-    setInterval(carregarPedidos, 20000);
+    setInterval(carregarPedidos, 30000);
 </script>
