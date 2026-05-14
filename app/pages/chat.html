@@ -73,14 +73,61 @@
     </div>
 </div>
 
-<!-- Efeito de Copiado (Toast Central) -->
+<!-- Estilos Customizados -->
+<style>
+    .no-arrow::after { display: none !important; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
+    .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+    
+    /* Divisor de Data estilo WhatsApp */
+    .date-divider { align-self: center; background: #d1d7db; color: #54656f; font-size: 0.75rem; padding: 5px 12px; border-radius: 8px; margin: 15px 0; text-transform: uppercase; font-weight: 500; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
+
+    /* Balão de Mensagem */
+    .msg-bubble { background: white; padding: 12px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+    .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; margin-bottom: 12px; }
+    
+    /* Reação do Status (img01.png) */
+    .reaction-badge { 
+        position: absolute; 
+        bottom: -10px; 
+        left: 10px; 
+        background: white; 
+        border-radius: 20px; 
+        padding: 1px 6px; 
+        font-size: 1.1rem; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    /* Tooltip estilo img02.png */
+    .reaction-badge:hover::after {
+        content: attr(data-motoboy);
+        position: absolute;
+        bottom: 30px;
+        left: 0;
+        background: white;
+        color: black;
+        padding: 8px 12px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        white-space: nowrap;
+        font-size: 0.75rem;
+        font-weight: bold;
+        z-index: 100;
+        border: 1px solid #eee;
+    }
+</style>
+
+<!-- Modais e Scripts seguem conforme solicitado -->
 <div id="toast-copiado" class="fixed-top w-100 h-100 d-none justify-content-center align-items-center" style="z-index: 9999; pointer-events: none;">
     <div class="bg-dark text-white px-4 py-2 rounded-pill shadow-lg fw-bold" style="opacity: 0.9;">
         <i class="bi bi-check2-circle me-2"></i> Modelo Copiado!
     </div>
 </div>
 
-<!-- Modal Modelo de Solicitação -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -128,30 +175,22 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                 <div id="passo-finalizacao" style="display:none;">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div>
-                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light" placeholder="Digite a hora no formato 00:00"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light" placeholder="00:00"></div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">VALOR KM</label>
                             <select id="p-valor-km" class="form-select border-0 bg-light" onchange="calcularTudo()">
-                                <option value="2.20">2,20</option>
-                                <option value="2.40">2,40</option>
-                                <option value="3.00">3,00</option>
+                                <option value="2.20">2,20</option><option value="2.40">2,40</option><option value="3.00">3,00</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">MERCADORIA</label>
                             <select id="p-mercadoria" class="form-select border-0 bg-light">
-                                <option value="Sacola">Sacola</option>
-                                <option value="Coleta">Coleta</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Envelope">Envelope</option>
+                                <option value="Sacola">Sacola</option><option value="Coleta">Coleta</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">TROCA/RETORNO</label>
-                            <select id="p-troca" class="form-select border-0 bg-light">
-                                <option value="NÃO">NÃO</option>
-                                <option value="SIM">SIM</option>
-                            </select>
+                            <select id="p-troca" class="form-select border-0 bg-light"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select>
                         </div>
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted">LOCALIDADE</label>
@@ -163,22 +202,16 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                                 <option value="7">Zona Oeste (Buritis) + (Taxa 7)</option>
                                 <option value="10">Pampulha (Castelo) + (Taxa 10)</option>
                                 <option value="15">Barreiro (Barreiro de Baixo) + (Taxa 15)</option>
-                                <option value="10">Nordeste (Cidade Nova) + (Taxa 10)</option>
-                                <option value="10">Noroeste (Caiçara) + (Taxa 10)</option>
                             </select>
                         </div>
                         <div class="col-md-12">
                             <label class="small fw-bold text-muted">PRIORIDADE</label>
                             <select id="p-prioridade" class="form-select border-0 bg-light" onchange="calcularTudo()">
-                                <option value="0">Normal</option>
-                                <option value="7">Urgente + (Taxa 7)</option>
-                                <option value="10">Agendado + (Taxa 10)</option>
+                                <option value="0">Normal</option><option value="7">Urgente + (Taxa 7)</option><option value="10">Agendado + (Taxa 10)</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <div class="p-4 rounded-4 text-center bg-danger text-white shadow">
-                                <h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1>
-                            </div>
+                            <div class="p-4 rounded-4 text-center bg-danger text-white shadow"><h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1></div>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
@@ -201,34 +234,28 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                 <div class="mb-3">
                     <label class="small fw-bold text-muted">STATUS (EMOJI)</label>
                     <select id="edit-msg-emoji" class="form-select border-0 bg-light">
-                        <option value="⏳">⏳ Aguardando</option>
-                        <option value="🏍️">🏍️ Em Coleta</option>
-                        <option value="📦">📦 Em Rota</option>
-                        <option value="✅">✅ Entregue</option>
-                        <option value="❌">❌ Cancelado</option>
+                        <option value="⏳">⏳ Aguardando</option><option value="🏍️">🏍️ Em Coleta</option><option value="📦">📦 Em Rota</option><option value="✅">✅ Entregue</option><option value="❌">❌ Cancelado</option>
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">MOTOBOY</label>
-                    <select id="edit-msg-motoboy" class="form-select border-0 bg-light"></select>
-                </div>
+                <div class="mb-3"><label class="small fw-bold text-muted">MOTOBOY</label><select id="edit-msg-motoboy" class="form-select border-0 bg-light"></select></div>
                 <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">SALVAR ALTERAÇÃO</button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .no-arrow::after { display: none !important; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
-    .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-bubble { background: white; padding: 12px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-    .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; }
-    .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; }
-</style>
-
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
+
+    function formatarDataHeader(dataISO) {
+        if(!dataISO) return "Hoje";
+        const d = new Date(dataISO);
+        const hoje = new Date();
+        const ontem = new Date(); ontem.setDate(hoje.getDate() - 1);
+        if (d.toDateString() === hoje.toDateString()) return "Hoje";
+        if (d.toDateString() === ontem.toDateString()) return "Ontem";
+        return d.toLocaleDateString('pt-BR');
+    }
 
     function removerPelicula() { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.classList.remove('modal-open'); document.body.style = ''; }
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModelo')).show(); }
@@ -237,14 +264,9 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         const texto = document.getElementById('texto-modelo-copia').innerText;
         navigator.clipboard.writeText(texto).then(() => {
             const toast = document.getElementById('toast-copiado');
-            toast.classList.remove('d-none');
-            toast.classList.add('d-flex');
+            toast.classList.replace('d-none', 'd-flex');
             bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
-            setTimeout(removerPelicula, 300);
-            setTimeout(() => {
-                toast.classList.add('d-none');
-                toast.classList.remove('d-flex');
-            }, 2000);
+            setTimeout(() => { toast.classList.replace('d-flex', 'd-none'); removerPelicula(); }, 2000);
         });
     }
 
@@ -273,15 +295,28 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat') || [];
         const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
-        document.getElementById('chat-messages-container').innerHTML = filtradas.map(m => {
+        const container = document.getElementById('chat-messages-container');
+        let html = '';
+        let ultimaData = '';
+
+        filtradas.forEach(m => {
+            const dataAtual = formatarDataHeader(m.data);
+            if(dataAtual !== ultimaData) {
+                html += `<div class="date-divider">${dataAtual}</div>`;
+                ultimaData = dataAtual;
+            }
+
             const isPedido = String(m.finalizado) === "true" || m.texto.includes('LOGÍSTICA RDO');
-            return `<div class="msg-bubble ${isPedido ? 'msg-logistics' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy || 'Aguardando'}')"` : ''}>
-                <div style="white-space: pre-wrap; font-size: 0.85rem; padding-bottom: ${isPedido ? '15px' : '0'};">${m.texto}</div>
-                ${isPedido ? `<div class="status-footer">${m.status_emoji || '⏳'}</div>` : ''}
-                <div class="text-end text-muted" style="font-size: 0.6rem;">${m.hora}</div>
-            </div>`;
-        }).join('');
-        const c = document.getElementById('chat-messages-container'); c.scrollTop = c.scrollHeight;
+            html += `
+                <div class="msg-bubble ${isPedido ? 'msg-logistics' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy || 'Aguardando'}')"` : ''}>
+                    <div style="white-space: pre-wrap; font-size: 0.85rem; padding-bottom: ${isPedido ? '5px' : '0'};">${m.texto}</div>
+                    ${isPedido ? `<div class="reaction-badge" data-motoboy="RDOEXPRESS: ${m.motoboy || 'Aguardando'}">${m.status_emoji || '⏳'}</div>` : ''}
+                    <div class="text-end text-muted" style="font-size: 0.6rem;">${m.hora || '00:00'}</div>
+                </div>`;
+        });
+        
+        container.innerHTML = html;
+        container.scrollTop = container.scrollHeight;
     }
 
     async function abrirEdicaoStatus(id, emoji, motoboy) {
@@ -320,7 +355,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
             input.value = '';
             new bootstrap.Modal(document.getElementById('modalPedido')).show();
         } else {
-            API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "false" }).then(() => { input.value = ''; carregarMensagensBanco(window.chatState.currentName); });
+            API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "false" }).then(() => { input.value = ''; carregarMensagensBanco(window.chatState.currentName); });
         }
     }
 
@@ -344,7 +379,7 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
 
     async function salvarPedidoAPI() {
         const corpo = `📦 LOGÍSTICA RDO\nSolicitante: ${document.getElementById('p-solicitante').value}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nTroca: ${document.getElementById('p-troca').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
-        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: corpo, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), finalizado: "true", status_emoji: "⏳", motoboy: "Aguardando" });
+        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: corpo, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "Aguardando" });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 300);
     }
