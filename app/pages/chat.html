@@ -68,6 +68,7 @@
     </div>
 </div>
 
+<!-- Modal Modelo de Solicitação -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -76,22 +77,23 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body py-3">
-                <div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
+                <div class="bg-light p-3 rounded-3 small text-muted mb-3" id="texto-modelo-copia" style="white-space: pre-wrap;">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo:
 
-SOLICITANTE: ...
-MERCADORIA: Coleta, Envelope, Sacola, Outros ...
+SOLICITANTE: 
+MERCADORIA: 
 COLETA: 
 ENTREGA: 
 HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: 
-OBS:
+OBS: 
 
-Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
+Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
                 <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="copiarModeloParaChat()">COPIAR PARA O CHAT</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Edição de Status -->
 <div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow rounded-4">
@@ -114,13 +116,50 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
                         <option value="Aguardando">Aguardando...</option>
                     </select>
                 </div>
-                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">SALVAR E LIMPAR BANCO</button>
+                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">SALVAR E ATUALIZAR</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow rounded-4"><div class="modal-header border-0 pb-0"><h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="passo-conferencia"><div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 250px;"><iframe id="mapa-iframe" width="100%" height="100%" frameborder="0"></iframe></div><div class="row g-2 mb-3"><div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm"></div><div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm"></div></div><button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">PREENCHER FORMULÁRIO</button></div><div id="passo-finalizacao" style="display:none;"><div class="row g-2"><div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div><div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div><div class="col-12 mt-3"><div class="p-3 rounded-4 text-center bg-danger text-white"><h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1></div></div></div><div class="d-flex gap-2 mt-4"><button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button><button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button></div></div></div></div></div></div>
+<!-- Modal Checkout Pedido -->
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold mb-0">RDO <span class="text-danger">Express</span> - Checkout</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="passo-conferencia">
+                    <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 250px;">
+                        <iframe id="mapa-iframe" width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6"><label class="small fw-bold text-muted">COLETA</label><input type="text" id="p-origem" class="form-control border-0 bg-light shadow-sm"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">ENTREGA</label><input type="text" id="p-destino" class="form-control border-0 bg-light shadow-sm"></div>
+                    </div>
+                    <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="proximoPassoPedido()">PREENCHER FORMULÁRIO</button>
+                </div>
+                <div id="passo-finalizacao" style="display:none;">
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control border-0 bg-light"></div>
+                        <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO COLETA</label><input type="text" id="p-horario-manual" class="form-control border-0 bg-light"></div>
+                        <div class="col-12 mt-3">
+                            <div class="p-3 rounded-4 text-center bg-danger text-white">
+                                <h1 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h1>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-light w-50 rounded-pill" onclick="voltarPasso()">VOLTAR</button>
+                        <button class="btn btn-dark w-50 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
     .no-arrow::after { display: none !important; }
@@ -200,13 +239,11 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
         const idAntigo = document.getElementById('edit-msg-id').value;
         const msgs = await API.call('getmensagens_chat') || [];
         const msgAntiga = msgs.find(m => String(m.id) === String(idAntigo));
-        
         if(msgAntiga) {
             const novaMsg = { ...msgAntiga };
             novaMsg.id = Date.now().toString(); 
             novaMsg.status_emoji = document.getElementById('edit-msg-emoji').value;
             novaMsg.motoboy = document.getElementById('edit-msg-motoboy').value;
-            
             const saveRes = await API.call('addmensagens_chat', novaMsg);
             if(saveRes.status === 'success') {
                 await API.call('deletemensagens_chat', { id: idAntigo });
@@ -218,8 +255,19 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
 
     async function salvarPedidoAPI() {
         const pid = "RDO-" + Math.floor(1000 + Math.random() * 9000);
-        const corpo = `📦 *LOGÍSTICA RDO*\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}`;
-        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: corpo, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toLocaleDateString('pt-BR'), finalizado: "true", status_emoji: "⏳", motoboy: "Aguardando" });
+        const corpo = `📦 LOGÍSTICA RDO\n\nID: ${pid}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: Coleta\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO PARA PEGAR ENCOMENDA: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nOBS: ...\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        
+        await API.call('addmensagens_chat', { 
+            id: Date.now().toString(), 
+            jid_numero: window.chatState.currentName, 
+            texto: corpo, 
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            data: new Date().toLocaleDateString('pt-BR'), 
+            finalizado: "true", 
+            status_emoji: "⏳", 
+            motoboy: "Aguardando" 
+        });
+        
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(removerPelicula, 300);
         await carregarMensagensBanco(window.chatState.currentName);
@@ -236,6 +284,7 @@ Assim que enviar, nosso sistema calculará sua taxa instantaneamente! 🏁</div>
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
+            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA');
             input.value = '';
             new bootstrap.Modal(document.getElementById('modalPedido')).show();
         } else {
