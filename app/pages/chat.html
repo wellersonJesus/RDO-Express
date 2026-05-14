@@ -73,6 +73,13 @@
     </div>
 </div>
 
+<!-- Efeito de Copiado (Toast Central) -->
+<div id="toast-copiado" class="fixed-top w-100 h-100 d-none justify-content-center align-items-center" style="z-index: 9999; pointer-events: none;">
+    <div class="bg-dark text-white px-4 py-2 rounded-pill shadow-lg fw-bold" style="opacity: 0.9;">
+        <i class="bi bi-check2-circle me-2"></i> Modelo Copiado!
+    </div>
+</div>
+
 <!-- Modal Modelo de Solicitação -->
 <div class="modal fade" id="modalModelo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -209,7 +216,6 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
     .msg-bubble { background: white; padding: 12px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-    /* CLASSE CRÍTICA PARA A MÃOZINHA */
     .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; }
     .status-footer { font-size: 1.2rem; position: absolute; left: 10px; bottom: 5px; }
 </style>
@@ -223,9 +229,20 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
     function copiarTextoClipboard() {
         const texto = document.getElementById('texto-modelo-copia').innerText;
         navigator.clipboard.writeText(texto).then(() => {
-            alert('Modelo copiado!');
+            // Efeito visual de copiado
+            const toast = document.getElementById('toast-copiado');
+            toast.classList.remove('d-none');
+            toast.classList.add('d-flex');
+            
+            // Fecha o modal
             bootstrap.Modal.getInstance(document.getElementById('modalModelo')).hide();
             setTimeout(removerPelicula, 300);
+
+            // Esconde o efeito após 2 segundos
+            setTimeout(() => {
+                toast.classList.add('d-none');
+                toast.classList.remove('d-flex');
+            }, 2000);
         });
     }
 
@@ -255,7 +272,6 @@ Assim que enviar, nosso sistema calculará sua taxa! 🏁</div>
         const res = await API.call('getmensagens_chat') || [];
         const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
         document.getElementById('chat-messages-container').innerHTML = filtradas.map(m => {
-            // VERIFICAÇÃO FORÇADA: Se finalizado for true ou texto contiver LOGÍSTICA RDO
             const isPedido = String(m.finalizado) === "true" || m.texto.includes('LOGÍSTICA RDO');
             return `<div class="msg-bubble ${isPedido ? 'msg-logistics' : ''} mb-2" ${isPedido ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy || 'Aguardando'}')"` : ''}>
                 <div style="white-space: pre-wrap; font-size: 0.85rem; padding-bottom: ${isPedido ? '15px' : '0'};">${m.texto}</div>
