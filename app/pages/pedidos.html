@@ -12,10 +12,24 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <div class="input-group input-group-sm" style="width: 220px;">
-                        <span class="input-group-text border-0 bg-light"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="filtro-pedido" class="form-control border-0 bg-light small" placeholder="Buscar..." onkeyup="renderizarTabela()">
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm rounded-pill border-0 px-3" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-filter-left fs-5"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end shadow border-0 p-3" style="width: 250px;">
+                            <label class="small fw-bold text-muted mb-2">FILTRAR POR:</label>
+                            <select id="tipo-filtro" class="form-select form-select-sm border-0 bg-light mb-2">
+                                <option value="todos">Todos os Campos</option>
+                                <option value="id">ID Pedido</option>
+                                <option value="data">Data</option>
+                                <option value="solicitante">Solicitante</option>
+                                <option value="motoboy">Motoboy</option>
+                                <option value="status">Status</option>
+                            </select>
+                            <input type="text" id="filtro-pedido" class="form-control form-control-sm border-0 bg-light" placeholder="Digite para buscar..." onkeyup="renderizarTabela()">
+                        </div>
                     </div>
+                    
                     <button class="btn btn-light btn-sm rounded-pill border-0 px-2" onclick="carregarPedidos()">
                         <i id="sync-pedidos" class="bi bi-arrow-repeat"></i>
                     </button>
@@ -57,7 +71,7 @@
             </div>
             <div class="modal-body px-4 pb-4">
                 <div class="row g-3">
-                    <div class="col-12"><h6 class="text-danger fw-bold small text-uppercase mb-0">Dados do Chat (mensagens_chat)</h6><hr class="my-1 opacity-10"></div>
+                    <div class="col-12"><h6 class="text-danger fw-bold small text-uppercase mb-0">Dados do Chat</h6><hr class="my-1 opacity-10"></div>
                     <div class="col-md-3">
                         <label class="small text-muted fw-bold">ID DO PEDIDO</label>
                         <input type="text" id="det-pedido-id" class="form-control form-control-sm border-0 bg-light fw-bold" readonly>
@@ -84,7 +98,7 @@
                         <input type="text" id="det-mercadoria" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
 
-                    <div class="col-12 mt-4"><h6 class="text-danger fw-bold small text-uppercase mb-0">Dados Técnicos (pedidos)</h6><hr class="my-1 opacity-10"></div>
+                    <div class="col-12 mt-4"><h6 class="text-danger fw-bold small text-uppercase mb-0">Dados Técnicos</h6><hr class="my-1 opacity-10"></div>
                     <div class="col-md-3">
                         <label class="small text-muted fw-bold">KM</label>
                         <input type="text" id="det-km" class="form-control form-control-sm border-0 bg-white shadow-sm">
@@ -110,7 +124,7 @@
                     </div>
                 </div>
                 <div class="mt-4 d-flex gap-2">
-                    <button id="btn-salvar" class="btn btn-danger w-100 rounded-pill fw-bold py-2 shadow" onclick="salvarSincronizado()">SALVAR EM AMBOS BANCOS</button>
+                    <button id="btn-salvar" class="btn btn-danger w-100 rounded-pill fw-bold py-2 shadow" onclick="salvarSincronizado()">SALVAR ALTERAÇÕES</button>
                     <button class="btn btn-light w-100 rounded-pill fw-bold py-2 border" data-bs-dismiss="modal">CANCELAR</button>
                 </div>
             </div>
@@ -138,18 +152,18 @@
     async function carregarPedidos() {
         document.getElementById('sync-pedidos')?.classList.add('loading-spin');
         try {
-            // Busca dados das duas tabelas
             const [resChat, resPedidos] = await Promise.all([
                 API.call('getmensagens_chat'),
                 API.call('getpedidos')
             ]);
-            
-            dadosChat = resChat.filter(m => m.finalizado === "true" || m.finalizado === true).reverse();
+            dadosChat = resChat.filter(m => String(m.finalizado) === "true").reverse();
             dadosPedidos = resPedidos || [];
-            
             renderizarTabela();
         } catch (e) { console.error(e); }
-        finally { document.getElementById('sync-pedidos')?.classList.remove('loading-spin'); document.getElementById('loading-pedidos').style.display = 'none'; }
+        finally { 
+            document.getElementById('sync-pedidos')?.classList.remove('loading-spin'); 
+            document.getElementById('loading-pedidos').style.display = 'none'; 
+        }
     }
 
     function extrair(texto, rotulo) {
@@ -160,12 +174,30 @@
 
     function renderizarTabela() {
         const query = document.getElementById('filtro-pedido').value.toLowerCase();
-        const html = dadosChat.filter(p => {
+        const tipoFiltro = document.getElementById('tipo-filtro').value;
+        const statusMap = { "⏳": ["bg-status-pending", "Pendente"], "📦": ["bg-status-route", "Rota"], "✅": ["bg-status-done", "OK"], "⭕": ["bg-status-cancel", "Cancel"] };
+
+        const filtrados = dadosChat.filter(p => {
+            if (!query) return true;
+            
             const id = extrair(p.texto, 'ID').toLowerCase();
-            return id.includes(query) || p.texto.toLowerCase().includes(query);
-        }).map(p => {
+            const solicitante = extrair(p.texto, 'Solicitante').toLowerCase();
+            const motoboy = (p.motoboy || '').toLowerCase();
+            const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '';
+            const statusStr = (statusMap[p.status_emoji] ? statusMap[p.status_emoji][1] : '').toLowerCase();
+
+            switch(tipoFiltro) {
+                case 'id': return id.includes(query);
+                case 'data': return data.includes(query);
+                case 'solicitante': return solicitante.includes(query);
+                case 'motoboy': return motoboy.includes(query);
+                case 'status': return statusStr.includes(query);
+                default: return id.includes(query) || solicitante.includes(query) || motoboy.includes(query) || statusStr.includes(query);
+            }
+        });
+
+        document.getElementById('tabela-pedidos-body').innerHTML = filtrados.map(p => {
             const idPedido = extrair(p.texto, 'ID');
-            const statusMap = { "⏳": ["bg-status-pending", "Pendente"], "📦": ["bg-status-route", "Rota"], "✅": ["bg-status-done", "OK"], "⭕": ["bg-status-cancel", "Cancel"] };
             const st = statusMap[p.status_emoji] || ["bg-light", "---"];
             
             return `<tr>
@@ -175,18 +207,21 @@
                 <td><i class="bi bi-bicycle me-1"></i>${p.motoboy || '---'}</td>
                 <td><span class="status-badge ${st[0]}">${st[1]}</span></td>
                 <td class="px-3 text-end">
-                    <button class="btn-action" onclick="abrirSincronizado('${p.id}', '${idPedido}')"><i class="bi bi-pencil-square"></i></button>
+                    <button class="btn-action me-1" onclick="abrirSincronizado('${p.id}', '${idPedido}')" title="Editar">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="btn-action" onclick="abrirSincronizado('${p.id}', '${idPedido}')" title="Visualizar">
+                        <i class="bi bi-eye"></i>
+                    </button>
                 </td>
             </tr>`;
         }).join('');
-        document.getElementById('tabela-pedidos-body').innerHTML = html;
     }
 
     function abrirSincronizado(chatId, pedidoId) {
         const pChat = dadosChat.find(x => x.id == chatId);
         const pTech = dadosPedidos.find(x => x.id_pedido === pedidoId);
 
-        // Preenche dados do Chat
         document.getElementById('det-pedido-id').value = pedidoId;
         document.getElementById('det-solicitante').value = extrair(pChat.texto, 'Solicitante');
         document.getElementById('det-mercadoria').value = extrair(pChat.texto, 'Mercadoria');
@@ -194,7 +229,6 @@
         document.getElementById('det-status').value = pChat.status_emoji || '⏳';
         document.getElementById('det-valor').value = extrair(pChat.texto, 'Valor');
 
-        // Preenche dados da tabela Pedidos (se existirem)
         document.getElementById('det-km').value = pTech ? pTech.km : '';
         document.getElementById('det-taxa').value = pTech ? pTech.taxa_localidade : '';
         document.getElementById('det-prioridade').value = pTech ? pTech.prioridade : 'Normal';
@@ -207,8 +241,9 @@
     }
 
     async function salvarSincronizado() {
-        const chatId = document.getElementById('btn-salvar').getAttribute('data-chatid');
-        const pedidoId = document.getElementById('btn-salvar').getAttribute('data-pedidoid');
+        const btn = document.getElementById('btn-salvar');
+        const chatId = btn.getAttribute('data-chatid');
+        const pedidoId = btn.getAttribute('data-pedidoid');
 
         const dadosParaChat = {
             id: chatId,
@@ -226,20 +261,16 @@
         };
 
         try {
-            // Atualiza mensagens_chat
             await API.call('updategetmensagens_chat', dadosParaChat);
-            
-            // Verifica se o pedido já existe na tabela pedidos para dar update ou insert
             const existe = dadosPedidos.some(x => x.id_pedido === pedidoId);
             if(existe) {
                 await API.call('updategetpedidos', dadosParaPedidos);
             } else {
                 await API.call('insertgetpedidos', dadosParaPedidos);
             }
-
             bsModal.hide();
             carregarPedidos();
-        } catch (e) { alert("Erro ao sincronizar bancos."); }
+        } catch (e) { alert("Erro ao sincronizar."); }
     }
 
     carregarPedidos();
