@@ -1,0 +1,275 @@
+<div class="row g-3 h-100">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden" style="height: 600px;">
+            <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-danger">CONTATOS</h6>
+                <i id="sync-icon" class="bi bi-arrow-repeat cursor-pointer" onclick="carregarDados()"></i>
+            </div>
+            <div id="lista-atendentes-chat" class="list-group list-group-flush overflow-auto"></div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 d-flex flex-column" style="height: 600px;">
+            <div id="chat-header" class="p-2 border-bottom bg-white d-flex align-items-center px-3">
+                <div id="chat-header-avatar"></div>
+                <h6 id="chat-header-name" class="fw-bold mb-0 ms-2 small">Selecione um atendimento</h6>
+            </div>
+            <div id="chat-messages-container" class="flex-grow-1 p-3 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
+            <div class="p-2 bg-white border-top">
+                <div class="input-group bg-light rounded-pill p-1">
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 small" rows="1" placeholder="Cole a solicitação aqui..."></textarea>
+                    <button class="btn btn-danger rounded-pill px-3" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMaps" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">RDO Express - <span class="text-danger">Análise de Rota</span></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rounded-4 overflow-hidden border mb-3 shadow-sm" style="height: 300px;">
+                    <iframe id="iframe-mapa" width="100%" height="100%" frameborder="0"></iframe>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="abrirCheckout()">AVANÇAR PARA CHECKOUT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPedido" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="bg-danger p-2 text-white text-center">
+                <small class="fw-bold">RDO Express - Checkout LOGISTIC</small>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formPedido" class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label mb-0 small fw-bold text-muted">SOLICITANTE</label>
+                        <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light validate" placeholder="Nome do cliente">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label mb-0 small fw-bold text-muted">HORÁRIO COLETA</label>
+                        <input type="text" id="p-horario-manual" class="form-control form-control-sm border-0 bg-light validate" placeholder="00:00">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">DISTÂNCIA (KM)</label>
+                        <input type="number" id="p-distancia" class="form-control form-control-sm border-0 bg-light validate" value="4.40" step="0.1" oninput="calcularTudo()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">TEMPO EST.</label>
+                        <input type="text" id="p-tempo" class="form-control form-control-sm border-0 bg-light validate" placeholder="Ex: 20 min">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">VALOR KM</label>
+                        <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="2.20" selected>2,20</option>
+                            <option value="2.40">2,40</option>
+                            <option value="3.00">3,00</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">MERCADORIA</label>
+                        <select id="p-mercadoria-input" class="form-select form-select-sm border-0 bg-light">
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label mb-0 small fw-bold text-muted">LOCALIDADE (TAXA)</label>
+                        <select id="p-localidade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="0">Centro (R$ 0)</option>
+                            <option value="5">Zona Sul (Savassi) + R$ 5</option>
+                            <option value="7">Zona Norte (Venda Nova) + R$ 7</option>
+                            <option value="7">Zona Leste (Sta Efigênia) + R$ 7</option>
+                            <option value="7">Zona Oeste (Buritis) + R$ 7</option>
+                            <option value="10">Pampulha (Castelo) + R$ 10</option>
+                            <option value="15">Barreiro + R$ 15</option>
+                            <option value="10">Nordeste + R$ 10</option>
+                            <option value="10">Noroeste + R$ 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">PRIORIDADE</label>
+                        <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="0">Normal</option>
+                            <option value="7">Urgente + R$ 7</option>
+                            <option value="10">Agendado + R$ 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 small fw-bold text-muted">TROCA/RETORNO</label>
+                        <select id="p-troca" class="form-select form-select-sm border-0 bg-light">
+                            <option value="NÃO">NÃO</option>
+                            <option value="SIM">SIM</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label mb-0 small fw-bold text-muted">DE (COLETA)</label>
+                        <input type="text" id="p-origem" class="form-control form-control-sm border-0 bg-light validate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-0 small fw-bold text-muted">PARA (ENTREGA)</label>
+                        <input type="text" id="p-destino" class="form-control form-control-sm border-0 bg-light validate">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label mb-0 small fw-bold text-muted">OBSERVAÇÕES</label>
+                        <input type="text" id="p-obs" class="form-control form-control-sm border-0 bg-light">
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-4">
+                                <div class="bg-dark text-white rounded-3 p-2 text-center">
+                                    <small class="d-block" style="font-size: 0.6rem; opacity: 0.8;">VALOR TOTAL</small>
+                                    <h5 class="mb-0 fw-bold" id="view-valor-final" style="color: #00FF00;">R$ 0,00</h5>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary w-100 h-100 rounded-3 fw-bold small" onclick="voltarParaMapa()">VOLTAR MAPA</button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-danger w-100 h-100 rounded-3 fw-bold" onclick="validarESalvar()">FINALIZAR</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .whatsapp-bg { background-color: #f0f2f5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); opacity: 0.9; }
+    .msg-bubble { background: white; padding: 8px 12px; border-radius: 10px; max-width: 80%; box-shadow: 0 1px 1px rgba(0,0,0,0.1); font-size: 0.85rem; }
+    .is-invalid { border: 1px solid #dc3545 !important; background-color: #fff8f8 !important; }
+    .cursor-pointer { cursor: pointer; }
+</style>
+
+<script>
+    if (!window.chatState) window.chatState = { currentName: null };
+
+    function calcularTudo() {
+        const km = parseFloat(document.getElementById('p-distancia').value) || 0;
+        const vKm = parseFloat(document.getElementById('p-valor-km').value) || 0;
+        const loc = parseFloat(document.getElementById('p-localidade').value) || 0;
+        const prio = parseFloat(document.getElementById('p-prioridade').value) || 0;
+        const total = (km * vKm) + loc + prio;
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
+
+    function abrirCheckout() {
+        bootstrap.Modal.getInstance(document.getElementById('modalMaps')).hide();
+        setTimeout(() => { new bootstrap.Modal(document.getElementById('modalPedido')).show(); calcularTudo(); }, 350);
+    }
+
+    function voltarParaMapa() {
+        bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+        setTimeout(() => { new bootstrap.Modal(document.getElementById('modalMaps')).show(); }, 350);
+    }
+
+    function validarESalvar() {
+        let v = true;
+        document.querySelectorAll('.validate').forEach(i => {
+            if(!i.value.trim()){ i.classList.add('is-invalid'); v=false; } 
+            else { i.classList.remove('is-invalid'); }
+        });
+        if(v) salvarPedidoAPI();
+    }
+
+    async function salvarPedidoAPI() {
+        const pedidoId = 'RDO' + Math.floor(1000 + Math.random() * 9000);
+        const msgId = Date.now().toString();
+        
+        const txt = `📦 *LOGÍSTICA RDO*\n\n*ID:* ${pedidoId}\n*Solicitante:* ${document.getElementById('p-solicitante').value}\n*Coleta:* ${document.getElementById('p-origem').value}\n*Entrega:* ${document.getElementById('p-destino').value}\n*Horário:* ${document.getElementById('p-horario-manual').value}\n*Tempo Est.:* ${document.getElementById('p-tempo').value}\n*Distância:* ${document.getElementById('p-distancia').value} KM\n*Troca:* ${document.getElementById('p-troca').value}\n*OBS:* ${document.getElementById('p-obs').value}\n--------------------------\n*VALOR:* ${document.getElementById('view-valor-final').innerText}`;
+
+        try {
+            // Salva em mensagens_chat
+            await API.call('addmensagens_chat', {
+                id: msgId,
+                jid_numero: window.chatState.currentName,
+                texto: txt,
+                hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                data: new Date().toISOString(),
+                finalizado: "true",
+                status_emoji: "⏳",
+                motoboy: "⁉",
+                pedido_id: pedidoId
+            });
+
+            // Salva em pedidos
+            await API.call('addpedidos', {
+                id_mensagens_chat: msgId,
+                id_pedido: pedidoId,
+                km: document.getElementById('p-distancia').value,
+                taxa_localidade: document.getElementById('p-localidade').value,
+                prioridade: document.getElementById('p-prioridade').value,
+                valor_corrida: document.getElementById('view-valor-final').innerText,
+                observacao: document.getElementById('p-obs').value
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+            carregarMensagensBanco(window.chatState.currentName);
+        } catch (e) {
+            alert("Erro ao salvar.");
+        }
+    }
+
+    function enviarMensagemManual() {
+        const t = document.getElementById('msg-input').value.trim();
+        if(!t) return;
+        if(t.toUpperCase().includes('SOLICITANTE:')) {
+            const get = (l) => (t.match(new RegExp(`${l}:\\s*(.*)`, 'i')) || [null, ''])[1].trim();
+            document.getElementById('p-solicitante').value = get('SOLICITANTE');
+            document.getElementById('p-origem').value = get('COLETA');
+            document.getElementById('p-destino').value = get('ENTREGA');
+            document.getElementById('p-horario-manual').value = (t.match(/HORÁRIO.*:\s*(.*)/i) || [null, ''])[1].trim();
+            
+            document.getElementById('iframe-mapa').src = `https://www.google.com/maps/embed/v1/search?key=SEU_TOKEN&q=${encodeURIComponent(get('COLETA') + ' para ' + get('ENTREGA'))}`;
+            
+            new bootstrap.Modal(document.getElementById('modalMaps')).show();
+            document.getElementById('msg-input').value = '';
+        }
+    }
+
+    async function carregarDados() {
+        const configs = await API.call('getbotconfig') || [];
+        const render = (u) => `<button onclick="selecionarChat('${u.username}', '${u.imagem}')" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-2"><img src="${u.imagem}" class="rounded-circle border me-2" width="30" height="30"><span class="small fw-bold">${u.username}</span></button>`;
+        document.getElementById('lista-atendentes-chat').innerHTML = configs.map(render).join('');
+    }
+
+    function selecionarChat(n, i) {
+        window.chatState.currentName = n;
+        document.getElementById('chat-header-name').innerText = n;
+        document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="30" height="30">`;
+        carregarMensagensBanco(n);
+    }
+
+    async function carregarMensagensBanco(nome) {
+        const res = await API.call('getmensagens_chat') || [];
+        const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
+        document.getElementById('chat-messages-container').innerHTML = filtradas.map(m => `
+            <div class="msg-bubble ${m.finalizado === 'true' ? 'ms-auto bg-success text-white' : 'bg-white text-dark'} mb-2 shadow-sm">
+                <div style="white-space: pre-wrap;">${m.texto}</div>
+                <div class="text-end small opacity-75" style="font-size: 0.65rem;">${m.hora}</div>
+            </div>
+        `).join('');
+    }
+
+    carregarDados();
+</script>

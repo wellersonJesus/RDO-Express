@@ -1,0 +1,198 @@
+<div class="modal fade" id="modalPedido" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="bg-dark p-2 text-white d-flex justify-content-between align-items-center px-3">
+                <span class="fw-bold small" style="font-size: 0.75rem;"><span class="text-danger">RDO</span> Express - Checkout LOGISTIC</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 0.6rem;"></button>
+            </div>
+            
+            <div class="modal-body p-3 bg-white">
+                <form id="formPedido" class="row g-2">
+                    <div class="col-md-7">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">SOLICITANTE</label>
+                        <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light validate" placeholder="Nome">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">HORÁRIO ESTIMADO COLETA</label>
+                        <input type="text" id="p-horario-manual" class="form-control form-control-sm border-0 bg-light validate" placeholder="00:00">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">DISTÂNCIA (KM)</label>
+                        <input type="number" id="p-distancia" class="form-control form-control-sm border-0 bg-light validate" oninput="calcularTudo()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">TEMPO ESTIMADO</label>
+                        <input type="text" id="p-tempo" class="form-control form-control-sm border-0 bg-light validate" placeholder="Ex: 25 min">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">VALOR KM</label>
+                        <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="2.20" selected>2,20</option>
+                            <option value="2.40">2,40</option>
+                            <option value="3.00">3,00</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">MERCADORIA</label>
+                        <select id="p-mercadoria-input" class="form-select form-select-sm border-0 bg-light">
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">LOCALIDADE</label>
+                        <select id="p-localidade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="0">Centro</option>
+                            <option value="5">Zona Sul (Savassi) + R$ 5</option>
+                            <option value="7">Zona Norte (Venda Nova) + R$ 7</option>
+                            <option value="7">Zona Leste (Sta Efigênia) + R$ 7</option>
+                            <option value="7">Zona Oeste (Buritis) + R$ 7</option>
+                            <option value="10">Pampulha (Castelo) + R$ 10</option>
+                            <option value="15">Barreiro (Barreiro de Baixo) + R$ 15</option>
+                            <option value="10">Nordeste (Cidade Nova) + R$ 10</option>
+                            <option value="10">Noroeste (Caiçara) + R$ 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">PRIORIDADE</label>
+                        <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
+                            <option value="0">Normal</option>
+                            <option value="7">Urgente + R$ 7</option>
+                            <option value="10">Agendado + R$ 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">TROCA/RETORNO</label>
+                        <select id="p-troca" class="form-select form-select-sm border-0 bg-light">
+                            <option value="NÃO">NÃO</option>
+                            <option value="SIM">SIM</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">DE (COLETA)</label>
+                        <input type="text" id="p-origem" class="form-control form-control-sm border-0 bg-light validate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">PARA (ENTREGA)</label>
+                        <input type="text" id="p-destino" class="form-control form-control-sm border-0 bg-light validate">
+                    </div>
+                    <div class="col-12">
+                        <label class="fw-bold text-muted mb-0" style="font-size: 0.65rem;">OBSERVAÇÕES</label>
+                        <input type="text" id="p-obs" class="form-control form-control-sm border-0 bg-light">
+                    </div>
+
+                    <div class="col-12 mt-3 p-2 rounded-3" style="background-color: #f8f9fa; border: 1px dashed #dee2e6;">
+                        <div class="row align-items-center g-2">
+                            <div class="col-4">
+                                <div class="bg-danger text-white rounded-3 p-1 text-center">
+                                    <small style="font-size: 0.55rem; display: block;">TOTAL ESTIMADO</small>
+                                    <h5 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h5>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-dark w-100 h-100 fw-bold" style="font-size: 0.7rem;" onclick="voltarParaMapa()">
+                                    <i class="bi bi-arrow-left"></i> VOLTAR MAPA
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-dark w-100 h-100 fw-bold" style="font-size: 0.7rem;" onclick="validarESalvar()">
+                                    FINALIZAR <i class="bi bi-check2-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Função para cálculo automático com as novas taxas
+    function calcularTudo() {
+        const km = parseFloat(document.getElementById('p-distancia').value) || 0;
+        const vKm = parseFloat(document.getElementById('p-valor-km').value) || 0;
+        const taxaLocalidade = parseFloat(document.getElementById('p-localidade').value) || 0;
+        const taxaPrioridade = parseFloat(document.getElementById('p-prioridade').value) || 0;
+        
+        const total = (km * vKm) + taxaLocalidade + taxaPrioridade;
+        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
+
+    // Fecha o checkout e volta para o modal do mapa
+    function voltarParaMapa() {
+        const modCheckout = bootstrap.Modal.getInstance(document.getElementById('modalPedido'));
+        if(modCheckout) modCheckout.hide();
+        
+        setTimeout(() => {
+            const modMaps = new bootstrap.Modal(document.getElementById('modalMaps'));
+            modMaps.show();
+        }, 400);
+    }
+
+    async function salvarPedidoAPI() {
+        const pedidoId = 'RDO' + Math.floor(1000 + Math.random() * 9000);
+        const msgId = Date.now().toString();
+        
+        // Texto formatado conforme solicitado
+        const txt = `📦 *LOGÍSTICA RDO*\n\n*ID:* ${pedidoId}\n*Solicitante:* ${document.getElementById('p-solicitante').value}\n*Coleta:* ${document.getElementById('p-origem').value}\n*Entrega:* ${document.getElementById('p-destino').value}\n*Horário:* ${document.getElementById('p-horario-manual').value}\n*Tempo:* ${document.getElementById('p-tempo').value}\n*Distância:* ${document.getElementById('p-distancia').value} KM\n*Troca:* ${document.getElementById('p-troca').value}\n*OBS:* ${document.getElementById('p-obs').value}\n--------------------------\n*VALOR:* ${document.getElementById('view-valor-final').innerText}`;
+
+        try {
+            // Salva na tabela mensagens_chat
+            await API.call('addmensagens_chat', {
+                id: msgId,
+                jid_numero: window.chatState.currentName,
+                texto: txt,
+                hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                finalizado: "true",
+                status_emoji: "⏳",
+                motoboy: "⁉",
+                pedido_id: pedidoId
+            });
+
+            // Salva na tabela pedidos (sincronizado)
+            await API.call('addpedidos', {
+                id_mensagens_chat: msgId,
+                id_pedido: pedidoId,
+                km: document.getElementById('p-distancia').value,
+                taxa_localidade: document.getElementById('p-localidade').value,
+                prioridade: document.getElementById('p-prioridade').value,
+                valor_corrida: document.getElementById('view-valor-final').innerText,
+                observacao: document.getElementById('p-obs').value
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+            carregarMensagensBanco(window.chatState.currentName);
+        } catch (e) {
+            console.error("Erro ao sincronizar dados:", e);
+        }
+    }
+
+    function validarESalvar() {
+        let v = true;
+        document.querySelectorAll('.validate').forEach(i => {
+            if(!i.value.trim()){ i.classList.add('border-danger'); v=false; } 
+            else { i.classList.remove('border-danger'); }
+        });
+        if(v) salvarPedidoAPI();
+    }
+</script>
+
+<style>
+    /* Estilo para manter o formulário clean */
+    .form-control-sm, .form-select-sm {
+        border-radius: 6px;
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+    }
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        background-color: #fff !important;
+        border: 1px solid #dc3545;
+    }
+</style>
