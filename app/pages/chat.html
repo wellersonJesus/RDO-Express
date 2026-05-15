@@ -87,8 +87,7 @@
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; margin-bottom: 8px; }
     .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; margin-bottom: 12px; }
     
-    /* Status Badge Vazado */
-    .msg-logistics .reaction-badge-floating { position: absolute; bottom: -8px; left: -10px; background: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 10; }
+    .msg-logistics .reaction-badge-floating { position: absolute; bottom: -8px; left: -10px; background: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 10; cursor: help; }
     
     .date-divider { align-self: center; background: #d1d7db; color: #54656f; font-size: 0.7rem; padding: 5px 12px; border-radius: 8px; margin: 10px 0; font-weight: bold; text-transform: uppercase; }
     .loading-spin { animation: spin 1s linear infinite; display: inline-block; }
@@ -164,7 +163,12 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                     <div class="col-12 mt-2">
                         <div class="row g-2 align-items-center">
                             <div class="col-5"><div class="bg-danger text-white rounded-3 p-2 text-center shadow-sm"><small style="font-size: 0.6rem;">VALOR FINAL</small><h5 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h5></div></div>
-                            <div class="col-7"><button class="btn btn-dark w-100 h-100 rounded-3 fw-bold" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button></div>
+                            <div class="col-7">
+                                <button id="btn-finalizar-checkout" class="btn btn-dark w-100 h-100 rounded-3 fw-bold" onclick="salvarPedidoAPI()">
+                                    <span id="btn-label">FINALIZAR PEDIDO</span>
+                                    <span id="btn-loader" class="d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -212,9 +216,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
     function carregarRotaNoMapa(o, d) {
         const query = encodeURIComponent(`${o} para ${d}`);
-        document.getElementById('iframe-mapa').src = `https://www.google.com/maps/embed/v1/search?key=YOUR_API_KEY_HERE&q=${query}&output=embed`.replace('YOUR_API_KEY_HERE', ''); 
-        // Fallback p/ visualização direta se sem chave:
-        document.getElementById('iframe-mapa').src = `https://maps.google.com/maps?q=$${query}&output=embed`;
+        document.getElementById('iframe-mapa').src = `https://www.google.com/maps?q=${query}&output=embed`;
     }
 
     async function carregarDados() {
@@ -250,8 +252,9 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             const dAt = formatarDataWpp(m.data);
             if (dAt !== uD) { html += `<div class="date-divider">${dAt}</div>`; uD = dAt; }
             const isP = String(m.finalizado) === "true";
-            html += `<div class="msg-bubble ${isP ? 'msg-logistics' : ''} mb-2" ${isP ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy}')"` : ''}>
-                ${isP ? `<div class="reaction-badge-floating">${m.status_emoji || '⏳'}</div>` : ''}
+            const motoboyNome = m.motoboy || "⁉";
+            html += `<div class="msg-bubble ${isP ? 'msg-logistics' : ''} mb-2" ${isP ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${motoboyNome}')"` : ''}>
+                ${isP ? `<div class="reaction-badge-floating" title="Motoboy: ${motoboyNome}">${m.status_emoji || '⏳'}</div>` : ''}
                 <div style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
                 <div class="text-end text-muted" style="font-size: 0.6rem; margin-top: 4px;">${m.hora || '00:00'}</div>
             </div>`;
@@ -290,11 +293,23 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     async function salvarPedidoAPI() {
+        const label = document.getElementById('btn-label');
+        const loader = document.getElementById('btn-loader');
+        const btn = document.getElementById('btn-finalizar-checkout');
+        
+        label.classList.add('d-none');
+        loader.classList.remove('d-none');
+        btn.disabled = true;
+
         const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 90000);
-        // NOVO PADRÃO DE MENSAGEM SOLICITADO
         const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nTroca/Retorno: ${document.getElementById('p-troca').value}\nOBS: ${document.getElementById('p-obs').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
         
-        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "❓" });
+        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉" });
+        
+        label.classList.remove('d-none');
+        loader.classList.add('d-none');
+        btn.disabled = false;
+
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 400);
     }
