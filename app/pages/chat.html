@@ -87,7 +87,7 @@
     .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; margin-bottom: 8px; }
     .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; margin-bottom: 12px; }
     
-    /* Status Badge no pé esquerdo, "vazando" para fora */
+    /* Status Badge Vazado */
     .msg-logistics .reaction-badge-floating { position: absolute; bottom: -8px; left: -10px; background: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 10; }
     
     .date-divider { align-self: center; background: #d1d7db; color: #54656f; font-size: 0.7rem; padding: 5px 12px; border-radius: 8px; margin: 10px 0; font-weight: bold; text-transform: uppercase; }
@@ -125,7 +125,7 @@
                 <h6 class="fw-bold mb-0">Modelo de Solicitação</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
+            <div class="modal-body">
                 <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo:
 SOLICITANTE: 
 MERCADORIA: 
@@ -194,10 +194,8 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         if (!iso) return "";
         const d = new Date(iso), agora = new Date();
         const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-        const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1);
         const comp = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         if (comp.getTime() === hoje.getTime()) return "Hoje";
-        if (comp.getTime() === ontem.getTime()) return "Ontem";
         return d.toLocaleDateString('pt-BR');
     }
 
@@ -214,9 +212,9 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
     function carregarRotaNoMapa(o, d) {
         const query = encodeURIComponent(`${o} para ${d}`);
-        const url = `https://www.google.com/maps/embed/v1/search?key=SEU_MAPS_KEY_OU_URL_LIVRE&q=${query}`;
-        const fallbackUrl = `https://maps.google.com/maps?q=${query}&output=embed`;
-        document.getElementById('iframe-mapa').src = fallbackUrl;
+        document.getElementById('iframe-mapa').src = `https://www.google.com/maps/embed/v1/search?key=YOUR_API_KEY_HERE&q=${query}&output=embed`.replace('YOUR_API_KEY_HERE', ''); 
+        // Fallback p/ visualização direta se sem chave:
+        document.getElementById('iframe-mapa').src = `https://maps.google.com/maps?q=$${query}&output=embed`;
     }
 
     async function carregarDados() {
@@ -252,8 +250,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             const dAt = formatarDataWpp(m.data);
             if (dAt !== uD) { html += `<div class="date-divider">${dAt}</div>`; uD = dAt; }
             const isP = String(m.finalizado) === "true";
-            
-            // Render da Mensagem com Badge Flutuante no canto inferior esquerdo
             html += `<div class="msg-bubble ${isP ? 'msg-logistics' : ''} mb-2" ${isP ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy}')"` : ''}>
                 ${isP ? `<div class="reaction-badge-floating">${m.status_emoji || '⏳'}</div>` : ''}
                 <div style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
@@ -279,6 +275,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = o; document.getElementById('p-destino').value = d;
             document.getElementById('p-horario-manual').value = (t.match(/HORÁRIO ESTIMADO.*:\s*(.*)/i) || [null, ''])[1].trim();
+            document.getElementById('p-obs').value = getF('OBS');
             carregarRotaNoMapa(o, d);
             new bootstrap.Modal(document.getElementById('modalMaps')).show();
             inp.value = '';
@@ -293,8 +290,11 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     async function salvarPedidoAPI() {
-        const txt = `📦 ${window.chatState.currentName}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
-        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "A definir" });
+        const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 90000);
+        // NOVO PADRÃO DE MENSAGEM SOLICITADO
+        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nTroca/Retorno: ${document.getElementById('p-troca').value}\nOBS: ${document.getElementById('p-obs').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        
+        await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "❓" });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 400);
     }
