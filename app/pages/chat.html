@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
-                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
@@ -69,13 +69,27 @@
     </div>
 </div>
 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toastCopy" class="toast align-items-center text-white bg-dark border-0 rounded-4" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex p-2">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-patch-check-fill text-info fs-5"></i> Modelo copiado com sucesso!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
 <style>
     .no-arrow::after { display: none !important; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; position: absolute; bottom: 1px; right: 12px; }
     .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; margin-bottom: 8px; }
     .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; margin-bottom: 12px; }
-    .reaction-badge { position: absolute; bottom: -10px; right: 10px; background: white; border-radius: 20px; padding: 1px 6px; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+    
+    /* Status Badge no pé esquerdo, "vazando" para fora */
+    .msg-logistics .reaction-badge-floating { position: absolute; bottom: -8px; left: -10px; background: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 10; }
+    
     .date-divider { align-self: center; background: #d1d7db; color: #54656f; font-size: 0.7rem; padding: 5px 12px; border-radius: 8px; margin: 10px 0; font-weight: bold; text-transform: uppercase; }
     .loading-spin { animation: spin 1s linear infinite; display: inline-block; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -112,14 +126,17 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center">
-                <pre class="bg-light p-3 rounded-3 small text-start" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer;" onclick="copiarModelo()">
+                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo:
 SOLICITANTE: 
+MERCADORIA: 
 COLETA: 
 ENTREGA: 
-MERCADORIA: 
 HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA: 
-OBS:</pre>
-                <button class="btn btn-outline-danger btn-sm rounded-pill px-4" onclick="copiarModelo()">Copiar Modelo</button>
+TROCA / RETORNO: 
+OBS:
+
+Assim que enviar, calcularemos á sua taxa! 🏁</div>
+                <button class="btn btn-danger w-100 rounded-pill fw-bold" onclick="copiarModelo()"><i class="bi bi-copy me-2"></i> COPIAR MODELO</button>
             </div>
         </div>
     </div>
@@ -135,52 +152,15 @@ OBS:</pre>
             <div class="modal-body">
                 <div class="row g-2">
                     <div class="col-md-6"><label class="small fw-bold text-muted">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light"></div>
-                    <div class="col-md-6"><label class="small fw-bold text-muted">HORÁRIO ESTIMADO P/ COLETA</label><input type="text" id="p-horario-manual" class="form-control form-control-sm border-0 bg-light" placeholder="00:00"></div>
-                    
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-muted">VALOR KM</label>
-                        <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
-                            <option value="2.20">2,20</option><option value="2.40" selected>2,40</option><option value="3.00">3,00</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-muted">MERCADORIA</label>
-                        <select id="p-mercadoria-input" class="form-select form-select-sm border-0 bg-light">
-                            <option value="Sacola">Sacola</option><option value="Coleta">Coleta</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-muted">TROCA/RETORNO</label>
-                        <select id="p-troca" class="form-select form-select-sm border-0 bg-light"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="small fw-bold text-muted">LOCALIDADE</label>
-                        <select id="p-localidade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
-                            <option value="0">Centro (R$ 0)</option>
-                            <option value="5">Zona Sul (Savassi) + R$ 5</option>
-                            <option value="7">Zona Norte (Venda Nova) + R$ 7</option>
-                            <option value="7">Zona Leste (Santa Efigênia) + R$ 7</option>
-                            <option value="7">Zona Oeste (Buritis) + R$ 7</option>
-                            <option value="10">Pampulha (Castelo) + R$ 10</option>
-                            <option value="15">Barreiro (Barreiro Baixo) + R$ 15</option>
-                            <option value="10">Nordeste (Cidade Nova) + R$ 10</option>
-                            <option value="10">Noroeste (Caiçara) + R$ 10</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="small fw-bold text-muted">PRIORIDADE</label>
-                        <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()">
-                            <option value="0">Normal</option>
-                            <option value="7">Urgente + R$ 7</option>
-                            <option value="10">Agendado + R$ 10</option>
-                        </select>
-                    </div>
-
+                    <div class="col-md-6"><label class="small fw-bold text-muted">COLETA ESTIMADA</label><input type="text" id="p-horario-manual" class="form-control form-control-sm border-0 bg-light" placeholder="00:00"></div>
+                    <div class="col-md-4"><label class="small fw-bold text-muted">VALOR KM</label><select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()"><option value="2.20">2,20</option><option value="2.40" selected>2,40</option><option value="3.00">3,00</option></select></div>
+                    <div class="col-md-4"><label class="small fw-bold text-muted">MERCADORIA</label><select id="p-mercadoria-input" class="form-select form-select-sm border-0 bg-light"><option value="Sacola">Sacola</option><option value="Coleta">Coleta</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option></select></div>
+                    <div class="col-md-4"><label class="small fw-bold text-muted">TROCA/RETORNO</label><select id="p-troca" class="form-select form-select-sm border-0 bg-light"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select></div>
+                    <div class="col-md-6"><label class="small fw-bold text-muted">LOCALIDADE</label><select id="p-localidade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()"><option value="0">Centro</option><option value="5">Zona Sul (Savassi) + 5</option><option value="7">Zona Norte (Venda Nova) + 7</option><option value="7">Zona Leste (Sta Efigênia) + 7</option><option value="7">Zona Oeste (Buritis) + 7</option><option value="10">Pampulha (Castelo) + 10</option><option value="15">Barreiro + 15</option><option value="10">Nordeste + 10</option><option value="10">Noroeste + 10</option></select></div>
+                    <div class="col-md-6"><label class="small fw-bold text-muted">PRIORIDADE</label><select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="calcularTudo()"><option value="0">Normal</option><option value="7">Urgente + 7</option><option value="10">Agendado + 10</option></select></div>
                     <div class="col-md-6"><label class="small fw-bold text-muted">DE (COLETA)</label><input type="text" id="p-origem" class="form-control form-control-sm border-0 bg-light"></div>
                     <div class="col-md-6"><label class="small fw-bold text-muted">PARA (ENTREGA)</label><input type="text" id="p-destino" class="form-control form-control-sm border-0 bg-light"></div>
                     <div class="col-12"><label class="small fw-bold text-muted">OBSERVAÇÕES</label><input type="text" id="p-obs" class="form-control form-control-sm border-0 bg-light"></div>
-                    
                     <div class="col-12 mt-2">
                         <div class="row g-2 align-items-center">
                             <div class="col-5"><div class="bg-danger text-white rounded-3 p-2 text-center shadow-sm"><small style="font-size: 0.6rem;">VALOR FINAL</small><h5 class="mb-0 fw-bold" id="view-valor-final">R$ 0,00</h5></div></div>
@@ -210,41 +190,48 @@ OBS:</pre>
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
 
-    function formatarDataWpp(isoString) {
-        if (!isoString) return "";
-        const dataMsg = new Date(isoString); const agora = new Date();
+    function formatarDataWpp(iso) {
+        if (!iso) return "";
+        const d = new Date(iso), agora = new Date();
         const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
         const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1);
-        const dataComp = new Date(dataMsg.getFullYear(), dataMsg.getMonth(), dataMsg.getDate());
-        if (dataComp.getTime() === hoje.getTime()) return "Hoje";
-        if (dataComp.getTime() === ontem.getTime()) return "Ontem";
-        return dataMsg.toLocaleDateString('pt-BR');
+        const comp = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        if (comp.getTime() === hoje.getTime()) return "Hoje";
+        if (comp.getTime() === ontem.getTime()) return "Ontem";
+        return d.toLocaleDateString('pt-BR');
     }
 
     function removerPelicula() { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.classList.remove('modal-open'); document.body.style = ''; }
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModeloMensagem')).show(); }
-    function copiarModelo() { navigator.clipboard.writeText(document.getElementById('texto-modelo').innerText).then(() => { alert('Modelo Copiado!'); bootstrap.Modal.getInstance(document.getElementById('modalModeloMensagem')).hide(); }); }
 
-    function carregarRotaNoMapa(origem, destino) {
-        const url = `https://www.google.com/maps?q=${encodeURIComponent(origem)}+to+${encodeURIComponent(destino)}&output=embed`;
-        document.getElementById('iframe-mapa').src = url;
+    function copiarModelo() {
+        const txt = document.getElementById('texto-modelo').innerText;
+        navigator.clipboard.writeText(txt).then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('modalModeloMensagem')).hide();
+            new bootstrap.Toast(document.getElementById('toastCopy')).show();
+        });
+    }
+
+    function carregarRotaNoMapa(o, d) {
+        const query = encodeURIComponent(`${o} para ${d}`);
+        const url = `https://www.google.com/maps/embed/v1/search?key=SEU_MAPS_KEY_OU_URL_LIVRE&q=${query}`;
+        const fallbackUrl = `https://maps.google.com/maps?q=${query}&output=embed`;
+        document.getElementById('iframe-mapa').src = fallbackUrl;
     }
 
     async function carregarDados() {
         const icon = document.getElementById('sync-icon'); if(icon) icon.classList.add('loading-spin');
         const configs = await API.call('getbotconfig') || [];
-        const botStatus = localStorage.getItem('bot_status') === 'true';
-
-        const renderItem = (u) => {
-            const isOnline = botStatus && String(u.status) === 'true';
+        const botOn = localStorage.getItem('bot_status') === 'true';
+        const render = (u) => {
+            const on = botOn && String(u.status) === 'true';
             return `<button onclick="selecionarChat('${u.username}', '${u.imagem}')" class="list-group-item list-group-item-action border-0 ${window.chatState.currentName === u.username ? 'bg-danger text-white' : ''} d-flex align-items-center px-2">
-                <div class="position-relative"><img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38"><span class="status-dot ${isOnline ? 'bg-success' : 'bg-secondary'}"></span></div>
+                <div class="position-relative"><img src="${u.imagem}" class="rounded-circle border me-3" width="38" height="38"><span class="status-dot ${on ? 'bg-success' : 'bg-secondary'}"></span></div>
                 <span class="fw-bold small">${u.username}</span></button>`;
         };
-
-        document.getElementById('lista-atendentes-chat').innerHTML = configs.filter(c => c.tipo !== 'grupo').map(renderItem).join('');
-        document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
-        if(window.chatState.currentName) await carregarMensagensBanco(window.chatState.currentName);
+        document.getElementById('lista-atendentes-chat').innerHTML = configs.filter(c => c.tipo !== 'grupo').map(render).join('');
+        document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(render).join('');
+        if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName);
         if(icon) setTimeout(() => icon.classList.remove('loading-spin'), 800);
     }
 
@@ -253,21 +240,23 @@ OBS:</pre>
         document.getElementById('chat-header-name').innerText = n;
         document.getElementById('chat-header-avatar').innerHTML = `<img src="${i}" class="rounded-circle border" width="40" height="40">`;
         document.getElementById('menu-opcoes-chat').style.display = 'block';
-        await carregarMensagensBanco(n);
+        carregarMensagensBanco(n);
     }
 
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat') || [];
         const filtradas = res.filter(m => String(m.jid_numero).includes(nome));
         const container = document.getElementById('chat-messages-container');
-        let html = ''; let uData = '';
+        let html = ''; let uD = '';
         filtradas.forEach(m => {
-            const dAtu = formatarDataWpp(m.data);
-            if (dAtu !== uData) { html += `<div class="date-divider">${dAtu}</div>`; uData = dAtu; }
+            const dAt = formatarDataWpp(m.data);
+            if (dAt !== uD) { html += `<div class="date-divider">${dAt}</div>`; uD = dAt; }
             const isP = String(m.finalizado) === "true";
+            
+            // Render da Mensagem com Badge Flutuante no canto inferior esquerdo
             html += `<div class="msg-bubble ${isP ? 'msg-logistics' : ''} mb-2" ${isP ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji || '⏳'}', '${m.motoboy}')"` : ''}>
+                ${isP ? `<div class="reaction-badge-floating">${m.status_emoji || '⏳'}</div>` : ''}
                 <div style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
-                ${isP ? `<div class="reaction-badge">${m.status_emoji || '⏳'}</div>` : ''}
                 <div class="text-end text-muted" style="font-size: 0.6rem; margin-top: 4px;">${m.hora || '00:00'}</div>
             </div>`;
         });
@@ -289,8 +278,7 @@ OBS:</pre>
             const o = getF('COLETA'), d = getF('ENTREGA');
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = o; document.getElementById('p-destino').value = d;
-            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ PEGAR ENCOMENDA');
-            document.getElementById('p-obs').value = getF('OBS');
+            document.getElementById('p-horario-manual').value = (t.match(/HORÁRIO ESTIMADO.*:\s*(.*)/i) || [null, ''])[1].trim();
             carregarRotaNoMapa(o, d);
             new bootstrap.Modal(document.getElementById('modalMaps')).show();
             inp.value = '';
@@ -305,8 +293,7 @@ OBS:</pre>
     }
 
     async function salvarPedidoAPI() {
-        const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 90000);
-        const txt = `📦 ${window.chatState.currentName}\nID: ${idRdo}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        const txt = `📦 ${window.chatState.currentName}\nDe: ${document.getElementById('p-origem').value}\nPara: ${document.getElementById('p-destino').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
         await API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "A definir" });
         bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
         setTimeout(() => { removerPelicula(); carregarMensagensBanco(window.chatState.currentName); }, 400);
