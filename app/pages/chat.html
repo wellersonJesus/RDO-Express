@@ -174,6 +174,19 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     </div>
 </div>
 
+<div class="modal fade" id="modalAtencaoChat" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-exclamation-triangle-fill text-warning display-4 mb-3 d-block"></i>
+                <h6 class="fw-bold text-dark mb-2">Pedido Concluído</h6>
+                <p class="text-muted small mb-4">Atenção! Este pedido já foi concluído/finalizado e não pode mais ser editado por nenhum usuário.</p>
+                <button type="button" class="btn btn-dark w-100 rounded-pill fw-bold py-2 small" data-bs-dismiss="modal">ENTENDIDO</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -249,7 +262,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             if (linha.startsWith("De:"))         dados.origem = linha.replace("De:", "").trim();
             if (linha.startsWith("HORÁRIO:"))   dados.horario = linha.replace("HORÁRIO:", "").trim();
             if (linha.startsWith("Para:"))       dados.destino = linha.replace("Para:", "").trim();
-            if (linha.startsWith("Distância:"))  dados.km = linha.replace("Distância:", "").trim();
+            if (linha.startsWith("Distância:"))  dados.km = inline => inline.replace("Distância:", "").trim();
             if (linha.startsWith("Valor:")) {
                 let vBruto = text => text.replace("Valor:", "").replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
                 dados.valor = parseFloat(vBruto(linha)) || 0.00;
@@ -367,7 +380,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
         });
 
-        // Correção de envio explícito de parâmetros isolados
         await API.call('addpedidos', {
             id: idRdo,
             id_mensagens_chat: chatId,
@@ -394,6 +406,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     async function abrirEdicaoStatus(id, emoji, motoboy) {
+        if (emoji === "✅") {
+            new bootstrap.Modal(document.getElementById('modalAtencaoChat')).show();
+            return;
+        }
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji || '⏳';
         const colab = await API.call('getcolaboradores') || [];

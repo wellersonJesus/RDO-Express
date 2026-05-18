@@ -62,6 +62,21 @@
     </div>
 </div>
 
+<!-- MODAL DE ATENÇÃO (BLOQUEIO DE EDIÇÃO) -->
+<div class="modal fade" id="modalAtencaoPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-exclamation-triangle-fill text-warning display-4 mb-3 d-block"></i>
+                <h6 class="fw-bold text-dark mb-2">Pedido Concluído</h6>
+                <p class="text-muted small mb-4">Atenção! Este pedido já foi concluído/finalizado e não pode mais ser editado por nenhum usuário.</p>
+                <button type="button" class="btn btn-dark w-100 rounded-pill fw-bold py-2 small" data-bs-dismiss="modal">ENTENDIDO</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETALHES GESTÃO -->
 <div class="modal fade" id="modalPedidoDetalhes" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -150,13 +165,16 @@
     let dadosChat = [];
     let dadosPedidos = [];
     let bsModal;
+    let bsModalAtencao;
 
     setTimeout(() => {
         const modalEl = document.getElementById('modalPedidoDetalhes');
-        if (modalEl) {
-            bsModal = new bootstrap.Modal(modalEl);
-            carregarPedidos();
-        }
+        if (modalEl) bsModal = new bootstrap.Modal(modalEl);
+        
+        const modalAtencaoEl = document.getElementById('modalAtencaoPedido');
+        if (modalAtencaoEl) bsModalAtencao = new bootstrap.Modal(modalAtencaoEl);
+        
+        carregarPedidos();
     }, 100);
 
     async function carregarPedidos() {
@@ -216,6 +234,7 @@
         tbody.innerHTML = filtrados.map(p => {
             const idPedido = extrair(p.texto, 'ID');
             const st = statusMap[p.status_emoji] || ["bg-light", "---"];
+            const isConcluido = p.status_emoji === "✅";
             
             return `<tr>
                 <td class="px-3 fw-bold text-danger">${idPedido}</td>
@@ -224,10 +243,16 @@
                 <td><span class="me-1">🛵</span>${p.motoboy || '---'}</td>
                 <td><span class="status-badge ${st[0]}">${st[1]}</span></td>
                 <td class="px-3 text-end">
-                    <button class="btn-action me-1" onclick="window.RDO_PEDIDOS.abrirSincronizado('${p.id}', '${idPedido}')" title="Editar">
+                    ${isConcluido ? `
+                    <button class="btn-action me-1" onclick="window.RDO_PEDIDOS.dispararAlertaBloqueio()" title="Editar Bloqueado">
+                        <i class="bi bi-pencil-square opacity-50 text-warning"></i>
+                    </button>
+                    ` : `
+                    <button class="btn-action me-1" onclick="window.RDO_PEDIDOS.abrirSincronizado('${p.id}', '${idPedido}', false)" title="Editar">
                         <i class="bi bi-pencil-square"></i>
                     </button>
-                    <button class="btn-action" onclick="window.RDO_PEDIDOS.abrirSincronizado('${p.id}', '${idPedido}')" title="Visualizar">
+                    `}
+                    <button class="btn-action" onclick="window.RDO_PEDIDOS.abrirSincronizado('${p.id}', '${idPedido}', true)" title="Visualizar">
                         <i class="bi bi-eye"></i>
                     </button>
                 </td>
@@ -235,7 +260,11 @@
         }).join('');
     }
 
-    function abrirSincronizado(chatId, pedidoId) {
+    function dispararAlertaBloqueio() {
+        if (bsModalAtencao) bsModalAtencao.show();
+    }
+
+    function abrirSincronizado(chatId, pedidoId, apenasLeitura = false) {
         const pChat = dadosChat.find(x => x.id == chatId);
         const pTech = dadosPedidos.find(x => String(x.id_pedido) === String(pedidoId) || String(x.id) === String(pedidoId));
 
@@ -254,6 +283,15 @@
         const btnSalvar = document.getElementById('btn-salvar');
         btnSalvar.setAttribute('data-chatid', chatId);
         btnSalvar.setAttribute('data-pedidoid', pedidoId);
+
+        // Controla se exibe ou oculta o botão salvar dependendo do tipo de clique (Olho vs Lápis)
+        if (apenasLeitura || pChat.status_emoji === "✅") {
+            btnSalvar.classList.add('d-none');
+            document.getElementById('detalhe-titulo').innerText = "Visualização de Pedido (Modo Leitura)";
+        } else {
+            btnSalvar.classList.remove('d-none');
+            document.getElementById('detalhe-titulo').innerText = "Gestão de Pedido";
+        }
 
         if (bsModal) bsModal.show();
     }
@@ -312,7 +350,8 @@
         carregarPedidos,
         renderizarTabela,
         abrirSincronizado,
-        salvarSincronizado
+        salvarSincronizado,
+        dispararAlertaBloqueio
     };
 })();
 </script>
