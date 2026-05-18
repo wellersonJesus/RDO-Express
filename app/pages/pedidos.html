@@ -22,7 +22,6 @@
                                 <option value="todos">Todos os Campos</option>
                                 <option value="id">ID Pedido</option>
                                 <option value="data">Data</option>
-                                <option value="solicitante">Solicitante</option>
                                 <option value="motoboy">Motoboy</option>
                                 <option value="status">Status</option>
                             </select>
@@ -46,8 +45,8 @@
                         <tr>
                             <th class="border-0 px-3 py-2 fw-bold text-muted text-uppercase">ID Pedido</th>
                             <th class="border-0 py-2 fw-bold text-muted text-uppercase">Data</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Solicitante</th>
                             <th class="border-0 py-2 fw-bold text-muted text-uppercase">Motoboy</th>
+                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Valor</th>
                             <th class="border-0 py-2 fw-bold text-muted text-uppercase">Status</th>
                             <th class="border-0 px-3 py-2 text-end fw-bold text-muted text-uppercase">Ações</th>
                         </tr>
@@ -213,7 +212,6 @@
             if (!query) return true;
             
             const id = extrair(p.texto, 'ID').toLowerCase();
-            const solicitante = extrair(p.texto, 'Solicitante').toLowerCase();
             const motoboy = (p.motoboy || '').toLowerCase();
             const data = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '';
             const statusStr = (statusMap[p.status_emoji] ? statusMap[p.status_emoji][1] : '').toLowerCase();
@@ -221,10 +219,9 @@
             switch(tipoFiltro) {
                 case 'id': return id.includes(query);
                 case 'data': return data.includes(query);
-                case 'solicitante': return solicitante.includes(query);
                 case 'motoboy': return motoboy.includes(query);
                 case 'status': return statusStr.includes(query);
-                default: return id.includes(query) || solicitante.includes(query) || motoboy.includes(query) || statusStr.includes(query);
+                default: return id.includes(query) || motoboy.includes(query) || statusStr.includes(query);
             }
         });
 
@@ -233,14 +230,15 @@
 
         tbody.innerHTML = filtrados.map(p => {
             const idPedido = extrair(p.texto, 'ID');
+            const valorPedido = extrair(p.texto, 'Valor');
             const st = statusMap[p.status_emoji] || ["bg-light", "---"];
             const isConcluido = p.status_emoji === "✅";
             
             return `<tr>
                 <td class="px-3 fw-bold text-danger">${idPedido}</td>
                 <td>${p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '--'}</td>
-                <td>${extrair(p.texto, 'Solicitante')}</td>
                 <td><span class="me-1">🛵</span>${p.motoboy || '---'}</td>
+                <td class="fw-bold text-dark">${valorPedido}</td>
                 <td><span class="status-badge ${st[0]}">${st[1]}</span></td>
                 <td class="px-3 text-end">
                     ${isConcluido ? `
@@ -284,7 +282,6 @@
         btnSalvar.setAttribute('data-chatid', chatId);
         btnSalvar.setAttribute('data-pedidoid', pedidoId);
 
-        // Controla se exibe ou oculta o botão salvar dependendo do tipo de clique (Olho vs Lápis)
         if (apenasLeitura || pChat.status_emoji === "✅") {
             btnSalvar.classList.add('d-none');
             document.getElementById('detalhe-titulo').innerText = "Visualização de Pedido (Modo Leitura)";
