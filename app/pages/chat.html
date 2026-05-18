@@ -66,14 +66,14 @@
 </div>
 
 <div class="modal fade" id="modalMaps" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
                 <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Rota</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button>
             </div>
             <div class="modal-body pt-2">
-                <div class="rounded-3 overflow-hidden border mb-3" style="height: 300px;">
+                <div class="rounded-3 overflow-hidden border mb-3" style="height: 450px;">
                     <iframe id="iframe-mapa" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
                 </div>
                 <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="avancarParaLogistica()">CHECKOUT</button>
@@ -94,7 +94,7 @@
                     <div class="col-12"><label class="lbl-clean">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control ctrl-clean validate"></div>
                     <div class="col-md-6"><label class="lbl-clean">HORÁRIO ESTIMADO</label><input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00"></div>
                     <div class="col-md-3"><label class="lbl-clean">DISTÂNCIA (KM)</label><input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" oninput="calcularTudo()"></div>
-                    <div class="col-md-3"><label class="lbl-clean">TEMPO</label><input type="text" id="p-tempo" class="form-control ctrl-clean validate"></div>
+                    <div class="col-md-3"><label class="lbl-clean">TEMPO</label><input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min"></div>
                     <div class="col-md-4">
                         <label class="lbl-clean">VALOR KM</label>
                         <select id="p-valor-km" class="form-select ctrl-clean validate" onchange="calcularTudo()">
@@ -301,7 +301,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 99999);
         const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${document.getElementById('p-distancia').value} KM\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
 
-        // id, jid_numero, texto, hora, data, finalizado, status_emoji, motoboy, pedido_id
         await API.call('addmensagens_chat', { 
             id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, 
             hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
@@ -349,8 +348,15 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
-            document.getElementById('iframe-mapa').src = `https://www.google.com/maps/embed/v1/directions?key=SUA_CHAVE_AQUI&origin=${encodeURIComponent(getF('COLETA'))}&destination=${encodeURIComponent(getF('ENTREGA'))}`;
-            new bootstrap.Modal(document.getElementById('modalMaps')).show();
+            
+            // Modelo de URL nativo sem necessidade de API Key carregando a rota diretamente
+            const sOrigem = encodeURIComponent(getF('COLETA'));
+            const sDestino = encodeURIComponent(getF('ENTREGA'));
+            document.getElementById('iframe-mapa').src = `https://www.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&output=embed`;
+            
+            // Ajustamos o tamanho do Modal de Rota para comportar melhor a visualização lateral das informações nativas
+            const modalMapsEl = document.getElementById('modalMaps');
+            new bootstrap.Modal(modalMapsEl).show();
             inp.value = '';
         } else {
             API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ''; carregarMensagensBanco(window.chatState.currentName); });
