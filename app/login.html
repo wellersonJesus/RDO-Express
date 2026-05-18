@@ -17,6 +17,8 @@
         .form-control { border-radius: 12px; padding: 14px; border: 1px solid #e0e0e0; transition: all 0.3s; }
         .btn-login { border-radius: 12px; padding: 14px; font-weight: 700; background: var(--primary-color); border: none; color: #fff; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .pass-container { position: relative; }
+        .toggle-password-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d; z-index: 10; font-size: 1.2rem; }
     </style>
 </head>
 <body>
@@ -33,36 +35,57 @@
                 <div class="mb-3">
                     <input type="text" id="user" class="form-control" placeholder="Usuário" required>
                 </div>
-                <div class="mb-4">
+                <div class="mb-4 pass-container">
                     <input type="password" id="pass" class="form-control" placeholder="Senha" required>
+                    <i id="togglePassIcon" class="bi bi-eye toggle-password-icon" onclick="togglePasswordVisibility()"></i>
                 </div>
                 <button type="submit" class="btn btn-danger btn-login w-100">Acessar Painel</button>
                 <div id="login-msg" class="text-center mt-3 text-danger small fw-bold"></div>
             </form>
         </div>
     </div>
+    
     <script>
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('pass');
+            const icon = document.getElementById('togglePassIcon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                passInput.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+
         document.getElementById('loginForm').onsubmit = async function(e) {
             e.preventDefault();
-            const u = document.getElementById('user').value;
-            const p = document.getElementById('pass').value;
+            const u = document.getElementById('user').value.trim();
+            const p = document.getElementById('pass').value.trim();
             const msg = document.getElementById('login-msg');
             msg.innerText = "Autenticando...";
             
             try {
-                const response = await fetch('/api/login', {
+                // Comunicação centralizada enviando os dados brutos para o servidor validar com Bcrypt
+                const response = await fetch('/api/login-auth', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: u, password: p })
                 });
-                const data = await response.json();
-                if(data.success) {
+                
+                const resData = await response.json();
+                
+                if (resData && resData.status === 'success') {
                     localStorage.setItem('rdo_auth', 'true');
-                    localStorage.setItem('user_name', data.user.name);
-                    localStorage.setItem('user_role', data.user.role);
-                    localStorage.setItem('user_img', data.user.imagem);
+                    localStorage.setItem('user_name', resData.user.username);
+                    localStorage.setItem('user_role', resData.user.cargo);
+                    localStorage.setItem('user_img', resData.user.imagem);
                     window.location.href = '/index.html';
-                } else { throw new Error(); }
+                } else {
+                    throw new Error(resData.message || "Acesso negado");
+                }
             } catch(err) {
                 msg.innerText = "Acesso negado!";
                 const card = document.querySelector('.login-card');

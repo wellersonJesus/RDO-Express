@@ -2,7 +2,8 @@ const API = {
     call: async (action, data = {}) => {
         try {
             const isAuth = localStorage.getItem('rdo_auth');
-            if (!isAuth && !window.location.pathname.includes('login.html')) {
+            
+            if (!isAuth && !window.location.pathname.includes('login.html') && !action.includes('usuarios')) {
                 window.location.href = 'login.html';
                 return;
             }

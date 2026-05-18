@@ -22,8 +22,11 @@ npm install && npm start
 - Gerar hash
 
 ```bash
-# Gerar senha hash segura para o .env
-node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("sua_senha", 10));
+# Instala o pacote localmente apenas para gerar o hash inicial
+npm install bcryptjs
+
+# Gera o Hash na tela de forma limpa
+node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("master@123", 10));'
 ```
 
 - Popular dados Docker

@@ -14,7 +14,6 @@ function doPost(e) {
     var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // Entidades suportadas: usuarios, clientes, colaboradores, pedidos, financeiro, botconfig, chatlive
     var entity = action.replace(/get|add|delete|update/, '').toLowerCase();
     var sheet = ss.getSheetByName(entity);
     
@@ -54,7 +53,6 @@ function handleAdd(sheet, data) {
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var newRow = headers.map(function(header) {
     var key = header.toLowerCase().trim();
-    // Se for ID e não vier no payload, gera um UUID. Caso contrário, busca a chave correspondente
     if (key === "id" && !data[key]) return Utilities.getUuid();
     return data[key] !== undefined ? data[key] : "";
   });
