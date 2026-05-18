@@ -114,13 +114,13 @@
                     <div class="col-md-6">
                         <label class="lbl-clean">LOCALIDADE</label>
                         <select id="p-localidade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0">Centro</option><option value="5">Zona Sul + 5</option><option value="7">Zona Norte + 7</option><option value="15">Barreiro + 15</option>
+                            <option value="0" data-nome="Centro">Centro</option><option value="5" data-nome="Zona Sul + 5">Zona Sul + 5</option><option value="7" data-nome="Zona Norte + 7">Zona Norte + 7</option><option value="15" data-nome="Barreiro + 15">Barreiro + 15</option>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label class="lbl-clean">PRIORIDADE</label>
                         <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0">Normal</option><option value="7">Urgente + 7</option><option value="10">Agendado + 10</option>
+                            <option value="0" data-nome="Normal">Normal</option><option value="7" data-nome="Urgente + 7">Urgente + 7</option><option value="10" data-nome="Agendado + 10">Agendado + 10</option>
                         </select>
                     </div>
                     <div class="col-md-6"><label class="lbl-clean">ORIGEM</label><input type="text" id="p-origem" class="form-control ctrl-clean validate"></div>
@@ -198,6 +198,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     .loading-spin { animation: spin 1s linear infinite; display: inline-block; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .is-invalid { border: 1.5px solid #ff0000 !important; }
+    .chat-date-indicator { align-self: center; background: rgba(225, 245, 254, 0.9); color: #4a4a4a; font-size: 0.7rem; font-weight: 600; padding: 5px 12px; border-radius: 7px; box-shadow: 0 1px 1px rgba(0,0,0,0.05); margin: 8px 0; text-transform: uppercase; }
 </style>
 
 <script>
@@ -217,6 +218,51 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); 
         document.body.classList.remove('modal-open'); 
         document.body.style = ''; 
+    }
+
+    // FORMATAÇÃO E TRATAMENTO DA EXIBIÇÃO DE DATA NATIVA
+    function formatarDataHeader(dataStr) {
+        if (!dataStr) return "";
+        try {
+            const dataObjeto = new Date(dataStr);
+            if (isNaN(dataObjeto.getTime())) return "";
+
+            const hoje = new Date();
+            const ontem = new Date();
+            ontem.setDate(hoje.getDate() - 1);
+
+            const checarMesmaData = (d1, d2) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+
+            if (checarMesmaData(dataObjeto, hoje)) return "Hoje";
+            if (checarMesmaData(dataObjeto, ontem)) return "Ontem";
+
+            const dia = String(dataObjeto.getDate()).padStart(2, '0');
+            const mes = String(dataObjeto.getMonth() + 1).padStart(2, '0');
+            const ano = dataObjeto.getFullYear();
+            return `${dia}/${mes}/${ano}`;
+        } catch (e) {
+            return "";
+        }
+    }
+
+    // PARSER AUXILIAR: EXTRAI E QUEBRA O BLOCO DE TEXTO EM PROPRIEDADES PURAS
+    function extrairDadosDoTexto(texto) {
+        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", km: "0 KM", valor: 0.00 };
+        if (!texto) return dados;
+        const linhas = texto.split('\n').map(l => l.trim());
+        linhas.forEach(linha => {
+            if (linha.startsWith("Solicitante:")) dados.solicitante = linha.replace("Solicitante:", "").trim();
+            if (linha.startsWith("Mercadoria:")) dados.mercadoria = linha.replace("Mercadoria:", "").trim();
+            if (linha.startsWith("De:"))         dados.origem = linha.replace("De:", "").trim();
+            if (linha.startsWith("HORÁRIO:"))   dados.horario = linha.replace("HORÁRIO:", "").trim();
+            if (linha.startsWith("Para:"))       dados.destino = linha.replace("Para:", "").trim();
+            if (linha.startsWith("Distância:"))  dados.km = linha.replace("Distância:", "").trim();
+            if (linha.startsWith("Valor:")) {
+                let vBruto = linha.replace("Valor:", "").replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+                dados.valor = parseFloat(vBruto) || 0.00;
+            }
+        });
+        return dados;
     }
 
     // MODAL MODELO
@@ -264,16 +310,33 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat') || [];
         const container = document.getElementById('chat-messages-container');
-        container.innerHTML = res.filter(m => String(m.jid_numero).includes(nome)).map(m => {
+        
+        // Filtra e ordena cronologicamente
+        const msgsFiltradas = res.filter(m => String(m.jid_numero).includes(nome));
+        
+        let htmlDinamico = "";
+        let ultimaDataCadastrada = "";
+
+        msgsFiltradas.forEach(m => {
+            const dataFormatada = formatarDataHeader(m.data);
+            
+            // Injeta o divisor visual de data caso mude de dia
+            if (dataFormatada && dataFormatada !== ultimaDataCadastrada) {
+                htmlDinamico += `<div class="chat-date-indicator">${dataFormatada}</div>`;
+                ultimaDataCadastrada = dataFormatada;
+            }
+
             const isLogistica = String(m.finalizado) === "true";
-            return `
+            htmlDinamico += `
             <div class="msg-bubble ${isLogistica ? 'msg-logistics' : ''}" 
                  ${isLogistica ? `onclick="abrirEdicaoStatus('${m.id}', '${m.status_emoji}', '${m.motoboy}')"` : ''}>
                 ${isLogistica ? `<div class="reaction-badge-floating" title="Motoboy: ${m.motoboy || 'Pendente'}">${m.status_emoji || '⏳'}</div>` : ''}
                 <div style="white-space: pre-wrap; font-size: 0.85rem;">${m.texto}</div>
                 <div class="text-end text-muted" style="font-size:0.6rem; margin-top:4px;">${m.hora || '00:00'}</div>
             </div>`;
-        }).join('');
+        });
+
+        container.innerHTML = htmlDinamico;
         container.scrollTop = container.scrollHeight;
     }
 
@@ -299,12 +362,42 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     async function salvarPedidoAPI() {
         toggleBtnLoader('btn-finalizar-checkout', true);
         const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 99999);
+        const chatId = Date.now().toString();
+        
+        let limpo = document.getElementById('view-valor-final').innerText.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+        let valorTotal = parseFloat(limpo) || 0.00;
+
         const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${document.getElementById('p-distancia').value} KM\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
 
+        const selLocalidade = document.getElementById('p-localidade');
+        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute('data-nome') || "Centro";
+        
+        const selPrioridade = document.getElementById('p-prioridade');
+        const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute('data-nome') || "Normal";
+
+        // 1. Gravação na tabela mensagens_chat
         await API.call('addmensagens_chat', { 
-            id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: txt, 
+            id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
             hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
             data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
+        });
+
+        // 2. Gravação limpa e alinhada na tabela pedidos coluna por coluna
+        await API.call('addpedidos', {
+            id: idRdo,
+            id_mensagens_chat: chatId,
+            solicitante: document.getElementById('p-solicitante').value.trim(),
+            mercadoria: document.getElementById('p-mercadoria-input').value,
+            origem: document.getElementById('p-origem').value.trim(),
+            destino: document.getElementById('p-destino').value.trim(),
+            horario: document.getElementById('p-horario-manual').value.trim(),
+            km: document.getElementById('p-distancia').value.trim() + ' KM',
+            taxa_localidade: nomeLocalidade,
+            prioridade: nomePrioridade,
+            valor_corrida: valorTotal,
+            motoboy: "⁉",
+            status: "⏳ Aguardando",
+            observacao: document.getElementById('p-obs').value.trim() || "---"
         });
 
         setTimeout(() => {
@@ -315,7 +408,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         }, 800);
     }
 
-    // STATUS E GESTÃO
+    // STATUS E GESTÃO SINCRO-CRUZADA SEM QUEBRA DE TIPOS
     async function abrirEdicaoStatus(id, emoji, motoboy) {
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji || '⏳';
@@ -331,7 +424,45 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const status_emoji = document.getElementById('edit-msg-emoji').value;
         const motoboy = document.getElementById('edit-msg-motoboy').value;
         
+        // Atualiza a tabela visual do chat
         await API.call('updatemensagens_chat', { id, status_emoji, motoboy });
+        
+        // Puxa a mensagem para fazer o parse reverso e não perder o alinhamento das colunas
+        const resMensagens = await API.call('getmensagens_chat') || [];
+        const msgAtual = resMensagens.find(m => String(m.id) === String(id));
+        
+        if (msgAtual) {
+            let pedidoId = msgAtual.pedido_id || msgAtual.id_pedido;
+            if (!pedidoId && msgAtual.texto) {
+                const match = msgAtual.texto.match(/ID:\s*(RDO\d+)/i);
+                if (match) pedidoId = match[1];
+            }
+            
+            if (pedidoId) {
+                let statusTexto = "⏳ Aguardando";
+                if (status_emoji === "📦") statusTexto = "📦 Em rota";
+                if (status_emoji === "✅") statusTexto = "✅ Concluído";
+                if (status_emoji === "⭕") statusTexto = "⭕ Cancelado";
+
+                const infoExtraida = extrairDadosDoTexto(msgAtual.texto);
+
+                // Executa atualização controlada na planilha física de pedidos
+                await API.call('updatepedidos', {
+                    id: pedidoId,
+                    id_pedido: pedidoId,
+                    id_mensagens_chat: id,
+                    solicitante: infoExtraida.solicitante,
+                    mercadoria: infoExtraida.mercadoria,
+                    origem: infoExtraida.origem,
+                    destino: infoExtraida.destino,
+                    horario: infoExtraida.horario,
+                    km: infoExtraida.km,
+                    valor_corrida: infoExtraida.valor,
+                    motoboy: motoboy,
+                    status: statusTexto
+                });
+            }
+        }
         
         setTimeout(() => {
             toggleBtnLoader('btn-atualizar-status', false);
@@ -349,12 +480,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
             
-            // Modelo de URL nativo sem necessidade de API Key carregando a rota diretamente
             const sOrigem = encodeURIComponent(getF('COLETA'));
             const sDestino = encodeURIComponent(getF('ENTREGA'));
             document.getElementById('iframe-mapa').src = `https://www.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&output=embed`;
             
-            // Ajustamos o tamanho do Modal de Rota para comportar melhor a visualização lateral das informações nativas
             const modalMapsEl = document.getElementById('modalMaps');
             new bootstrap.Modal(modalMapsEl).show();
             inp.value = '';
