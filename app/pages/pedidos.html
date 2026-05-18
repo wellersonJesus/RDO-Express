@@ -221,7 +221,7 @@
                 <td class="px-3 fw-bold text-danger">${idPedido}</td>
                 <td>${p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '--'}</td>
                 <td>${extrair(p.texto, 'Solicitante')}</td>
-                <td><i class="bi bi-bicycle me-1"></i>${p.motoboy || '---'}</td>
+                <td><span class="me-1">🛵</span>${p.motoboy || '---'}</td>
                 <td><span class="status-badge ${st[0]}">${st[1]}</span></td>
                 <td class="px-3 text-end">
                     <button class="btn-action me-1" onclick="window.RDO_PEDIDOS.abrirSincronizado('${p.id}', '${idPedido}')" title="Editar">
@@ -246,7 +246,6 @@
         document.getElementById('det-status').value = pChat.status_emoji || '⏳';
         document.getElementById('det-valor').value = extrair(pChat.texto, 'Valor');
 
-        // Valores isolados e sanitizados vindo diretamente da tabela de pedidos física
         document.getElementById('det-km').value = pTech ? pTech.km : '0 KM';
         document.getElementById('det-taxa').value = pTech ? pTech.taxa_localidade : 'Centro';
         document.getElementById('det-prioridade').value = pTech ? pTech.prioridade : 'Normal';
