@@ -14,10 +14,15 @@ function doPost(e) {
     var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    var entity = action.replace(/get|add|delete|update/, '').toLowerCase();
-    var sheet = ss.getSheetByName(entity);
+    // Extrai o nome limpo da entidade (ex: pedidos ou mensagens_chat)
+    var entity = action.replace(/get|add|delete|update/, '').toLowerCase().trim();
     
-    if (!sheet) return response({ status: "error", message: "Aba '" + entity + "' não encontrada no Google Sheets." });
+    // BUSCA INTELIGENTE: Ignora maiúsculas/minúsculas e espaços extras
+    var sheet = getSheetCaseInsensitive(ss, entity);
+    
+    if (!sheet) {
+      return response({ status: "error", message: "Aba correspondente a '" + entity + "' não encontrada no Google Sheets. Verifique o nome da aba!" });
+    }
 
     var result;
     if (action.startsWith('get')) result = handleGet(sheet);
@@ -30,6 +35,19 @@ function doPost(e) {
   } catch (err) {
     return response({ status: "error", message: "Erro: " + err.toString() });
   }
+}
+
+// Nova função auxiliar para evitar quebras por Letras Maiúsculas/Minúsculas no nome da Aba
+function getSheetCaseInsensitive(ss, entityName) {
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var name = sheets[i].getName().toLowerCase().trim();
+    // Aceita correspondência exata ou resolve se uma se chamar "pedidos" e a outra "pedido"
+    if (name === entityName || name === entityName.replace(/s$/, '') || entityName === name.replace(/s$/, '')) {
+      return sheets[i];
+    }
+  }
+  return null;
 }
 
 function handleGet(sheet) {
@@ -52,7 +70,7 @@ function handleAdd(sheet, data) {
   delete data.apiKey;
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var newRow = headers.map(function(header) {
-    var key = header.toLowerCase().trim();
+    var key = header.toString().toLowerCase().trim();
     if (key === "id" && !data[key]) return Utilities.getUuid();
     return data[key] !== undefined ? data[key] : "";
   });
@@ -68,8 +86,9 @@ function handleUpdate(sheet, data) {
   for (var i = 1; i < rows.length; i++) {
     if (rows[i][idIndex] == data.id) {
       headers.forEach(function(header, j) {
-        if (data[header] !== undefined) {
-          sheet.getRange(i + 1, j + 1).setValue(data[header]);
+        var key = header.toString().toLowerCase().trim();
+        if (data[key] !== undefined) {
+          sheet.getRange(i + 1, j + 1).setValue(data[key]);
         }
       });
       return { status: "success", message: "Atualizado!" };

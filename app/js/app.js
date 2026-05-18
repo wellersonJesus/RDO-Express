@@ -15,10 +15,25 @@ window.loadPage = function(page, title, subtitle) {
         .then(html => {
             container.innerHTML = html;
             const scripts = container.querySelectorAll('script');
+            
             scripts.forEach(oldScript => {
+                // Remove instâncias anteriores injetadas no head com o mesmo conteúdo para evitar vazamento
+                const scriptsAntigos = document.head.querySelectorAll(`script[data-origin="${page}"]`);
+                scriptsAntigos.forEach(s => s.parentNode.removeChild(s));
+
                 const newScript = document.createElement("script");
-                newScript.text = oldScript.text;
-                document.head.appendChild(newScript).parentNode.removeChild(newScript);
+                newScript.setAttribute('data-origin', page);
+
+                // TRATAMENTO EXPLICITO DE ESCOPO COM PRESERVAÇÃO DE FUNÇÕES GLOBAIS:
+                // Se o script usar declarações globais com 'let dadosChat', transformamos de forma segura 
+                // em declarações que não causam SyntaxError ao serem reinjetadas no escopo do navegador,
+                // permitindo que os binds de clique (como enviar mensagem/aviaozinho) continuem funcionando.
+                let cleanText = oldScript.text
+                    .replace(/let\s+dadosChat\s*=/g, 'var dadosChat =')
+                    .replace(/const\s+dadosChat\s*=/g, 'var dadosChat =');
+
+                newScript.text = cleanText;
+                document.head.appendChild(newScript);
             });
         })
         .catch(err => {

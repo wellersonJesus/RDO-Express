@@ -14,6 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve os arquivos estáticos da pasta do seu front-end
 app.use(express.static(path.join(__dirname, 'app')));
 
 // CENTRALIZADOR DE AUTENTICAÇÃO COM COMPARAÇÃO CRIPTOGRÁFICA (BCRYPT) + RETORNO DE IMAGEM
@@ -25,7 +26,6 @@ app.post('/api/login-auth', async (req, res) => {
 
     const uLower = username.trim().toLowerCase();
     
-    // Buscar preventivamente a lista de usuários para obter os metadados (como a imagem de perfil)
     let usuariosPlanilha = [];
     try {
         const targetUrl = process.env.API_URL;
@@ -41,14 +41,12 @@ app.post('/api/login-auth', async (req, res) => {
         console.error("Erro ao buscar dados na planilha:", err);
     }
 
-    // Etapa A: Validação do Master vindo do arquivo .env
     const masterUser = (process.env.MASTER_LOGIN || 'Master').trim().toLowerCase();
     let masterHash = process.env.MASTER_PASS_HASH || '';
 
     if (uLower === masterUser && masterHash) {
         if (masterHash.includes('$$')) masterHash = masterHash.replace(/\$\$/g, '$');
         if (bcrypt.compareSync(password, masterHash)) {
-            // Tenta localizar se existe uma linha correspondente ao 'Master' na planilha para pegar a foto
             const dadosPlanilhaMaster = Array.isArray(usuariosPlanilha) ? 
                 usuariosPlanilha.find(userObj => String(userObj.username).toLowerCase().trim() === uLower) : null;
 
@@ -63,7 +61,6 @@ app.post('/api/login-auth', async (req, res) => {
         }
     }
 
-    // Etapa B: Validação para demais usuários cadastrados na planilha do Google Sheets
     if (usuariosPlanilha && Array.isArray(usuariosPlanilha)) {
         const dbUser = usuariosPlanilha.find(userObj => String(userObj.username).toLowerCase().trim() === uLower);
         
@@ -86,11 +83,40 @@ app.post('/api/login-auth', async (req, res) => {
     return res.json({ status: 'error', message: 'Usuário ou senha incorretos.' });
 });
 
-// Proxy Genérico para chamadas de tabelas (add, update, delete)
+// Proxy Inteligente e Corrigido para chamadas de tabelas (add, update, delete)
 app.post('/api/proxy', async (req, res) => {
     try {
         const targetUrl = process.env.API_URL;
-        const bodyData = { ...req.body, apiKey: process.env.SECRET_KEY };
+        if (!targetUrl) {
+            return res.status(500).json({ status: 'error', message: 'Configuração API_URL ausente no arquivo .env' });
+        }
+
+        let bodyData = { ...req.body };
+
+        // Normaliza a action caso venha mapeada como endpoint pelo front-end
+        if (!bodyData.action && bodyData.endpoint) {
+            bodyData.action = bodyData.endpoint;
+        }
+
+        // Tratamento e Sincronização de Chaves Primárias para a tabela 'pedidos'
+        if (bodyData.action === 'addpedidos' || bodyData.action === 'updatepedidos') {
+            if (!bodyData.dados) {
+                bodyData.dados = { ...bodyData };
+                delete bodyData.dados.action;
+                delete bodyData.dados.apiKey;
+                delete bodyData.dados.endpoint;
+            }
+
+            // Garante consistência dupla exigida pela estrutura de colunas do Sheets
+            const idDetectado = bodyData.dados.id_pedido || bodyData.dados.id;
+            if (idDetectado) {
+                bodyData.dados.id_pedido = idDetectado;
+                bodyData.dados.id = idDetectado;
+            }
+        }
+
+        // Injeta a chave secreta de assinatura da API de forma transparente
+        bodyData.apiKey = process.env.SECRET_KEY;
 
         const response = await fetch(targetUrl, {
             method: 'POST',
@@ -99,15 +125,18 @@ app.post('/api/proxy', async (req, res) => {
         });
 
         const data = await response.json();
-        res.json(data);
+        return res.json(data);
+
     } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Erro na comunicação externa do servidor.' });
+        console.error("❌ [Erro Proxy RDO]:", error.message);
+        return res.status(500).json({ status: 'error', message: 'Erro na comunicação externa do servidor.' });
     }
 });
 
+// Redirecionamento SPA para capturar qualquer rota não mapeada de volta ao index
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'app', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`💤 Server rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`💤 Servidor RDO integrado ativo na porta ${PORT}`));
