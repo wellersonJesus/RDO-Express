@@ -104,7 +104,7 @@
                         <input type="text" id="det-km" class="form-control form-control-sm border-0 bg-white shadow-sm">
                     </div>
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">TAXA</label>
+                        <label class="small text-muted fw-bold">TAXA/LOCALIDADE</label>
                         <input type="text" id="det-taxa" class="form-control form-control-sm border-0 bg-white shadow-sm">
                     </div>
                     <div class="col-md-3">
@@ -115,7 +115,8 @@
                         <label class="small text-muted fw-bold">PRIORIDADE</label>
                         <select id="det-prioridade" class="form-select form-select-sm border-0 bg-white shadow-sm">
                             <option value="Normal">Normal</option>
-                            <option value="Urgente">Urgente</option>
+                            <option value="Urgente + 7">Urgente + 7</option>
+                            <option value="Agendado + 10">Agendado + 10</option>
                         </select>
                     </div>
                     <div class="col-12">
@@ -150,7 +151,6 @@
     let dadosPedidos = [];
     let bsModal;
 
-    // Inicialização segura controlando re-execuções manuais do DOM
     setTimeout(() => {
         const modalEl = document.getElementById('modalPedidoDetalhes');
         if (modalEl) {
@@ -244,14 +244,13 @@
         document.getElementById('det-mercadoria').value = extrair(pChat.texto, 'Mercadoria');
         document.getElementById('det-motoboy').value = pChat.motoboy || '';
         document.getElementById('det-status').value = pChat.status_emoji || '⏳';
-        
-        let valorTratado = extrair(pChat.texto, 'Valor');
-        document.getElementById('det-valor').value = valorTratado;
+        document.getElementById('det-valor').value = extrair(pChat.texto, 'Valor');
 
-        document.getElementById('det-km').value = pTech ? pTech.km : '';
-        document.getElementById('det-taxa').value = pTech ? pTech.taxa_localidade : '';
+        // Valores isolados e sanitizados vindo diretamente da tabela de pedidos física
+        document.getElementById('det-km').value = pTech ? pTech.km : '0 KM';
+        document.getElementById('det-taxa').value = pTech ? pTech.taxa_localidade : 'Centro';
         document.getElementById('det-prioridade').value = pTech ? pTech.prioridade : 'Normal';
-        document.getElementById('det-obs').value = pTech ? (pTech.observacao || pTech.obs) : extrair(pChat.texto, 'OBS');
+        document.getElementById('det-obs').value = pTech ? (pTech.observacao || pTech.obs || '') : extrair(pChat.texto, 'OBS');
 
         const btnSalvar = document.getElementById('btn-salvar');
         btnSalvar.setAttribute('data-chatid', chatId);
@@ -269,23 +268,24 @@
         const textoOriginal = btn.innerHTML;
         btn.innerHTML = '<i class="bi bi-arrow-repeat loading-spin"></i> SALVANDO...';
 
+        let limpo = document.getElementById('det-valor').value.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+        let valorTotal = parseFloat(limpo) || 0.00;
+
         const dadosParaChat = {
             id: chatId,
             motoboy: document.getElementById('det-motoboy').value.trim(),
             status_emoji: document.getElementById('det-status').value
         };
 
-        let limpo = document.getElementById('det-valor').value.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
-        let valorTotal = parseFloat(limpo) || 0.00;
-
         const dadosParaPedidos = {
             id: pedidoId,
+            id_pedido: pedidoId,
             id_mensagens_chat: chatId,
             km: document.getElementById('det-km').value.trim() || '0 KM',
-            taxa_localidade: document.getElementById('det-taxa').value.trim() || 'Padrão',
+            taxa_localidade: document.getElementById('det-taxa').value.trim() || 'Centro',
             prioridade: document.getElementById('det-prioridade').value,
             valor_corrida: valorTotal,
-            observacao: document.getElementById('det-obs').value.trim()
+            observacao: document.getElementById('det-obs').value.trim() || '---'
         };
 
         try {
@@ -309,7 +309,6 @@
         }
     }
 
-    // Exporta as funções para um objeto global seguro associado a este módulo
     window.RDO_PEDIDOS = {
         carregarPedidos,
         renderizarTabela,

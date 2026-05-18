@@ -112,15 +112,20 @@
                         <select id="p-troca" class="form-select ctrl-clean validate"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select>
                     </div>
                     <div class="col-md-6">
-                        <label class="lbl-clean">LOCALIDADE</label>
+                        <label class="lbl-clean">TAXA/LOCALIDADE</label>
                         <select id="p-localidade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Centro">Centro</option><option value="5" data-nome="Zona Sul + 5">Zona Sul + 5</option><option value="7" data-nome="Zona Norte + 7">Zona Norte + 7</option><option value="15" data-nome="Barreiro + 15">Barreiro + 15</option>
+                            <option value="0" data-nome="Centro">0,00 (Centro)</option>
+                            <option value="5" data-nome="Zona Sul + 5">5,00 (Zona Sul)</option>
+                            <option value="7" data-nome="Zona Norte + 7">7,00 (Zona Norte)</option>
+                            <option value="15" data-nome="Barreiro + 15">15,00 (Barreiro)</option>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label class="lbl-clean">PRIORIDADE</label>
                         <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Normal">Normal</option><option value="7" data-nome="Urgente + 7">Urgente + 7</option><option value="10" data-nome="Agendado + 10">Agendado + 10</option>
+                            <option value="0" data-nome="Normal">0,00 (Normal)</option>
+                            <option value="7" data-nome="Urgente + 7">7,00 (Urgente)</option>
+                            <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
                         </select>
                     </div>
                     <div class="col-md-6"><label class="lbl-clean">ORIGEM</label><input type="text" id="p-origem" class="form-control ctrl-clean validate"></div>
@@ -204,7 +209,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 <script>
     if (!window.chatState) window.chatState = { currentName: null };
 
-    // FUNÇÕES DE INTERFACE
     function toggleBtnLoader(btnId, show) {
         const btn = document.getElementById(btnId);
         if(!btn) return;
@@ -220,52 +224,40 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         document.body.style = ''; 
     }
 
-    // FORMATAÇÃO E TRATAMENTO DA EXIBIÇÃO DE DATA NATIVA
     function formatarDataHeader(dataStr) {
         if (!dataStr) return "";
         try {
             const dataObjeto = new Date(dataStr);
             if (isNaN(dataObjeto.getTime())) return "";
-
             const hoje = new Date();
             const ontem = new Date();
             ontem.setDate(hoje.getDate() - 1);
-
             const checarMesmaData = (d1, d2) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
-
             if (checarMesmaData(dataObjeto, hoje)) return "Hoje";
             if (checarMesmaData(dataObjeto, ontem)) return "Ontem";
-
-            const dia = String(dataObjeto.getDate()).padStart(2, '0');
-            const mes = String(dataObjeto.getMonth() + 1).padStart(2, '0');
-            const ano = dataObjeto.getFullYear();
-            return `${dia}/${mes}/${ano}`;
-        } catch (e) {
-            return "";
-        }
+            return `${String(dataObjeto.getDate()).padStart(2, '0')}/${String(dataObjeto.getMonth() + 1).padStart(2, '0')}/${dataObjeto.getFullYear()}`;
+        } catch (e) { return ""; }
     }
 
-    // PARSER AUXILIAR: EXTRAI E QUEBRA O BLOCO DE TEXTO EM PROPRIEDADES PURAS
     function extrairDadosDoTexto(texto) {
-        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", km: "0 KM", valor: 0.00 };
+        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", km: "0 KM", valor: 0.00, taxa_localidade: "Centro", prioridade: "Normal" };
         if (!texto) return dados;
         const linhas = texto.split('\n').map(l => l.trim());
         linhas.forEach(linha => {
             if (linha.startsWith("Solicitante:")) dados.solicitante = linha.replace("Solicitante:", "").trim();
-            if (linha.startsWith("Mercadoria:")) dados.mercadoria = linha.replace("Mercadoria:", "").trim();
+            if (linha.startsWith("Mercadoria:")) dados.mercadoria = inline => inline.replace("Mercadoria:", "").trim();
             if (linha.startsWith("De:"))         dados.origem = linha.replace("De:", "").trim();
             if (linha.startsWith("HORÁRIO:"))   dados.horario = linha.replace("HORÁRIO:", "").trim();
             if (linha.startsWith("Para:"))       dados.destino = linha.replace("Para:", "").trim();
             if (linha.startsWith("Distância:"))  dados.km = linha.replace("Distância:", "").trim();
             if (linha.startsWith("Valor:")) {
-                let vBruto = linha.replace("Valor:", "").replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
-                dados.valor = parseFloat(vBruto) || 0.00;
+                let vBruto = text => text.replace("Valor:", "").replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+                dados.valor = parseFloat(vBruto(linha)) || 0.00;
             }
         });
         return dados;
     }
 
-    // MODAL MODELO
     function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModeloMensagem')).show(); }
     
     function copiarModelo() {
@@ -279,7 +271,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         });
     }
 
-    // CARREGAMENTO DE DADOS
     async function carregarDados() {
         const icon = document.getElementById('sync-icon'); 
         if(icon) icon.classList.add('loading-spin');
@@ -310,8 +301,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat') || [];
         const container = document.getElementById('chat-messages-container');
-        
-        // Filtra e ordena cronologicamente
         const msgsFiltradas = res.filter(m => String(m.jid_numero).includes(nome));
         
         let htmlDinamico = "";
@@ -319,13 +308,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
         msgsFiltradas.forEach(m => {
             const dataFormatada = formatarDataHeader(m.data);
-            
-            // Injeta o divisor visual de data caso mude de dia
             if (dataFormatada && dataFormatada !== ultimaDataCadastrada) {
                 htmlDinamico += `<div class="chat-date-indicator">${dataFormatada}</div>`;
                 ultimaDataCadastrada = dataFormatada;
             }
-
             const isLogistica = String(m.finalizado) === "true";
             htmlDinamico += `
             <div class="msg-bubble ${isLogistica ? 'msg-logistics' : ''}" 
@@ -335,12 +321,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 <div class="text-end text-muted" style="font-size:0.6rem; margin-top:4px;">${m.hora || '00:00'}</div>
             </div>`;
         });
-
         container.innerHTML = htmlDinamico;
         container.scrollTop = container.scrollHeight;
     }
 
-    // LÓGICA DE PEDIDO
     function calcularTudo() {
         const km = parseFloat(document.getElementById('p-distancia').value) || 0;
         const val = parseFloat(document.getElementById('p-valor-km').value) || 0;
@@ -367,22 +351,23 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         let limpo = document.getElementById('view-valor-final').innerText.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
         let valorTotal = parseFloat(limpo) || 0.00;
 
-        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${document.getElementById('p-distancia').value} KM\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
-
         const selLocalidade = document.getElementById('p-localidade');
         const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute('data-nome') || "Centro";
         
         const selPrioridade = document.getElementById('p-prioridade');
         const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute('data-nome') || "Normal";
+        
+        const valorDistancia = document.getElementById('p-distancia').value.trim() + ' KM';
 
-        // 1. Gravação na tabela mensagens_chat
+        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+
         await API.call('addmensagens_chat', { 
             id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
             hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
             data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
         });
 
-        // 2. Gravação limpa e alinhada na tabela pedidos coluna por coluna
+        // Correção de envio explícito de parâmetros isolados
         await API.call('addpedidos', {
             id: idRdo,
             id_mensagens_chat: chatId,
@@ -391,7 +376,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             origem: document.getElementById('p-origem').value.trim(),
             destino: document.getElementById('p-destino').value.trim(),
             horario: document.getElementById('p-horario-manual').value.trim(),
-            km: document.getElementById('p-distancia').value.trim() + ' KM',
+            km: valorDistancia,
             taxa_localidade: nomeLocalidade,
             prioridade: nomePrioridade,
             valor_corrida: valorTotal,
@@ -408,7 +393,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         }, 800);
     }
 
-    // STATUS E GESTÃO SINCRO-CRUZADA SEM QUEBRA DE TIPOS
     async function abrirEdicaoStatus(id, emoji, motoboy) {
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji || '⏳';
@@ -424,10 +408,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const status_emoji = document.getElementById('edit-msg-emoji').value;
         const motoboy = document.getElementById('edit-msg-motoboy').value;
         
-        // Atualiza a tabela visual do chat
         await API.call('updatemensagens_chat', { id, status_emoji, motoboy });
-        
-        // Puxa a mensagem para fazer o parse reverso e não perder o alinhamento das colunas
         const resMensagens = await API.call('getmensagens_chat') || [];
         const msgAtual = resMensagens.find(m => String(m.id) === String(id));
         
@@ -437,16 +418,13 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 const match = msgAtual.texto.match(/ID:\s*(RDO\d+)/i);
                 if (match) pedidoId = match[1];
             }
-            
             if (pedidoId) {
                 let statusTexto = "⏳ Aguardando";
                 if (status_emoji === "📦") statusTexto = "📦 Em rota";
                 if (status_emoji === "✅") statusTexto = "✅ Concluído";
                 if (status_emoji === "⭕") statusTexto = "⭕ Cancelado";
-
                 const infoExtraida = extrairDadosDoTexto(msgAtual.texto);
 
-                // Executa atualização controlada na planilha física de pedidos
                 await API.call('updatepedidos', {
                     id: pedidoId,
                     id_pedido: pedidoId,
@@ -463,7 +441,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 });
             }
         }
-        
         setTimeout(() => {
             toggleBtnLoader('btn-atualizar-status', false);
             bootstrap.Modal.getInstance(document.getElementById('modalStatusMensagem')).hide();
@@ -479,13 +456,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
             document.getElementById('p-origem').value = getF('COLETA');
             document.getElementById('p-destino').value = getF('ENTREGA');
-            
             const sOrigem = encodeURIComponent(getF('COLETA'));
             const sDestino = encodeURIComponent(getF('ENTREGA'));
             document.getElementById('iframe-mapa').src = `https://www.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&output=embed`;
-            
-            const modalMapsEl = document.getElementById('modalMaps');
-            new bootstrap.Modal(modalMapsEl).show();
+            new bootstrap.Modal(document.getElementById('modalMaps')).show();
             inp.value = '';
         } else {
             API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ''; carregarMensagensBanco(window.chatState.currentName); });
