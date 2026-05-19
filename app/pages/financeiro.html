@@ -44,21 +44,22 @@
                 </button>
             </div>
 
-            <!-- Tabela de Lançamentos Baseada na Nova Modelagem -->
+            <!-- Tabela de Lançamentos -->
             <div class="table-responsive px-3">
                 <table class="table table-hover align-middle table-sm" style="font-size: 0.8rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="py-3 text-secondary" style="width: 45%;">Pedido / Identificação</th>
-                            <th class="py-3 text-secondary" style="width: 25%;">Valor / Fluxo</th>
-                            <th class="py-3 text-secondary" style="width: 20%;">Situação</th>
-                            <th class="text-center py-3 text-secondary" style="width: 10%;">Ações</th>
+                            <th class="py-3 text-secondary" style="width: 25%;">PEDIDO</th>
+                            <th class="py-3 text-secondary" style="width: 20%;">DATA</th>
+                            <th class="py-3 text-secondary" style="width: 25%;">VALOR</th>
+                            <th class="py-3 text-secondary" style="width: 20%;">SITUAÇÃO</th>
+                            <th class="text-center py-3 text-secondary" style="width: 10%;">AÇÕES</th>
                         </tr>
                     </thead>
                     <tbody id="financeiro-body">
                         <tr>
-                            <td colspan="4" class="text-center py-4 text-muted">
-                                <div class="spinner-border spinner-border-sm text-danger me-2"></div> Sincronizando lançamentos e banco financeiro...
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <div class="spinner-border spinner-border-sm text-danger me-2"></div> Buscando dados reais do banco de dados...
                             </td>
                         </tr>
                     </tbody>
@@ -127,6 +128,14 @@
                             <option value="CARTAO">Cartão Corporativo</option>
                         </select>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label text-secondary small fw-bold mb-1">Situação / Status</label>
+                        <select class="form-select form-select-sm" id="fin-situacao" required>
+                            <option value="CAIXA">Caixa</option>
+                            <option value="PAGO" selected>Pago</option>
+                            <option value="EM ABERTO">Em Aberto</option>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label text-secondary small fw-bold mb-1">Caixa / Destino</label>
                         <select class="form-select form-select-sm" id="fin-caixa" required>
@@ -153,53 +162,65 @@
             return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         };
 
+        const parseBancoDate = (dateStr) => {
+            if (!dateStr) return new Date(0);
+            const str = String(dateStr).trim().split(' ')[0];
+            const parts = str.split('/');
+            if (parts.length === 3) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+            }
+            const isoCheck = new Date(dateStr);
+            return isNaN(isoCheck.getTime()) ? new Date(0) : isoCheck;
+        };
+
         async function init() {
             try {
-                // Puxa diretamente os dados reais salvos no banco financeiro unificado
-                const resFin = await API.call('getfinanceiro');
+                const [resFin, resPedidos] = await Promise.all([
+                    API.call('getfinanceiro'),
+                    API.call('getpedidos').catch(() => [])
+                ]);
 
                 if (!resFin || resFin.status === 'error') {
-                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao carregar dados do banco financeiro.</td></tr>`;
+                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Erro ao carregar dados do banco financeiro.</td></tr>`;
                     return;
+                }
+
+                const pedidosMap = {};
+                if (Array.isArray(resPedidos)) {
+                    resPedidos.forEach(p => {
+                        if (p.id) pedidosMap[String(p.id).trim()] = p;
+                    });
                 }
 
                 const listaMapeada = [];
 
                 if (Array.isArray(resFin)) {
                     resFin.forEach(f => {
-                        const isEntrada = String(f.tipo_movimentacao).toUpperCase() === 'ENTRADA';
-                        let identificacaoText = '';
-
-                        if (f.id_pedido) {
-                            identificacaoText = `PEDIDO #${f.id_pedido} <span class="text-muted fw-normal">(${String(f.categoria).toUpperCase()})</span>`;
-                        } else if (f.id_produto) {
-                            identificacaoText = `<span class="text-warning fw-bold">ESTOQUE</span> - ITEM COMPRA #${f.id_produto}`;
-                        } else {
-                            identificacaoText = `<span class="text-danger fw-bold">DESPESA</span> - ${String(f.categoria || 'OPERACIONAL').toUpperCase()}`;
-                        }
+                        let rawIdPedido = f.id_pedido || f.id || '';
+                        let pedidoCorrespondente = pedidosMap[String(rawIdPedido).trim()];
+                        let idPedidoFinal = pedidoCorrespondente ? String(pedidoCorrespondente.id) : String(rawIdPedido);
 
                         listaMapeada.push({
                             id: f.id,
-                            data: f.data_pagamento || new Date().toISOString(),
-                            identificacao: identificacaoText,
-                            valor: parseFloat(f.valor || 0),
-                            tipo: isEntrada ? 'Entrada' : 'Saída',
-                            origem: f.caixa_origem || f.forma_pagamento || 'Caixa',
-                            status: f.status_pgt || 'PAGO'
+                            id_pedido: idPedidoFinal.trim(),
+                            data: f.data_pagamento || f.data || '',
+                            valor: parseFloat(f.valor_pedido || 0),
+                            origem: f.caixa_origem || f.forma_pagamento || '',
+                            situacao: String(f.situacao || f.status_pgt || 'PAGO').toUpperCase()
                         });
                     });
                 }
 
-                financeiroUnificado = listaMapeada.sort((a, b) => new Date(b.data) - new Date(a.data));
+                financeiroUnificado = listaMapeada.sort((a, b) => parseBancoDate(b.data) - parseBancoDate(a.data));
                 renderizarPaginaFin(1);
             } catch (err) {
-                console.error("Erro no processamento unificado:", err);
-                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao processar tabelas do banco.</td></tr>`;
+                console.error("Erro no processamento das planilhas e banco:", err);
+                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Erro ao processar tabelas do banco.</td></tr>`;
             }
         }
 
         window.atualizarListaFinanceira = function() {
-            document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div> Atualizando...</td></tr>`;
+            document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div> Sincronizando...</td></tr>`;
             init();
         };
 
@@ -211,38 +232,52 @@
             const tbody = document.getElementById('financeiro-body');
 
             if (paginatedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum lançamento ou registro encontrado no banco de dados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Nenhum lançamento encontrado no banco de dados.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = paginatedItems.map((item, index) => {
-                const isEntrada = item.tipo === 'Entrada';
-                const classeFluxo = isEntrada ? 'text-success fw-bold' : 'text-danger';
-                const prefixoSinal = isEntrada ? '+' : '-';
+            tbody.innerHTML = paginatedItems.map((item) => {
+                let statusClass = 'bg-secondary-subtle text-secondary';
+                if (item.situacao.includes('PAGO')) {
+                    statusClass = 'bg-success-subtle text-success';
+                } else if (item.situacao.includes('ABERTO')) {
+                    statusClass = 'bg-danger-subtle text-danger';
+                } else if (item.situacao.includes('CAIXA')) {
+                    statusClass = 'bg-warning-subtle text-warning';
+                }
 
-                const statusClass = item.status.toLowerCase().includes('pago') || item.status.toLowerCase().includes('concl')
-                    ? 'bg-success-subtle text-success' 
-                    : 'bg-warning-subtle text-warning';
-
-                const dataFormatada = item.data ? item.data.substring(0, 10).split('-').reverse().join('/') : '-';
+                let dataExibicao = '-';
+                if (item.data) {
+                    const de = new Date(item.data);
+                    if (!isNaN(de.getTime()) && String(item.data).includes('-')) {
+                        dataExibicao = de.toLocaleDateString('pt-BR');
+                    } else {
+                        dataExibicao = String(item.data).trim().split(' ')[0] || String(item.data);
+                    }
+                }
 
                 return `
                     <tr>
+                        <!-- COLUNA: PEDIDO (Número em vermelho 'text-danger', sem negrito) -->
+                        <td class="text-danger" style="font-size: 0.8rem;">
+                            ${item.id_pedido || '---'}
+                        </td>
+                        <!-- COLUNA: DATA -->
+                        <td class="text-secondary">
+                            ${dataExibicao}
+                        </td>
+                        <!-- COLUNA: VALOR -->
+                        <td class="text-dark fw-bold">
+                            ${formatCurrency(item.valor)}
+                        </td>
+                        <!-- COLUNA: SITUAÇÃO -->
                         <td>
-                            <div class="text-secondary small mb-0" style="font-size: 0.7rem;">${dataFormatada}</div>
-                            <div class="text-dark truncate-container" style="letter-spacing: 0.3px; font-size: 0.8rem;">
-                                ${item.identificacao}
-                            </div>
+                            <div class="text-muted mb-1" style="font-size: 0.75rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.origem}</div>
+                            <span class="badge ${statusClass} border-0 px-2" style="font-size: 0.7rem;">${item.situacao}</span>
                         </td>
-                        <td class="${classeFluxo}">
-                            ${prefixoSinal} ${formatCurrency(item.valor)}
-                        </td>
-                        <td>
-                            <div class="text-muted mb-1" style="font-size: 0.75rem;">${item.origem}</div>
-                            <span class="badge ${statusClass} border-0 px-2" style="font-size: 0.7rem;">${item.status}</span>
-                        </td>
+                        <!-- COLUNA: AÇÕES -->
                         <td class="text-center text-nowrap">
-                            <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar Identificador ID: ${item.id}"><i class="bi bi-info-circle"></i></button>
+                            <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar Registro ID: ${item.id}"><i class="bi bi-info-circle"></i></button>
                             <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-pencil-square"></i></button>
                         </td>
                     </tr>
@@ -252,29 +287,31 @@
             renderPaginationControlsFin();
         };
 
-        // INSERÇÃO NATIVA DE NOVO LANÇAMENTO MANUAL NO BANCO VIA API PROXY
         document.getElementById('form-novo-lancamento').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const categoria = document.getElementById('fin-categoria').value;
-            const valor = parseFloat(document.getElementById('fin-valor').value);
-            const formaPgt = document.getElementById('fin-forma-pgt').value;
-            const caixa = document.getElementById('fin-caixa').value;
+            const category = document.getElementById('fin-categoria').value;
+            const value = parseFloat(document.getElementById('fin-valor').value);
+            const paymentMethod = document.getElementById('form-novo-lancamento').elements['fin-forma-pgt'].value;
+            const statusSituation = document.getElementById('fin-situacao').value;
+            const safeBox = document.getElementById('fin-caixa').value;
 
             const payloadFinanceiro = {
                 endpoint: 'addfinanceiro',
                 tipo_movimentacao: 'SAIDA',
-                categoria: categoria,
-                valor: valor,
+                categoria: category,
+                valor_pedido: value,
+                valor: value,
                 taxa_adm: 0.00,
-                valor_liquido: valor,
-                caixa_origem: caixa,
-                forma_pagamento: formaPgt,
-                status_pgt: 'PAGO',
+                valor_liquido: value,
+                caixa_origem: safeBox,
+                forma_pagamento: paymentMethod,
+                situacao: statusSituation,
+                status_pgt: statusSituation,
                 observacao: 'Lançamento manual de despesa via painel financeiro'
             };
 
             try {
-                const response = await API.call(payloadFinanceiro.endpoint, payloadFinanceiro);
+                await API.call(payloadFinanceiro.endpoint, payloadFinanceiro);
                 
                 const modalEl = document.getElementById('modalNovoLancamento');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);

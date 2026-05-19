@@ -94,10 +94,9 @@ app.post('/api/proxy', async (req, res) => {
             bodyData.action = bodyData.endpoint;
         }
 
-        // Se a ação for ler o financeiro, faremos a unificação em tempo real com os pedidos concluídos antigos
+        // INTERCEPTADOR: Sincronização Retroativa ao listar o financeiro
         if (bodyData.action === 'getfinanceiro') {
             try {
-                // Busca simultânea no Google Sheets (Financeiro e Pedidos)
                 const [resFinanceiro, resPedidos] = await Promise.all([
                     fetch(targetUrl, {
                         method: 'POST',
@@ -114,38 +113,36 @@ app.post('/api/proxy', async (req, res) => {
                 let listaConsolidada = Array.isArray(resFinanceiro) ? [...resFinanceiro] : [];
 
                 if (Array.isArray(resPedidos)) {
-                    // Filtra apenas os pedidos cujo status é concluído/finalizado
                     const pedidosConcluidos = resPedidos.filter(p => {
                         const st = String(p.status || '').toLowerCase().trim();
-                        return st === 'concluido' || st === 'concluído' || st === 'finalizado';
+                        return st.includes('concluido') || st.includes('concluído') || st.includes('finalizado');
                     });
 
                     pedidosConcluidos.forEach(p => {
-                        const idPedido = parseInt(p.id_pedido || p.id);
-                        
-                        // Evita duplicar se o pedido já tiver sido migrado para a tabela financeiro antes
-                        const jaExiste = listaConsolidada.some(f => parseInt(f.id_pedido) === idPedido);
+                        const idPedido = String(p.id_pedido || p.id || '').trim();
+                        if (!idPedido) return;
+
+                        const jaExiste = listaConsolidada.some(f => String(f.id_pedido || '').trim() === idPedido);
                         
                         if (!jaExiste) {
-                            const valorCorrida = parseFloat(p.valor_corrida || p.valor || 0);
-                            const taxaAdm = parseFloat(p.taxa_localidade || p.taxa_adm || 0);
+                            // Mapeamento extraído da estrutura real fornecida da sua planilha
+                            const valorCorrida = parseFloat(p.valor_corridamotoboy || p.valor_corrida || p.valor || 0);
+                            const taxaAdm = parseFloat(p.taxa_localidadeprioridade || p.taxa_localidade || p.taxa_adm || 0);
                             const valorLiquido = valorCorrida - taxaAdm;
 
-                            // Simula a estrutura exata do banco financeiro para o front-end renderizar retroativamente
                             listaConsolidada.push({
                                 id: `retro-${idPedido}`,
                                 id_pedido: idPedido,
-                                id_produto: null,
-                                tipo_movimentacao: 'ENTRADA',
+                                data_pagamento: p.data || p.horariokm || new Date().toLocaleDateString('pt-BR'),
                                 categoria: 'PEDIDO',
-                                valor: valorCorrida,
+                                tipo_movimentacao: 'ENTRADA',
+                                valor_pedido: valorCorrida,
                                 taxa_adm: taxaAdm,
                                 valor_liquido: valorLiquido,
                                 caixa_origem: 'Caixa Principal',
                                 forma_pagamento: p.forma_pagamento || 'PIX',
-                                status_pgt: 'PAGO',
-                                data_pagamento: p.data || p.data_entrega || new Date().toISOString(),
-                                observacao: 'Histórico Retroativo - Sincronizado por correspondência de Status.'
+                                situacao: 'PAGO',
+                                observacao: 'Sincronização Retroativa - Pedido Concluído encontrado fora do Financeiro.'
                             });
                         }
                     });
@@ -154,10 +151,11 @@ app.post('/api/proxy', async (req, res) => {
                 return res.json(listaConsolidada);
             } catch (err) {
                 console.error("❌ [Erro na Consolidação Retroativa]:", err.message);
-                // Fallback: se der erro na unificação, tenta trazer ao menos o financeiro puro
+                return res.json([]);
             }
         }
 
+        // Normalização de ações vindas do front-end manual
         if (bodyData.action === 'addpedidos' || bodyData.action === 'updatepedidos') {
             if (!bodyData.dados) {
                 bodyData.dados = { ...bodyData };
@@ -183,31 +181,32 @@ app.post('/api/proxy', async (req, res) => {
 
         const data = await response.json();
 
-        // Mantém o interceptador em tempo real ativo para novos pedidos que forem alterados a partir de agora
+        // INTERCEPTADOR: Replicação Automática em Tempo Real disparada pelo "Potinho" ou API
         if (bodyData.action === 'updatepedidos') {
             const fonteDados = bodyData.dados || bodyData;
             const statusExtraido = String(fonteDados.status || bodyData.status || '').toLowerCase().trim();
             const idExtraido = fonteDados.id_pedido || fonteDados.id || bodyData.id_pedido || bodyData.id;
 
-            if (idExtraido && (statusExtraido === 'concluido' || statusExtraido === 'concluído' || statusExtraido === 'finalizado')) {
-                const valorCorrida = parseFloat(fonteDados.valor_corrida || fonteDados.valor || 0);
-                const taxaAdm = parseFloat(fonteDados.taxa_localidade || fonteDados.taxa_adm || 0);
+            if (idExtraido && (statusExtraido.includes('concluido') || statusExtraido.includes('concluído') || statusExtraido.includes('finalizado'))) {
+                // Captura os nomes exatos mapeados da sua planilha física
+                const valorCorrida = parseFloat(fonteDados.valor_corridamotoboy || fonteDados.valor_corrida || fonteDados.valor || 0);
+                const taxaAdm = parseFloat(fonteDados.taxa_localidadeprioridade || fonteDados.taxa_localidade || fonteDados.taxa_adm || 0);
                 const valorLiquido = valorCorrida - taxaAdm;
 
                 const payloadFinanceiro = {
                     action: 'addfinanceiro',
                     apiKey: process.env.SECRET_KEY,
-                    id_pedido: parseInt(idExtraido),
-                    id_produto: null,
-                    tipo_movimentacao: 'ENTRADA',
+                    id_pedido: idExtraido,
+                    data_pagamento: fonteDados.data || new Date().toLocaleDateString('pt-BR'),
                     categoria: 'PEDIDO',
-                    valor: valorCorrida,
+                    tipo_movimentacao: 'ENTRADA',
+                    valor_pedido: valorCorrida,
                     taxa_adm: taxaAdm,
                     valor_liquido: valorLiquido,
                     caixa_origem: 'Caixa Principal',
                     forma_pagamento: fonteDados.forma_pagamento || 'PIX',
-                    status_pgt: 'PAGO',
-                    observacao: `Replicação automática - Pedido #${idExtraido} Concluído.`
+                    situacao: 'PAGO',
+                    observacao: `Replicação automática - Pedido #${idExtraido} Alterado para Concluído.`
                 };
 
                 fetch(targetUrl, {
