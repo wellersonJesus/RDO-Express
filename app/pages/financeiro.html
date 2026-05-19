@@ -1,17 +1,17 @@
+<!-- Bloco Isolado do Cabeçalho (Padrão Pedidos) -->
+<div class="card shadow-sm border-0 mb-3 bg-white py-3 px-4">
+    <div class="d-flex align-items-center mb-1">
+        <h5 class="mb-0 fw-bold d-flex align-items-center">
+            <i class="bi bi-cash-coin text-danger me-3 fs-4"></i>
+            <span class="text-danger">RDO</span>&nbsp;<span class="text-dark">Express - Financeiro</span>
+        </h5>
+    </div>
+    <p class="text-muted small mb-0 w-100" style="font-size: 0.8rem;">Gerenciamento unificado de pedidos concluídos, receitas, despesas e fluxo de caixa da RDO Express.</p>
+</div>
+
+<!-- Bloco Principal do Conteúdo e Abas -->
 <div class="card shadow-sm border-0">
-    <!-- Header Principal da Página -->
-    <div class="card-header bg-white pt-3 pb-0 border-0">
-        <div class="mb-2">
-            <!-- Título padronizado com as cores da marca -->
-            <h4 class="mb-0 fw-bold d-flex align-items-center">
-                <i class="bi bi-cash-coin text-danger me-3 fs-3"></i>
-                <span class="text-danger">RDO</span>&nbsp;<span class="text-dark">Express - Financeiro</span>
-            </h4>
-        </div>
-        <!-- Texto descritivo curto ocupando toda a largura horizontal abaixo do título -->
-        <p class="text-muted small mb-3 w-100">Gerenciamento unificado de pedidos, receitas, despesas e fluxo de caixa da plataforma de logística RDO Express.</p>
-        
-        <!-- Navegação por Abas Justificadas (Ocupando toda a largura) -->
+    <div class="card-header bg-white pt-2 pb-0 border-0">
         <ul class="nav nav-tabs nav-justified border-bottom-0" id="financeiroTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active text-secondary fw-bold small py-3" id="lancamentos-tab" data-bs-toggle="tab" data-bs-target="#lancamentos-pane" type="button" role="tab">
@@ -36,32 +36,29 @@
         <!-- ABA 1: LANÇAMENTOS -->
         <div class="tab-pane fade show active" id="lancamentos-pane" role="tabpanel" aria-labelledby="lancamentos-tab" tabindex="0">
             
-            <!-- Botões de Ação reposicionados exclusivamente dentro da aba de Lançamentos -->
+            <!-- Botões de Ação -->
             <div class="d-flex justify-content-end gap-2 px-3 pt-3 pb-2">
-                <button class="btn btn-outline-secondary btn-sm px-3 shadow-sm"><i class="bi bi-download me-1"></i> Exportar</button>
-                <button class="btn btn-dark btn-sm px-3 shadow-sm"><i class="bi bi-plus-lg me-1"></i> Novo Lançamento</button>
+                <button class="btn btn-outline-secondary btn-sm px-3 shadow-sm" onclick="window.atualizarListaFinanceira()"><i class="bi bi-arrow-clockwise me-1"></i> Atualizar</button>
+                <button class="btn btn-dark btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovoLancamento">
+                    <i class="bi bi-plus-lg me-1"></i> Novo Lançamento
+                </button>
             </div>
 
-            <!-- Tabela de Listagem -->
+            <!-- Tabela de Lançamentos Baseada na Nova Modelagem -->
             <div class="table-responsive px-3">
                 <table class="table table-hover align-middle table-sm" style="font-size: 0.8rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="py-3 text-secondary">Data</th>
-                            <th class="py-3 text-secondary">Cliente / Conta</th>
-                            <th class="py-3 text-secondary">Pagamento</th>
-                            <th class="py-3 text-secondary">Entrada</th>
-                            <th class="py-3 text-secondary">Saída</th>
-                            <th class="py-3 text-secondary">Taxa</th>
-                            <th class="py-3 text-secondary">Origem</th>
-                            <th class="py-3 text-secondary">Status</th>
-                            <th class="text-center py-3 text-secondary">Ações</th>
+                            <th class="py-3 text-secondary" style="width: 45%;">Pedido / Identificação</th>
+                            <th class="py-3 text-secondary" style="width: 25%;">Valor / Fluxo</th>
+                            <th class="py-3 text-secondary" style="width: 20%;">Situação</th>
+                            <th class="text-center py-3 text-secondary" style="width: 10%;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="financeiro-body">
                         <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <div class="spinner-border spinner-border-sm text-danger me-2"></div> Otimizando visualização...
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <div class="spinner-border spinner-border-sm text-danger me-2"></div> Sincronizando lançamentos e banco financeiro...
                             </td>
                         </tr>
                     </tbody>
@@ -86,7 +83,7 @@
         </div>
     </div>
 
-    <!-- Paginação Geral Fixada no Footer -->
+    <!-- Footer / Paginação -->
     <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center border-top-0">
         <div id="pagination-info-fin" class="small text-muted" style="font-size: 0.75rem;"></div>
         <nav>
@@ -95,9 +92,59 @@
     </div>
 </div>
 
+<!-- MODAL PARA LANÇAMENTOS DE DESPESAS E RETIRADAS -->
+<div class="modal fade" id="modalNovoLancamento" tabindex="-1" aria-labelledby="modalNovoLancamentoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-2">
+                <h6 class="modal-title fw-bold text-secondary" id="modalNovoLancamentoLabel">Nova Despesa / Conta</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <form id="form-novo-lancamento">
+                    <div class="mb-2">
+                        <label class="form-label text-secondary small fw-bold mb-1">Categoria da Conta</label>
+                        <select class="form-select form-select-sm" id="fin-categoria" required>
+                            <option value="" disabled selected>Selecione...</option>
+                            <option value="PRO-LABORE">Pró-labore / Retirada Sócios</option>
+                            <option value="AGUA">Água</option>
+                            <option value="LUZ">Luz</option>
+                            <option value="INTERNET">Telefone / Internet</option>
+                            <option value="COLABORADORES">Funcionários / Motoboys</option>
+                            <option value="ESTOQUE">Compra de Estoque / Mercadoria</option>
+                            <option value="GERAIS">Despesas Gerais</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-secondary small fw-bold mb-1">Valor do Lançamento</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="fin-valor" placeholder="R$ 0,00" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-secondary small fw-bold mb-1">Forma de Pagamento</label>
+                        <select class="form-select form-select-sm" id="fin-forma-pgt" required>
+                            <option value="PIX" selected>PIX</option>
+                            <option value="DINHEIRO">Dinheiro Espécie</option>
+                            <option value="CARTAO">Cartão Corporativo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold mb-1">Caixa / Destino</label>
+                        <select class="form-select form-select-sm" id="fin-caixa" required>
+                            <option value="Caixa Principal" selected>Caixa Principal</option>
+                            <option value="Banco Itaú">Banco Itaú</option>
+                            <option value="Banco Cora">Banco Cora</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm w-100 shadow-sm py-2">Salvar Lançamento</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (function() {
-        let financeiroComNomes = [];
+        let financeiroUnificado = [];
         let currentFinPage = 1;
         const finLimit = 20;
 
@@ -108,90 +155,95 @@
 
         async function init() {
             try {
-                const [resFin, resPed, resCli] = await Promise.all([
-                    API.call('getfinanceiro'),
-                    API.call('getpedidos'),
-                    API.call('getclientes')
-                ]);
+                // Puxa diretamente os dados reais salvos no banco financeiro unificado
+                const resFin = await API.call('getfinanceiro');
 
                 if (!resFin || resFin.status === 'error') {
-                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>`;
+                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao carregar dados do banco financeiro.</td></tr>`;
                     return;
                 }
 
-                // Mapa de Pedido para ID de Cliente
-                const pedToCli = {};
-                if (Array.isArray(resPed)) {
-                    resPed.forEach(p => pedToCli[String(p.id).trim()] = String(p.id_cliente).trim());
-                }
+                const listaMapeada = [];
 
-                // Mapa de ID de Cliente para Primeiro Nome
-                const cliToName = {};
-                if (Array.isArray(resCli)) {
-                    resCli.forEach(c => {
-                        const fullUsername = c.username || c.nome || "Usuário";
-                        cliToName[String(c.id).trim()] = fullUsername.trim().split(' ')[0];
+                if (Array.isArray(resFin)) {
+                    resFin.forEach(f => {
+                        const isEntrada = String(f.tipo_movimentacao).toUpperCase() === 'ENTRADA';
+                        let identificacaoText = '';
+
+                        if (f.id_pedido) {
+                            identificacaoText = `PEDIDO #${f.id_pedido} <span class="text-muted fw-normal">(${String(f.categoria).toUpperCase()})</span>`;
+                        } else if (f.id_produto) {
+                            identificacaoText = `<span class="text-warning fw-bold">ESTOQUE</span> - ITEM COMPRA #${f.id_produto}`;
+                        } else {
+                            identificacaoText = `<span class="text-danger fw-bold">DESPESA</span> - ${String(f.categoria || 'OPERACIONAL').toUpperCase()}`;
+                        }
+
+                        listaMapeada.push({
+                            id: f.id,
+                            data: f.data_pagamento || new Date().toISOString(),
+                            identificacao: identificacaoText,
+                            valor: parseFloat(f.valor || 0),
+                            tipo: isEntrada ? 'Entrada' : 'Saída',
+                            origem: f.caixa_origem || f.forma_pagamento || 'Caixa',
+                            status: f.status_pgt || 'PAGO'
+                        });
                     });
                 }
 
-                // Cruzamento de dados estruturando a visualização mista (Pedidos, Despesas e Contas)
-                financeiroComNomes = resFin.map(f => {
-                    const idPed = String(f.id_pedido).trim();
-                    const idCli = pedToCli[idPed];
-                    
-                    // Se for um pedido atrelado a cliente exibe o nome, senão identifica a conta/descrição do lançamento externo
-                    let identificadorExibicao = "Avulso";
-                    if (idCli && cliToName[idCli]) {
-                        identificadorExibicao = cliToName[idCli];
-                    } else if (f.descricao_conta || f.historico) {
-                        identificadorExibicao = f.descricao_conta || f.historico;
-                    }
-
-                    return {
-                        ...f,
-                        clienteExibicao: identificadorExibicao
-                    };
-                }).reverse();
-
+                financeiroUnificado = listaMapeada.sort((a, b) => new Date(b.data) - new Date(a.data));
                 renderizarPaginaFin(1);
             } catch (err) {
-                console.error("Erro no processamento:", err);
-                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Erro ao processar nomes.</td></tr>`;
+                console.error("Erro no processamento unificado:", err);
+                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Erro ao processar tabelas do banco.</td></tr>`;
             }
         }
+
+        window.atualizarListaFinanceira = function() {
+            document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div> Atualizando...</td></tr>`;
+            init();
+        };
 
         window.renderizarPaginaFin = function(page) {
             currentFinPage = page;
             const start = (page - 1) * finLimit;
             const end = start + finLimit;
-            const paginatedItems = financeiroComNomes.slice(start, end);
+            const paginatedItems = financeiroUnificado.slice(start, end);
             const tbody = document.getElementById('financeiro-body');
 
             if (paginatedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Nenhum registro encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum lançamento ou registro encontrado no banco de dados.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = paginatedItems.map(f => {
-                const statusClass = f.status_pgt?.toLowerCase().includes('pago') 
+            tbody.innerHTML = paginatedItems.map((item, index) => {
+                const isEntrada = item.tipo === 'Entrada';
+                const classeFluxo = isEntrada ? 'text-success fw-bold' : 'text-danger';
+                const prefixoSinal = isEntrada ? '+' : '-';
+
+                const statusClass = item.status.toLowerCase().includes('pago') || item.status.toLowerCase().includes('concl')
                     ? 'bg-success-subtle text-success' 
                     : 'bg-warning-subtle text-warning';
 
-                const dataFormatada = f.data_pagamento ? f.data_pagamento.substring(0, 10).split('-').reverse().join('/') : '-';
+                const dataFormatada = item.data ? item.data.substring(0, 10).split('-').reverse().join('/') : '-';
 
                 return `
                     <tr>
-                        <td class="text-nowrap text-secondary">${dataFormatada}</td>
-                        <td class="fw-bold text-dark text-uppercase" style="letter-spacing: 0.5px;">${f.clienteExibicao}</td>
-                        <td class="text-secondary small">${f.tipo_pgt || '-'}</td>
-                        <td class="text-success fw-bold">${formatCurrency(f.valor_entrada)}</td>
-                        <td class="text-danger">${formatCurrency(f.valor_saida_colab || f.valor_saida)}</td>
-                        <td class="text-muted small">${formatCurrency(f.taxa_adm)}</td>
-                        <td><span class="badge bg-light text-dark border fw-normal">${f.caixa_origem || '-'}</span></td>
-                        <td><span class="badge ${statusClass} border-0 px-2">${f.status_pgt || '-'}</span></td>
-                        <td class="text-center">
+                        <td>
+                            <div class="text-secondary small mb-0" style="font-size: 0.7rem;">${dataFormatada}</div>
+                            <div class="text-dark truncate-container" style="letter-spacing: 0.3px; font-size: 0.8rem;">
+                                ${item.identificacao}
+                            </div>
+                        </td>
+                        <td class="${classeFluxo}">
+                            ${prefixoSinal} ${formatCurrency(item.valor)}
+                        </td>
+                        <td>
+                            <div class="text-muted mb-1" style="font-size: 0.75rem;">${item.origem}</div>
+                            <span class="badge ${statusClass} border-0 px-2" style="font-size: 0.7rem;">${item.status}</span>
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar Identificador ID: ${item.id}"><i class="bi bi-info-circle"></i></button>
                             <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-pencil-square"></i></button>
-                            <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-trash3"></i></button>
                         </td>
                     </tr>
                 `;
@@ -200,8 +252,44 @@
             renderPaginationControlsFin();
         };
 
+        // INSERÇÃO NATIVA DE NOVO LANÇAMENTO MANUAL NO BANCO VIA API PROXY
+        document.getElementById('form-novo-lancamento').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const categoria = document.getElementById('fin-categoria').value;
+            const valor = parseFloat(document.getElementById('fin-valor').value);
+            const formaPgt = document.getElementById('fin-forma-pgt').value;
+            const caixa = document.getElementById('fin-caixa').value;
+
+            const payloadFinanceiro = {
+                endpoint: 'addfinanceiro',
+                tipo_movimentacao: 'SAIDA',
+                categoria: categoria,
+                valor: valor,
+                taxa_adm: 0.00,
+                valor_liquido: valor,
+                caixa_origem: caixa,
+                forma_pagamento: formaPgt,
+                status_pgt: 'PAGO',
+                observacao: 'Lançamento manual de despesa via painel financeiro'
+            };
+
+            try {
+                const response = await API.call(payloadFinanceiro.endpoint, payloadFinanceiro);
+                
+                const modalEl = document.getElementById('modalNovoLancamento');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if(modalInstance) modalInstance.hide();
+                this.reset();
+                
+                window.atualizarListaFinanceira();
+            } catch (err) {
+                console.error("Erro ao salvar despesa manual:", err);
+                alert("Não foi possível salvar o lançamento no banco.");
+            }
+        });
+
         function renderPaginationControlsFin() {
-            const totalPages = Math.ceil(financeiroComNomes.length / finLimit);
+            const totalPages = Math.ceil(financeiroUnificado.length / finLimit);
             const controls = document.getElementById('pagination-controls-fin');
             let html = '';
             
@@ -222,7 +310,7 @@
             </li>`;
             
             controls.innerHTML = html;
-            document.getElementById('pagination-info-fin').innerText = `Total: ${financeiroComNomes.length} lançamentos`;
+            document.getElementById('pagination-info-fin').innerText = `Total: ${financeiroUnificado.length} registros`;
         }
 
         init();

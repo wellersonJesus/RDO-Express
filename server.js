@@ -14,10 +14,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve os arquivos estáticos da pasta do seu front-end
 app.use(express.static(path.join(__dirname, 'app')));
 
-// CENTRALIZADOR DE AUTENTICAÇÃO COM COMPARAÇÃO CRIPTOGRÁFICA (BCRYPT) + RETORNO DE IMAGEM
 app.post('/api/login-auth', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -83,7 +81,6 @@ app.post('/api/login-auth', async (req, res) => {
     return res.json({ status: 'error', message: 'Usuário ou senha incorretos.' });
 });
 
-// Proxy Inteligente e Corrigido para chamadas de tabelas (add, update, delete)
 app.post('/api/proxy', async (req, res) => {
     try {
         const targetUrl = process.env.API_URL;
@@ -93,12 +90,74 @@ app.post('/api/proxy', async (req, res) => {
 
         let bodyData = { ...req.body };
 
-        // Normaliza a action caso venha mapeada como endpoint pelo front-end
         if (!bodyData.action && bodyData.endpoint) {
             bodyData.action = bodyData.endpoint;
         }
 
-        // Tratamento e Sincronização de Chaves Primárias para a tabela 'pedidos'
+        // Se a ação for ler o financeiro, faremos a unificação em tempo real com os pedidos concluídos antigos
+        if (bodyData.action === 'getfinanceiro') {
+            try {
+                // Busca simultânea no Google Sheets (Financeiro e Pedidos)
+                const [resFinanceiro, resPedidos] = await Promise.all([
+                    fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'getfinanceiro', apiKey: process.env.SECRET_KEY })
+                    }).then(r => r.json()),
+                    fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'getpedidos', apiKey: process.env.SECRET_KEY })
+                    }).then(r => r.json())
+                ]);
+
+                let listaConsolidada = Array.isArray(resFinanceiro) ? [...resFinanceiro] : [];
+
+                if (Array.isArray(resPedidos)) {
+                    // Filtra apenas os pedidos cujo status é concluído/finalizado
+                    const pedidosConcluidos = resPedidos.filter(p => {
+                        const st = String(p.status || '').toLowerCase().trim();
+                        return st === 'concluido' || st === 'concluído' || st === 'finalizado';
+                    });
+
+                    pedidosConcluidos.forEach(p => {
+                        const idPedido = parseInt(p.id_pedido || p.id);
+                        
+                        // Evita duplicar se o pedido já tiver sido migrado para a tabela financeiro antes
+                        const jaExiste = listaConsolidada.some(f => parseInt(f.id_pedido) === idPedido);
+                        
+                        if (!jaExiste) {
+                            const valorCorrida = parseFloat(p.valor_corrida || p.valor || 0);
+                            const taxaAdm = parseFloat(p.taxa_localidade || p.taxa_adm || 0);
+                            const valorLiquido = valorCorrida - taxaAdm;
+
+                            // Simula a estrutura exata do banco financeiro para o front-end renderizar retroativamente
+                            listaConsolidada.push({
+                                id: `retro-${idPedido}`,
+                                id_pedido: idPedido,
+                                id_produto: null,
+                                tipo_movimentacao: 'ENTRADA',
+                                categoria: 'PEDIDO',
+                                valor: valorCorrida,
+                                taxa_adm: taxaAdm,
+                                valor_liquido: valorLiquido,
+                                caixa_origem: 'Caixa Principal',
+                                forma_pagamento: p.forma_pagamento || 'PIX',
+                                status_pgt: 'PAGO',
+                                data_pagamento: p.data || p.data_entrega || new Date().toISOString(),
+                                observacao: 'Histórico Retroativo - Sincronizado por correspondência de Status.'
+                            });
+                        }
+                    });
+                }
+
+                return res.json(listaConsolidada);
+            } catch (err) {
+                console.error("❌ [Erro na Consolidação Retroativa]:", err.message);
+                // Fallback: se der erro na unificação, tenta trazer ao menos o financeiro puro
+            }
+        }
+
         if (bodyData.action === 'addpedidos' || bodyData.action === 'updatepedidos') {
             if (!bodyData.dados) {
                 bodyData.dados = { ...bodyData };
@@ -107,7 +166,6 @@ app.post('/api/proxy', async (req, res) => {
                 delete bodyData.dados.endpoint;
             }
 
-            // Garante consistência dupla exigida pela estrutura de colunas do Sheets
             const idDetectado = bodyData.dados.id_pedido || bodyData.dados.id;
             if (idDetectado) {
                 bodyData.dados.id_pedido = idDetectado;
@@ -115,7 +173,6 @@ app.post('/api/proxy', async (req, res) => {
             }
         }
 
-        // Injeta a chave secreta de assinatura da API de forma transparente
         bodyData.apiKey = process.env.SECRET_KEY;
 
         const response = await fetch(targetUrl, {
@@ -125,6 +182,42 @@ app.post('/api/proxy', async (req, res) => {
         });
 
         const data = await response.json();
+
+        // Mantém o interceptador em tempo real ativo para novos pedidos que forem alterados a partir de agora
+        if (bodyData.action === 'updatepedidos') {
+            const fonteDados = bodyData.dados || bodyData;
+            const statusExtraido = String(fonteDados.status || bodyData.status || '').toLowerCase().trim();
+            const idExtraido = fonteDados.id_pedido || fonteDados.id || bodyData.id_pedido || bodyData.id;
+
+            if (idExtraido && (statusExtraido === 'concluido' || statusExtraido === 'concluído' || statusExtraido === 'finalizado')) {
+                const valorCorrida = parseFloat(fonteDados.valor_corrida || fonteDados.valor || 0);
+                const taxaAdm = parseFloat(fonteDados.taxa_localidade || fonteDados.taxa_adm || 0);
+                const valorLiquido = valorCorrida - taxaAdm;
+
+                const payloadFinanceiro = {
+                    action: 'addfinanceiro',
+                    apiKey: process.env.SECRET_KEY,
+                    id_pedido: parseInt(idExtraido),
+                    id_produto: null,
+                    tipo_movimentacao: 'ENTRADA',
+                    categoria: 'PEDIDO',
+                    valor: valorCorrida,
+                    taxa_adm: taxaAdm,
+                    valor_liquido: valorLiquido,
+                    caixa_origem: 'Caixa Principal',
+                    forma_pagamento: fonteDados.forma_pagamento || 'PIX',
+                    status_pgt: 'PAGO',
+                    observacao: `Replicação automática - Pedido #${idExtraido} Concluído.`
+                };
+
+                fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadFinanceiro)
+                }).catch(err => console.error("❌ [Erro Replicação Financeiro]:", err.message));
+            }
+        }
+
         return res.json(data);
 
     } catch (error) {
@@ -133,7 +226,6 @@ app.post('/api/proxy', async (req, res) => {
     }
 });
 
-// Redirecionamento SPA para capturar qualquer rota não mapeada de volta ao index
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'app', 'index.html'));
 });
