@@ -125,7 +125,6 @@ app.post('/api/proxy', async (req, res) => {
                         const jaExiste = listaConsolidada.some(f => String(f.id_pedido || '').trim() === idPedido);
                         
                         if (!jaExiste) {
-                            // Mapeamento extraído da estrutura real fornecida da sua planilha
                             const valorCorrida = parseFloat(p.valor_corridamotoboy || p.valor_corrida || p.valor || 0);
                             const taxaAdm = parseFloat(p.taxa_localidadeprioridade || p.taxa_localidade || p.taxa_adm || 0);
                             const valorLiquido = valorCorrida - taxaAdm;
@@ -141,8 +140,7 @@ app.post('/api/proxy', async (req, res) => {
                                 valor_liquido: valorLiquido,
                                 caixa_origem: 'Caixa Principal',
                                 forma_pagamento: p.forma_pagamento || 'PIX',
-                                situacao: 'PAGO',
-                                observacao: 'Sincronização Retroativa - Pedido Concluído encontrado fora do Financeiro.'
+                                situacao: 'PAGO'
                             });
                         }
                     });
@@ -155,7 +153,6 @@ app.post('/api/proxy', async (req, res) => {
             }
         }
 
-        // Normalização de ações vindas do front-end manual
         if (bodyData.action === 'addpedidos' || bodyData.action === 'updatepedidos') {
             if (!bodyData.dados) {
                 bodyData.dados = { ...bodyData };
@@ -181,14 +178,13 @@ app.post('/api/proxy', async (req, res) => {
 
         const data = await response.json();
 
-        // INTERCEPTADOR: Replicação Automática em Tempo Real disparada pelo "Potinho" ou API
+        // INTERCEPTADOR: Replicação Automática em Tempo Real disparada pelo painel
         if (bodyData.action === 'updatepedidos') {
             const fonteDados = bodyData.dados || bodyData;
             const statusExtraido = String(fonteDados.status || bodyData.status || '').toLowerCase().trim();
             const idExtraido = fonteDados.id_pedido || fonteDados.id || bodyData.id_pedido || bodyData.id;
 
             if (idExtraido && (statusExtraido.includes('concluido') || statusExtraido.includes('concluído') || statusExtraido.includes('finalizado'))) {
-                // Captura os nomes exatos mapeados da sua planilha física
                 const valorCorrida = parseFloat(fonteDados.valor_corridamotoboy || fonteDados.valor_corrida || fonteDados.valor || 0);
                 const taxaAdm = parseFloat(fonteDados.taxa_localidadeprioridade || fonteDados.taxa_localidade || fonteDados.taxa_adm || 0);
                 const valorLiquido = valorCorrida - taxaAdm;
@@ -205,8 +201,7 @@ app.post('/api/proxy', async (req, res) => {
                     valor_liquido: valorLiquido,
                     caixa_origem: 'Caixa Principal',
                     forma_pagamento: fonteDados.forma_pagamento || 'PIX',
-                    situacao: 'PAGO',
-                    observacao: `Replicação automática - Pedido #${idExtraido} Alterado para Concluído.`
+                    situacao: 'PAGO'
                 };
 
                 fetch(targetUrl, {

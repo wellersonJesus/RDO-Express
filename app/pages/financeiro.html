@@ -49,16 +49,17 @@
                 <table class="table table-hover align-middle table-sm" style="font-size: 0.8rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="py-3 text-secondary" style="width: 25%;">PEDIDO</th>
-                            <th class="py-3 text-secondary" style="width: 20%;">DATA</th>
-                            <th class="py-3 text-secondary" style="width: 25%;">VALOR</th>
+                            <th class="py-3 text-secondary" style="width: 15%;">PEDIDO</th>
+                            <th class="py-3 text-secondary" style="width: 15%;">DATA</th>
+                            <th class="py-3 text-secondary" style="width: 20%;">VALOR</th>
+                            <th class="py-3 text-secondary" style="width: 20%;">PAGAMENTO</th>
                             <th class="py-3 text-secondary" style="width: 20%;">SITUAÇÃO</th>
                             <th class="text-center py-3 text-secondary" style="width: 10%;">AÇÕES</th>
                         </tr>
                     </thead>
                     <tbody id="financeiro-body">
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="6" class="text-center py-4 text-muted">
                                 <div class="spinner-border spinner-border-sm text-danger me-2"></div> Buscando dados reais do banco de dados...
                             </td>
                         </tr>
@@ -93,7 +94,7 @@
     </div>
 </div>
 
-<!-- MODAL PARA LANÇAMENTOS DE DESPESAS E RETIRADAS -->
+<!-- MODAL PARA LANÇAMENTOS DE DESPESAS -->
 <div class="modal fade" id="modalNovoLancamento" tabindex="-1" aria-labelledby="modalNovoLancamentoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow">
@@ -137,7 +138,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-secondary small fw-bold mb-1">Caixa / Destino</label>
+                        <label class="form-label text-secondary small fw-bold mb-1">Caixa / Origem</label>
                         <select class="form-select form-select-sm" id="fin-caixa" required>
                             <option value="Caixa Principal" selected>Caixa Principal</option>
                             <option value="Banco Itaú">Banco Itaú</option>
@@ -181,7 +182,7 @@
                 ]);
 
                 if (!resFin || resFin.status === 'error') {
-                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Erro ao carregar dados do banco financeiro.</td></tr>`;
+                    document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar dados do banco financeiro.</td></tr>`;
                     return;
                 }
 
@@ -199,14 +200,18 @@
                         let rawIdPedido = f.id_pedido || f.id || '';
                         let pedidoCorrespondente = pedidosMap[String(rawIdPedido).trim()];
                         let idPedidoFinal = pedidoCorrespondente ? String(pedidoCorrespondente.id) : String(rawIdPedido);
+                        
+                        // Busca a observação vinda diretamente da tabela de pedidos
+                        let obsPedido = pedidoCorrespondente ? (pedidoCorrespondente.observacao || '') : '';
 
                         listaMapeada.push({
                             id: f.id,
                             id_pedido: idPedidoFinal.trim(),
                             data: f.data_pagamento || f.data || '',
                             valor: parseFloat(f.valor_pedido || 0),
-                            origem: f.caixa_origem || f.forma_pagamento || '',
-                            situacao: String(f.situacao || f.status_pgt || 'PAGO').toUpperCase()
+                            forma_pagamento: f.forma_pagamento || 'PIX',
+                            situacao: String(f.situacao || f.status_pgt || 'PAGO').toUpperCase(),
+                            observacao_pedido: obsPedido
                         });
                     });
                 }
@@ -215,12 +220,12 @@
                 renderizarPaginaFin(1);
             } catch (err) {
                 console.error("Erro no processamento das planilhas e banco:", err);
-                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Erro ao processar tabelas do banco.</td></tr>`;
+                document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Erro ao processar tabelas do banco.</td></tr>`;
             }
         }
 
         window.atualizarListaFinanceira = function() {
-            document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div> Sincronizando...</td></tr>`;
+            document.getElementById('financeiro-body').innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div> Sincronizando...</td></tr>`;
             init();
         };
 
@@ -232,7 +237,7 @@
             const tbody = document.getElementById('financeiro-body');
 
             if (paginatedItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Nenhum lançamento encontrado no banco de dados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Nenhum lançamento encontrado no banco de dados.</td></tr>`;
                 return;
             }
 
@@ -256,9 +261,12 @@
                     }
                 }
 
+                // Cria o texto de auxílio de dica com a observação real do pedido
+                let titleObs = item.observacao_pedido ? `title="Obs do Pedido: ${item.observacao_pedido}"` : `title="Registro ID: ${item.id}"`;
+
                 return `
                     <tr>
-                        <!-- COLUNA: PEDIDO (Número em vermelho 'text-danger', sem negrito) -->
+                        <!-- COLUNA: PEDIDO -->
                         <td class="text-danger" style="font-size: 0.8rem;">
                             ${item.id_pedido || '---'}
                         </td>
@@ -270,14 +278,17 @@
                         <td class="text-dark fw-bold">
                             ${formatCurrency(item.valor)}
                         </td>
+                        <!-- COLUNA: PAGAMENTO -->
+                        <td class="text-secondary fw-semibold">
+                            ${item.forma_pagamento}
+                        </td>
                         <!-- COLUNA: SITUAÇÃO -->
                         <td>
-                            <div class="text-muted mb-1" style="font-size: 0.75rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.origem}</div>
                             <span class="badge ${statusClass} border-0 px-2" style="font-size: 0.7rem;">${item.situacao}</span>
                         </td>
                         <!-- COLUNA: AÇÕES -->
-                        <td class="text-center text-nowrap">
-                            <button class="btn btn-sm btn-link text-secondary p-1" title="Visualizar Registro ID: ${item.id}"><i class="bi bi-info-circle"></i></button>
+                        <td class="text-nowrap text-center">
+                            <button class="btn btn-sm btn-link text-secondary p-1" ${titleObs}><i class="bi bi-info-circle"></i></button>
                             <button class="btn btn-sm btn-link text-secondary p-1"><i class="bi bi-pencil-square"></i></button>
                         </td>
                     </tr>
@@ -300,14 +311,11 @@
                 tipo_movimentacao: 'SAIDA',
                 categoria: category,
                 valor_pedido: value,
-                valor: value,
                 taxa_adm: 0.00,
                 valor_liquido: value,
                 caixa_origem: safeBox,
                 forma_pagamento: paymentMethod,
-                situacao: statusSituation,
-                status_pgt: statusSituation,
-                observacao: 'Lançamento manual de despesa via painel financeiro'
+                situacao: statusSituation
             };
 
             try {
