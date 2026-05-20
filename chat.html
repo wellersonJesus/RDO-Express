@@ -65,6 +65,7 @@
     </div>
 </div>
 
+<!-- PASSO 1: MODAL MAPS -->
 <div class="modal fade" id="modalMaps" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -82,55 +83,117 @@
     </div>
 </div>
 
+<!-- PASSO 2: MODAL CHECKOUT FORMULARIO LOGISTICO -->
 <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Checkout</h5>
+                <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Checkout LOGISTIC</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button>
             </div>
             <div class="modal-body pt-2">
                 <form id="form-logistic" class="row g-2">
-                    <div class="col-12"><label class="lbl-clean">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control ctrl-clean validate"></div>
-                    <div class="col-md-6"><label class="lbl-clean">HORÁRIO ESTIMADO</label><input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00"></div>
-                    <div class="col-md-3"><label class="lbl-clean">DISTÂNCIA (KM)</label><input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" oninput="calcularTudo()"></div>
-                    <div class="col-md-3"><label class="lbl-clean">TEMPO</label><input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min"></div>
+                    <div class="col-md-6">
+                        <label class="lbl-clean">SOLICITANTE</label>
+                        <input type="text" id="p-solicitante" class="form-control ctrl-clean validate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="lbl-clean">CONTATO</label>
+                        <input type="text" id="p-contato" class="form-control ctrl-clean validate" placeholder="(031) 9 9999-9999">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="lbl-clean">HORÁRIO ESTIMADO P/ COLETA</label>
+                        <input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="lbl-clean">DISTÂNCIA (KM)</label>
+                        <input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" oninput="calcularTudo()" placeholder="Digite o km percorrido">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="lbl-clean">TEMPO</label>
+                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Digite o tempo estimado">
+                    </div>
+                    
                     <div class="col-md-4">
                         <label class="lbl-clean">VALOR KM</label>
                         <select id="p-valor-km" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="2.20">2,20</option><option value="2.40" selected>2,40</option><option value="2.60">2,60</option><option value="3.00">3,00</option>
+                            <option value="2.02">2,02</option>
+                            <option value="2.03">2,03</option>
+                            <option value="2.05">2,05</option>
+                            <option value="2.10">2,10</option>
+                            <option value="2.20">2,20</option>
+                            <option value="2.40" selected>2,40</option>
+                            <option value="2.60">2,60</option>
+                            <option value="3.00">3,00</option>
                         </select>
                     </div>
                     <div class="col-md-4">
                         <label class="lbl-clean">MERCADORIA</label>
                         <select id="p-mercadoria-input" class="form-select ctrl-clean validate">
-                            <option value="">Escolha...</option><option value="Sacola">Sacola</option><option value="Coleta">Coleta</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option>
+                            <option value="">Escolha...</option>
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="lbl-clean">RETORNO?</label>
-                        <select id="p-troca" class="form-select ctrl-clean validate"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="lbl-clean">TAXA/LOCALIDADE</label>
-                        <select id="p-localidade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Centro">0,00 (Centro)</option>
-                            <option value="5" data-nome="Zona Sul + 5">5,00 (Zona Sul)</option>
-                            <option value="7" data-nome="Zona Norte + 7">7,00 (Zona Norte)</option>
-                            <option value="15" data-nome="Barreiro + 15">15,00 (Barreiro)</option>
+                        <label class="lbl-clean">TAXA RETORNO</label>
+                        <select id="p-troca" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="0">NÃO (Taxa: 0)</option>
+                            <option value="0.60">SIM (Taxa: 60%)</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+
+                    <div class="col-md-4">
+                        <label class="lbl-clean">TAXA DINÂMICO</label>
+                        <select id="p-taxa-dinamico" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="0">Taxa 01 (Taxa 0)</option>
+                            <option value="5">Taxa 02 (Taxa 5)</option>
+                            <option value="7">Taxa 03 (Taxa 7)</option>
+                            <option value="10">Taxa 04 (Taxa 10)</option>
+                            <option value="15">Taxa 05 (Taxa 15)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="lbl-clean">TAXA CANCELAMENTO</label>
+                        <select id="p-taxa-cancelamento" class="form-select ctrl-clean validate">
+                            <option value="10">R$ 10 (R$ 0 a R$ 35)</option>
+                            <option value="15">R$ 15 (R$ 36 a R$ 70)</option>
+                            <option value="20">R$ 20 (R$ 71 acima)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="lbl-clean">PRIORIDADE</label>
                         <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Normal">0,00 (Normal)</option>
-                            <option value="7" data-nome="Urgente + 7">7,00 (Urgente)</option>
-                            <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
+                            <option value="0" data-nome="Normal">Normal</option>
+                            <option value="5" data-nome="Agendado + Taxa 5">Agendado + Taxa 5</option>
+                            <option value="7" data-nome="Urgente + Taxa 7">Urgente + Taxa 7</option>
                         </select>
                     </div>
-                    <div class="col-md-6"><label class="lbl-clean">ORIGEM</label><input type="text" id="p-origem" class="form-control ctrl-clean validate"></div>
-                    <div class="col-md-6"><label class="lbl-clean">DESTINO</label><input type="text" id="p-destino" class="form-control ctrl-clean validate"></div>
+
+                    <!-- CONTAINER DE ROTAS DINAMICAS -->
+                    <div class="col-12 mt-2">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="lbl-clean m-0">ROTAS DE ENTREGA</label>
+                            <button type="button" class="btn btn-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; padding: 0;" onclick="adicionarNovaRotaHtml()">
+                                <i class="bi bi-plus-lg fs-6"></i>
+                            </button>
+                        </div>
+                        <div id="container-rotas-dinamicas" class="row g-2">
+                            <!-- Inicia obrigatoriamente com a Rota 1 -->
+                            <div class="col-12 rota-item" id="item-rota-1">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-dark text-white fw-bold border-0" style="font-size: 0.7rem;">1</span>
+                                    <input type="text" id="p-origem-1" class="form-control ctrl-clean validate border" placeholder="DE:" style="font-size:0.8rem;">
+                                    <input type="text" id="p-destino-1" class="form-control ctrl-clean validate border" placeholder="PARA:" style="font-size:0.8rem;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-12"><label class="lbl-clean">OBSERVAÇÕES</label><input type="text" id="p-obs" class="form-control ctrl-clean"></div>
+                    
                     <div class="col-12 mt-3">
                         <div class="row g-2">
                             <div class="col-2"><button type="button" class="btn btn-light w-100 border rounded-3 py-2" onclick="voltarParaMaps()"><i class="bi bi-arrow-left"></i></button></div>
@@ -223,7 +286,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 </style>
 
 <script>
-    if (!window.chatState) window.chatState = { currentName: null };
+    if (!window.chatState) window.chatState = { currentName: null, totalRotasAtivas: 1 };
 
     function toggleBtnLoader(btnId, show) {
         const btn = document.getElementById(btnId);
@@ -341,12 +404,79 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         container.scrollTop = container.scrollHeight;
     }
 
+    /* SISTEMA DE ADIÇÃO DINÂMICA DE ROTAS (PASSO 2) */
+    function adicionarNovaRotaHtml() {
+        window.chatState.totalRotasAtivas++;
+        const numeroRota = window.chatState.totalRotasAtivas;
+        const novoHtml = `
+            <div class="col-12 rota-item mt-1" id="item-rota-${numeroRota}">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-dark text-white fw-bold border-0" style="font-size: 0.7rem;">${numeroRota}</span>
+                    <input type="text" id="p-origem-${numeroRota}" class="form-control ctrl-clean validate border" placeholder="DE:" style="font-size:0.8rem;">
+                    <input type="text" id="p-destino-${numeroRota}" class="form-control ctrl-clean validate border" placeholder="PARA:" style="font-size:0.8rem;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="removerRotaHtml(${numeroRota})"><i class="bi bi-trash"></i></button>
+                </div>
+            </div>`;
+        document.getElementById('container-rotas-dinamicas').insertAdjacentHTML('beforeend', novoHtml);
+    }
+
+    function removerRotaHtml(numero) {
+        const el = document.getElementById(`item-rota-${numero}`);
+        if(el) {
+            el.remove();
+            reestruturarNumeracaoRotas();
+        }
+    }
+
+    function reestruturarNumeracaoRotas() {
+        const itens = document.querySelectorAll('#container-rotas-dinamicas .rota-item');
+        window.chatState.totalRotasAtivas = 0;
+        itens.forEach((item) => {
+            window.chatState.totalRotasAtivas++;
+            const novoIndex = window.chatState.totalRotasAtivas;
+            
+            item.id = `item-rota-${novoIndex}`;
+            item.querySelector('.input-group-text').innerText = novoIndex;
+            
+            const inputOrigem = item.querySelector('input[id^="p-origem-"]');
+            const inputDestino = item.querySelector('input[id^="p-destino-"]');
+            
+            inputOrigem.id = `p-origem-${novoIndex}`;
+            inputDestino.id = `p-destino-${novoIndex}`;
+            
+            const btnDeletar = item.querySelector('button');
+            if (btnDeletar) {
+                btnDeletar.setAttribute('onclick', `removerRotaHtml(${novoIndex})`);
+            }
+        });
+    }
+
+    function resetarFormularioRotas() {
+        document.getElementById('container-rotas-dinamicas').innerHTML = `
+            <div class="col-12 rota-item" id="item-rota-1">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-dark text-white fw-bold border-0" style="font-size: 0.7rem;">1</span>
+                    <input type="text" id="p-origem-1" class="form-control ctrl-clean validate border" placeholder="DE:" style="font-size:0.8rem;">
+                    <input type="text" id="p-destino-1" class="form-control ctrl-clean validate border" placeholder="PARA:" style="font-size:0.8rem;">
+                </div>
+            </div>`;
+        window.chatState.totalRotasAtivas = 1;
+    }
+
+    /* REGRA DE CÁLCULO ATUALIZADA (VALOR KM, RETORNO %, DINÂMICO E PRIORIDADE) */
     function calcularTudo() {
         const km = parseFloat(document.getElementById('p-distancia').value) || 0;
-        const val = parseFloat(document.getElementById('p-valor-km').value) || 0;
-        const loc = parseFloat(document.getElementById('p-localidade').value) || 0;
-        const prio = parseFloat(document.getElementById('p-prioridade').value) || 0;
-        const total = (km * val) + loc + prio;
+        const valKm = parseFloat(document.getElementById('p-valor-km').value) || 0;
+        const taxaRetornoFator = parseFloat(document.getElementById('p-troca').value) || 0;
+        const taxaDinamico = parseFloat(document.getElementById('p-taxa-dinamico').value) || 0;
+        const taxaPrioridade = parseFloat(document.getElementById('p-prioridade').value) || 0;
+        
+        let subtotalCorrida = km * valKm;
+        if(taxaRetornoFator > 0) {
+            subtotalCorrida += (subtotalCorrida * taxaRetornoFator);
+        }
+        
+        const total = subtotalCorrida + taxaDinamico + taxaPrioridade;
         document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 
@@ -367,15 +497,27 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         let limpo = document.getElementById('view-valor-final').innerText.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
         let valorTotal = parseFloat(limpo) || 0.00;
 
-        const selLocalidade = document.getElementById('p-localidade');
-        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute('data-nome') || "Centro";
+        const selDinamico = document.getElementById('p-taxa-dinamico');
+        const nomeDinamico = selDinamico.options[selDinamico.selectedIndex].text;
         
         const selPrioridade = document.getElementById('p-prioridade');
         const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute('data-nome') || "Normal";
         
         const valorDistancia = document.getElementById('p-distancia').value.trim() + ' KM';
 
-        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        // Junção e processamento de todas as rotas ativas na montagem do texto
+        let rotasTextoArray = [];
+        let rotasBancoArray = [];
+        for (let i = 1; i <= window.chatState.totalRotasAtivas; i++) {
+            const orig = document.getElementById(`p-origem-${i}`).value.trim();
+            const dest = document.getElementById(`p-destino-${i}`).value.trim();
+            rotasTextoArray.push(`${i}. DE: ${orig} PARA: ${dest}`);
+            rotasBancoArray.push(`(${i}. De: ${orig}, Para: ${dest})`);
+        }
+        const strTodasRotasTexto = rotasTextoArray.join(', ');
+        const strTodasRotasBanco = rotasBancoArray.join(', ');
+
+        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nContato: ${document.getElementById('p-contato').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById('p-tempo').value}\nValor KM: ${document.getElementById('p-valor-km').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nRotas: ${strTodasRotasTexto}\nRetorno: ${document.getElementById('p-troca').options[document.getElementById('p-troca').selectedIndex].text}\nDinâmico: ${nomeDinamico}\nPrioridade: ${nomePrioridade}\nValor: ${document.getElementById('view-valor-final').innerText}`;
 
         await API.call('addmensagens_chat', { 
             id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
@@ -388,11 +530,11 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             id_mensagens_chat: chatId,
             solicitante: document.getElementById('p-solicitante').value.trim(),
             mercadoria: document.getElementById('p-mercadoria-input').value,
-            origem: document.getElementById('p-origem').value.trim(),
-            destino: document.getElementById('p-destino').value.trim(),
+            origem: document.getElementById('p-origem-1').value.trim(), 
+            destino: strTodasRotasBanco, 
             horario: document.getElementById('p-horario-manual').value.trim(),
             km: valorDistancia,
-            taxa_localidade: nomeLocalidade,
+            taxa_localidade: nomeDinamico, 
             prioridade: nomePrioridade,
             valor_corrida: valorTotal,
             motoboy: "⁉",
@@ -471,10 +613,34 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     function enviarMensagemManual() {
         const inp = document.getElementById('msg-input'); const t = inp.value.trim(); if(!t) return;
         if(t.toUpperCase().includes('SOLICITANTE:')) {
+            resetarFormularioRotas();
             const getF = (l) => (t.match(new RegExp(`${l}:\\s*(.*)`, 'i')) || [null, ''])[1].trim();
+            
             document.getElementById('p-solicitante').value = getF('SOLICITANTE');
-            document.getElementById('p-origem').value = getF('1. \\(De:'); // Fallback básico de captura do primeiro ponto se digitado manualmente no padrão antigo
-            document.getElementById('p-destino').value = '';
+            document.getElementById('p-contato').value = getF('CONATO');
+            document.getElementById('p-horario-manual').value = getF('HORÁRIO ESTIMADO P/ COLETA');
+            
+            const mercadoriaCaptura = getF('MERCADORIA');
+            if(mercadoriaCaptura) {
+                document.getElementById('p-mercadoria-input').value = mercadoriaCaptura;
+            }
+
+            // PASSO 1: Estrutura isolando a Rota 1 no Mapa para prosseguir
+            let rotaCompletaTexto = getF('ROTA');
+            let deDefinido = "";
+            let paraDefinido = "";
+            
+            if(rotaCompletaTexto) {
+                const matchPrimeiraRota = rotaCompletaTexto.match(/1\.\s*\(?De:\s*([^,]*),\s*Para:\s*([^\)]*)\)?/i);
+                if(matchPrimeiraRota) {
+                    deDefinido = matchPrimeiraRota[1].trim();
+                    paraDefinido = matchPrimeiraRota[2].trim();
+                }
+            }
+            
+            document.getElementById('p-origem-1').value = deDefinido;
+            document.getElementById('p-destino-1').value = paraDefinido;
+            
             new bootstrap.Modal(document.getElementById('modalMaps')).show();
             inp.value = '';
         } else {
@@ -482,7 +648,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         }
     }
 
-    function  avancarParaLogistica() {
+    function avancarParaLogistica() {
         bootstrap.Modal.getInstance(document.getElementById('modalMaps')).hide();
         setTimeout(() => { new bootstrap.Modal(document.getElementById('modalPedido')).show(); calcularTudo(); }, 400);
     }
