@@ -128,6 +128,10 @@
                             <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
                         </select>
                     </div>
+                    <div class="col-12">
+                        <label class="lbl-clean" style="color: #FF0000; font-weight: bold;">MULTI-ROTAS ADICIONAIS DETECTADAS</label>
+                        <textarea id="p-rotas-adicionais" class="form-control ctrl-clean" rows="2" placeholder="Nenhuma rota adicional ou intermediária encontrada."></textarea>
+                    </div>
                     <div class="col-md-6"><label class="lbl-clean">ORIGEM</label><input type="text" id="p-origem" class="form-control ctrl-clean validate"></div>
                     <div class="col-md-6"><label class="lbl-clean">DESTINO</label><input type="text" id="p-destino" class="form-control ctrl-clean validate"></div>
                     <div class="col-12"><label class="lbl-clean">OBSERVAÇÕES</label><input type="text" id="p-obs" class="form-control ctrl-clean"></div>
@@ -154,23 +158,11 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Copiar Modelo</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo:
+                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
 
-<<<<<<< HEAD
-SOLICITANTE: 
-CONATO: 
-HORÁRIO ESTIMADO P/ COLETA:  
-MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
-ROTA: 
-1. (De: , Para), 
-2. (De: , Para),
-3. (De: , Para) 
-TROCA/RETORNO:  (SIM /NÃO)
-PRIORIDADE: (Normal, Agendado, Urgente) 
-=======
 SOLICITANTE: 
 CONATO: 
-HORÁRIO ESTIMADO P/ COLETA:  
+HORÁRIO ESTIMADO P/ COLETA: 
 MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
 ROTA: 
 1. (De: , Para), 
@@ -178,7 +170,6 @@ ROTA:
 3. (De: , Para) 
 TROCA/RETORNO:  (SIM /NÃO)
 PRIORIDADE: (Normal, Agendado, Urgente) 
->>>>>>> 50acf77661806086b0d1df2f2c75328a2a86724d
 
 Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="copiarModelo()">
@@ -373,49 +364,56 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     async function salvarPedidoAPI() {
-        toggleBtnLoader('btn-finalizar-checkout', true);
-        const idRdo = 'RDO' + Math.floor(10000 + Math.random() * 99999);
+        toggleBtnLoader("btn-finalizar-checkout", true);
+        const idRdo = "RDO" + Math.floor(10000 + Math.random() * 99999);
         const chatId = Date.now().toString();
         
-        let limpo = document.getElementById('view-valor-final').innerText.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+        let limpo = document.getElementById("view-valor-final").innerText.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".").trim();
         let valorTotal = parseFloat(limpo) || 0.00;
 
-        const selLocalidade = document.getElementById('p-localidade');
-        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute('data-nome') || "Centro";
+        const selLocalidade = document.getElementById("p-localidade");
+        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute("data-nome") || "Centro";
         
-        const selPrioridade = document.getElementById('p-prioridade');
-        const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute('data-nome') || "Normal";
+        const selPrioridade = document.getElementById("p-prioridade");
+        const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute("data-nome") || "Normal";
         
-        const valorDistancia = document.getElementById('p-distancia').value.trim() + ' KM';
+        const valorDistancia = document.getElementById("p-distancia").value.trim() + " KM";
 
-        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById('p-solicitante').value}\nMercadoria: ${document.getElementById('p-mercadoria-input').value}\nDe: ${document.getElementById('p-origem').value}\nHORÁRIO: ${document.getElementById('p-horario-manual').value}\nPara: ${document.getElementById('p-destino').value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById('p-tempo').value}\nValor: ${document.getElementById('view-valor-final').innerText}`;
+        let stringRotasFormato = "";
+        if (window.currentRotasCapturadas && window.currentRotasCapturadas.length > 0) {
+            stringRotasFormato = window.currentRotasCapturadas.map(r => `${r.numero}. DE: ${r.origem}, PARA: ${r.destino}`).join(", ");
+        } else {
+            stringRotasFormato = `1. DE: ${document.getElementById("p-origem").value}, PARA: ${document.getElementById("p-destino").value}`;
+        }
 
-        await API.call('addmensagens_chat', { 
+        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById("p-solicitante").value}\nMercadoria: ${document.getElementById("p-mercadoria-input").value}\nROTA: ${stringRotasFormato}\nHORÁRIO: ${document.getElementById("p-horario-manual").value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById("p-tempo").value}\nValor: ${document.getElementById("view-valor-final").innerText}`;
+
+        await API.call("addmensagens_chat", { 
             id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
-            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), 
             data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
         });
 
-        await API.call('addpedidos', {
+        await API.call("addpedidos", {
             id: idRdo,
             id_mensagens_chat: chatId,
-            solicitante: document.getElementById('p-solicitante').value.trim(),
-            mercadoria: document.getElementById('p-mercadoria-input').value,
-            origem: document.getElementById('p-origem').value.trim(),
-            destino: document.getElementById('p-destino').value.trim(),
-            horario: document.getElementById('p-horario-manual').value.trim(),
+            solicitante: document.getElementById("p-solicitante").value.trim(),
+            mercadoria: document.getElementById("p-mercadoria-input").value,
+            origem: document.getElementById("p-origem").value.trim(),
+            destino: document.getElementById("p-destino").value.trim(),
+            horario: document.getElementById("p-horario-manual").value.trim(),
             km: valorDistancia,
             taxa_localidade: nomeLocalidade,
             prioridade: nomePrioridade,
             valor_corrida: valorTotal,
             motoboy: "⁉",
             status: "⏳ Aguardando",
-            observacao: document.getElementById('p-obs').value.trim() || "---"
+            observacao: `Rotas mapeadas: ${stringRotasFormato}. Obs: ` + (document.getElementById("p-obs").value.trim() || "---")
         });
 
         setTimeout(() => {
-            toggleBtnLoader('btn-finalizar-checkout', false);
-            bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+            toggleBtnLoader("btn-finalizar-checkout", false);
+            bootstrap.Modal.getInstance(document.getElementById("modalPedido")).hide();
             removerPelicula();
             carregarMensagensBanco(window.chatState.currentName);
         }, 800);
@@ -482,16 +480,39 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     function enviarMensagemManual() {
-        const inp = document.getElementById('msg-input'); const t = inp.value.trim(); if(!t) return;
-        if(t.toUpperCase().includes('SOLICITANTE:')) {
-            const getF = (l) => (t.match(new RegExp(`${l}:\\s*(.*)`, 'i')) || [null, ''])[1].trim();
-            document.getElementById('p-solicitante').value = getF('SOLICITANTE');
-            document.getElementById('p-origem').value = getF('1. \\(De:'); // Fallback básico de captura do primeiro ponto se digitado manualmente no padrão antigo
-            document.getElementById('p-destino').value = '';
-            new bootstrap.Modal(document.getElementById('modalMaps')).show();
-            inp.value = '';
+        const inp = document.getElementById("msg-input"); const t = inp.value.trim(); if(!t) return;
+        if(t.toUpperCase().includes("SOLICITANTE:")) {
+            const info = extrairDadosDoTexto(t);
+            
+            window.currentRotasCapturadas = info.rotas;
+
+            document.getElementById("p-solicitante").value = info.solicitante;
+            document.getElementById("p-horario-manual").value = info.horario;
+            
+            const selMerc = document.getElementById("p-mercadoria-input");
+            if (selMerc) selMerc.value = info.mercadoria || "Sacola";
+            
+            const selTroca = document.getElementById("p-troca");
+            if (selTroca) selTroca.value = info.troca;
+
+            let origemMapa = "";
+            let destinoMapa = "";
+            if (info.rotas && info.rotas.length > 0) {
+                origemMapa = info.rotas[0].origem;
+                destinoMapa = info.rotas[0].destino;
+            }
+            
+            document.getElementById("p-origem").value = origemMapa;
+            document.getElementById("p-destino").value = destinoMapa;
+            
+            const sOrigem = encodeURIComponent(origemMapa);
+            const sDestino = encodeURIComponent(destinoMapa);
+            document.getElementById("iframe-mapa").src = `https://www.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&output=embed`;
+            
+            new bootstrap.Modal(document.getElementById("modalMaps")).show();
+            inp.value = "";
         } else {
-            API.call('addmensagens_chat', { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ''; carregarMensagensBanco(window.chatState.currentName); });
+            API.call("addmensagens_chat", { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ""; carregarMensagensBanco(window.chatState.currentName); });
         }
     }
 
@@ -506,4 +527,93 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
     }
 
     carregarDados();
+</script>
+<script>
+    function extrairDadosDoTexto(texto) {
+        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", rotasAdicionais: [] };
+        if (!texto) return dados;
+
+        const mSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i);
+        if (mSolicitante) dados.solicitante = mSolicitante[1].trim();
+
+        const mMercadoria = texto.match(/MERCADORIA:\s*\(?([^)]*)\)?/i);
+        if (mMercadoria) dados.mercadoria = mMercadoria[1].trim();
+
+        const mHorario = texto.match(/(?:HORÁRIO ESTIMADO P\/ COLETA|HORÁRIO ESTIMADO P\/ PEGAR ENCOMENDA):\s*(.*)/i);
+        if (mHorario) dados.horario = mHorario[1].trim();
+
+        const regexRota = /\d+\.\s*\(De:\s*(.*?),\s*Para:\s*(.*?)\)/gi;
+        let match;
+        let indicesRotas = [];
+
+        while ((match = regexRota.exec(texto)) !== null) {
+            indicesRotas.push({ origem: match[1].trim(), destino: match[2].trim() });
+        }
+
+        if (indicesRotas.length > 0) {
+            dados.origem = indicesRotas[0].origem;
+            dados.destino = indicesRotas[0].destino;
+            
+            if (indicesRotas.length > 1) {
+                dados.rotasAdicionais = indicesRotas.slice(1).map((r, i) => `Rota ${i+2}: De ${r.origem} até ${r.destino}`);
+            }
+        }
+        return dados;
+    }
+
+    function enviarMensagemManual() {
+        const inp = document.getElementById('msg-input'); 
+        if (!inp) return;
+        const t = inp.value.trim(); 
+        if (!t) return;
+
+        if (t.toUpperCase().includes('SOLICITANTE:')) {
+            const dados = extrairDadosDoTexto(t);
+
+            if(document.getElementById('p-solicitante')) document.getElementById('p-solicitante').value = dados.solicitante;
+            if(document.getElementById('p-origem')) document.getElementById('p-origem').value = dados.origem;
+            if(document.getElementById('p-destino')) document.getElementById('p-destino').value = dados.destino;
+            if(document.getElementById('p-horario-manual')) document.getElementById('p-horario-manual').value = dados.horario;
+            
+            const txtRotasAdicionais = document.getElementById('p-rotas-adicionais');
+            if (txtRotasAdicionais) {
+                txtRotasAdicionais.value = dados.rotasAdicionais.length > 0 ? dados.rotasAdicionais.join('\n') : '';
+            }
+
+            if (dados.mercadoria && document.getElementById('p-mercadoria-input')) {
+                document.getElementById('p-mercadoria-input').value = dados.mercadoria;
+            }
+
+            if (dados.origem && dados.destino) {
+                const sOrigem = encodeURIComponent(dados.origem);
+                const sDestino = encodeURIComponent(dados.destino);
+                
+                // Formato de rotas incorporado público (sem necessidade de API Key)
+                const urlMapa = `https://maps.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&dirflg=t&directionsmode=motorcycle&output=embed`;
+                
+                const iframe = document.getElementById('iframe-mapa');
+                if (iframe) iframe.src = urlMapa;
+            }
+
+            const modalM = document.getElementById('modalMaps');
+            if (modalM) {
+                new bootstrap.Modal(modalM).show();
+            }
+            inp.value = '';
+        } else {
+            if (typeof API !== 'undefined') {
+                API.call('addmensagens_chat', { 
+                    id: Date.now().toString(), 
+                    jid_numero: window.chatState?.currentName || '0', 
+                    texto: t, 
+                    hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+                    data: new Date().toISOString(), 
+                    finalizado: "false" 
+                }).then(() => { 
+                    inp.value = ''; 
+                    if(typeof carregarMensagensBanco === 'function') carregarMensagensBanco(window.chatState.currentName); 
+                });
+            }
+        }
+    }
 </script>
