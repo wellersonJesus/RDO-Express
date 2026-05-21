@@ -14,6 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve os arquivos estáticos da pasta 'app'
 app.use(express.static(path.join(__dirname, 'app')));
 
 app.post('/api/login-auth', async (req, res) => {
@@ -43,7 +44,7 @@ app.post('/api/login-auth', async (req, res) => {
     let masterHash = process.env.MASTER_PASS_HASH || '';
 
     if (uLower === masterUser && masterHash) {
-        if (masterHash.includes('$$')) masterHash = masterHash.replace(/\$\$/g, '$');
+        if (masterHash.includes('$$')) masterHash = masterHash.replace(/\$\$\$/g, '$');
         if (bcrypt.compareSync(password, masterHash)) {
             const dadosPlanilhaMaster = Array.isArray(usuariosPlanilha) ? 
                 usuariosPlanilha.find(userObj => String(userObj.username).toLowerCase().trim() === uLower) : null;
@@ -94,7 +95,6 @@ app.post('/api/proxy', async (req, res) => {
             bodyData.action = bodyData.endpoint;
         }
 
-        // INTERCEPTADOR: Sincronização Retroativa ao listar o financeiro
         if (bodyData.action === 'getfinanceiro') {
             try {
                 const [resFinanceiro, resPedidos] = await Promise.all([
@@ -178,7 +178,6 @@ app.post('/api/proxy', async (req, res) => {
 
         const data = await response.json();
 
-        // INTERCEPTADOR: Replicação Automática em Tempo Real disparada pelo painel
         if (bodyData.action === 'updatepedidos') {
             const fonteDados = bodyData.dados || bodyData;
             const statusExtraido = String(fonteDados.status || bodyData.status || '').toLowerCase().trim();
