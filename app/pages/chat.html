@@ -90,55 +90,114 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button>
             </div>
             <div class="modal-body pt-2">
-                <form id="form-logistic" class="row g-2">
-                    <div class="col-12"><label class="lbl-clean">SOLICITANTE</label><input type="text" id="p-solicitante" class="form-control ctrl-clean validate"></div>
-                    <div class="col-md-6"><label class="lbl-clean">HORÁRIO ESTIMADO</label><input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00"></div>
-                    <div class="col-md-3"><label class="lbl-clean">DISTÂNCIA (KM)</label><input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" oninput="calcularTudo()"></div>
-                    <div class="col-md-3"><label class="lbl-clean">TEMPO</label><input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min"></div>
+                <form id="form-logistic" class="row g-2" onsubmit="event.preventDefault();">
+                    <div class="col-12">
+                        <label class="lbl-clean">SOLICITANTE</label>
+                        <input type="text" id="p-solicitante" class="form-control ctrl-clean validate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="lbl-clean">HORÁRIO ESTIMADO</label>
+                        <input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="lbl-clean">DISTÂNCIA (KM)</label>
+                        <input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" value="0" oninput="calcularTudo()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="lbl-clean">TEMPO</label>
+                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min">
+                    </div>
+                    
                     <div class="col-md-4">
                         <label class="lbl-clean">VALOR KM</label>
                         <select id="p-valor-km" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="2.20">2,20</option><option value="2.40" selected>2,40</option><option value="2.60">2,60</option><option value="3.00">3,00</option>
+                            <option value="2.20" selected>2,20</option>
+                            <option value="2.40">2,40</option>
+                            <option value="2.60">2,60</option>
+                            <option value="3.00">3,00</option>
                         </select>
                     </div>
                     <div class="col-md-4">
                         <label class="lbl-clean">MERCADORIA</label>
                         <select id="p-mercadoria-input" class="form-select ctrl-clean validate">
-                            <option value="">Escolha...</option><option value="Sacola">Sacola</option><option value="Coleta">Coleta</option><option value="Bolsa">Bolsa</option><option value="Envelope">Envelope</option>
+                            <option value="">Escolha...</option>
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
                         </select>
                     </div>
                     <div class="col-md-4">
                         <label class="lbl-clean">RETORNO?</label>
-                        <select id="p-troca" class="form-select ctrl-clean validate"><option value="NÃO">NÃO</option><option value="SIM">SIM</option></select>
+                        <select id="p-troca" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="NÃO" selected>Não</option>
+                            <option value="SIM">Sim (60%)</option>
+                        </select>
                     </div>
-                    <div class="col-md-6">
+                    
+                    <div class="col-md-4">
                         <label class="lbl-clean">TAXA/LOCALIDADE</label>
                         <select id="p-localidade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Centro">0,00 (Centro)</option>
+                            <option value="0" data-nome="Centro" selected>0,00 (Centro)</option>
                             <option value="5" data-nome="Zona Sul + 5">5,00 (Zona Sul)</option>
                             <option value="7" data-nome="Zona Norte + 7">7,00 (Zona Norte)</option>
                             <option value="15" data-nome="Barreiro + 15">15,00 (Barreiro)</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label class="lbl-clean">TAXA CANCELAMENTO</label>
+                        <select id="p-taxa-cancelamento" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="0" selected>0,00 (Sem Taxa)</option>
+                            <option value="10">10,00 (R$ 0 a R$ 35)</option>
+                            <option value="15">15,00 (R$ 36 a R$ 70)</option>
+                            <option value="20">20,00 (R$ 71 acima)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="lbl-clean">PRIORIDADE</label>
                         <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Normal">0,00 (Normal)</option>
+                            <option value="0" data-nome="Normal" selected>0,00 (Normal)</option>
                             <option value="7" data-nome="Urgente + 7">7,00 (Urgente)</option>
                             <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
                         </select>
                     </div>
-                    <div class="col-12">
-                        <label class="lbl-clean" style="color: #FF0000; font-weight: bold;">MULTI-ROTAS ADICIONAIS DETECTADAS</label>
-                        <textarea id="p-rotas-adicionais" class="form-control ctrl-clean" rows="2" placeholder="Nenhuma rota adicional ou intermediária encontrada."></textarea>
+
+                    <div class="col-12 mt-3">
+                        <div class="accordion" id="accordionRotas">
+                            <div class="accordion-item border rounded-3 overflow-hidden">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button bg-light text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRotas" aria-expanded="true">
+                                        <i class="bi bi-geo-alt-fill text-danger me-2"></i> ROTAS DO TRAJETO
+                                    </button>
+                                </h2>
+                                <div id="collapseRotas" class="accordion-collapse collapse show" data-bs-parent="#accordionRotas">
+                                    <div class="accordion-body bg-white p-3">
+                                        <div id="container-linhas-rotas" class="row g-2">
+                                            </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6"><label class="lbl-clean">ORIGEM</label><input type="text" id="p-origem" class="form-control ctrl-clean validate"></div>
-                    <div class="col-md-6"><label class="lbl-clean">DESTINO</label><input type="text" id="p-destino" class="form-control ctrl-clean validate"></div>
-                    <div class="col-12"><label class="lbl-clean">OBSERVAÇÕES</label><input type="text" id="p-obs" class="form-control ctrl-clean"></div>
+
+                    <div class="col-12">
+                        <label class="lbl-clean">OBSERVAÇÕES</label>
+                        <input type="text" id="p-obs" class="form-control ctrl-clean">
+                    </div>
+                    
                     <div class="col-12 mt-3">
                         <div class="row g-2">
-                            <div class="col-2"><button type="button" class="btn btn-light w-100 border rounded-3 py-2" onclick="voltarParaMaps()"><i class="bi bi-arrow-left"></i></button></div>
-                            <div class="col-4"><div class="bg-danger text-white rounded-3 py-2 text-center h-100 d-flex flex-column justify-content-center"><small style="font-size: 0.55rem;">VALOR FINAL</small><span class="fw-bold" id="view-valor-final">R$ 0,00</span></div></div>
+                            <div class="col-2">
+                                <button type="button" class="btn btn-light w-100 border rounded-3 py-2" onclick="voltarParaMaps()">
+                                    <i class="bi bi-arrow-left"></i>
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <div class="bg-danger text-white rounded-3 py-2 text-center h-100 d-flex flex-column justify-content-center">
+                                    <small style="font-size: 0.55rem;" id="lbl-tipo-valor">VALOR FINAL</small>
+                                    <span class="fw-bold" id="view-valor-final">R$ 0,00</span>
+                                </div>
+                            </div>
                             <div class="col-6">
                                 <button type="button" id="btn-finalizar-checkout" class="btn btn-dark w-100 h-100 rounded-3 fw-bold" onclick="validarESalvar()">
                                     <span class="btn-text">FINALIZAR</span>
@@ -161,17 +220,16 @@
                 <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
 
 SOLICITANTE: 
-CONATO: 
 HORÁRIO ESTIMADO P/ COLETA: 
 MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
 ROTA: 
 1. (De: , Para), 
-2. (De: , Para),
-3. (De: , Para) 
-TROCA/RETORNO:  (SIM /NÃO)
+2. (De: , Para)
+TROCA/RETORNO: (SIM /NÃO)
 PRIORIDADE: (Normal, Agendado, Urgente) 
+OBSERVAÇÃO: 
 
-Assim que enviar, calcularemos á sua taxa! 🏁</div>
+Assim que enviar, calcularemos a sua taxa! 🏁</div>
                 <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="copiarModelo()">
                     <span class="btn-text">COPIAR MODELO</span>
                     <span class="btn-loader d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
@@ -227,15 +285,24 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 </style>
 
 <script>
-    if (!window.chatState) window.chatState = { currentName: null };
+    // Configuração inicial do estado global do Chat RDO
+    if (!window.chatState) window.chatState = { currentName: null, rawLastMessage: "" };
+    let contadorRotas = 0;
 
     function toggleBtnLoader(btnId, show) {
         const btn = document.getElementById(btnId);
         if(!btn) return;
         const text = btn.querySelector('.btn-text');
         const loader = btn.querySelector('.btn-loader');
-        if(show) { text.classList.add('d-none'); loader.classList.remove('d-none'); btn.disabled = true; }
-        else { text.classList.remove('d-none'); loader.classList.add('d-none'); btn.disabled = false; }
+        if(show) { 
+            if(text) text.classList.add('d-none'); 
+            if(loader) loader.classList.remove('d-none'); 
+            btn.disabled = true; 
+        } else { 
+            if(text) text.classList.remove('d-none'); 
+            if(loader) loader.classList.add('d-none'); 
+            btn.disabled = false; 
+        }
     }
 
     function removerPelicula() { 
@@ -259,38 +326,279 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         } catch (e) { return ""; }
     }
 
+    // Função única e calibrada para extrair dados brutos da mensagem do Whatsapp
     function extrairDadosDoTexto(texto) {
-        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", km: "0 KM", valor: 0.00, taxa_localidade: "Centro", prioridade: "Normal" };
+        const dados = { solicitante: "", mercadoria: "", horario: "", retorno: "NÃO", prioridade: "0", observacao: "", valor: 0.00, rotas: [] };
         if (!texto) return dados;
-        const linhas = texto.split('\n').map(l => l.trim());
-        linhas.forEach(linha => {
-            if (linha.startsWith("Solicitante:")) dados.solicitante = linha.replace("Solicitante:", "").trim();
-            if (linha.startsWith("Mercadoria:")) dados.mercadoria = inline => inline.replace("Mercadoria:", "").trim();
-            if (linha.startsWith("De:"))         dados.origem = linha.replace("De:", "").trim();
-            if (linha.startsWith("HORÁRIO:"))   dados.horario = inline => inline.replace("HORÁRIO:", "").trim();
-            if (linha.startsWith("Para:"))       dados.destino = linha.replace("Para:", "").trim();
-            if (linha.startsWith("Distância:"))  dados.km = inline => inline.replace("Distância:", "").trim();
-            if (linha.startsWith("Valor:")) {
-                let vBruto = text => text.replace("Valor:", "").replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
-                dados.valor = parseFloat(vBruto(linha)) || 0.00;
+
+        const extrairCampo = (regex) => {
+            const match = texto.match(regex);
+            return match ? match[1].replace(/[()]/g, '').trim() : '';
+        };
+
+        dados.solicitante = extrairCampo(/SOLICITANTE:\s*([^\n\r]*)/i);
+        dados.horario = extrairCampo(/(?:HORÁRIO ESTIMADO P\/ COLETA|HORÁRIO):\s*([^\n\r]*)/i);
+        dados.mercadoria = extrairCampo(/MERCADORIA:\s*([^\n\r]*)/i);
+        dados.retorno = extrairCampo(/TROCA\s*\/\s*RETORNO:\s*([^\n\r]*)/i);
+        dados.prioridade = extrairCampo(/PRIORIDADE:\s*([^\n\r]*)/i);
+        dados.observacao = extrairCampo(/OBSERVAÇÃO:\s*([^\n\r]*)/i);
+
+        // Regex flexível: Captura rotas como "1. (De: Centro, Para: Savassi)" ou "2. (De: X, Para Y)"
+        const regexRotas = /\d+\.\s*\(\s*De:\s*([^,]+),\s*Para\s*([^)]+)\)/gi;
+        let match;
+        while ((match = regexRotas.exec(texto)) !== null) {
+            let destinoLimpo = match[2].replace(/^:\s*/, '').trim();
+            if (match[1].trim() !== "" || destinoLimpo !== "") {
+                dados.rotas.push({
+                    origem: match[1].trim(),
+                    destino: destinoLimpo
+                });
             }
-        });
+        }
         return dados;
     }
 
-    function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModeloMensagem')).show(); }
-    
-    function copiarModelo() {
-        toggleBtnLoader('btn-copiar-modelo', true);
-        const texto = document.getElementById('texto-modelo').innerText;
-        navigator.clipboard.writeText(texto).then(() => {
-            setTimeout(() => {
-                toggleBtnLoader('btn-copiar-modelo', false);
-                bootstrap.Modal.getInstance(document.getElementById('modalModeloMensagem')).hide();
-            }, 800);
+    // Processador Principal da Caixa de Mensagens
+    function enviarMensagemManual() {
+        const inp = document.getElementById("msg-input"); 
+        if(!inp) return;
+        const t = inp.value.trim(); 
+        if(!t) return;
+
+        if (t.toUpperCase().includes("SOLICITANTE:")) {
+            window.chatState.rawLastMessage = t;
+            const dados = extrairDadosDoTexto(t);
+
+            // Alimentação dos Inputs no HTML
+            if (dados.solicitante) document.getElementById("p-solicitante").value = dados.solicitante;
+            if (dados.horario) document.getElementById("p-horario-manual").value = dados.horario;
+            if (dados.observacao) document.getElementById("p-obs").value = dados.observacao;
+
+            // Tratamento do Dropdown Mercadoria
+            if (dados.mercadoria) {
+                const selectMerc = document.getElementById("p-mercadoria-input");
+                const mercLimpa = dados.mercadoria.split('(')[0].trim();
+                for (let opt of selectMerc.options) {
+                    if (opt.value.toLowerCase() === mercLimpa.toLowerCase() || mercLimpa.toLowerCase().includes(opt.value.toLowerCase())) {
+                        selectMerc.value = opt.value;
+                        break;
+                    }
+                }
+            }
+
+            // Tratamento do Dropdown de Retorno
+            const selectRetorno = document.getElementById("p-troca");
+            if (selectRetorno) {
+                selectRetorno.value = dados.retorno.toUpperCase().includes("SIM") ? "SIM" : "NÃO";
+            }
+
+            // Tratamento da Prioridade
+            if (dados.prioridade) {
+                const selectPrioridade = document.getElementById("p-prioridade");
+                const pTexto = dados.prioridade.toLowerCase();
+                if (pTexto.includes("urgente") || pTexto.includes("7")) selectPrioridade.value = "7";
+                else if (pTexto.includes("agendado") || pTexto.includes("10")) selectPrioridade.value = "10";
+                else selectPrioridade.value = "0";
+            }
+
+            // Geração de Linhas Dinâmicas no Bloco de Rotas
+            const container = document.getElementById("container-linhas-rotas");
+            if (container) {
+                container.innerHTML = "";
+                contadorRotas = 0;
+
+                if (dados.rotas.length > 0) {
+                    dados.rotas.forEach(r => adicionarNovaRotaManual(r.origem, r.destino));
+                    window.currentRotasCapturadas = dados.rotas.map((r, i) => ({ numero: i + 1, origem: r.origem, destino: r.destino }));
+                } else {
+                    adicionarNovaRotaManual("", "");
+                    window.currentRotasCapturadas = [];
+                }
+            }
+
+            // Montagem Segura da URL no Iframe do Google Maps
+            if (dados.rotas.length > 0) {
+                const sOrigem = encodeURIComponent(dados.rotas[0].origem);
+                const sDestino = encodeURIComponent(dados.rotas[0].destino);
+                document.getElementById("iframe-mapa").src = `https://maps.google.com/maps?q=${sOrigem}&daddr=${sDestino}&output=embed`;
+            }
+
+            new bootstrap.Modal(document.getElementById("modalMaps")).show();
+            inp.value = "";
+        } else {
+            // Envio simples de conversação padrão
+            API.call("addmensagens_chat", { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ""; carregarMensagensBanco(window.chatState.currentName); });
+        }
+    }
+
+    // Gerador Dinâmico de Linhas de Trajeto do Checkout
+    function adicionarNovaRotaManual(origem = '', destino = '') {
+        contadorRotas++;
+        const container = document.getElementById('container-linhas-rotas');
+        if (!container) return;
+        
+        const novaLinhaHTML = `
+            <div class="col-12 rota-item mt-1" id="rota-grupo-${contadorRotas}">
+                <div class="row g-2 align-items-center">
+                    <div class="col">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-muted fw-bold index-rota">${contadorRotas}</span>
+                            <input type="text" class="form-control p-origem-dinamico validate" placeholder="De: Origem" value="${origem}">
+                            <input type="text" class="form-control p-destino-dinamico validate" placeholder="Para: Destino" value="${destino}">
+                        </div>
+                    </div>
+                    <div class="col-auto d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-light border btn-add-rota text-secondary" onclick="adicionarNovaRotaManual()"><i class="bi bi-plus-lg"></i></button>
+                        <button type="button" class="btn btn-sm btn-light border btn-remover-rota text-danger" onclick="removerEstaRota(${contadorRotas})"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', novaLinhaHTML);
+        atualizarComponentesInterfaceRotas();
+    }
+
+    function removerEstaRota(id) {
+        const row = document.getElementById(`rota-grupo-${id}`);
+        if (row) { row.remove(); reordenarEIndices(); }
+    }
+
+    function reordenarEIndices() {
+        const itens = document.querySelectorAll('#container-linhas-rotas .rota-item');
+        contadorRotas = 0;
+        itens.forEach((item) => {
+            contadorRotas++;
+            item.id = `rota-grupo-${contadorRotas}`;
+            const badge = item.querySelector('.index-rota');
+            const btnRemover = item.querySelector('.btn-remover-rota');
+            if (badge) badge.innerText = contadorRotas;
+            if (btnRemover) btnRemover.setAttribute('onclick', `removerEstaRota(${contadorRotas})`);
+        });
+        atualizarComponentesInterfaceRotas();
+        calcularTudo();
+    }
+
+    function atualizarComponentesInterfaceRotas() {
+        const botoesRemover = document.querySelectorAll('.btn-remover-rota');
+        botoesRemover.forEach(btn => {
+            if (botoesRemover.length <= 1) btn.classList.add('d-none');
+            else btn.classList.remove('d-none');
         });
     }
 
+    function obterCadeiaFormatadaRotas() {
+        const itens = document.querySelectorAll('#container-linhas-rotas .rota-item');
+        let listaFormatada = [];
+        itens.forEach((item, index) => {
+            const o = item.querySelector('.p-origem-dinamico')?.value.trim() || 'Não Informado';
+            const d = item.querySelector('.p-destino-dinamico')?.value.trim() || 'Não Informado';
+            listaFormatada.push(`(${index + 1}. De: ${o}, Para: ${d})`);
+        });
+        return listaFormatada.join(' | ');
+    }
+
+    // Central de Cálculos Comerciais (KM, Taxas e Cancelamento)
+    function calcularTudo() {
+        const km = parseFloat(document.getElementById('p-distancia')?.value) || 0;
+        const val = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
+        const loc = parseFloat(document.getElementById('p-localidade')?.value) || 0;
+        const prio = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
+        const retornoSelecionado = document.getElementById('p-troca')?.value || 'NÃO';
+        const taxaCancelamento = parseFloat(document.getElementById('p-taxa-cancelamento')?.value) || 0;
+
+        const lblTipoValor = document.getElementById('lbl-tipo-valor');
+        const viewValorFinal = document.getElementById('view-valor-final');
+
+        if (taxaCancelamento > 0) {
+            if (lblTipoValor) lblTipoValor.innerText = "VALOR CANCELAMENTO";
+            if (viewValorFinal) viewValorFinal.innerText = taxaCancelamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return;
+        }
+
+        if (lblTipoValor) lblTipoValor.innerText = "VALOR FINAL";
+        
+        let calculoBaseKm = km * val;
+        let acrescimoRetorno = (retornoSelecionado === 'SIM') ? (loc * 0.60) : 0;
+        const total = calculoBaseKm + loc + acrescimoRetorno + prio;
+
+        if (viewValorFinal) {
+            viewValorFinal.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+    }
+
+    // Validador de Consistência e Persistência API
+    function validarESalvar() {
+        let valid = true;
+        document.querySelectorAll('.validate').forEach(el => {
+            if (!el.value.trim()) { el.classList.add('is-invalid'); valid = false; }
+            else { el.classList.remove('is-invalid'); }
+        });
+
+        document.querySelectorAll('.p-origem-dinamico, .p-destino-dinamico').forEach(input => {
+            if (!input.value.trim()) { input.classList.add('is-invalid'); valid = false; }
+            else { input.classList.remove('is-invalid'); }
+        });
+
+        if (!valid) {
+            return; // Interrompe o envio se houver marcações em vermelho
+        }
+        salvarPedidoAPI();
+    }
+
+    async function salvarPedidoAPI() {
+        toggleBtnLoader("btn-finalizar-checkout", true);
+        const idRdo = "RDO" + Math.floor(10000 + Math.random() * 99999);
+        const chatId = Date.now().toString();
+        
+        let limpo = document.getElementById("view-valor-final").innerText.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".").trim();
+        let valorTotal = parseFloat(limpo) || 0.00;
+
+        const selLocalidade = document.getElementById("p-localidade");
+        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].text;
+        
+        const selPrioridade = document.getElementById("p-prioridade");
+        const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].text;
+        
+        const valorDistancia = (document.getElementById("p-distancia").value || "0") + " KM";
+        const stringRotasFormato = obterCadeiaFormatadaRotas();
+
+        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById("p-solicitante").value}\nMercadoria: ${document.getElementById("p-mercadoria-input").value}\nROTA: ${stringRotasFormato}\nHORÁRIO: ${document.getElementById("p-horario-manual").value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById("p-tempo").value}\nValor: ${document.getElementById("view-valor-final").innerText}`;
+
+        // Injeta o balão verde de logística no banco para o chat ativo
+        await API.call("addmensagens_chat", { 
+            id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
+            hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), 
+            data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
+        });
+
+        // Adiciona registro estruturado na tabela comercial de pedidos
+        await API.call("addpedidos", {
+            id: idRdo,
+            id_mensagens_chat: chatId,
+            solicitante: document.getElementById("p-solicitante").value.trim(),
+            mercadoria: document.getElementById("p-mercadoria-input").value,
+            origem: stringRotasFormato,
+            destino: stringRotasFormato,
+            horario: document.getElementById("p-horario-manual").value.trim(),
+            km: valorDistancia,
+            taxa_localidade: nomeLocalidade,
+            prioridade: nomePrioridade,
+            valor_corrida: valorTotal,
+            motoboy: "⁉",
+            status: "⏳ Aguardando",
+            observacao: (document.getElementById("p-obs").value.trim() || "Sem observações")
+        });
+
+        setTimeout(() => {
+            toggleBtnLoader("btn-finalizar-checkout", false);
+            bootstrap.Modal.getInstance(document.getElementById("modalPedido")).hide();
+            removerPelicula();
+            carregarMensagensBanco(window.chatState.currentName);
+        }, 800);
+    }
+
+    // Carregamento de Contatos da API
     async function carregarDados() {
         const icon = document.getElementById('sync-icon'); 
         if(icon) icon.classList.add('loading-spin');
@@ -314,10 +622,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         document.getElementById('chat-header-name').innerText = nome;
         document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40">`;
         document.getElementById('menu-opcoes-chat').style.display = 'block';
-        carregarDados();
         carregarMensagensBanco(nome);
     }
 
+    // Carregamento e renderização de mensagens ativas
     async function carregarMensagensBanco(nome) {
         const res = await API.call('getmensagens_chat') || [];
         const container = document.getElementById('chat-messages-container');
@@ -343,80 +651,6 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         });
         container.innerHTML = htmlDinamico;
         container.scrollTop = container.scrollHeight;
-    }
-
-    function calcularTudo() {
-        const km = parseFloat(document.getElementById('p-distancia').value) || 0;
-        const val = parseFloat(document.getElementById('p-valor-km').value) || 0;
-        const loc = parseFloat(document.getElementById('p-localidade').value) || 0;
-        const prio = parseFloat(document.getElementById('p-prioridade').value) || 0;
-        const total = (km * val) + loc + prio;
-        document.getElementById('view-valor-final').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-    }
-
-    function validarESalvar() {
-        let valid = true;
-        document.querySelectorAll('.validate').forEach(el => {
-            if (!el.value.trim()) { el.classList.add('is-invalid'); valid = false; }
-            else { el.classList.remove('is-invalid'); }
-        });
-        if (valid) salvarPedidoAPI();
-    }
-
-    async function salvarPedidoAPI() {
-        toggleBtnLoader("btn-finalizar-checkout", true);
-        const idRdo = "RDO" + Math.floor(10000 + Math.random() * 99999);
-        const chatId = Date.now().toString();
-        
-        let limpo = document.getElementById("view-valor-final").innerText.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".").trim();
-        let valorTotal = parseFloat(limpo) || 0.00;
-
-        const selLocalidade = document.getElementById("p-localidade");
-        const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].getAttribute("data-nome") || "Centro";
-        
-        const selPrioridade = document.getElementById("p-prioridade");
-        const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].getAttribute("data-nome") || "Normal";
-        
-        const valorDistancia = document.getElementById("p-distancia").value.trim() + " KM";
-
-        let stringRotasFormato = "";
-        if (window.currentRotasCapturadas && window.currentRotasCapturadas.length > 0) {
-            stringRotasFormato = window.currentRotasCapturadas.map(r => `${r.numero}. DE: ${r.origem}, PARA: ${r.destino}`).join(", ");
-        } else {
-            stringRotasFormato = `1. DE: ${document.getElementById("p-origem").value}, PARA: ${document.getElementById("p-destino").value}`;
-        }
-
-        const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById("p-solicitante").value}\nMercadoria: ${document.getElementById("p-mercadoria-input").value}\nROTA: ${stringRotasFormato}\nHORÁRIO: ${document.getElementById("p-horario-manual").value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById("p-tempo").value}\nValor: ${document.getElementById("view-valor-final").innerText}`;
-
-        await API.call("addmensagens_chat", { 
-            id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
-            hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), 
-            data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
-        });
-
-        await API.call("addpedidos", {
-            id: idRdo,
-            id_mensagens_chat: chatId,
-            solicitante: document.getElementById("p-solicitante").value.trim(),
-            mercadoria: document.getElementById("p-mercadoria-input").value,
-            origem: document.getElementById("p-origem").value.trim(),
-            destino: document.getElementById("p-destino").value.trim(),
-            horario: document.getElementById("p-horario-manual").value.trim(),
-            km: valorDistancia,
-            taxa_localidade: nomeLocalidade,
-            prioridade: nomePrioridade,
-            valor_corrida: valorTotal,
-            motoboy: "⁉",
-            status: "⏳ Aguardando",
-            observacao: `Rotas mapeadas: ${stringRotasFormato}. Obs: ` + (document.getElementById("p-obs").value.trim() || "---")
-        });
-
-        setTimeout(() => {
-            toggleBtnLoader("btn-finalizar-checkout", false);
-            bootstrap.Modal.getInstance(document.getElementById("modalPedido")).hide();
-            removerPelicula();
-            carregarMensagensBanco(window.chatState.currentName);
-        }, 800);
     }
 
     async function abrirEdicaoStatus(id, emoji, motoboy) {
@@ -461,10 +695,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                     id_mensagens_chat: id,
                     solicitante: infoExtraida.solicitante,
                     mercadoria: infoExtraida.mercadoria,
-                    origem: infoExtraida.origem,
-                    destino: infoExtraida.destino,
+                    origem: msgAtual.texto.match(/ROTA:\s*([^\n\r]*)/i)?.[1] || "Rota Mapeada",
+                    destino: msgAtual.texto.match(/ROTA:\s*([^\n\r]*)/i)?.[1] || "Rota Mapeada",
                     horario: infoExtraida.horario,
-                    km: infoExtraida.km,
+                    km: msgAtual.texto.match(/Distância:\s*([^\n\r]*)/i)?.[1] || "0 KM",
                     valor_corrida: infoExtraida.valor,
                     motoboy: motoboy,
                     status: statusTexto
@@ -479,44 +713,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         }, 800);
     }
 
-    function enviarMensagemManual() {
-        const inp = document.getElementById("msg-input"); const t = inp.value.trim(); if(!t) return;
-        if(t.toUpperCase().includes("SOLICITANTE:")) {
-            const info = extrairDadosDoTexto(t);
-            
-            window.currentRotasCapturadas = info.rotas;
-
-            document.getElementById("p-solicitante").value = info.solicitante;
-            document.getElementById("p-horario-manual").value = info.horario;
-            
-            const selMerc = document.getElementById("p-mercadoria-input");
-            if (selMerc) selMerc.value = info.mercadoria || "Sacola";
-            
-            const selTroca = document.getElementById("p-troca");
-            if (selTroca) selTroca.value = info.troca;
-
-            let origemMapa = "";
-            let destinoMapa = "";
-            if (info.rotas && info.rotas.length > 0) {
-                origemMapa = info.rotas[0].origem;
-                destinoMapa = info.rotas[0].destino;
-            }
-            
-            document.getElementById("p-origem").value = origemMapa;
-            document.getElementById("p-destino").value = destinoMapa;
-            
-            const sOrigem = encodeURIComponent(origemMapa);
-            const sDestino = encodeURIComponent(destinoMapa);
-            document.getElementById("iframe-mapa").src = `https://www.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&output=embed`;
-            
-            new bootstrap.Modal(document.getElementById("modalMaps")).show();
-            inp.value = "";
-        } else {
-            API.call("addmensagens_chat", { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ""; carregarMensagensBanco(window.chatState.currentName); });
-        }
-    }
-
-    function  avancarParaLogistica() {
+    function avancarParaLogistica() {
         bootstrap.Modal.getInstance(document.getElementById('modalMaps')).hide();
         setTimeout(() => { new bootstrap.Modal(document.getElementById('modalPedido')).show(); calcularTudo(); }, 400);
     }
@@ -526,94 +723,19 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         setTimeout(() => { new bootstrap.Modal(document.getElementById('modalMaps')).show(); }, 400);
     }
 
+    function abrirModalModelo() { new bootstrap.Modal(document.getElementById('modalModeloMensagem')).show(); }
+
+    function copiarModelo() {
+        toggleBtnLoader('btn-copiar-modelo', true);
+        const texto = document.getElementById('texto-modelo').innerText;
+        navigator.clipboard.writeText(texto).then(() => {
+            setTimeout(() => {
+                toggleBtnLoader('btn-copiar-modelo', false);
+                bootstrap.Modal.getInstance(document.getElementById('modalModeloMensagem')).hide();
+            }, 800);
+        });
+    }
+
+    // Inicializa a primeira carga de dados ao abrir o painel
     carregarDados();
-</script>
-<script>
-    function extrairDadosDoTexto(texto) {
-        const dados = { solicitante: "", mercadoria: "", origem: "", horario: "", destino: "", rotasAdicionais: [] };
-        if (!texto) return dados;
-
-        const mSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i);
-        if (mSolicitante) dados.solicitante = mSolicitante[1].trim();
-
-        const mMercadoria = texto.match(/MERCADORIA:\s*\(?([^)]*)\)?/i);
-        if (mMercadoria) dados.mercadoria = mMercadoria[1].trim();
-
-        const mHorario = texto.match(/(?:HORÁRIO ESTIMADO P\/ COLETA|HORÁRIO ESTIMADO P\/ PEGAR ENCOMENDA):\s*(.*)/i);
-        if (mHorario) dados.horario = mHorario[1].trim();
-
-        const regexRota = /\d+\.\s*\(De:\s*(.*?),\s*Para:\s*(.*?)\)/gi;
-        let match;
-        let indicesRotas = [];
-
-        while ((match = regexRota.exec(texto)) !== null) {
-            indicesRotas.push({ origem: match[1].trim(), destino: match[2].trim() });
-        }
-
-        if (indicesRotas.length > 0) {
-            dados.origem = indicesRotas[0].origem;
-            dados.destino = indicesRotas[0].destino;
-            
-            if (indicesRotas.length > 1) {
-                dados.rotasAdicionais = indicesRotas.slice(1).map((r, i) => `Rota ${i+2}: De ${r.origem} até ${r.destino}`);
-            }
-        }
-        return dados;
-    }
-
-    function enviarMensagemManual() {
-        const inp = document.getElementById('msg-input'); 
-        if (!inp) return;
-        const t = inp.value.trim(); 
-        if (!t) return;
-
-        if (t.toUpperCase().includes('SOLICITANTE:')) {
-            const dados = extrairDadosDoTexto(t);
-
-            if(document.getElementById('p-solicitante')) document.getElementById('p-solicitante').value = dados.solicitante;
-            if(document.getElementById('p-origem')) document.getElementById('p-origem').value = dados.origem;
-            if(document.getElementById('p-destino')) document.getElementById('p-destino').value = dados.destino;
-            if(document.getElementById('p-horario-manual')) document.getElementById('p-horario-manual').value = dados.horario;
-            
-            const txtRotasAdicionais = document.getElementById('p-rotas-adicionais');
-            if (txtRotasAdicionais) {
-                txtRotasAdicionais.value = dados.rotasAdicionais.length > 0 ? dados.rotasAdicionais.join('\n') : '';
-            }
-
-            if (dados.mercadoria && document.getElementById('p-mercadoria-input')) {
-                document.getElementById('p-mercadoria-input').value = dados.mercadoria;
-            }
-
-            if (dados.origem && dados.destino) {
-                const sOrigem = encodeURIComponent(dados.origem);
-                const sDestino = encodeURIComponent(dados.destino);
-                
-                // Formato de rotas incorporado público (sem necessidade de API Key)
-                const urlMapa = `https://maps.google.com/maps?saddr=${sOrigem}&daddr=${sDestino}&dirflg=t&directionsmode=motorcycle&output=embed`;
-                
-                const iframe = document.getElementById('iframe-mapa');
-                if (iframe) iframe.src = urlMapa;
-            }
-
-            const modalM = document.getElementById('modalMaps');
-            if (modalM) {
-                new bootstrap.Modal(modalM).show();
-            }
-            inp.value = '';
-        } else {
-            if (typeof API !== 'undefined') {
-                API.call('addmensagens_chat', { 
-                    id: Date.now().toString(), 
-                    jid_numero: window.chatState?.currentName || '0', 
-                    texto: t, 
-                    hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-                    data: new Date().toISOString(), 
-                    finalizado: "false" 
-                }).then(() => { 
-                    inp.value = ''; 
-                    if(typeof carregarMensagensBanco === 'function') carregarMensagensBanco(window.chatState.currentName); 
-                });
-            }
-        }
-    }
 </script>
