@@ -5,23 +5,28 @@
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-whatsapp fs-3 text-danger"></i>
                     <div>
-                        <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> <span style="color: #000000;">Express - Chat</span></h5>
+                        <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> <span
+                                style="color: #000000;">Express - Chat</span></h5>
                         <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento Profissional</small>
                     </div>
                 </div>
                 <div class="text-end">
-                    <span id="sync-text" class="fw-bold text-dark me-2" style="font-size: 0.75rem;">Serviço Ativo</span>
-                    <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger d-inline-block" style="cursor:pointer;" onclick="carregarDados()"></i>
+                    <span id="sync-text" class="text-secondary"
+                        style="font-size: 0.70rem; font-weight: 300; letter-spacing: 0.5px;">Serviço Ativo</span>
+                    <i id="sync-icon" class="bi bi-arrow-repeat fs-4 text-danger d-inline-block" style="cursor:pointer;"
+                        onclick="carregarDados()"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
-        <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat" style="height: 600px; overflow-y: auto;">
+        <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white" id="accordionChat"
+            style="height: 600px; overflow-y: auto;">
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">ATENDENTES</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-2 shadow-none"
+                        type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">ATENDENTES</button>
                 </h2>
                 <div id="collAtendentes" class="accordion-collapse collapse show">
                     <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
@@ -29,7 +34,8 @@
             </div>
             <div class="accordion-item border-0 border-top">
                 <h2 class="accordion-header">
-                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">GRUPOS / OUTROS</button>
+                    <button class="accordion-button no-arrow bg-light fw-bold text-secondary small py-2 shadow-none"
+                        type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">GRUPOS / OUTROS</button>
                 </h2>
                 <div id="collGrupos" class="accordion-collapse collapse show">
                     <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
@@ -48,17 +54,22 @@
                     </div>
                 </div>
                 <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
-                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5 text-secondary"></i></button>
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown"><i
+                            class="bi bi-three-dots-vertical fs-5 text-secondary"></i></button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
+                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i
+                                    class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
                     </ul>
                 </div>
             </div>
-            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
+            <div id="chat-messages-container"
+                class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
-                    <button id="btn-enviar-manual" class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1"
+                        placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
+                    <button id="btn-enviar-manual" class="btn btn-danger rounded-pill px-3 ms-1"
+                        onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
                 </div>
             </div>
         </div>
@@ -74,9 +85,11 @@
             </div>
             <div class="modal-body pt-2">
                 <div class="rounded-3 overflow-hidden border mb-3" style="height: 450px;">
-                    <iframe id="iframe-mapa" width="100%" height="100%" frameborder="0" style="border:0" allowfullscreen></iframe>
+                    <iframe id="iframe-mapa" width="100%" height="100%" frameborder="0" style="border:0"
+                        allowfullscreen></iframe>
                 </div>
-                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="avancarParaLogistica()">CHECKOUT</button>
+                <button class="btn btn-dark w-100 rounded-pill fw-bold"
+                    onclick="avancarParaLogistica()">CHECKOUT</button>
             </div>
         </div>
     </div>
@@ -101,7 +114,8 @@
                     </div>
                     <div class="col-md-2">
                         <label class="lbl-clean">HORÁRIO ESTIMADO</label>
-                        <input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00">
+                        <input type="text" id="p-horario-manual" class="form-control ctrl-clean validate"
+                            placeholder="00:00">
                     </div>
 
                     <div class="col-md-3">
@@ -115,12 +129,15 @@
                     </div>
                     <div class="col-md-3">
                         <label class="lbl-clean">TEMPO</label>
-                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min">
+                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate"
+                            placeholder="Ex: 25 min">
                     </div>
                     <div class="col-md-3">
                         <label class="lbl-clean">DISTÂNCIA (KM)</label>
-                        <input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" value="0" oninput="calcularTudo()">
-                    </div>              
+                        <input type="number" id="p-distancia"
+                            class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" value="0"
+                            oninput="calcularTudo()">
+                    </div>
                     <div class="col-md-3">
                         <label class="lbl-clean">MERCADORIA</label>
                         <select id="p-mercadoria-input" class="form-select ctrl-clean validate">
@@ -131,7 +148,7 @@
                             <option value="Envelope">Envelope</option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label class="lbl-clean">TAXA/PRIORIDADE</label>
                         <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
@@ -148,7 +165,7 @@
                             <option value="7" data-nome="Zona Norte + 7">7,00 (Zona Norte)</option>
                             <option value="15" data-nome="Barreiro + 15">15,00 (Barreiro)</option>
                         </select>
-                    </div>                    
+                    </div>
                     <div class="col-md-4">
                         <label class="lbl-clean">TAXA/RETORNO?</label>
                         <select id="p-troca" class="form-select ctrl-clean validate" onchange="calcularTudo()">
@@ -161,14 +178,16 @@
                         <div class="accordion" id="accordionRotas">
                             <div class="accordion-item border rounded-3 overflow-hidden">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button bg-light text-dark fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRotas" aria-expanded="true">
+                                    <button class="accordion-button bg-light text-dark fw-bold" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#collapseRotas" aria-expanded="true">
                                         <i class="bi bi-geo-alt-fill text-danger me-2"></i> ROTAS DO TRAJETO
                                     </button>
                                 </h2>
-                                <div id="collapseRotas" class="accordion-collapse collapse show" data-bs-parent="#accordionRotas">
+                                <div id="collapseRotas" class="accordion-collapse collapse show"
+                                    data-bs-parent="#accordionRotas">
                                     <div class="accordion-body bg-white p-3">
                                         <div id="container-linhas-rotas" class="row g-2">
-                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -179,24 +198,28 @@
                         <label class="lbl-clean">OBSERVAÇÕES</label>
                         <input type="text" id="p-obs" class="form-control ctrl-clean">
                     </div>
-                    
+
                     <div class="col-12 mt-3">
                         <div class="row g-2">
                             <div class="col-2">
-                                <button type="button" class="btn btn-light w-100 border rounded-3 py-2" onclick="voltarParaMaps()">
+                                <button type="button" class="btn btn-light w-100 border rounded-3 py-2"
+                                    onclick="voltarParaMaps()">
                                     <i class="bi bi-arrow-left"></i>
                                 </button>
                             </div>
                             <div class="col-4">
-                                <div class="bg-danger text-white rounded-3 py-2 text-center h-100 d-flex flex-column justify-content-center">
+                                <div
+                                    class="bg-danger text-white rounded-3 py-2 text-center h-100 d-flex flex-column justify-content-center">
                                     <small style="font-size: 0.55rem;" id="lbl-tipo-valor">VALOR FINAL</small>
                                     <span class="fw-bold" id="view-valor-final">R$ 0,00</span>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <button type="button" id="btn-finalizar-checkout" class="btn btn-dark w-100 h-100 rounded-3 fw-bold" onclick="validarESalvar()">
+                                <button type="button" id="btn-finalizar-checkout"
+                                    class="btn btn-dark w-100 h-100 rounded-3 fw-bold" onclick="validarESalvar()">
                                     <span class="btn-text">FINALIZAR</span>
-                                    <span class="btn-loader d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
+                                    <span class="btn-loader d-none"><i
+                                            class="bi bi-arrow-repeat loading-spin"></i></span>
                                 </button>
                             </div>
                         </div>
@@ -210,23 +233,30 @@
 <div class="modal fade" id="modalModeloMensagem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Copiar Modelo</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">Copiar Modelo</h6><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
+                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo"
+                    style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦
+                    Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única
+                    mensagem:
 
-SOLICITANTE: 
-CONATO: 
-HORÁRIO ESTIMADO P/ COLETA:  
-MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
-ROTA: 
-1. (De: , Para), 
-2. (De: , Para),
-3. (De: , Para) 
-TROCA/RETORNO:  (SIM /NÃO)
-PRIORIDADE: (Normal, Agendado, Urgente) 
+                    SOLICITANTE:
+                    CONATO:
+                    HORÁRIO ESTIMADO P/ COLETA:
+                    MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
+                    ROTA:
+                    1. (De: , Para),
+                    2. (De: , Para),
+                    3. (De: , Para)
+                    TROCA/RETORNO: (SIM /NÃO)
+                    PRIORIDADE: (Normal, Agendado, Urgente)
 
-Assim que enviar, calcularemos á sua taxa! 🏁</div>
-                <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="copiarModelo()">
+                    Assim que enviar, calcularemos á sua taxa! 🏁</div>
+                <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2"
+                    onclick="copiarModelo()">
                     <span class="btn-text">COPIAR MODELO</span>
                     <span class="btn-loader d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
                 </button>
@@ -241,8 +271,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             <div class="modal-body p-4 text-center">
                 <i class="bi bi-exclamation-triangle-fill text-warning display-4 mb-3 d-block"></i>
                 <h6 class="fw-bold text-dark mb-2">Pedido Concluído</h6>
-                <p class="text-muted small mb-4">Atenção! Este pedido já foi concluído/finalizado e não pode mais ser editado por nenhum usuário.</p>
-                <button type="button" class="btn btn-dark w-100 rounded-pill fw-bold py-2 small" data-bs-dismiss="modal">ENTENDIDO</button>
+                <p class="text-muted small mb-4">Atenção! Este pedido já foi concluído/finalizado e não pode mais ser
+                    editado por nenhum usuário.</p>
+                <button type="button" class="btn btn-dark w-100 rounded-pill fw-bold py-2 small"
+                    data-bs-dismiss="modal">ENTENDIDO</button>
             </div>
         </div>
     </div>
@@ -251,12 +283,23 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 <div class="modal fade" id="modalStatusMensagem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Gestão</h6><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="removerPelicula()"></button></div>
+            <div class="modal-header border-0 pb-0">
+                <h6 class="fw-bold mb-0">Gestão</h6><button type="button" class="btn-close" data-bs-dismiss="modal"
+                    onclick="removerPelicula()"></button>
+            </div>
             <div class="modal-body py-3">
                 <input type="hidden" id="edit-msg-id">
-                <div class="mb-3"><label class="lbl-clean">STATUS</label><select id="edit-msg-emoji" class="form-select ctrl-clean"><option value="⏳">⏳ Aguardando</option><option value="📦">📦 Em rota</option><option value="✅">✅ Concluído</option><option value="⭕">⭕ Cancelado</option></select></div>
-                <div class="mb-3"><label class="lbl-clean">MOTOBOY</label><select id="edit-msg-motoboy" class="form-select ctrl-clean"></select></div>
-                <button id="btn-atualizar-status" class="btn btn-danger w-100 rounded-pill fw-bold" onclick="atualizarStatusNoBanco()">
+                <div class="mb-3"><label class="lbl-clean">STATUS</label><select id="edit-msg-emoji"
+                        class="form-select ctrl-clean">
+                        <option value="⏳">⏳ Aguardando</option>
+                        <option value="📦">📦 Em rota</option>
+                        <option value="✅">✅ Concluído</option>
+                        <option value="⭕">⭕ Cancelado</option>
+                    </select></div>
+                <div class="mb-3"><label class="lbl-clean">MOTOBOY</label><select id="edit-msg-motoboy"
+                        class="form-select ctrl-clean"></select></div>
+                <button id="btn-atualizar-status" class="btn btn-danger w-100 rounded-pill fw-bold"
+                    onclick="atualizarStatusNoBanco()">
                     <span class="btn-text">ATUALIZAR</span>
                     <span class="btn-loader d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
                 </button>
@@ -266,18 +309,103 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 </div>
 
 <style>
-    .no-arrow::after { display: none !important; }
-    .lbl-clean { font-size: 0.65rem; font-weight: 800; color: #6c757d; text-transform: uppercase; margin-bottom: 2px; }
-    .ctrl-clean { border: none !important; background-color: #f8f9fa !important; font-size: 0.85rem; padding: 0.4rem 0.75rem; border-radius: 8px; }
-    .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-    .msg-bubble { background: white; padding: 10px 14px; border-radius: 12px; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; margin-bottom: 8px; }
-    .msg-logistics { align-self: flex-end; background-color: #dcf8c6 !important; border: 1px solid #c7e5b0 !important; cursor: pointer !important; }
-    .reaction-badge-floating { position: absolute; bottom: -8px; left: -10px; background: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #eee; z-index: 10; cursor: help; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; position: absolute; bottom: 1px; right: 12px; border: 2px solid white; }
-    .loading-spin { animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .is-invalid { border: 1.5px solid #ff0000 !important; }
-    .chat-date-indicator { align-self: center; background: rgba(225, 245, 254, 0.9); color: #4a4a4a; font-size: 0.7rem; font-weight: 600; padding: 5px 12px; border-radius: 7px; box-shadow: 0 1px 1px rgba(0,0,0,0.05); margin: 8px 0; text-transform: uppercase; }
+    .no-arrow::after {
+        display: none !important;
+    }
+
+    .lbl-clean {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+
+    .ctrl-clean {
+        border: none !important;
+        background-color: #f8f9fa !important;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 8px;
+    }
+
+    .whatsapp-bg {
+        background-color: #e5ddd5;
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    }
+
+    .msg-bubble {
+        background: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        max-width: 85%;
+        align-self: flex-start;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .msg-logistics {
+        align-self: flex-end;
+        background-color: #dcf8c6 !important;
+        border: 1px solid #c7e5b0 !important;
+        cursor: pointer !important;
+    }
+
+    .reaction-badge-floating {
+        position: absolute;
+        bottom: -8px;
+        left: -10px;
+        background: white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        border: 1px solid #eee;
+        z-index: 10;
+        cursor: help;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        position: absolute;
+        bottom: 1px;
+        right: 12px;
+        border: 2px solid white;
+    }
+
+    .loading-spin {
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .is-invalid {
+        border: 1.5px solid #ff0000 !important;
+    }
+
+    .chat-date-indicator {
+        align-self: center;
+        background: rgba(225, 245, 254, 0.9);
+        color: #4a4a4a;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 7px;
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+        margin: 8px 0;
+        text-transform: uppercase;
+    }
 </style>
 
 <script>
@@ -287,24 +415,24 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
     function toggleBtnLoader(btnId, show) {
         const btn = document.getElementById(btnId);
-        if(!btn) return;
+        if (!btn) return;
         const text = btn.querySelector('.btn-text');
         const loader = btn.querySelector('.btn-loader');
-        if(show) { 
-            if(text) text.classList.add('d-none'); 
-            if(loader) loader.classList.remove('d-none'); 
-            btn.disabled = true; 
-        } else { 
-            if(text) text.classList.remove('d-none'); 
-            if(loader) loader.classList.add('d-none'); 
-            btn.disabled = false; 
+        if (show) {
+            if (text) text.classList.add('d-none');
+            if (loader) loader.classList.remove('d-none');
+            btn.disabled = true;
+        } else {
+            if (text) text.classList.remove('d-none');
+            if (loader) loader.classList.add('d-none');
+            btn.disabled = false;
         }
     }
 
-    function removerPelicula() { 
-        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); 
-        document.body.classList.remove('modal-open'); 
-        document.body.style = ''; 
+    function removerPelicula() {
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style = '';
     }
 
     function formatarDataHeader(dataStr) {
@@ -356,10 +484,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
     // Processador Principal da Caixa de Mensagens
     function enviarMensagemManual() {
-        const inp = document.getElementById("msg-input"); 
-        if(!inp) return;
-        const t = inp.value.trim(); 
-        if(!t) return;
+        const inp = document.getElementById("msg-input");
+        if (!inp) return;
+        const t = inp.value.trim();
+        if (!t) return;
 
         if (t.toUpperCase().includes("SOLICITANTE:")) {
             window.chatState.rawLastMessage = t;
@@ -423,7 +551,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
             inp.value = "";
         } else {
             // Envio simples de conversação padrão
-            API.call("addmensagens_chat", { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ""; carregarMensagensBanco(window.chatState.currentName); });
+            API.call("addmensagens_chat", { id: Date.now().toString(), jid_numero: window.chatState.currentName, texto: t, hora: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), data: new Date().toISOString(), finalizado: "false" }).then(() => { inp.value = ""; carregarMensagensBanco(window.chatState.currentName); });
         }
     }
 
@@ -432,7 +560,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         contadorRotas++;
         const container = document.getElementById('container-linhas-rotas');
         if (!container) return;
-        
+
         const novaLinhaHTML = `
             <div class="col-12 rota-item mt-1" id="rota-grupo-${contadorRotas}">
                 <div class="row g-2 align-items-center">
@@ -450,7 +578,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 </div>
             </div>
         `;
-        
+
         container.insertAdjacentHTML('beforeend', novaLinhaHTML);
         atualizarComponentesInterfaceRotas();
     }
@@ -494,10 +622,10 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         return listaFormatada.join(' | ');
     }
 
-    // Central de Cálculos Comerciais (KM, Taxas e Cancelamento)
+    // Central de Cálculos Comerciais (KM e Taxas)
     function calcularTudo() {
         const km = parseFloat(document.getElementById('p-distancia')?.value) || 0;
-        const val = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
+        const valPorKm = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
         const loc = parseFloat(document.getElementById('p-localidade')?.value) || 0;
         const prio = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
         const retornoSelecionado = document.getElementById('p-troca')?.value || 'NÃO';
@@ -506,18 +634,23 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const lblTipoValor = document.getElementById('lbl-tipo-valor');
         const viewValorFinal = document.getElementById('view-valor-final');
 
+        // Se houver cancelamento, exibe ele diretamente
         if (taxaCancelamento > 0) {
             if (lblTipoValor) lblTipoValor.innerText = "VALOR CANCELAMENTO";
             if (viewValorFinal) viewValorFinal.innerText = taxaCancelamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             return;
         }
 
-        if (lblTipoValor) lblTipoValor.innerText = "VALOR FINAL";
-        
-        let calculoBaseKm = km * val;
-        let acrescimoRetorno = (retornoSelecionado === 'SIM') ? (loc * 0.60) : 0;
-        const total = calculoBaseKm + loc + acrescimoRetorno + prio;
+        // Soma Base: Km + Taxas (Localidade + Prioridade)
+        let subtotal = (km * valPorKm) + loc + prio;
 
+        // Aplica os 60% sobre o total acumulado se houver retorno
+        let total = subtotal;
+        if (retornoSelecionado === 'SIM') {
+            total = subtotal + (subtotal * 0.60);
+        }
+
+        if (lblTipoValor) lblTipoValor.innerText = "VALOR FINAL";
         if (viewValorFinal) {
             viewValorFinal.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
@@ -546,25 +679,25 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         toggleBtnLoader("btn-finalizar-checkout", true);
         const idRdo = "RDO" + Math.floor(10000 + Math.random() * 99999);
         const chatId = Date.now().toString();
-        
+
         let limpo = document.getElementById("view-valor-final").innerText.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".").trim();
         let valorTotal = parseFloat(limpo) || 0.00;
 
         const selLocalidade = document.getElementById("p-localidade");
         const nomeLocalidade = selLocalidade.options[selLocalidade.selectedIndex].text;
-        
+
         const selPrioridade = document.getElementById("p-prioridade");
         const nomePrioridade = selPrioridade.options[selPrioridade.selectedIndex].text;
-        
+
         const valorDistancia = (document.getElementById("p-distancia").value || "0") + " KM";
         const stringRotasFormato = obterCadeiaFormatadaRotas();
 
         const txt = `📦 LOGÍSTICA RDO\n\nID: ${idRdo}\nSolicitante: ${document.getElementById("p-solicitante").value}\nMercadoria: ${document.getElementById("p-mercadoria-input").value}\nROTA: ${stringRotasFormato}\nHORÁRIO: ${document.getElementById("p-horario-manual").value}\nDistância: ${valorDistancia}\nTempo: ${document.getElementById("p-tempo").value}\nValor: ${document.getElementById("view-valor-final").innerText}`;
 
         // Injeta o balão verde de logística no banco para o chat ativo
-        await API.call("addmensagens_chat", { 
-            id: chatId, jid_numero: window.chatState.currentName, texto: txt, 
-            hora: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}), 
+        await API.call("addmensagens_chat", {
+            id: chatId, jid_numero: window.chatState.currentName, texto: txt,
+            hora: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             data: new Date().toISOString(), finalizado: "true", status_emoji: "⏳", motoboy: "⁉", pedido_id: idRdo
         });
 
@@ -596,8 +729,8 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
 
     // Carregamento de Contatos da API
     async function carregarDados() {
-        const icon = document.getElementById('sync-icon'); 
-        if(icon) icon.classList.add('loading-spin');
+        const icon = document.getElementById('sync-icon');
+        if (icon) icon.classList.add('loading-spin');
         const configs = await API.call('getbotconfig') || [];
         const renderItem = (u) => {
             const isOnline = String(u.status) === 'true';
@@ -609,8 +742,8 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         };
         document.getElementById('lista-atendentes-chat').innerHTML = configs.filter(c => c.tipo !== 'grupo').map(renderItem).join('');
         document.getElementById('lista-grupos-chat').innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
-        if(window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName);
-        if(icon) setTimeout(() => icon.classList.remove('loading-spin'), 800);
+        if (window.chatState.currentName) carregarMensagensBanco(window.chatState.currentName);
+        if (icon) setTimeout(() => icon.classList.remove('loading-spin'), 800);
     }
 
     async function selecionarChat(nome, imagem) {
@@ -626,7 +759,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const res = await API.call('getmensagens_chat') || [];
         const container = document.getElementById('chat-messages-container');
         const msgsFiltradas = res.filter(m => String(m.jid_numero).includes(nome));
-        
+
         let htmlDinamico = "";
         let ultimaDataCadastrada = "";
 
@@ -657,7 +790,7 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         document.getElementById('edit-msg-id').value = id;
         document.getElementById('edit-msg-emoji').value = emoji || '⏳';
         const colab = await API.call('getcolaboradores') || [];
-        document.getElementById('edit-msg-motoboy').innerHTML = '<option value="⁉">Escolher Motoboy...</option>' + 
+        document.getElementById('edit-msg-motoboy').innerHTML = '<option value="⁉">Escolher Motoboy...</option>' +
             colab.filter(c => c.cargo?.toLowerCase() === 'motoboy').map(m => `<option value="${m.username}" ${m.username === motoboy ? 'selected' : ''}>${m.username}</option>`).join('');
         new bootstrap.Modal(document.getElementById('modalStatusMensagem')).show();
     }
@@ -667,11 +800,11 @@ Assim que enviar, calcularemos á sua taxa! 🏁</div>
         const id = document.getElementById('edit-msg-id').value;
         const status_emoji = document.getElementById('edit-msg-emoji').value;
         const motoboy = document.getElementById('edit-msg-motoboy').value;
-        
+
         await API.call('updatemensagens_chat', { id, status_emoji, motoboy });
         const resMensagens = await API.call('getmensagens_chat') || [];
         const msgAtual = resMensagens.find(m => String(m.id) === String(id));
-        
+
         if (msgAtual) {
             let pedidoId = msgAtual.pedido_id || msgAtual.id_pedido;
             if (!pedidoId && msgAtual.texto) {
