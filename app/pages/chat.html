@@ -91,24 +91,20 @@
             </div>
             <div class="modal-body pt-2">
                 <form id="form-logistic" class="row g-2" onsubmit="event.preventDefault();">
-                    <div class="col-12">
+                    <div class="col-6">
                         <label class="lbl-clean">SOLICITANTE</label>
                         <input type="text" id="p-solicitante" class="form-control ctrl-clean validate">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-4">
+                        <label class="lbl-clean">CONTATO</label>
+                        <input type="text" id="p-contato" class="form-control ctrl-clean validate">
+                    </div>
+                    <div class="col-md-2">
                         <label class="lbl-clean">HORÁRIO ESTIMADO</label>
                         <input type="text" id="p-horario-manual" class="form-control ctrl-clean validate" placeholder="00:00">
                     </div>
+
                     <div class="col-md-3">
-                        <label class="lbl-clean">DISTÂNCIA (KM)</label>
-                        <input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" value="0" oninput="calcularTudo()">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="lbl-clean">TEMPO</label>
-                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min">
-                    </div>
-                    
-                    <div class="col-md-4">
                         <label class="lbl-clean">VALOR KM</label>
                         <select id="p-valor-km" class="form-select ctrl-clean validate" onchange="calcularTudo()">
                             <option value="2.20" selected>2,20</option>
@@ -117,7 +113,15 @@
                             <option value="3.00">3,00</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="lbl-clean">TEMPO</label>
+                        <input type="text" id="p-tempo" class="form-control ctrl-clean validate" placeholder="Ex: 25 min">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="lbl-clean">DISTÂNCIA (KM)</label>
+                        <input type="number" id="p-distancia" class="form-control ctrl-clean text-danger fw-bold validate" step="0.1" value="0" oninput="calcularTudo()">
+                    </div>              
+                    <div class="col-md-3">
                         <label class="lbl-clean">MERCADORIA</label>
                         <select id="p-mercadoria-input" class="form-select ctrl-clean validate">
                             <option value="">Escolha...</option>
@@ -127,14 +131,15 @@
                             <option value="Envelope">Envelope</option>
                         </select>
                     </div>
+                    
                     <div class="col-md-4">
-                        <label class="lbl-clean">RETORNO?</label>
-                        <select id="p-troca" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="NÃO" selected>Não</option>
-                            <option value="SIM">Sim (60%)</option>
+                        <label class="lbl-clean">TAXA/PRIORIDADE</label>
+                        <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="0" data-nome="Normal" selected>0,00 (Normal)</option>
+                            <option value="7" data-nome="Urgente + 7">7,00 (Urgente)</option>
+                            <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
                         </select>
                     </div>
-                    
                     <div class="col-md-4">
                         <label class="lbl-clean">TAXA/LOCALIDADE</label>
                         <select id="p-localidade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
@@ -143,22 +148,12 @@
                             <option value="7" data-nome="Zona Norte + 7">7,00 (Zona Norte)</option>
                             <option value="15" data-nome="Barreiro + 15">15,00 (Barreiro)</option>
                         </select>
-                    </div>
+                    </div>                    
                     <div class="col-md-4">
-                        <label class="lbl-clean">TAXA CANCELAMENTO</label>
-                        <select id="p-taxa-cancelamento" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" selected>0,00 (Sem Taxa)</option>
-                            <option value="10">10,00 (R$ 0 a R$ 35)</option>
-                            <option value="15">15,00 (R$ 36 a R$ 70)</option>
-                            <option value="20">20,00 (R$ 71 acima)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="lbl-clean">TAXA PRIORIDADE</label>
-                        <select id="p-prioridade" class="form-select ctrl-clean validate" onchange="calcularTudo()">
-                            <option value="0" data-nome="Normal" selected>0,00 (Normal)</option>
-                            <option value="7" data-nome="Urgente + 7">7,00 (Urgente)</option>
-                            <option value="10" data-nome="Agendado + 10">10,00 (Agendado)</option>
+                        <label class="lbl-clean">TAXA/RETORNO?</label>
+                        <select id="p-troca" class="form-select ctrl-clean validate" onchange="calcularTudo()">
+                            <option value="NÃO" selected>Não</option>
+                            <option value="SIM">Sim (60%)</option>
                         </select>
                     </div>
 
@@ -220,16 +215,17 @@
                 <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">📦 Olá! Para agilizarmos seu pedido, por favor preencha os dados abaixo e nos envie em uma única mensagem:
 
 SOLICITANTE: 
-HORÁRIO ESTIMADO P/ COLETA: 
+CONATO: 
+HORÁRIO ESTIMADO P/ COLETA:  
 MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
 ROTA: 
 1. (De: , Para), 
-2. (De: , Para)
-TROCA/RETORNO: (SIM /NÃO)
+2. (De: , Para),
+3. (De: , Para) 
+TROCA/RETORNO:  (SIM /NÃO)
 PRIORIDADE: (Normal, Agendado, Urgente) 
-OBSERVAÇÃO: 
 
-Assim que enviar, calcularemos a sua taxa! 🏁</div>
+Assim que enviar, calcularemos á sua taxa! 🏁</div>
                 <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="copiarModelo()">
                     <span class="btn-text">COPIAR MODELO</span>
                     <span class="btn-loader d-none"><i class="bi bi-arrow-repeat loading-spin"></i></span>
