@@ -1,0 +1,63 @@
+<div class="row g-3 h-100 m-0" id="chat-module-container">
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm rounded-4 overflow-hidden bg-white" style="height: 600px;">
+            <div class="accordion" id="accordionChat" style="overflow-y: auto;">
+                <div class="accordion-item border-0">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">ATENDENTES</button>
+                    </h2>
+                    <div id="collAtendentes" class="accordion-collapse collapse show">
+                        <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
+                    </div>
+                </div>
+                <div class="accordion-item border-0 border-top">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">GRUPOS / OUTROS</button>
+                    </h2>
+                    <div id="collGrupos" class="accordion-collapse collapse show">
+                        <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
+            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div id="chat-header-avatar"></div>
+                    <div class="ms-3"><h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6></div>
+                </div>
+                <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
+                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5 text-secondary"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
+            
+            <div class="p-3 bg-white border-top">
+                <div class="input-group bg-light rounded-pill p-1">
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
+                    <button id="btn-enviar-manual" class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalModeloMensagem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0"><h6 class="fw-bold mb-0">Copiar Modelo</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="bg-light p-3 rounded-3 small text-start mb-3" id="texto-modelo" style="white-space: pre-wrap; cursor: pointer; border: 1px dashed #ccc;" onclick="copiarModelo()">...</div>
+                <button id="btn-copiar-modelo" class="btn btn-danger w-100 rounded-pill fw-bold py-2" onclick="copiarModelo()">COPIAR MODELO</button>
+            </div>
+        </div>
+    </div>
+</div>

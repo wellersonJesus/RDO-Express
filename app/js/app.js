@@ -1,49 +1,44 @@
 window.loadPage = function(page, title, subtitle) {
-    const pageTitle = document.getElementById('page-title');
-    const pageSubtitle = document.getElementById('page-subtitle');
-    if(pageTitle) pageTitle.innerText = title;
-    if(pageSubtitle) pageSubtitle.innerText = subtitle;
-
     const container = document.getElementById('router-view');
     if (!container) return;
+    document.getElementById('page-title').innerText = title;
+    document.getElementById('page-subtitle').innerText = subtitle;
+    fetch(`pages/${page}/${page}.html`)
+        .then(res => res.ok ? res.text() : Promise.reject())
+        .then(html => container.innerHTML = html)
+        .catch(() => container.innerHTML = `<div class='alert alert-danger'>Erro ao carregar página.</div>`);
+};
 
-    fetch(`pages/${page}.html`)
-        .then(res => {
-            if (!res.ok) throw new Error('Página não encontrada');
-            return res.text();
-        })
-        .then(html => {
-            container.innerHTML = html;
-            const scripts = container.querySelectorAll('script');
-            
-            scripts.forEach(oldScript => {
-                // Remove instâncias anteriores injetadas no head com o mesmo conteúdo para evitar vazamento
-                const scriptsAntigos = document.head.querySelectorAll(`script[data-origin="${page}"]`);
-                scriptsAntigos.forEach(s => s.parentNode.removeChild(s));
+window.logout = function() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+};
 
-                const newScript = document.createElement("script");
-                newScript.setAttribute('data-origin', page);
-
-                // TRATAMENTO EXPLICITO DE ESCOPO COM PRESERVAÇÃO DE FUNÇÕES GLOBAIS:
-                // Se o script usar declarações globais com 'let dadosChat', transformamos de forma segura 
-                // em declarações que não causam SyntaxError ao serem reinjetadas no escopo do navegador,
-                // permitindo que os binds de clique (como enviar mensagem/aviaozinho) continuem funcionando.
-                let cleanText = oldScript.text
-                    .replace(/let\s+dadosChat\s*=/g, 'var dadosChat =')
-                    .replace(/const\s+dadosChat\s*=/g, 'var dadosChat =');
-
-                newScript.text = cleanText;
-                document.head.appendChild(newScript);
-            });
-        })
-        .catch(err => {
-            container.innerHTML = "<div class='alert alert-danger'>Erro ao carregar módulo: " + page + "</div>";
-        });
+window.abrirModalLogout = function() {
+    new bootstrap.Modal(document.getElementById('logoutModal')).show();
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const user = localStorage.getItem('user_name');
-    if (!user && !window.location.pathname.includes('login.html')) {
+    if (!localStorage.getItem('rdo_auth')) {
         window.location.href = 'login.html';
+        return;
     }
+
+    // Atualiza Header
+    document.getElementById('display-username').innerText = localStorage.getItem('user_name') || 'Usuário';
+    document.getElementById('display-cargo').innerText = localStorage.getItem('user_role') || 'Cargo não definido';
+
+    const img = localStorage.getItem('user_img');
+    const avatar = document.getElementById('avatar-container');
+    if (avatar && img && img !== 'null' && img.length > 5) {
+        avatar.innerHTML = `<img src="${img}" style="width:100%; height:100%; object-fit:cover;">`;
+    }
+
+    // Toggle Sidebar
+    document.getElementById('toggle-btn').addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle(window.innerWidth <= 768 ? 'active' : 'collapsed');
+    });
+
+    window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
 });

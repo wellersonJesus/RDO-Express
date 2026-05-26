@@ -7,218 +7,100 @@ import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Serve os arquivos estáticos da pasta 'app'
+// Middlewares essenciais
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+// Servir arquivos estáticos da pasta 'app'
 app.use(express.static(path.join(__dirname, 'app')));
 
+// --- ROTA DE LOGIN (AUTENTICAÇÃO) ---
 app.post('/api/login-auth', async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.json({ status: 'error', message: 'Dados incompletos.' });
-    }
+    if (!username || !password) return res.status(400).json({ status: 'error', message: 'Dados incompletos.' });
 
     const uLower = username.trim().toLowerCase();
-    
-    let usuariosPlanilha = [];
+
     try {
-        const targetUrl = process.env.API_URL;
-        if (targetUrl) {
-            const response = await fetch(targetUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'getusuarios', apiKey: process.env.SECRET_KEY })
-            });
-            usuariosPlanilha = await response.json();
+        const response = await fetch(process.env.API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'getusuarios', apiKey: process.env.SECRET_KEY })
+        });
+
+        if (!response.ok) throw new Error('Falha ao conectar com o servidor de dados.');
+        const usuariosPlanilha = await response.json();
+
+        // 1. Checagem Master (Prioridade)
+        const masterUser = (process.env.MASTER_LOGIN || 'Master').trim().toLowerCase();
+        const masterHash = (process.env.MASTER_PASS_HASH || '').replace(/\$\$\$/g, '$');
+
+        if (uLower === masterUser && masterHash && bcrypt.compareSync(password, masterHash)) {
+            return res.json({ status: 'success', user: { username: masterUser, cargo: 'SRE Architect', imagem: '' } });
         }
-    } catch (err) {
-        console.error("Erro ao buscar dados na planilha:", err);
-    }
 
-    const masterUser = (process.env.MASTER_LOGIN || 'Master').trim().toLowerCase();
-    let masterHash = process.env.MASTER_PASS_HASH || '';
+        // 2. Checagem Banco/Planilha
+        const dbUser = Array.isArray(usuariosPlanilha) ? usuariosPlanilha.find(u =>
+            String(u.username || '').toLowerCase().trim() === uLower
+        ) : null;
 
-    if (uLower === masterUser && masterHash) {
-        if (masterHash.includes('$$')) masterHash = masterHash.replace(/\$\$\$/g, '$');
-        if (bcrypt.compareSync(password, masterHash)) {
-            const dadosPlanilhaMaster = Array.isArray(usuariosPlanilha) ? 
-                usuariosPlanilha.find(userObj => String(userObj.username).toLowerCase().trim() === uLower) : null;
-
+        if (dbUser && bcrypt.compareSync(password, String(dbUser.password || dbUser.senha || '').trim())) {
             return res.json({
                 status: 'success',
-                user: { 
-                    username: process.env.MASTER_LOGIN || 'Master', 
-                    cargo: process.env.MASTER_CARGO || 'SRE Architect', 
-                    imagem: dadosPlanilhaMaster ? (dadosPlanilhaMaster.imagem || '') : '' 
+                user: {
+                    username: dbUser.username,
+                    cargo: dbUser.tipo || dbUser.cargo || 'Operador',
+                    imagem: dbUser.imagem || ''
                 }
             });
         }
+    } catch (err) {
+        console.error("❌ Erro no Processo de Auth:", err);
+        return res.status(500).json({ status: 'error', message: 'Erro interno no servidor.' });
     }
 
-    if (usuariosPlanilha && Array.isArray(usuariosPlanilha)) {
-        const dbUser = usuariosPlanilha.find(userObj => String(userObj.username).toLowerCase().trim() === uLower);
-        
-        if (dbUser) {
-            const storedHash = dbUser.password || dbUser.senha;
-            
-            if (storedHash && bcrypt.compareSync(password, String(storedHash).trim())) {
-                return res.json({
-                    status: 'success',
-                    user: {
-                        username: dbUser.username,
-                        cargo: dbUser.tipo || dbUser.cargo || 'Operador',
-                        imagem: dbUser.imagem || ''
-                    }
-                });
-            }
-        }
-    }
-
-    return res.json({ status: 'error', message: 'Usuário ou senha incorretos.' });
+    return res.status(401).json({ status: 'error', message: 'Usuário ou senha incorretos.' });
 });
 
+// --- ROTA PROXY CENTRALIZADA ---
 app.post('/api/proxy', async (req, res) => {
     try {
-        const targetUrl = process.env.API_URL;
-        if (!targetUrl) {
-            return res.status(500).json({ status: 'error', message: 'Configuração API_URL ausente no arquivo .env' });
-        }
+        if (!process.env.API_URL) throw new Error('API_URL não configurada no ambiente.');
 
-        let bodyData = { ...req.body };
+        const bodyData = { ...req.body, apiKey: process.env.SECRET_KEY };
+        if (bodyData.endpoint) bodyData.action = bodyData.endpoint;
 
-        if (!bodyData.action && bodyData.endpoint) {
-            bodyData.action = bodyData.endpoint;
-        }
-
+        // Lógica Especial Financeiro (Consolidação)
         if (bodyData.action === 'getfinanceiro') {
-            try {
-                const [resFinanceiro, resPedidos] = await Promise.all([
-                    fetch(targetUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'getfinanceiro', apiKey: process.env.SECRET_KEY })
-                    }).then(r => r.json()),
-                    fetch(targetUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'getpedidos', apiKey: process.env.SECRET_KEY })
-                    }).then(r => r.json())
-                ]);
-
-                let listaConsolidada = Array.isArray(resFinanceiro) ? [...resFinanceiro] : [];
-
-                if (Array.isArray(resPedidos)) {
-                    const pedidosConcluidos = resPedidos.filter(p => {
-                        const st = String(p.status || '').toLowerCase().trim();
-                        return st.includes('concluido') || st.includes('concluído') || st.includes('finalizado');
-                    });
-
-                    pedidosConcluidos.forEach(p => {
-                        const idPedido = String(p.id_pedido || p.id || '').trim();
-                        if (!idPedido) return;
-
-                        const jaExiste = listaConsolidada.some(f => String(f.id_pedido || '').trim() === idPedido);
-                        
-                        if (!jaExiste) {
-                            const valorCorrida = parseFloat(p.valor_corridamotoboy || p.valor_corrida || p.valor || 0);
-                            const taxaAdm = parseFloat(p.taxa_localidadeprioridade || p.taxa_localidade || p.taxa_adm || 0);
-                            const valorLiquido = valorCorrida - taxaAdm;
-
-                            listaConsolidada.push({
-                                id: `retro-${idPedido}`,
-                                id_pedido: idPedido,
-                                data_pagamento: p.data || p.horariokm || new Date().toLocaleDateString('pt-BR'),
-                                categoria: 'PEDIDO',
-                                tipo_movimentacao: 'ENTRADA',
-                                valor_pedido: valorCorrida,
-                                taxa_adm: taxaAdm,
-                                valor_liquido: valorLiquido,
-                                caixa_origem: 'Caixa Principal',
-                                forma_pagamento: p.forma_pagamento || 'PIX',
-                                situacao: 'PAGO'
-                            });
-                        }
-                    });
-                }
-
-                return res.json(listaConsolidada);
-            } catch (err) {
-                console.error("❌ [Erro na Consolidação Retroativa]:", err.message);
-                return res.json([]);
-            }
+            const [resFinanceiro] = await Promise.all([
+                fetch(process.env.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getfinanceiro', apiKey: process.env.SECRET_KEY })
+                }).then(r => r.json())
+            ]);
+            return res.json(resFinanceiro || []);
         }
 
-        if (bodyData.action === 'addpedidos' || bodyData.action === 'updatepedidos') {
-            if (!bodyData.dados) {
-                bodyData.dados = { ...bodyData };
-                delete bodyData.dados.action;
-                delete bodyData.dados.apiKey;
-                delete bodyData.dados.endpoint;
-            }
-
-            const idDetectado = bodyData.dados.id_pedido || bodyData.dados.id;
-            if (idDetectado) {
-                bodyData.dados.id_pedido = idDetectado;
-                bodyData.dados.id = idDetectado;
-            }
-        }
-
-        bodyData.apiKey = process.env.SECRET_KEY;
-
-        const response = await fetch(targetUrl, {
+        // Proxy genérico
+        const response = await fetch(process.env.API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyData)
         });
 
         const data = await response.json();
-
-        if (bodyData.action === 'updatepedidos') {
-            const fonteDados = bodyData.dados || bodyData;
-            const statusExtraido = String(fonteDados.status || bodyData.status || '').toLowerCase().trim();
-            const idExtraido = fonteDados.id_pedido || fonteDados.id || bodyData.id_pedido || bodyData.id;
-
-            if (idExtraido && (statusExtraido.includes('concluido') || statusExtraido.includes('concluído') || statusExtraido.includes('finalizado'))) {
-                const valorCorrida = parseFloat(fonteDados.valor_corridamotoboy || fonteDados.valor_corrida || fonteDados.valor || 0);
-                const taxaAdm = parseFloat(fonteDados.taxa_localidadeprioridade || fonteDados.taxa_localidade || fonteDados.taxa_adm || 0);
-                const valorLiquido = valorCorrida - taxaAdm;
-
-                const payloadFinanceiro = {
-                    action: 'addfinanceiro',
-                    apiKey: process.env.SECRET_KEY,
-                    id_pedido: idExtraido,
-                    data_pagamento: fonteDados.data || new Date().toLocaleDateString('pt-BR'),
-                    categoria: 'PEDIDO',
-                    tipo_movimentacao: 'ENTRADA',
-                    valor_pedido: valorCorrida,
-                    taxa_adm: taxaAdm,
-                    valor_liquido: valorLiquido,
-                    caixa_origem: 'Caixa Principal',
-                    forma_pagamento: fonteDados.forma_pagamento || 'PIX',
-                    situacao: 'PAGO'
-                };
-
-                fetch(targetUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payloadFinanceiro)
-                }).catch(err => console.error("❌ [Erro Replicação Financeiro]:", err.message));
-            }
-        }
-
         return res.json(data);
-
     } catch (error) {
-        console.error("❌ [Erro Proxy RDO]:", error.message);
-        return res.status(500).json({ status: 'error', message: 'Erro na comunicação externa do servidor.' });
+        console.error("❌ Proxy Error:", error.message);
+        return res.status(500).json({ status: 'error', message: 'Erro na comunicação com a fonte de dados.' });
     }
 });
 
+// SPA Fallback: Qualquer rota não reconhecida retorna o index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'app', 'index.html'));
 });
