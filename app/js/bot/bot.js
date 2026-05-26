@@ -1,57 +1,68 @@
-window.initBot = async () => {
+(function() {
     window.botState = { cache: [] };
-    const masterStatus = localStorage.getItem('bot_master_active') === 'true';
-    window.updateMasterUI(masterStatus);
-    await window.reloadBot();
-};
 
-window.reloadBot = async () => {
-    try {
-        const data = await window.API.call('getbotconfig');
-        window.botState.cache = Array.isArray(data) ? data : [];
+    window.initBot = async () => {
+        const masterStatus = localStorage.getItem('bot_master_active') === 'true';
+        window.updateMasterUI(masterStatus);
+        await window.reloadBot();
+    };
+
+    window.reloadBot = async () => {
         const tbody = document.getElementById('bot-list');
         if (!tbody) return;
-        
-        tbody.innerHTML = window.botState.cache.map(i => `
-            <tr>
-                <td><input type="checkbox" class="form-check-input" value="${i.id}"></td>
-                <td><input type="checkbox" class="form-check-input" ${String(i.status) === 'true' ? 'checked' : ''} onchange="window.alterarStatusDireto('${i.id}', this.checked)"></td>
-                <td><img src="${i.imagem || ''}" width="30" class="rounded-circle border"></td>
-                <td><span class="fw-bold">${i.username}</span></td>
-                <td><span class="badge bg-light text-dark border">${i.tipo}</span></td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="window.abrirModalForm('${i.id}')">
-                        Editar
-                    </button>
-                </td>
-            </tr>`).join('');
-    } catch (e) { console.error("Erro ao carregar:", e); }
-};
 
-window.toggleMaster = async () => {
-    const currentState = localStorage.getItem('bot_master_active') === 'true';
-    const newState = !currentState;
-    await window.API.call('updateallbotstatus', { status: String(newState) });
-    localStorage.setItem('bot_master_active', newState);
-    window.updateMasterUI(newState);
-    await window.reloadBot();
-};
+        try {
+            const data = await window.API.call('getbotconfig');
+            window.botState.cache = Array.isArray(data) ? data : [];
+            const masterStatus = localStorage.getItem('bot_master_active') === 'true';
 
-window.updateMasterUI = (isActive) => {
-    const btn = document.getElementById('btn-status-bot');
-    if (!btn) return;
-    btn.className = isActive ? "btn btn-sm btn-info text-white" : "btn btn-sm btn-outline-info";
-    btn.innerHTML = isActive ? 'MASTER ON' : 'MASTER OFF';
-};
+            tbody.innerHTML = window.botState.cache.map(i => {
+                const isChecked = String(i.status) === 'true';
+                return `
+                <tr class="border-bottom">
+                    <td class="ps-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" ${isChecked ? 'checked' : ''} 
+                            onchange="window.alterarStatusDireto('${i.id}', this.checked)" style="background-color: ${isChecked ? '#FF0000' : ''}; border-color: #FF0000;">
+                        </div>
+                    </td>
+                    <td><img src="${i.imagem || 'assets/default.png'}" width="35" class="rounded-circle border" style="border-color:#dee2e6!important"></td>
+                    <td><span class="fw-semibold text-dark">${i.username || 'N/A'}</span></td>
+                    <td><span class="badge rounded-pill" style="background-color: #f8d7da; color: #FF0000;">${i.tipo || 'Operador'}</span></td>
+                    <td class="text-end pe-3">
+                        <button class="btn btn-sm btn-link text-decoration-none text-danger" onclick="window.abrirModalForm('${i.id}')">
+                            EDITAR
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            console.error("Erro ao carregar bots:", e);
+        }
+    };
 
-window.abrirModalForm = (id = '') => {
-    const form = document.getElementById('form-bot-config');
-    if (form) form.reset();
-    document.getElementById('bot-id').value = id;
-    const modalEl = document.getElementById('modalBotForm');
-    if (modalEl) new bootstrap.Modal(modalEl).show();
-};
+    window.toggleMaster = async () => {
+        const newState = !(localStorage.getItem('bot_master_active') === 'true');
+        await window.API.call('updateallbotstatus', { status: String(newState) });
+        localStorage.setItem('bot_master_active', newState);
+        window.updateMasterUI(newState);
+        await window.reloadBot();
+    };
 
-window.alterarStatusDireto = async (id, status) => {
-    await window.API.call('updatebotconfig', { id, status: String(status) });
-};
+    window.updateMasterUI = (isActive) => {
+        const btn = document.getElementById('btn-status-bot');
+        if (!btn) return;
+        btn.innerText = isActive ? 'MASTER ON' : 'MASTER OFF';
+        btn.className = isActive ? "btn btn-danger rounded-pill px-4" : "btn btn-outline-danger rounded-pill px-4";
+    };
+
+    window.alterarStatusDireto = async (id, status) => {
+        await window.API.call('updatebotconfig', { id, status: String(status) });
+    };
+
+    window.abrirModalForm = (id = '') => {
+        console.log("Abrindo modal para:", id);
+    };
+
+    window.initBot();
+})();
