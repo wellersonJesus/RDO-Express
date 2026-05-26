@@ -1,10 +1,10 @@
+// Estado Global
 if (!window.chatState) window.chatState = { currentName: null };
 
+// Função única e completa de Sincronização
 async function carregarDados() {
     const icon = document.getElementById('sync-icon');
     const text = document.getElementById('sync-text');
-    const listAtend = document.getElementById('lista-atendentes-chat');
-    const listGrupos = document.getElementById('lista-grupos-chat');
     
     // Inicia animação
     icon.classList.add('loading-sync');
@@ -12,19 +12,25 @@ async function carregarDados() {
 
     try {
         const configs = await API.call('getbotconfig') || [];
-        
+        const listAtend = document.getElementById('lista-atendentes-chat');
+        const listGrupos = document.getElementById('lista-grupos-chat');
+
+        // Renderização dos itens
         listAtend.innerHTML = configs.filter(c => c.tipo !== 'grupo').map(renderItem).join('');
         listGrupos.innerHTML = configs.filter(c => c.tipo === 'grupo').map(renderItem).join('');
-        
+
+        // Se houver um chat aberto, mantém as mensagens carregadas
         if (window.chatState.currentName) {
-            carregarMensagensBanco(window.chatState.currentName);
+            await carregarMensagensBanco(window.chatState.currentName);
         }
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
     } finally {
-        // Finaliza animação
-        text.innerText = "Serviço Ativo";
-        icon.classList.remove('loading-sync');
+        // Remove animação após 800ms para dar feedback de conclusão
+        setTimeout(() => {
+            text.innerText = "Serviço Ativo";
+            icon.classList.remove('loading-sync');
+        }, 800);
     }
 }
 
@@ -34,19 +40,23 @@ function renderItem(u) {
     <button onclick="selecionarChat('${u.username}', '${u.imagem}')" 
             class="list-group-item list-group-item-action ${isActive ? 'bg-danger text-white' : ''} d-flex align-items-center px-3 py-2 border-0">
         <img src="${u.imagem || 'https://via.placeholder.com/40'}" class="rounded-circle me-3" width="35" height="35">
-        <div><span class="fw-bold small d-block">${u.username}</span></div>
+        <span class="fw-bold small">${u.username}</span>
     </button>`;
 }
 
 async function selecionarChat(nome, imagem) {
     window.chatState.currentName = nome;
+    
+    // Atualiza cabeçalho
     document.getElementById('chat-header-name').innerText = nome;
     document.getElementById('chat-header-avatar').innerHTML = `<img src="${imagem}" class="rounded-circle border" width="40" height="40">`;
     document.getElementById('menu-opcoes-chat').style.display = 'block';
+
+    // Atualiza a seleção visual na lista sem rodar o sync completo (para ficar rápido)
+    const items = document.querySelectorAll('.list-group-item');
+    items.forEach(i => i.classList.remove('bg-danger', 'text-white'));
     
-    // Atualiza visualmente a lista para marcar o ativo
-    carregarDados(); 
-    carregarMensagensBanco(nome);
+    await carregarMensagensBanco(nome);
 }
 
 async function carregarMensagensBanco(nome) {
@@ -66,4 +76,4 @@ async function carregarMensagensBanco(nome) {
 }
 
 // Inicialização
-carregarDados();
+document.addEventListener('DOMContentLoaded', carregarDados);

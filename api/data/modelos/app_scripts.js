@@ -14,14 +14,14 @@ function doPost(e) {
     var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // Extrai o nome limpo da entidade (ex: pedidos ou mensagens_chat)
+    // Extrai o nome da entidade limpando a ação executada
     var entity = action.replace(/get|add|delete|update/, '').toLowerCase().trim();
     
-    // BUSCA INTELIGENTE: Ignora maiúsculas/minúsculas e espaços extras
+    // Busca robusta pela aba correspondente
     var sheet = getSheetCaseInsensitive(ss, entity);
     
     if (!sheet) {
-      return response({ status: "error", message: "Aba correspondente a '" + entity + "' não encontrada no Google Sheets. Verifique o nome da aba!" });
+      return response({ status: "error", message: "Aba correspondente a '" + entity + "' não encontrada no Google Sheets. Verifique os nomes das abas!" });
     }
 
     var result;
@@ -37,13 +37,17 @@ function doPost(e) {
   }
 }
 
-// Nova função auxiliar para evitar quebras por Letras Maiúsculas/Minúsculas no nome da Aba
+// Busca tolerante a variações comuns de nomes de tabelas/abas
 function getSheetCaseInsensitive(ss, entityName) {
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     var name = sheets[i].getName().toLowerCase().trim();
-    // Aceita correspondência exata ou resolve se uma se chamar "pedidos" e a outra "pedido"
-    if (name === entityName || name === entityName.replace(/s$/, '') || entityName === name.replace(/s$/, '')) {
+    
+    if (name === entityName || 
+        name === entityName.replace(/s$/, '') || 
+        entityName === name.replace(/s$/, '') ||
+        entityName.indexOf(name) !== -1 ||
+        name.indexOf(entityName) !== -1) {
       return sheets[i];
     }
   }
@@ -81,27 +85,35 @@ function handleAdd(sheet, data) {
 function handleUpdate(sheet, data) {
   var rows = sheet.getDataRange().getValues();
   var headers = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); });
-  var idIndex = headers.indexOf("id");
   
+  var idIndex = headers.indexOf("id");
+  if (idIndex === -1) {
+    idIndex = 0; 
+  }
+  
+  var targetId = data.id || data.id_pedido || data.id_mensagens_chat;
+
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][idIndex] == data.id) {
+    if (String(rows[i][idIndex]).trim() == String(targetId).trim()) {
       headers.forEach(function(header, j) {
         var key = header.toString().toLowerCase().trim();
         if (data[key] !== undefined) {
           sheet.getRange(i + 1, j + 1).setValue(data[key]);
         }
       });
-      return { status: "success", message: "Atualizado!" };
+      return { status: "success", message: "Atualizado com sucesso!" };
     }
   }
-  return { status: "error", message: "ID não encontrado." };
+  return { status: "error", message: "ID '" + targetId + "' não encontrado para atualização na linha." };
 }
 
 function handleDelete(sheet, id) {
   var rows = sheet.getDataRange().getValues();
   var idIndex = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); }).indexOf("id");
+  if (idIndex === -1) idIndex = 0;
+  
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][idIndex] == id) {
+    if (String(rows[i][idIndex]).trim() == String(id).trim()) {
       sheet.deleteRow(i + 1);
       return { status: "success", message: "Excluído!" };
     }

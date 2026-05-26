@@ -1,0 +1,4 @@
+.btn-light:hover { background-color: #f8f9fa; }
+.badge { font-weight: 500; font-size: 0.7rem; }
+.table thead th { border-bottom: 2px solid #f8f9fa !important; }
+.fw-medium { font-weight: 500; }

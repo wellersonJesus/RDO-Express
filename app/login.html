@@ -68,7 +68,6 @@
             msg.innerText = "Autenticando...";
             
             try {
-                // Comunicação centralizada enviando os dados brutos para o servidor validar com Bcrypt
                 const response = await fetch('/api/login-auth', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -78,10 +77,12 @@
                 const resData = await response.json();
                 
                 if (resData && resData.status === 'success') {
+                    // Mapeamento correto para as chaves que o index.html espera
                     localStorage.setItem('rdo_auth', 'true');
-                    localStorage.setItem('user_name', resData.user.username);
-                    localStorage.setItem('user_role', resData.user.cargo);
-                    localStorage.setItem('user_img', resData.user.imagem);
+                    localStorage.setItem('username', resData.user.username);
+                    localStorage.setItem('tipo', resData.user.tipo); // 'tipo' conforme banco
+                    localStorage.setItem('imagem', resData.user.imagem);
+                    
                     window.location.href = '/index.html';
                 } else {
                     throw new Error(resData.message || "Acesso negado");
@@ -91,7 +92,7 @@
                 const card = document.querySelector('.login-card');
                 card.style.animation = 'shake 0.4s';
                 setTimeout(() => card.style.animation = '', 400);
-            }console.log("URL da imagem recebida:", resData.user.imagem);
+            }
         };
     </script>
 </body>

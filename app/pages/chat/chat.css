@@ -89,6 +89,41 @@
     font-weight: 600 !important;
 }
 
+/* Animação do ícone de sincronização */
+.loading-sync {
+    animation: rotate-icon 1s linear infinite;
+}
+
+/* Estilo para os títulos clicáveis */
+.menu-section-header {
+    cursor: pointer;
+    transition: background 0.2s;
+    user-select: none;
+}
+.menu-section-header:hover {
+    background-color: #f8f9fa;
+}
+
+/* Estilo para a área de mensagens com fundo WhatsApp */
+#chat-messages-container {
+    background-color: #e5ddd5;
+    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-repeat: repeat;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Animação do ícone */
+.loading-sync {
+    animation: rotate-icon 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes rotate-icon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* --- 5. Animações --- */
 @keyframes dots {
     0%, 20% { content: '.'; }
@@ -100,4 +135,19 @@
 @keyframes pulse-sync {
     from { opacity: 0.5; transform: scale(0.98); }
     to { opacity: 1; transform: scale(1.0); }
+}
+
+/* Remove setinhas dos botões do acordeão */
+.accordion-button::after {
+    display: none !important;
+}
+
+/* Garante que o cursor seja uma mãozinha nos cabeçalhos */
+.menu-section-header {
+    cursor: pointer !important;
+}
+
+@keyframes rotate-icon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
