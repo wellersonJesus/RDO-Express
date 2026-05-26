@@ -39,17 +39,37 @@ body {
 .submenu { padding-left: 0; display: none; }
 .menu-group:hover .submenu, .menu-group.active .submenu { display: block; }
 
-/* Links do menu */
+/* Links do menu - Aumentamos o padding-left para criar o recuo */
 .nav-link {
-    display: block; padding: 8px 25px; font-size: 0.80rem; font-weight: 400; 
-    color: #495057; text-decoration: none; position: relative; transition: var(--transition);
+    display: block; 
+    padding: 8px 25px 8px 40px; /* Recuo aplicado aqui (40px à esquerda) */
+    font-size: 0.80rem; 
+    font-weight: 400;   
+    color: #495057; 
+    text-decoration: none; 
+    position: relative; 
+    transition: var(--transition);
 }
-.nav-link:hover { color: var(--primary) !important; }
+
+.nav-link:hover { 
+    color: var(--primary) !important; 
+}
+
+/* Ajuste da barrinha para acompanhar o novo padding */
 .nav-link::after {
-    content: ''; position: absolute; bottom: 8px; left: 25px; width: 0; height: 3px; 
-    background: var(--primary); transition: width 0.3s ease;
+    content: ''; 
+    position: absolute; 
+    bottom: 8px; 
+    left: 40px; /* A barrinha agora começa alinhada com o novo texto */
+    width: 0; 
+    height: 3px; 
+    background: var(--primary); 
+    transition: width 0.3s ease;
 }
-.nav-link:hover::after { width: 25px; }
+
+.nav-link:hover::after { 
+    width: 25px; 
+}
 
 /* Comportamento da Sidebar Colapsada */
 .sidebar.collapsed .menu-text, .sidebar.collapsed .submenu { display: none; }
