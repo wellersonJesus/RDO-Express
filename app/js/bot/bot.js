@@ -12,7 +12,7 @@
         try {
             const data = await window.API.call('getbotconfig');
             window.botState.cache = Array.isArray(data) ? data : [];
-            
+
             const masterStatus = localStorage.getItem('bot_master_active') === 'true';
             window.updateMasterUI(masterStatus);
 
@@ -29,22 +29,22 @@
             tbody.innerHTML = window.botState.cache.map(i => {
                 const isChecked = String(i.status) === 'true';
                 return `
-                <tr class="border-bottom" id="row-${i.id}" style="${!masterStatus ? 'opacity: 0.5;' : ''}">
-                    <td class="ps-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" ${isChecked ? 'checked' : ''} 
-                            onchange="window.alterarStatusDireto('${i.id}', this.checked)" ${!masterStatus ? 'disabled' : ''}>
-                        </div>
-                    </td>
-                    <td><img src="${i.imagem || 'assets/default.png'}" width="30" class="rounded-circle border"></td>
-                    <td><small class="text-muted">${i.username || 'N/A'}</small></td>
-                    <td><span class="badge rounded-pill px-2">${i.tipo || 'Operador'}</span></td>
-                    <td class="text-end pe-3">
-                        <button class="btn btn-light btn-sm" onclick="window.abrirModalForm('${i.id}')">
-                            <i class="bi bi-gear"></i>
-                        </button>
-                    </td>
-                </tr>`;
+    <tr class="border-bottom" id="row-${i.id}" style="${!masterStatus ? 'opacity: 0.5;' : ''}">
+        <td class="ps-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" ${isChecked ? 'checked' : ''} 
+                onchange="window.alterarStatusDireto('${i.id}', this.checked)" ${!masterStatus ? 'disabled' : ''}>
+            </div>
+        </td>
+        <td><img src="${i.imagem || 'assets/default.png'}" width="30" class="rounded-circle border"></td>
+        <td><small class="text-muted">${i.username || 'N/A'}</small></td>
+        <td><span class="badge rounded-pill px-2">${i.tipo || 'Operador'}</span></td>
+        <td class="text-end pe-3">
+            <button class="btn btn-light btn-sm me-2" onclick="window.editarBot('${i.id}')">
+                <i class="bi bi-pencil-square"></i>
+            </button>            
+        </td>
+    </tr>`;
             }).join('');
         } catch (e) { console.error("Erro ao carregar:", e); }
     };
@@ -60,20 +60,20 @@
             } else {
                 // LIGANDO: Recupera o estado real de cada um que salvamos anteriormente
                 const savedStatus = JSON.parse(localStorage.getItem('last_real_status') || '{}');
-                
+
                 // Aplica a restauração individual baseada no que estava salvo antes do Master desligar
                 for (const i of window.botState.cache) {
                     const statusAnterior = savedStatus[i.id] !== undefined ? savedStatus[i.id] : true;
-                    await window.API.call('updatebotconfig', { 
-                        id: i.id, 
-                        status: String(statusAnterior).toUpperCase() 
+                    await window.API.call('updatebotconfig', {
+                        id: i.id,
+                        status: String(statusAnterior).toUpperCase()
                     });
                 }
             }
 
             localStorage.setItem('bot_master_active', newMasterState);
             window.updateMasterUI(newMasterState);
-            
+
             // Pequeno delay para o GAS processar
             await new Promise(r => setTimeout(r, 800));
             await window.reloadBot();
