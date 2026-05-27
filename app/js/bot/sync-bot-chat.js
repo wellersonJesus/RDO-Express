@@ -1,5 +1,3 @@
-// app/js/bot/sync-bot-chat.js
-
 const BotCore = {
     getMasterStatus: () => localStorage.getItem('bot_master_active') === 'true',
 
@@ -9,7 +7,6 @@ const BotCore = {
 
     syncLoggedUser: async () => {
         try {
-            // Garante que o usuario esteja no formato JSON
             const rawUser = localStorage.getItem('user_data');
             if (!rawUser) return;
             

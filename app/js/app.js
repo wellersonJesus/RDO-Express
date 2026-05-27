@@ -98,3 +98,4 @@ window.abrirModalLogout = () => {
     const modalEl = document.getElementById('logoutModal');
     if (modalEl) new bootstrap.Modal(modalEl).show();
 };
+

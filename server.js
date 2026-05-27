@@ -101,4 +101,4 @@ app.post('/api/proxy', async (req, res) => {
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'app', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor RDO rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`💤 Servidor RDO rodando na porta ${PORT}`));

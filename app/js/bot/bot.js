@@ -14,8 +14,7 @@
         try {
             const data = await window.API.call('getbotconfig');
             window.botState.cache = Array.isArray(data) ? data : [];
-            const masterStatus = localStorage.getItem('bot_master_active') === 'true';
-
+            
             tbody.innerHTML = window.botState.cache.map(i => {
                 const isChecked = String(i.status) === 'true';
                 return `
@@ -26,13 +25,11 @@
                             onchange="window.alterarStatusDireto('${i.id}', this.checked)" style="background-color: ${isChecked ? '#FF0000' : ''}; border-color: #FF0000;">
                         </div>
                     </td>
-                    <td><img src="${i.imagem || 'assets/default.png'}" width="35" class="rounded-circle border" style="border-color:#dee2e6!important"></td>
+                    <td><img src="${i.imagem || 'assets/default.png'}" width="35" class="rounded-circle border" style="border-color:#dee2e6!important; object-fit:cover;"></td>
                     <td><span class="fw-semibold text-dark">${i.username || 'N/A'}</span></td>
                     <td><span class="badge rounded-pill" style="background-color: #f8d7da; color: #FF0000;">${i.tipo || 'Operador'}</span></td>
                     <td class="text-end pe-3">
-                        <button class="btn btn-sm btn-link text-decoration-none text-danger" onclick="window.abrirModalForm('${i.id}')">
-                            EDITAR
-                        </button>
+                        <button class="btn btn-sm btn-link text-decoration-none text-danger" onclick="window.abrirModalForm('${i.id}')">EDITAR</button>
                     </td>
                 </tr>`;
             }).join('');
@@ -58,10 +55,6 @@
 
     window.alterarStatusDireto = async (id, status) => {
         await window.API.call('updatebotconfig', { id, status: String(status) });
-    };
-
-    window.abrirModalForm = (id = '') => {
-        console.log("Abrindo modal para:", id);
     };
 
     window.initBot();
