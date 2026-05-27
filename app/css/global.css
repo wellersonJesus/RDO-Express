@@ -1,23 +1,24 @@
+
 /* --- 1. Variáveis Globais --- */
 :root {
-    --primary: #dc3545;
-    --sidebar-w: 280px;
-    --sidebar-c: 80px;
-    --transition: all 0.3s ease;
+   --primary: #dc3545;
+   --sidebar-w: 280px;
+   --sidebar-c: 80px;
+   --transition: all 0.3s ease;
 }
 
 /* --- 2. Base --- */
-body { 
-    background: #f8f9fa; 
-    font-family: 'Segoe UI', Tahoma, sans-serif; 
-    overflow-x: hidden; 
-    margin: 0; 
+body {
+   background: #f8f9fa;
+   font-family: 'Segoe UI', Tahoma, sans-serif;
+   overflow-x: hidden;
+   margin: 0;
 }
 
 /* --- 3. Sidebar (Layout) --- */
-.sidebar { 
-    width: var(--sidebar-w); height: 100vh; position: fixed; top: 0; left: 0; background: #fff; 
-    z-index: 1050; border-right: 1px solid #eee; transition: var(--transition); display: flex; flex-direction: column; overflow-y: auto;
+.sidebar {
+   width: var(--sidebar-w); height: 100vh; position: fixed; top: 0; left: 0; background: #fff;
+   z-index: 1050; border-right: 1px solid #eee; transition: var(--transition); display: flex; flex-direction: column; overflow-y: auto;
 }
 .sidebar.collapsed { width: var(--sidebar-c); }
 
@@ -30,9 +31,9 @@ body {
 .sidebar.collapsed .logo-full { justify-content: center !important; gap: 0 !important; }
 
 /* Títulos do grupo */
-.menu-title { 
-    padding: 12px 25px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; 
-    letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; color: #6c757d; 
+.menu-title {
+   padding: 12px 25px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+   letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; color: #6c757d;
 }
 .menu-title i { margin-right: 12px; color: var(--primary); font-size: 1.1rem; }
 
@@ -41,34 +42,34 @@ body {
 
 /* Links do menu - Aumentamos o padding-left para criar o recuo */
 .nav-link {
-    display: block; 
-    padding: 8px 25px 8px 40px; /* Recuo aplicado aqui (40px à esquerda) */
-    font-size: 0.80rem; 
-    font-weight: 400;   
-    color: #495057; 
-    text-decoration: none; 
-    position: relative; 
-    transition: var(--transition);
+   display: block;
+   padding: 8px 25px 8px 40px; /* Recuo aplicado aqui (40px à esquerda) */
+   font-size: 0.80rem;
+   font-weight: 400;  
+   color: #495057;
+   text-decoration: none;
+   position: relative;
+   transition: var(--transition);
 }
 
-.nav-link:hover { 
-    color: var(--primary) !important; 
+.nav-link:hover {
+   color: var(--primary) !important;
 }
 
 /* Ajuste da barrinha para acompanhar o novo padding */
 .nav-link::after {
-    content: ''; 
-    position: absolute; 
-    bottom: 8px; 
-    left: 40px; /* A barrinha agora começa alinhada com o novo texto */
-    width: 0; 
-    height: 3px; 
-    background: var(--primary); 
-    transition: width 0.3s ease;
+   content: '';
+   position: absolute;
+   bottom: 8px;
+   left: 40px; /* A barrinha agora começa alinhada com o novo texto */
+   width: 0;
+   height: 3px;
+   background: var(--primary);
+   transition: width 0.3s ease;
 }
 
-.nav-link:hover::after { 
-    width: 25px; 
+.nav-link:hover::after {
+   width: 25px;
 }
 
 /* Comportamento da Sidebar Colapsada */
@@ -79,28 +80,20 @@ body {
 /* --- 5. Estilização do Usuário (Header) --- */
 #display-username { font-weight: 600; color: #212529; font-size: 0.9rem; }
 #display-cargo {
-    font-weight: 400 !important; font-size: 0.75rem; color: var(--primary); 
-    text-transform: uppercase; letter-spacing: 0.8px; font-style: italic;
+   font-weight: 400 !important; font-size: 0.75rem; color: var(--primary);
+   text-transform: uppercase; letter-spacing: 0.8px; font-style: italic;
 }
 
 /* --- 6. Responsividade --- */
 @media (max-width: 768px) {
-    .sidebar { left: -100%; box-shadow: 10px 0 25px rgba(0,0,0,0.3); }
-    .sidebar.active { left: 0; }
-    .main-content { margin-left: 0 !important; width: 100% !important; }
+   .sidebar { left: -100%; box-shadow: 10px 0 25px rgba(0,0,0,0.3); }
+   .sidebar.active { left: 0; }
+   .main-content { margin-left: 0 !important; width: 100% !important; }
 }
 @media (min-width: 769px) {
-    .sidebar.collapsed .menu-group:hover .submenu { 
-        display: block !important; position: absolute; top: 0; left: 100%; width: 200px; 
-        background: #fff; border: 1px solid #eee; box-shadow: 5px 0 15px rgba(0,0,0,0.1); 
-        padding: 10px 20px; z-index: 9999; 
-    }
+   .sidebar.collapsed .menu-group:hover .submenu {
+       display: block !important; position: absolute; top: 0; left: 100%; width: 200px;
+       background: #fff; border: 1px solid #eee; box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+       padding: 10px 20px; z-index: 9999;
+   }
 }
-
-
-
-
-
-
-
-
