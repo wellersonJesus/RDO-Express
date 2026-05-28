@@ -1,6 +1,16 @@
-<div class="modal fade" id="modalColaborador" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4"><h5>Cadastrar Colaborador</h5>
-    <input type="text" id="col-username" class="form-control mb-2" placeholder="Nome">
-    <select id="col-tipo" class="form-select mb-2"><option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option></select>
-    <input type="text" id="col-cnpj" class="form-control mb-3" placeholder="CNPJ">
-    <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalColaborador')">Salvar Colaborador</button>
-</div></div></div></div>
+<div class="modal fade" id="modalColaborador" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-3">Cadastrar Colaborador</h5>
+                <input type="text" id="col-username" class="form-control mb-2" placeholder="Nome">
+                <select id="col-tipo" class="form-select mb-2">
+                    <option value="">Selecione o Tipo</option>
+                    <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
+                </select>
+                <input type="text" id="col-cnpj" class="form-control mb-2" placeholder="CNPJ">
+                <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalColaborador')">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
