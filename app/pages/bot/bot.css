@@ -1,36 +1,26 @@
-/* Força a remoção de bordas em TODAS as células da tabela */
-.table td, .table th {
+/* Força a remoção de bordas em TODAS as tags de tabela no seu contexto */
+.card .table-responsive .table,
+.card .table-responsive .table tr,
+.card .table-responsive .table td,
+.card .table-responsive .table th {
     border: none !important;
+    border-top: none !important;
     border-bottom: none !important;
+    background-color: transparent !important;
 }
 
-/* Mantém apenas a linha divisória elegante do cabeçalho */
-.table thead {
-    border-bottom: 2px solid #f1f3f5 !important;
+/* Garante que o hover não crie bordas */
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa !important;
+    border: none !important;
 }
 
-/* Garante que o container da tabela não force bordas */
+/* Remove a borda padrão do Bootstrap que muitas vezes vem do seletor .table */
 .table {
     border-collapse: collapse !important;
 }
 
-/* Paginação e Badges */
-.pagination .page-link { 
-    border: none !important; 
-    background: #f8f9fa !important; 
-    color: #666 !important; 
-    font-size: 0.75rem !important; 
-}
-
-.pagination .page-item.active .page-link { 
-    background: #dc3545 !important; 
-    color: #fff !important; 
-}
-
-.badge-tipo { 
-    border-radius: 50rem; 
-    padding: 0.25rem 0.75rem; 
-    font-size: 0.70rem; 
-    background: #f1f3f5; 
-    color: #495057; 
+/* Mantém apenas a linha divisória do cabeçalho */
+.table thead tr {
+    border-bottom: 2px solid #f1f3f5 !important;
 }
