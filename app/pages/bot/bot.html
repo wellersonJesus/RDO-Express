@@ -13,11 +13,8 @@
                     <select id="filtro-tipo" class="form-select form-select-sm" style="width: 150px;" onchange="window.reloadBot()">
                         <option value="TODOS">Toda a lista</option>
                         <option value="atendente">Atendente</option>
-                        <option value="grupo">Grupo</option>
-                        <option value="SRE Architect">SRE Architect</option>
-                        <option value="financeiro">Financeiro</option>
-                        <option value="motoboy">Motoboy</option>
                         <option value="cliente">Clientes</option>
+                        <option value="colaborador">Colaborador</option>
                     </select>
                     <button class="btn btn-danger btn-sm rounded-pill px-3" onclick="window.abrirModalCadastro()"><i class="bi bi-plus-lg"></i> Novo</button>
                     <button id="btn-status-bot" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="window.toggleMaster()">MASTER OFF</button>
@@ -26,27 +23,13 @@
             </div>
         </div>
     </div>
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4">
-            <div class="table-responsive p-3">
-                <table class="table table-hover align-middle border-0">
-                    <thead class="text-uppercase" style="font-size: 0.65rem; color: #999; letter-spacing: 1px;">
-                        <tr><th class="ps-3">Status</th><th>Avatar</th><th>Nome</th><th>Tipo</th><th class="text-end pe-3">Ações</th></tr>
-                    </thead>
-                    <tbody id="bot-list"></tbody>
-                </table>
-            </div>
-            <div class="card-footer bg-white border-0 d-flex justify-content-center pb-3">
-                <nav><ul class="pagination pagination-sm" id="bot-pagination"></ul></nav>
-            </div>
-        </div>
-    </div>
+    <div class="col-12"><div class="card border-0 shadow-sm bg-white rounded-4"><div class="table-responsive p-3"><table class="table table-hover align-middle border-0"><thead class="text-uppercase" style="font-size: 0.65rem; color: #999; letter-spacing: 1px;"><tr><th class="ps-3">Status</th><th>Avatar</th><th>Nome</th><th>Tipo</th><th class="text-end pe-3">Ações</th></tr></thead><tbody id="bot-list"></tbody></table></div><div class="card-footer bg-white border-0 d-flex justify-content-center pb-3"><nav><ul class="pagination pagination-sm" id="bot-pagination"></ul></nav></div></div></div>
 </div>
 
-<div class="modal fade" id="modalEscolhaTipo" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4 text-center"><h5 class="mb-3">Novo Registro</h5><button class="btn btn-outline-danger w-100 mb-2" onclick="window.abrirModalEspecifico('usuario')">Usuário</button></div></div></div></div>
+<div class="modal fade" id="modalEscolhaTipo" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4 text-center"><h5>Novo Registro</h5><button class="btn btn-outline-danger w-100 mb-2" onclick="window.abrirModalEspecifico('usuarios')">Usuário</button><button class="btn btn-outline-danger w-100 mb-2" onclick="window.abrirModalEspecifico('clientes')">Cliente</button><button class="btn btn-outline-danger w-100" onclick="window.abrirModalEspecifico('colaboradores')">Colaborador</button></div></div></div></div>
 
-<div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4"><h5>Cadastrar Usuário</h5><input type="text" id="u-username" class="form-control mb-2" placeholder="Nome"><select id="u-tipo" class="form-select mb-2"><option value="atendente">Atendente</option><option value="grupo">Grupo</option><option value="SRE Architect">SRE Architect</option><option value="financeiro">Financeiro</option><option value="motoboy">Motoboy</option><option value="cliente">Cliente</option></select><input type="text" id="u-imagem" class="form-control mb-2" placeholder="URL Imagem"><input type="password" id="u-password" class="form-control mb-2" placeholder="Senha"><button class="btn btn-danger w-100" onclick="window.salvarNovoUsuario()">Salvar</button></div></div></div></div>
+<div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4"><h5>Cadastrar</h5><input type="text" id="u-username" class="form-control mb-2" placeholder="Nome"><input type="text" id="u-imagem" class="form-control mb-2" placeholder="URL Imagem"><button class="btn btn-danger w-100" onclick="window.salvarNovo()">Salvar</button></div></div></div></div>
 
-<div class="modal fade" id="modalEdicao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4"><h5>Editar</h5><input type="text" id="edit-user" class="form-control mb-2" placeholder="Username"><button class="btn btn-danger w-100" onclick="window.confirmarEdicao()">Salvar</button></div></div></div></div>
+<div class="modal fade" id="modalEdicao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4"><h5>Editar</h5><input type="text" id="edit-user" class="form-control mb-2" placeholder="Nome"><button class="btn btn-danger w-100" onclick="window.confirmarEdicao()">Salvar</button></div></div></div></div>
 
 <div class="modal fade" id="modalExclusao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><h5>Confirmar Exclusão?</h5><button class="btn btn-danger" onclick="window.confirmarExclusao()">Sim, Remover</button></div></div></div></div>
