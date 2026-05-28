@@ -97,3 +97,13 @@ body {
        padding: 10px 20px; z-index: 9999;
    }
 }
+
+.spinner-rotate {
+    animation: spin 1s linear infinite;
+    display: inline-block; /* Importante para ícones girarem */
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

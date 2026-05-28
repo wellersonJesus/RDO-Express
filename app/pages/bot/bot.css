@@ -1,14 +1,11 @@
-.btn-light:hover { background-color: #f8f9fa; }
-.badge { font-weight: 500; font-size: 0.7rem; }
-.table thead th { border-bottom: 2px solid #f8f9fa !important; }
-.fw-medium { font-weight: 500; }
-
-/* Efeito de Loop para o botão de Sincronizar */
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.spinner-rotate { animation: spin 1s linear infinite; display: inline-block; }
 .spinner-rotate {
-    animation: rotation 1s infinite linear;
-    display: inline-block;
+    display: inline-block !important;
+    animation: rotation 1s infinite linear !important;
 }
+
 @keyframes rotation {
     from { transform: rotate(0deg); }
-    to { transform: rotate(359deg); }
+    to { transform: rotate(360deg); }
 }

@@ -7,49 +7,36 @@ function doGet(e) {
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    if (!data.apiKey || data.apiKey !== SECRET_KEY) {
-      return response({ status: "error", message: "Acesso Negado" });
-    }
+    if (!data.apiKey || data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
     
-    var action = data.action; 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Extrai o nome da entidade limpando a ação executada
-    var entity = action.replace(/get|add|delete|update/, '').toLowerCase().trim();
-    
-    // Busca robusta pela aba correspondente
+    var entity = data.action.replace(/get|add|delete|update/, '').toLowerCase().trim();
     var sheet = getSheetCaseInsensitive(ss, entity);
     
-    if (!sheet) {
-      return response({ status: "error", message: "Aba correspondente a '" + entity + "' não encontrada no Google Sheets. Verifique os nomes das abas!" });
-    }
+    if (!sheet) return response({ status: "error", message: "Aba não encontrada." });
 
     var result;
-    if (action.startsWith('get')) result = handleGet(sheet);
-    else if (action.startsWith('add')) result = handleAdd(sheet, data);
-    else if (action.startsWith('update')) result = handleUpdate(sheet, data);
-    else if (action.startsWith('delete')) result = handleDelete(sheet, data.id);
-    else return response({ status: "error", message: "Ação inválida" });
+    if (data.action.startsWith('get')) result = handleGet(sheet);
+    else if (data.action.startsWith('add')) result = handleAdd(sheet, data);
+    else if (data.action.startsWith('update')) result = handleUpdate(sheet, data);
+    else if (data.action.startsWith('delete')) result = handleDelete(sheet, data.id);
     
     return response(result);
-  } catch (err) {
-    return response({ status: "error", message: "Erro: " + err.toString() });
-  }
+  } catch (err) { return response({ status: "error", message: err.toString() }); }
 }
 
-// Busca tolerante a variações comuns de nomes de tabelas/abas
+function handleAdd(sheet, data) {
+  var headers = sheet.getDataRange().getValues()[0].map(function(h) { return String(h).toLowerCase().trim(); });
+  var newRow = headers.map(function(h) { return data[h] || ""; });
+  sheet.appendRow(newRow);
+  return { status: "success", message: "Adicionado com sucesso!" };
+}
+
 function getSheetCaseInsensitive(ss, entityName) {
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     var name = sheets[i].getName().toLowerCase().trim();
-    
-    if (name === entityName || 
-        name === entityName.replace(/s$/, '') || 
-        entityName === name.replace(/s$/, '') ||
-        entityName.indexOf(name) !== -1 ||
-        name.indexOf(entityName) !== -1) {
-      return sheets[i];
-    }
+    if (name === entityName || name === entityName.replace(/s$/, '')) return sheets[i];
   }
   return null;
 }
@@ -57,61 +44,50 @@ function getSheetCaseInsensitive(ss, entityName) {
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
-  var headers = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+  
+  // Normaliza cabeçalhos para minúsculo e remove espaços
+  var headers = rows[0].map(function(h) { 
+    return h.toString().toLowerCase().trim(); 
+  });
+  
   var data = [];
   for (var i = 1; i < rows.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      obj[headers[j]] = rows[i][j];
+      var val = rows[i][j];
+      var key = headers[j];
+      // Só adiciona se o cabeçalho não estiver vazio
+      if (key !== "") {
+        obj[key] = val;
+      }
     }
     data.push(obj);
   }
   return data;
 }
 
-function handleAdd(sheet, data) {
-  delete data.action;
-  delete data.apiKey;
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var newRow = headers.map(function(header) {
-    var key = header.toString().toLowerCase().trim();
-    if (key === "id" && !data[key]) return Utilities.getUuid();
-    return data[key] !== undefined ? data[key] : "";
-  });
-  sheet.appendRow(newRow);
-  return { status: "success", message: "Registrado com sucesso!" };
-}
-
 function handleUpdate(sheet, data) {
   var rows = sheet.getDataRange().getValues();
-  var headers = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); });
-  
+  var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
-  if (idIndex === -1) {
-    idIndex = 0; 
-  }
-  
-  var targetId = data.id || data.id_pedido || data.id_mensagens_chat;
+  var statusIndex = headers.indexOf("status");
+
+  // Se for Master, apenas retorna sucesso (o controle é no front-end)
+  if (String(data.id || "").toUpperCase() === "MASTER") return { status: "success", message: "Master atualizado." };
 
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][idIndex]).trim() == String(targetId).trim()) {
-      headers.forEach(function(header, j) {
-        var key = header.toString().toLowerCase().trim();
-        if (data[key] !== undefined) {
-          sheet.getRange(i + 1, j + 1).setValue(data[key]);
-        }
-      });
-      return { status: "success", message: "Atualizado com sucesso!" };
+    if (String(rows[i][idIndex]).trim() === String(data.id).trim()) {
+      sheet.getRange(i + 1, statusIndex + 1).setValue(data.status);
+      return { status: "success", message: "Status atualizado!" };
     }
   }
-  return { status: "error", message: "ID '" + targetId + "' não encontrado para atualização na linha." };
+  return { status: "error", message: "ID não encontrado." };
 }
 
 function handleDelete(sheet, id) {
   var rows = sheet.getDataRange().getValues();
   var idIndex = rows[0].map(function(h) { return h.toString().toLowerCase().trim(); }).indexOf("id");
   if (idIndex === -1) idIndex = 0;
-  
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][idIndex]).trim() == String(id).trim()) {
       sheet.deleteRow(i + 1);
