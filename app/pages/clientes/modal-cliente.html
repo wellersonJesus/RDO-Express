@@ -1,15 +1,34 @@
 <div class="modal fade" id="modalCliente" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-body p-4">
                 <h5 class="fw-bold mb-3">Cadastrar Cliente</h5>
-                <input type="text" id="c-username" class="form-control mb-2" placeholder="Nome">
-                <select id="c-tipo" class="form-select mb-2">
-                    <option value="">Selecione o Tipo</option>
-                    <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
-                </select>
-                <input type="text" id="c-responsavel" class="form-control mb-2" placeholder="Responsável">
-                <input type="text" id="c-cnpj" class="form-control mb-2" placeholder="CNPJ">
+                
+                <div class="row g-2 mb-2">
+                    <div class="col-4"><input type="text" id="c-username" class="form-control" placeholder="Nome"></div>
+                    <div class="col-4">
+                        <select id="c-tipo" class="form-select">
+                            <option value="">Tipo</option>
+                            <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option>
+                            <option value="Motoboy">Motoboy</option><option value="TI">TI</option>
+                            <option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option>
+                            <option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
+                        </select>
+                    </div>
+                    <div class="col-4"><input type="text" id="c-responsavel" class="form-control" placeholder="Responsável"></div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-4"><input type="text" id="c-cnpj" class="form-control" placeholder="CNPJ"></div>
+                    <div class="col-4"><input type="text" id="c-contato" class="form-control" placeholder="Contato"></div>
+                    <div class="col-4"><input type="email" id="c-email" class="form-control" placeholder="E-mail"></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><input type="text" id="c-endereco" class="form-control" placeholder="Endereço"></div>
+                    <div class="col-6"><input type="text" id="c-bairro" class="form-control" placeholder="Bairro"></div>
+                </div>
+                
                 <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalCliente')">Salvar</button>
             </div>
         </div>
