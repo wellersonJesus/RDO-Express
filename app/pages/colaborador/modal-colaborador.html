@@ -1,14 +1,52 @@
 <div class="modal fade" id="modalColaborador" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-body p-4">
                 <h5 class="fw-bold mb-3">Cadastrar Colaborador</h5>
-                <input type="text" id="col-username" class="form-control mb-2" placeholder="Nome">
-                <select id="col-tipo" class="form-select mb-2">
-                    <option value="">Selecione o Tipo</option>
-                    <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
-                </select>
-                <input type="text" id="col-cnpj" class="form-control mb-2" placeholder="CNPJ">
+                
+                <div class="row g-2 mb-2">
+                    <div class="col-4"><input type="text" id="col-username" class="form-control" placeholder="Nome"></div>
+                    <div class="col-4">
+                        <select id="col-tipo" class="form-select">
+                            <option value="">Selecione o Tipo</option>
+                            <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option>
+                            <option value="Motoboy">Motoboy</option><option value="TI">TI</option>
+                            <option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option>
+                            <option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
+                        </select>
+                    </div>
+                    <div class="col-4"><input type="text" id="col-cnpj" class="form-control" placeholder="CNPJ"></div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-4"><input type="text" id="col-moto_placa" class="form-control" placeholder="Placa Moto"></div>
+                    <div class="col-4"><input type="email" id="col-email" class="form-control" placeholder="E-mail"></div>
+                    <div class="col-4"><input type="text" id="col-chave_pix" class="form-control" placeholder="Chave PIX"></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><input type="text" id="col-endereco" class="form-control" placeholder="Endereço"></div>
+                    <div class="col-4"><input type="text" id="col-bairro" class="form-control" placeholder="Bairro"></div>
+                    <div class="col-4">
+                        <select id="col-tipo_comissao" class="form-select">
+                            <option value="">Comissão</option>
+                            <option value="50%">50%</option>
+                            <option value="70%">70%</option>
+                            <option value="80%">80%</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-12">
+                        <select id="col-status_contrato" class="form-select">
+                            <option value="">Status Contrato</option>
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalColaborador')">Salvar</button>
             </div>
         </div>

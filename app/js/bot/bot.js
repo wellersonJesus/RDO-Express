@@ -49,15 +49,50 @@ window.abrirModalEspecifico = async (origem) => {
 
 window.salvarNovo = async (modalId) => {
     const el = document.getElementById(modalId);
+    // Seleciona todos os inputs e selects dentro do modal
     const inputs = el.querySelectorAll('input, select');
+    let valid = true;
+
+    // Itera sobre cada campo para validar
+    inputs.forEach(i => {
+        // Se o valor estiver vazio, aplica a borda vermelha
+        if (!i.value || i.value === "") {
+            i.style.borderColor = 'red';
+            i.style.borderWidth = '2px';
+            valid = false;
+        } else {
+            // Se estiver preenchido, limpa a borda
+            i.style.borderColor = '';
+            i.style.borderWidth = '';
+        }
+    });
+
+    // Se houver algum campo inválido, interrompe o salvamento
+    if (!valid) {
+        // Opcional: Você pode adicionar um alerta visual aqui se desejar
+        return;
+    }
+
+    // Se tudo estiver OK, prossegue com o salvamento
     const btn = el.querySelector('.btn-danger');
+    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
     
     let dados = {};
-    inputs.forEach(i => { if(i.id) dados[i.id.split('-')[1]] = i.value; });
+    inputs.forEach(i => { 
+        if(i.id) {
+            const key = i.id.split('-')[1]; // Pega o nome do campo após o hífen
+            dados[key] = i.value;
+        }
+    });
     
-    await window.API.call('add' + window.botState.origemEmEdicao, dados);
-    bootstrap.Modal.getInstance(el).hide();
-    btn.innerHTML = 'Salvar';
-    window.reloadBot();
+    try {
+        await window.API.call('add' + window.botState.origemEmEdicao, dados);
+        bootstrap.Modal.getInstance(el).hide();
+        window.reloadBot();
+    } catch (err) {
+        console.error("Erro ao salvar:", err);
+    } finally {
+        btn.innerHTML = originalText;
+    }
 };
