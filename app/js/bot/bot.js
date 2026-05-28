@@ -30,25 +30,19 @@ window.abrirModalEspecifico = (origem) => {
 
 window.salvarNovo = async (modalId) => {
     const modal = document.getElementById(modalId);
-    const inputs = modal.querySelectorAll('input');
+    const inputs = modal.querySelectorAll('input, select');
     let valid = true;
     inputs.forEach(i => { if(!i.value) { i.style.borderColor = 'red'; valid = false; } else { i.style.borderColor = ''; } });
     if(!valid) return;
 
     const btn = modal.querySelector('button.btn-danger');
-    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
     
-    let dados = {};
-    if(modalId === 'modalCliente') {
-        dados = { username: document.getElementById('c-username').value, tipo: document.getElementById('c-tipo').value, responsavel: document.getElementById('c-responsavel').value, cnpj: document.getElementById('c-cnpj').value, contato: document.getElementById('c-contato').value, email: document.getElementById('c-email').value, endereco: document.getElementById('c-endereco').value, bairro: document.getElementById('c-bairro').value };
-    } else {
-        dados = { username: document.getElementById('u-username').value, password: document.getElementById('u-password').value, imagem: document.getElementById('u-imagem').value, tipo: document.getElementById('u-tipo').value };
-    }
+    let dados = (modalId === 'modalCliente') ? { username: document.getElementById('c-username').value, tipo: document.getElementById('c-tipo').value, responsavel: document.getElementById('c-responsavel').value, cnpj: document.getElementById('c-cnpj').value, contato: document.getElementById('c-contato').value, email: document.getElementById('c-email').value, endereco: document.getElementById('c-endereco').value, bairro: document.getElementById('c-bairro').value } : { username: document.getElementById('u-username').value, password: document.getElementById('u-password').value, imagem: document.getElementById('u-imagem').value, tipo: document.getElementById('u-tipo').value };
     
     await window.API.call('add' + window.botState.origemEmEdicao, dados);
     bootstrap.Modal.getInstance(modal).hide();
-    btn.innerHTML = originalText;
+    btn.innerHTML = "Salvar";
     window.reloadBot();
 };
 
