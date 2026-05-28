@@ -24,10 +24,11 @@
             </div>
         </div>
     </div>
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4">
-            <div class="table-responsive p-3"><table class="table table-hover align-middle border-0"><thead class="text-uppercase" style="font-size: 0.65rem; color: #999; letter-spacing: 1px;"><tr><th class="ps-3">Status</th><th>Avatar</th><th>Nome</th><th>Tipo</th><th class="text-end pe-3">Ações</th></tr></thead><tbody id="bot-list"></tbody></table></div>
-            <div class="card-footer bg-white border-0 d-flex justify-content-center pb-3"><nav><ul class="pagination pagination-sm" id="bot-pagination"></ul></nav></div>
-        </div>
-    </div>
+    <div class="col-12"><div class="card border-0 shadow-sm bg-white rounded-4"><div class="table-responsive p-3"><table class="table table-hover align-middle border-0"><thead class="text-uppercase" style="font-size: 0.65rem; color: #999; letter-spacing: 1px;"><tr><th class="ps-3">Status</th><th>Avatar</th><th>Nome</th><th>Tipo</th><th class="text-end pe-3">Ações</th></tr></thead><tbody id="bot-list"></tbody></table></div><div class="card-footer bg-white border-0 d-flex justify-content-center pb-3"><nav><ul class="pagination pagination-sm" id="bot-pagination"></ul></nav></div></div></div>
 </div>
+
+<div class="modal fade" id="modalEscolhaTipo" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body p-4 text-center"><h5 class="mb-3">Novo Registro</h5><button class="btn btn-outline-danger w-100 mb-2" onclick="window.abrirModalEspecifico('usuario')">Usuário</button><button class="btn btn-outline-danger w-100 mb-2" onclick="window.abrirModalEspecifico('cliente')">Cliente</button><button class="btn btn-outline-danger w-100" onclick="window.abrirModalEspecifico('colaborador')">Colaborador</button></div></div></div></div>
+
+<div class="modal fade" id="modalEdicao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body"><h5 class="mb-3">Editar Registro</h5><input type="text" id="edit-user" class="form-control mb-2" placeholder="Username"><button class="btn btn-danger w-100" onclick="window.confirmarEdicao()">Salvar Alterações</button></div></div></div></div>
+
+<div class="modal fade" id="modalExclusao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><h5>Você irá excluir este item?</h5><p>Esta ação é irreversível.</p><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-danger" onclick="window.confirmarExclusao()">Confirmar Remover</button></div></div></div></div>

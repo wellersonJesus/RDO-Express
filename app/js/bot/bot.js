@@ -1,6 +1,7 @@
-window.botState = { cache: [], currentPage: 1 };
+window.botState = { cache: [], currentPage: 1, idEmEdicao: null };
 
-// Função única para atualizar a UI do Master sem alterar o banco
+// --- MANTENDO SUA LÓGICA APROVADA ---
+
 window.updateMasterUI = (active) => {
     const btn = document.getElementById('btn-status-bot');
     if(!btn) return;
@@ -8,7 +9,6 @@ window.updateMasterUI = (active) => {
     btn.className = active ? "btn btn-danger btn-sm rounded-pill px-3" : "btn btn-outline-danger btn-sm rounded-pill px-3";
 };
 
-// RELOAD: Apenas busca os dados e renderiza, sem alterar status algum
 window.reloadBot = async () => {
     const tbody = document.getElementById('bot-list');
     if (!tbody) return;
@@ -19,7 +19,6 @@ window.reloadBot = async () => {
     window.SyncBotUtils.toggleSpin('sync-icon-bot', true);
     
     try {
-        // BUSCA APENAS (GET)
         const dados = await window.API.call('getbotconfig');
         window.botState.cache = (filtro === 'TODOS') ? dados : dados.filter(b => b.tipo === filtro);
         
@@ -36,7 +35,7 @@ window.reloadBot = async () => {
             <td><small class="text-muted">${i.username}</small></td>
             <td><span class="badge-tipo">${i.tipo}</span></td>
             <td class="text-end pe-3">
-                <button class="btn btn-light btn-sm" onclick="window.abrirModalCadastro()"><i class="bi bi-pencil-square"></i></button> 
+                <button class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')"><i class="bi bi-pencil-square"></i></button> 
                 <button class="btn btn-light btn-sm text-danger" onclick="window.excluirBot('${i.id}')"><i class="bi bi-trash"></i></button>
             </td>
         </tr>`).join('');
@@ -48,18 +47,14 @@ window.reloadBot = async () => {
     }
 };
 
-// MASTER: Apenas alterna a chave local e atualiza o visual da tabela
 window.toggleMaster = () => {
     const newState = !(localStorage.getItem('bot_master_active') === 'true');
     localStorage.setItem('bot_master_active', newState);
-    // Recarrega visualmente sem buscar dados da rede (mais rápido)
     window.reloadBot();
 };
 
-// ALTERAÇÃO INDIVIDUAL: Único lugar que altera status (salva no banco)
 window.alterarStatusDireto = async (id, status) => {
     await window.API.call('updatebotconfig', {id, status: String(status).toUpperCase()});
-    // Atualiza o cache local
     const bot = window.botState.cache.find(b => b.id == id);
     if(bot) bot.status = String(status).toUpperCase();
 };
@@ -71,3 +66,25 @@ window.renderPagination = () => {
 
 window.mudarPagina = (p) => { window.botState.currentPage=p; window.reloadBot(); };
 window.initBot = () => window.reloadBot();
+
+// --- NOVAS FUNÇÕES PARA OS MODAIS (INTEGRAÇÃO) ---
+
+window.abrirModalCadastro = () => {
+    new bootstrap.Modal(document.getElementById('modalEscolhaTipo')).show();
+};
+
+window.editarBot = (id) => {
+    window.botState.idEmEdicao = id;
+    new bootstrap.Modal(document.getElementById('modalEdicao')).show();
+};
+
+window.excluirBot = (id) => {
+    window.botState.idEmEdicao = id;
+    new bootstrap.Modal(document.getElementById('modalExclusao')).show();
+};
+
+window.confirmarExclusao = async () => {
+    await window.API.call('deletebotconfig', {id: window.botState.idEmEdicao});
+    bootstrap.Modal.getInstance(document.getElementById('modalExclusao')).hide();
+    window.reloadBot();
+};
