@@ -24,7 +24,7 @@ window.reloadBot = async () => {
             <td><img src="${i.imagem}" width="30" class="rounded-circle"></td>
             <td><small class="text-muted">${i.username}</small></td>
             <td><span class="badge-tipo">${i.tipo}</span></td>
-            <td class="text-end pe-3"><button class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')"><i class="bi bi-pencil-square"></i></button> <button class="btn btn-light btn-sm text-danger" onclick="window.excluirBot('${i.id}')"><i class="bi bi-trash"></i></button></td>
+            <td class="text-end pe-3"><button type="button" class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')"><i class="bi bi-pencil-square"></i></button> <button type="button" class="btn btn-light btn-sm text-danger" onclick="window.excluirBot('${i.id}')"><i class="bi bi-trash"></i></button></td>
         </tr>`).join('');
         window.renderPagination();
         window.updateMasterUI(isMasterOn);
@@ -41,18 +41,16 @@ window.alterarStatusDireto = async (id, status) => {
     await window.API.call('updatebotconfig', {id, status: String(status).toUpperCase()});
 };
 
-// --- MODAIS E AÇÕES (CORRIGIDO PARA NÃO FECHAR PREMATURAMENTE) ---
+// --- MODAIS E AÇÕES (NOVO, EDITAR, REMOVER) ---
 
 window.abrirModalCadastro = () => {
     new bootstrap.Modal(document.getElementById('modalEscolhaTipo')).show();
 };
 
 window.abrirModalEspecifico = (tipo) => {
-    // Apenas fecha o de escolha, NÃO chama o reloadBot
     bootstrap.Modal.getInstance(document.getElementById('modalEscolhaTipo')).hide();
     const mapa = {'usuario': 'modalUsuario', 'cliente': 'modalCliente', 'colaborador': 'modalColaborador'};
-    const modalEl = document.getElementById(mapa[tipo]);
-    new bootstrap.Modal(modalEl).show();
+    new bootstrap.Modal(document.getElementById(mapa[tipo])).show();
 };
 
 window.editarBot = (id) => {
@@ -65,20 +63,19 @@ window.excluirBot = (id) => {
     new bootstrap.Modal(document.getElementById('modalExclusao')).show();
 };
 
-// A função de salvar deve prevenir o comportamento padrão do form
-window.confirmarCadastro = async (event, tipo) => {
-    if(event) event.preventDefault(); // Impede o reload da página
-    
-    // ... Aqui entra sua lógica de API.call para salvar o tipo específico ...
-    
-    // Só fechamos e recarregamos após a confirmação do servidor
-    bootstrap.Modal.getInstance(document.getElementById('modal'+tipo.charAt(0).toUpperCase()+tipo.slice(1))).hide();
-    window.reloadBot();
-};
-
 window.confirmarExclusao = async () => {
     await window.API.call('deletebotconfig', {id: window.botState.idEmEdicao});
     bootstrap.Modal.getInstance(document.getElementById('modalExclusao')).hide();
+    window.reloadBot();
+};
+
+window.salvarRegistro = async (tipo) => {
+    // Lógica de captura e salvamento via API
+    // await window.API.call('create' + tipo, dados);
+    
+    const modalEl = document.getElementById('modal' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if(modalInstance) modalInstance.hide();
     window.reloadBot();
 };
 
@@ -89,3 +86,18 @@ window.renderPagination = () => {
 
 window.mudarPagina = (p) => { window.botState.currentPage=p; window.reloadBot(); };
 window.initBot = () => window.reloadBot();
+
+window.processarCadastro = async (entidade, campos, prefixo) => {
+    let dados = { action: 'add' + entidade, apiKey: 'aquieumakdjdddggjrtr' }; // Use sua KEY
+    campos.forEach(campo => {
+        dados[campo] = document.getElementById(prefixo + campo).value;
+    });
+
+    // Envia para o seu backend Google Apps Script
+    await window.API.call('add' + entidade, dados);
+    
+    // Fecha o modal e atualiza
+    const modalEl = document.querySelector('.modal.show');
+    bootstrap.Modal.getInstance(modalEl).hide();
+    window.reloadBot();
+};

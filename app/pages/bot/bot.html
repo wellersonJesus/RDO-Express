@@ -33,6 +33,42 @@
 
 <div class="modal fade" id="modalExclusao" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><h5>Confirmar exclusão?</h5><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" onclick="window.confirmarExclusao()">Sim, Remover</button></div></div></div></div>
 
-<div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body"><h5>Cadastro de Usuário</h5><input type="text" class="form-control mb-2" placeholder="Nome"><button type="button" class="btn btn-danger w-100" onclick="alert('Salvar Usuário')">Salvar</button></div></div></div></div>
-<div class="modal fade" id="modalCliente" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body"><h5>Cadastro de Cliente</h5><input type="text" class="form-control mb-2" placeholder="Empresa"><button type="button" class="btn btn-danger w-100" onclick="alert('Salvar Cliente')">Salvar</button></div></div></div></div>
-<div class="modal fade" id="modalColaborador" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body"><h5>Cadastro de Colaborador</h5><input type="text" class="form-control mb-2" placeholder="Cargo"><button type="button" class="btn btn-danger w-100" onclick="alert('Salvar Colaborador')">Salvar</button></div></div></div></div>
+<div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body">
+    <h5>Cadastro de Usuário</h5>
+    <input type="text" id="u-id" class="form-control mb-2" placeholder="ID">
+    <input type="text" id="u-username" class="form-control mb-2" placeholder="Username">
+    <input type="text" id="u-tipo" class="form-control mb-2" placeholder="Tipo">
+    <input type="text" id="u-imagem" class="form-control mb-2" placeholder="Imagem">
+    <input type="password" id="u-password" class="form-control mb-2" placeholder="Password">
+    <button type="button" class="btn btn-danger w-100" onclick="window.salvarRegistro('usuarios', 'u-', ['id','username','tipo','imagem','password'])">Salvar</button>
+</div></div></div></div>
+
+<div class="modal fade" id="modalCliente" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body">
+    <h5>Cadastro de Cliente</h5>
+    <input type="text" id="c-id" class="form-control mb-2" placeholder="ID">
+    <input type="text" id="c-username" class="form-control mb-2" placeholder="Username">
+    <input type="text" id="c-responsavel" class="form-control mb-2" placeholder="Responsável">
+    <input type="text" id="c-cnpj" class="form-control mb-2" placeholder="CNPJ">
+    <input type="text" id="c-contato" class="form-control mb-2" placeholder="Contato">
+    <input type="text" id="c-email" class="form-control mb-2" placeholder="Email">
+    <input type="text" id="c-endereco" class="form-control mb-2" placeholder="Endereço">
+    <input type="text" id="c-bairro" class="form-control mb-2" placeholder="Bairro">
+    <button type="button" class="btn btn-danger w-100" onclick="window.salvarRegistro('clientes', 'c-', ['id','username','responsavel','cnpj','contato','email','endereco','bairro'])">Salvar</button>
+</div></div></div></div>
+
+<div class="modal fade" id="modalColaborador" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body">
+    <h5>Cadastro de Colaborador</h5>
+    <input type="text" id="col-id" class="form-control mb-2" placeholder="ID">
+    <input type="text" id="col-username" class="form-control mb-2" placeholder="Username">
+    <input type="text" id="col-cargo" class="form-control mb-2" placeholder="Cargo">
+    <input type="text" id="col-cnpj" class="form-control mb-2" placeholder="CNPJ">
+    <input type="text" id="col-moto_placa" class="form-control mb-2" placeholder="Moto Placa">
+    <input type="text" id="col-email" class="form-control mb-2" placeholder="Email">
+    <input type="text" id="col-endereco" class="form-control mb-2" placeholder="Endereço">
+    <input type="text" id="col-bairro" class="form-control mb-2" placeholder="Bairro">
+    <input type="text" id="col-chave_pix" class="form-control mb-2" placeholder="Chave PIX">
+    <input type="text" id="col-tipo_comissao" class="form-control mb-2" placeholder="Tipo Comissão">
+    <input type="text" id="col-valor_base_comissao" class="form-control mb-2" placeholder="Valor Base">
+    <input type="text" id="col-status_contrato" class="form-control mb-2" placeholder="Status Contrato">
+    <button type="button" class="btn btn-danger w-100" onclick="window.salvarRegistro('colaboradores', 'col-', ['id','username','cargo','cnpj','moto_placa','email','endereco','bairro','chave_pix','tipo_comissao','valor_base_comissao','status_contrato'])">Salvar</button>
+</div></div></div></div>
