@@ -15,7 +15,9 @@ window.reloadBot = async () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     if (!tbody) return;
     
-    document.getElementById('sync-icon-bot').classList.add('spinner-rotate');
+    const syncIcon = document.getElementById('sync-icon-bot');
+    if(syncIcon) syncIcon.classList.add('spinner-rotate');
+
     try {
         const [bots, users, clients, cols] = await Promise.all([
             window.API.call('getbotconfig'), window.API.call('getusuarios'), 
@@ -43,74 +45,82 @@ window.reloadBot = async () => {
                 </button>
             </td>
         </tr>`).join('');
-    } finally { document.getElementById('sync-icon-bot').classList.remove('spinner-rotate'); }
+    } catch(e) { console.error(e); } finally { 
+        if(syncIcon) syncIcon.classList.remove('spinner-rotate'); 
+    }
 };
 
 window.toggleMaster = () => {
-    const currentState = localStorage.getItem('bot_master_active') === 'true';
-    localStorage.setItem('bot_master_active', !currentState);
+    const newState = !(localStorage.getItem('bot_master_active') === 'true');
+    localStorage.setItem('bot_master_active', newState);
     window.initBot();
 };
 
-window.abrirModalCadastro = () => {
-    const modalEl = document.getElementById('modalEscolhaTipo');
-    if (modalEl) new bootstrap.Modal(modalEl).show();
-};
+window.abrirModalCadastro = () => new bootstrap.Modal(document.getElementById('modalEscolhaTipo')).show();
 
 window.abrirModalEspecifico = async (origem, data = null) => {
     const paths = { 'usuarios': 'pages/usuarios/modal-usuario.html', 'clientes': 'pages/clientes/modal-cliente.html', 'colaboradores': 'pages/colaborador/modal-colaborador.html' };
     const map = { 'usuarios': 'modalUsuario', 'clientes': 'modalCliente', 'colaboradores': 'modalColaborador' };
     const modalId = map[origem];
 
-    let modalEl = document.getElementById(modalId);
-    if(!modalEl) {
+    if(!document.getElementById(modalId)) {
         const resp = await fetch(paths[origem]);
-        const html = await resp.text();
-        document.body.insertAdjacentHTML('beforeend', html);
-        modalEl = document.getElementById(modalId);
+        document.body.insertAdjacentHTML('beforeend', await resp.text());
     }
-    
-    // Preencher campos se for edição
-    const inputs = modalEl.querySelectorAll('input, select');
-    inputs.forEach(i => {
-        i.value = data && i.id ? (data[i.id.split('-')[1]] || '') : '';
-    });
 
+    const modalEl = document.getElementById(modalId);
+    const inputs = modalEl.querySelectorAll('input, select');
+    
+    // Limpa campos e preenche se for edição
+    inputs.forEach(i => {
+        i.value = data ? (data[i.id.split('-')[1]] || '') : '';
+    });
+    
     window.botState.origemEmEdicao = origem;
     new bootstrap.Modal(modalEl).show();
 };
 
 window.editarBot = (id) => {
     const item = window.botState.cache.find(i => i.id == id);
-    if(item) {
-        window.botState.idEmEdicao = id;
-        window.abrirModalEspecifico(item.origem, item);
-    }
+    if(item) window.abrirModalEspecifico(item.origem, item);
 };
 
 window.excluirBot = (id, origem) => {
-    let modal = document.getElementById('modalConfirmar');
-    if(!modal) {
-        document.body.insertAdjacentHTML('beforeend', `<div class="modal fade" id="modalConfirmar"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-4"><h5>Confirmar Exclusão</h5><p>Tem certeza que deseja remover este item?</p><button class="btn btn-danger w-100" id="btn-confirm-del">Sim, remover</button></div></div></div></div>`);
-        modal = document.getElementById('modalConfirmar');
-    }
-    document.getElementById('btn-confirm-del').onclick = async () => {
+    const modalHtml = `
+    <div class="modal fade" id="modalConfirmar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-exclamation-triangle text-danger fs-1"></i>
+                    <h5>Confirmar Exclusão?</h5>
+                    <p>Esta ação não pode ser desfeita.</p>
+                    <button class="btn btn-danger w-100" id="btn-conf-del">Remover Registro</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
+    
+    document.getElementById('btn-conf-del').onclick = async (e) => {
+        e.target.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
         await window.API.call('delete' + origem, { id });
-        bootstrap.Modal.getInstance(modal).hide();
+        modal.hide();
+        document.getElementById('modalConfirmar').remove();
         window.reloadBot();
     };
-    new bootstrap.Modal(modal).show();
+    modal.show();
 };
 
 window.salvarNovo = async (modalId) => {
     const el = document.getElementById(modalId);
     const inputs = el.querySelectorAll('input, select');
-    const dados = { id: window.botState.idEmEdicao || Date.now().toString() };
+    let dados = { id: window.botState.idEmEdicao || Date.now().toString() };
     
     inputs.forEach(i => { if(i.id) dados[i.id.split('-')[1]] = i.value; });
     
     const btn = el.querySelector('.btn-danger');
-    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
     
     const action = window.botState.idEmEdicao ? 'update' : 'add';
@@ -119,7 +129,6 @@ window.salvarNovo = async (modalId) => {
     bootstrap.Modal.getInstance(el).hide();
     window.botState.idEmEdicao = null;
     window.reloadBot();
-    btn.innerHTML = originalText;
 };
 
 window.alterarStatusDireto = async (id, status, origem) => {
