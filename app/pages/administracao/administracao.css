@@ -1,0 +1,38 @@
+/* Container das abas */
+#adminTabs {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    border: none !important;
+    gap: 20px;
+}
+
+/* Criamos uma classe nova: btn-tab-custom */
+.btn-tab-custom {
+    color: #999 !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    padding: 0 0 5px 0 !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-tab-custom:hover, 
+.btn-tab-custom.active {
+    color: #FF0000 !important;
+    border-bottom: 2px solid #FF0000 !important;
+}
+
+.spinner-rotate {
+    display: inline-block;
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
