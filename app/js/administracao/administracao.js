@@ -160,36 +160,65 @@ window.toggleComissao = () => {
 
 window.salvarColaborador = async () => {
     const modal = document.getElementById('modalColaborador');
-    const btn = document.getElementById('btn-salvar-colaborador');
-    const txt = document.getElementById('txt-salvar');
-    const spinner = document.getElementById('spinner-salvar');
     const errorDiv = document.getElementById('colaborador-error');
-    
-    // Validação
+    errorDiv.classList.add('d-none'); // Esconde erro anterior
+
+    // 1. Campos Obrigatórios
+    const camposObrigatorios = [
+        { id: 'col-username', nome: 'Nome' },
+        { id: 'col-cpf_cnpj', nome: 'CPF/CNPJ' }
+    ];
+
+    let valid = true;
+    camposObrigatorios.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (!input.value.trim()) {
+            input.classList.add('input-error');
+            valid = false;
+        } else {
+            input.classList.remove('input-error');
+        }
+    });
+
+    // 2. Validação de Funções
     const funcoes = Array.from(modal.querySelectorAll('.col-funcao:checked')).map(c => c.value);
-    if(funcoes.length === 0) {
+    if (funcoes.length === 0) {
         errorDiv.textContent = "Selecione pelo menos uma função!";
         errorDiv.classList.remove('d-none');
         return;
     }
+
+    if (!valid) {
+        errorDiv.textContent = "Preencha os campos obrigatórios em destaque.";
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    // 3. Lógica de Verificação de Duplicidade (CNPJ/CPF)
+    const cpfCnpjAtual = document.getElementById('col-cpf_cnpj').value.trim();
+    const idEmEdicao = window.botState?.idEmEdicao;
+
+    const duplicado = window.adminState.cache.find(c => 
+        c.cpf_cnpj === cpfCnpjAtual && 
+        c.id !== idEmEdicao // Ignora o próprio registro se estiver editando
+    );
+
+    if (duplicado) {
+        errorDiv.textContent = "Erro: Este CPF/CNPJ já está cadastrado para outro colaborador!";
+        errorDiv.classList.remove('d-none');
+        document.getElementById('col-cpf_cnpj').classList.add('input-error');
+        return;
+    }
+
+    // 4. Salvar
     document.getElementById('col-colaborador').value = funcoes.join('/');
-
-    // Efeito Loading
-    btn.disabled = true;
-    spinner.classList.remove('d-none');
-    txt.textContent = "Salvando...";
-
+    
+    // Prossiga com sua lógica de salvamento (ex: chamar a API)
     try {
-        // Usa a lógica universal salvarNovo
         await window.salvarNovo('modalColaborador');
-        bootstrap.Modal.getInstance(modal).hide();
     } catch (e) {
         errorDiv.textContent = "Erro ao salvar: " + e.message;
         errorDiv.classList.remove('d-none');
-    } finally {
-        btn.disabled = false;
-        spinner.classList.add('d-none');
-        txt.textContent = "Salvar Colaborador";
     }
 };
 
