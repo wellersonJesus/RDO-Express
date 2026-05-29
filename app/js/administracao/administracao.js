@@ -30,28 +30,22 @@ window.mudarPaginaAdmin = (dir) => {
 };
 
 window.carregarAdmin = async (origem) => {
-    // 1. Atualiza o estado
+    // 1. Verificação de Segurança
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    if (!isMasterOn) {
+        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sistema Master está DESLIGADO. Ligue-o para gerenciar registros.</td></tr>';
+        return;
+    }
+
+    // 2. Continua com a carga normal
     window.adminState.origemAtual = origem;
-    // Opcional: resetar para pág 1 apenas se mudar de aba, ou manter se for apenas refresh
-    // window.adminState.paginaAtual = 1; 
-    
     const syncIcon = document.getElementById('sync-icon-admin');
     if(syncIcon) syncIcon.classList.add('spinner-rotate');
 
-    // UI: Botões de aba
-    document.querySelectorAll('#adminTabs .btn-tab-custom').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-origem') === origem);
-    });
-    document.getElementById('titulo-aba').innerText = `Gerenciando: ${origem}`;
-    
     try {
-        // 2. Busca os dados
         const dados = await window.API.call('get' + origem);
         window.adminState.cache = dados || [];
-        
-        // 3. Chama o renderizador que já contém a lógica de paginação
         window.renderizarAdmin();
-        
     } catch (e) {
         document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
     } finally {

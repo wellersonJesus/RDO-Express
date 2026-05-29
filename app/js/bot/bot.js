@@ -29,15 +29,33 @@ window.reloadBot = async () => {
     const filtro = document.getElementById('filtro-tipo')?.value || 'TODOS';
     
     if (!tbody) return;
+
+    // Se o Master estiver DESLIGADO, limpamos a lista e paramos aqui
+    if (!isMasterOn) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Master OFF: Gerenciamento desativado.</td></tr>';
+        if(infoPag) infoPag.innerText = "Pág 0 de 0";
+        return;
+    }
     
     const syncIcon = document.getElementById('sync-icon-bot');
     if(syncIcon) syncIcon.classList.add('spinner-rotate');
     
     try {
+        // Usamos uma função auxiliar que trata o erro individualmente (evita derrubar o Promise.all)
+        const safeFetch = async (action) => {
+            try {
+                const res = await window.API.call(action);
+                return Array.isArray(res) ? res : [];
+            } catch (e) {
+                console.error(`Erro ao carregar ${action}:`, e);
+                return []; // Retorna lista vazia se falhar, permitindo que o resto carregue
+            }
+        };
+
         const [users, clients, cols] = await Promise.all([
-            window.API.call('getusuarios'), 
-            window.API.call('getclientes'), 
-            window.API.call('getcolaboradores')
+            safeFetch('getusuarios'), 
+            safeFetch('getclientes'), 
+            safeFetch('getcolaboradores')
         ]);
         
         let dados = [
@@ -59,19 +77,24 @@ window.reloadBot = async () => {
         tbody.innerHTML = pageData.map(i => {
             const isReadOnly = (i.origem === 'clientes' || i.origem === 'colaboradores');
             return `<tr>
-                <td class="ps-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" onchange="window.alterarStatusDireto('${i.id}', this.checked, '${i.origem}')" ${String(i.status||'').toUpperCase()=='TRUE'?'checked':''} ${!isMasterOn?'disabled':''}></div></td>
-                <td><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
+                <td class="ps-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" onchange="window.alterarStatusDireto('${i.id}', this.checked, '${i.origem}')" ${String(i.status||'').toUpperCase()=='TRUE'?'checked':''}></div></td>
+                <td><img src="${i.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
                 <td>${i.username || i.responsavel || i.nome || 'N/A'}</td>
                 <td>${i.origem.toUpperCase()}</td>
                 <td class="text-end pe-3">
-                    <button class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')" ${!isMasterOn?'disabled':''}>
+                    <button class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')">
                         <i class="bi ${isReadOnly ? 'bi-eye' : 'bi-pencil-square'}"></i>
                     </button> 
-                    ${!isReadOnly ? `<button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')" ${!isMasterOn?'disabled':''}><i class="bi bi-trash"></i></button>` : ''}
+                    ${!isReadOnly ? `<button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')"><i class="bi bi-trash"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
-    } catch (e) { console.error(e); } finally { if(syncIcon) syncIcon.classList.remove('spinner-rotate'); }
+
+    } catch (e) { 
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Falha na conexão com o serviço.</td></tr>';
+    } finally { 
+        if(syncIcon) syncIcon.classList.remove('spinner-rotate'); 
+    }
 };
 
 window.toggleMaster = () => {
