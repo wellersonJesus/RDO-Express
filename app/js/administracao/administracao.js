@@ -2,7 +2,7 @@ window.adminState = {
     origemAtual: 'clientes', 
     cache: [], 
     paginaAtual: 1, 
-    itensPorPagina: 15 
+    itensPorPagina: 15 // Limite fixo em 15
 };
 
 // Ajuste na função de abrir o modal de cadastro
@@ -19,27 +19,39 @@ window.abrirModalCadastro = () => {
 };
 
 window.mudarPaginaAdmin = (dir) => {
-    window.adminState.paginaAtual = Math.max(1, window.adminState.paginaAtual + dir);
+    // Calcula total para limitar a navegação
+    const totalPag = Math.max(1, Math.ceil(window.adminState.cache.length / window.adminState.itensPorPagina));
+    
+    // Atualiza página dentro dos limites 1 e totalPag
+    window.adminState.paginaAtual = Math.min(Math.max(1, window.adminState.paginaAtual + dir), totalPag);
+    
+    // Re-renderiza a tabela
     window.renderizarAdmin();
 };
 
 window.carregarAdmin = async (origem) => {
+    // 1. Atualiza o estado
     window.adminState.origemAtual = origem;
-    window.adminState.paginaAtual = 1;
+    // Opcional: resetar para pág 1 apenas se mudar de aba, ou manter se for apenas refresh
+    // window.adminState.paginaAtual = 1; 
     
     const syncIcon = document.getElementById('sync-icon-admin');
     if(syncIcon) syncIcon.classList.add('spinner-rotate');
 
+    // UI: Botões de aba
     document.querySelectorAll('#adminTabs .btn-tab-custom').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-origem') === origem);
     });
-
     document.getElementById('titulo-aba').innerText = `Gerenciando: ${origem}`;
     
     try {
+        // 2. Busca os dados
         const dados = await window.API.call('get' + origem);
         window.adminState.cache = dados || [];
+        
+        // 3. Chama o renderizador que já contém a lógica de paginação
         window.renderizarAdmin();
+        
     } catch (e) {
         document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
     } finally {
@@ -49,6 +61,7 @@ window.carregarAdmin = async (origem) => {
 
 window.renderizarAdmin = () => {
     const tbody = document.getElementById('admin-list');
+    const infoPag = document.getElementById('info-paginacao-admin');
     if (!tbody) return;
 
     let dados = window.adminState.cache;
@@ -56,37 +69,48 @@ window.renderizarAdmin = () => {
     // Aplicar Filtro
     if (window.adminState.filtroAtual) {
         const termo = window.adminState.filtroAtual.toLowerCase();
-        dados = dados.filter(i => 
-            (i.username || i.nome || '').toLowerCase().includes(termo)
-        );
+        dados = dados.filter(i => (i.username || i.nome || '').toLowerCase().includes(termo));
     }
     
-    // Paginação com dados filtrados
+    // Cálculo do total
     const totalPag = Math.max(1, Math.ceil(dados.length / window.adminState.itensPorPagina));
-    // ... (o restante da sua lógica de paginação permanece igual)
+    if (window.adminState.paginaAtual > totalPag) window.adminState.paginaAtual = totalPag;
+    
+    // Atualiza o texto no seu componente de botão
+    if (infoPag) {
+        infoPag.innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
+    }
 
-    tbody.innerHTML = dados.map(i => {
+    // Fatiamento dos dados
+    const inicio = (window.adminState.paginaAtual - 1) * window.adminState.itensPorPagina;
+    const dadosPaginados = dados.slice(inicio, inicio + window.adminState.itensPorPagina);
+
+    // Renderiza a lista
+    tbody.innerHTML = dadosPaginados.map(i => {
         const rawStatus = String(i.status || 'FALSE').toUpperCase();
         const isActive = rawStatus === 'TRUE' || rawStatus === 'ATIVO';
         
-        // Estilo: removi o 'fw-bold' do nome para atender ao seu pedido de fonte fina
         return `<tr>
-            <td class="ps-3">
-                <img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" 
-                width="30" class="rounded-circle" style="object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-            </td>
+            <td class="ps-3"><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
             <td style="font-weight: 400 !important;">${i.nome || i.username || 'N/A'}</td>
-            <td>
-                <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} rounded-pill" style="font-size: 0.65rem;">
-                    ${isActive ? 'Ativo' : 'Inativo'}
-                </span>
-            </td>
+            <td><span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} rounded-pill" style="font-size: 0.65rem;">${isActive ? 'Ativo' : 'Inativo'}</span></td>
             <td class="text-end pe-3">
                 <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}')"><i class="bi bi-pencil-square"></i></button>
                 <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${window.adminState.origemAtual}')"><i class="bi bi-trash"></i></button>
             </td>
         </tr>`;
     }).join('');
+};
+
+window.mudarPaginaAdmin = (dir) => {
+    const totalPag = Math.max(1, Math.ceil(window.adminState.cache.length / window.adminState.itensPorPagina));
+    
+    // Calcula nova página mantendo dentro dos limites 1 a totalPag
+    const novaPagina = window.adminState.paginaAtual + dir;
+    if (novaPagina >= 1 && novaPagina <= totalPag) {
+        window.adminState.paginaAtual = novaPagina;
+        window.renderizarAdmin();
+    }
 };
 
 // Ajuste na função editar para garantir que o idEmEdicao seja setado

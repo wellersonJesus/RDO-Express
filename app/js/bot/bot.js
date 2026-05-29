@@ -6,8 +6,14 @@ window.botState = {
     itensPorPagina: 15 
 };
 
+// Lógica de navegação com proteção de limites
 window.mudarPagina = (dir) => {
-    window.botState.paginaAtual = Math.max(1, window.botState.paginaAtual + dir);
+    // Calcula o total de páginas baseado no cache atual
+    const totalPag = Math.max(1, Math.ceil(window.botState.cache.length / window.botState.itensPorPagina));
+    
+    // Atualiza a página garantindo que fique entre 1 e totalPag
+    window.botState.paginaAtual = Math.min(Math.max(1, window.botState.paginaAtual + dir), totalPag);
+    
     window.reloadBot();
 };
 
@@ -24,8 +30,10 @@ window.initBot = async () => {
 
 window.reloadBot = async () => {
     const tbody = document.getElementById('bot-list');
+    const infoPag = document.getElementById('info-paginacao');
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     const filtro = document.getElementById('filtro-tipo')?.value || 'TODOS';
+    
     if (!tbody) return;
     
     const syncIcon = document.getElementById('sync-icon-bot');
@@ -38,21 +46,32 @@ window.reloadBot = async () => {
         ]);
         
         let dados = [
-            ...(bots||[]).map(i=>({...i, origem:'botconfig'})), ...(users||[]).map(i=>({...i, origem:'usuarios'})), 
-            ...(clients||[]).map(i=>({...i, origem:'clientes'})), ...(cols||[]).map(i=>({...i, origem:'colaboradores'}))
+            ...(bots||[]).map(i=>({...i, origem:'botconfig'})), 
+            ...(users||[]).map(i=>({...i, origem:'usuarios'})), 
+            ...(clients||[]).map(i=>({...i, origem:'clientes'})), 
+            ...(cols||[]).map(i=>({...i, origem:'colaboradores'}))
         ];
 
+        // Aplica filtro
         if(filtro !== 'TODOS') dados = dados.filter(i => i.origem === filtro.toLowerCase());
+        
+        // Atualiza o cache global
         window.botState.cache = dados;
 
+        // Cálculo do total de páginas
         const totalPag = Math.max(1, Math.ceil(dados.length / window.botState.itensPorPagina));
+        
+        // Segurança: se o filtro reduziu a lista e a página atual ficou inválida
         if(window.botState.paginaAtual > totalPag) window.botState.paginaAtual = totalPag;
         
+        // Exibe o contador (Ex: Pág 1 de 5)
+        if(infoPag) infoPag.innerText = `Pág ${window.botState.paginaAtual} de ${totalPag}`;
+        
+        // Fatiamento dos dados
         const start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
         const pageData = dados.slice(start, start + window.botState.itensPorPagina);
 
-        document.getElementById('info-paginacao').innerText = `Pág ${window.botState.paginaAtual} de ${totalPag}`;
-        
+        // Renderização
         tbody.innerHTML = pageData.map(i => `<tr>
             <td class="ps-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" onchange="window.alterarStatusDireto('${i.id}', this.checked, '${i.origem}')" ${String(i.status||'').toUpperCase()=='TRUE'?'checked':''} ${!isMasterOn?'disabled':''}></div></td>
             <td><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'"></td>
@@ -63,7 +82,13 @@ window.reloadBot = async () => {
                 <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')" ${!isMasterOn?'disabled':''}><i class="bi bi-trash"></i></button>
             </td>
         </tr>`).join('');
-    } catch (e) { console.error(e); } finally { if(syncIcon) syncIcon.classList.remove('spinner-rotate'); }
+
+    } catch (e) { 
+        console.error(e); 
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
+    } finally { 
+        if(syncIcon) syncIcon.classList.remove('spinner-rotate'); 
+    }
 };
 
 window.initBot = async () => {
