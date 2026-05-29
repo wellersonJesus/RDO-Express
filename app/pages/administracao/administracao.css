@@ -1,53 +1,27 @@
 /* Container das abas */
-#adminTabs {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex !important;
-    border: none !important;
-    gap: 20px;
-}
+#adminTabs { list-style: none !important; padding: 0 !important; margin: 0 !important; display: flex !important; border: none !important; gap: 20px; }
 
-/* Criamos uma classe nova: btn-tab-custom */
 .btn-tab-custom {
-    color: #999 !important;
-    background: transparent !important;
-    border: none !important;
-    border-bottom: 2px solid transparent !important;
-    padding: 0 0 5px 0 !important;
-    display: inline-block !important;
-    transition: all 0.2s ease !important;
-    cursor: pointer;
-    font-weight: 600;
+    color: #999 !important; background: transparent !important; border: none !important;
+    border-bottom: 2px solid transparent !important; padding: 0 0 5px 0 !important;
+    font-weight: 400 !important; cursor: pointer; transition: 0.2s;
 }
 
-.btn-tab-custom:hover, 
-.btn-tab-custom.active {
-    color: #FF0000 !important;
-    border-bottom: 2px solid #FF0000 !important;
-}
-
-.spinner-rotate {
-    display: inline-block;
-    animation: rotate 1s linear infinite;
-}
-
-/* Ajuste para a coluna de Status */
-.badge-status {
-    font-size: 0.65rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    padding: 0.3em 0.6em !important;
-}
-
-/* Garante fonte limpa na tabela */
 #admin-list td {
-    font-size: 0.85rem !important;
-    color: #495057;
+    font-weight: 400 !important; /* Força peso normal */
+    font-size: 0.75rem !important;
 }
 
-@keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.btn-tab-custom:hover, .btn-tab-custom.active { color: #FF0000 !important; border-bottom: 2px solid #FF0000 !important; }
+
+/* --- AQUI A CORREÇÃO: FONTE NÃO BOLD --- */
+#admin-list td {
+    font-size: 0.75rem !important;
+    font-weight: 400 !important; /* Normal, não bold */
+    color: #333 !important;
 }
+
+.input-error { border: 2px solid #dc3545 !important; }
+
+.spinner-rotate { display: inline-block; animation: rotate 1s linear infinite; }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
