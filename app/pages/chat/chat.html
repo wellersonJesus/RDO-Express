@@ -5,69 +5,53 @@
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-whatsapp fs-3 text-danger"></i>
                     <div>
-                        <h5 class="fw-bold mb-0">
-                            <span style="color: #FF0000;">RDO</span> 
-                            <span style="color: #000000;">Express - Chat</span>
-                        </h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">Painel de Atendimento Profissional</small>
+                        <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Chat</h5>
+                        <small class="text-muted" style="font-size: 0.75rem;">Atendimento em Tempo Real</small>
                     </div>
                 </div>
-                <div class="text-end">
-                    <span id="sync-text" class="text-secondary" style="font-size: 0.70rem; font-weight: 300; letter-spacing: 0.5px;">Serviço Ativo</span>
-                    <i id="sync-icon-chat" class="bi bi-arrow-repeat fs-4 text-danger d-inline-block" style="cursor:pointer;" onclick="carregarDados()"></i>
-                </div>
+                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="carregarDados()">
+                    <i id="sync-icon-chat" class="bi bi-arrow-repeat"></i>
+                </button>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
-        <div class="accordion shadow-sm rounded-4 overflow-hidden bg-white border" id="accordionChat" style="height: 600px; overflow-y: auto;">
-            <div class="accordion-item border-0">
-                <h2 class="accordion-header">
-                    <button class="accordion-button bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collAtendentes">
-                        ATENDENTES
-                    </button>
-                </h2>
-                <div id="collAtendentes" class="accordion-collapse collapse show">
-                    <div id="lista-atendentes-chat" class="list-group list-group-flush"></div>
+        <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column" style="height: 600px;">
+            <div class="p-3 border-bottom">
+                <div class="input-group bg-light rounded-pill px-2">
+                    <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
+                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" 
+                           placeholder="Pesquisar contatos..." onkeyup="filtrarContatos()">
                 </div>
             </div>
-            <div class="accordion-item border-0 border-top">
-                <h2 class="accordion-header">
-                    <button class="accordion-button bg-light fw-bold text-secondary small py-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collGrupos">
-                        GRUPOS / OUTROS
-                    </button>
-                </h2>
-                <div id="collGrupos" class="accordion-collapse collapse show">
-                    <div id="lista-grupos-chat" class="list-group list-group-flush"></div>
+            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
                 </div>
-            </div>
         </div>
     </div>
 
     <div class="col-md-8">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
-            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center">
-                    <div id="chat-header-avatar"></div>
-                    <div class="ms-3">
-                        <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
-                    </div>
-                </div>
-                <div class="dropdown" id="menu-opcoes-chat" style="display: none;">
-                    <button class="btn border-0 p-1" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5 text-secondary"></i></button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                        <li><a class="dropdown-item py-2 small fw-bold" href="#" onclick="abrirModalModelo()"><i class="bi bi-file-earmark-text me-2"></i> Modelo de Solicitação</a></li>
-                    </ul>
+            <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
+                <div id="chat-header-avatar"></div>
+                <div class="ms-3">
+                    <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
                 </div>
             </div>
 
-            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
+            <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
+                <div class="text-center text-muted my-auto">
+                    <i class="bi bi-chat-dots fs-1 d-block mb-2"></i>
+                    <p>Inicie uma conversa selecionando um contato à esquerda</p>
+                </div>
+            </div>
 
             <div class="p-3 bg-white border-top">
                 <div class="input-group bg-light rounded-pill p-1">
-                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Cole a solicitação aqui..." style="resize: none;"></textarea>
-                    <button id="btn-enviar-manual" class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()"><i class="bi bi-send-fill"></i></button>
+                    <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Digite uma mensagem..." style="resize: none;"></textarea>
+                    <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="enviarMensagemManual()">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
                 </div>
             </div>
         </div>
