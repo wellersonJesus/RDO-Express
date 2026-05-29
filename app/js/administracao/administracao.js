@@ -5,17 +5,20 @@ window.adminState = {
     itensPorPagina: 15 // Limite fixo em 15
 };
 
-// Ajuste na função de abrir o modal de cadastro
 window.abrirModalCadastro = () => {
-    const origem = window.adminState.origemAtual;
-    // Mapeamento correto para identificar o ID do modal
-    const modalMap = {
-        'clientes': 'modalCliente',
-        'colaboradores': 'modalColaborador'
-    };
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     
-    // Passa null pois é um novo cadastro
-    window.abrirModalEspecifico(origem, null);
+    // Se desligado, mostra o modal premium de bloqueio
+    if (!isMasterOn) {
+        const modalElement = document.getElementById('modalBloqueioMaster');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        return; // Interrompe, mantendo a tela exatamente como está
+    }
+    
+    // Se ligado, abre o modal de cadastro original
+    const modalCadastro = new bootstrap.Modal(document.getElementById('modalEscolhaTipo'));
+    modalCadastro.show();
 };
 
 window.mudarPaginaAdmin = (dir) => {
@@ -30,27 +33,62 @@ window.mudarPaginaAdmin = (dir) => {
 };
 
 window.carregarAdmin = async (origem) => {
-    // 1. Verificação de Segurança
+    // 1. Atualiza o estado visual
+    window.adminState.origemAtual = origem;
+    window.adminState.paginaAtual = 1;
+
+    // 2. Atualiza UI dos botões
+    document.querySelectorAll('.btn-tab-custom').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-origem') === origem) btn.classList.add('active');
+    });
+
+    // 3. Atualiza o título
+    const tituloAba = document.getElementById('titulo-aba');
+    if (tituloAba) tituloAba.innerText = `Gerenciando: ${origem.charAt(0).toUpperCase() + origem.slice(1)}`;
+
+    // 4. CHAMADA DA API (O PONTO QUE FALTAVA)
+    const syncIcon = document.getElementById('sync-icon-admin');
+    if (syncIcon) syncIcon.classList.add('spinner-rotate');
+
+    try {
+        // Assume que a sua API chama 'getclientes' ou 'getcolaboradores'
+        const res = await window.API.call(`get${origem}`);
+        
+        // Atualiza o cache com os dados retornados
+        window.adminState.cache = Array.isArray(res) ? res : [];
+        
+        // 5. Renderiza a tabela agora que o cache está populado
+        window.renderizarAdmin();
+        
+    } catch (e) {
+        console.error(`Erro ao carregar ${origem}:`, e);
+        window.adminState.cache = [];
+        window.renderizarAdmin();
+    } finally {
+        if (syncIcon) syncIcon.classList.remove('spinner-rotate');
+    }
+};
+
+window.reloadAdministracao = async () => {
+    const tbody = document.getElementById('bot-list'); // Assumindo que usa o mesmo ID da tabela
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    
+    if (!tbody) return;
+
+    // Trava de segurança com a mensagem e ícone solicitados
     if (!isMasterOn) {
-        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sistema Master está DESLIGADO. Ligue-o para gerenciar registros.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-5">
+            <i class="bi bi-exclamation-triangle-fill text-danger d-block mb-3" style="font-size: 2.5rem;"></i>
+            <h5 class="fw-bold">Sistema Master RDO desligado.</h5>
+            <p>Faça um contato com a gestão.</p>
+        </td></tr>`;
         return;
     }
 
-    // 2. Continua com a carga normal
-    window.adminState.origemAtual = origem;
-    const syncIcon = document.getElementById('sync-icon-admin');
-    if(syncIcon) syncIcon.classList.add('spinner-rotate');
-
-    try {
-        const dados = await window.API.call('get' + origem);
-        window.adminState.cache = dados || [];
-        window.renderizarAdmin();
-    } catch (e) {
-        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
-    } finally {
-        if(syncIcon) syncIcon.classList.remove('spinner-rotate');
-    }
+    // Se o sistema estiver ligado, segue a execução normal do seu reload
+    console.log("Sistema ativo, carregando dados...");
+    // ... restante da sua lógica de carregamento ...
 };
 
 window.renderizarAdmin = () => {
@@ -295,7 +333,6 @@ window.salvarCliente = async () => {
     }
 };
 
-// Toggle para mostrar/esconder campo comissão
 window.toggleComissao = () => {
     const isMotoboy = document.getElementById('checkMotoboy').checked;
     const divComissao = document.getElementById('div-comissao');

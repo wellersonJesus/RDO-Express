@@ -30,9 +30,12 @@ window.reloadBot = async () => {
     
     if (!tbody) return;
 
-    // Se o Master estiver DESLIGADO, limpamos a lista e paramos aqui
+    // Refinamento solicitado: Bloqueio total e exibição da mensagem quando Master desligado
     if (!isMasterOn) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Master OFF: Gerenciamento desativado.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-4">
+            <i class="bi bi-exclamation-triangle-fill text-danger d-block mb-2" style="font-size: 2rem;"></i>
+            <strong>Sistema Master RDO desligado.</strong>
+        </td></tr>`;
         if(infoPag) infoPag.innerText = "Pág 0 de 0";
         return;
     }
@@ -41,27 +44,16 @@ window.reloadBot = async () => {
     if(syncIcon) syncIcon.classList.add('spinner-rotate');
     
     try {
-        // Usamos uma função auxiliar que trata o erro individualmente (evita derrubar o Promise.all)
-        const safeFetch = async (action) => {
-            try {
-                const res = await window.API.call(action);
-                return Array.isArray(res) ? res : [];
-            } catch (e) {
-                console.error(`Erro ao carregar ${action}:`, e);
-                return []; // Retorna lista vazia se falhar, permitindo que o resto carregue
-            }
-        };
-
         const [users, clients, cols] = await Promise.all([
-            safeFetch('getusuarios'), 
-            safeFetch('getclientes'), 
-            safeFetch('getcolaboradores')
+            window.API.call('getusuarios').catch(() => []), 
+            window.API.call('getclientes').catch(() => []), 
+            window.API.call('getcolaboradores').catch(() => [])
         ]);
         
         let dados = [
-            ...(users||[]).map(i=>({...i, origem:'usuarios'})), 
-            ...(clients||[]).map(i=>({...i, origem:'clientes'})), 
-            ...(cols||[]).map(i=>({...i, origem:'colaboradores'}))
+            ...(users||[]).map(i => ({...i, origem:'usuarios'})), 
+            ...(clients||[]).map(i => ({...i, origem:'clientes'})), 
+            ...(cols||[]).map(i => ({...i, origem:'colaboradores'}))
         ];
 
         if(filtro !== 'TODOS') dados = dados.filter(i => i.origem === filtro.toLowerCase());
@@ -74,18 +66,19 @@ window.reloadBot = async () => {
         const start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
         const pageData = dados.slice(start, start + window.botState.itensPorPagina);
 
+        // Renderização com visual Bootstrap Premium
         tbody.innerHTML = pageData.map(i => {
             const isReadOnly = (i.origem === 'clientes' || i.origem === 'colaboradores');
             return `<tr>
                 <td class="ps-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" onchange="window.alterarStatusDireto('${i.id}', this.checked, '${i.origem}')" ${String(i.status||'').toUpperCase()=='TRUE'?'checked':''}></div></td>
                 <td><img src="${i.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
                 <td>${i.username || i.responsavel || i.nome || 'N/A'}</td>
-                <td>${i.origem.toUpperCase()}</td>
+                <td><span class="badge bg-light text-dark">${i.origem.toUpperCase()}</span></td>
                 <td class="text-end pe-3">
-                    <button class="btn btn-light btn-sm" onclick="window.editarBot('${i.id}')">
+                    <button class="btn btn-light btn-sm shadow-sm" onclick="window.editarBot('${i.id}')">
                         <i class="bi ${isReadOnly ? 'bi-eye' : 'bi-pencil-square'}"></i>
                     </button> 
-                    ${!isReadOnly ? `<button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')"><i class="bi bi-trash"></i></button>` : ''}
+                    ${!isReadOnly ? `<button class="btn btn-light btn-sm shadow-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')"><i class="bi bi-trash"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -102,7 +95,16 @@ window.toggleMaster = () => {
     window.initBot();
 };
 
-window.abrirModalCadastro = () => new bootstrap.Modal(document.getElementById('modalEscolhaTipo')).show();
+window.abrirModalCadastro = () => {
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    if (!isMasterOn) {
+        alert("Atenção: Sistema Master RDO desligado. Acesso restrito.");
+        return;
+    }
+    // Lógica original para abrir modal...
+    const modal = new bootstrap.Modal(document.getElementById('modalEscolhaTipo'));
+    modal.show();
+};
 
 window.editarBot = async (id) => {
     const item = window.botState.cache.find(i => i.id == id);
