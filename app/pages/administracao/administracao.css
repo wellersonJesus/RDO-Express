@@ -32,6 +32,21 @@
     animation: rotate 1s linear infinite;
 }
 
+/* Ajuste para a coluna de Status */
+.badge-status {
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.3em 0.6em !important;
+}
+
+/* Garante fonte limpa na tabela */
+#admin-list td {
+    font-size: 0.85rem !important;
+    color: #495057;
+}
+
 @keyframes rotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }

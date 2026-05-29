@@ -3,33 +3,22 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-body p-4">
                 <h5 class="fw-bold mb-3">Cadastrar Cliente</h5>
-                
                 <div class="row g-2 mb-2">
-                    <div class="col-4"><input type="text" id="c-username" class="form-control" placeholder="Nome"></div>
-                    <div class="col-4">
-                        <select id="c-tipo" class="form-select">
-                            <option value="">Tipo</option>
-                            <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option>
-                            <option value="Motoboy">Motoboy</option><option value="TI">TI</option>
-                            <option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option>
-                            <option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
-                        </select>
-                    </div>
-                    <div class="col-4"><input type="text" id="c-responsavel" class="form-control" placeholder="Responsável"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Nome</label><input type="text" id="c-username" class="form-control" placeholder="Ex: João Silva"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Tipo</label><select id="c-tipo" class="form-select"><option value="">Selecione...</option><option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option></select></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Responsável</label><input type="text" id="c-responsavel" class="form-control" placeholder="Nome do responsável"></div>
                 </div>
-
                 <div class="row g-2 mb-2">
-                    <div class="col-4"><input type="text" id="c-cnpj" class="form-control" placeholder="CNPJ"></div>
-                    <div class="col-4"><input type="text" id="c-contato" class="form-control" placeholder="Contato"></div>
-                    <div class="col-4"><input type="email" id="c-email" class="form-control" placeholder="E-mail"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">CNPJ</label><input type="text" id="c-cnpj" class="form-control" placeholder="00.000.000/0000-00"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Contato</label><input type="text" id="c-contato" class="form-control" placeholder="(00) 00000-0000"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">E-mail</label><input type="email" id="c-email" class="form-control" placeholder="email@exemplo.com"></div>
                 </div>
-
                 <div class="row g-2 mb-3">
-                    <div class="col-6"><input type="text" id="c-endereco" class="form-control" placeholder="Endereço"></div>
-                    <div class="col-6"><input type="text" id="c-bairro" class="form-control" placeholder="Bairro"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Endereço</label><input type="text" id="c-endereco" class="form-control" placeholder="Rua, Número"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Bairro</label><input type="text" id="c-bairro" class="form-control" placeholder="Bairro"></div>
                 </div>
-                
-                <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalCliente')">Salvar</button>
+                <input type="hidden" id="c-status" value="TRUE">
+                <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalCliente')">Salvar Cliente</button>
             </div>
         </div>
     </div>

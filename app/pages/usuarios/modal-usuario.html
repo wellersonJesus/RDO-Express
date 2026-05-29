@@ -4,19 +4,14 @@
             <div class="modal-body p-4">
                 <h5 class="fw-bold mb-3">Cadastrar Usuário</h5>
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><input type="text" id="u-username" class="form-control" placeholder="Nome"></div>
-                    <div class="col-6">
-                        <select id="u-tipo" class="form-select">
-                            <option value="">Selecione o Tipo</option>
-                            <option value="Atendente">Atendente</option><option value="Grupo">Grupo</option><option value="Motoboy">Motoboy</option><option value="TI">TI</option><option value="SRE Architect">SRE Architect</option><option value="Logistica">Logistica</option><option value="Financeiro">Financeiro</option><option value="Comercial">Comercial</option>
-                        </select>
-                    </div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Nome</label><input type="text" id="u-username" class="form-control" placeholder="Nome de usuário"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Cargo</label><select id="u-tipo" class="form-select"><option value="">Selecione...</option><option value="Atendente">Atendente</option><option value="TI">TI</option><option value="Financeiro">Financeiro</option></select></div>
                 </div>
                 <div class="row g-2 mb-3">
-                    <div class="col-6"><input type="text" id="u-imagem" class="form-control" placeholder="URL Imagem"></div>
-                    <div class="col-6"><input type="password" id="u-password" class="form-control" placeholder="Senha"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">URL Imagem</label><input type="text" id="u-imagem" class="form-control" placeholder="https://imagem.com/foto.jpg"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Senha</label><input type="password" id="u-password" class="form-control" placeholder="******"></div>
                 </div>
-                <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalUsuario')">Salvar</button>
+                <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalUsuario')">Salvar Usuário</button>
             </div>
         </div>
     </div>
