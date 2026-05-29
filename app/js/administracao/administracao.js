@@ -143,6 +143,64 @@ window.salvarNovo = async (modalId) => {
     }
 };
 
+window.toggleComissao = () => {
+    const isMotoboy = document.getElementById('checkMotoboy').checked;
+    document.getElementById('div-comissao').classList.toggle('d-none', !isMotoboy);
+};
+
+window.salvarColaborador = async () => {
+    const modal = document.getElementById('modalColaborador');
+    const btn = document.getElementById('btn-salvar-colaborador');
+    const txt = document.getElementById('txt-salvar');
+    const spinner = document.getElementById('spinner-salvar');
+    const errorDiv = document.getElementById('colaborador-error');
+    
+    // Validação
+    const funcoes = Array.from(modal.querySelectorAll('.col-funcao:checked')).map(c => c.value);
+    if(funcoes.length === 0) {
+        errorDiv.textContent = "Selecione pelo menos uma função!";
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    document.getElementById('col-colaborador').value = funcoes.join('/');
+
+    // Efeito Loading
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    txt.textContent = "Salvando...";
+
+    try {
+        // Usa a lógica universal salvarNovo
+        await window.salvarNovo('modalColaborador');
+        bootstrap.Modal.getInstance(modal).hide();
+    } catch (e) {
+        errorDiv.textContent = "Erro ao salvar: " + e.message;
+        errorDiv.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
+        spinner.classList.add('d-none');
+        txt.textContent = "Salvar Colaborador";
+    }
+};
+
+// Função para Salvar Clientes (Com validações de Nome, Responsável, Contato)
+window.salvarCliente = async () => {
+    const modal = document.getElementById('modalCliente');
+    const requiredFields = ['c-username', 'c-responsavel', 'c-contato'];
+    let valid = true;
+
+    requiredFields.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el.value) { el.classList.add('input-error'); valid = false; }
+        else el.classList.remove('input-error');
+    });
+
+    if(!valid) return;
+    
+    // Segue a mesma lógica do Colaborador para o loop...
+    // (Pode usar a mesma estrutura acima trocando os prefixos)
+};
+
 // Toggle para mostrar/esconder campo comissão
 window.toggleComissao = () => {
     const isMotoboy = document.getElementById('checkMotoboy').checked;

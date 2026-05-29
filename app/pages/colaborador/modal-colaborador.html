@@ -6,8 +6,8 @@
                 <div id="colaborador-error" class="alert alert-danger d-none p-2 small"></div>
 
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="small fw-bold text-muted">Nome</label><input type="text" id="col-username" class="form-control"></div>
-                    <div class="col-6"><label class="small fw-bold text-muted">CPF/CNPJ</label><input type="text" id="col-cpf_cnpj" class="form-control"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Nome</label><input type="text" id="col-username" class="form-control" placeholder="Nome completo"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">CPF/CNPJ</label><input type="text" id="col-cpf_cnpj" class="form-control" placeholder="000.000.000-00"></div>
                 </div>
 
                 <div class="mb-3">
@@ -29,22 +29,22 @@
                 </div>
 
                 <div class="row g-2 mb-3">
-                    <div class="col-4"><label class="small fw-bold text-muted">Placa Moto</label><input type="text" id="col-moto_placa" class="form-control"></div>
-                    <div class="col-4"><label class="small fw-bold text-muted">E-mail</label><input type="email" id="col-email" class="form-control"></div>
-                    <div class="col-4"><label class="small fw-bold text-muted">Chave PIX</label><input type="text" id="col-chave_pix" class="form-control"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Placa Moto</label><input type="text" id="col-moto_placa" class="form-control" placeholder="ABC-1234"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">E-mail</label><input type="email" id="col-email" class="form-control" placeholder="email@exemplo.com"></div>
+                    <div class="col-4"><label class="small fw-bold text-muted">Chave PIX</label><input type="text" id="col-chave_pix" class="form-control" placeholder="Chave aqui"></div>
                 </div>
 
                 <div class="row g-2 mb-3">
-                    <div class="col-6"><label class="small fw-bold text-muted">Endereço</label><input type="text" id="col-endereco" class="form-control"></div>
-                    <div class="col-6"><label class="small fw-bold text-muted">Bairro</label><input type="text" id="col-bairro" class="form-control"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Endereço</label><input type="text" id="col-endereco" class="form-control" placeholder="Rua exemplo, 00"></div>
+                    <div class="col-6"><label class="small fw-bold text-muted">Bairro</label><input type="text" id="col-bairro" class="form-control" placeholder="Bairro"></div>
                 </div>
 
                 <input type="hidden" id="col-status" value="TRUE">
                 <input type="hidden" id="col-colaborador">
 
-                <button class="btn btn-danger w-100 fw-bold" id="btn-salvar-colaborador" onclick="window.salvarColaboradorCompleto()">
+                <button class="btn btn-danger w-100 fw-bold" id="btn-salvar-colaborador" onclick="window.salvarColaborador()">
                     <span id="txt-salvar">Salvar Colaborador</span>
-                    <i id="spinner-salvar" class="bi bi-arrow-repeat d-none"></i>
+                    <i id="spinner-salvar" class="bi bi-arrow-repeat d-none spinner-rotate"></i>
                 </button>
             </div>
         </div>
