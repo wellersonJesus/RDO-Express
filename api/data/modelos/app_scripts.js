@@ -70,15 +70,16 @@ function handleUpdate(sheet, data) {
   var rows = sheet.getDataRange().getValues();
   var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
-  var statusIndex = headers.indexOf("status");
-
-  // Se for Master, apenas retorna sucesso (o controle é no front-end)
-  if (String(data.id || "").toUpperCase() === "MASTER") return { status: "success", message: "Master atualizado." };
 
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][idIndex]).trim() === String(data.id).trim()) {
-      sheet.getRange(i + 1, statusIndex + 1).setValue(data.status);
-      return { status: "success", message: "Status atualizado!" };
+      // Atualiza todas as colunas baseado nos campos recebidos
+      for (var j = 0; j < headers.length; j++) {
+        if (data.hasOwnProperty(headers[j])) {
+          sheet.getRange(i + 1, j + 1).setValue(data[headers[j]]);
+        }
+      }
+      return { status: "success", message: "Registro atualizado com sucesso!" };
     }
   }
   return { status: "error", message: "ID não encontrado." };
