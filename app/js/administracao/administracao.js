@@ -66,37 +66,29 @@ window.renderizarAdmin = () => {
 
     let dados = window.adminState.cache;
     
-    // Aplicar Filtro
+    // Filtro
     if (window.adminState.filtroAtual) {
         const termo = window.adminState.filtroAtual.toLowerCase();
-        dados = dados.filter(i => (i.username || i.nome || '').toLowerCase().includes(termo));
+        dados = dados.filter(i => (i.nome || i.username || '').toLowerCase().includes(termo));
     }
     
-    // Cálculo do total
+    // Paginação
     const totalPag = Math.max(1, Math.ceil(dados.length / window.adminState.itensPorPagina));
     if (window.adminState.paginaAtual > totalPag) window.adminState.paginaAtual = totalPag;
+    if (infoPag) infoPag.innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
     
-    // Atualiza o texto no seu componente de botão
-    if (infoPag) {
-        infoPag.innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
-    }
-
-    // Fatiamento dos dados
     const inicio = (window.adminState.paginaAtual - 1) * window.adminState.itensPorPagina;
     const dadosPaginados = dados.slice(inicio, inicio + window.adminState.itensPorPagina);
 
-    // Renderiza a lista
     tbody.innerHTML = dadosPaginados.map(i => {
-        const rawStatus = String(i.status || 'FALSE').toUpperCase();
-        const isActive = rawStatus === 'TRUE' || rawStatus === 'ATIVO';
-        
+        const isActive = String(i.status || '').toUpperCase() === 'TRUE';
         return `<tr>
             <td class="ps-3"><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
-            <td style="font-weight: 400 !important;">${i.nome || i.username || 'N/A'}</td>
-            <td><span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} rounded-pill" style="font-size: 0.65rem;">${isActive ? 'Ativo' : 'Inativo'}</span></td>
+            <td>${i.nome || i.username || 'N/A'}</td>
+            <td><span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} rounded-pill">${isActive ? 'Ativo' : 'Inativo'}</span></td>
             <td class="text-end pe-3">
-                <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}')"><i class="bi bi-pencil-square"></i></button>
-                <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${window.adminState.origemAtual}')"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}', false)"><i class="bi bi-pencil-square"></i></button>
+                <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}', true)"><i class="bi bi-eye"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -113,13 +105,32 @@ window.mudarPaginaAdmin = (dir) => {
     }
 };
 
-// Ajuste na função editar para garantir que o idEmEdicao seja setado
-window.editarAdmin = async (id) => {
+window.editarAdmin = async (id, isReadOnly = false) => {
     const item = window.adminState.cache.find(i => i.id == id);
-    if(item) {
-        window.botState.idEmEdicao = id; // Garante que o bot reconheça a edição
-        window.botState.origemEmEdicao = window.adminState.origemAtual;
-        await window.abrirModalEspecifico(window.adminState.origemAtual, item);
+    if (!item) return;
+
+    window.botState.idEmEdicao = id;
+    window.botState.origemEmEdicao = window.adminState.origemAtual;
+    
+    // Abre o modal
+    await window.abrirModalEspecifico(window.adminState.origemAtual, item);
+    
+    const modalId = window.adminState.origemAtual === 'clientes' ? 'modalCliente' : 'modalColaborador';
+    const modalEl = document.getElementById(modalId);
+    
+    if (modalEl) {
+        const inputs = modalEl.querySelectorAll('input, select');
+        const btnSalvar = modalEl.querySelector('.btn-danger'); // Botão de Salvar
+        
+        // 1. Bloqueia ou libera os inputs
+        inputs.forEach(i => {
+            i.disabled = isReadOnly;
+        });
+
+        // 2. Controla a visibilidade do botão de salvar
+        if (btnSalvar) {
+            btnSalvar.style.display = isReadOnly ? 'none' : 'block';
+        }
     }
 };
 
