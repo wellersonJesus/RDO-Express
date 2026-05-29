@@ -21,7 +21,10 @@
     color: #333 !important;
 }
 
-.input-error { border: 2px solid #dc3545 !important; }
+.input-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
 
 .spinner-rotate { display: inline-block; animation: rotate 1s linear infinite; }
 @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

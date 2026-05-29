@@ -3,26 +3,31 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-body p-4">
                 <h5 class="fw-bold mb-3">Cadastrar Cliente</h5>
-                
+
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="small fw-bold text-muted">Nome</label>
-                        <input type="text" id="c-username" class="form-control" placeholder="Ex: João Silva">
+                        <input type="text" id="c-username" class="form-control" placeholder="Nome do Cliente" required>
                     </div>
                     <div class="col-6">
                         <label class="small fw-bold text-muted">Responsável</label>
-                        <input type="text" id="c-responsavel" class="form-control" placeholder="Nome do responsável">
+                        <input type="text" id="c-responsavel" class="form-control" placeholder="Nome do Responsável"
+                            required>
                     </div>
                 </div>
 
                 <div class="row g-2 mb-2">
-                    <div class="col-4">
-                        <label class="small fw-bold text-muted">CNPJ</label>
-                        <input type="text" id="c-cnpj" class="form-control" placeholder="00.000.000/0000-00">
-                    </div>
-                    <div class="col-4">
-                        <label class="small fw-bold text-muted">Contato</label>
-                        <input type="text" id="c-contato" class="form-control" placeholder="(00) 00000-0000">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">Contato</label>
+                            <input type="text" id="c-contato" class="form-control" placeholder="(00) 90000-0000"
+                                required>
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">CPF/CNPJ</label>
+                            <input type="text" id="c-cnpj" class="form-control"
+                                placeholder="000.000.000-00 ou 00.000.000/0000-00">
+                        </div>
                     </div>
                     <div class="col-4">
                         <label class="small fw-bold text-muted">E-mail</label>
@@ -42,7 +47,7 @@
                 </div>
 
                 <input type="hidden" id="c-status" value="TRUE">
-                
+
                 <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarNovo('modalCliente')">
                     Salvar Cliente
                 </button>

@@ -102,33 +102,41 @@ window.editarAdmin = async (id) => {
 window.salvarNovo = async (modalId) => {
     const el = document.getElementById(modalId);
     const inputs = el.querySelectorAll('input, select');
-    const btn = el.querySelector('.btn-danger');
     
-    // Validação com borda vermelha
+    // 1. Definição dos campos obrigatórios por modal
+    // Coloque aqui o ID dos campos que devem ficar vermelhos se vazios
+    const obrigatorios = modalId === 'modalCliente' 
+        ? ['c-username', 'c-responsavel', 'c-contato'] 
+        : ['col-username', 'col-cpf_cnpj']; // Exemplo para colaborador
+
     let valid = true;
+    let dados = { id: window.botState?.idEmEdicao || Date.now().toString() };
+
+    // 2. Validação Visual e Captura de Dados
     inputs.forEach(i => {
-        if (!i.value && i.hasAttribute('required')) {
+        if (!i.id) return;
+
+        // Limpa a borda vermelha antes de validar
+        i.classList.remove('input-error');
+
+        // Verifica se é obrigatório e está vazio
+        if (obrigatorios.includes(i.id) && !i.value.trim()) {
             i.classList.add('input-error');
             valid = false;
-        } else {
-            i.classList.remove('input-error');
         }
-    });
-    if (!valid) return;
 
+        // Captura o dado (limpa o prefixo c- ou col-)
+        const chave = i.id.includes('-') ? i.id.split('-')[1] : i.id;
+        dados[chave] = i.value;
+    });
+
+    if (!valid) return; // Para aqui se algo falhar visualmente
+
+    // 3. Efeito de carregamento e envio
+    const btn = el.querySelector('.btn-danger');
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
-    
-    // Extração inteligente de campos
-    let dados = { id: window.botState?.idEmEdicao || Date.now().toString() };
-    inputs.forEach(i => {
-        if(i.id) {
-            // Pega o nome do campo removendo prefixo (c- ou col-)
-            const key = i.id.includes('-') ? i.id.split('-')[1] : i.id;
-            dados[key] = i.value;
-        }
-    });
     
     try {
         const action = (window.botState?.idEmEdicao ? 'update' : 'add') + window.adminState.origemAtual;
@@ -137,7 +145,9 @@ window.salvarNovo = async (modalId) => {
         bootstrap.Modal.getInstance(el).hide();
         window.botState.idEmEdicao = null;
         window.carregarAdmin(window.adminState.origemAtual);
-    } catch(e) { console.error(e); } finally {
+    } catch(e) {
+        console.error("Erro no salvamento:", e);
+    } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
@@ -183,22 +193,48 @@ window.salvarColaborador = async () => {
     }
 };
 
-// Função para Salvar Clientes (Com validações de Nome, Responsável, Contato)
 window.salvarCliente = async () => {
     const modal = document.getElementById('modalCliente');
-    const requiredFields = ['c-username', 'c-responsavel', 'c-contato'];
+    const btn = document.getElementById('btn-salvar-cliente');
+    const txt = document.getElementById('txt-salvar');
+    const spinner = document.getElementById('spinner-salvar');
+    
+    // Lista de campos obrigatórios (IDs do HTML)
+    const obrigatorios = ['c-username', 'c-responsavel', 'c-contato'];
     let valid = true;
 
-    requiredFields.forEach(id => {
-        const el = document.getElementById(id);
-        if(!el.value) { el.classList.add('input-error'); valid = false; }
-        else el.classList.remove('input-error');
+    // Limpa bordas anteriores e valida
+    obrigatorios.forEach(id => {
+        const input = document.getElementById(id);
+        if (!input.value.trim()) {
+            input.classList.add('input-error'); // Aplica a borda vermelha
+            valid = false;
+        } else {
+            input.classList.remove('input-error');
+        }
     });
 
-    if(!valid) return;
-    
-    // Segue a mesma lógica do Colaborador para o loop...
-    // (Pode usar a mesma estrutura acima trocando os prefixos)
+    if (!valid) {
+        alert("Por favor, preencha os campos obrigatórios (Nome, Responsável e Contato).");
+        return;
+    }
+
+    // Efeito de Loop
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    txt.innerText = "Salvando...";
+
+    try {
+        await window.salvarNovo('modalCliente');
+        bootstrap.Modal.getInstance(modal).hide();
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao salvar cliente.");
+    } finally {
+        btn.disabled = false;
+        spinner.classList.add('d-none');
+        txt.innerText = "Salvar Cliente";
+    }
 };
 
 // Toggle para mostrar/esconder campo comissão
