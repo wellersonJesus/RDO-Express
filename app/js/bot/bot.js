@@ -6,6 +6,11 @@ window.botState = {
     itensPorPagina: 15 
 };
 
+window.mudarPagina = (dir) => {
+    window.botState.paginaAtual = Math.max(1, window.botState.paginaAtual + dir);
+    window.reloadBot();
+};
+
 window.initBot = async () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     const btn = document.getElementById('btn-status-bot');
@@ -19,39 +24,38 @@ window.initBot = async () => {
 
 window.reloadBot = async () => {
     const tbody = document.getElementById('bot-list');
-    const filtro = document.getElementById('filtro-tipo')?.value || 'TODOS';
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    const filtro = document.getElementById('filtro-tipo')?.value || 'TODOS';
     if (!tbody) return;
     
     const syncIcon = document.getElementById('sync-icon-bot');
     if(syncIcon) syncIcon.classList.add('spinner-rotate');
-
+    
     try {
         const [bots, users, clients, cols] = await Promise.all([
             window.API.call('getbotconfig'), window.API.call('getusuarios'), 
             window.API.call('getclientes'), window.API.call('getcolaboradores')
         ]);
         
-        window.botState.cache = [
-            ...(bots||[]).map(i=>({...i, origem:'botconfig'})), 
-            ...(users||[]).map(i=>({...i, origem:'usuarios'})), 
-            ...(clients||[]).map(i=>({...i, origem:'clientes'})), 
-            ...(cols||[]).map(i=>({...i, origem:'colaboradores'}))
+        let dados = [
+            ...(bots||[]).map(i=>({...i, origem:'botconfig'})), ...(users||[]).map(i=>({...i, origem:'usuarios'})), 
+            ...(clients||[]).map(i=>({...i, origem:'clientes'})), ...(cols||[]).map(i=>({...i, origem:'colaboradores'}))
         ];
 
-        // Filtro e Paginação
-        let lista = window.botState.cache;
-        if (filtro !== 'TODOS') {
-            lista = lista.filter(i => (i.tipo || i.origem) === filtro || (filtro === 'Cliente' && i.origem === 'clientes'));
-        }
+        if(filtro !== 'TODOS') dados = dados.filter(i => i.origem === filtro.toLowerCase());
+        window.botState.cache = dados;
 
-        const inicio = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
-        const final = inicio + window.botState.itensPorPagina;
-        const dadosPagina = lista.slice(inicio, final);
+        const totalPag = Math.max(1, Math.ceil(dados.length / window.botState.itensPorPagina));
+        if(window.botState.paginaAtual > totalPag) window.botState.paginaAtual = totalPag;
+        
+        const start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
+        const pageData = dados.slice(start, start + window.botState.itensPorPagina);
 
-        tbody.innerHTML = dadosPagina.map(i => `<tr>
+        document.getElementById('info-paginacao').innerText = `Pág ${window.botState.paginaAtual} de ${totalPag}`;
+        
+        tbody.innerHTML = pageData.map(i => `<tr>
             <td class="ps-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" onchange="window.alterarStatusDireto('${i.id}', this.checked, '${i.origem}')" ${String(i.status||'').toUpperCase()=='TRUE'?'checked':''} ${!isMasterOn?'disabled':''}></div></td>
-            <td><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://via.placeholder.com/30'}" width="30" class="rounded-circle" onerror="this.src='https://via.placeholder.com/30'"></td>
+            <td><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'"></td>
             <td>${i.username || i.responsavel || i.nome || 'N/A'}</td>
             <td>${i.tipo || i.cargo || 'N/A'}</td>
             <td class="text-end pe-3">
@@ -59,9 +63,17 @@ window.reloadBot = async () => {
                 <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${i.origem}')" ${!isMasterOn?'disabled':''}><i class="bi bi-trash"></i></button>
             </td>
         </tr>`).join('');
-    } finally { 
-        if(syncIcon) syncIcon.classList.remove('spinner-rotate'); 
+    } catch (e) { console.error(e); } finally { if(syncIcon) syncIcon.classList.remove('spinner-rotate'); }
+};
+
+window.initBot = async () => {
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    const btn = document.getElementById('btn-status-bot');
+    if(btn) {
+        btn.innerText = isMasterOn ? 'MASTER ON' : 'MASTER OFF';
+        btn.className = isMasterOn ? 'btn btn-danger btn-sm rounded-pill px-3' : 'btn btn-outline-danger btn-sm rounded-pill px-3';
     }
+    await window.reloadBot();
 };
 
 window.toggleMaster = () => {
