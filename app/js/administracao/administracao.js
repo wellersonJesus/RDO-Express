@@ -14,7 +14,10 @@ window.carregarAdmin = async (origem) => {
     window.adminState.origemAtual = origem;
     window.adminState.paginaAtual = 1;
     
-    // Atualiza botões (usando a classe btn-tab-custom)
+    // Inicia a animação
+    const syncIcon = document.getElementById('sync-icon-admin');
+    if(syncIcon) syncIcon.classList.add('spinner-rotate');
+
     document.querySelectorAll('#adminTabs .btn-tab-custom').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-origem') === origem);
     });
@@ -26,7 +29,10 @@ window.carregarAdmin = async (origem) => {
         window.adminState.cache = dados || [];
         window.renderizarAdmin();
     } catch (e) {
-        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar.</td></tr>';
+        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
+    } finally {
+        // Para a animação
+        if(syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 };
 
