@@ -8,15 +8,14 @@ window.adminState = {
 window.abrirModalCadastro = () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     
-    // Se desligado, mostra o modal premium de bloqueio
     if (!isMasterOn) {
-        const modalElement = document.getElementById('modalBloqueioMaster');
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-        return; // Interrompe, mantendo a tela exatamente como está
+        // Exibe o modal Premium de aviso que criamos no HTML
+        const modalBloqueio = new bootstrap.Modal(document.getElementById('modalBloqueioMaster'));
+        modalBloqueio.show();
+        return;
     }
     
-    // Se ligado, abre o modal de cadastro original
+    // Se ligado, abre o modal de seleção (Cliente ou Colaborador)
     const modalCadastro = new bootstrap.Modal(document.getElementById('modalEscolhaTipo'));
     modalCadastro.show();
 };
@@ -33,36 +32,40 @@ window.mudarPaginaAdmin = (dir) => {
 };
 
 window.carregarAdmin = async (origem) => {
-    // 1. Atualiza o estado visual
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    const tbody = document.getElementById('admin-list');
+
+    // Se o Master estiver desligado, exibe o aviso na tabela e interrompe
+    if (!isMasterOn) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted p-5">
+            <i class="bi bi-exclamation-triangle-fill text-danger d-block mb-3" style="font-size: 2.5rem;"></i>
+            <h5 class="fw-bold">Sistema Master RDO desligado.</h5>
+            <p>Faça um contato com a gestão para liberar o registro.</p>
+        </td></tr>`;
+        return;
+    }
+
+    // Se ligado, segue o fluxo normal
     window.adminState.origemAtual = origem;
     window.adminState.paginaAtual = 1;
 
-    // 2. Atualiza UI dos botões
+    // Atualiza UI dos botões
     document.querySelectorAll('.btn-tab-custom').forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-origem') === origem) btn.classList.add('active');
     });
 
-    // 3. Atualiza o título
     const tituloAba = document.getElementById('titulo-aba');
     if (tituloAba) tituloAba.innerText = `Gerenciando: ${origem.charAt(0).toUpperCase() + origem.slice(1)}`;
 
-    // 4. CHAMADA DA API (O PONTO QUE FALTAVA)
     const syncIcon = document.getElementById('sync-icon-admin');
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
     try {
-        // Assume que a sua API chama 'getclientes' ou 'getcolaboradores'
         const res = await window.API.call(`get${origem}`);
-        
-        // Atualiza o cache com os dados retornados
         window.adminState.cache = Array.isArray(res) ? res : [];
-        
-        // 5. Renderiza a tabela agora que o cache está populado
         window.renderizarAdmin();
-        
     } catch (e) {
-        console.error(`Erro ao carregar ${origem}:`, e);
         window.adminState.cache = [];
         window.renderizarAdmin();
     } finally {
