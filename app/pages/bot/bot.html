@@ -46,3 +46,19 @@
         </div></div>
     </div>
 </div>
+
+<div class="modal fade" id="modalConfirmacaoExclusao" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 p-3">
+            <div class="modal-body text-center">
+                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                <h5 class="fw-bold mt-2">Confirmar Remoção</h5>
+                <p class="text-muted">Esta ação é irreversível. Deseja realmente remover este registro?</p>
+                <div class="d-flex gap-2 justify-content-center mt-4">
+                    <button class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button id="btn-confirmar-remocao" class="btn btn-danger rounded-pill px-4" onclick="window.confirmarExclusao()">Remover</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
