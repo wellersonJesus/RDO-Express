@@ -1,33 +1,56 @@
-window.adminState = { origemAtual: 'clientes', cache: [] };
+window.adminState = { 
+    origemAtual: 'clientes', 
+    cache: [], 
+    paginaAtual: 1, 
+    itensPorPagina: 15 
+};
+
+window.mudarPaginaAdmin = (dir) => {
+    window.adminState.paginaAtual = Math.max(1, window.adminState.paginaAtual + dir);
+    window.renderizarAdmin();
+};
 
 window.carregarAdmin = async (origem) => {
     window.adminState.origemAtual = origem;
+    window.adminState.paginaAtual = 1;
     
-    // Reset visual dos botões
-    document.querySelectorAll('#adminTabs .nav-link').forEach(btn => {
+    // Atualiza botões (usando a classe btn-tab-custom)
+    document.querySelectorAll('#adminTabs .btn-tab-custom').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-origem') === origem);
     });
 
     document.getElementById('titulo-aba').innerText = `Gerenciando: ${origem}`;
-    const tbody = document.getElementById('admin-list');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Carregando...</td></tr>';
-
+    
     try {
         const dados = await window.API.call('get' + origem);
         window.adminState.cache = dados || [];
-        
-        tbody.innerHTML = window.adminState.cache.map(i => `<tr>
-            <td class="ps-3"><img src="${i.imagem || 'https://via.placeholder.com/30'}" width="30" class="rounded-circle"></td>
-            <td>${i.nome || i.username || 'N/A'}</td>
-            <td>${i.tipo || i.cargo || 'N/A'}</td>
-            <td class="text-end pe-3">
-                <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}')"><i class="bi bi-pencil-square"></i></button>
-                <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${origem}')"><i class="bi bi-trash"></i></button>
-            </td>
-        </tr>`).join('');
+        window.renderizarAdmin();
     } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
+        document.getElementById('admin-list').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar.</td></tr>';
     }
+};
+
+window.renderizarAdmin = () => {
+    const tbody = document.getElementById('admin-list');
+    const dados = window.adminState.cache;
+    
+    const totalPag = Math.max(1, Math.ceil(dados.length / window.adminState.itensPorPagina));
+    if(window.adminState.paginaAtual > totalPag) window.adminState.paginaAtual = totalPag;
+    
+    const start = (window.adminState.paginaAtual - 1) * window.adminState.itensPorPagina;
+    const pageData = dados.slice(start, start + window.adminState.itensPorPagina);
+    
+    document.getElementById('info-paginacao-admin').innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
+    
+    tbody.innerHTML = pageData.map(i => `<tr>
+        <td class="ps-3"><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'"></td>
+        <td>${i.nome || i.username || 'N/A'}</td>
+        <td>${i.tipo || i.cargo || 'N/A'}</td>
+        <td class="text-end pe-3">
+            <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-light btn-sm text-danger" onclick="window.confirmarExclusao('${i.id}', '${window.adminState.origemAtual}')"><i class="bi bi-trash"></i></button>
+        </td>
+    </tr>`).join('');
 };
 
 window.editarAdmin = async (id) => {
@@ -36,11 +59,4 @@ window.editarAdmin = async (id) => {
         window.botState.idEmEdicao = id;
         await window.abrirModalEspecifico(window.adminState.origemAtual, item);
     }
-};
-
-window.abrirModalCadastro = () => {
-    const btn = document.getElementById('btn-novo-admin');
-    btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Carregando...';
-    window.abrirModalEspecifico(window.adminState.origemAtual);
-    setTimeout(() => { btn.innerHTML = '<i class="bi bi-plus-lg"></i> Novo Registro'; }, 500);
 };
