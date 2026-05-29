@@ -5,19 +5,20 @@ window.adminState = {
     itensPorPagina: 15 // Limite fixo em 15
 };
 
+// No administracao.js
 window.abrirModalCadastro = () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     
     if (!isMasterOn) {
-        // Exibe o modal Premium de aviso que criamos no HTML
+        // Se estiver desligado, mostra o aviso PREMIUM
         const modalBloqueio = new bootstrap.Modal(document.getElementById('modalBloqueioMaster'));
         modalBloqueio.show();
         return;
     }
     
-    // Se ligado, abre o modal de seleção (Cliente ou Colaborador)
-    const modalCadastro = new bootstrap.Modal(document.getElementById('modalEscolhaTipo'));
-    modalCadastro.show();
+    // Se estiver ligado, abre o modal de usuário (conforme solicitado anteriormente)
+    // Se você estiver em "clientes" ou "colaboradores", chame o específico:
+    window.abrirModalEspecifico(window.adminState.origemAtual);
 };
 
 window.mudarPaginaAdmin = (dir) => {

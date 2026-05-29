@@ -97,13 +97,34 @@ window.toggleMaster = () => {
 
 window.abrirModalCadastro = () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    
     if (!isMasterOn) {
-        alert("Atenção: Sistema Master RDO desligado. Acesso restrito.");
+        alert("Atenção: Sistema Master RDO desligado.");
         return;
     }
-    // Lógica original para abrir modal...
-    const modal = new bootstrap.Modal(document.getElementById('modalEscolhaTipo'));
-    modal.show();
+    
+    // PONTO CHAVE: Abre apenas usuários aqui
+    window.abrirModalEspecifico('usuarios');
+};
+
+// Garantindo que a edição também seja restrita conforme solicitado
+window.editarBot = async (id) => {
+    const item = window.botState.cache.find(i => i.id == id);
+    if(!item) return;
+
+    window.botState.idEmEdicao = id;
+    window.botState.origemEmEdicao = item.origem;
+    await window.abrirModalEspecifico(item.origem, item);
+    
+    // Bloqueia edição se não for usuário
+    const modalId = item.origem === 'usuarios' ? 'modalUsuario' : (item.origem === 'clientes' ? 'modalCliente' : 'modalColaborador');
+    const modal = document.getElementById(modalId);
+    
+    if (item.origem !== 'usuarios') {
+        modal.querySelectorAll('input, select').forEach(i => i.disabled = true);
+        const btnSalvar = modal.querySelector('.btn-danger');
+        if (btnSalvar) btnSalvar.style.display = 'none';
+    }
 };
 
 window.editarBot = async (id) => {
@@ -126,28 +147,54 @@ window.editarBot = async (id) => {
 };
 
 window.abrirModalEspecifico = async (origem, data = null) => {
-    const paths = { 'usuarios': 'pages/usuarios/modal-usuario.html', 'clientes': 'pages/clientes/modal-cliente.html', 'colaboradores': 'pages/colaborador/modal-colaborador.html' };
+    const paths = { 
+        'usuarios': 'pages/usuarios/modal-usuario.html', 
+        'clientes': 'pages/clientes/modal-cliente.html', 
+        'colaboradores': 'pages/colaborador/modal-colaborador.html' 
+    };
     const map = { 'usuarios': 'modalUsuario', 'clientes': 'modalCliente', 'colaboradores': 'modalColaborador' };
     const modalId = map[origem];
 
-    if(!document.getElementById(modalId)) {
-        const resp = await fetch(paths[origem]);
-        document.body.insertAdjacentHTML('beforeend', await resp.text());
+    // Verifica se o modal já existe no DOM
+    let modalEl = document.getElementById(modalId);
+
+    // Se não existir, carrega via fetch
+    if (!modalEl) {
+        try {
+            const resp = await fetch(paths[origem]);
+            if (!resp.ok) throw new Error("Erro ao carregar modal");
+            const html = await resp.text();
+            
+            // Insere o HTML no corpo da página
+            document.body.insertAdjacentHTML('beforeend', html);
+            modalEl = document.getElementById(modalId);
+        } catch (e) {
+            console.error("Erro ao buscar o arquivo do modal:", e);
+            alert("Erro ao carregar formulário. Verifique o caminho do arquivo.");
+            return;
+        }
     }
-    
-    const modalEl = document.getElementById(modalId);
+
+    // Preenche os campos se houver dados (para edição)
     const inputs = modalEl.querySelectorAll('input, select');
-    const btnSalvar = modalEl.querySelector('.btn-danger');
-    
     inputs.forEach(i => {
-        i.value = data ? (data[i.id.split('-')[1]] || '') : '';
-        i.disabled = false;
-        i.style.borderColor = '';
+        if (i.id) {
+            const campo = i.id.split('-')[1];
+            i.value = (data && data[campo]) ? data[campo] : '';
+            i.disabled = false;
+            i.style.borderColor = '';
+        }
     });
-    
-    if(btnSalvar) btnSalvar.style.display = 'block';
-    window.botState.origemEmEdicao = origem;
-    new bootstrap.Modal(modalEl).show();
+
+    // Garante que o botão de salvar esteja visível
+    const btnSalvar = modalEl.querySelector('.btn-danger');
+    if (btnSalvar) btnSalvar.style.display = 'block';
+
+    // ABERTURA SEGURA: Instancia o modal do Bootstrap apenas se o elemento existir
+    if (modalEl) {
+        const modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.show();
+    }
 };
 
 window.salvarNovo = async (modalId) => {
