@@ -1,39 +1,32 @@
 <div class="modal fade" id="modalMapa" tabindex="-1" aria-labelledby="modalMapaLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-bold text-dark" id="modalMapaLabel">
-                    ROTA SOLICITADA - SOLICITANTE: <span id="header-nome-solicitante">...</span>
+
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold" id="modalMapaLabel">
+                    <span class="text-danger">RDO</span> Express - Rota(s)
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+
+                <div class="mt-1 text-muted" style="font-size: 0.85rem; font-weight: normal;">
+                    Solicitante: <span id="header-nome-solicitante">Carregando...</span>
+                </div>
             </div>
 
             <div class="modal-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3 bg-light p-3 rounded-3">
-                    <div class="text-center">
-                        <small class="text-muted d-block">Tempo</small>
-                        <span id="map-tempo-total" class="fw-bold text-primary fs-5">0 min</span>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted d-block">Distância</small>
-                        <span id="map-distancia-total" class="fw-bold text-dark fs-5">0 km</span>
-                    </div>
-                </div>
-                
-                <div id="container-mapa-visual" class="rounded-3 mb-3 border shadow-sm" style="height: 300px; background: #e5e5e5; position: relative; overflow: hidden;">
-                    <div class="p-3 text-muted">Simulação de Mapa Humanizado</div>
+                <div id="container-mapa-visual" class="rounded-3 mb-3 border shadow-sm"
+                    style="height: 250px; background: #e5e5e5; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-muted">Carregando mapa...</span>
                 </div>
 
                 <div class="bg-white border rounded-3 p-3 mb-3">
                     <p class="fw-bold mb-2">Rotas:</p>
-                    <div id="lista-rotas-detalhada" class="small text-secondary" style="line-height: 1.5;">
-                        </div>
+                    <div id="lista-rotas-detalhada" class="small text-secondary" style="line-height: 1.6;"></div>
                 </div>
 
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary w-50 rounded-pill py-2" data-bs-dismiss="modal">Cancelar</button>
-                    <button class="btn btn-danger w-50 rounded-pill py-2 fw-bold" onclick="prosseguirParaFormulario()">Confirmar Rota</button>
-                </div>
+                <button class="btn btn-danger w-100 rounded-pill py-2 fw-bold"
+                    onclick="window.prosseguirParaFormulario()">
+                    Confirmar Rota
+                </button>
             </div>
         </div>
     </div>

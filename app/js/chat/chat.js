@@ -177,25 +177,55 @@ function calcularTudo() {
 }
 
 window.iniciarFluxoCheckout = function() {
-    // 1. Acesso direto ao elemento
-    const modalEl = document.getElementById('modalMapa');
+    const msgInput = document.getElementById('msg-input');
+    if (!msgInput) return;
     
-    if (!modalEl) {
-        alert("Erro: O modal não foi encontrado na página.");
+    const texto = msgInput.value;
+
+    // 1. Regex que captura o Solicitante e o bloco de Rota
+    // Ele para de capturar no momento que encontrar a palavra TROCA ou uma nova linha de observação
+    const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
+    const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
+
+    if (!solicitanteMatch || !rotasMatch) {
+        alert("Formato da mensagem inválido.");
         return;
     }
 
-    // 2. Preenchimento seguro
-    document.getElementById('header-nome-solicitante').innerText = "Marcio Augusto";
-    document.getElementById('map-tempo-total').innerText = "19 min";
-    document.getElementById('map-distancia-total').innerText = "9.5 km";
-    document.getElementById('lista-rotas-detalhada').innerHTML = 
-        "Rota 1: De: Rua A, 32 - Floramar Para: Local 1 <br>" +
-        "Rota 2: De: Local 1 Para: Rua Cinco, 192 - Belo Horizonte";
+    const nomeSolicitante = solicitanteMatch[1].trim();
+    
+    // 2. Processa as rotas ignorando os campos que você não quer
+    // Divide pelo padrão numérico "1." "2." etc
+    const listaRotas = rotasMatch[1]
+        .split(/\d+\./)
+        .filter(r => r.trim().length > 0)
+        .map(r => r.trim().replace(/[\(\),]/g, ''));
 
-    // 3. Inicialização do Bootstrap
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    // 3. Preenche cabeçalho
+    const el = document.getElementById('header-nome-solicitante');
+    if (el) el.innerText = nomeSolicitante;
+
+    // 4. Preenche rotas uma embaixo da outra
+    const container = document.getElementById('lista-rotas-detalhada');
+    if (container) {
+        container.innerHTML = listaRotas.map((rota, index) => {
+            // Divide o "De" e "Para" pelo pipe |
+            const [de, para] = rota.split('|');
+            return `
+                <div class="mb-3 border-bottom pb-2">
+                    <strong class="text-danger">${index + 1}.</strong> 
+                    <span class="d-block text-dark"><strong>De:</strong> ${de ? de.trim() : ''}</span>
+                    <span class="d-block text-dark"><strong>Para:</strong> ${para ? para.trim() : ''}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 5. Abre o modal
+    const modalEl = document.getElementById('modalMapa');
+    if (modalEl) {
+        new bootstrap.Modal(modalEl).show();
+    }
 };
 
 window.prosseguirParaFormulario = function() {

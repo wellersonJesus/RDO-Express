@@ -35,3 +35,8 @@
     background-size: 400px; /* Ajuste o tamanho do padrão conforme necessário */
     background-attachment: scroll;
 }
+
+#lista-rotas-detalhada {
+    max-height: 300px; /* Limita a altura da lista */
+    overflow-y: auto;  /* Adiciona scroll se passar de 300px */
+}
