@@ -66,20 +66,19 @@ async function carregarDados() {
     const syncIcon = document.getElementById('sync-icon-chat');
     
     if (!listEl) return;
-    
-    // Animação de carregamento
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
     try {
         const clientes = await API.call('getclientes') || [];
         
-        if (clientes.length === 0) {
-            listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato encontrado.</div>';
-            return;
-        }
+        // Regra de Negócio: Check do Master Bot
+        const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
         listEl.innerHTML = clientes.map(c => {
-            const isOnline = String(c.status).toUpperCase() === 'TRUE';
+            // Se Master ON, usa o status real do banco. Se Master OFF, força FALSE (Offline)
+            const statusReal = String(c.status).toUpperCase() === 'TRUE';
+            const isOnline = isMasterOn ? statusReal : false;
+            
             const statusText = isOnline ? 'Online' : 'Offline';
             const statusColor = isOnline ? '#28a745' : '#adb5bd';
 
@@ -102,7 +101,6 @@ async function carregarDados() {
 
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
-        listEl.innerHTML = '<div class="p-3 text-center text-danger small">Erro ao carregar contatos.</div>';
     } finally {
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
