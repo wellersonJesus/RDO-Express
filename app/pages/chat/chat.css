@@ -1,68 +1,77 @@
-/* Lista de Contatos - Clean & Light */
-.contact-item-clean {
+/* --- Lista de Contatos: Design Clean --- */
+.contato-item {
     cursor: pointer;
     transition: background 0.2s;
-    font-size: 0.85rem;
-    color: #555;
-    padding: 10px !important;
+    padding: 8px 10px !important; /* Mais compacto */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-/* Nome do contato: fonte normal, sem bold */
+.contato-item:hover {
+    background-color: #fcfcfc;
+}
+
+/* Redução de tamanho dos textos */
 .contact-name {
     font-weight: 400 !important;
-    font-size: 0.9rem;
+    font-size: 0.82rem; /* Fonte ligeiramente menor */
     color: #333;
+    margin: 0;
 }
 
-/* Status: mais suave */
 .contact-status {
-    font-size: 0.75rem;
+    font-size: 0.68rem; /* Fonte pequena e discreta */
     color: #bbb;
     font-weight: 300;
 }
 
-/* Seleção: destaque mais suave */
+/* Ícones e Avatar menores */
+.avatar-chat {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #e9ecef;
+}
+
+/* Seleção suave */
 .selected-contact {
     background-color: #fff5f5 !important; 
     border-left: 3px solid #f8d7da !important;
 }
 
-/* Layout e Fundo Estilo WhatsApp */
+/* --- Fundo Estilo WhatsApp --- */
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
     background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
     background-repeat: repeat;
-    background-size: 400px; /* Ajuste o tamanho do padrão conforme necessário */
-    background-attachment: scroll;
+    background-size: 400px;
 }
 
+/* --- Ajuste de Elementos Gerais --- */
 #lista-rotas-detalhada {
-    max-height: 300px; /* Limita a altura da lista */
-    overflow-y: auto;  /* Adiciona scroll se passar de 300px */
+    max-height: 250px;
+    overflow-y: auto;
+    font-size: 0.8rem; /* Texto das rotas menor */
 }
 
-#container-mapa-visual {
-    height: 250px !important;
-    width: 100%;
-    display: block !important;
-}
-
-/* Card de Rota Clean */
-.card {
-    transition: all 0.3s ease;
-}
-.card:hover {
-    transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+/* Card Rota Clean */
+.card-rota-clean {
+    border-left: 3px solid #dcdcdc !important;
+    background: #ffffff !important;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Inputs minimalistas */
 .form-control-sm {
-    border-radius: 8px !important;
-    font-size: 0.85rem;
-}
-
-/* Modal com visual suave */
-.modal-content {
-    border-radius: 20px !important;
+    font-size: 0.78rem !important;
+    padding: 4px 8px !important;
 }

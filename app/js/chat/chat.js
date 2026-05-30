@@ -55,29 +55,54 @@ async function carregarDados() {
     }
 }
 
-function filtrarContatos() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        const input = document.getElementById('chat-search');
-        const filter = input.value.toLowerCase();
-        const list = document.getElementById('lista-contatos-chat');
-        const items = list.getElementsByClassName('list-group-item');
-        let encontradoAlgum = false;
+window.filtrarContatos = function() {
+    const termo = document.getElementById('chat-search').value.toLowerCase();
+    const listaContatos = document.getElementById('lista-contatos-chat');
+    
+    // Supondo que seus contatos dentro da lista sejam divs ou links com uma classe comum
+    // Exemplo: <div class="contato-item">...</div>
+    const contatos = listaContatos.getElementsByClassName('contato-item');
 
-        Array.from(items).forEach(item => {
-            const nome = item.querySelector('.contact-name').textContent.toLowerCase();
-            const visivel = nome.includes(filter);
-            item.style.display = visivel ? "flex" : "none";
-            if (visivel) encontradoAlgum = true;
-        });
-
-        let msg = document.getElementById('no-results-msg');
-        if (!encontradoAlgum) {
-            if (!msg) list.insertAdjacentHTML('beforeend', '<div id="no-results-msg" class="p-3 text-center text-muted small">Nenhum contato encontrado.</div>');
-        } else if (msg) {
-            msg.remove();
+    Array.from(contatos).forEach(contato => {
+        // Busca o nome do contato dentro do elemento (pode ser um h6, span, etc)
+        const nomeContato = contato.innerText.toLowerCase();
+        
+        if (nomeContato.includes(termo)) {
+            contato.style.display = ""; // Mostra
+        } else {
+            contato.style.display = "none"; // Esconde
         }
-    }, 200);
+    });
+
+    // Opcional: Feedback visual se não encontrar nada
+    const visiveis = Array.from(contatos).filter(c => c.style.display !== "none");
+    let msgVazia = document.getElementById('msg-sem-resultado');
+    
+    if (visiveis.length === 0) {
+        if (!msgVazia) {
+            listaContatos.insertAdjacentHTML('beforeend', 
+                '<div id="msg-sem-resultado" class="text-center p-3 text-muted">Nenhum contato encontrado</div>');
+        }
+    } else if (msgVazia) {
+        msgVazia.remove();
+    }
+};
+
+function renderizarContatos(listaDeClientes) {
+    const container = document.getElementById('lista-contatos-chat');
+    container.innerHTML = ''; // Limpa antes de renderizar
+
+    listaDeClientes.forEach(cliente => {
+        // Criando o elemento dinamicamente
+        const div = document.createElement('div');
+        div.className = 'contato-item list-group-item'; // Classe essencial para a pesquisa funcionar
+        div.innerText = cliente.nome;
+        
+        // Adiciona um evento de clique se necessário
+        div.onclick = () => carregarConversa(cliente.id);
+        
+        container.appendChild(div);
+    });
 }
 
 function mostrarPasso(passo) {
