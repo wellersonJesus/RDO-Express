@@ -178,38 +178,33 @@ function calcularTudo() {
 
 window.iniciarFluxoCheckout = function() {
     const msgInput = document.getElementById('msg-input');
-    if (!msgInput) return;
-    
-    const texto = msgInput.value;
+    const modalEl = document.getElementById('modalMapa');
 
-    // 1. Regex que captura o Solicitante e o bloco de Rota
-    // Ele para de capturar no momento que encontrar a palavra TROCA ou uma nova linha de observação
+    if (!msgInput || !modalEl) return;
+
+    const texto = msgInput.value;
     const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
     const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
 
     if (!solicitanteMatch || !rotasMatch) {
-        alert("Formato da mensagem inválido.");
+        alert("Formato da mensagem inválido!");
         return;
     }
 
     const nomeSolicitante = solicitanteMatch[1].trim();
-    
-    // 2. Processa as rotas ignorando os campos que você não quer
-    // Divide pelo padrão numérico "1." "2." etc
     const listaRotas = rotasMatch[1]
         .split(/\d+\./)
         .filter(r => r.trim().length > 0)
         .map(r => r.trim().replace(/[\(\),]/g, ''));
 
-    // 3. Preenche cabeçalho
+    // 1. Atualiza Cabeçalho
     const el = document.getElementById('header-nome-solicitante');
     if (el) el.innerText = nomeSolicitante;
 
-    // 4. Preenche rotas uma embaixo da outra
+    // 2. Preenche Rotas Verticalmente
     const container = document.getElementById('lista-rotas-detalhada');
     if (container) {
         container.innerHTML = listaRotas.map((rota, index) => {
-            // Divide o "De" e "Para" pelo pipe |
             const [de, para] = rota.split('|');
             return `
                 <div class="mb-3 border-bottom pb-2">
@@ -221,11 +216,36 @@ window.iniciarFluxoCheckout = function() {
         }).join('');
     }
 
-    // 5. Abre o modal
-    const modalEl = document.getElementById('modalMapa');
-    if (modalEl) {
-        new bootstrap.Modal(modalEl).show();
-    }
+    // 3. Inicializa Mapa com Leaflet (Evento Único)
+    modalEl.addEventListener('shown.bs.modal', function () {
+        const mapContainer = document.getElementById('container-mapa-visual');
+        
+        // Evita recriar o mapa se já existir
+        if (mapContainer._leaflet_id) return; 
+
+        const map = L.map('container-mapa-visual').setView([-19.9167, -43.9345], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Geocodificação da primeira rota
+        const [primeiraOrigem] = listaRotas[0].split('|');
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(primeiraOrigem.trim())}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const { lat, lon } = data[0];
+                    const marker = L.marker([lat, lon]).addTo(map);
+                    marker.bindPopup(`<b>Origem:</b> ${primeiraOrigem}`).openPopup();
+                    map.setView([lat, lon], 15);
+                }
+            });
+
+        setTimeout(() => map.invalidateSize(), 300);
+    }, { once: true });
+
+    // 4. Abre o Modal
+    new bootstrap.Modal(modalEl).show();
 };
 
 window.prosseguirParaFormulario = function() {
