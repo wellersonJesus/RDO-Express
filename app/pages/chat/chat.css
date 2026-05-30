@@ -1,51 +1,37 @@
-/* Layout e Fundo Estilo WhatsApp */
-.whatsapp-bg {
-    background-color: #e5ddd5 !important;
-    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-}
-
-/* Lista de Contatos Clean */
+/* Lista de Contatos - Clean & Light */
 .contact-item-clean {
     cursor: pointer;
     transition: background 0.2s;
     font-size: 0.85rem;
-    color: #444;
+    color: #555;
+    padding: 10px !important;
 }
 
-.contact-item-clean:hover {
-    background: #f8f9fa;
-}
-
-/* Tipografia Clean */
+/* Nome do contato: fonte normal, sem bold */
 .contact-name {
-    font-weight: 400;
+    font-weight: 400 !important;
     font-size: 0.9rem;
+    color: #333;
 }
 
+/* Status: mais suave */
 .contact-status {
     font-size: 0.75rem;
-    color: #999;
+    color: #bbb;
+    font-weight: 300;
 }
 
-/* Elementos Visuais */
-.img-avatar-small {
-    width: 35px;
-    height: 35px;
-    object-fit: cover;
+/* Seleção: destaque mais suave */
+.selected-contact {
+    background-color: #fff5f5 !important; 
+    border-left: 3px solid #f8d7da !important;
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-}
-
-/* Animações Otimizadas */
-@keyframes rotate-icon {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.spinner-rotate {
-    animation: rotate-icon 1s linear infinite !important;
-    display: inline-block !important;
+/* Layout e Fundo Estilo WhatsApp */
+.whatsapp-bg {
+    background-color: #e5ddd5 !important;
+    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-repeat: repeat;
+    background-size: 400px; /* Ajuste o tamanho do padrão conforme necessário */
+    background-attachment: scroll;
 }
