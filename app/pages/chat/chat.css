@@ -1,3 +1,18 @@
+/* Estilo para lista clean */
+.contact-item-clean {
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.85rem;
+    color: #444;
+}
+.contact-item-clean:hover { background: #f8f9fa; }
+
+/* Ajuste de ícones e fontes */
+.contact-name { font-weight: 400; font-size: 0.9rem; }
+.contact-status { font-size: 0.75rem; color: #999; }
+.img-avatar-small { width: 35px; height: 35px; object-fit: cover; }
+.status-dot { width: 8px; height: 8px; }
+
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .spinner-rotate { animation: spin 1s linear infinite; display: inline-block; }
 
