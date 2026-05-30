@@ -1,64 +1,7 @@
-async function initChatContacts() {
-    const chatContactList = document.getElementById('chat-contact-list');
-    if (!chatContactList) return;
-
-    // 1. Validação do status Master (mesma chave usada no bot.js)
-    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-
-    if (!isMasterOn) {
-        chatContactList.innerHTML = `
-            <div class="p-4 text-center text-muted">
-                <i class="bi bi-lock-fill fs-2 d-block mb-2"></i>
-                <p>Sistema Master desligado.<br>Contatos indisponíveis.</p>
-            </div>`;
-        return;
-    }
-
-    // 2. Busca os dados de clientes (mesma API do bot)
-    try {
-        const clientes = await API.call('getclientes');
-        renderizarLista(clientes);
-    } catch (error) {
-        console.error("Erro ao sincronizar clientes para o chat:", error);
-    }
-}
-
-function renderizarLista(lista) {
-    const container = document.getElementById('chat-contact-list');
-    
-    container.innerHTML = lista.map(item => {
-        // Lógica de Status: Verifica se o status é 'true' (string ou booleano)
-        const isOnline = String(item.status).toUpperCase() === 'TRUE';
-        const statusCor = isOnline ? 'bg-success' : 'bg-secondary';
-        const statusTexto = isOnline ? 'Online' : 'Offline';
-
-        return `
-            <div class="list-group-item d-flex align-items-center border-0 p-3 shadow-sm mb-2 rounded-3" 
-                 onclick="selecionarChat('${item.id}')" style="cursor: pointer;">
-                
-                <div class="position-relative me-3">
-                    <img src="${item.imagem || 'assets/default-user.png'}" 
-                         class="rounded-circle" width="45" height="45" style="object-fit:cover;">
-                    <span class="position-absolute bottom-0 end-0 border border-white rounded-circle ${statusCor}" 
-                          style="width: 12px; height: 12px;"></span>
-                </div>
-                
-                <div class="flex-grow-1">
-                    <h6 class="mb-0 fw-bold">${item.nome || 'Cliente'}</h6>
-                    <small class="text-muted">${statusTexto}</small>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-window.selecionarChat = (id) => {
-    console.log("Abrindo chat com ID:", id);
-    // Aqui você chama sua lógica de carregar as mensagens do cliente selecionado
-};
+let debounceTimer;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initChatContacts();
+    carregarDados();
 });
 
 async function carregarDados() {
@@ -70,12 +13,10 @@ async function carregarDados() {
 
     try {
         const clientes = await API.call('getclientes') || [];
-        
-        // Regra de Negócio: Check do Master Bot
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
         listEl.innerHTML = clientes.map(c => {
-            // Se Master ON, usa o status real do banco. Se Master OFF, força FALSE (Offline)
+            // Regra: Master OFF força todos como Offline
             const statusReal = String(c.status).toUpperCase() === 'TRUE';
             const isOnline = isMasterOn ? statusReal : false;
             
@@ -98,13 +39,41 @@ async function carregarDados() {
                 </div>
             `;
         }).join('');
-
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
+        listEl.innerHTML = '<div class="p-3 text-center text-danger small">Erro ao carregar.</div>';
     } finally {
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 }
 
-// Inicialização automática
-document.addEventListener('DOMContentLoaded', carregarDados);
+function filtrarContatos() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        const input = document.getElementById('chat-search');
+        const filter = input.value.toLowerCase();
+        const list = document.getElementById('lista-contatos-chat');
+        const items = list.getElementsByClassName('list-group-item');
+        let encontradoAlgum = false;
+
+        Array.from(items).forEach(item => {
+            const nome = item.querySelector('.contact-name').textContent.toLowerCase();
+            const visivel = nome.includes(filter);
+            item.style.display = visivel ? "flex" : "none";
+            if (visivel) encontradoAlgum = true;
+        });
+
+        // Gerencia mensagem de "Nenhum resultado"
+        let msg = document.getElementById('no-results-msg');
+        if (!encontradoAlgum) {
+            if (!msg) list.insertAdjacentHTML('beforeend', '<div id="no-results-msg" class="p-3 text-center text-muted small">Nenhum contato encontrado.</div>');
+        } else if (msg) {
+            msg.remove();
+        }
+    }, 200);
+}
+
+function abrirConversa(id) {
+    console.log("Abrindo chat com ID:", id);
+    // Sua lógica de carregar mensagens aqui
+}

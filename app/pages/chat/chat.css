@@ -1,27 +1,51 @@
-/* Estilo para lista clean */
+/* Layout e Fundo Estilo WhatsApp */
+.whatsapp-bg {
+    background-color: #e5ddd5 !important;
+    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+}
+
+/* Lista de Contatos Clean */
 .contact-item-clean {
     cursor: pointer;
     transition: background 0.2s;
     font-size: 0.85rem;
     color: #444;
 }
-.contact-item-clean:hover { background: #f8f9fa; }
 
-/* Ajuste de ícones e fontes */
-.contact-name { font-weight: 400; font-size: 0.9rem; }
-.contact-status { font-size: 0.75rem; color: #999; }
-.img-avatar-small { width: 35px; height: 35px; object-fit: cover; }
-.status-dot { width: 8px; height: 8px; }
+.contact-item-clean:hover {
+    background: #f8f9fa;
+}
 
-@keyframes spin { 100% { transform: rotate(360deg); } }
-.spinner-rotate { animation: spin 1s linear infinite; display: inline-block; }
+/* Tipografia Clean */
+.contact-name {
+    font-weight: 400;
+    font-size: 0.9rem;
+}
+
+.contact-status {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+/* Elementos Visuais */
+.img-avatar-small {
+    width: 35px;
+    height: 35px;
+    object-fit: cover;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+}
+
+/* Animações Otimizadas */
+@keyframes rotate-icon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
 .spinner-rotate {
     animation: rotate-icon 1s linear infinite !important;
     display: inline-block !important;
 }
-@keyframes rotate-icon {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-.whatsapp-bg { background-color: #e5ddd5; }
