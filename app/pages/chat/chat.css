@@ -40,3 +40,29 @@
     max-height: 300px; /* Limita a altura da lista */
     overflow-y: auto;  /* Adiciona scroll se passar de 300px */
 }
+
+#container-mapa-visual {
+    height: 250px !important;
+    width: 100%;
+    display: block !important;
+}
+
+/* Card de Rota Clean */
+.card {
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+}
+
+/* Inputs minimalistas */
+.form-control-sm {
+    border-radius: 8px !important;
+    font-size: 0.85rem;
+}
+
+/* Modal com visual suave */
+.modal-content {
+    border-radius: 20px !important;
+}

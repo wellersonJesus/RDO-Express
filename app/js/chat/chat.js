@@ -178,74 +178,49 @@ function calcularTudo() {
 
 window.iniciarFluxoCheckout = function() {
     const msgInput = document.getElementById('msg-input');
-    const modalEl = document.getElementById('modalMapa');
+    const container = document.getElementById('lista-rotas-detalhada'); // Onde as rotas aparecem
+    const modalMapaEl = document.getElementById('modalMapa');
 
-    if (!msgInput || !modalEl) return;
-
-    const texto = msgInput.value;
-    const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
-    const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
-
-    if (!solicitanteMatch || !rotasMatch) {
-        alert("Formato da mensagem inválido!");
+    if (!msgInput || !container || !modalMapaEl) {
+        console.error("Elementos não encontrados:", { msgInput, container, modalMapaEl });
         return;
     }
 
-    const nomeSolicitante = solicitanteMatch[1].trim();
-    const listaRotas = rotasMatch[1]
-        .split(/\d+\./)
-        .filter(r => r.trim().length > 0)
-        .map(r => r.trim().replace(/[\(\),]/g, ''));
+    const texto = msgInput.value;
+    const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
 
-    // 1. Atualiza Cabeçalho
-    const el = document.getElementById('header-nome-solicitante');
-    if (el) el.innerText = nomeSolicitante;
-
-    // 2. Preenche Rotas Verticalmente
-    const container = document.getElementById('lista-rotas-detalhada');
-    if (container) {
-        container.innerHTML = listaRotas.map((rota, index) => {
-            const [de, para] = rota.split('|');
-            return `
-                <div class="mb-3 border-bottom pb-2">
-                    <strong class="text-danger">${index + 1}.</strong> 
-                    <span class="d-block text-dark"><strong>De:</strong> ${de ? de.trim() : ''}</span>
-                    <span class="d-block text-dark"><strong>Para:</strong> ${para ? para.trim() : ''}</span>
-                </div>
-            `;
-        }).join('');
+    if (!rotasMatch) {
+        alert("Formato de ROTA não detectado na mensagem.");
+        return;
     }
 
-    // 3. Inicializa Mapa com Leaflet (Evento Único)
-    modalEl.addEventListener('shown.bs.modal', function () {
-        const mapContainer = document.getElementById('container-mapa-visual');
+    const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
+    const coresSoft = ['#A8DADC', '#A7C957', '#F4A261', '#E76F51', '#8D99AE'];
+
+    // PREENCHIMENTO DO CONTAINER
+    container.innerHTML = listaRotas.map((rota, index) => {
+        const [de, para] = rota.split('|');
+        const cor = coresSoft[index % coresSoft.length];
         
-        // Evita recriar o mapa se já existir
-        if (mapContainer._leaflet_id) return; 
+        return `
+            <div class="card mb-2 border-0 shadow-sm" style="border-left: 5px solid ${cor}; background: #fcfcfc;">
+                <div class="card-body p-2">
+                    <strong style="color: ${cor}">Rota ${index + 1}</strong>
+                    <div class="small"><strong>De:</strong> ${de?.trim()}</div>
+                    <div class="small mb-2"><strong>Para:</strong> ${para?.trim()}</div>
+                    <div class="row g-2">
+                        <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="KM"></div>
+                        <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="Min"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 
-        const map = L.map('container-mapa-visual').setView([-19.9167, -43.9345], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+    console.log("Rotas processadas:", listaRotas.length);
 
-        // Geocodificação da primeira rota
-        const [primeiraOrigem] = listaRotas[0].split('|');
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(primeiraOrigem.trim())}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.length > 0) {
-                    const { lat, lon } = data[0];
-                    const marker = L.marker([lat, lon]).addTo(map);
-                    marker.bindPopup(`<b>Origem:</b> ${primeiraOrigem}`).openPopup();
-                    map.setView([lat, lon], 15);
-                }
-            });
-
-        setTimeout(() => map.invalidateSize(), 300);
-    }, { once: true });
-
-    // 4. Abre o Modal
-    new bootstrap.Modal(modalEl).show();
+    // Abre o Modal
+    new bootstrap.Modal(modalMapaEl).show();
 };
 
 window.prosseguirParaFormulario = function() {
