@@ -278,7 +278,7 @@ window.iniciarFluxoCheckout = function() {
     }
 
     // 1. DEFINIÇÃO DA VARIÁVEL NO TOPO (Corrigindo o erro de referência)
-    const cores = ['#3498db', '#6c757d', '#fd7e14']; 
+    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7','#3fb8af','#c18180'];
     
     // 2. Processamento da lista
     const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
