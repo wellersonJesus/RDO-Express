@@ -42,20 +42,20 @@
                         </div>
                     </div>
 
-                    <!-- LINHA ÚNICA DAS TAXAS (Prioridade, Retorno, Dinâmica) -->
+                    <!-- LINHA DAS TAXAS (Prioridade, Retorno, Dinâmica) -->
                     <div class="row g-2 mt-2">
                         <div class="col-4">
                             <label class="small text-muted fw-bold">Prioridade</label>
                             <select id="p-prioridade" class="form-select form-select-sm rounded-pill border-secondary" onchange="calcularTudo()">
                                 <option value="0">Normal</option>
-                                <option value="5">Agendado</option>
-                                <option value="7">Urgente</option>
+                                <option value="5">Agendado (+5)</option>
+                                <option value="7">Urgente (+7)</option>
                             </select>
                         </div>
                         <div class="col-4">
                             <label class="small text-muted fw-bold">Retorno</label>
                             <select id="p-retorno" class="form-select form-select-sm rounded-pill border-secondary" onchange="calcularTudo()">
-                                <option value="0">NÃO</option>
+                                <option value="0">NÃO (0%)</option>
                                 <option value="0.6">SIM (60%)</option>
                             </select>
                         </div>
@@ -64,7 +64,7 @@
                             <select id="p-dinamica" class="form-select form-select-sm rounded-pill border-secondary" onchange="calcularTudo()">
                                 <option value="0">Tx 01 (0)</option>
                                 <option value="5">Tx 02 (5)</option>
-                                <option value="15">Tx 05 (15)</option>
+                                <option value="15">Tx 03 (15)</option>
                             </select>
                         </div>
                     </div>

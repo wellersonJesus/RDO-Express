@@ -277,41 +277,34 @@ function avancarParaFormulario() {
 }
 
 function calcularTudo() {
-    // 1. Captura de inputs
+    // 1. Captura dos valores
     const dist = parseFloat(document.getElementById('p-distancia')?.value) || 0;
     const valKm = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
-    const taxaLocal = parseFloat(document.getElementById('p-localidade')?.value) || 0;
     const prioridade = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
-    const taxaDinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
-    
-    // Captura o multiplicador do retorno (0 ou 0.6)
+    const dinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
     const multRetorno = parseFloat(document.getElementById('p-retorno')?.value) || 0;
 
-    // 2. Cálculo Base (Corrida + Taxas Fixas)
+    // 2. Cálculo Base (Corrida)
     const baseCorrida = dist * valKm;
     
-    // 3. Cálculo do Retorno (60% sobre a base da corrida)
+    // 3. Aplica Taxa de Retorno (60% da base, se selecionado '0.6')
     const valorRetorno = baseCorrida * multRetorno;
 
     // 4. Somatório Total
-    let total = baseCorrida + valorRetorno + taxaLocal + prioridade + taxaDinamica;
+    let total = baseCorrida + valorRetorno + prioridade + dinamica;
 
-    // 5. Lógica de Taxa de Cancelamento
-    // Se o usuário não definiu uma taxa fixa no input, aplicamos a regra de faixas
-    let taxaCancel = parseFloat(document.getElementById('p-taxa-cancelamento')?.value) || 0;
+    // 5. Lógica de Cancelamento (Faixas)
+    let taxaCancel = 0;
+    if (total > 71) taxaCancel = 20;
+    else if (total > 36) taxaCancel = 15;
+    else if (total > 0) taxaCancel = 10;
     
-    if (taxaCancel === 0) {
-        if (total > 71) taxaCancel = 20;
-        else if (total > 36) taxaCancel = 15;
-        else if (total > 0) taxaCancel = 10;
-    }
-    
+    // Adiciona taxa de cancelamento ao total
     total += taxaCancel;
 
-    // 6. Atualização do Display
+    // 6. Atualiza o display
     document.getElementById('view-valor-final').innerText = total.toLocaleString('pt-BR', { 
-        style: 'currency', 
-        currency: 'BRL' 
+        style: 'currency', currency: 'BRL' 
     });
 }
 
