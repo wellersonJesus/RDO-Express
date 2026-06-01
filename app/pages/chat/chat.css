@@ -75,3 +75,8 @@
     font-size: 0.78rem !important;
     padding: 4px 8px !important;
 }
+
+#container-mapa-visual {
+    height: 300px !important;
+    width: 100%;
+}

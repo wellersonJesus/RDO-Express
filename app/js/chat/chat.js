@@ -1,5 +1,6 @@
 let debounceTimer;
 let clienteSelecionado = null;
+let rotasAtuais = []; 
 
 document.addEventListener('input', (e) => {
     if (e.target && e.target.id === 'chat-search') {
@@ -130,6 +131,38 @@ function renderizarContatos(listaDeClientes) {
     });
 }
 
+async function renderizarMapaGratuito(listaRotas) {
+    const container = document.getElementById('container-mapa-visual');
+    container.innerHTML = ""; // Limpa anterior
+
+    // Inicializa o mapa centralizado em BH
+    const map = L.map(container).setView([-19.9167, -43.9345], 13);
+
+    // Camada gratuita do OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Desenha cada rota
+    listaRotas.forEach((rota, index) => {
+        // NOTA: Para desenhar a rota exata (curvas das ruas), 
+        // você precisaria de um serviço de OSRM (gratuito) ou coordenadas.
+        // Como você quer "cores tracejadas", vamos desenhar uma linha estilizada:
+        
+        const latlngs = [
+            [-19.92, -43.94], // Exemplo: Ponto A (coordenadas reais seriam necessárias)
+            [-19.95, -43.92]  // Exemplo: Ponto B
+        ];
+
+        L.polyline(latlngs, {
+            color: coresRotas[index % coresRotas.length],
+            weight: 5,
+            dashArray: '10, 10', // <--- Isso cria o efeito TRACEJADO
+            lineJoin: 'round'
+        }).addTo(map);
+    });
+}
+
 function mostrarPasso(passo) {
     // Esconde todos os steps
     ['chat', 'mapa', 'formulario'].forEach(s => {
@@ -228,11 +261,11 @@ function calcularTudo() {
 
 window.iniciarFluxoCheckout = function() {
     const msgInput = document.getElementById('msg-input');
-    const container = document.getElementById('lista-rotas-detalhada'); // Onde as rotas aparecem
+    const containerRotas = document.getElementById('lista-rotas-editavel');
     const modalMapaEl = document.getElementById('modalMapa');
 
-    if (!msgInput || !container || !modalMapaEl) {
-        console.error("Elementos não encontrados:", { msgInput, container, modalMapaEl });
+    if (!msgInput || !containerRotas || !modalMapaEl) {
+        console.error("Elementos do modal não encontrados.");
         return;
     }
 
@@ -240,37 +273,48 @@ window.iniciarFluxoCheckout = function() {
     const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
 
     if (!rotasMatch) {
-        alert("Formato de ROTA não detectado na mensagem.");
+        alert("Formato de ROTA não detectado.");
         return;
     }
 
+    // 1. DEFINIÇÃO DA VARIÁVEL NO TOPO (Corrigindo o erro de referência)
+    const cores = ['#3498db', '#6c757d', '#fd7e14']; 
+    
+    // 2. Processamento da lista
     const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
-    const coresSoft = ['#A8DADC', '#A7C957', '#F4A261', '#E76F51', '#8D99AE'];
 
-    // PREENCHIMENTO DO CONTAINER
-    container.innerHTML = listaRotas.map((rota, index) => {
+    // 3. Renderização da lista
+    containerRotas.innerHTML = `<h6 class="fw-bold mb-3">Rotas Detalhadas:</h6>` + listaRotas.map((rota, index) => {
         const [de, para] = rota.split('|');
-        const cor = coresSoft[index % coresSoft.length];
+        // Agora 'cores' é acessível aqui
+        const corAtual = cores[index % cores.length]; 
         
         return `
-            <div class="card mb-2 border-0 shadow-sm" style="border-left: 5px solid ${cor}; background: #fcfcfc;">
-                <div class="card-body p-2">
-                    <strong style="color: ${cor}">Rota ${index + 1}</strong>
-                    <div class="small"><strong>De:</strong> ${de?.trim()}</div>
-                    <div class="small mb-2"><strong>Para:</strong> ${para?.trim()}</div>
-                    <div class="row g-2">
-                        <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="KM"></div>
-                        <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="Min"></div>
-                    </div>
+            <div class="mb-3 p-2 border-start border-4 shadow-sm bg-white" style="border-color: ${corAtual} !important;">
+                <div class="fw-bold" style="color: ${corAtual}">Rota ${index + 1}</div>
+                <div class="small text-truncate">De: ${de?.trim() || 'N/A'}</div>
+                <div class="small text-truncate">Para: ${para?.trim() || 'N/A'}</div>
+                <div class="row g-2 mt-1">
+                    <div class="col-6"><input type="number" class="form-control form-control-sm input-km" placeholder="KM"></div>
+                    <div class="col-6"><input type="number" class="form-control form-control-sm input-min" placeholder="Min"></div>
                 </div>
             </div>
         `;
     }).join('');
 
-    console.log("Rotas processadas:", listaRotas.length);
+    // 4. Exibição do modal
+    const modal = new bootstrap.Modal(modalMapaEl);
+    modal.show();
 
-    // Abre o Modal
-    new bootstrap.Modal(modalMapaEl).show();
+    // 5. Configuração do mapa
+    const setupMapa = () => {
+        if (typeof renderizarMapaGratuito === 'function') {
+            renderizarMapaGratuito(listaRotas);
+        }
+        modalMapaEl.removeEventListener('shown.bs.modal', setupMapa);
+    };
+
+    modalMapaEl.addEventListener('shown.bs.modal', setupMapa);
 };
 
 window.prosseguirParaFormulario = function() {
