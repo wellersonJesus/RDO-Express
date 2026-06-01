@@ -1,14 +1,69 @@
 let debounceTimer;
-
 let clienteSelecionado = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    carregarDados();
+document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'chat-search') {
+        window.filtrarContatos();
+    }
 });
+
+window.filtrarContatos = function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        const searchInput = document.getElementById('chat-search');
+        const termo = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const listaContatos = document.getElementById('lista-contatos-chat');
+        if (!listaContatos) return;
+
+        // Seleciona todos os itens da lista
+        const contatos = listaContatos.querySelectorAll('.contact-item-clean');
+
+        contatos.forEach(contato => {
+            // Busca o nome dentro do elemento atual
+            const nomeEl = contato.querySelector('.contact-name');
+            const textoNome = nomeEl ? nomeEl.innerText.toLowerCase() : '';
+            
+            console.log("Comparando:", textoNome, "com", termo); // DEBUG: verifique se isso aparece no F12
+
+            if (textoNome.includes(termo)) {
+                contato.style.setProperty('display', 'flex', 'important');
+            } else {
+                contato.style.setProperty('display', 'none', 'important');
+            }
+        });
+    }, 300);
+};
 
 document.querySelectorAll('#modalFormulario input, #modalFormulario select').forEach(el => {
     el.addEventListener('change', calcularTudo);
 });
+
+function criarElementoContato(cliente, isMasterOn) {
+    const id = cliente.id || '';
+    const nome = (cliente.nome || cliente.username || 'Sem nome').replace(/'/g, "\\'");
+    const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+    
+    // Lógica de status
+    const statusReal = String(cliente.status || '').toUpperCase() === 'TRUE';
+    const isOnline = isMasterOn && statusReal;
+    const statusText = isOnline ? 'Online' : 'Offline';
+    const statusColor = isOnline ? '#28a745' : '#adb5bd';
+
+    return `
+        <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
+             onclick="abrirConversa('${id}', '${nome}', '${imagem}')">
+            <div class="position-relative">
+                <img src="${imagem}" class="rounded-circle img-avatar-small" style="width:35px; height:35px; object-fit:cover;">
+                <span class="position-absolute bottom-0 end-0 rounded-circle border border-white status-dot" 
+                      style="background-color: ${statusColor};"></span>
+            </div>
+            <div class="ms-3 overflow-hidden">
+                <div class="contact-name text-truncate">${nome}</div>
+                <div class="contact-status small text-muted">${statusText}</div>
+            </div>
+        </div>
+    `;
+}
 
 async function carregarDados() {
     const listEl = document.getElementById('lista-contatos-chat');
@@ -21,33 +76,32 @@ async function carregarDados() {
         const clientes = await API.call('getclientes') || [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // Aqui está o trecho que você perguntou: ele cria a linha do contato dinamicamente
-        listEl.innerHTML = clientes.map(c => {
-            const id = c.id || '';
-            const nomeExibicao = (c.nome || c.username || 'Sem nome').replace(/'/g, "\\'");
-            const imagem = c.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        // Renderiza usando a lógica padronizada
+        listEl.innerHTML = clientes.map(cliente => {
+            const id = cliente.id || '';
+            const nome = (cliente.nome || cliente.username || 'Sem nome').replace(/'/g, "\\'");
+            const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
             
-            const statusReal = String(c.status || '').toUpperCase() === 'TRUE';
-            const isOnline = isMasterOn ? statusReal : false;
+            const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
             const statusText = isOnline ? 'Online' : 'Offline';
             const statusColor = isOnline ? '#28a745' : '#adb5bd';
 
-            // O trecho do onclick passa o ID, NOME e IMAGEM para a função abrirConversa
             return `
                 <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
-                     onclick="abrirConversa('${id}', '${nomeExibicao}', '${imagem}')">
+                     onclick="abrirConversa('${id}', '${nome}', '${imagem}')">
                     <div class="position-relative">
-                        <img src="${imagem}" class="rounded-circle img-avatar-small" style="width:35px; height:35px; object-fit:cover;">
-                        <span class="position-absolute bottom-0 end-0 rounded-circle border border-white status-dot" 
-                              style="background-color: ${statusColor};"></span>
+                        <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
+                        <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
+                              style="width:10px; height:10px; background-color: ${statusColor};"></span>
                     </div>
                     <div class="ms-3 overflow-hidden">
-                        <div class="contact-name text-truncate">${nomeExibicao}</div>
-                        <div class="contact-status">${statusText}</div>
+                        <div class="contact-name fw-bold">${nome}</div>
+                        <div class="small text-muted">${statusText}</div>
                     </div>
                 </div>
             `;
         }).join('');
+        
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
     } finally {
@@ -55,38 +109,9 @@ async function carregarDados() {
     }
 }
 
-window.filtrarContatos = function() {
-    const termo = document.getElementById('chat-search').value.toLowerCase();
-    const listaContatos = document.getElementById('lista-contatos-chat');
-    
-    // Supondo que seus contatos dentro da lista sejam divs ou links com uma classe comum
-    // Exemplo: <div class="contato-item">...</div>
-    const contatos = listaContatos.getElementsByClassName('contato-item');
-
-    Array.from(contatos).forEach(contato => {
-        // Busca o nome do contato dentro do elemento (pode ser um h6, span, etc)
-        const nomeContato = contato.innerText.toLowerCase();
-        
-        if (nomeContato.includes(termo)) {
-            contato.style.display = ""; // Mostra
-        } else {
-            contato.style.display = "none"; // Esconde
-        }
-    });
-
-    // Opcional: Feedback visual se não encontrar nada
-    const visiveis = Array.from(contatos).filter(c => c.style.display !== "none");
-    let msgVazia = document.getElementById('msg-sem-resultado');
-    
-    if (visiveis.length === 0) {
-        if (!msgVazia) {
-            listaContatos.insertAdjacentHTML('beforeend', 
-                '<div id="msg-sem-resultado" class="text-center p-3 text-muted">Nenhum contato encontrado</div>');
-        }
-    } else if (msgVazia) {
-        msgVazia.remove();
-    }
-};
+document.addEventListener('DOMContentLoaded', () => {
+    carregarDados();
+});
 
 function renderizarContatos(listaDeClientes) {
     const container = document.getElementById('lista-contatos-chat');
