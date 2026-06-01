@@ -7,30 +7,62 @@
                     Solicitante: <span id="header-nome-solicitante" class="fw-bold text-dark"></span>
                 </div>
             </div>
-            
+
             <div class="modal-body p-4 pt-2">
                 <form id="form-checkout">
-                    <div class="mb-2">
-                        <small class="text-muted fw-bold">Solicitante:</small>
-                        <input type="text" id="p-solicitante" class="form-control form-control-sm rounded-pill border-secondary" readonly>
+                    <div class="row g-2">
+                        <div class="col-6"><label class="small fw-bold">Solicitante</label><input type="text"
+                                id="p-solicitante" class="form-control rounded-pill border-secondary" readonly></div>
+                        <div class="col-6"><label class="small fw-bold">Contato</label><input type="text" id="p-contato"
+                                class="form-control rounded-pill border-secondary"></div>
                     </div>
 
-                    <div class="row g-2">
-                        <div class="col-6"><input type="text" id="p-contato" class="form-control form-control-sm rounded-pill border-secondary" placeholder="Contato"></div>
-                        <div class="col-6"><input type="time" id="p-horario" class="form-control form-control-sm rounded-pill border-secondary"></div>
-                        <div class="col-4"><input type="number" id="p-distancia" class="form-control form-control-sm rounded-pill border-secondary" placeholder="KM Total"></div>
-                        <div class="col-4"><input type="text" id="p-tempo" class="form-control form-control-sm rounded-pill border-secondary" placeholder="Tempo Est."></div>
-                        <div class="col-4">
-                            <select id="p-prioridade" class="form-select form-select-sm rounded-pill border-secondary">
-                                <option value="0">Normal</option>
-                                <option value="7">Urgente</option>
+                    <div class="row g-2 mt-2">
+                        <div class="col-4"><label class="small fw-bold">Horário</label><input type="time" id="p-horario"
+                                class="form-control rounded-pill border-secondary"></div>
+                        <div class="col-4"><label class="small fw-bold">KM</label><input type="number" id="p-distancia"
+                                class="form-control rounded-pill border-secondary" placeholder="0"></div>
+                        <div class="col-4"><label class="small fw-bold">Tempo</label><input type="text" id="p-tempo"
+                                class="form-control rounded-pill border-secondary" placeholder="Ex: 30min"></div>
+                    </div>
+
+                    <div class="row g-2 mt-2">
+                        <div class="col-6"><label class="small fw-bold">Valor KM</label>
+                            <select id="p-valor-km" class="form-select rounded-pill border-secondary">
+                                <option value="2.02">R$ 2,02</option>
+                                <option value="2.20">R$ 2,20</option>
+                                <option value="3.00">R$ 3,00</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><label class="small fw-bold">Mercadoria</label>
+                            <select id="p-mercadoria" class="form-select rounded-pill border-secondary">
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="my-2" id="container-linhas-rotas"></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-6"><label class="small fw-bold">Retorno</label>
+                            <select id="p-retorno" class="form-select rounded-pill border-secondary">
+                                <option value="0">NÃO (Taxa 0)</option>
+                                <option value="0.6">SIM (Taxa 60%)</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><label class="small fw-bold">Taxa Dinâmica</label>
+                            <select id="p-dinamica" class="form-select rounded-pill border-secondary">
+                                <option value="0">Taxa 01 (0)</option>
+                                <option value="5">Taxa 02 (5)</option>
+                                <option value="15">Taxa 05 (15)</option>
+                            </select>
+                        </div>
+                    </div>
 
-                    <textarea id="p-obs" class="form-control form-control-sm rounded-3 border-secondary" rows="2" placeholder="Observações"></textarea>
+                    <div class="mt-2"><label class="small fw-bold">Rota</label><textarea id="p-rotas"
+                            class="form-control rounded-3 border-secondary" rows="2"></textarea></div>
+                    <div class="mt-2"><label class="small fw-bold">Observação</label><textarea id="p-obs"
+                            class="form-control rounded-3 border-secondary" rows="2"></textarea></div>
                 </form>
 
                 <div class="mt-3 p-2 bg-light rounded-3 text-center border border-secondary">
@@ -39,8 +71,10 @@
                 </div>
 
                 <div class="row g-2 mt-3">
-                    <div class="col-5"><button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="window.voltarParaMapa()">Voltar</button></div>
-                    <div class="col-7"><button type="button" class="btn btn-danger w-100 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button></div>
+                    <div class="col-5"><button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold"
+                            onclick="window.voltarParaMapa()">Voltar</button></div>
+                    <div class="col-7"><button type="button" class="btn btn-danger w-100 rounded-pill fw-bold"
+                            onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button></div>
                 </div>
             </div>
         </div>

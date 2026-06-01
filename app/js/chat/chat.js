@@ -8,8 +8,6 @@ document.addEventListener('input', (e) => {
     }
 });
 
-window.dadosPedidoAtual = {}; // Objeto global para persistir dados
-
 window.filtrarContatos = function() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -262,73 +260,79 @@ function avancarParaFormulario() {
 }
 
 function calcularTudo() {
+    // 1. Captura dos valores básicos
     const dist = parseFloat(document.getElementById('p-distancia').value) || 0;
     const valKm = parseFloat(document.getElementById('p-valor-km').value) || 2.20;
-    const taxaLocal = parseFloat(document.getElementById('p-localidade').value) || 0;
+    const taxaLocal = parseFloat(document.getElementById('p-localidade')?.value) || 0; // Campo opcional
     const prioridade = parseFloat(document.getElementById('p-prioridade').value) || 0;
-    const isRetorno = document.getElementById('p-troca').value === 'SIM';
     
-    // Cálculo: (KM * Valor) + Localidade + Prioridade + (Retorno se houver)
-    let total = (dist * valKm) + taxaLocal + prioridade;
+    // 2. Captura dos novos valores
+    const taxaDinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
+    const isRetorno = document.getElementById('p-retorno')?.value === 'SIM';
+    
+    // 3. Lógica do Cálculo
+    // (KM * Valor) + Localidade + Prioridade + Dinâmica
+    let total = (dist * valKm) + taxaLocal + prioridade + taxaDinamica;
+    
+    // Aplica a taxa de retorno (60% sobre a taxa local, se existir)
     if (isRetorno) total += (taxaLocal * 0.60);
 
-    const cancel = parseFloat(document.getElementById('p-taxa-cancelamento').value) || 0;
-    if (cancel > 0) total = cancel; // Sobrescreve se houver taxa de cancelamento
+    // 4. Lógica de Cancelamento (Sobrescreve se houver taxa de cancelamento ativa)
+    // A lógica de faixas que você pediu:
+    let cancel = 0;
+    if (total > 71) cancel = 20;
+    else if (total > 36) cancel = 15;
+    else if (total > 0) cancel = 10;
 
+    // Se o sistema já define uma taxa, usamos ela, caso contrário aplica a de faixas
+    const taxaCancelamentoFixa = parseFloat(document.getElementById('p-taxa-cancelamento')?.value) || 0;
+    total += (taxaCancelamentoFixa > 0 ? taxaCancelamentoFixa : cancel);
+
+    // Atualiza o display
     document.getElementById('view-valor-final').innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 window.iniciarFluxoCheckout = async function() {
-    console.log("Iniciando fluxo de mapa...");
     const texto = document.getElementById('msg-input').value;
     
-    // 1. Popula dados
+    // Extração robusta
     window.dadosPedidoAtual = {
-        solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || '',
-        contato: texto.match(/CONTATO:\s*(.*)/i)?.[1] || '',
-        rotas: texto.match(/ROTA:\s*([\s\S]*?)(?=PRIORIDADE|$)/i)?.[1] || ''
+        solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || '',
+        contato: texto.match(/CONTATO:\s*(.*)/i)?.[1]?.trim() || '',
+        horario: texto.match(/HORÁRIO:\s*(.*)/i)?.[1]?.trim() || '',
+        distancia: texto.match(/DISTANCIA:\s*(\d+)/i)?.[1]?.trim() || '',
+        tempo: texto.match(/TEMPO:\s*(.*)/i)?.[1]?.trim() || '',
+        rotas: texto.match(/ROTA:\s*([\s\S]*?)(?=OBSERVAÇÃO|$)/i)?.[1]?.trim() || '',
+        obs: texto.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || ''
     };
     
-    // 2. Garante que o container de modais exista
-    let modalContainer = document.getElementById('modal-container');
-    if (!modalContainer) {
-        modalContainer = document.createElement('div');
-        modalContainer.id = 'modal-container';
-        document.body.appendChild(modalContainer);
-    }
-    
-    // 3. Carrega o arquivo e AGUARDA
+    // Abre o modal do Mapa
     await window.loadModal('modal_mapa.html');
+    const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
+    modalMapa.show();
     
-    // 4. Aguarda o DOM renderizar o elemento (pequeno delay de segurança)
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const modalEl = document.getElementById('modalMapa');
-    if (modalEl) {
-        document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
-        
-        // Inicializa e mostra
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-        
-        // Renderiza o mapa após o modal estar visível
-        renderizarMapaGratuito();
-    } else {
-        console.error("ModalMapa não foi encontrado após carregar o arquivo.");
-    }
+    // Renderiza mapa
+    setTimeout(renderizarMapaGratuito, 500);
 };
 
-window.prosseguirParaFormulario = function() {
-    // Fecha o modal atual
-    const modalEl = document.getElementById('modalMapa');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if(modal) modal.hide();
-
-    // Remove a "película cinza" (backdrop) que as vezes trava
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+window.prosseguirParaFormulario = async function() {
+    // 1. Fecha Mapa
+    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    if(modalMapa) modalMapa.hide();
     
-    // Mostra o passo seguinte
-    mostrarPasso('formulario');
+    // 2. Carrega Formulário
+    await window.loadModal('modal_form.html');
+    
+    // 3. Popula os campos automaticamente
+    Object.keys(window.dadosPedidoAtual).forEach(key => {
+        const el = document.getElementById(`p-${key}`);
+        if (el) el.value = window.dadosPedidoAtual[key];
+    });
+
+    // 4. Exibe Formulário e calcula o valor inicial
+    const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
+    modalForm.show();
+    calcularTudo(); // Chama sua função de cálculo atualizada
 };
 
 window.salvarPedidoAPI = async function() {
@@ -368,25 +372,40 @@ window.salvarPedidoAPI = async function() {
 };
 
 window.abrirCheckoutDoMapa = async function() {
-    console.log("Iniciando fluxo de checkout..."); // Log 1
+    console.log("Fluxo de checkout: Carregando formulário...");
 
+    // 1. Fecha o mapa e aguarda a transição
     const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
     if (modalMapa) modalMapa.hide();
-    
-    console.log("Tentando carregar modal_form.html..."); // Log 2
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 2. Carrega o HTML do formulário (o await aqui é vital)
     await window.loadModal('modal_form.html');
-    
+
+    // 3. Aguarda o DOM estar pronto para leitura
     const modalFormEl = document.getElementById('modalFormulario');
-    console.log("Modal encontrado?", !!modalFormEl); // Log 3
     
-    if (modalFormEl) {
-        // Preenchimento...
-        const modalForm = new bootstrap.Modal(modalFormEl);
-        modalForm.show();
-        console.log("Modal exibido."); // Log 4
-    } else {
-        alert("Erro crítico: O formulário não foi carregado no HTML.");
+    // 4. Preenche os dados usando o seu objeto global `window.dadosPedidoAtual`
+    // Usamos verificações para não travar caso algum dado falte
+    const pSolicitante = document.getElementById('p-solicitante');
+    const pContato = document.getElementById('p-contato');
+    const headerNome = document.getElementById('header-nome-solicitante');
+    const containerRotas = document.getElementById('container-linhas-rotas');
+
+    if (pSolicitante) pSolicitante.value = window.dadosPedidoAtual.solicitante || '';
+    if (pContato) pContato.value = window.dadosPedidoAtual.contato || '';
+    if (headerNome) headerNome.innerText = window.dadosPedidoAtual.solicitante || 'Não informado';
+    
+    // Preenche as rotas (garantindo que o formato no chat seja lido)
+    if (containerRotas) {
+        containerRotas.innerHTML = `<p class="small text-muted mb-0">${window.dadosPedidoAtual.rotas || 'Sem rotas definidas'}</p>`;
     }
+
+    // 5. Exibe o modal apenas após ter preenchido tudo
+    const modalForm = new bootstrap.Modal(modalFormEl);
+    modalForm.show();
+    
+    console.log("Dados preenchidos com sucesso.");
 };
 
 window.voltarParaMapa = async function() {
@@ -452,6 +471,7 @@ function limparBackdrops() {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
 }
+
 
 window.iniciarChat = function() {
     console.log("Chat pronto para operar");
