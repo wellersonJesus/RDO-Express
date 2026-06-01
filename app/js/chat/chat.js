@@ -206,17 +206,36 @@ function aoReceberMensagem(texto) {
     }
 }
 
-function prosseguirParaFormulario() {
-    // Fecha mapa e abre formulário
-    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+window.prosseguirParaFormulario = async function() {
+    // 1. Fecha o modal do Mapa
+    const modalMapaEl = document.getElementById('modalMapa');
+    const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
     if (modalMapa) modalMapa.hide();
-    
-    setTimeout(() => {
-        const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
-        modalForm.show();
-        mostrarPasso('formulario');
-    }, 300);
-}
+
+    // 2. Garante que o Modal do Formulário esteja carregado e abre
+    // Nota: Certifique-se de que o modalFormulario já está no DOM
+    const modalFormEl = document.getElementById('modalFormulario');
+    const modalForm = new bootstrap.Modal(modalFormEl);
+    modalForm.show();
+
+    // 3. Aplica os dados persistidos (ex: window.dadosPedidoAtual)
+    if (window.dadosPedidoAtual) {
+        // Preenche o campo de input
+        const inputSolicitante = document.getElementById('p-solicitante');
+        if (inputSolicitante) inputSolicitante.value = window.dadosPedidoAtual.solicitante || '';
+
+        // Atualiza o Cabeçalho do Formulário (O novo solicitado)
+        const headerNome = document.getElementById('form-nome-solicitante');
+        if (headerNome) headerNome.innerText = window.dadosPedidoAtual.solicitante || 'Não informado';
+
+        // Preenche o campo de Rotas com os dados do pedido/mapa
+        const inputRotas = document.getElementById('p-rotas');
+        if (inputRotas) inputRotas.value = window.dadosPedidoAtual.rotas || '';
+    }
+
+    // 4. Executa o cálculo inicial para o valor não ficar R$ 0,00 parado
+    calcularTudo();
+};
 
 window.abrirConversa = function(id, nome, urlImagem) {
     clienteSelecionado = id;
@@ -240,19 +259,17 @@ window.abrirConversa = function(id, nome, urlImagem) {
     event.currentTarget.classList.add('selected-contact');
 };
 
-function abrirModalMapa(dados) {
-    // 1. Nome do solicitante no header
-    document.getElementById('header-nome-solicitante').innerText = dados.solicitante;
+window.abrirModalMapaComDados = function(nomeDoChat) {
+    // Define o solicitante como o nome vindo do chat
+    window.dadosPedidoAtual.solicitante = nomeDoChat;
     
-    // 2. Preencher a lista de rotas sem colchetes
-    const containerRotas = document.getElementById('lista-rotas-detalhada');
-    containerRotas.innerHTML = dados.rotas.map((r, index) => {
-        return `<div>Rota ${index + 1}: De: ${r.de} Para: ${r.para}</div>`;
-    }).join('');
+    // Atualiza o display no Modal Mapa
+    const headerNome = document.getElementById('header-nome-solicitante');
+    if(headerNome) headerNome.innerText = nomeDoChat;
     
-    // 3. Abrir o modal
-    new bootstrap.Modal(document.getElementById('modalMapa')).show();
-}
+    const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
+    modalMapa.show();
+};
 
 function avancarParaFormulario() {
     mostrarPasso('formulario');
@@ -260,36 +277,42 @@ function avancarParaFormulario() {
 }
 
 function calcularTudo() {
-    // 1. Captura dos valores básicos
-    const dist = parseFloat(document.getElementById('p-distancia').value) || 0;
-    const valKm = parseFloat(document.getElementById('p-valor-km').value) || 2.20;
-    const taxaLocal = parseFloat(document.getElementById('p-localidade')?.value) || 0; // Campo opcional
-    const prioridade = parseFloat(document.getElementById('p-prioridade').value) || 0;
-    
-    // 2. Captura dos novos valores
+    // 1. Captura de inputs
+    const dist = parseFloat(document.getElementById('p-distancia')?.value) || 0;
+    const valKm = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
+    const taxaLocal = parseFloat(document.getElementById('p-localidade')?.value) || 0;
+    const prioridade = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
     const taxaDinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
-    const isRetorno = document.getElementById('p-retorno')?.value === 'SIM';
     
-    // 3. Lógica do Cálculo
-    // (KM * Valor) + Localidade + Prioridade + Dinâmica
-    let total = (dist * valKm) + taxaLocal + prioridade + taxaDinamica;
+    // Captura o multiplicador do retorno (0 ou 0.6)
+    const multRetorno = parseFloat(document.getElementById('p-retorno')?.value) || 0;
+
+    // 2. Cálculo Base (Corrida + Taxas Fixas)
+    const baseCorrida = dist * valKm;
     
-    // Aplica a taxa de retorno (60% sobre a taxa local, se existir)
-    if (isRetorno) total += (taxaLocal * 0.60);
+    // 3. Cálculo do Retorno (60% sobre a base da corrida)
+    const valorRetorno = baseCorrida * multRetorno;
 
-    // 4. Lógica de Cancelamento (Sobrescreve se houver taxa de cancelamento ativa)
-    // A lógica de faixas que você pediu:
-    let cancel = 0;
-    if (total > 71) cancel = 20;
-    else if (total > 36) cancel = 15;
-    else if (total > 0) cancel = 10;
+    // 4. Somatório Total
+    let total = baseCorrida + valorRetorno + taxaLocal + prioridade + taxaDinamica;
 
-    // Se o sistema já define uma taxa, usamos ela, caso contrário aplica a de faixas
-    const taxaCancelamentoFixa = parseFloat(document.getElementById('p-taxa-cancelamento')?.value) || 0;
-    total += (taxaCancelamentoFixa > 0 ? taxaCancelamentoFixa : cancel);
+    // 5. Lógica de Taxa de Cancelamento
+    // Se o usuário não definiu uma taxa fixa no input, aplicamos a regra de faixas
+    let taxaCancel = parseFloat(document.getElementById('p-taxa-cancelamento')?.value) || 0;
+    
+    if (taxaCancel === 0) {
+        if (total > 71) taxaCancel = 20;
+        else if (total > 36) taxaCancel = 15;
+        else if (total > 0) taxaCancel = 10;
+    }
+    
+    total += taxaCancel;
 
-    // Atualiza o display
-    document.getElementById('view-valor-final').innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    // 6. Atualização do Display
+    document.getElementById('view-valor-final').innerText = total.toLocaleString('pt-BR', { 
+        style: 'currency', 
+        currency: 'BRL' 
+    });
 }
 
 window.iniciarFluxoCheckout = async function() {
@@ -336,38 +359,51 @@ window.prosseguirParaFormulario = async function() {
 };
 
 window.salvarPedidoAPI = async function() {
-    const form = document.getElementById('form-checkout');
-    const inputs = form.querySelectorAll('input:not([readonly]), select, textarea');
-    let isValid = true;
+    const btn = document.getElementById('btn-finalizar');
+    const txt = document.getElementById('btn-text');
+    const spn = document.getElementById('btn-spinner');
 
-    inputs.forEach(input => {
-        // Remove erros anteriores
-        input.classList.remove('border-danger', 'border-2');
-        input.classList.add('border-secondary');
-        
-        // Verifica vazio
-        if (!input.value || input.value.trim() === "") {
-            input.classList.add('border-danger', 'border-2');
-            input.classList.remove('border-secondary');
-            isValid = false;
-        }
-    });
-
-    if (!isValid) return; // Interrompe se houver erro
-
-    // --- Lógica de Envio ---
-    const btn = event.currentTarget;
     btn.disabled = true;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Finalizando...';
+    txt.innerText = "Processando...";
+    spn.classList.remove('d-none');
 
+    // Monta o objeto com os dados atuais
+    const pedido = {
+        solicitante: document.getElementById('p-solicitante').value,
+        contato: document.getElementById('p-contato').value,
+        rotas: document.getElementById('p-rotas').value,
+        valorFinal: document.getElementById('view-valor-final').innerText
+    };
+
+    // Simulação do envio para o seu chat
     try {
-        // (Sua lógica de coleta de dados e API permanece aqui)
-        await window.API.call('enviarMensagemChat', { mensagem: "Pedido gerado..." });
-        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
-    } catch (e) {
-        btn.innerHTML = originalText;
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Tempo de processamento
+        
+        // Formata a mensagem para o chat
+        const mensagemFormatada = `
+📦 **PEDIDO FINALIZADO**
+👤 Solicitante: ${pedido.solicitante}
+📞 Contato: ${pedido.contato}
+📍 Rota: ${pedido.rotas}
+💰 Valor: ${pedido.valorFinal}
+        `.trim();
+
+        // Insere no input do seu chat e limpa o modal
+        document.getElementById('msg-input').value = mensagemFormatada;
+        
+        // Fecha o modal
+        const modalEl = document.getElementById('modalFormulario');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+        
+        alert("Pedido enviado com sucesso!");
+    } catch (error) {
+        alert("Erro ao finalizar pedido.");
+    } finally {
+        // Reseta o botão
         btn.disabled = false;
+        txt.innerText = "FINALIZAR PEDIDO";
+        spn.classList.add('d-none');
     }
 };
 
@@ -471,7 +507,6 @@ function limparBackdrops() {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
 }
-
 
 window.iniciarChat = function() {
     console.log("Chat pronto para operar");
