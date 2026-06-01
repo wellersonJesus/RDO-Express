@@ -129,72 +129,57 @@ window.editarBot = async (id) => {
 
 window.editarBot = async (id) => {
     const item = window.botState.cache.find(i => i.id == id);
-    if(item) {
-        window.botState.idEmEdicao = id;
-        window.botState.origemEmEdicao = item.origem;
-        await window.abrirModalEspecifico(item.origem, item);
-        
-        // Bloqueio de segurança se for cliente ou colaborador
-        const isReadOnly = (item.origem === 'clientes' || item.origem === 'colaboradores');
-        const modal = document.getElementById(item.origem === 'usuarios' ? 'modalUsuario' : (item.origem === 'clientes' ? 'modalCliente' : 'modalColaborador'));
-        
-        if(isReadOnly) {
-            modal.querySelectorAll('input, select').forEach(i => i.disabled = true);
-            // Re-habilita apenas o status se necessário, ou esconde o botão de salvar
-            modal.querySelector('.btn-danger').style.display = 'none';
-        }
+    if (!item) return;
+
+    window.botState.idEmEdicao = id;
+    window.botState.origemEmEdicao = item.origem;
+    
+    // Abre o modal passando os dados para preenchimento
+    await window.abrirModalEspecifico(item.origem, item);
+    
+    // Lógica de bloqueio: Clientes e Colaboradores são "ReadOnly" aqui
+    const isReadOnly = (item.origem !== 'usuarios');
+    const modalId = item.origem === 'usuarios' ? 'modalUsuario' : 
+                    (item.origem === 'clientes' ? 'modalCliente' : 'modalColaborador');
+    
+    const modalEl = document.getElementById(modalId);
+    if (modalEl) {
+        modalEl.querySelectorAll('input, select').forEach(i => i.disabled = isReadOnly);
+        const btnSalvar = modalEl.querySelector('.btn-danger');
+        if (btnSalvar) btnSalvar.style.display = isReadOnly ? 'none' : 'block';
     }
 };
 
 window.abrirModalEspecifico = async (origem, data = null) => {
-    const paths = { 
-        'usuarios': 'pages/usuarios/modal-usuario.html', 
-        'clientes': 'pages/clientes/modal-cliente.html', 
-        'colaboradores': 'pages/colaborador/modal-colaborador.html' 
-    };
     const map = { 'usuarios': 'modalUsuario', 'clientes': 'modalCliente', 'colaboradores': 'modalColaborador' };
     const modalId = map[origem];
-
-    // Verifica se o modal já existe no DOM
     let modalEl = document.getElementById(modalId);
 
-    // Se não existir, carrega via fetch
+    // Se o modal não existir no DOM, busca via Fetch
     if (!modalEl) {
-        try {
-            const resp = await fetch(paths[origem]);
-            if (!resp.ok) throw new Error("Erro ao carregar modal");
-            const html = await resp.text();
-            
-            // Insere o HTML no corpo da página
-            document.body.insertAdjacentHTML('beforeend', html);
-            modalEl = document.getElementById(modalId);
-        } catch (e) {
-            console.error("Erro ao buscar o arquivo do modal:", e);
-            alert("Erro ao carregar formulário. Verifique o caminho do arquivo.");
-            return;
-        }
+        const paths = { 'usuarios': 'pages/usuarios/modal-usuario.html', 'clientes': 'pages/clientes/modal-cliente.html', 'colaboradores': 'pages/colaborador/modal-colaborador.html' };
+        const resp = await fetch(paths[origem]);
+        const html = await resp.text();
+        document.body.insertAdjacentHTML('beforeend', html);
+        modalEl = document.getElementById(modalId);
     }
 
-    // Preenche os campos se houver dados (para edição)
+    // Preenchimento dos dados
     const inputs = modalEl.querySelectorAll('input, select');
     inputs.forEach(i => {
-        if (i.id) {
-            const campo = i.id.split('-')[1];
-            i.value = (data && data[campo]) ? data[campo] : '';
-            i.disabled = false;
-            i.style.borderColor = '';
+        const key = i.id.split('-').pop(); // Pega o nome do campo após o hífen
+        if (data && data.hasOwnProperty(key)) {
+            i.value = data[key];
+        } else if (!data) {
+            i.value = '';
         }
+        i.disabled = false;
+        i.style.borderColor = '';
     });
 
-    // Garante que o botão de salvar esteja visível
-    const btnSalvar = modalEl.querySelector('.btn-danger');
-    if (btnSalvar) btnSalvar.style.display = 'block';
-
-    // ABERTURA SEGURA: Instancia o modal do Bootstrap apenas se o elemento existir
-    if (modalEl) {
-        const modalInstance = new bootstrap.Modal(modalEl);
-        modalInstance.show();
-    }
+    // Abertura segura
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
 };
 
 window.salvarNovo = async (modalId) => {
@@ -235,3 +220,8 @@ window.alterarStatusDireto = async (id, status, origem) => {
 };
 
 window.confirmarExclusao = (id, origem) => { /* Mantida mesma lógica */ };
+
+window.initBotPage = function() {
+    console.log("Bot inicializado.");
+    // Coloque aqui sua lógica de carregar botões, status, etc.
+};

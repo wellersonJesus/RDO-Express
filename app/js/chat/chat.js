@@ -415,3 +415,8 @@ function limparBackdrops() {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
 }
+
+window.iniciarChat = function() {
+    console.log("Chat pronto para operar");
+    carregarDados();
+};

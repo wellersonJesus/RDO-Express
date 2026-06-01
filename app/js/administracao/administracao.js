@@ -5,7 +5,6 @@ window.adminState = {
     itensPorPagina: 15 // Limite fixo em 15
 };
 
-// No administracao.js
 window.abrirModalCadastro = () => {
     const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     
@@ -344,3 +343,7 @@ window.toggleComissao = () => {
     else divComissao.classList.add('d-none');
 };
 
+window.initAdminPage = function() {
+    console.log("Administração inicializada.");
+    // Coloque aqui sua lógica de carregar tabelas, configs, etc.
+};
