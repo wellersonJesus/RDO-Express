@@ -8,6 +8,8 @@ document.addEventListener('input', (e) => {
     }
 });
 
+window.dadosPedidoAtual = {}; // Objeto global para persistir dados
+
 window.filtrarContatos = function() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -131,37 +133,51 @@ function renderizarContatos(listaDeClientes) {
     });
 }
 
-async function renderizarMapaGratuito(listaRotas) {
+function renderizarMapaGratuito(destinos) {
     const container = document.getElementById('container-mapa-visual');
-    container.innerHTML = ""; // Limpa anterior
-
-    // Inicializa o mapa centralizado em BH
-    const map = L.map(container).setView([-19.9167, -43.9345], 13);
-
-    // Camada gratuita do OpenStreetMap
+    if (!container) return;
+    
+    // Limpeza de instância anterior
+    container.innerHTML = '<div id="map" style="width:100%; height:250px;"></div>';
+    const map = L.map('map').setView([-19.9167, -43.9345], 13);
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
-
-    // Desenha cada rota
-    listaRotas.forEach((rota, index) => {
-        // NOTA: Para desenhar a rota exata (curvas das ruas), 
-        // você precisaria de um serviço de OSRM (gratuito) ou coordenadas.
-        // Como você quer "cores tracejadas", vamos desenhar uma linha estilizada:
-        
-        const latlngs = [
-            [-19.92, -43.94], // Exemplo: Ponto A (coordenadas reais seriam necessárias)
-            [-19.95, -43.92]  // Exemplo: Ponto B
-        ];
-
-        L.polyline(latlngs, {
-            color: coresRotas[index % coresRotas.length],
-            weight: 5,
-            dashArray: '10, 10', // <--- Isso cria o efeito TRACEJADO
-            lineJoin: 'round'
-        }).addTo(map);
-    });
 }
+
+function renderizarMapaTracejado(latlngs) {
+    const container = document.getElementById('container-mapa-visual');
+    if (!container) return;
+
+    // Limpa instância anterior do Leaflet se existir
+    const mapDiv = L.DomUtil.get('container-mapa-visual');
+    if (mapDiv._leaflet_id) mapDiv._leaflet_id = null;
+
+    const map = L.map(container).setView(latlngs[0], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    L.polyline(latlngs, {
+        color: '#dc3545',
+        weight: 6,
+        dashArray: '10, 10', // Efeito Tracejado
+        lineJoin: 'round'
+    }).addTo(map);
+}
+
+window.abrirCheckoutDoMapa = async function() {
+    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    modalMapa.hide();
+    
+    await window.loadModal('modal_form.html');
+    // Adiciona o botão voltar ao cabeçalho do formulário
+    const header = document.querySelector('#modalFormulario .modal-header');
+    header.insertAdjacentHTML('afterbegin', `
+        <button type="button" class="btn btn-link text-danger p-0 mb-2" onclick="window.voltarParaMapa()">
+            <i class="bi bi-arrow-left"></i> Voltar ao Mapa
+        </button>
+    `);
+};
 
 function mostrarPasso(passo) {
     // Esconde todos os steps
@@ -260,38 +276,17 @@ function calcularTudo() {
 }
 
 window.iniciarFluxoCheckout = async function() {
-    const msgInput = document.getElementById('msg-input');
-    const texto = msgInput ? msgInput.value : '';
+    const texto = document.getElementById('msg-input').value;
+    // Extrai dados e popula o objeto global
+    window.dadosPedidoAtual = {
+        solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || '',
+        contato: texto.match(/CONTATO:\s*(.*)/i)?.[1] || '',
+        rotas: texto.match(/ROTA:\s*([\s\S]*?)(?=PRIORIDADE|$)/i)?.[1] || ''
+    };
     
-    // Captura Solicitante e Rota
-    const solMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
-    const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
-
-    if (!rotasMatch) { alert("Formato de ROTA não detectado."); return; }
-
     await window.loadModal('modal_mapa.html');
-
-    // Preenche Cabeçalho
-    document.getElementById('header-nome-solicitante').innerText = solMatch ? solMatch[1].trim() : "Não identificado";
-
-    // Processa e Renderiza Rotas
-    const containerRotas = document.getElementById('container-linhas-rotas-modal');
-    const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
-    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7', '#3fb8af', '#c18180'];
-
-    containerRotas.innerHTML = listaRotas.map((rota, index) => {
-        const [de, para] = rota.split('|');
-        return `
-            <div class="mb-3 p-3 border-start border-4 shadow-sm bg-white" style="border-color: ${cores[index % cores.length]} !important;">
-                <div class="fw-bold mb-1" style="color: ${cores[index % cores.length]}">Rota ${index + 1}</div>
-                <div class="small mb-2">De: ${de?.trim()} <br> Para: ${para?.trim()}</div>
-                <div class="row g-2">
-                    <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="KM Total"></div>
-                    <div class="col-6"><input type="text" class="form-control form-control-sm" placeholder="Tempo Est."></div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
+    renderizarMapaGratuito();
 };
 
 window.prosseguirParaFormulario = function() {
@@ -334,22 +329,59 @@ async function salvarPedidoAPI() {
 }
 
 window.abrirCheckoutDoMapa = async function() {
+    // 1. Fecha mapa com segurança
     const modalMapaEl = document.getElementById('modalMapa');
     const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
+    if(modalMapa) modalMapa.hide();
     
-    // Fecha o mapa
-    if (modalMapa) modalMapa.hide();
+    // 2. Carrega formulário
+    await window.loadModal('modal_form.html');
+    
+    // 3. Preenche automaticamente com window.dadosPedidoAtual
+    const form = document.getElementById('form-checkout');
+    document.getElementById('p-solicitante').value = window.dadosPedidoAtual.solicitante || '';
+    document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante || 'Não informado';
+    document.getElementById('container-linhas-rotas').innerHTML = window.dadosPedidoAtual.rotasHtml || '';
 
-    // Remove qualquer resquício de backdrop que cause travamento no Bootstrap 5
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-
-    // Abre o formulário (Carrega do arquivo externo via sua função loadModal)
-    setTimeout(async () => {
-        await window.loadModal('modal_form.html');
-        
-        // Sincroniza dados básicos se necessário
-        const nomeSolicitante = document.getElementById('chat-header-name').innerText;
-        const inputSolicitante = document.getElementById('p-solicitante');
-        if (inputSolicitante) inputSolicitante.value = nomeSolicitante;
-    }, 400);
+    // 4. Lógica de Validação: Cinza no foco, Vermelho no erro (blur)
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', (e) => {
+            if (!e.target.value || e.target.value.trim() === "") {
+                e.target.classList.add('border-danger');
+                e.target.classList.remove('border-secondary');
+            } else {
+                e.target.classList.add('border-secondary');
+                e.target.classList.remove('border-danger');
+            }
+        });
+    });
 };
+
+window.voltarParaMapa = function() {
+    bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+    new bootstrap.Modal(document.getElementById('modalMapa')).show();
+};
+
+function renderizarMapaGoogle(destino) {
+    const container = document.getElementById('container-mapa-visual');
+    // Este link é o modo de busca pública e gratuita
+    const url = `https://www.google.com/maps/embed/v1/search?key=&q=${encodeURIComponent(destino)}`;
+    
+    container.innerHTML = `
+        <iframe width="100%" height="100%" frameborder="0" style="border:0" 
+        src="${url}" allowfullscreen></iframe>
+    `;
+}
+
+function fecharModaisEAbrir(novoModalId) {
+    // Remove todos os backdrops manualmente
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Abre o novo
+    const modal = new bootstrap.Modal(document.getElementById(novoModalId));
+    modal.show();
+}

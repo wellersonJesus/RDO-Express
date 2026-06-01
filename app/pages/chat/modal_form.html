@@ -1,97 +1,47 @@
 <div class="modal fade" id="modalFormulario" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold">
-                    <span class="text-danger">RDO</span> Express - Checkout
-                </h5>
+                <h5 class="modal-title fw-bold text-danger">RDO Express - Checkout</h5>
                 <div class="mt-1 text-muted small">
-                    Solicitante: <span id="header-nome-solicitante">Aguardando...</span>
+                    Solicitante: <span id="header-nome-solicitante" class="fw-bold text-dark"></span>
                 </div>
             </div>
             
-            <div class="modal-body p-4">
-                <form id="form-checkout" onsubmit="return false;">
+            <div class="modal-body p-4 pt-2">
+                <form id="form-checkout">
+                    <div class="mb-2">
+                        <small class="text-muted fw-bold">Solicitante:</small>
+                        <input type="text" id="p-solicitante" class="form-control form-control-sm rounded-pill border-secondary" readonly>
+                    </div>
+
                     <div class="row g-2">
-                        <div class="col-md-6">
-                            <input type="text" id="p-solicitante" class="form-control rounded-pill" placeholder="Solicitante" required>
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" id="p-contato" class="form-control rounded-pill" placeholder="Contato (031) 9 9999-9999">
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <input type="time" id="p-horario" class="form-control rounded-pill">
-                        </div>
-                        <div class="col-md-4">
-                            <input type="number" id="p-distancia" class="form-control rounded-pill" placeholder="KM Total" step="0.1">
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" id="p-tempo" class="form-control rounded-pill" placeholder="Tempo Est.">
-                        </div>
-                        
-                        <div class="col-12 mt-2">
-                            <label class="small text-muted ms-2 fw-bold">Rotas:</label>
-                            <div id="container-linhas-rotas" class="my-2"></div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill w-100" onclick="adicionarNovaRotaManual()">
-                                <i class="bi bi-plus-circle"></i> Adicionar Rota
-                            </button>
-                        </div>
-
-                        <div class="col-md-6">
-                            <select id="p-mercadoria" class="form-select rounded-pill">
-                                <option value="Sacola">Sacola</option>
-                                <option value="Coleta">Coleta</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Envelope">Envelope</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <select id="p-valor-km" class="form-select rounded-pill">
-                                <option value="2.02">KM R$ 2,02</option>
-                                <option value="2.20" selected>KM R$ 2,20</option>
-                                <option value="2.40">KM R$ 2,40</option>
-                                <option value="3.00">KM R$ 3,00</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <select id="p-troca" class="form-select rounded-pill">
-                                <option value="NAO" selected>Sem Retorno</option>
-                                <option value="SIM">Retorno (60%)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="p-localidade" class="form-select rounded-pill">
-                                <option value="0">Taxa Local (0)</option>
-                                <option value="5">Taxa 02 (5)</option>
-                                <option value="10">Taxa 04 (10)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="p-prioridade" class="form-select rounded-pill">
+                        <div class="col-6"><input type="text" id="p-contato" class="form-control form-control-sm rounded-pill border-secondary" placeholder="Contato"></div>
+                        <div class="col-6"><input type="time" id="p-horario" class="form-control form-control-sm rounded-pill border-secondary"></div>
+                        <div class="col-4"><input type="number" id="p-distancia" class="form-control form-control-sm rounded-pill border-secondary" placeholder="KM Total"></div>
+                        <div class="col-4"><input type="text" id="p-tempo" class="form-control form-control-sm rounded-pill border-secondary" placeholder="Tempo Est."></div>
+                        <div class="col-4">
+                            <select id="p-prioridade" class="form-select form-select-sm rounded-pill border-secondary">
                                 <option value="0">Normal</option>
-                                <option value="7">Urgente (+7)</option>
+                                <option value="7">Urgente</option>
                             </select>
-                        </div>
-
-                        <div class="col-12">
-                            <textarea id="p-obs" class="form-control rounded-3" rows="2" placeholder="Observações"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <input type="number" id="p-taxa-cancelamento" class="form-control rounded-pill border-danger" placeholder="Taxa Cancelamento (0-35)">
                         </div>
                     </div>
+
+                    <div class="my-2" id="container-linhas-rotas"></div>
+
+                    <textarea id="p-obs" class="form-control form-control-sm rounded-3 border-secondary" rows="2" placeholder="Observações"></textarea>
                 </form>
 
-                <div class="mt-4 p-3 bg-light rounded-4 text-center border">
+                <div class="mt-3 p-2 bg-light rounded-3 text-center border border-secondary">
                     <span class="text-muted small">Valor Final:</span>
-                    <h4 class="mb-0 fw-bold text-danger" id="view-valor-final">R$ 0,00</h4>
+                    <h5 class="mb-0 fw-bold text-danger" id="view-valor-final">R$ 0,00</h5>
                 </div>
 
-                <button type="button" class="btn btn-success w-100 rounded-pill fw-bold mt-3 py-2" onclick="salvarPedidoAPI()">
-                    Finalizar Pedido
-                </button>
+                <div class="row g-2 mt-3">
+                    <div class="col-5"><button type="button" class="btn btn-outline-danger w-100 rounded-pill fw-bold" onclick="window.voltarParaMapa()">Voltar</button></div>
+                    <div class="col-7"><button type="button" class="btn btn-danger w-100 rounded-pill fw-bold" onclick="salvarPedidoAPI()">FINALIZAR PEDIDO</button></div>
+                </div>
             </div>
         </div>
     </div>
