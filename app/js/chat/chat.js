@@ -358,9 +358,30 @@ window.abrirCheckoutDoMapa = async function() {
     });
 };
 
-window.voltarParaMapa = function() {
-    bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
-    new bootstrap.Modal(document.getElementById('modalMapa')).show();
+window.voltarParaMapa = async function() {
+    // 1. Fecha o formulário atual
+    const modalFormEl = document.getElementById('modalFormulario');
+    const modalForm = bootstrap.Modal.getInstance(modalFormEl);
+    if (modalForm) {
+        modalForm.hide();
+        // Aguarda a animação de fechar
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    // 2. Limpa resquícios do Bootstrap (importante para não travar a tela)
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+
+    // 3. Recarrega o arquivo do mapa no container
+    await window.loadModal('modal_mapa.html');
+
+    // 4. Reaplica os dados que já tínhamos (persistência)
+    const headerNome = document.getElementById('header-nome-solicitante');
+    if (headerNome) headerNome.innerText = window.dadosPedidoAtual.solicitante;
+    
+    // 5. Re-renderiza o mapa (Leaflet)
+    renderizarMapaGratuito(); 
 };
 
 function renderizarMapaGoogle(destino) {
@@ -384,4 +405,10 @@ function fecharModaisEAbrir(novoModalId) {
     // Abre o novo
     const modal = new bootstrap.Modal(document.getElementById(novoModalId));
     modal.show();
+}
+
+function limparBackdrops() {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
 }

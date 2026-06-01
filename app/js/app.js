@@ -24,21 +24,14 @@ window.loadPage = function(page, title, subtitle) {
 
 window.loadModal = async function(arquivo) {
     const container = document.getElementById('modal-container');
-    if (!container) {
-        console.error("Erro: #modal-container não encontrado no index.html");
-        return;
-    }
-    try {
-        const res = await fetch(`pages/chat/${arquivo}`);
-        if (!res.ok) throw new Error("Falha ao carregar arquivo");
-        container.innerHTML = await res.text();
-        
-        // Inicializa e exibe o modal
-        const modalEl = container.querySelector('.modal');
-        if (modalEl) {
-            new bootstrap.Modal(modalEl).show();
-        }
-    } catch (e) {
-        console.error("Erro ao carregar modal:", e);
+    const res = await fetch(`pages/chat/${arquivo}`);
+    const html = await res.text();
+    container.innerHTML = html;
+    
+    // Seleciona o modal que acabou de chegar e abre
+    const modalEl = container.querySelector('.modal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
     }
 };
