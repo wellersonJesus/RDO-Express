@@ -133,17 +133,20 @@ function renderizarContatos(listaDeClientes) {
     });
 }
 
-function renderizarMapaGratuito(destinos) {
+function renderizarMapaGratuito() {
     const container = document.getElementById('container-mapa-visual');
     if (!container) return;
     
-    // Limpeza de instância anterior
-    container.innerHTML = '<div id="map" style="width:100%; height:250px;"></div>';
-    const map = L.map('map').setView([-19.9167, -43.9345], 13);
+    // Força a limpeza e reinicialização para evitar erros de tamanho
+    container.innerHTML = '<div id="map" style="width:100%; height:100%;"></div>';
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    const map = L.map('map').setView([-19.9167, -43.9345], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    
+    // Solução para o bug do Leaflet em modais: forçar o redimensionamento após abrir
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 500);
 }
 
 function renderizarMapaTracejado(latlngs) {

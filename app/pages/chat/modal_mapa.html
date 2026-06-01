@@ -9,9 +9,13 @@
                     Solicitante: <span id="header-nome-solicitante" class="fw-bold text-dark">Carregando...</span>
                 </div>
             </div>
-            <div class="modal-body p-4">
-                <div id="container-mapa-visual" class="rounded-3 mb-4 border shadow-sm" style="height: 250px;"></div>
-                <div id="lista-rotas-editavel" class="mb-4"></div>
+            <div class="modal-body p-3">
+                <div id="container-mapa-visual" class="border shadow-sm mb-3">
+                </div>
+
+                <div id="lista-rotas-editavel" class="mb-3" style="max-height: 200px; overflow-y: auto;">
+                </div>
+
                 <button class="btn btn-danger w-100 rounded-pill py-2 fw-bold" onclick="window.abrirCheckoutDoMapa()">
                     Confirmar e avançar para check-out
                 </button>
