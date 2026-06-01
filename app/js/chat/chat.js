@@ -259,17 +259,9 @@ function calcularTudo() {
     document.getElementById('view-valor-final').innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-window.iniciarFluxoCheckout = function() {
+window.iniciarFluxoCheckout = async function() {
     const msgInput = document.getElementById('msg-input');
-    const containerRotas = document.getElementById('lista-rotas-editavel');
-    const modalMapaEl = document.getElementById('modalMapa');
-
-    if (!msgInput || !containerRotas || !modalMapaEl) {
-        console.error("Elementos do modal não encontrados.");
-        return;
-    }
-
-    const texto = msgInput.value;
+    const texto = msgInput ? msgInput.value : '';
     const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
 
     if (!rotasMatch) {
@@ -277,44 +269,35 @@ window.iniciarFluxoCheckout = function() {
         return;
     }
 
-    // 1. DEFINIÇÃO DA VARIÁVEL NO TOPO (Corrigindo o erro de referência)
-    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7','#3fb8af','#c18180'];
-    
-    // 2. Processamento da lista
+    // Tenta encontrar o modal já existente
+    let modalMapaEl = document.getElementById('modalMapa');
+
+    // Se não existir, carrega via a função que definimos acima
+    if (!modalMapaEl) {
+        await window.loadModal('modal_mapa.html');
+        modalMapaEl = document.getElementById('modalMapa');
+    }
+
+    // Agora que garantimos que o modal existe:
+    const containerRotas = modalMapaEl.querySelector('#lista-rotas-editavel');
+    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7', '#3fb8af', '#c18180'];
     const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
 
-    // 3. Renderização da lista
-    containerRotas.innerHTML = `<h6 class="fw-bold mb-3">Rotas Detalhadas:</h6>` + listaRotas.map((rota, index) => {
-        const [de, para] = rota.split('|');
-        // Agora 'cores' é acessível aqui
-        const corAtual = cores[index % cores.length]; 
-        
-        return `
-            <div class="mb-3 p-2 border-start border-4 shadow-sm bg-white" style="border-color: ${corAtual} !important;">
-                <div class="fw-bold" style="color: ${corAtual}">Rota ${index + 1}</div>
-                <div class="small text-truncate">De: ${de?.trim() || 'N/A'}</div>
-                <div class="small text-truncate">Para: ${para?.trim() || 'N/A'}</div>
-                <div class="row g-2 mt-1">
-                    <div class="col-6"><input type="number" class="form-control form-control-sm input-km" placeholder="KM"></div>
-                    <div class="col-6"><input type="number" class="form-control form-control-sm input-min" placeholder="Min"></div>
+    if (containerRotas) {
+        containerRotas.innerHTML = `<h6 class="fw-bold mb-3">Rotas Detalhadas:</h6>` + listaRotas.map((rota, index) => {
+            const [de, para] = rota.split('|');
+            return `
+                <div class="mb-3 p-2 border-start border-4 shadow-sm bg-white" style="border-color: ${cores[index % cores.length]} !important;">
+                    <div class="fw-bold">Rota ${index + 1}</div>
+                    <div class="small">De: ${de?.trim() || 'N/A'} | Para: ${para?.trim() || 'N/A'}</div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
-    // 4. Exibição do modal
-    const modal = new bootstrap.Modal(modalMapaEl);
+    // Abre o modal (caso ele tenha sido injetado agora, a função loadModal já mostrou ele)
+    const modal = bootstrap.Modal.getInstance(modalMapaEl) || new bootstrap.Modal(modalMapaEl);
     modal.show();
-
-    // 5. Configuração do mapa
-    const setupMapa = () => {
-        if (typeof renderizarMapaGratuito === 'function') {
-            renderizarMapaGratuito(listaRotas);
-        }
-        modalMapaEl.removeEventListener('shown.bs.modal', setupMapa);
-    };
-
-    modalMapaEl.addEventListener('shown.bs.modal', setupMapa);
 };
 
 window.prosseguirParaFormulario = function() {
@@ -355,3 +338,24 @@ async function salvarPedidoAPI() {
         // Lógica de enviar mensagem via API para o chat...
     }
 }
+
+window.abrirCheckoutDoMapa = async function() {
+    const modalMapaEl = document.getElementById('modalMapa');
+    const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
+    
+    // Fecha o mapa
+    if (modalMapa) modalMapa.hide();
+
+    // Remove qualquer resquício de backdrop que cause travamento no Bootstrap 5
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+    // Abre o formulário (Carrega do arquivo externo via sua função loadModal)
+    setTimeout(async () => {
+        await window.loadModal('modal_form.html');
+        
+        // Sincroniza dados básicos se necessário
+        const nomeSolicitante = document.getElementById('chat-header-name').innerText;
+        const inputSolicitante = document.getElementById('p-solicitante');
+        if (inputSolicitante) inputSolicitante.value = nomeSolicitante;
+    }, 400);
+};
