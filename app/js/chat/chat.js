@@ -262,42 +262,36 @@ function calcularTudo() {
 window.iniciarFluxoCheckout = async function() {
     const msgInput = document.getElementById('msg-input');
     const texto = msgInput ? msgInput.value : '';
+    
+    // Captura Solicitante e Rota
+    const solMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
     const rotasMatch = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
 
-    if (!rotasMatch) {
-        alert("Formato de ROTA não detectado.");
-        return;
-    }
+    if (!rotasMatch) { alert("Formato de ROTA não detectado."); return; }
 
-    // Tenta encontrar o modal já existente
-    let modalMapaEl = document.getElementById('modalMapa');
+    await window.loadModal('modal_mapa.html');
 
-    // Se não existir, carrega via a função que definimos acima
-    if (!modalMapaEl) {
-        await window.loadModal('modal_mapa.html');
-        modalMapaEl = document.getElementById('modalMapa');
-    }
+    // Preenche Cabeçalho
+    document.getElementById('header-nome-solicitante').innerText = solMatch ? solMatch[1].trim() : "Não identificado";
 
-    // Agora que garantimos que o modal existe:
-    const containerRotas = modalMapaEl.querySelector('#lista-rotas-editavel');
-    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7', '#3fb8af', '#c18180'];
+    // Processa e Renderiza Rotas
+    const containerRotas = document.getElementById('container-linhas-rotas-modal');
     const listaRotas = rotasMatch[1].split(/\d+\./).filter(r => r.trim().length > 0);
+    const cores = ['#ff3d7f', '#ff9e9d', '#dad8a7', '#3fb8af', '#c18180'];
 
-    if (containerRotas) {
-        containerRotas.innerHTML = `<h6 class="fw-bold mb-3">Rotas Detalhadas:</h6>` + listaRotas.map((rota, index) => {
-            const [de, para] = rota.split('|');
-            return `
-                <div class="mb-3 p-2 border-start border-4 shadow-sm bg-white" style="border-color: ${cores[index % cores.length]} !important;">
-                    <div class="fw-bold">Rota ${index + 1}</div>
-                    <div class="small">De: ${de?.trim() || 'N/A'} | Para: ${para?.trim() || 'N/A'}</div>
+    containerRotas.innerHTML = listaRotas.map((rota, index) => {
+        const [de, para] = rota.split('|');
+        return `
+            <div class="mb-3 p-3 border-start border-4 shadow-sm bg-white" style="border-color: ${cores[index % cores.length]} !important;">
+                <div class="fw-bold mb-1" style="color: ${cores[index % cores.length]}">Rota ${index + 1}</div>
+                <div class="small mb-2">De: ${de?.trim()} <br> Para: ${para?.trim()}</div>
+                <div class="row g-2">
+                    <div class="col-6"><input type="number" class="form-control form-control-sm" placeholder="KM Total"></div>
+                    <div class="col-6"><input type="text" class="form-control form-control-sm" placeholder="Tempo Est."></div>
                 </div>
-            `;
-        }).join('');
-    }
-
-    // Abre o modal (caso ele tenha sido injetado agora, a função loadModal já mostrou ele)
-    const modal = bootstrap.Modal.getInstance(modalMapaEl) || new bootstrap.Modal(modalMapaEl);
-    modal.show();
+            </div>
+        `;
+    }).join('');
 };
 
 window.prosseguirParaFormulario = function() {

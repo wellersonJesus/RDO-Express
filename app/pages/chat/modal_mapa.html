@@ -6,16 +6,19 @@
                     <span class="text-danger">RDO</span> Express - Rota(s)
                 </h5>
                 <div class="mt-1 text-muted small">
-                    Solicitante: <span id="header-nome-solicitante">Aguardando...</span>
+                    Solicitante: <span id="header-nome-solicitante" class="fw-bold text-dark">Carregando...</span>
                 </div>
             </div>
             
             <div class="modal-body p-4">
                 <div id="container-mapa-visual" class="rounded-3 mb-4 border shadow-sm" 
-                     style="height: 250px; background: #f8f9fa;">
-                </div>
+                     style="height: 250px; background: #f8f9fa;"></div>
 
-                <div id="lista-rotas-editavel" class="mb-4"></div>
+                <div id="lista-rotas-editavel" class="mb-4">
+                    <h6 class="fw-bold mb-3">Rotas Detalhadas:</h6>
+                    <div id="container-linhas-rotas-modal">
+                        </div>
+                </div>
 
                 <button type="button" class="btn btn-danger w-100 rounded-pill py-2 fw-bold" 
                         onclick="window.abrirCheckoutDoMapa()">
