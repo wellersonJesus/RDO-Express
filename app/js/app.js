@@ -59,16 +59,10 @@ window.loadPage = async function(page, title, subtitle) {
     }
 };
 
-window.loadModal = async function(arquivo) {
-    const container = document.getElementById('modal-container');
-    const res = await fetch(`pages/chat/${arquivo}`);
-    const html = await res.text();
-    container.innerHTML = html;
-    
-    // Seleciona o modal que acabou de chegar e abre
-    const modalEl = container.querySelector('.modal');
-    if (modalEl) {
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    }
+window.loadModal = function(arquivo) {
+    return fetch(`pages/chat/${arquivo}`)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('modal-container').innerHTML = html;
+        });
 };

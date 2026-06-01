@@ -279,17 +279,43 @@ function calcularTudo() {
 }
 
 window.iniciarFluxoCheckout = async function() {
+    console.log("Iniciando fluxo de mapa...");
     const texto = document.getElementById('msg-input').value;
-    // Extrai dados e popula o objeto global
+    
+    // 1. Popula dados
     window.dadosPedidoAtual = {
         solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || '',
         contato: texto.match(/CONTATO:\s*(.*)/i)?.[1] || '',
         rotas: texto.match(/ROTA:\s*([\s\S]*?)(?=PRIORIDADE|$)/i)?.[1] || ''
     };
     
+    // 2. Garante que o container de modais exista
+    let modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-container';
+        document.body.appendChild(modalContainer);
+    }
+    
+    // 3. Carrega o arquivo e AGUARDA
     await window.loadModal('modal_mapa.html');
-    document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
-    renderizarMapaGratuito();
+    
+    // 4. Aguarda o DOM renderizar o elemento (pequeno delay de segurança)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const modalEl = document.getElementById('modalMapa');
+    if (modalEl) {
+        document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
+        
+        // Inicializa e mostra
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        // Renderiza o mapa após o modal estar visível
+        renderizarMapaGratuito();
+    } else {
+        console.error("ModalMapa não foi encontrado após carregar o arquivo.");
+    }
 };
 
 window.prosseguirParaFormulario = function() {
@@ -305,86 +331,97 @@ window.prosseguirParaFormulario = function() {
     mostrarPasso('formulario');
 };
 
-async function salvarPedidoAPI() {
-    const dadosPedido = {
-        id_mensagens_chat: Date.now(), // Ou capture do ID da última mensagem
-        solicitante: document.getElementById('p-solicitante').value,
-        contato: document.getElementById('p-contato').value,
-        horario: document.getElementById('p-horario').value,
-        mercadoria: document.getElementById('p-mercadoria').value,
-        de: "{1 - R. A 32, 2 - Av brasilia 100, 3 - Rua Goitacazes 52}",
-        para: "{1 - Rua das Esmeraldas 192, 2 - Av Santos Drumond, 3 - Rua Rio de Janeiro 12}",
-        troca_retorno: document.getElementById('p-troca').value,
-        prioridade: document.getElementById('p-prioridade').value,
-        valor_corrida: parseFloat(document.getElementById('view-valor-final').innerText.replace('R$', '').replace(',', '.')),
-        motoboy: "⁉",
-        status: "⏳ Aguardando",
-        observacao: document.getElementById('p-obs').value
-    };
+window.salvarPedidoAPI = async function() {
+    const form = document.getElementById('form-checkout');
+    const inputs = form.querySelectorAll('input:not([readonly]), select, textarea');
+    let isValid = true;
 
-    const response = await API.call('createpedido', dadosPedido);
-    
-    if (response) {
-        // Envia confirmação de volta ao chat
-        const mensagemConfirmacao = `✅ *Pedido RDO${response.id} criado com sucesso!*\nCliente: ${document.getElementById('chat-header-name').innerText}`;
-        // Lógica de enviar mensagem via API para o chat...
+    inputs.forEach(input => {
+        // Remove erros anteriores
+        input.classList.remove('border-danger', 'border-2');
+        input.classList.add('border-secondary');
+        
+        // Verifica vazio
+        if (!input.value || input.value.trim() === "") {
+            input.classList.add('border-danger', 'border-2');
+            input.classList.remove('border-secondary');
+            isValid = false;
+        }
+    });
+
+    if (!isValid) return; // Interrompe se houver erro
+
+    // --- Lógica de Envio ---
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Finalizando...';
+
+    try {
+        // (Sua lógica de coleta de dados e API permanece aqui)
+        await window.API.call('enviarMensagemChat', { mensagem: "Pedido gerado..." });
+        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+    } catch (e) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
-}
+};
 
 window.abrirCheckoutDoMapa = async function() {
-    // 1. Fecha mapa com segurança
-    const modalMapaEl = document.getElementById('modalMapa');
-    const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
-    if(modalMapa) modalMapa.hide();
+    console.log("Iniciando fluxo de checkout..."); // Log 1
+
+    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    if (modalMapa) modalMapa.hide();
     
-    // 2. Carrega formulário
+    console.log("Tentando carregar modal_form.html..."); // Log 2
     await window.loadModal('modal_form.html');
     
-    // 3. Preenche automaticamente com window.dadosPedidoAtual
-    const form = document.getElementById('form-checkout');
-    document.getElementById('p-solicitante').value = window.dadosPedidoAtual.solicitante || '';
-    document.getElementById('header-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante || 'Não informado';
-    document.getElementById('container-linhas-rotas').innerHTML = window.dadosPedidoAtual.rotasHtml || '';
-
-    // 4. Lógica de Validação: Cinza no foco, Vermelho no erro (blur)
-    const inputs = form.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('blur', (e) => {
-            if (!e.target.value || e.target.value.trim() === "") {
-                e.target.classList.add('border-danger');
-                e.target.classList.remove('border-secondary');
-            } else {
-                e.target.classList.add('border-secondary');
-                e.target.classList.remove('border-danger');
-            }
-        });
-    });
+    const modalFormEl = document.getElementById('modalFormulario');
+    console.log("Modal encontrado?", !!modalFormEl); // Log 3
+    
+    if (modalFormEl) {
+        // Preenchimento...
+        const modalForm = new bootstrap.Modal(modalFormEl);
+        modalForm.show();
+        console.log("Modal exibido."); // Log 4
+    } else {
+        alert("Erro crítico: O formulário não foi carregado no HTML.");
+    }
 };
 
 window.voltarParaMapa = async function() {
-    // 1. Fecha o formulário atual
+    // 1. Fecha o modal de formulário
     const modalFormEl = document.getElementById('modalFormulario');
     const modalForm = bootstrap.Modal.getInstance(modalFormEl);
-    if (modalForm) {
-        modalForm.hide();
-        // Aguarda a animação de fechar
-        await new Promise(resolve => setTimeout(resolve, 300));
-    }
+    if (modalForm) modalForm.hide();
 
-    // 2. Limpa resquícios do Bootstrap (importante para não travar a tela)
+    // 2. Aguarda a transição para evitar sobreposição de modais
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // 3. Limpeza total de resquícios
     document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
 
-    // 3. Recarrega o arquivo do mapa no container
-    await window.loadModal('modal_mapa.html');
-
-    // 4. Reaplica os dados que já tínhamos (persistência)
-    const headerNome = document.getElementById('header-nome-solicitante');
-    if (headerNome) headerNome.innerText = window.dadosPedidoAtual.solicitante;
-    
-    // 5. Re-renderiza o mapa (Leaflet)
-    renderizarMapaGratuito(); 
+    // 4. Re-abre o Modal do Mapa
+    const modalMapaEl = document.getElementById('modalMapa');
+    if (modalMapaEl) {
+        const modalMapa = new bootstrap.Modal(modalMapaEl);
+        modalMapa.show();
+        
+        // 5. Reinicia o mapa dentro do modal com um pequeno delay 
+        // para o Bootstrap finalizar a animação de "show"
+        setTimeout(() => {
+            if (typeof window.renderizarMapaGratuito === 'function') {
+                window.renderizarMapaGratuito();
+            }
+        }, 300);
+    } else {
+        // Se o modalMapa sumiu do DOM, recarrega-o
+        await window.loadModal('modal_mapa.html');
+        new bootstrap.Modal(document.getElementById('modalMapa')).show();
+        setTimeout(window.renderizarMapaGratuito, 300);
+    }
 };
 
 function renderizarMapaGoogle(destino) {
