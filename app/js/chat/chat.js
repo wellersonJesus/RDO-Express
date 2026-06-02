@@ -384,59 +384,55 @@ window.prosseguirParaFormulario = async function () {
     const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
     modalForm.show();
 
-    // Captura dados do chat
-    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
-    const textoOriginal = document.getElementById('msg-input').value;
-
+    // Aguarda o modal estar visível para preencher os inputs
     setTimeout(() => {
-        // Exibir nome do cliente no subtítulo do Formulário
-        document.getElementById('subtitulo-cliente-form').innerText = `Cliente: ${nomeClienteChat}`;
-        document.getElementById('form-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
+        const textoOriginal = document.getElementById('msg-input').value;
+        const dados = window.dadosPedidoAtual; // Dados calculados no mapa
 
-        // Preenchimento Automático dos campos (extraídos do texto via Regex)
-        document.getElementById('p-solicitante').value = window.dadosPedidoAtual.solicitante;
-        document.getElementById('p-contato').value = textoOriginal.match(/CONATO:\s*(.*)/i)?.[1]?.trim() || '';
-        document.getElementById('p-horario').value = textoOriginal.match(/HORÁRIO.*?:\s*(.*)/i)?.[1]?.trim() || '';
-        document.getElementById('p-rotas').value = textoOriginal.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1]?.trim() || '';
-        document.getElementById('p-obs').value = textoOriginal.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || '';
-        
-        // Define o select de prioridade automaticamente se encontrar "Urgente"
-        const prioridadeSelect = document.getElementById('p-prioridade');
-        if (textoOriginal.toLowerCase().includes('urgente')) prioridadeSelect.value = "8";
+        if (dados) {
+            // Preenchimento das métricas calculadas
+            document.getElementById('p-distancia').value = dados.distancia;
+            document.getElementById('p-tempo').value = dados.tempo;
+            
+            // Preenchimento do Itinerário (Lista de Rotas)
+            // Extrai apenas a parte da rota do texto original
+            const rotas = textoOriginal.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1]?.trim() || '';
+            document.getElementById('p-rotas').value = rotas;
 
-        // Preenche métricas calculadas
-        document.getElementById('p-distancia').value = window.dadosPedidoAtual.distancia;
-        document.getElementById('p-tempo').value = window.dadosPedidoAtual.tempo;
+            // Preenchimento do Telefone/Contato
+            // Procura por formatos como (XX) XXXXX-XXXX ou apenas números
+            const telefone = textoOriginal.match(/(?:\(\d{2}\)\s*)?\d{4,5}-?\d{4}/)?.[0] || '';
+            document.getElementById('p-contato').value = telefone;
 
-        window.calcularTudo();
-    }, 300);
+            // Outros campos
+            document.getElementById('p-solicitante').value = dados.solicitante;
+            
+            // Dispara o recálculo do valor final baseado nos novos dados carregados
+            if (typeof window.calcularTudo === 'function') {
+                window.calcularTudo();
+            }
+        }
+    }, 500);
 };
 
 window.calcularTudo = function () {
-    const inputDistancia = document.getElementById('p-distancia');
-    const selectValorKm = document.getElementById('p-valor-km');
-    const selectPrioridade = document.getElementById('p-prioridade');
-    const selectRetorno = document.getElementById('p-retorno');
-    const selectDinamica = document.getElementById('p-dinamica');
-    const viewValorFinal = document.getElementById('view-valor-final');
-
-    if (!inputDistancia || !viewValorFinal) return;
-
-    // Converte a string "14.2" para float matematicamente
-    const km = parseFloat(inputDistancia.value) || 0;
-    const valorKm = parseFloat(selectValorKm?.value) || 2.20;
-
+    const km = parseFloat(document.getElementById('p-distancia')?.value) || 0;
+    const valorKm = parseFloat(document.getElementById('p-valor-km')?.value) || 2.20;
+    const prioridade = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
+    const retorno = parseFloat(document.getElementById('p-retorno')?.value) || 0; // Ex: 0.5 para 50%
+    
     let valorBase = km * valorKm;
-
-    valorBase += parseFloat(selectPrioridade?.value) || 0;
-    valorBase += parseFloat(selectDinamica?.value) || 0;
-
-    const fatorRetorno = parseFloat(selectRetorno?.value) || 0;
-    if (fatorRetorno > 0) {
-        valorBase += (valorBase * fatorRetorno);
+    valorBase += prioridade;
+    
+    // Aplica a taxa de retorno se houver
+    if (retorno > 0) {
+        valorBase += (valorBase * retorno);
     }
 
-    viewValorFinal.innerText = valorBase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const viewValorFinal = document.getElementById('view-valor-final');
+    if (viewValorFinal) {
+        viewValorFinal.innerText = valorBase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
 };
 
 window.voltarParaMapa = async function () {
