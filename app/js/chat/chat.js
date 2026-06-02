@@ -1,10 +1,10 @@
 let debounceTimer;
 let clienteSelecionado = null;
 let rotasAtuais = [];
-let listaCarregada = false; // Controle para o loop de carregamento da página
+let listaCarregada = false;
 
 // =====================================================================
-// EVENTOS GLOBAIS E DELEGAÇÃO (Filtro, Formulário e Botão Loop)
+// EVENTOS GLOBAIS E DELEGAÇÃO
 // =====================================================================
 
 document.addEventListener('input', (e) => {
@@ -19,7 +19,6 @@ document.addEventListener('change', (e) => {
     }
 });
 
-// Aciona o carregamento manual ao clicar no botão de Loop (Sincronizar)
 document.addEventListener('click', (e) => {
     if (e.target && e.target.closest('#sync-icon-chat')) {
         window.carregarDados();
@@ -27,18 +26,16 @@ document.addEventListener('click', (e) => {
 });
 
 // =====================================================================
-// OBSERVAR PÁGINA 7 (Carrega automaticamente ao entrar e sair)
+// OBSERVAR PÁGINA 7 (Carrega automaticamente)
 // =====================================================================
 
 const observerPagina = new MutationObserver((mutations) => {
     const listaExiste = document.getElementById('lista-contatos-chat');
     
     if (listaExiste && !listaCarregada) {
-        // Entrou na página 7: Carrega os dados
         window.carregarDados();
         listaCarregada = true;
     } else if (!listaExiste) {
-        // Saiu da página 7: Reseta o status para carregar na próxima vez
         listaCarregada = false;
     }
 });
@@ -76,7 +73,7 @@ window.carregarDados = async function () {
     const syncIcon = document.getElementById('sync-icon-chat');
 
     if (!listEl) return;
-    if (syncIcon) syncIcon.classList.add('spinner-rotate'); // Inicia a animação de loop
+    if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
     try {
         const clientes = await API.call('getclientes') || [];
@@ -110,7 +107,7 @@ window.carregarDados = async function () {
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
     } finally {
-        if (syncIcon) syncIcon.classList.remove('spinner-rotate'); // Para a animação de loop
+        if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 };
 
@@ -138,41 +135,8 @@ window.abrirConversa = function (id, nome, urlImagem) {
 };
 
 // =====================================================================
-// MAPA E FLUXO DE CHECKOUT
+// NOVO SISTEMA DE CÁLCULO DE ROTAS (EFEITO GOOGLE MAPS)
 // =====================================================================
-
-window.renderizarMapaUnificado = async function(latlngs = null) {
-    const container = document.getElementById('container-mapa-visual');
-    if (!container) return;
-
-    if (container._leaflet_id) container._leaflet_id = null;
-    container.innerHTML = '<div id="map-instance" style="width:100%; height:100%;"></div>';
-    
-    const map = L.map('map-instance').setView([-19.9167, -43.9345], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    let coordsParaRenderizar = latlngs;
-
-    if (!coordsParaRenderizar && window.dadosPedidoAtual && window.dadosPedidoAtual.coordenadas) {
-        coordsParaRenderizar = window.dadosPedidoAtual.coordenadas.map(c => [c.lat, c.lng]);
-    }
-
-    if (coordsParaRenderizar && coordsParaRenderizar.length > 0) {
-        coordsParaRenderizar.forEach((pos, index) => {
-            const label = index === 0 ? "Origem (Coleta)" : `Parada ${index}`;
-            L.marker(pos).addTo(map).bindPopup(label);
-        });
-
-        L.polyline(coordsParaRenderizar, {
-            color: 'blue', 
-            weight: 5,
-            opacity: 0.8
-        }).addTo(map);
-        map.fitBounds(coordsParaRenderizar);
-    }
-    
-    setTimeout(() => map.invalidateSize(), 500);
-};
 
 async function buscarCoordenadasEndereco(enderecoTexto) {
     try {
@@ -185,7 +149,8 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
         if (dados && dados.length > 0) {
             return {
                 lat: parseFloat(dados[0].lat),
-                lng: parseFloat(dados[0].lon)
+                lng: parseFloat(dados[0].lon),
+                endereco: enderecoTexto
             };
         }
         return null;
@@ -194,6 +159,46 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
         return null;
     }
 }
+
+window.renderizarMapaUnificado = async function() {
+    const container = document.getElementById('container-mapa-visual');
+    if (!container) return;
+
+    if (container._leaflet_id) container._leaflet_id = null;
+    container.innerHTML = '<div id="map-instance" style="width:100%; height:100%;"></div>';
+    
+    const map = L.map('map-instance').setView([-19.9167, -43.9345], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const dados = window.dadosPedidoAtual;
+
+    if (dados && dados.coordenadas && dados.coordenadas.length > 0) {
+        // Marca os pontos (Origem, Destino, Paradas)
+        dados.coordenadas.forEach((ponto, index) => {
+            let label = index === 0 ? `📍 Origem: ${ponto.endereco}` : 
+                        index === dados.coordenadas.length - 1 ? `🏁 Destino: ${ponto.endereco}` : 
+                        `🛑 Parada ${index}: ${ponto.endereco}`;
+            L.marker([ponto.lat, ponto.lng]).addTo(map).bindPopup(label);
+        });
+
+        // Desenha a linha traçando as ruas (se houver o caminho calculado pelo OSRM)
+        if (dados.caminhoRuas && dados.caminhoRuas.length > 0) {
+            const linhaRota = L.polyline(dados.caminhoRuas, {
+                color: '#1a73e8', // Azul Google Maps
+                weight: 5,
+                opacity: 0.8
+            }).addTo(map);
+            map.fitBounds(linhaRota.getBounds(), { padding: [30, 30] });
+        } else {
+            // Fallback: Linha reta se o OSRM falhar
+            const coordsSimples = dados.coordenadas.map(c => [c.lat, c.lng]);
+            const linhaReta = L.polyline(coordsSimples, { color: 'gray', weight: 4, dashArray: '10, 10' }).addTo(map);
+            map.fitBounds(linhaReta.getBounds(), { padding: [30, 30] });
+        }
+    }
+    
+    setTimeout(() => map.invalidateSize(), 500);
+};
 
 window.iniciarFluxoCheckout = async function () {
     const msgInput = document.getElementById('msg-input');
@@ -224,7 +229,6 @@ window.iniciarFluxoCheckout = async function () {
     const contato = texto.match(/CONATO:\s*(.*)/i)?.[1]?.trim() || texto.match(/CONTATO:\s*(.*)/i)?.[1]?.trim() || '';
     const horario = texto.match(/HORÁRIO ESTIMADO P\/ COLETA:\s*(.*)/i)?.[1]?.trim() || '';
     const mercadoria = texto.match(/MERCADORIA:\s*\((.*)\)/i)?.[1]?.trim() || 'Sacola';
-    const retornoTexto = texto.match(/TROCA\/RETORNO:\s*\((.*)\)/i)?.[1]?.trim() || '';
     const prioridadeTexto = texto.match(/PRIORIDADE:\s*\((.*)\)/i)?.[1]?.trim() || '';
     const obs = texto.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || '';
 
@@ -232,9 +236,10 @@ window.iniciarFluxoCheckout = async function () {
     const linhasEnderecos = blocoRotas.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     let listaEnderecosUnicos = [];
 
+    // Extrai Endereços
     linhasEnderecos.forEach((linha) => {
         const limpaLinha = line => line.replace(/^\d+\.\s*/, '');
-        const partes = limpaLinha(linha).split(/\||Para:/i);
+        const partes = limpaLinha(linha).split(/\||Para:|- /i);
         partes.forEach(p => {
             let enderecoTratado = p.replace(/De:/i, '').trim();
             if (enderecoTratado.endsWith(',')) enderecoTratado = enderecoTratado.slice(0, -1);
@@ -254,46 +259,55 @@ window.iniciarFluxoCheckout = async function () {
     const elResumoTotal = document.getElementById('resumo-total');
     if (elResumoTotal) {
         elResumoTotal.className = "text-muted small"; 
-        elResumoTotal.innerText = "Calculando rota...";
+        elResumoTotal.innerText = "Buscando coordenadas e calculando rota...";
     }
 
-    const promisesCoordenadas = listaEnderecosUnicos.map(end => buscarCoordenadasEndereco(end));
-    const resultadosCoordenadas = await Promise.all(promisesCoordenadas);
-    const coordenadasValidas = resultadosCoordenadas.filter(c => c !== null);
+    // Busca as coordenadas pausadamente (para não travar a API do Nominatim)
+    let coordenadasValidas = [];
+    for (let endereco of listaEnderecosUnicos) {
+        const coord = await buscarCoordenadasEndereco(endereco);
+        if (coord) coordenadasValidas.push(coord);
+    }
 
     if (coordenadasValidas.length < 2) {
-        if (elResumoTotal) elResumoTotal.innerText = "Erro: Coordenadas insuficientes.";
+        if (elResumoTotal) elResumoTotal.innerText = "Preencha a KM manualmente (Falta de coordenadas).";
+        window.dadosPedidoAtual = { solicitante, contato, horario, mercadoria, obs, rotas: blocoRotas, distancia: "0", tempo: "0", coordenadas: coordenadasValidas, caminhoRuas: [] };
+        setTimeout(() => window.renderizarMapaUnificado(), 300);
         return;
     }
 
-    let calculoServidor = { distancia_km: 0, tempo_estimado_minutos: 0 };
+    // =====================================================================
+    // O MÁGICO: CÁLCULO DIRETO COM OSRM (Soma de pontos, KM e Tempo reais)
+    // =====================================================================
+    let kmCalculado = "0";
+    let tempoCalculado = "0";
+    let caminhoTrilha = [];
+
     try {
-        const response = await fetch('/api/calcular-rota', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                coordenadas: coordenadasValidas,
-                prioridade: prioridadeTexto,
-                retorno: retornoTexto
-            })
-        });
-        const resData = await response.json();
-        if (resData.status === 'success') {
-            calculoServidor.distancia_km = resData.distancia_km;
-            calculoServidor.tempo_estimado_minutos = resData.tempo_estimado_minutos;
+        // Formata as coordenadas para a URL: lon,lat;lon,lat;lon,lat
+        const stringCoordenadas = coordenadasValidas.map(c => `${c.lng},${c.lat}`).join(';');
+        const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${stringCoordenadas}?geometries=geojson&overview=full`;
+        
+        const resposta = await fetch(urlOSRM);
+        const dadosOSRM = await resposta.json();
+
+        if (dadosOSRM.code === 'Ok' && dadosOSRM.routes.length > 0) {
+            const rotaPrincipal = dadosOSRM.routes[0];
+            
+            kmCalculado = (rotaPrincipal.distance / 1000).toFixed(1); // Metros para KM
+            tempoCalculado = Math.ceil(rotaPrincipal.duration / 60).toString(); // Segundos para Minutos
+            
+            // Inverte [lon, lat] (GeoJSON) para [lat, lon] (Leaflet)
+            caminhoTrilha = rotaPrincipal.geometry.coordinates.map(c => [c[1], c[0]]);
         }
-    } catch (err) {
-        console.error("Erro no cálculo OSRM:", err);
+    } catch (e) {
+        console.error("Erro ao calcular rota via OSRM", e);
     }
 
-    const numKm = Number(calculoServidor.distancia_km) || 0;
-    const numTempo = Math.ceil(calculoServidor.tempo_estimado_minutos) || 0;
-
-    const textoKmStr = numKm.toFixed(1);
-    const textoTempoStr = numTempo > 0 ? `${numTempo} min` : "-- min";
-
+    // Atualiza o visual tipo Google Maps
+    const textoTempoStr = tempoCalculado > 0 ? `${tempoCalculado} min` : "-- min";
     if (elResumoTotal) {
-        elResumoTotal.innerHTML = `<span class="text-dark fw-medium">${textoTempoStr}</span> (${textoKmStr} km)`;
+        elResumoTotal.innerHTML = `<span class="text-dark fw-medium" style="font-size: 16px;">⏱️ ${textoTempoStr}</span> <span style="color: #dc3545; font-weight: bold; font-size: 16px;">📍 ${kmCalculado} km</span>`;
     }
 
     window.dadosPedidoAtual = {
@@ -303,13 +317,13 @@ window.iniciarFluxoCheckout = async function () {
         mercadoria,
         obs,
         rotas: blocoRotas,
-        distancia: textoKmStr, 
+        distancia: kmCalculado, 
         tempo: textoTempoStr,   
-        coordenadas: coordenadasValidas
+        coordenadas: coordenadasValidas,
+        caminhoRuas: caminhoTrilha
     };
 
-    const latlngsMapeadas = coordenadasValidas.map(c => [c.lat, c.lng]);
-    setTimeout(() => window.renderizarMapaUnificado(latlngsMapeadas), 300);
+    setTimeout(() => window.renderizarMapaUnificado(), 300);
 };
 
 // =====================================================================
@@ -338,6 +352,7 @@ window.prosseguirParaFormulario = async function () {
         if (document.getElementById('p-rotas')) document.getElementById('p-rotas').value = window.dadosPedidoAtual.rotas;
         if (document.getElementById('p-obs')) document.getElementById('p-obs').value = window.dadosPedidoAtual.obs;
         
+        // Aplica o calculo real nos campos
         if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = window.dadosPedidoAtual.distancia;
         if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = window.dadosPedidoAtual.tempo;
 
@@ -395,14 +410,11 @@ window.voltarParaMapa = async function () {
         const elResumoTotal = document.getElementById('resumo-total');
         if (elResumoTotal && window.dadosPedidoAtual) {
             elResumoTotal.className = "text-muted small";
-            elResumoTotal.innerHTML = `<span class="text-dark fw-medium">${window.dadosPedidoAtual.tempo}</span> (${window.dadosPedidoAtual.distancia} km)`;
+            elResumoTotal.innerHTML = `<span class="text-dark fw-medium" style="font-size: 16px;">⏱️ ${window.dadosPedidoAtual.tempo}</span> <span style="color: #dc3545; font-weight: bold; font-size: 16px;">📍 ${window.dadosPedidoAtual.distancia} km</span>`;
         }
 
         setTimeout(() => {
-            if (window.dadosPedidoAtual && window.dadosPedidoAtual.coordenadas) {
-                const latlngs = window.dadosPedidoAtual.coordenadas.map(c => [c.lat, c.lng]);
-                window.renderizarMapaUnificado(latlngs);
-            }
+            window.renderizarMapaUnificado();
         }, 300);
     }
 };
