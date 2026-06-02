@@ -215,13 +215,30 @@ window.iniciarFluxoCheckout = async function () {
     if (!msgInput || !msgInput.value.trim()) return;
 
     const texto = msgInput.value;
+    
+    // 1. Extração Limpa: Remove o rótulo caso venha duplicado
+    let nomeSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
+    nomeSolicitante = nomeSolicitante.replace(/Solicitante:/gi, '').trim();
+    
+    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
     const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
     const linhas = blocoRotas.split(/\n/).filter(l => l.includes('De:') && l.includes('Para:'));
 
-    // Abre o modal
+    // 2. Abertura e Preenchimento dos Cabeçalhos
     await window.loadModal('modal_mapa.html');
     new bootstrap.Modal(document.getElementById('modalMapa')).show();
 
+    // Exibição dos nomes no modal (com segurança para não quebrar o layout)
+    const elSubtitulo = document.getElementById('subtitulo-cliente');
+    if (elSubtitulo) elSubtitulo.innerText = `Atendimento: ${nomeClienteChat}`;
+
+    const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
+    if (elHeaderSolicitante) elHeaderSolicitante.innerText = nomeSolicitante;
+
+    const elResumo = document.getElementById('resumo-total');
+    if (elResumo) elResumo.innerText = "Calculando trechos...";
+
+    // 3. Cálculo Segmentado (Somatória Exata)
     let kmTotal = 0;
     let minTotal = 0;
     let listaCoords = [];
@@ -233,14 +250,13 @@ window.iniciarFluxoCheckout = async function () {
             const p2 = await buscarCoordenadasEndereco(partes[1]);
 
             if (p1 && p2) {
-                // Cálculo de trecho isolado sem otimização extra
                 const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
                 const resp = await fetch(url);
                 const data = await resp.json();
                 
                 if (data.routes && data.routes.length > 0) {
-                    // ADIÇÃO DE FILTRO: Se o trecho for maior que 60km, é um erro de geocodificação
                     const dist = data.routes[0].distance / 1000;
+                    // Filtro de segurança contra erros de geocodificação
                     if (dist < 60) {
                         kmTotal += dist;
                         minTotal += (data.routes[0].duration / 60);
@@ -251,15 +267,21 @@ window.iniciarFluxoCheckout = async function () {
         }
     }
 
-    // Exibição
+    // 4. Atualização Final
     window.dadosPedidoAtual = {
+        solicitante: nomeSolicitante,
         distancia: kmTotal.toFixed(1),
         tempo: formatarTempoHumano(minTotal),
         coordenadas: listaCoords
     };
 
-    document.getElementById('resumo-total').innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
-    window.renderizarMapaUnificado();
+    if (elResumo) {
+        elResumo.innerHTML = `👤 ${nomeSolicitante} | ⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
+    }
+    
+    if (typeof window.renderizarMapaUnificado === 'function') {
+        window.renderizarMapaUnificado();
+    }
 };
 
 async function calcularTrechoIndividual(p1, p2) {
@@ -302,7 +324,18 @@ window.prosseguirParaFormulario = async function () {
     const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
     modalForm.show();
 
+    // Captura o nome do cliente selecionado no chat
+    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
+
     setTimeout(() => {
+        // 1. Exibe o nome do cliente no subtítulo do formulário
+        // Certifique-se de que o seu modal_form.html tenha este ID ou adapte para o ID correto
+        const elSubtituloForm = document.getElementById('subtitulo-cliente-form');
+        if (elSubtituloForm) {
+            elSubtituloForm.innerText = `Destinatário: ${nomeClienteChat}`;
+        }
+
+        // 2. Mantém o preenchimento dos outros campos
         const elFormSolicitante = document.getElementById('form-nome-solicitante');
         if (elFormSolicitante) elFormSolicitante.innerText = window.dadosPedidoAtual.solicitante;
 
@@ -313,7 +346,6 @@ window.prosseguirParaFormulario = async function () {
         if (document.getElementById('p-rotas')) document.getElementById('p-rotas').value = window.dadosPedidoAtual.rotas;
         if (document.getElementById('p-obs')) document.getElementById('p-obs').value = window.dadosPedidoAtual.obs;
         
-        // Aplica o calculo real nos campos invisíveis/visíveis
         if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = window.dadosPedidoAtual.distancia;
         if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = window.dadosPedidoAtual.tempo;
 
