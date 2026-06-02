@@ -294,14 +294,28 @@ window.iniciarFluxoCheckout = async function () {
     const texto = msgInput.value;
     if (!texto.trim()) return;
 
-    // 1. Envia visualmente a mensagem para a janela do chat
-    window.enviarMensagemParaChat(texto);
+    // 1. Injeta a mensagem no chat com fundo branco imediatamente (Simulando colagem do cliente)
+    const container = document.getElementById('chat-messages-container');
+    if (container) {
+        const placeholder = container.querySelector('.text-muted.my-auto');
+        if (placeholder) placeholder.remove();
 
-    // Exibe um feedback visual ou loading rápido no console
-    console.log("Iniciando processamento lógico do arquivo/texto...");
+        const divMensagemCliente = document.createElement('div');
+        divMensagemCliente.className = 'd-flex justify-content-start mb-2'; // Alinhado à esquerda
+        divMensagemCliente.innerHTML = `
+            <div class="bg-white text-dark p-3 rounded-4 shadow-sm border border-light-subtle" style="max-width: 80%; white-space: pre-line; font-size: 0.9rem;">
+                ${texto.replace(/\n/g, '<br>')}
+            </div>
+        `;
+        container.appendChild(divMensagemCliente);
+        container.scrollTop = container.scrollHeight;
+    }
 
-    // 2. Extração via Regex baseada na mensagem padrão do cliente
-    const solicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || '';
+    // Limpa o campo de digitação do chat
+    msgInput.value = '';
+
+    // 2. Extração via Regex dos dados da mensagem crús
+    const solicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
     const contato = texto.match(/CONATO:\s*(.*)/i)?.[1]?.trim() || texto.match(/CONTATO:\s*(.*)/i)?.[1]?.trim() || '';
     const horario = texto.match(/HORÁRIO ESTIMADO P\/ COLETA:\s*(.*)/i)?.[1]?.trim() || '';
     const mercadoria = texto.match(/MERCADORIA:\s*\((.*)\)/i)?.[1]?.trim() || '';
@@ -309,21 +323,19 @@ window.iniciarFluxoCheckout = async function () {
     const prioridadeTexto = texto.match(/PRIORIDADE:\s*\((.*)\)/i)?.[1]?.trim() || '';
     const obs = texto.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || '';
 
-    // Extrai as linhas de rota da estrutura
+    // Extrai o bloco de rotas
     const blocoRotas = texto.match(/ROTA:\s*([\s\S]*?)(?=TROCA|$)/i)?.[1]?.trim() || '';
     
-    // Captura e separa todos os endereços (De: X | Para: Y) de forma limpa
+    // Tratamento e separação das linhas de rotas
     const linhasEnderecos = blocoRotas.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     let listaEnderecosUnicos = [];
 
     linhasEnderecos.forEach((linha) => {
-        // Limpa numerações como "1.", "2."
         const limpaLinha = linha.replace(/^\d+\.\s*/, '');
         const partes = limpaLinha.split(/\||Para:/i);
         
         partes.forEach(p => {
             let enderecoTratado = p.replace(/De:/i, '').trim();
-            // Remove vírgula final se houver residual de formatação
             if (enderecoTratado.endsWith(',')) enderecoTratado = enderecoTratado.slice(0, -1);
             if (enderecoTratado && !listaEnderecosUnicos.includes(enderecoTratado)) {
                 listaEnderecosUnicos.push(enderecoTratado);
@@ -331,23 +343,36 @@ window.iniciarFluxoCheckout = async function () {
         });
     });
 
-    // 3. Geocodifica todos os endereços da rota de forma sequencial e paralela
-    console.log("Convertendo endereços em coordenadas geográficas...");
+    // 3. Abre o Modal do Mapa IMEDIATAMENTE e coloca o nome do solicitante
+    await window.loadModal('modal_mapa.html');
+    const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
+    modalMapa.show();
+
+    // Alimenta o nome do Solicitante no cabeçalho do mapa na hora
+    const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
+    if (elHeaderSolicitante) {
+        elHeaderSolicitante.innerText = solicitante;
+    }
+
+    // Deixa o resumo avisando que está calculando as coordenadas
+    const elResumoTotal = document.getElementById('resumo-total');
+    if (elResumoTotal) {
+        elResumoTotal.innerText = "Calculando melhor rota via OSRM...";
+    }
+
+    // 4. Geocodifica os endereços em background para não travar a tela
     const promisesCoordenadas = listaEnderecosUnicos.map(end => buscarCoordenadasEndereco(end));
     const resultadosCoordenadas = await Promise.all(promisesCoordenadas);
-    
-    // Filtra apenas as coordenadas encontradas com sucesso
     const coordenadasValidas = resultadosCoordenadas.filter(c => c !== null);
 
     if (coordenadasValidas.length < 2) {
+        if (elResumoTotal) elResumoTotal.innerText = "Erro: Rotas insuficientes.";
         alert("Não foi possível identificar coordenadas geográficas suficientes para os endereços da rota.");
         return;
     }
 
-    // 4. Faz o disparo HTTP para a rota do servidor que calcula via OSRM Web Cloud
-    console.log("Enviando dados de rota para processamento no servidor backend...");
-    let calculoServidor = { distancia_km: 0, valor_taxa: 0 };
-
+    // 5. Faz a requisição HTTP para o servidor calcular a rota real (OSRM)
+    let calculoServidor = { distancia_km: 0, valor_taxa: 0, tempo_estimado_minutos: 0 };
     try {
         const response = await fetch('/api/calcular-rota', {
             method: 'POST',
@@ -363,10 +388,17 @@ window.iniciarFluxoCheckout = async function () {
             calculoServidor = resData;
         }
     } catch (err) {
-        console.error("Erro ao requisitar cálculo de rota do backend:", err);
+        console.error("Erro ao requisitar cálculo de rota:", err);
     }
 
-    // 5. Monta o objeto Global persistido com os retornos exatos do OSRM Cloud
+    // 6. Atualiza dinamicamente as informações de KM e Valor na tela do mapa
+    if (elResumoTotal) {
+        const kmFormatado = Number(calculoServidor.distancia_km).toFixed(2);
+        const valorFormatado = Number(calculoServidor.valor_taxa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        elResumoTotal.innerText = `Distância: ${kmFormatado} KM | Valor Prévio: ${valorFormatado}`;
+    }
+
+    // 7. Salva os dados processados no estado global do RDO
     window.dadosPedidoAtual = {
         solicitante,
         contato,
@@ -377,17 +409,58 @@ window.iniciarFluxoCheckout = async function () {
         distancia: calculoServidor.distancia_km,
         tempo: calculoServidor.tempo_estimado_minutos + " min",
         valorCalculadoOSRM: calculoServidor.valor_taxa,
-        coordenadas: coordenadasValidas
+        coordenadas: coordenadasValidas,
+        retornoOriginal: retornoTexto
     };
 
-    // 6. Carrega e exibe o modal do Mapa já renderizando o caminho geométrico na tela
-    await window.loadModal('modal_mapa.html');
-    const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
-    modalMapa.show();
-
-    // Renderiza a linha polilinha do trajeto geográfico no Leaflet
+    // 8. Renderiza a linha azul e marcadores no mapa Leaflet
     const latlngsMapeadas = coordenadasValidas.map(c => [c.lat, c.lng]);
-    setTimeout(() => window.renderizarMapaUnificado(latlngsMapeadas), 500);
+    setTimeout(() => window.renderizarMapaUnificado(latlngsMapeadas), 300);
+};
+
+window.salvarPedidoAPI = async function () {
+    // Captura o nome do cliente selecionado no cabeçalho do chat ativo para usar como Grupo/Solicitante Master
+    const nomeGrupoChat = document.getElementById('chat-header-name')?.innerText || 'RDO EXPRESS CLIENTES';
+
+    // Gera um número de serviço aleatório simulando o padrão informado (Ex: RDO91313)
+    const numeroServicoAleatorio = 'RDO' + Math.floor(10000 + Math.random() * 90000);
+
+    // Captura os dados diretamente atualizados de dentro dos campos do formulário
+    const solicitanteForm = document.getElementById('p-solicitante')?.value || window.dadosPedidoAtual.solicitante;
+    const contatoForm = document.getElementById('p-contato')?.value || window.dadosPedidoAtual.contato;
+    const mercadoriaForm = document.getElementById('p-mercadoria')?.value || window.dadosPedidoAtual.mercadoria;
+    const horarioForm = document.getElementById('p-horario')?.value || window.dadosPedidoAtual.horario;
+    const distanciaForm = document.getElementById('p-distancia')?.value || window.dadosPedidoAtual.distancia;
+    const tempoForm = document.getElementById('p-tempo')?.value || window.dadosPedidoAtual.tempo;
+    const rotasForm = document.getElementById('p-rotas')?.value || window.dadosPedidoAtual.rotas;
+    const obsForm = document.getElementById('p-obs')?.value || window.dadosPedidoAtual.obs;
+    const valorFinalForm = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
+
+    // Verifica o valor do select de Retorno para escrever SIM ou NÃO no texto
+    const selectRetorno = document.getElementById('p-retorno');
+    const retornoFinalTexto = (selectRetorno && selectRetorno.value !== "0") ? "SIM" : "NÃO";
+
+    // Estrutura exatamente o seu template final solicitado
+    const mensagemFinalFormatada = `
+📦 *${nomeGrupoChat.toUpperCase()}*
+
+*N.SERVIÇO:* ${numeroServicoAleatorio}
+*Solicitante:* ${solicitanteForm} | *Contato:* ${contatoForm}
+*Mercadoria:* ${mercadoriaForm} *Horário:* ${horarioForm} | 
+*Distância:* ${distanciaForm} KM | *Retorno:* ${retornoFinalTexto} | *Tempo:* ${tempoForm} 
+
+*Rota(s):* ${rotasForm}
+
+*Observação:* ${obsForm}
+*Valor:* ${valorFinalForm}
+    `.trim();
+
+    // Envia a mensagem final estilizada de sucesso (Fundo Vermelho do RDO, Alinhada à Direita)
+    window.enviarMensagemParaChat(mensagemFinalFormatada);
+
+    // Fecha o modal de formulário de forma limpa
+    const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
+    if (modalForm) modalForm.hide();
 };
 
 window.prosseguirParaFormulario = async function () {
