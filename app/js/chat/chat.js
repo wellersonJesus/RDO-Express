@@ -25,17 +25,44 @@ window.filtrarContatos = function () {
 };
 
 // =====================================================================
-// 2. OBSERVER (Protegido contra redeclaração)
+// OBSERVER PROTEGIDO E DEBUGÁVEL
 // =====================================================================
 if (!window.AppRDO.observerIniciado) {
+    console.log("Iniciando MutationObserver para lista de contatos...");
+    
     new MutationObserver((mutations) => {
-        const listaExiste = document.getElementById('lista-contatos-chat');
-        if (listaExiste && !window.AppRDO.listaCarregada) {
-            window.carregarDados();
-            window.AppRDO.listaCarregada = true;
+        try {
+            const listaExiste = document.getElementById('lista-contatos-chat');
+            
+            if (listaExiste) {
+                if (!window.AppRDO.listaCarregada) {
+                    console.log("Lista detectada! Carregando dados...");
+                    window.AppRDO.listaCarregada = true;
+                    
+                    // Verificação de segurança: a função existe?
+                    if (typeof window.carregarDados === 'function') {
+                        window.carregarDados().catch(err => {
+                            console.error("Erro ao executar carregarDados:", err);
+                        });
+                    } else {
+                        console.error("ERRO: window.carregarDados não está definida!");
+                    }
+                }
+            } else {
+                // Se a lista sumiu do DOM, reseta o estado
+                if (window.AppRDO.listaCarregada) {
+                    console.log("Lista removida do DOM. Resetando estado.");
+                    window.AppRDO.listaCarregada = false;
+                }
+            }
+        } catch (err) {
+            console.error("Erro crítico no MutationObserver:", err);
         }
     }).observe(document.body, { childList: true, subtree: true });
+    
     window.AppRDO.observerIniciado = true;
+} else {
+    console.warn("O Observer já estava iniciado. Tentativa de duplicação bloqueada.");
 }
 
 // =====================================================================
@@ -57,22 +84,6 @@ document.addEventListener('click', (e) => {
         window.carregarDados();
     }
 });
-
-// =====================================================================
-// OBSERVAR PÁGINA 7 (Carrega automaticamente)
-// =====================================================================
-
-const observerPagina = new MutationObserver((mutations) => {
-    const listaExiste = document.getElementById('lista-contatos-chat');
-    
-    if (listaExiste && !listaCarregada) {
-        window.carregarDados();
-        listaCarregada = true;
-    } else if (!listaExiste) {
-        listaCarregada = false;
-    }
-});
-observerPagina.observe(document.body, { childList: true, subtree: true });
 
 // =====================================================================
 // FUNÇÕES DE CONTATOS E CHAT
@@ -215,99 +226,83 @@ window.renderizarMapaUnificado = function() {
 };
 
 window.iniciarFluxoCheckout = async function () {
-    try {
-        const msgInput = document.getElementById('msg-input');
-        if (!msgInput || !msgInput.value.trim()) return;
+    const msgInput = document.getElementById('msg-input');
+    if (!msgInput || !msgInput.value.trim()) return;
 
-        const texto = msgInput.value;
-        
-        // 1. Extração de dados (Robustez contra match nulo)
-        const getMatch = (regex) => texto.match(regex)?.[1]?.trim() || '';
-        
-        const solicitante = getMatch(/SOLICITANTE:\s*(.*)/i) || 'Não Identificado';
-        const contato = getMatch(/CONATO:\s*(.*)/i) || getMatch(/CONTATO:\s*(.*)/i);
-        const horario = getMatch(/HORÁRIO ESTIMADO P\/ COLETA:\s*(.*)/i);
-        const mercadoria = getMatch(/MERCADORIA:\s*\((.*)\)/i) || 'Sacola';
-        const prioridadeTexto = getMatch(/PRIORIDADE:\s*\((.*)\)/i);
-        const retornoTexto = getMatch(/TROCA\/RETORNO:\s*\((.*)\)/i);
-        const obs = getMatch(/OBSERVAÇÃO:\s*(.*)/i);
-        
-        const blocoRotas = getMatch(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
-        const linhas = blocoRotas.split('\n').filter(l => l.toLowerCase().includes('de:') && l.toLowerCase().includes('para:'));
+    const texto = msgInput.value;
+    const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
+    const linhas = blocoRotas.split(/\n/).filter(l => l.includes('De:') && l.includes('Para:'));
 
-        // 2. Extração inteligente de pontos
-        let listaEnderecos = [];
-        linhas.forEach(linha => {
-            const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
-            partes.forEach(p => {
-                let end = p.replace(/^[0-9\.\s]+/, '').replace(/\|/g, '').trim();
-                if (end && !listaEnderecos.includes(end)) listaEnderecos.push(end);
-            });
-        });
+    // Abre o modal de forma segura
+    await window.loadModal('modal_mapa.html');
+    const modalEl = document.getElementById('modalMapa');
+    const modalMapa = new bootstrap.Modal(modalEl);
+    modalMapa.show();
+    
+    document.getElementById('resumo-total').innerText = "Calculando...";
 
-        // 3. Abertura do Modal com segurança
-        await window.loadModal('modal_mapa.html');
-        const modalEl = document.getElementById('modalMapa');
-        if (!modalEl) throw new Error("Modal não encontrado no DOM.");
-        
-        const modalMapa = new bootstrap.Modal(modalEl);
-        modalMapa.show();
+    let kmTotal = 0;
+    let minTotal = 0;
+    let listaCoords = [];
 
-        const elResumo = document.getElementById('resumo-total');
-        if (elResumo) elResumo.innerText = "Processando rotas...";
+    // Loop de extração de pontos e cálculo
+    for (let linha of linhas) {
+        const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
+        if (partes.length >= 2) {
+            const p1 = await buscarCoordenadasEndereco(partes[0]);
+            const p2 = await buscarCoordenadasEndereco(partes[1]);
 
-        // 4. Geocodificação (Geolocalização segura)
-        const resultados = await Promise.all(listaEnderecos.map(async (end) => {
-            const res = await buscarCoordenadasEndereco(end);
-            return res ? { lat: res.lat, lng: res.lng } : null;
-        }));
-        
-        const coordenadasValidas = resultados.filter(c => c !== null);
-        if (coordenadasValidas.length < 2) {
-            if (elResumo) elResumo.innerText = "Erro: Rotas insuficientes.";
-            return;
+            if (p1 && p2) {
+                // Requisição direta ao OSRM para cada trecho
+                const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+                try {
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    
+                    if (data.routes && data.routes.length > 0) {
+                        const dist = data.routes[0].distance / 1000;
+                        if (dist < 60) { // Filtro de segurança
+                            kmTotal += dist;
+                            minTotal += (data.routes[0].duration / 60);
+                            listaCoords.push(p1, p2);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro no cálculo do trecho:", e);
+                }
+            }
         }
-
-        // 5. Cálculo via Servidor (Tratamento de erro de rede/JSON)
-        let dist = 0, tempo = 0;
-        try {
-            const response = await fetch('/api/calcular-rota', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ coordenadas: coordenadasValidas })
-            });
-
-            if (!response.ok) throw new Error("Erro no servidor: " + response.status);
-            
-            const data = await response.json();
-            dist = parseFloat(data.distancia_km) || 0;
-            tempo = parseFloat(data.tempo_estimado_minutos) || 0;
-        } catch (e) {
-            console.error("Erro na API:", e);
-            if (elResumo) elResumo.innerText = "Erro ao calcular distância.";
-            return;
-        }
-
-        // 6. Atualização de Estado e UI
-        window.dadosPedidoAtual = {
-            solicitante, contato, horario, mercadoria, obs,
-            rotas: blocoRotas,
-            distancia: dist.toFixed(1),
-            tempo: `${Math.ceil(tempo)} min`,
-            coordenadas: coordenadasValidas
-        };
-
-        if (elResumo) {
-            elResumo.innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
-        }
-        
-        if (typeof window.renderizarMapaUnificado === 'function') {
-            window.renderizarMapaUnificado(coordenadasValidas.map(c => [c.lat, c.lng]));
-        }
-
-    } catch (err) {
-        console.error("Falha fatal no checkout:", err);
     }
+
+    // --- AQUI ESTÁ O AJUSTE CRÍTICO: Enviar para o servidor para precificar ---
+    let valorFinal = 0;
+    try {
+        const respPreco = await fetch('/api/calcular-rota', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                coordenadas: listaCoords,
+                prioridade: texto.includes('Urgente') ? 'Urgente' : 'Normal',
+                retorno: texto.includes('TROCA/RETORNO') ? 'SIM' : 'NÃO'
+            })
+        });
+        const dataPreco = await respPreco.json();
+        valorFinal = dataPreco.valor_taxa || 0;
+    } catch (e) {
+        console.error("Erro ao comunicar com servidor de precificação:", e);
+    }
+
+    // Exibição Final
+    window.dadosPedidoAtual = {
+        solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente',
+        distancia: kmTotal.toFixed(1),
+        tempo: formatarTempoHumano(minTotal),
+        coordenadas: listaCoords,
+        valor: valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    };
+
+    document.getElementById('resumo-total').innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km | 💰 ${window.dadosPedidoAtual.valor}`;
+    window.renderizarMapaUnificado();
 };
 
 async function calcularTrechoIndividual(p1, p2) {
