@@ -1,90 +1,48 @@
-/* --- Lista de Contatos: Design Clean --- */
-.contato-item {
+/* --- Estilos de Contatos (Escopo Protegido) --- */
+#lista-contatos-chat .contact-item-clean {
     cursor: pointer;
-    transition: background 0.2s;
-    padding: 8px 10px !important; /* Mais compacto */
+    transition: all 0.2s ease;
+    padding: 10px 12px !important;
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f8f9fa;
 }
 
-.contato-item:hover {
-    background-color: #fcfcfc;
+#lista-contatos-chat .contact-item-clean:hover {
+    background-color: #f1f3f5;
 }
 
-/* Redução de tamanho dos textos */
-.contact-name {
-    font-weight: 400 !important;
-    font-size: 0.82rem; /* Fonte ligeiramente menor */
-    color: #333;
-    margin: 0;
+#lista-contatos-chat .selected-contact {
+    background-color: #ffeef0 !important;
+    border-left: 4px solid #dc3545 !important;
 }
 
-.contact-status {
-    font-size: 0.68rem; /* Fonte pequena e discreta */
-    color: #bbb;
-    font-weight: 300;
+/* Redução visual para interface limpa */
+.contact-name { font-size: 0.9rem; color: #212529; }
+.small.text-muted { font-size: 0.75rem; }
+
+/* --- Ajuste de Mapa (Prevenção de Erros de Render) --- */
+#mapa-container {
+    height: 400px;
+    width: 100%;
+    min-height: 300px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    /* Evita que o mapa quebre o layout do modal */
+    z-index: 1; 
 }
 
-/* Ícones e Avatar menores */
-.avatar-chat {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: #e9ecef;
+/* Garante que o Leaflet preencha o container */
+#mapa-container .leaflet-container {
+    width: 100%;
+    height: 100%;
 }
 
-/* Seleção suave */
-.selected-contact {
-    background-color: #fff5f5 !important; 
-    border-left: 3px solid #f8d7da !important;
-}
-
-/* --- Fundo Estilo WhatsApp --- */
+/* --- Estilização do Chat --- */
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
-    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-    background-repeat: repeat;
-    background-size: 400px;
-}
-
-/* --- Ajuste de Elementos Gerais --- */
-#lista-rotas-detalhada {
-    max-height: 250px;
-    overflow-y: auto;
-    font-size: 0.8rem; /* Texto das rotas menor */
-}
-
-/* Card Rota Clean */
-.card-rota-clean {
-    border-left: 3px solid #dcdcdc !important;
-    background: #ffffff !important;
-    padding: 8px 12px;
-    margin-bottom: 6px;
-    border-radius: 0 6px 6px 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* Inputs minimalistas */
-.form-control-sm {
-    font-size: 0.78rem !important;
-    padding: 4px 8px !important;
-}
-
-#container-mapa-visual {
-    height: 300px !important;
-    width: 100%;
-}
-
-/* Força o iframe ou o div do Leaflet a preencher o container */
-#container-mapa-visual iframe, 
-#container-mapa-visual #map {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
+    /* Background padrão mais sutil */
+    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
 }

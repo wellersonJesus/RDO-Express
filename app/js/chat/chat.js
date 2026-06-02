@@ -204,25 +204,57 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
 }
 
 window.renderizarMapaUnificado = function() {
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas) return;
-    
-    // Supondo que você use Leaflet
-    const coords = window.dadosPedidoAtual.coordenadas; // Espera um array: [p1, p2, p3, p4]
-    
-    // Limpa camadas antigas
-    if (window.mapaInstancia) {
-        // Remove linhas anteriores
-        window.mapaInstancia.eachLayer(layer => {
-            if (layer instanceof L.Polyline) window.mapaInstancia.removeLayer(layer);
-        });
-
-        // Desenha a nova linha azul
-        const latlngs = coords.map(c => [c.lat, c.lng]);
-        L.polyline(latlngs, {color: 'blue', weight: 5}).addTo(window.mapaInstancia);
-        
-        // Ajusta o zoom para ver todas as rotas
-        window.mapaInstancia.fitBounds(latlngs);
+    // 1. Validação de segurança
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length === 0) {
+        console.warn("Sem coordenadas para renderizar.");
+        return;
     }
+
+    const coords = window.dadosPedidoAtual.coordenadas;
+    
+    // 2. Inicialização do Mapa (se não existir)
+    if (!window.mapaInstancia) {
+        const mapEl = document.getElementById('mapa-container'); // ID do seu div de mapa
+        if (!mapEl) return;
+        
+        window.mapaInstancia = L.map('mapa-container').setView([coords[0].lat, coords[0].lng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(window.mapaInstancia);
+    }
+
+    // 3. Limpeza de camadas anteriores (para não sobrepor linhas)
+    window.mapaInstancia.eachLayer(layer => {
+        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+            window.mapaInstancia.removeLayer(layer);
+        }
+    });
+
+    // 4. Desenho dos Pontos e Linha Azul
+    const latlngs = coords.map(c => [c.lat, c.lng]);
+    
+    // Desenha a Linha Azul
+    L.polyline(latlngs, {
+        color: '#0d6efd', // Azul Bootstrap
+        weight: 6,
+        opacity: 0.8,
+        smoothFactor: 1
+    }).addTo(window.mapaInstancia);
+
+    // Desenha os marcadores (Origem, Pontos intermediários, Destino)
+    latlngs.forEach((latlng, index) => {
+        L.circleMarker(latlng, {
+            radius: 8,
+            fillColor: index === 0 ? "#28a745" : (index === latlngs.length - 1 ? "#dc3545" : "#ffc107"),
+            color: "#fff",
+            weight: 2,
+            fillOpacity: 1
+        }).addTo(window.mapaInstancia).bindPopup(index === 0 ? "Origem" : "Destino");
+    });
+
+    // 5. Ajuste automático do zoom
+    window.mapaInstancia.fitBounds(latlngs, { padding: [50, 50] });
 };
 
 window.iniciarFluxoCheckout = async function () {
