@@ -158,28 +158,20 @@ function formatarTempoHumano(minutosTotais) {
 
 async function buscarCoordenadasEndereco(enderecoTexto) {
     try {
-        // Limpeza agressiva para remover rótulos e sujeiras comuns de chats
-        let termoLimpo = enderecoTexto.replace(/(De:|Para:|1\.|2\.|3\.|\||-)/gi, '').trim();
+        // Limpeza refinada para não sobrar numeração da lista
+        let termoLimpo = enderecoTexto.replace(/^[0-9\.\s]+/, '').replace(/\||-/g, '').trim();
         const buscaLimpa = encodeURIComponent(termoLimpo + ", MG, Brasil");
         
-        // Chamada direta para o Nominatim com foco em precisão
         const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${buscaLimpa}`;
-        
         const response = await fetch(url, { headers: { 'User-Agent': 'RDO-Express-App' } });
         const dados = await response.json();
         
-        if (dados && dados.length > 0) {
-            return {
-                lat: parseFloat(dados[0].lat),
-                lng: parseFloat(dados[0].lon),
-                endereco: termoLimpo
-            };
-        }
-        return null;
-    } catch (err) {
-        console.error("Erro ao geocodificar:", err);
-        return null;
-    }
+        return (dados && dados.length > 0) ? {
+            lat: parseFloat(dados[0].lat),
+            lng: parseFloat(dados[0].lon),
+            endereco: termoLimpo
+        } : null;
+    } catch (err) { return null; }
 }
 
 window.renderizarMapaUnificado = async function() {
@@ -225,66 +217,83 @@ window.renderizarMapaUnificado = async function() {
 window.iniciarFluxoCheckout = async function () {
     const msgInput = document.getElementById('msg-input');
     if (!msgInput || !msgInput.value.trim()) return;
-    
-    const texto = msgInput.value;
-    
-    // Extrai dados básicos do formulário
-    const solicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
-    const contato = texto.match(/CONATO:\s*(.*)/i)?.[1]?.trim() || '';
-    const horario = texto.match(/HORÁRIO ESTIMADO P\/ COLETA:\s*(.*)/i)?.[1]?.trim() || '';
-    const mercadoria = texto.match(/MERCADORIA:\s*\((.*)\)/i)?.[1]?.trim() || 'Sacola';
-    const obs = texto.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || '';
-    
-    // Extração inteligente de rotas (Suporta 1. De... 2. Para... ou formatos complexos)
-    const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
-    const partes = blocoRotas.split(/\||Para:|De:|->/gi).map(p => p.trim()).filter(p => p.length > 5);
 
-    // Abre o modal de imediato para feedback
+    const texto = msgInput.value;
+
+    // 1. EXTRAÇÃO LIMPA (Remove o rótulo caso venha duplicado no texto)
+    let nomeSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
+    nomeSolicitante = nomeSolicitante.replace(/Solicitante:/gi, '').trim(); 
+
+    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
+
+    // 2. EXTRAÇÃO DE ROTAS
+    const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
+    const linhas = blocoRotas.split(/\n/).filter(l => l.trim().length > 5);
+
+    // 3. ABERTURA DO MODAL
     await window.loadModal('modal_mapa.html');
     const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
     modalMapa.show();
-    
-    document.getElementById('resumo-total').innerText = "Buscando endereços...";
 
-    let coordenadasValidas = [];
-    for (let end of partes) {
-        const coord = await buscarCoordenadasEndereco(end);
-        if (coord) coordenadasValidas.push(coord);
-        await new Promise(r => setTimeout(r, 1000)); // Delay para evitar bloqueio da API
-    }
+    // 4. ATRIBUIÇÃO LIMPA (Sem texto estático duplicado)
+    const elSubtitulo = document.getElementById('subtitulo-cliente');
+    if (elSubtitulo) elSubtitulo.innerText = `Atendimento: ${nomeClienteChat}`;
 
-    if (coordenadasValidas.length < 2) {
-        document.getElementById('resumo-total').innerText = "Erro: Não identificamos pontos suficientes.";
-        return;
-    }
+    const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
+    if (elHeaderSolicitante) elHeaderSolicitante.innerText = nomeSolicitante;
 
-    // Cálculo via OSRM
-    const coordsStr = coordenadasValidas.map(c => `${c.lng},${c.lat}`).join(';');
-    const urlOSRM = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?geometries=geojson&overview=full`;
-    
-    try {
-        const resp = await fetch(urlOSRM);
-        const json = await resp.json();
+    const elResumo = document.getElementById('resumo-total');
+    elResumo.innerText = "Calculando rota de " + linhas.length + " trechos...";
+
+    // 5. CÁLCULO SEGMENTADO (Soma precisa)
+    let kmTotal = 0;
+    let minutosTotais = 0;
+    let todasCoordenadas = [];
+
+    for (let linha of linhas) {
+        // Remove numeração e rótulos para geocodificar apenas o endereço
+        const linhaLimpa = linha.replace(/^\d+\.\s*/, ''); 
+        const partes = linhaLimpa.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
         
-        if (json.routes && json.routes.length > 0) {
-            const rota = json.routes[0];
-            const km = (rota.distance / 1000).toFixed(1);
-            const tempo = formatarTempoHumano(rota.duration / 60);
+        if (partes.length >= 2) {
+            const c1 = await buscarCoordenadasEndereco(partes[0]);
+            const c2 = await buscarCoordenadasEndereco(partes[1]);
 
-            window.dadosPedidoAtual = { 
-                solicitante, contato, horario, mercadoria, obs, rotas: blocoRotas,
-                distancia: km, tempo: tempo, 
-                coordenadas: coordenadasValidas,
-                caminhoRuas: rota.geometry.coordinates.map(c => [c[1], c[0]])
-            };
-            
-            document.getElementById('resumo-total').innerHTML = `⏱️ ${tempo} 📍 ${km} km`;
-            window.renderizarMapaUnificado();
+            if (c1 && c2) {
+                const res = await calcularRotaOSRM(c1, c2);
+                if (res) {
+                    kmTotal += res.km;
+                    minutosTotais += res.min;
+                    todasCoordenadas.push(c1, c2);
+                }
+            }
+            await new Promise(r => setTimeout(r, 800));
         }
-    } catch (e) {
-        document.getElementById('resumo-total').innerText = "Erro ao conectar com o roteador.";
     }
+
+    // 6. FINALIZAÇÃO
+    window.dadosPedidoAtual = {
+        solicitante: nomeSolicitante,
+        distancia: kmTotal.toFixed(1),
+        tempo: formatarTempoHumano(minutosTotais),
+        coordenadas: todasCoordenadas
+    };
+
+    elResumo.innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
+    window.renderizarMapaUnificado();
 };
+
+async function calcularRotaOSRM(p1, p2) {
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.routes && data.routes.length > 0) {
+            return { km: data.routes[0].distance / 1000, min: data.routes[0].duration / 60 };
+        }
+        return null;
+    } catch (e) { return null; }
+}
 
 // =====================================================================
 // TRANSIÇÃO FORMULÁRIO E FINALIZAÇÃO
