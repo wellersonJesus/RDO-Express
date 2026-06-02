@@ -10,15 +10,19 @@
                 </div>
             </div>
             <div class="modal-body p-3">
-                <div id="container-mapa-visual" class="border shadow-sm mb-3">
+                <div id="container-mapa-visual" style="height: 350px; width: 100%; border-radius: 10px;" class="border shadow-sm mb-3">
                 </div>
 
-                <div id="lista-rotas-editavel" class="mb-3" style="max-height: 200px; overflow-y: auto;">
-                </div>
+                <div id="lista-rotas-editavel" class="mb-3 p-2 bg-light rounded" style="max-height: 200px; overflow-y: auto; font-size: 0.9rem;">
+                     </div>
 
-                <button class="btn btn-danger" onclick="window.prosseguirParaFormulario()">
-                    Avançar para Checkout
-                </button>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div id="resumo-total" class="fw-bold text-primary">Distância: 0km | Valor: R$ 0,00</div>
+                    
+                    <button class="btn btn-danger" onclick="window.prosseguirParaFormulario()">
+                        Avançar para Checkout
+                    </button>
+                </div>
             </div>
         </div>
     </div>

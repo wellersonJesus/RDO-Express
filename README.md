@@ -29,33 +29,40 @@ npm install bcryptjs
 node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("master@123", 10));'
 ```
 
-- Popular dados Docker
+- Baixar mapa para docker
 
 ```bash
-# Popular base de dados inicial
-npm run seed
-🐳 Operação SRE (Docker)
-Reset Total e Limpeza
-Use este comando para garantir que nenhum cache ou container órfão interfira na nova versão:
+#link para dowunload
+https://download.geofabrik.de/south-america/brazil/sudeste.html
+#renomear mapa
+mv mapas/sudeste-260601.osm.pbf mapas/minas-gerais-latest.osm.pbf
+#extração mapa
+sudo docker run -t -v "$(pwd)/mapas:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/minas-gerais-latest.osm.pbf
+#particionamento
+docker run -t -v "$(pwd)/mapas:/data" osrm/osrm-backend osrm-partition /data/minas-gerais-latest.osrm
+#customização
+docker run -t -v "$(pwd)/mapas:/data" osrm/osrm-backend osrm-customize /data/minas-gerais-latest.osrm
+#verificar
+ls -l mapas/
 ```
-- Limpar imagens 
+- Docker
 
 ```bash
-# Para o ecossistema, limpa imagens com erro e reconstrói do zero
-sudo docker-compose down && \
-sudo docker rmi rdo-express_rdo_app atendai/evolution-api:v1.6.1 && \
-sudo docker-compose up -d --build
-Atualização Rápida (Hot Reload)
-Para aplicar alterações no código ou variáveis de ambiente sem derrubar todo o gateway:
+#Para subir tudo pela primeira vez:
+docker-compose up -d --build
+
+#Para reiniciar apenas o seu app (após mudar o código):
+docker-compose restart rdo_app
+
+#Para ver logs e identificar erros (em tempo real):
+docker-compose logs -f rdo_app
+
+#Para parar o sistema sem excluir os dados:
+docker-compose stop
+
+#Para subir novamente (sem reconstruir):
+docker-compose start
 ```
-
-- Atualização reconstruir Docker
-
-```bash
-# Reconstrói apenas o container da aplicação RDO
-sudo docker-compose up -d --build rdo_app && sudo docker logs -f rdo_app
-```
-
 ---
 
 <div align="center">
