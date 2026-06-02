@@ -2,13 +2,16 @@ window.loadPage = async function(page, title, subtitle) {
     const container = document.getElementById('router-view');
     if (!container) return;
 
-    // 1. Limpeza de modais (Segurança)
+    // 1. Limpeza rigorosa de modais e backdrops pendentes
     document.querySelectorAll('.modal.show').forEach(m => {
         const inst = bootstrap.Modal.getInstance(m);
         if (inst) inst.hide();
     });
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
 
-    // 2. Atualização de Títulos
+    // 2. Atualização UI
     document.getElementById('page-title').innerText = title;
     document.getElementById('page-subtitle').innerText = subtitle;
 
@@ -18,24 +21,39 @@ window.loadPage = async function(page, title, subtitle) {
         if (!response.ok) throw new Error(`Página ${page} não encontrada.`);
         container.innerHTML = await response.text();
 
-        // 4. INICIALIZAÇÃO AUTOMÁTICA (O PONTO QUE VOCÊ PRECISAVA)
-        // Sempre que o HTML carregar, verificamos o script do Bot
-        if (page === 'bot') {
-            // Garante que o script do bot esteja carregado antes de inicializar
-            if (typeof window.initBot !== 'function') {
-                const script = document.createElement('script');
-                script.src = 'js/bot/bot.js';
-                script.onload = () => window.initBot(); // Inicia assim que carregar
-                document.body.appendChild(script);
+        // 4. MAPEAMENTO INTELIGENTE (Adicione novas páginas aqui)
+        const pageScripts = {
+            'bot':            { func: 'initBot', path: 'js/bot/bot.js' },
+            'administracao':  { func: 'carregarAdmin', path: 'js/administracao/administracao.js', arg: 'clientes' },
+            'chat':           { func: 'iniciarChat', path: 'js/chat/chat.js' }
+        };
+
+        const config = pageScripts[page];
+
+        // 5. Execução automática com verificação de carregamento
+        if (config) {
+            const executar = () => {
+                if (typeof window[config.func] === 'function') {
+                    config.arg ? window[config.func](config.arg) : window[config.func]();
+                } else {
+                    console.error(`Função ${config.func} não definida no script carregado.`);
+                }
+            };
+
+            if (typeof window[config.func] === 'function') {
+                executar();
             } else {
-                window.initBot(); // Se já estiver carregado, apenas inicia
+                const script = document.createElement('script');
+                script.src = config.path;
+                script.onload = executar;
+                script.onerror = () => console.error(`Falha ao carregar script: ${config.path}`);
+                document.body.appendChild(script);
             }
         }
         
-        // Adicione outros 'if (page === ...)' conforme necessário para outras páginas
-        
     } catch (err) {
-        console.error("Erro na navegação:", err);
+        console.error("Erro fatal na navegação:", err);
+        container.innerHTML = `<div class="p-4 text-center text-danger">Erro ao carregar a página: ${page}. Verifique o console.</div>`;
     }
 };
 
