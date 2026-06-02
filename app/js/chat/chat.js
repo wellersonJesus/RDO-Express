@@ -158,18 +158,21 @@ function formatarTempoHumano(minutosTotais) {
 
 async function buscarCoordenadasEndereco(enderecoTexto) {
     try {
-        // Limpeza refinada para não sobrar numeração da lista
-        let termoLimpo = enderecoTexto.replace(/^[0-9\.\s]+/, '').replace(/\||-/g, '').trim();
-        const buscaLimpa = encodeURIComponent(termoLimpo + ", MG, Brasil");
+        // Limpeza básica do texto
+        let termo = enderecoTexto.replace(/^[0-9\.\s]+/, '').replace(/(De:|Para:|\||-)/gi, '').trim();
+        // Apenas o parâmetro q é necessário. O Nominatim entende "MG" dentro da query.
+        const busca = encodeURIComponent(termo + ", MG, Brasil");
         
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${buscaLimpa}`;
-        const response = await fetch(url, { headers: { 'User-Agent': 'RDO-Express-App' } });
+        // Usamos viewbox para priorizar a região de BH sem quebrar a URL
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&viewbox=-44.3,-20.2,-43.5,-19.6&bounded=1&q=${busca}`;
+        
+        const response = await fetch(url);
         const dados = await response.json();
         
-        return (dados && dados.length > 0) ? {
-            lat: parseFloat(dados[0].lat),
-            lng: parseFloat(dados[0].lon),
-            endereco: termoLimpo
+        return (dados && dados.length > 0) ? { 
+            lat: parseFloat(dados[0].lat), 
+            lng: parseFloat(dados[0].lon), 
+            endereco: termo 
         } : null;
     } catch (err) { return null; }
 }
@@ -177,41 +180,34 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
 window.renderizarMapaUnificado = async function() {
     const container = document.getElementById('container-mapa-visual');
     if (!container) return;
-
-    if (container._leaflet_id) container._leaflet_id = null;
     container.innerHTML = '<div id="map-instance" style="width:100%; height:100%;"></div>';
     
     const map = L.map('map-instance').setView([-19.9167, -43.9345], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     const dados = window.dadosPedidoAtual;
-
     if (dados && dados.coordenadas && dados.coordenadas.length > 0) {
-        // Marca os pontos (Origem, Destino, Paradas)
-        dados.coordenadas.forEach((ponto, index) => {
-            let label = index === 0 ? `📍 Origem: ${ponto.endereco}` : 
-                        index === dados.coordenadas.length - 1 ? `🏁 Destino: ${ponto.endereco}` : 
-                        `🛑 Parada ${index}: ${ponto.endereco}`;
-            L.marker([ponto.lat, ponto.lng]).addTo(map).bindPopup(label);
-        });
+        // Marcadores
+        dados.coordenadas.forEach(p => L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.endereco));
 
-        // Desenha a linha traçando as ruas (se houver o caminho calculado pelo OSRM)
-        if (dados.caminhoRuas && dados.caminhoRuas.length > 0) {
-            const linhaRota = L.polyline(dados.caminhoRuas, {
-                color: '#1a73e8', // Azul Google Maps
-                weight: 5,
-                opacity: 0.8
-            }).addTo(map);
-            map.fitBounds(linhaRota.getBounds(), { padding: [30, 30] });
-        } else {
-            // Fallback: Linha reta se o OSRM falhar
-            const coordsSimples = dados.coordenadas.map(c => [c.lat, c.lng]);
-            const linhaReta = L.polyline(coordsSimples, { color: 'gray', weight: 4, dashArray: '10, 10' }).addTo(map);
-            map.fitBounds(linhaReta.getBounds(), { padding: [30, 30] });
+        // DESENHO DA LINHA AZUL: Agora percorre os segmentos
+        // Precisamos desenhar uma polilinha para cada par de coordenadas (trecho)
+        for (let i = 0; i < dados.coordenadas.length; i += 2) {
+            if (dados.coordenadas[i+1]) {
+                const p1 = dados.coordenadas[i];
+                const p2 = dados.coordenadas[i+1];
+                
+                // OSRM para desenhar o trajeto entre os dois pontos
+                const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?geometries=geojson`;
+                fetch(url).then(r => r.json()).then(data => {
+                    if (data.routes && data.routes[0]) {
+                        const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                        L.polyline(coords, { color: '#1a73e8', weight: 5 }).addTo(map);
+                    }
+                });
+            }
         }
     }
-    
-    setTimeout(() => map.invalidateSize(), 500);
 };
 
 window.iniciarFluxoCheckout = async function () {
@@ -219,69 +215,65 @@ window.iniciarFluxoCheckout = async function () {
     if (!msgInput || !msgInput.value.trim()) return;
 
     const texto = msgInput.value;
-
-    // 1. EXTRAÇÃO LIMPA (Remove o rótulo caso venha duplicado no texto)
-    let nomeSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
-    nomeSolicitante = nomeSolicitante.replace(/Solicitante:/gi, '').trim(); 
-
-    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
-
-    // 2. EXTRAÇÃO DE ROTAS
     const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
-    const linhas = blocoRotas.split(/\n/).filter(l => l.trim().length > 5);
+    const linhas = blocoRotas.split(/\n/).filter(l => l.includes('De:') && l.includes('Para:'));
 
-    // 3. ABERTURA DO MODAL
+    // Abre o modal
     await window.loadModal('modal_mapa.html');
-    const modalMapa = new bootstrap.Modal(document.getElementById('modalMapa'));
-    modalMapa.show();
+    new bootstrap.Modal(document.getElementById('modalMapa')).show();
 
-    // 4. ATRIBUIÇÃO LIMPA (Sem texto estático duplicado)
-    const elSubtitulo = document.getElementById('subtitulo-cliente');
-    if (elSubtitulo) elSubtitulo.innerText = `Atendimento: ${nomeClienteChat}`;
-
-    const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
-    if (elHeaderSolicitante) elHeaderSolicitante.innerText = nomeSolicitante;
-
-    const elResumo = document.getElementById('resumo-total');
-    elResumo.innerText = "Calculando rota de " + linhas.length + " trechos...";
-
-    // 5. CÁLCULO SEGMENTADO (Soma precisa)
     let kmTotal = 0;
-    let minutosTotais = 0;
-    let todasCoordenadas = [];
+    let minTotal = 0;
+    let listaCoords = [];
 
     for (let linha of linhas) {
-        // Remove numeração e rótulos para geocodificar apenas o endereço
-        const linhaLimpa = linha.replace(/^\d+\.\s*/, ''); 
-        const partes = linhaLimpa.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
-        
+        const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
         if (partes.length >= 2) {
-            const c1 = await buscarCoordenadasEndereco(partes[0]);
-            const c2 = await buscarCoordenadasEndereco(partes[1]);
+            const p1 = await buscarCoordenadasEndereco(partes[0]);
+            const p2 = await buscarCoordenadasEndereco(partes[1]);
 
-            if (c1 && c2) {
-                const res = await calcularRotaOSRM(c1, c2);
-                if (res) {
-                    kmTotal += res.km;
-                    minutosTotais += res.min;
-                    todasCoordenadas.push(c1, c2);
+            if (p1 && p2) {
+                // Cálculo de trecho isolado sem otimização extra
+                const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                
+                if (data.routes && data.routes.length > 0) {
+                    // ADIÇÃO DE FILTRO: Se o trecho for maior que 60km, é um erro de geocodificação
+                    const dist = data.routes[0].distance / 1000;
+                    if (dist < 60) {
+                        kmTotal += dist;
+                        minTotal += (data.routes[0].duration / 60);
+                        listaCoords.push(p1, p2);
+                    }
                 }
             }
-            await new Promise(r => setTimeout(r, 800));
         }
     }
 
-    // 6. FINALIZAÇÃO
+    // Exibição
     window.dadosPedidoAtual = {
-        solicitante: nomeSolicitante,
         distancia: kmTotal.toFixed(1),
-        tempo: formatarTempoHumano(minutosTotais),
-        coordenadas: todasCoordenadas
+        tempo: formatarTempoHumano(minTotal),
+        coordenadas: listaCoords
     };
 
-    elResumo.innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
+    document.getElementById('resumo-total').innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
     window.renderizarMapaUnificado();
 };
+
+async function calcularTrechoIndividual(p1, p2) {
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.routes && data.routes.length > 0) {
+            return { km: data.routes[0].distance / 1000, min: data.routes[0].duration / 60 };
+        }
+        return null;
+    } catch (e) { return null; }
+}
+
 
 async function calcularRotaOSRM(p1, p2) {
     try {
