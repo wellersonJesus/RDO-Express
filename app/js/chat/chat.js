@@ -230,22 +230,30 @@ window.iniciarFluxoCheckout = async function () {
     if (!msgInput || !msgInput.value.trim()) return;
 
     const texto = msgInput.value;
+    
+    // Extração melhorada: garante que o nome do solicitante seja capturado
+    const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
+    const solicitante = solicitanteMatch ? solicitanteMatch[1].trim() : 'Cliente';
+    
     const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
     const linhas = blocoRotas.split(/\n/).filter(l => l.includes('De:') && l.includes('Para:'));
 
-    // Abre o modal de forma segura
+    // Abre o modal
     await window.loadModal('modal_mapa.html');
     const modalEl = document.getElementById('modalMapa');
     const modalMapa = new bootstrap.Modal(modalEl);
     modalMapa.show();
     
-    document.getElementById('resumo-total').innerText = "Calculando...";
+    // Atualiza o cabeçalho do solicitante no modal (ID precisa existir no seu HTML)
+    const elHeader = document.getElementById('header-nome-solicitante');
+    if (elHeader) elHeader.innerText = solicitante;
+
+    document.getElementById('resumo-total').innerText = "Calculando rota...";
 
     let kmTotal = 0;
     let minTotal = 0;
     let listaCoords = [];
 
-    // Loop de extração de pontos e cálculo
     for (let linha of linhas) {
         const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
         if (partes.length >= 2) {
@@ -253,28 +261,24 @@ window.iniciarFluxoCheckout = async function () {
             const p2 = await buscarCoordenadasEndereco(partes[1]);
 
             if (p1 && p2) {
-                // Requisição direta ao OSRM para cada trecho
                 const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
                 try {
                     const resp = await fetch(url);
                     const data = await resp.json();
-                    
                     if (data.routes && data.routes.length > 0) {
                         const dist = data.routes[0].distance / 1000;
-                        if (dist < 60) { // Filtro de segurança
+                        if (dist < 60) {
                             kmTotal += dist;
                             minTotal += (data.routes[0].duration / 60);
                             listaCoords.push(p1, p2);
                         }
                     }
-                } catch (e) {
-                    console.error("Erro no cálculo do trecho:", e);
-                }
+                } catch (e) { console.error("Erro no cálculo:", e); }
             }
         }
     }
 
-    // --- AQUI ESTÁ O AJUSTE CRÍTICO: Enviar para o servidor para precificar ---
+    // Comunicação com seu servidor para valor final
     let valorFinal = 0;
     try {
         const respPreco = await fetch('/api/calcular-rota', {
@@ -288,13 +292,11 @@ window.iniciarFluxoCheckout = async function () {
         });
         const dataPreco = await respPreco.json();
         valorFinal = dataPreco.valor_taxa || 0;
-    } catch (e) {
-        console.error("Erro ao comunicar com servidor de precificação:", e);
-    }
+    } catch (e) { console.error("Erro no servidor de precificação:", e); }
 
-    // Exibição Final
+    // Salva globalmente para uso no formulário e mapa
     window.dadosPedidoAtual = {
-        solicitante: texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente',
+        solicitante: solicitante,
         distancia: kmTotal.toFixed(1),
         tempo: formatarTempoHumano(minTotal),
         coordenadas: listaCoords,
@@ -302,7 +304,13 @@ window.iniciarFluxoCheckout = async function () {
     };
 
     document.getElementById('resumo-total').innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km | 💰 ${window.dadosPedidoAtual.valor}`;
-    window.renderizarMapaUnificado();
+    
+    // Pequeno delay para garantir que o modal esteja renderizado antes de desenhar o mapa
+    setTimeout(() => {
+        if (typeof window.renderizarMapaUnificado === 'function') {
+            window.renderizarMapaUnificado();
+        }
+    }, 500);
 };
 
 async function calcularTrechoIndividual(p1, p2) {
