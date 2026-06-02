@@ -215,59 +215,68 @@ window.iniciarFluxoCheckout = async function () {
     if (!msgInput || !msgInput.value.trim()) return;
 
     const texto = msgInput.value;
-    
-    // 1. Extração Limpa: Remove o rótulo caso venha duplicado
-    let nomeSolicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1]?.trim() || 'Não Identificado';
-    nomeSolicitante = nomeSolicitante.replace(/Solicitante:/gi, '').trim();
-    
-    const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
-    const blocoRotas = texto.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1] || '';
-    const linhas = blocoRotas.split(/\n/).filter(l => l.includes('De:') && l.includes('Para:'));
 
-    // 2. Abertura e Preenchimento dos Cabeçalhos
+    // 1. EXTRAÇÃO ROBUSTA
+    const nomeMatch = texto.match(/SOLICITANTE:\s*([^\n\r]+)/i);
+    const nomeSolicitante = nomeMatch ? nomeMatch[1].trim() : 'Não Identificado';
+
+    // Captura todo o bloco entre "ROTA:" e o próximo item de controle
+    const blocoRotas = texto.split(/ROTA:/i)[1]?.split(/TROCA:|PRIORIDADE:|OBSERVAÇÃO:|HORÁRIO/i)[0] || '';
+    
+    // Divide por qualquer número seguido de ponto (1. 2. 3.) OU por quebra de linha
+    // e garante que a linha contenha "De:" e "Para:"
+    const linhas = blocoRotas.split(/\n|\d+\./).filter(l => 
+        l.toLowerCase().includes('de:') && l.toLowerCase().includes('para:')
+    );
+
+    // 2. MODAL E CABEÇALHOS
     await window.loadModal('modal_mapa.html');
-    new bootstrap.Modal(document.getElementById('modalMapa')).show();
+    const modal = new bootstrap.Modal(document.getElementById('modalMapa'));
+    modal.show();
 
-    // Exibição dos nomes no modal (com segurança para não quebrar o layout)
-    const elSubtitulo = document.getElementById('subtitulo-cliente');
-    if (elSubtitulo) elSubtitulo.innerText = `Atendimento: ${nomeClienteChat}`;
-
+    const elResumo = document.getElementById('resumo-total');
+    if (elResumo) elResumo.innerHTML = `Processando ${linhas.length} trechos...`;
+    
     const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
     if (elHeaderSolicitante) elHeaderSolicitante.innerText = nomeSolicitante;
 
-    const elResumo = document.getElementById('resumo-total');
-    if (elResumo) elResumo.innerText = "Calculando trechos...";
-
-    // 3. Cálculo Segmentado (Somatória Exata)
+    // 3. LOOP DE CÁLCULO (SOMA SEGMENTADA)
     let kmTotal = 0;
     let minTotal = 0;
     let listaCoords = [];
 
-    for (let linha of linhas) {
+    for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i];
+        // Extrai apenas os endereços de origem e destino da linha
         const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
+        
         if (partes.length >= 2) {
             const p1 = await buscarCoordenadasEndereco(partes[0]);
             const p2 = await buscarCoordenadasEndereco(partes[1]);
 
             if (p1 && p2) {
+                // Cálculo de trecho INDIVIDUAL (A->B, B->C, C->D)
                 const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
-                const resp = await fetch(url);
-                const data = await resp.json();
+                const response = await fetch(url);
+                const data = await response.json();
                 
-                if (data.routes && data.routes.length > 0) {
+                if (data.routes && data.routes[0]) {
                     const dist = data.routes[0].distance / 1000;
-                    // Filtro de segurança contra erros de geocodificação
-                    if (dist < 60) {
-                        kmTotal += dist;
-                        minTotal += (data.routes[0].duration / 60);
-                        listaCoords.push(p1, p2);
-                    }
+                    const dur = data.routes[0].duration / 60;
+                    
+                    // Somatória real dos segmentos
+                    kmTotal += dist;
+                    minTotal += dur;
+                    listaCoords.push(p1, p2);
+                    
+                    console.log(`Trecho ${i+1}: ${dist.toFixed(1)}km`);
                 }
             }
+            await new Promise(r => setTimeout(r, 600)); // Delay para API
         }
     }
 
-    // 4. Atualização Final
+    // 4. ATUALIZAÇÃO FINAL
     window.dadosPedidoAtual = {
         solicitante: nomeSolicitante,
         distancia: kmTotal.toFixed(1),
@@ -278,24 +287,26 @@ window.iniciarFluxoCheckout = async function () {
     if (elResumo) {
         elResumo.innerHTML = `👤 ${nomeSolicitante} | ⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
     }
-    
+
     if (typeof window.renderizarMapaUnificado === 'function') {
         window.renderizarMapaUnificado();
     }
 };
 
 async function calcularTrechoIndividual(p1, p2) {
-    try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (data.routes && data.routes.length > 0) {
-            return { km: data.routes[0].distance / 1000, min: data.routes[0].duration / 60 };
-        }
-        return null;
-    } catch (e) { return null; }
+    // URL específica para evitar otimizações estranhas do OSRM
+    const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    
+    if (data.routes && data.routes[0]) {
+        return { 
+            km: data.routes[0].distance / 1000, 
+            min: data.routes[0].duration / 60 
+        };
+    }
+    return null;
 }
-
 
 async function calcularRotaOSRM(p1, p2) {
     try {
@@ -327,7 +338,7 @@ window.prosseguirParaFormulario = async function () {
 
     setTimeout(() => {
         // Exibir nome do cliente no subtítulo do Formulário
-        document.getElementById('subtitulo-cliente-form').innerText = `Atendimento: ${nomeClienteChat}`;
+        document.getElementById('subtitulo-cliente-form').innerText = `Cliente: ${nomeClienteChat}`;
         document.getElementById('form-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
 
         // Preenchimento Automático dos campos (extraídos do texto via Regex)
