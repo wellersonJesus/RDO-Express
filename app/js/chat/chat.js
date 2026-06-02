@@ -314,43 +314,39 @@ async function calcularRotaOSRM(p1, p2) {
 // =====================================================================
 
 window.prosseguirParaFormulario = async function () {
-    const modalMapaEl = document.getElementById('modalMapa');
-    if (modalMapaEl) {
-        const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
-        if (modalMapa) modalMapa.hide();
-    }
+    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    if (modalMapa) modalMapa.hide();
 
     await window.loadModal('modal_form.html');
     const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
     modalForm.show();
 
-    // Captura o nome do cliente selecionado no chat
+    // Captura dados do chat
     const nomeClienteChat = document.getElementById('chat-header-name')?.innerText || 'Cliente';
+    const textoOriginal = document.getElementById('msg-input').value;
 
     setTimeout(() => {
-        // 1. Exibe o nome do cliente no subtítulo do formulário
-        // Certifique-se de que o seu modal_form.html tenha este ID ou adapte para o ID correto
-        const elSubtituloForm = document.getElementById('subtitulo-cliente-form');
-        if (elSubtituloForm) {
-            elSubtituloForm.innerText = `Destinatário: ${nomeClienteChat}`;
-        }
+        // Exibir nome do cliente no subtítulo do Formulário
+        document.getElementById('subtitulo-cliente-form').innerText = `Atendimento: ${nomeClienteChat}`;
+        document.getElementById('form-nome-solicitante').innerText = window.dadosPedidoAtual.solicitante;
 
-        // 2. Mantém o preenchimento dos outros campos
-        const elFormSolicitante = document.getElementById('form-nome-solicitante');
-        if (elFormSolicitante) elFormSolicitante.innerText = window.dadosPedidoAtual.solicitante;
-
-        if (document.getElementById('p-solicitante')) document.getElementById('p-solicitante').value = window.dadosPedidoAtual.solicitante;
-        if (document.getElementById('p-contato')) document.getElementById('p-contato').value = window.dadosPedidoAtual.contato;
-        if (document.getElementById('p-horario')) document.getElementById('p-horario').value = window.dadosPedidoAtual.horario;
-        if (document.getElementById('p-mercadoria')) document.getElementById('p-mercadoria').value = window.dadosPedidoAtual.mercadoria;
-        if (document.getElementById('p-rotas')) document.getElementById('p-rotas').value = window.dadosPedidoAtual.rotas;
-        if (document.getElementById('p-obs')) document.getElementById('p-obs').value = window.dadosPedidoAtual.obs;
+        // Preenchimento Automático dos campos (extraídos do texto via Regex)
+        document.getElementById('p-solicitante').value = window.dadosPedidoAtual.solicitante;
+        document.getElementById('p-contato').value = textoOriginal.match(/CONATO:\s*(.*)/i)?.[1]?.trim() || '';
+        document.getElementById('p-horario').value = textoOriginal.match(/HORÁRIO.*?:\s*(.*)/i)?.[1]?.trim() || '';
+        document.getElementById('p-rotas').value = textoOriginal.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1]?.trim() || '';
+        document.getElementById('p-obs').value = textoOriginal.match(/OBSERVAÇÃO:\s*(.*)/i)?.[1]?.trim() || '';
         
-        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = window.dadosPedidoAtual.distancia;
-        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = window.dadosPedidoAtual.tempo;
+        // Define o select de prioridade automaticamente se encontrar "Urgente"
+        const prioridadeSelect = document.getElementById('p-prioridade');
+        if (textoOriginal.toLowerCase().includes('urgente')) prioridadeSelect.value = "8";
+
+        // Preenche métricas calculadas
+        document.getElementById('p-distancia').value = window.dadosPedidoAtual.distancia;
+        document.getElementById('p-tempo').value = window.dadosPedidoAtual.tempo;
 
         window.calcularTudo();
-    }, 250);
+    }, 300);
 };
 
 window.calcularTudo = function () {
