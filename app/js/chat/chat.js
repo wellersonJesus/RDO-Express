@@ -1,12 +1,52 @@
 let debounceTimer;
 let clienteSelecionado = null;
 let rotasAtuais = [];
+let listaCarregada = false; // Controle para o loop de carregamento da página
+
+// =====================================================================
+// EVENTOS GLOBAIS E DELEGAÇÃO (Filtro, Formulário e Botão Loop)
+// =====================================================================
 
 document.addEventListener('input', (e) => {
     if (e.target && e.target.id === 'chat-search') {
         window.filtrarContatos();
     }
 });
+
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.closest('#modalFormulario')) {
+        if (typeof window.calcularTudo === 'function') window.calcularTudo();
+    }
+});
+
+// Aciona o carregamento manual ao clicar no botão de Loop (Sincronizar)
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest('#sync-icon-chat')) {
+        window.carregarDados();
+    }
+});
+
+// =====================================================================
+// OBSERVAR PÁGINA 7 (Carrega automaticamente ao entrar e sair)
+// =====================================================================
+
+const observerPagina = new MutationObserver((mutations) => {
+    const listaExiste = document.getElementById('lista-contatos-chat');
+    
+    if (listaExiste && !listaCarregada) {
+        // Entrou na página 7: Carrega os dados
+        window.carregarDados();
+        listaCarregada = true;
+    } else if (!listaExiste) {
+        // Saiu da página 7: Reseta o status para carregar na próxima vez
+        listaCarregada = false;
+    }
+});
+observerPagina.observe(document.body, { childList: true, subtree: true });
+
+// =====================================================================
+// FUNÇÕES DE CONTATOS E CHAT
+// =====================================================================
 
 window.filtrarContatos = function () {
     clearTimeout(debounceTimer);
@@ -31,20 +71,12 @@ window.filtrarContatos = function () {
     }, 300);
 };
 
-// CORREÇÃO DO LOOP: Event listener movido para o documento global (Event Delegation) 
-// para não quebrar o script quando o modal ainda não estiver carregado na tela.
-document.addEventListener('change', (e) => {
-    if (e.target && e.target.closest('#modalFormulario')) {
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
-    }
-});
-
-async function carregarDados() {
+window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
     if (!listEl) return;
-    if (syncIcon) syncIcon.classList.add('spinner-rotate');
+    if (syncIcon) syncIcon.classList.add('spinner-rotate'); // Inicia a animação de loop
 
     try {
         const clientes = await API.call('getclientes') || [];
@@ -78,13 +110,9 @@ async function carregarDados() {
     } catch (e) {
         console.error("Erro ao carregar lista:", e);
     } finally {
-        if (syncIcon) syncIcon.classList.remove('spinner-rotate');
+        if (syncIcon) syncIcon.classList.remove('spinner-rotate'); // Para a animação de loop
     }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    carregarDados();
-});
+};
 
 window.abrirConversa = function (id, nome, urlImagem) {
     clienteSelecionado = id;
@@ -108,6 +136,10 @@ window.abrirConversa = function (id, nome, urlImagem) {
         window.event.currentTarget.classList.add('selected-contact');
     }
 };
+
+// =====================================================================
+// MAPA E FLUXO DE CHECKOUT
+// =====================================================================
 
 window.renderizarMapaUnificado = async function(latlngs = null) {
     const container = document.getElementById('container-mapa-visual');
@@ -280,6 +312,10 @@ window.iniciarFluxoCheckout = async function () {
     setTimeout(() => window.renderizarMapaUnificado(latlngsMapeadas), 300);
 };
 
+// =====================================================================
+// TRANSIÇÃO FORMULÁRIO E FINALIZAÇÃO
+// =====================================================================
+
 window.prosseguirParaFormulario = async function () {
     const modalMapaEl = document.getElementById('modalMapa');
     if (modalMapaEl) {
@@ -327,7 +363,6 @@ window.calcularTudo = function () {
     valorBase += parseFloat(selectPrioridade?.value) || 0;
     valorBase += parseFloat(selectDinamica?.value) || 0;
 
-    // CORREÇÃO: Removido erro de digitação de escopo da variável duplicada 'FatorRetorno'
     const fatorRetorno = parseFloat(selectRetorno?.value) || 0;
     if (fatorRetorno > 0) {
         valorBase += (valorBase * fatorRetorno);
@@ -407,7 +442,6 @@ window.salvarPedidoAPI = async function () {
     const valor_corrida = document.getElementById('view-valor-final').innerText;
     const observacao = document.getElementById('p-obs').value;
 
-    // ESTRUTURA ORDENADA DA SUA TABELA DE BANCO DE DADOS 'PEDIDOS'
     const payloadBancoDados = {
         id: 'RDO' + Math.floor(10000 + Math.random() * 90000), 
         id_mensagens_chat: idMensagemChatAleatorio,
