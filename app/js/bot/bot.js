@@ -107,26 +107,6 @@ window.abrirModalCadastro = () => {
     window.abrirModalEspecifico('usuarios');
 };
 
-// Garantindo que a edição também seja restrita conforme solicitado
-window.editarBot = async (id) => {
-    const item = window.botState.cache.find(i => i.id == id);
-    if(!item) return;
-
-    window.botState.idEmEdicao = id;
-    window.botState.origemEmEdicao = item.origem;
-    await window.abrirModalEspecifico(item.origem, item);
-    
-    // Bloqueia edição se não for usuário
-    const modalId = item.origem === 'usuarios' ? 'modalUsuario' : (item.origem === 'clientes' ? 'modalCliente' : 'modalColaborador');
-    const modal = document.getElementById(modalId);
-    
-    if (item.origem !== 'usuarios') {
-        modal.querySelectorAll('input, select').forEach(i => i.disabled = true);
-        const btnSalvar = modal.querySelector('.btn-danger');
-        if (btnSalvar) btnSalvar.style.display = 'none';
-    }
-};
-
 window.editarBot = async (id) => {
     const item = window.botState.cache.find(i => i.id == id);
     if (!item) return;
@@ -134,15 +114,14 @@ window.editarBot = async (id) => {
     window.botState.idEmEdicao = id;
     window.botState.origemEmEdicao = item.origem;
     
-    // Abre o modal passando os dados para preenchimento
+    // Abre o modal
     await window.abrirModalEspecifico(item.origem, item);
     
-    // Lógica de bloqueio: Clientes e Colaboradores são "ReadOnly" aqui
+    // Lógica de bloqueio: Clientes e Colaboradores são "ReadOnly"
     const isReadOnly = (item.origem !== 'usuarios');
-    const modalId = item.origem === 'usuarios' ? 'modalUsuario' : 
-                    (item.origem === 'clientes' ? 'modalCliente' : 'modalColaborador');
+    const map = { 'usuarios': 'modalUsuario', 'clientes': 'modalCliente', 'colaboradores': 'modalColaborador' };
+    const modalEl = document.getElementById(map[item.origem]);
     
-    const modalEl = document.getElementById(modalId);
     if (modalEl) {
         modalEl.querySelectorAll('input, select').forEach(i => i.disabled = isReadOnly);
         const btnSalvar = modalEl.querySelector('.btn-danger');
@@ -221,7 +200,23 @@ window.alterarStatusDireto = async (id, status, origem) => {
 
 window.confirmarExclusao = (id, origem) => { /* Mantida mesma lógica */ };
 
+document.addEventListener('DOMContentLoaded', () => {
+    window.initBot();
+});
+
+async function carregarPaginaBot() {
+    const container = document.getElementById('main-content');
+    container.innerHTML = await fetch('app/pages/bot/bot.html').then(r => r.text());
+    
+    // Chame a função aqui após injetar o HTML
+    if (typeof window.initBot === 'function') {
+        window.initBot();
+    }
+}
+
 window.initBotPage = function() {
-    console.log("Bot inicializado.");
-    // Coloque aqui sua lógica de carregar botões, status, etc.
+    console.log("Inicializando Bot...");
+    window.initBot(); // Chama a sua função principal de carregamento
 };
+
+window.initBot();

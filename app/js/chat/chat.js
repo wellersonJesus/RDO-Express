@@ -1,16 +1,49 @@
-let debounceTimer;
-let clienteSelecionado = null;
-let rotasAtuais = [];
-let listaCarregada = false;
+// =====================================================================
+// PROTEÇÃO CONTRA DUPLA DECLARAÇÃO
+// =====================================================================
+
+window.AppRDO = window.AppRDO || {
+    debounceTimer: null,
+    listaCarregada: false,
+    observerIniciado: false
+};
+
+// =====================================================================
+// EVENTOS E OBSERVERS
+// =====================================================================
+// (Mantenha seus EventListeners aqui, apenas troque debounceTimer por window.AppRDO.debounceTimer)
+
+window.filtrarContatos = function () {
+    clearTimeout(window.AppRDO.debounceTimer);
+    window.AppRDO.debounceTimer = setTimeout(() => {
+        const termo = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
+        document.querySelectorAll('.contact-item-clean').forEach(item => {
+            const nome = item.querySelector('.contact-name')?.innerText.toLowerCase() || '';
+            item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
+        });
+    }, 300);
+};
+
+// =====================================================================
+// 2. OBSERVER (Protegido contra redeclaração)
+// =====================================================================
+if (!window.AppRDO.observerIniciado) {
+    new MutationObserver((mutations) => {
+        const listaExiste = document.getElementById('lista-contatos-chat');
+        if (listaExiste && !window.AppRDO.listaCarregada) {
+            window.carregarDados();
+            window.AppRDO.listaCarregada = true;
+        }
+    }).observe(document.body, { childList: true, subtree: true });
+    window.AppRDO.observerIniciado = true;
+}
 
 // =====================================================================
 // EVENTOS GLOBAIS E DELEGAÇÃO
 // =====================================================================
 
 document.addEventListener('input', (e) => {
-    if (e.target && e.target.id === 'chat-search') {
-        window.filtrarContatos();
-    }
+    if (e.target && e.target.id === 'chat-search') window.filtrarContatos();
 });
 
 document.addEventListener('change', (e) => {
@@ -44,29 +77,6 @@ observerPagina.observe(document.body, { childList: true, subtree: true });
 // =====================================================================
 // FUNÇÕES DE CONTATOS E CHAT
 // =====================================================================
-
-window.filtrarContatos = function () {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        const searchInput = document.getElementById('chat-search');
-        const termo = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const listaContatos = document.getElementById('lista-contatos-chat');
-        if (!listaContatos) return;
-
-        const contatos = listaContatos.querySelectorAll('.contact-item-clean');
-
-        contatos.forEach(contato => {
-            const nomeEl = contato.querySelector('.contact-name');
-            const textoNome = nomeEl ? nomeEl.innerText.toLowerCase() : '';
-
-            if (textoNome.includes(termo)) {
-                contato.style.setProperty('display', 'flex', 'important');
-            } else {
-                contato.style.setProperty('display', 'none', 'important');
-            }
-        });
-    }, 300);
-};
 
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
@@ -158,138 +168,145 @@ function formatarTempoHumano(minutosTotais) {
 
 async function buscarCoordenadasEndereco(enderecoTexto) {
     try {
-        // Limpeza básica do texto
-        let termo = enderecoTexto.replace(/^[0-9\.\s]+/, '').replace(/(De:|Para:|\||-)/gi, '').trim();
-        // Apenas o parâmetro q é necessário. O Nominatim entende "MG" dentro da query.
-        const busca = encodeURIComponent(termo + ", MG, Brasil");
+        // Limpeza agressiva: remove números de lista (1.), pipes, hífen e espaços extras
+        let termo = enderecoTexto
+            .replace(/^\d+\.\s*/, '') // Remove "1. "
+            .replace(/[||\-]/g, ' ')   // Remove pipes ou hifens
+            .trim();
+            
+        // Adiciona a cidade/estado para melhorar a precisão no Nominatim
+        const busca = encodeURIComponent(termo + ", Belo Horizonte, MG");
         
-        // Usamos viewbox para priorizar a região de BH sem quebrar a URL
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&viewbox=-44.3,-20.2,-43.5,-19.6&bounded=1&q=${busca}`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${busca}`;
         
         const response = await fetch(url);
         const dados = await response.json();
         
         return (dados && dados.length > 0) ? { 
             lat: parseFloat(dados[0].lat), 
-            lng: parseFloat(dados[0].lon), 
-            endereco: termo 
+            lng: parseFloat(dados[0].lon) 
         } : null;
-    } catch (err) { return null; }
+    } catch (err) { 
+        console.error("Erro na geocodificação:", err);
+        return null; 
+    }
 }
 
-window.renderizarMapaUnificado = async function() {
-    const container = document.getElementById('container-mapa-visual');
-    if (!container) return;
-    container.innerHTML = '<div id="map-instance" style="width:100%; height:100%;"></div>';
+window.renderizarMapaUnificado = function() {
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas) return;
     
-    const map = L.map('map-instance').setView([-19.9167, -43.9345], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    // Supondo que você use Leaflet
+    const coords = window.dadosPedidoAtual.coordenadas; // Espera um array: [p1, p2, p3, p4]
+    
+    // Limpa camadas antigas
+    if (window.mapaInstancia) {
+        // Remove linhas anteriores
+        window.mapaInstancia.eachLayer(layer => {
+            if (layer instanceof L.Polyline) window.mapaInstancia.removeLayer(layer);
+        });
 
-    const dados = window.dadosPedidoAtual;
-    if (dados && dados.coordenadas && dados.coordenadas.length > 0) {
-        // Marcadores
-        dados.coordenadas.forEach(p => L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.endereco));
-
-        // DESENHO DA LINHA AZUL: Agora percorre os segmentos
-        // Precisamos desenhar uma polilinha para cada par de coordenadas (trecho)
-        for (let i = 0; i < dados.coordenadas.length; i += 2) {
-            if (dados.coordenadas[i+1]) {
-                const p1 = dados.coordenadas[i];
-                const p2 = dados.coordenadas[i+1];
-                
-                // OSRM para desenhar o trajeto entre os dois pontos
-                const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?geometries=geojson`;
-                fetch(url).then(r => r.json()).then(data => {
-                    if (data.routes && data.routes[0]) {
-                        const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                        L.polyline(coords, { color: '#1a73e8', weight: 5 }).addTo(map);
-                    }
-                });
-            }
-        }
+        // Desenha a nova linha azul
+        const latlngs = coords.map(c => [c.lat, c.lng]);
+        L.polyline(latlngs, {color: 'blue', weight: 5}).addTo(window.mapaInstancia);
+        
+        // Ajusta o zoom para ver todas as rotas
+        window.mapaInstancia.fitBounds(latlngs);
     }
 };
 
 window.iniciarFluxoCheckout = async function () {
-    const msgInput = document.getElementById('msg-input');
-    if (!msgInput || !msgInput.value.trim()) return;
+    try {
+        const msgInput = document.getElementById('msg-input');
+        if (!msgInput || !msgInput.value.trim()) return;
 
-    const texto = msgInput.value;
-
-    // 1. EXTRAÇÃO ROBUSTA
-    const nomeMatch = texto.match(/SOLICITANTE:\s*([^\n\r]+)/i);
-    const nomeSolicitante = nomeMatch ? nomeMatch[1].trim() : 'Não Identificado';
-
-    // Captura todo o bloco entre "ROTA:" e o próximo item de controle
-    const blocoRotas = texto.split(/ROTA:/i)[1]?.split(/TROCA:|PRIORIDADE:|OBSERVAÇÃO:|HORÁRIO/i)[0] || '';
-    
-    // Divide por qualquer número seguido de ponto (1. 2. 3.) OU por quebra de linha
-    // e garante que a linha contenha "De:" e "Para:"
-    const linhas = blocoRotas.split(/\n|\d+\./).filter(l => 
-        l.toLowerCase().includes('de:') && l.toLowerCase().includes('para:')
-    );
-
-    // 2. MODAL E CABEÇALHOS
-    await window.loadModal('modal_mapa.html');
-    const modal = new bootstrap.Modal(document.getElementById('modalMapa'));
-    modal.show();
-
-    const elResumo = document.getElementById('resumo-total');
-    if (elResumo) elResumo.innerHTML = `Processando ${linhas.length} trechos...`;
-    
-    const elHeaderSolicitante = document.getElementById('header-nome-solicitante');
-    if (elHeaderSolicitante) elHeaderSolicitante.innerText = nomeSolicitante;
-
-    // 3. LOOP DE CÁLCULO (SOMA SEGMENTADA)
-    let kmTotal = 0;
-    let minTotal = 0;
-    let listaCoords = [];
-
-    for (let i = 0; i < linhas.length; i++) {
-        const linha = linhas[i];
-        // Extrai apenas os endereços de origem e destino da linha
-        const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
+        const texto = msgInput.value;
         
-        if (partes.length >= 2) {
-            const p1 = await buscarCoordenadasEndereco(partes[0]);
-            const p2 = await buscarCoordenadasEndereco(partes[1]);
+        // 1. Extração de dados (Robustez contra match nulo)
+        const getMatch = (regex) => texto.match(regex)?.[1]?.trim() || '';
+        
+        const solicitante = getMatch(/SOLICITANTE:\s*(.*)/i) || 'Não Identificado';
+        const contato = getMatch(/CONATO:\s*(.*)/i) || getMatch(/CONTATO:\s*(.*)/i);
+        const horario = getMatch(/HORÁRIO ESTIMADO P\/ COLETA:\s*(.*)/i);
+        const mercadoria = getMatch(/MERCADORIA:\s*\((.*)\)/i) || 'Sacola';
+        const prioridadeTexto = getMatch(/PRIORIDADE:\s*\((.*)\)/i);
+        const retornoTexto = getMatch(/TROCA\/RETORNO:\s*\((.*)\)/i);
+        const obs = getMatch(/OBSERVAÇÃO:\s*(.*)/i);
+        
+        const blocoRotas = getMatch(/ROTA:\s*([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
+        const linhas = blocoRotas.split('\n').filter(l => l.toLowerCase().includes('de:') && l.toLowerCase().includes('para:'));
 
-            if (p1 && p2) {
-                // Cálculo de trecho INDIVIDUAL (A->B, B->C, C->D)
-                const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.routes && data.routes[0]) {
-                    const dist = data.routes[0].distance / 1000;
-                    const dur = data.routes[0].duration / 60;
-                    
-                    // Somatória real dos segmentos
-                    kmTotal += dist;
-                    minTotal += dur;
-                    listaCoords.push(p1, p2);
-                    
-                    console.log(`Trecho ${i+1}: ${dist.toFixed(1)}km`);
-                }
-            }
-            await new Promise(r => setTimeout(r, 600)); // Delay para API
+        // 2. Extração inteligente de pontos
+        let listaEnderecos = [];
+        linhas.forEach(linha => {
+            const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
+            partes.forEach(p => {
+                let end = p.replace(/^[0-9\.\s]+/, '').replace(/\|/g, '').trim();
+                if (end && !listaEnderecos.includes(end)) listaEnderecos.push(end);
+            });
+        });
+
+        // 3. Abertura do Modal com segurança
+        await window.loadModal('modal_mapa.html');
+        const modalEl = document.getElementById('modalMapa');
+        if (!modalEl) throw new Error("Modal não encontrado no DOM.");
+        
+        const modalMapa = new bootstrap.Modal(modalEl);
+        modalMapa.show();
+
+        const elResumo = document.getElementById('resumo-total');
+        if (elResumo) elResumo.innerText = "Processando rotas...";
+
+        // 4. Geocodificação (Geolocalização segura)
+        const resultados = await Promise.all(listaEnderecos.map(async (end) => {
+            const res = await buscarCoordenadasEndereco(end);
+            return res ? { lat: res.lat, lng: res.lng } : null;
+        }));
+        
+        const coordenadasValidas = resultados.filter(c => c !== null);
+        if (coordenadasValidas.length < 2) {
+            if (elResumo) elResumo.innerText = "Erro: Rotas insuficientes.";
+            return;
         }
-    }
 
-    // 4. ATUALIZAÇÃO FINAL
-    window.dadosPedidoAtual = {
-        solicitante: nomeSolicitante,
-        distancia: kmTotal.toFixed(1),
-        tempo: formatarTempoHumano(minTotal),
-        coordenadas: listaCoords
-    };
+        // 5. Cálculo via Servidor (Tratamento de erro de rede/JSON)
+        let dist = 0, tempo = 0;
+        try {
+            const response = await fetch('/api/calcular-rota', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coordenadas: coordenadasValidas })
+            });
 
-    if (elResumo) {
-        elResumo.innerHTML = `👤 ${nomeSolicitante} | ⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
-    }
+            if (!response.ok) throw new Error("Erro no servidor: " + response.status);
+            
+            const data = await response.json();
+            dist = parseFloat(data.distancia_km) || 0;
+            tempo = parseFloat(data.tempo_estimado_minutos) || 0;
+        } catch (e) {
+            console.error("Erro na API:", e);
+            if (elResumo) elResumo.innerText = "Erro ao calcular distância.";
+            return;
+        }
 
-    if (typeof window.renderizarMapaUnificado === 'function') {
-        window.renderizarMapaUnificado();
+        // 6. Atualização de Estado e UI
+        window.dadosPedidoAtual = {
+            solicitante, contato, horario, mercadoria, obs,
+            rotas: blocoRotas,
+            distancia: dist.toFixed(1),
+            tempo: `${Math.ceil(tempo)} min`,
+            coordenadas: coordenadasValidas
+        };
+
+        if (elResumo) {
+            elResumo.innerHTML = `⏱️ ${window.dadosPedidoAtual.tempo} | 📍 ${window.dadosPedidoAtual.distancia} km`;
+        }
+        
+        if (typeof window.renderizarMapaUnificado === 'function') {
+            window.renderizarMapaUnificado(coordenadasValidas.map(c => [c.lat, c.lng]));
+        }
+
+    } catch (err) {
+        console.error("Falha fatal no checkout:", err);
     }
 };
 

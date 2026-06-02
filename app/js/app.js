@@ -2,60 +2,40 @@ window.loadPage = async function(page, title, subtitle) {
     const container = document.getElementById('router-view');
     if (!container) return;
 
-    // 1. Limpeza de ambiente: fecha modais abertos e remove backdrops pendentes
+    // 1. Limpeza de modais (Segurança)
     document.querySelectorAll('.modal.show').forEach(m => {
         const inst = bootstrap.Modal.getInstance(m);
         if (inst) inst.hide();
     });
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
 
-    // 2. Atualização visual do cabeçalho
+    // 2. Atualização de Títulos
     document.getElementById('page-title').innerText = title;
     document.getElementById('page-subtitle').innerText = subtitle;
 
     try {
-        // 3. Busca o HTML da página
+        // 3. Carregamento do HTML
         const response = await fetch(`pages/${page}/${page}.html`);
         if (!response.ok) throw new Error(`Página ${page} não encontrada.`);
-        
         container.innerHTML = await response.text();
 
-        // 4. Mapeamento de inicialização (Ajuste os caminhos conforme sua estrutura de pastas)
-        const pageConfigs = {
-            'chat':           { init: 'iniciarChat', script: 'js/chat/chat.js' },
-            'bot':            { init: 'initBotPage', script: 'js/bot/bot.js' },
-            'administracao':  { init: 'initAdminPage', script: 'js/administracao/administracao.js' }
-        };
-
-        const config = pageConfigs[page];
-
-        // 5. Lógica de Execução com Injeção Dinâmica
-        if (config) {
-            const iniciar = () => {
-                if (typeof window[config.init] === 'function') {
-                    window[config.init]();
-                } else {
-                    console.warn(`Função ${config.init} não encontrada.`);
-                }
-            };
-
-            if (typeof window[config.init] === 'function') {
-                iniciar();
-            } else {
-                console.log(`Carregando script para: ${page}...`);
+        // 4. INICIALIZAÇÃO AUTOMÁTICA (O PONTO QUE VOCÊ PRECISAVA)
+        // Sempre que o HTML carregar, verificamos o script do Bot
+        if (page === 'bot') {
+            // Garante que o script do bot esteja carregado antes de inicializar
+            if (typeof window.initBot !== 'function') {
                 const script = document.createElement('script');
-                script.src = config.script;
-                script.onload = iniciar;
-                script.onerror = () => console.error(`Falha ao carregar ${config.script}`);
+                script.src = 'js/bot/bot.js';
+                script.onload = () => window.initBot(); // Inicia assim que carregar
                 document.body.appendChild(script);
+            } else {
+                window.initBot(); // Se já estiver carregado, apenas inicia
             }
         }
-
+        
+        // Adicione outros 'if (page === ...)' conforme necessário para outras páginas
+        
     } catch (err) {
         console.error("Erro na navegação:", err);
-        container.innerHTML = `<div class="p-4 text-danger text-center">Erro ao carregar o módulo: ${page}.</div>`;
     }
 };
 
