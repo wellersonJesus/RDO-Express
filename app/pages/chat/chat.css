@@ -136,6 +136,12 @@
     animation: rotation 1s infinite linear;
 }
 
+.spinner-rotate {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
 @keyframes rotation {
     from { transform: rotate(0deg); }
     to { transform: rotate(359deg); }

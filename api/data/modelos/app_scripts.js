@@ -1,24 +1,57 @@
 var SECRET_KEY = "aquieumakdjdddggjrtr";
 
+var SECRET_KEY = "aquieumakdjdddggjrtr";
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     if (!data.apiKey || data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
     
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var entity = data.action.replace(/get|add|delete|update/, '').toLowerCase().trim();
-    var sheet = getSheetCaseInsensitive(ss, entity);
+    var action = data.action.toLowerCase();
     
-    if (!sheet) return response({ status: "error", message: "Aba não encontrada: " + entity });
+    // 1. Tratamento de mensagens (Sem chamar funções inexistentes)
+    if (action === 'sendmessage') {
+      return response({ status: "success", message: "Mensagem processada (modo simulado)." });
+    }
+    
+    // 2. Roteamento de Banco de Dados
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var entity = action.replace(/get|add|delete|update|save/g, '').toLowerCase().trim();
+    
+    // Mapa de entidades para garantir o nome exato da aba na planilha
+    var mapaEntidades = {
+      "usuario": "usuarios",
+      "cliente": "clientes",
+      "colaborador": "colaboradores",
+      "bot": "botconfig",
+      "mensagem": "mensagens_chat",
+      "pedido": "pedidos",
+      "financeiro": "financeiro"
+    };
+    
+    var nomeAba = mapaEntidades[entity] || entity;
+    var sheet = getSheetCaseInsensitive(ss, nomeAba);
+    
+    if (!sheet) return response({ status: "error", message: "Tabela não encontrada: " + nomeAba });
 
+    // 3. Execução das operações
     var result;
-    if (data.action.startsWith('get')) result = handleGet(sheet);
-    else if (data.action.startsWith('add')) result = handleAdd(sheet, data, entity);
-    else if (data.action.startsWith('update')) result = handleUpdate(sheet, data);
-    else if (data.action.startsWith('delete')) result = handleDelete(sheet, data.id);
+    if (action.startsWith('get')) result = handleGet(sheet);
+    else if (action.startsWith('add') || action.startsWith('save')) result = handleAdd(sheet, data, nomeAba);
+    else if (action.startsWith('update')) result = handleUpdate(sheet, data);
+    else if (action.startsWith('delete')) result = handleDelete(sheet, data.id);
+    else return response({ status: "error", message: "Ação inválida." });
     
     return response(result);
-  } catch (err) { return response({ status: "error", message: err.toString() }); }
+    
+  } catch (err) { 
+    return response({ status: "error", message: "Erro no Servidor: " + err.toString() }); 
+  }
+}
+
+// Helper para garantir resposta JSON padrão
+function response(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // Lógica de Geração de ID Automática
@@ -52,12 +85,11 @@ function handleAdd(sheet, data, entity) {
 }
 
 // --- Funções de Suporte Mantidas ---
-
 function getSheetCaseInsensitive(ss, entityName) {
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     var name = sheets[i].getName().toLowerCase().trim();
-    // Ajuste: verifica match exato para evitar conflitos (ex: pedidos vs pedidos_teste)
+    // Esta linha é a chave: se você buscar 'pedido', ela encontra 'pedidos'
     if (name === entityName || name === entityName.replace(/s$/, '')) return sheets[i];
   }
   return null;

@@ -525,27 +525,63 @@ window.formatarTelefone = function (tel) {
 };
 
 window.salvarPedidoAPI = async function () {
+    const btn = document.querySelector('[onclick="window.salvarPedidoAPI()"]');
     const form = document.getElementById('form-checkout');
+    
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
     }
 
-    // Coleta dados dos inputs do formulário
-    const payload = {
-        solicitante: document.getElementById('p-solicitante')?.value || 'N/A',
-        contato: document.getElementById('p-contato').value,
-        horario: document.getElementById('p-horario').value,
-        mercadoria: document.getElementById('p-mercadoria').value,
-        distancia: document.getElementById('p-distancia').value,
-        tempo: document.getElementById('p-tempo').value,
-        rotas: document.getElementById('p-rotas').value,
-        observacao: document.getElementById('p-obs').value,
-        valor: document.getElementById('view-valor-final').innerText
-    };
+    // 1. ATIVAR SPINNER IMEDIATAMENTE
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
+    btn.disabled = true;
 
-    console.log("Enviando Pedido:", payload);
-    // ... restante da sua lógica de fetch ...
+    try {
+        const dados = {
+            id_mensagens_chat: window.AppRDO.clienteId || 'N/A',
+            solicitante: document.getElementById('p-solicitante').value,
+            contato: document.getElementById('p-contato').value,
+            horario: document.getElementById('p-horario').value,
+            mercadoria: "Pedido RDO",
+            depara: document.getElementById('p-rotas').value,
+            troca_retorno: document.getElementById('p-retorno').options[document.getElementById('p-retorno').selectedIndex].text,
+            prioridade: document.getElementById('p-prioridade').options[document.getElementById('p-prioridade').selectedIndex].text,
+            valor_corrida: document.getElementById('view-valor-final').innerText.replace('R$ ', ''),
+            observacao: document.getElementById('p-obs').value,
+            status: '⏳ Aguardando'
+        };
+
+        const response = await API.call('addpedido', dados);
+        if (response.status === 'error') throw new Error(response.message);
+
+        // 2. FORMATAR MENSAGEM PADRÃO RDO
+        const msg = `📦 NOME: ${window.AppRDO?.clienteSelecionado || 'N/A'}
+
+N.SERVIÇO: ${response.id || 'RDO'}
+SOLICITANTE: ${dados.solicitante}
+CONTATO: ${dados.contato}
+MERCADORIA: ${dados.mercadoria}
+ROTA: ${dados.depara}
+HORÁRIO: ${dados.horario}
+TROCA/RETORNO: ${dados.troca_retorno}
+OBSERVAÇÃO: ${dados.observacao}`;
+
+        // 3. FINALIZAR UI
+        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+        
+        // Envia para o chat e avisa o usuário
+        window.enviarMensagemParaChat(msg);
+        alert("Pedido emitido com sucesso!");
+
+    } catch (err) {
+        alert("Erro ao salvar: " + err.message);
+    } finally {
+        // Restaurar botão
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
 };
 
 window.enviarMensagemParaChat = function (texto) {
