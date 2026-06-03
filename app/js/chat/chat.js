@@ -287,85 +287,107 @@ window.renderizarFooterResumo = function (el) {
     `;
 };
 
+window.analisarMensagemEntrada = function(texto) {
+    // Expressões regulares flexíveis para encontrar os dados
+    const regexSolicitante = /SOLICITANTE:\s*(.*)/i;
+    const regexKM = /(?:KM|DISTÂNCIA):\s*(\d+)/i;
+    const regexRota = /ROTA:\s*([\s\S]*?)(?=(?:$|TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE))/i;
+
+    const solicitante = texto.match(regexSolicitante)?.[1]?.trim();
+    const km = texto.match(regexKM)?.[1];
+    const rota = texto.match(regexRota)?.[1]?.trim();
+
+    // Validação: Só prossegue se os 3 campos existirem
+    if (solicitante && km && rota) {
+        return { solicitante, km, rota, valido: true };
+    }
+    
+    return { valido: false };
+};
+
 window.iniciarFluxoCheckout = async function () {
     try {
         const msgInput = document.getElementById('msg-input');
         if (!msgInput?.value.trim()) throw new Error("A mensagem do pedido está vazia.");
 
-        const texto = msgInput.value;
-        const solicitante = (texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente').trim();
+        let texto = msgInput.value;
+
+        // 1. LIMPEZA PREVENTIVA: Removemos bullets, números de lista e espaços desnecessários
+        // Isso resolve o problema do "1. De:" virar apenas "De:"
+        texto = texto.replace(/^\d+\.\s*/gm, ''); 
+
+        // 2. EXTRAÇÃO ROBUSTA
+        // Busca o nome do solicitante (padrão após "SOLICITANTE:")
+        const solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)?.[1] || "Não informado").trim();
+
+        // Busca o contato (procura qualquer número com formato de tel, ignorando se escreveu errado "CONATO")
+        const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || 
+                         texto.match(/(\d{4,5}-?\d{4})/)?.[0] || "").trim();
+
+        // Busca as rotas: Procura linhas que contenham "De:" E "Para:"
+        // Não importa se tem "ROTA:" escrito antes ou não
+        const linhasRota = texto.split('\n').filter(l => /de:/i.test(l) && /para:/i.test(l));
+
+        console.log("DEBUG RDO - Captura:", { solicitante, contato, rotas: linhasRota });
+
+        // 3. VALIDAÇÃO FLEXÍVEL
+        if (!contato || linhasRota.length === 0) {
+            throw new Error("Formato inválido. Certifique-se de enviar o Contato e as rotas no formato 'De: X Para: Y'.");
+        }
+
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'Nenhum cliente selecionado';
 
+        // --- FLUXO DO MODAL (Mantido conforme seu sistema) ---
         await window.loadModal('modal_mapa.html');
         const modalEl = document.getElementById('modalMapa');
-        if (!modalEl) throw new Error("Estrutura do modal não encontrada.");
-
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
 
         modalEl.addEventListener('shown.bs.modal', async () => {
-            const elCliente = document.getElementById('header-nome-cliente');
             const elSolicitante = document.getElementById('header-nome-solicitante');
             const resumoEl = document.getElementById('resumo-total');
-
-            if (elCliente) elCliente.innerText = nomeCliente;
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traçando rota real...';
+            if (resumoEl) resumoEl.innerHTML = 'Processando...';
 
             try {
-                const rotaMatch = texto.match(/ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i);
-                const linhas = rotaMatch ? rotaMatch[1].split('\n').filter(l => l.includes('De:') && l.includes('Para:')) : [];
-
-                if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada.");
-
                 let kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
-                for (const linha of linhas) {
-                    const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
-                    if (partes.length >= 2) {
-                        const p1 = await buscarCoordenadasEndereco(partes[0]);
-                        const p2 = await buscarCoordenadasEndereco(partes[1]);
-
+                for (const linha of linhasRota) {
+                    // Limpa "De:" e "Para:" da string antes de buscar
+                    const p = linha.split(/Para:|\|/gi).map(x => x.replace(/De:/gi, '').trim());
+                    if (p.length >= 2) {
+                        const p1 = await buscarCoordenadasEndereco(p[0]);
+                        const p2 = await buscarCoordenadasEndereco(p[1]);
                         if (p1 && p2) {
-                            // A chave está aqui: overview=full e geometries=geojson
                             const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
                             const resp = await fetch(url);
                             const data = await resp.json();
-
                             if (data.routes?.[0]) {
                                 kmTotal += (data.routes[0].distance / 1000);
                                 minTotal += (data.routes[0].duration / 60);
-                                // Converte [lng, lat] para [lat, lng] para o Leaflet
-                                const pontosRota = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                                listaCaminhos.push(pontosRota);
+                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
                             }
                         }
                     }
                 }
 
-                if (listaCaminhos.length === 0) throw new Error("Não foi possível traçar o trajeto.");
-
                 window.dadosPedidoAtual = {
-                    solicitante: solicitante,
-                    cliente: nomeCliente,
+                    solicitante, contato, cliente: nomeCliente,
                     distancia: Math.round(kmTotal).toString(),
                     tempo: formatarTempoHumano(minTotal),
-                    coordenadas: listaCaminhos, // Agora listaCaminhos é um array de trajetos
+                    coordenadas: listaCaminhos,
                     valor: ((Math.round(kmTotal) * 3.00)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                 };
 
                 window.renderizarFooterResumo(resumoEl);
                 window.renderizarMapaUnificado();
                 if (typeof window.preencherDadosFormulario === 'function') window.preencherDadosFormulario();
-
             } catch (err) {
-                console.error("Erro no trajeto:", err);
-                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger small">Erro: ${err.message}</span>`;
+                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
             }
         }, { once: true });
     } catch (err) {
-        console.error("Erro crítico:", err);
-        window.exibirErroRodape?.("Erro: " + err.message);
+        window.exibirErroRodape?.(err.message);
     }
 };
 
