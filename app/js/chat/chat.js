@@ -206,43 +206,70 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
 }
 
 // =====================================================================
-// 1. RENDERIZAÇÃO UNIFICADA E SEGURA
+// 1. RENDERIZAÇÃO UNIFICADA DO RODAPÉ (NUNCA ALTERAR PARA .innerText) E SEGURA
 // =====================================================================
 window.renderizarMapaUnificado = function () {
-    // Validação de segurança: o mapa tem os dados necessários?
-    if (!window.dadosPedidoAtual?.coordenadas || window.dadosPedidoAtual.coordenadas.length < 2) {
-        console.warn("Mapa ignorado: dados insuficientes.");
-        return;
-    }
-
     const container = document.getElementById('container-mapa-visual');
-    if (!container) return;
+    if (!container || !window.dadosPedidoAtual?.coordenadas) return;
 
-    // Garante visibilidade do contêiner
-    container.style.display = 'block';
-    container.style.height = '350px';
-
-    // Limpa instância anterior para evitar erros de renderização
+    // 1. Limpeza de instância anterior
     if (window.mapaInstancia) {
         window.mapaInstancia.remove();
         window.mapaInstancia = null;
     }
 
-    // Inicializa o mapa
+    // 2. Inicialização do mapa
     const coords = window.dadosPedidoAtual.coordenadas;
     window.mapaInstancia = L.map('container-mapa-visual').setView([coords[0].lat, coords[0].lng], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
 
-    // Renderiza as rotas (Seu loop existente...)
-    // ... [mantenha sua lógica de L.polyline e L.marker aqui] ...
+    // 3. Definição dos ícones específicos
+    const iconeBandeira = L.divIcon({ 
+        html: '<div style="font-size: 20px;">🏁</div>', 
+        className: 'custom-div-icon' 
+    });
+    const iconeDestino = L.divIcon({ 
+        html: '<div style="font-size: 20px;">📍</div>', 
+        className: 'custom-div-icon' 
+    });
 
-    // Força o ajuste do mapa após renderização
-    setTimeout(() => window.mapaInstancia.invalidateSize(), 200);
+    // 4. Extração das descrições das rotas para o tooltip
+    const textoRotas = document.getElementById('p-rotas')?.value || "";
+    const listaRotas = textoRotas.split('\n').filter(l => l.includes('De:') && l.includes('Para:'));
+
+    // 5. Renderização dos pontos e linhas
+    for (let i = 0; i < coords.length; i += 2) {
+        if (coords[i + 1]) {
+            const pInicio = coords[i];
+            const pFim = coords[i + 1];
+            const descricao = listaRotas[i / 2] || "Rota";
+
+            // Desenha a linha tracejada
+            L.polyline([
+                [pInicio.lat, pInicio.lng], 
+                [pFim.lat, pFim.lng]
+            ], { 
+                color: '#dc3545', 
+                weight: 4, 
+                dashArray: '10, 10' 
+            }).addTo(window.mapaInstancia);
+
+            // Marcador de Início (Bandeira)
+            L.marker([pInicio.lat, pInicio.lng], { icon: iconeBandeira })
+             .addTo(window.mapaInstancia)
+             .bindTooltip(descricao, { permanent: false, direction: 'top' });
+
+            // Marcador de Destino (Ponto)
+            L.marker([pFim.lat, pFim.lng], { icon: iconeDestino })
+             .addTo(window.mapaInstancia)
+             .bindTooltip(descricao, { permanent: false, direction: 'top' });
+        }
+    }
+
+    // Ajusta o zoom para enquadrar todas as rotas
+    window.mapaInstancia.fitBounds(coords.map(c => [c.lat, c.lng]), { padding: [50, 50] });
 };
 
-// =====================================================================
-// RENDERIZAÇÃO UNIFICADA DO RODAPÉ (NUNCA ALTERAR PARA .innerText)
-// ===========================================
 window.exibirErroRodape = function (mensagem) {
     const el = document.getElementById('resumo-total');
     if (el) el.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> ${mensagem}</span>`;
@@ -357,30 +384,65 @@ async function calcularRotaOSRM(p1, p2) {
 // TRANSIÇÃO FORMULÁRIO E FINALIZAÇÃO
 // =====================================================================
 window.preencherDadosFormulario = function () {
-    const dados = window.dadosPedidoAtual || {};
-    const texto = document.getElementById('msg-input')?.value || '';
+    try {
+        console.log("Iniciando preenchimento do formulário...");
+        const dados = window.dadosPedidoAtual || {};
+        const texto = document.getElementById('msg-input')?.value || '';
 
-    // Mapeamento: ID do campo HTML -> Expressão regular para extrair
-    const campos = [
-        { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
-        { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
-        { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i },
-        { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
-    ];
+        // 1. Mapeamento de campos (Regex)
+        const campos = [
+            { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
+            { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
+            { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i },
+            { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
+        ];
 
-    campos.forEach(c => {
-        const el = document.getElementById(c.id);
-        if (el) {
-            const match = texto.match(c.regex);
-            if (match) el.value = match[1] ? match[1].trim() : match[0];
+        campos.forEach(c => {
+            const el = document.getElementById(c.id);
+            if (el) {
+                const match = texto.match(c.regex);
+                if (match) {
+                    el.value = match[1] ? match[1].trim() : match[0];
+                    console.log(`Campo ${c.id} preenchido com sucesso.`);
+                } else {
+                    console.warn(`Aviso: Regex não encontrou valor para o campo ${c.id}`);
+                }
+            } else {
+                console.error(`ERRO: Elemento HTML com ID '${c.id}' não encontrado no formulário.`);
+            }
+        });
+
+        // 2. Garantia de persistência do Solicitante (Prioriza o objeto global se o regex falhar)
+        const elSolicitante = document.getElementById('p-solicitante');
+        if (elSolicitante && (!elSolicitante.value || elSolicitante.value === 'Carregando...')) {
+            elSolicitante.value = dados.solicitante || 'Cliente';
         }
-    });
 
-    // Campos de cálculo direto do objeto
-    if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '';
-    if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '';
+        // 3. Campos de cálculo direto do objeto
+        const camposCalculo = [
+            { id: 'p-distancia', valor: dados.distancia },
+            { id: 'p-tempo', valor: dados.tempo }
+        ];
 
-    if (typeof window.calcularTudo === 'function') window.calcularTudo();
+        camposCalculo.forEach(c => {
+            const el = document.getElementById(c.id);
+            if (el) {
+                el.value = c.valor || '0';
+            } else {
+                console.warn(`Aviso: Campo de cálculo '${c.id}' não encontrado.`);
+            }
+        });
+
+        // 4. Dispara o cálculo final
+        if (typeof window.calcularTudo === 'function') {
+            window.calcularTudo();
+        } else {
+            console.error("ERRO: window.calcularTudo não está definida.");
+        }
+
+    } catch (error) {
+        console.error("ERRO CRÍTICO ao preencher formulário:", error);
+    }
 };
 
 window.calcularTudo = function () {
@@ -412,11 +474,21 @@ window.calcularTudo = function () {
 };
 
 window.prosseguirParaFormulario = async function () {
-    bootstrap.Modal.getInstance(document.getElementById('modalMapa'))?.hide();
+    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    modalMapa?.hide();
+    
     await window.loadModal('modal_form.html');
-    const modal = new bootstrap.Modal(document.getElementById('modalFormulario'));
-    modal.show();
-    document.getElementById('modalFormulario').addEventListener('shown.bs.modal', window.preencherDadosFormulario, { once: true });
+    const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
+    
+    document.getElementById('modalFormulario').addEventListener('shown.bs.modal', () => {
+        window.preencherDadosFormulario();
+        // Dispara o cálculo inicial com os dados carregados
+        if (typeof window.calcularTudo === 'function') {
+            window.calcularTudo();
+        }
+    }, { once: true });
+    
+    modalForm.show();
 };
 
 window.voltarParaMapa = async function () {
