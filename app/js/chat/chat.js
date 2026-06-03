@@ -610,7 +610,7 @@ SOLICITANTE: ${dados.solicitante} | CONTATO: ${dados.contato}
 HORÁRIO: ${dados.horario}
 -
 MERCADORIA: ${dados.mercadoria}
-TROCA/RETORNO: ${dados.retorno}
+RETORNO: ${dados.retorno}
 -
 ROTA(s): 
 ${rotasFormatadas}
@@ -640,12 +640,18 @@ ${dados.valor_corrida}`;
 window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
     const div = document.createElement('div');
-    div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-2`;
-
+    
+    div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-3`;
+    
     div.innerHTML = `
-        <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
-             style="white-space: pre-line; font-size: 0.9rem;">
-            ${texto}
+        <div class="message-wrapper position-relative">
+            <div class="${isRecebida ? 'message-received' : 'message-sent'}">
+                ${texto}
+                <!-- Ícone sem fundo, maior, circular -->
+                <div class="status-icon" title="Aguardando" style="position: absolute; bottom: -12px; left: -14px; cursor: help;">
+                    <i class="bi bi-clock-history" style="font-size: 22px; color: #6c757d;"></i>
+                </div>
+            </div>
         </div>
     `;
 
