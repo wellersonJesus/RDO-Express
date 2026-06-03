@@ -204,57 +204,62 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
 }
 
 window.renderizarMapaUnificado = function() {
-    // 1. Validação de segurança
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length === 0) {
-        console.warn("Sem coordenadas para renderizar.");
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length < 2) {
+        console.warn("Dados insuficientes para desenhar rotas.");
         return;
     }
 
-    const coords = window.dadosPedidoAtual.coordenadas;
+    const coords = window.dadosPedidoAtual.coordenadas; // Espera-se um array de pares: [p1, p2, p3, p4...]
     
-    // 2. Inicialização do Mapa (se não existir)
+    // Paleta de cores para diferenciar as rotas
+    const cores = ['#0d6efd', '#20c997', '#fd7e14', '#6610f2', '#e83e8c'];
+
     if (!window.mapaInstancia) {
-        const mapEl = document.getElementById('mapa-container'); // ID do seu div de mapa
+        const mapEl = document.getElementById('container-mapa-visual'); // ID corrigido conforme seu HTML
         if (!mapEl) return;
-        
-        window.mapaInstancia = L.map('mapa-container').setView([coords[0].lat, coords[0].lng], 13);
-        
+        window.mapaInstancia = L.map('container-mapa-visual').setView([coords[0].lat, coords[0].lng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(window.mapaInstancia);
     }
 
-    // 3. Limpeza de camadas anteriores (para não sobrepor linhas)
+    // Limpeza de camadas anteriores
     window.mapaInstancia.eachLayer(layer => {
-        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+        if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
             window.mapaInstancia.removeLayer(layer);
         }
     });
 
-    // 4. Desenho dos Pontos e Linha Azul
-    const latlngs = coords.map(c => [c.lat, c.lng]);
-    
-    // Desenha a Linha Azul
-    L.polyline(latlngs, {
-        color: '#0d6efd', // Azul Bootstrap
-        weight: 6,
-        opacity: 0.8,
-        smoothFactor: 1
-    }).addTo(window.mapaInstancia);
+    const todosPontos = [];
 
-    // Desenha os marcadores (Origem, Pontos intermediários, Destino)
-    latlngs.forEach((latlng, index) => {
-        L.circleMarker(latlng, {
-            radius: 8,
-            fillColor: index === 0 ? "#28a745" : (index === latlngs.length - 1 ? "#dc3545" : "#ffc107"),
-            color: "#fff",
-            weight: 2,
-            fillOpacity: 1
-        }).addTo(window.mapaInstancia).bindPopup(index === 0 ? "Origem" : "Destino");
-    });
+    // Processa pares de coordenadas (de 2 em 2)
+    for (let i = 0; i < coords.length - 1; i += 2) {
+        const pInicio = coords[i];
+        const pFim = coords[i + 1];
+        const corAtual = cores[(i / 2) % cores.length];
 
-    // 5. Ajuste automático do zoom
-    window.mapaInstancia.fitBounds(latlngs, { padding: [50, 50] });
+        // Desenha a linha específica deste trecho
+        L.polyline([[pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]], {
+            color: corAtual,
+            weight: 5,
+            opacity: 0.8
+        }).addTo(window.mapaInstancia);
+
+        // Marcador de Partida (Verde)
+        L.circleMarker([pInicio.lat, pInicio.lng], {
+            radius: 6, fillColor: "#28a745", color: "#fff", weight: 2, fillOpacity: 1
+        }).addTo(window.mapaInstancia).bindPopup("Origem Trecho " + (i/2 + 1));
+
+        // Marcador de Destino (Vermelho)
+        L.circleMarker([pFim.lat, pFim.lng], {
+            radius: 6, fillColor: "#dc3545", color: "#fff", weight: 2, fillOpacity: 1
+        }).addTo(window.mapaInstancia).bindPopup("Destino Trecho " + (i/2 + 1));
+
+        todosPontos.push([pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]);
+    }
+
+    // Ajuste de zoom
+    window.mapaInstancia.fitBounds(todosPontos, { padding: [30, 30] });
 };
 
 window.iniciarFluxoCheckout = async function () {
