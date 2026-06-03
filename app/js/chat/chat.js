@@ -556,24 +556,27 @@ window.formatarTelefone = function (tel) {
 };
 
 window.salvarPedidoAPI = async function () {
-    // Usamos o ID que adicionamos, é muito mais seguro
+    // Acesso seguro via ID (certifique-se de que o botão no seu HTML tenha este ID)
     const btn = document.getElementById('btn-emitir-pedido');
     const form = document.getElementById('form-checkout');
+    const msgInput = document.getElementById('msg-input'); // O "aviãozinho"
     
+    // 1. Validação do formulário
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
     }
 
-    // 1. Estados iniciais e feedback visual
+    // 2. Feedback visual: Inicia o spinner
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
     
-    // FORÇA O NAVEGADOR A RENDERIZAR O SPINNER ANTES DA API
+    // Pausa de 50ms para garantir que o navegador desenhe o ícone na tela
     await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
+        // Coleta de dados
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
         const dados = {
             id_mensagens_chat: window.AppRDO.clienteId || 'N/A',
@@ -587,6 +590,7 @@ window.salvarPedidoAPI = async function () {
             valor_corrida: document.getElementById('view-valor-final').innerText
         };
 
+        // Chamada da API
         const response = await API.call('addpedido', dados);
         if (response.status === 'error') throw new Error(response.message);
 
@@ -602,9 +606,11 @@ HORÁRIO: ${dados.horario}
 TROCA/RETORNO: ${dados.retorno}
 OBSERVAÇÃO: ${dados.obs}`;
 
+        // 3. Atualiza o chat e limpa o input do "aviãozinho"
         await window.enviarMensagemParaChat(msg);
-        
-        // Finalização: Fecha o modal após sucesso
+        if (msgInput) msgInput.value = ''; 
+
+        // 4. Finalização: Fecha o modal
         const modalEl = document.getElementById('modalFormulario');
         const modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (modalInstance) modalInstance.hide();
@@ -612,11 +618,11 @@ OBSERVAÇÃO: ${dados.obs}`;
     } catch (err) {
         console.error("Erro na emissão:", err);
         alert("Erro ao emitir pedido. Tente novamente.");
-        // Restaura o botão apenas em caso de erro
+        
+        // Restaura o botão apenas se houver erro
         btn.disabled = false;
         btn.innerHTML = originalContent;
     }
-    // NOTA: Não restauramos no finally para sucesso, pois o modal vai sumir.
 };
 
 window.enviarMensagemParaChat = function (texto, isRecebida = false) {
