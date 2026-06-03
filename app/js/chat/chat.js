@@ -204,62 +204,67 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
 }
 
 window.renderizarMapaUnificado = function() {
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length < 2) {
-        console.warn("Dados insuficientes para desenhar rotas.");
-        return;
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length < 2) return;
+
+    const coords = window.dadosPedidoAtual.coordenadas;
+    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+    // 1. ATUALIZAÇÃO DO RODAPÉ (Fonte: leve, sem negrito, menor)
+    const rodape = document.getElementById('resumo-total');
+    if (rodape) {
+        rodape.style.fontSize = "0.85rem";
+        rodape.style.fontWeight = "400"; // Peso normal (não negrito)
+        rodape.style.color = "#6c757d";
+        rodape.innerHTML = `
+            <span style="margin-right: 15px;">${window.dadosPedidoAtual.tempo}</span>
+            <span style="margin-right: 15px;">${window.dadosPedidoAtual.distancia} km</span>
+            <span style="color: #212529;">${window.dadosPedidoAtual.valor}</span>
+        `;
     }
 
-    const coords = window.dadosPedidoAtual.coordenadas; // Espera-se um array de pares: [p1, p2, p3, p4...]
-    
-    // Paleta de cores para diferenciar as rotas
-    const cores = ['#0d6efd', '#20c997', '#fd7e14', '#6610f2', '#e83e8c'];
+    // Ícone de Partida (Bandeira)
+    const iconeBandeira = L.divIcon({
+        html: '<div style="font-size: 24px;">🏁</div>',
+        className: 'custom-div-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+    });
+
+    // Ícone de Destino (Pino Vermelho padrão Leaflet)
+    const iconeDestino = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34]
+    });
 
     if (!window.mapaInstancia) {
-        const mapEl = document.getElementById('container-mapa-visual'); // ID corrigido conforme seu HTML
-        if (!mapEl) return;
         window.mapaInstancia = L.map('container-mapa-visual').setView([coords[0].lat, coords[0].lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(window.mapaInstancia);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
     }
 
-    // Limpeza de camadas anteriores
     window.mapaInstancia.eachLayer(layer => {
-        if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
-            window.mapaInstancia.removeLayer(layer);
-        }
+        if (layer instanceof L.Polyline || layer instanceof L.Marker) window.mapaInstancia.removeLayer(layer);
     });
 
     const todosPontos = [];
-
-    // Processa pares de coordenadas (de 2 em 2)
     for (let i = 0; i < coords.length - 1; i += 2) {
         const pInicio = coords[i];
         const pFim = coords[i + 1];
         const corAtual = cores[(i / 2) % cores.length];
 
-        // Desenha a linha específica deste trecho
+        // Linha pontilhada colorida
         L.polyline([[pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]], {
-            color: corAtual,
-            weight: 5,
-            opacity: 0.8
+            color: corAtual, weight: 4, opacity: 0.8, dashArray: '8, 8'
         }).addTo(window.mapaInstancia);
 
-        // Marcador de Partida (Verde)
-        L.circleMarker([pInicio.lat, pInicio.lng], {
-            radius: 6, fillColor: "#28a745", color: "#fff", weight: 2, fillOpacity: 1
-        }).addTo(window.mapaInstancia).bindPopup("Origem Trecho " + (i/2 + 1));
-
-        // Marcador de Destino (Vermelho)
-        L.circleMarker([pFim.lat, pFim.lng], {
-            radius: 6, fillColor: "#dc3545", color: "#fff", weight: 2, fillOpacity: 1
-        }).addTo(window.mapaInstancia).bindPopup("Destino Trecho " + (i/2 + 1));
+        // Marcadores
+        L.marker([pInicio.lat, pInicio.lng], { icon: iconeBandeira }).addTo(window.mapaInstancia);
+        L.marker([pFim.lat, pFim.lng], { icon: iconeDestino }).addTo(window.mapaInstancia);
 
         todosPontos.push([pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]);
     }
 
-    // Ajuste de zoom
-    window.mapaInstancia.fitBounds(todosPontos, { padding: [30, 30] });
+    window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
 
 window.iniciarFluxoCheckout = async function () {
