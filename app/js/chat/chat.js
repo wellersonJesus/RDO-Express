@@ -213,7 +213,7 @@ window.renderizarMapaUnificado = function() {
     const rodape = document.getElementById('resumo-total');
     if (rodape) {
         rodape.style.fontSize = "0.85rem";
-        rodape.style.fontWeight = "400"; // Peso normal (não negrito)
+        rodape.style.fontWeight = "400";
         rodape.style.color = "#6c757d";
         rodape.innerHTML = `
             <span style="margin-right: 15px;">${window.dadosPedidoAtual.tempo}</span>
@@ -222,15 +222,18 @@ window.renderizarMapaUnificado = function() {
         `;
     }
 
-    // Ícone de Partida (Bandeira)
+    // 2. EXTRAÇÃO DAS ROTAS (Para exibir no hover)
+    const textoRotas = document.getElementById('p-rotas')?.value || "";
+    // Limpa a string para pegar apenas as linhas válidas da rota
+    const listaRotas = textoRotas.split('\n').filter(l => l.includes('De:') && l.includes('Para:'));
+
+    // 3. Ícones
     const iconeBandeira = L.divIcon({
         html: '<div style="font-size: 24px;">🏁</div>',
         className: 'custom-div-icon',
-        iconSize: [30, 30],
-        iconAnchor: [15, 30]
+        iconSize: [30, 30], iconAnchor: [15, 30]
     });
 
-    // Ícone de Destino (Pino Vermelho padrão Leaflet)
     const iconeDestino = L.icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
@@ -251,15 +254,24 @@ window.renderizarMapaUnificado = function() {
         const pInicio = coords[i];
         const pFim = coords[i + 1];
         const corAtual = cores[(i / 2) % cores.length];
+        
+        // Pega a descrição da rota baseada no índice
+        const descricaoRota = listaRotas[i / 2] || `Rota ${i/2 + 1}`;
 
-        // Linha pontilhada colorida
+        // Linha pontilhada
         L.polyline([[pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]], {
             color: corAtual, weight: 4, opacity: 0.8, dashArray: '8, 8'
         }).addTo(window.mapaInstancia);
 
-        // Marcadores
-        L.marker([pInicio.lat, pInicio.lng], { icon: iconeBandeira }).addTo(window.mapaInstancia);
-        L.marker([pFim.lat, pFim.lng], { icon: iconeDestino }).addTo(window.mapaInstancia);
+        // Marcador Partida: Exibe a rota inteira no hover
+        L.marker([pInicio.lat, pInicio.lng], { icon: iconeBandeira })
+         .addTo(window.mapaInstancia)
+         .bindTooltip(descricaoRota, { permanent: false, direction: 'top', className: 'tooltip-rota' });
+
+        // Marcador Destino: Exibe a rota inteira no hover
+        L.marker([pFim.lat, pFim.lng], { icon: iconeDestino })
+         .addTo(window.mapaInstancia)
+         .bindTooltip(descricaoRota, { permanent: false, direction: 'top', className: 'tooltip-rota' });
 
         todosPontos.push([pInicio.lat, pInicio.lng], [pFim.lat, pFim.lng]);
     }
