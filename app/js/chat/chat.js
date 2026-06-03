@@ -21,7 +21,7 @@ window.filtrarContatos = function () {
 if (!window.AppRDO.observerIniciado) {
     new MutationObserver((mutations) => {
         const listaExiste = document.getElementById('lista-contatos-chat');
-        
+
         // Só dispara se a lista for detectada pela primeira vez ou após reset
         if (listaExiste && !window.AppRDO.listaCarregada) {
             console.log("Detectado DOM: Carregando contatos...");
@@ -120,13 +120,13 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
         const msgEl = document.getElementById('modal-atencao-mensagem');
         if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline. Não é possível enviar mensagens.`;
         new bootstrap.Modal(document.getElementById('modalAtencao')).show();
-        return; 
+        return;
     }
 
     // 2. Atualizar estado e cabeçalho
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
-    
+
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) nameEl.innerText = nome;
 
@@ -224,12 +224,12 @@ window.renderizarMapaUnificado = function () {
 
     const trajetos = window.dadosPedidoAtual.coordenadas;
     const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-    
+
     window.mapaInstancia = L.map('container-mapa-visual').setView(trajetos[0][0], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
 
-    const criarIcone = (html) => L.divIcon({ 
-        html: `<div style="font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">${html}</div>`, 
+    const criarIcone = (html) => L.divIcon({
+        html: `<div style="font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">${html}</div>`,
         className: 'custom-div-icon',
         iconSize: [25, 25]
     });
@@ -238,11 +238,11 @@ window.renderizarMapaUnificado = function () {
         const cor = cores[index % cores.length];
 
         // 1. Desenha o trajeto real
-        L.polyline(caminho, { 
-            color: cor, 
-            weight: 5, 
+        L.polyline(caminho, {
+            color: cor,
+            weight: 5,
             dashArray: '8, 8',
-            opacity: 0.9 
+            opacity: 0.9
         }).addTo(window.mapaInstancia);
 
         // 2. Lógica de Ícones Inteligente para evitar sobreposição
@@ -257,12 +257,12 @@ window.renderizarMapaUnificado = function () {
         } else {
             // Pontos de parada intermediários (onde acaba um e começa o outro)
             // Deslocamos levemente o ícone ou usamos um marcador de conexão para não esconder a bandeira
-            L.marker(caminho[caminho.length - 1], { 
+            L.marker(caminho[caminho.length - 1], {
                 icon: criarIcone('🔄') // Ícone de transição/parada intermediária
             }).addTo(window.mapaInstancia);
         }
     });
-    
+
     const todosPontos = trajetos.flat();
     window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
@@ -299,7 +299,7 @@ window.iniciarFluxoCheckout = async function () {
         await window.loadModal('modal_mapa.html');
         const modalEl = document.getElementById('modalMapa');
         if (!modalEl) throw new Error("Estrutura do modal não encontrada.");
-        
+
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
 
@@ -307,7 +307,7 @@ window.iniciarFluxoCheckout = async function () {
             const elCliente = document.getElementById('header-nome-cliente');
             const elSolicitante = document.getElementById('header-nome-solicitante');
             const resumoEl = document.getElementById('resumo-total');
-            
+
             if (elCliente) elCliente.innerText = nomeCliente;
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traçando rota real...';
@@ -315,7 +315,7 @@ window.iniciarFluxoCheckout = async function () {
             try {
                 const rotaMatch = texto.match(/ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i);
                 const linhas = rotaMatch ? rotaMatch[1].split('\n').filter(l => l.includes('De:') && l.includes('Para:')) : [];
-                
+
                 if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada.");
 
                 let kmTotal = 0, minTotal = 0, listaCaminhos = [];
@@ -325,13 +325,13 @@ window.iniciarFluxoCheckout = async function () {
                     if (partes.length >= 2) {
                         const p1 = await buscarCoordenadasEndereco(partes[0]);
                         const p2 = await buscarCoordenadasEndereco(partes[1]);
-                        
+
                         if (p1 && p2) {
                             // A chave está aqui: overview=full e geometries=geojson
                             const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
                             const resp = await fetch(url);
                             const data = await resp.json();
-                            
+
                             if (data.routes?.[0]) {
                                 kmTotal += (data.routes[0].distance / 1000);
                                 minTotal += (data.routes[0].duration / 60);
@@ -407,9 +407,9 @@ window.preencherDadosFormulario = function () {
 
         // 1. Definição do Nome do Cliente (Fonte de Verdade: AppRDO)
         // Se AppRDO estiver vazio, tenta ler do header do chat, se falhar, assume 'Não identificado'
-        const nomeCliente = window.AppRDO?.clienteSelecionado || 
-                            document.getElementById('chat-header-name')?.innerText || 
-                            'Não identificado';
+        const nomeCliente = window.AppRDO?.clienteSelecionado ||
+            document.getElementById('chat-header-name')?.innerText ||
+            'Não identificado';
 
         // Atualiza o header dentro do formulário (fixo para o problema de exibição)
         const elHeader = document.getElementById('header-nome-cliente');
@@ -439,7 +439,7 @@ window.preencherDadosFormulario = function () {
         // 3. Preenchimento de Cálculos (Objeto dadosPedidoAtual)
         if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
         if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
-        
+
         // 4. Horário
         const elHorario = document.getElementById('p-horario');
         if (elHorario && !elHorario.value) {
@@ -506,10 +506,10 @@ window.calcularTudo = function () {
 window.prosseguirParaFormulario = async function () {
     const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
     modalMapa?.hide();
-    
+
     await window.loadModal('modal_form.html');
     const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
-    
+
     document.getElementById('modalFormulario').addEventListener('shown.bs.modal', () => {
         window.preencherDadosFormulario();
         // Dispara o cálculo inicial com os dados carregados
@@ -517,7 +517,7 @@ window.prosseguirParaFormulario = async function () {
             window.calcularTudo();
         }
     }, { once: true });
-    
+
     modalForm.show();
 };
 
@@ -560,7 +560,7 @@ window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const form = document.getElementById('form-checkout');
     const msgInput = document.getElementById('msg-input'); // O "aviãozinho"
-    
+
     // 1. Validação do formulário
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
@@ -571,7 +571,7 @@ window.salvarPedidoAPI = async function () {
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
-    
+
     // Pausa de 50ms para garantir que o navegador desenhe o ícone na tela
     await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -595,20 +595,32 @@ window.salvarPedidoAPI = async function () {
         if (response.status === 'error') throw new Error(response.message);
 
         // Modelo de mensagem EXATO
-        const msg = `📦 NOME: ${nomeCliente}
+        // Dentro da função salvarPedidoAPI, ajuste a montagem da variável 'msg':
+        // Processamento das Rotas: Adiciona o ícone 📍 em cada linha
+const rotasFormatadas = dados.rotas.split('\n')
+    .map(linha => linha.trim() ? `📍${linha.trim()}` : '')
+    .filter(linha => linha !== '')
+    .join('\n');
 
-N.SERVIÇO: ${response.id || 'RDO'}
-SOLICITANTE: ${dados.solicitante}
-CONTATO: ${dados.contato}
-MERCADORIA: ${dados.mercadoria}
-ROTA: ${dados.rotas}
+// Construção exata do modelo solicitado
+const msg = `📦 ${nomeCliente}
+
+N.SERVIÇO: RDO${response.id || '...'}
+SOLICITANTE: ${dados.solicitante} | CONTATO: ${dados.contato}
 HORÁRIO: ${dados.horario}
+-
+MERCADORIA: ${dados.mercadoria}
 TROCA/RETORNO: ${dados.retorno}
-OBSERVAÇÃO: ${dados.obs}`;
+-
+ROTA(s): 
+${rotasFormatadas}
+-
+OBSERVAÇÃO: ${dados.obs}
+${dados.valor_corrida}`;
 
         // 3. Atualiza o chat e limpa o input do "aviãozinho"
         await window.enviarMensagemParaChat(msg);
-        if (msgInput) msgInput.value = ''; 
+        if (msgInput) msgInput.value = '';
 
         // 4. Finalização: Fecha o modal
         const modalEl = document.getElementById('modalFormulario');
@@ -618,7 +630,7 @@ OBSERVAÇÃO: ${dados.obs}`;
     } catch (err) {
         console.error("Erro na emissão:", err);
         alert("Erro ao emitir pedido. Tente novamente.");
-        
+
         // Restaura o botão apenas se houver erro
         btn.disabled = false;
         btn.innerHTML = originalContent;
@@ -629,7 +641,7 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
     const div = document.createElement('div');
     div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-2`;
-    
+
     div.innerHTML = `
         <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
              style="white-space: pre-line; font-size: 0.9rem;">

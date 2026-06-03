@@ -138,31 +138,44 @@
    ========================================================================== */
 
 /* Container do Chat */
+/* Respiro entre o header e o container de mensagens */
 #chat-messages-container {
-    background-color: #e5ddd5; /* Fundo padrão WhatsApp */
+    padding-top: 20px !important; /* Respiro superior dentro do container */
+    background-color: #e5ddd5;
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
-/* Balão de mensagem recebida (Fundo branco) */
+/* Alinhamento à esquerda (WhatsApp Style) */
+.message-sent {
+    background-color: #dcf8c6 !important;
+    color: #333 !important;
+    border-radius: 8px 0 8px 8px !important;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    padding: 10px 15px !important;
+    max-width: 85%;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    margin-left: auto; /* Mantém a mensagem enviada à direita */
+    text-align: left !important; /* Alinhado à esquerda dentro do balão */
+    white-space: pre-line;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .message-received {
     background-color: #ffffff !important;
     color: #333 !important;
     border-radius: 0 8px 8px 8px !important;
     box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-    padding: 8px 12px;
-    max-width: 80%;
-    margin-bottom: 5px;
-}
-
-/* Balão de mensagem enviada (Seu pedido) */
-.message-sent {
-    background-color: #dcf8c6 !important; /* Verde claro WhatsApp */
-    color: #333 !important;
-    border-radius: 8px 0 8px 8px !important;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-    padding: 8px 12px;
-    max-width: 80%;
-    margin-bottom: 5px;
-    margin-left: auto; /* Alinha à direita */
+    padding: 10px 15px !important;
+    max-width: 85%;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    text-align: left !important; /* Alinhado à esquerda dentro do balão */
+    white-space: pre-line;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 @keyframes spin { 
