@@ -669,14 +669,19 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
     const div = document.createElement('div');
     div.className = 'message-wrapper';
+    
+    // Adicionamos um ID único baseado no timestamp
+    const msgId = 'msg-' + Date.now();
 
-    // Envolvemos o texto na classe message-body para controlar o espaço
     div.innerHTML = `
-        <div class="${isRecebida ? 'message-received' : 'message-sent'}">
+        <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
+             id="${msgId}" 
+             onclick="window.abrirModalStatus('${msgId}')"
+             style="cursor: pointer;">
             <div class="message-body">${texto}</div>
             ${!isRecebida ? `
-                <div class="status-icon" title="Aguardando">
-                    <i class="bi bi-clock-history" style="font-size: 18px; color: #6c757d;"></i>
+                <div class="status-icon" id="status-${msgId}" title="Clique para alterar status">
+                    <i class="bi bi-clock-history" style="font-size: 24px; color: #6c757d;"></i>
                 </div>
             ` : ''}
         </div>

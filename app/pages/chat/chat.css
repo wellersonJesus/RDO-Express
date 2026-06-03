@@ -251,6 +251,12 @@
     word-wrap: break-word;
 }
 
+/* Efeito de destaque ao passar o mouse na mensagem */
+.message-sent:hover, .message-received:hover {
+    filter: brightness(0.95);
+    transition: filter 0.2s;
+}
+
 .message-sent {
     background-color: #dcf8c6 !important;
     margin-left: auto;
@@ -265,27 +271,26 @@
     border-bottom-left-radius: 2px;
 }
 
-/* Ícone de status: Sem fundo, apenas o ícone, posicionado conforme pedido */
+/* Garante que o ícone do status tenha o tamanho consistente */
 .status-icon {
     position: absolute;
-    bottom: -15px; /* Empurrado um pouco mais para baixo */
-    left: 2px;     /* Deslocamento à esquerda */
+    bottom: -15px; 
+    left: 2px;
     z-index: 10;
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent !important; /* Fundo removido */
-    box-shadow: none !important;        /* Sombra removida */
-    padding: 0;
+    cursor: pointer !important;
+    width: 24px;  /* Tamanho fixo igual ao do relógio */
+    height: 24px;
 }
 
-/* Aumento do tamanho do ícone (específico para o clock-history) */
-.status-icon i {
-    font-size: 24px !important; /* Tamanho aumentado para 24px */
+/* Garante que o span (emoji) mantenha o alinhamento */
+.status-icon span {
+    line-height: 24px;
+    display: inline-block;
 }
-
-/* --- ANIMAÇÕES E EFEITOS (MANTIDOS E PRESERVADOS) --- */
 
 @keyframes rotate { 
     from { transform: rotate(0deg); } 
