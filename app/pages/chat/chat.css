@@ -138,44 +138,30 @@
    ========================================================================== */
 
 /* Container do Chat */
-/* Respiro entre o header e o container de mensagens */
-#chat-messages-container {
-    padding-top: 20px !important; /* Respiro superior dentro do container */
-    background-color: #e5ddd5;
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-/* Alinhamento à esquerda (WhatsApp Style) */
-.message-sent {
-    background-color: #dcf8c6 !important;
-    color: #333 !important;
-    border-radius: 8px 0 8px 8px !important;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-    padding: 10px 15px !important;
+/* Alinhamento à esquerda e espaçamento interno */
+.message-sent, .message-received {
+    padding: 15px 20px !important; /* Aumenta o respiro interno para centralizar visualmente */
     max-width: 85%;
     margin-bottom: 10px;
-    margin-right: 10px;
-    margin-left: auto; /* Mantém a mensagem enviada à direita */
-    text-align: left !important; /* Alinhado à esquerda dentro do balão */
+    text-align: left !important;
     white-space: pre-line;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    font-size: 0.95rem;
+    line-height: 1.6; /* Aumenta o espaço entre linhas para leitura mais leve */
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.message-sent {
+    background-color: #dcf8c6 !important;
+    margin-left: auto;
+    margin-right: 10px;
+    border-bottom-right-radius: 0; /* Estilo WhatsApp */
 }
 
 .message-received {
     background-color: #ffffff !important;
-    color: #333 !important;
-    border-radius: 0 8px 8px 8px !important;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-    padding: 10px 15px !important;
-    max-width: 85%;
-    margin-bottom: 10px;
     margin-left: 10px;
-    text-align: left !important; /* Alinhado à esquerda dentro do balão */
-    white-space: pre-line;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    border-bottom-left-radius: 0; /* Estilo WhatsApp */
 }
 
 @keyframes spin { 
