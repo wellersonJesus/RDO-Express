@@ -1,12 +1,8 @@
 // =====================================================================
-// PROTEÇÃO CONTRA DUPLA DECLARAÇÃO
+// PROTEÇÃO E ESTADO GLOBAL
 // =====================================================================
-
-window.AppRDO = window.AppRDO || {
-    debounceTimer: null,
-    listaCarregada: false,
-    observerIniciado: false
-};
+window.AppRDO = window.AppRDO || { debounceTimer: null, listaCarregada: false, observerIniciado: false };
+window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 // =====================================================================
 // EVENTOS E OBSERVERS
@@ -68,6 +64,17 @@ if (!window.AppRDO.observerIniciado) {
 // =====================================================================
 // EVENTOS GLOBAIS E DELEGAÇÃO
 // =====================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const inputContato = document.getElementById('p-contato');
+    if (inputContato) {
+        inputContato.addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 11) val = val.substring(0, 11);
+            e.target.value = window.formatarTelefone(val);
+        });
+    }
+});
 
 document.addEventListener('input', (e) => {
     if (e.target && e.target.id === 'chat-search') window.filtrarContatos();
@@ -398,39 +405,69 @@ async function calcularRotaOSRM(p1, p2) {
 // TRANSIÇÃO FORMULÁRIO E FINALIZAÇÃO
 // =====================================================================
 
+window.preencherDadosFormulario = function() {
+    const dados = window.dadosPedidoAtual;
+    const msgInput = document.getElementById('msg-input');
+    const textoChat = msgInput ? msgInput.value : '';
+
+    console.log("Preenchendo formulário com:", dados);
+
+    // 1. Header do Cliente
+    const nomeCliente = document.getElementById('chat-header-name')?.innerText || 'Não identificado';
+    if (document.getElementById('header-nome-cliente')) {
+        document.getElementById('header-nome-cliente').innerText = nomeCliente;
+    }
+
+    // 2. Solicitante (Prioriza o texto da mensagem, se não existir, usa nome do cliente)
+    const solicitanteMatch = textoChat.match(/SOLICITANTE:\s*(.*)/i);
+    const inputSolicitante = document.getElementById('p-solicitante');
+    if (inputSolicitante) {
+        inputSolicitante.value = solicitanteMatch ? solicitanteMatch[1].trim() : nomeCliente;
+    }
+
+    // 3. Telefone (Formatado)
+    const matchTelefone = textoChat.match(/\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/);
+    if (matchTelefone) {
+        document.getElementById('p-contato').value = window.formatarTelefone(matchTelefone[0].replace(/\D/g, ''));
+    }
+
+    // 4. Campos Calculados (do Objeto dadosPedidoAtual)
+    if (dados) {
+        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '';
+        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '';
+        if (document.getElementById('view-valor-final')) document.getElementById('view-valor-final').innerText = dados.valor || 'R$ 0,00';
+    }
+
+    // 5. Rota
+    const rotasMatch = textoChat.match(/ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i);
+    if (document.getElementById('p-rotas')) {
+        document.getElementById('p-rotas').value = rotasMatch ? rotasMatch[1].trim() : '';
+    }
+
+    // 6. Horário
+    if (document.getElementById('p-horario')) {
+        document.getElementById('p-horario').value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Recalcula o total baseado nos valores inseridos
+    if (typeof window.calcularTudo === 'function') window.calcularTudo();
+};
+
 window.prosseguirParaFormulario = async function () {
-    // 1. Oculta o modal do mapa de forma segura
     const modalMapaEl = document.getElementById('modalMapa');
     const modalMapa = bootstrap.Modal.getInstance(modalMapaEl);
     if (modalMapa) modalMapa.hide();
 
-    // 2. Carrega o formulário e exibe
     await window.loadModal('modal_form.html');
+    
     const modalFormEl = document.getElementById('modalFormulario');
     const modalForm = new bootstrap.Modal(modalFormEl);
     modalForm.show();
 
-    // 3. Preenchimento inteligente com delay para garantir carregamento do DOM
-    setTimeout(() => {
-        const texto = document.getElementById('msg-input')?.value || '';
-        const dados = window.dadosPedidoAtual || {};
-
-        // Mapeamento dos campos (Certifique-se de que estes IDs existam no seu modal_form.html)
-        document.getElementById('p-solicitante').value = dados.solicitante || 'Não identificado';
-        document.getElementById('p-contato').value = texto.match(/\(\d{2}\)\s?9?\d{4}-?\d{4}/)?.[0] || '';
-        document.getElementById('p-horario').value = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        document.getElementById('p-distancia').value = dados.distancia || 0;
-        document.getElementById('p-tempo').value = dados.tempo || '0 min';
-        
-        // Extração de Rotas (Regex robusta)
-        const rotasMatch = texto.match(/ROTA:([\s\S]*?)(?=OBSERVAÇÃO|$)/i);
-        document.getElementById('p-rotas').value = rotasMatch ? rotasMatch[1].trim() : '';
-        
-        // Dispara o cálculo inicial
-        if (typeof window.calcularTudo === 'function') {
-            window.calcularTudo();
-        }
-    }, 500);
+    // Aguarda o modal estar visível para garantir que os campos existam no DOM
+    modalFormEl.addEventListener('shown.bs.modal', function () {
+        window.preencherDadosFormulario();
+    }, { once: true });
 };
 
 window.calcularTudo = function () {
@@ -492,6 +529,69 @@ window.voltarParaMapa = async function () {
             window.renderizarMapaUnificado();
         }, 300);
     }
+};
+
+window.preencherDadosFormulario = function() {
+    console.log("Iniciando preenchimento...");
+    
+    // Tenta encontrar o modal explicitamente
+    const modal = document.getElementById('modalFormulario');
+    if (!modal) {
+        console.error("ERRO: Modal não encontrado no DOM!");
+        return;
+    }
+
+    const dados = window.dadosPedidoAtual || {};
+    const textoChat = document.getElementById('msg-input')?.value || '';
+    const nomeCliente = document.getElementById('chat-header-name')?.innerText || 'Não identificado';
+
+    // 1. Cliente Header
+    const elHeader = document.getElementById('header-nome-cliente');
+    if (elHeader) elHeader.innerText = nomeCliente;
+
+    // 2. Solicitante
+    const solicitanteMatch = textoChat.match(/SOLICITANTE:\s*(.*)/i);
+    const campoSolicitante = document.getElementById('p-solicitante');
+    if (campoSolicitante) campoSolicitante.value = solicitanteMatch ? solicitanteMatch[1].trim() : nomeCliente;
+
+    // 3. Telefone
+    const matchTelefone = textoChat.match(/\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/);
+    const campoContato = document.getElementById('p-contato');
+    if (campoContato && matchTelefone) {
+        campoContato.value = window.formatarTelefone(matchTelefone[0].replace(/\D/g, ''));
+    }
+
+    // 4. Preenchimento de campos de cálculo (Forçando leitura do objeto)
+    console.log("Dados disponíveis para preencher:", dados);
+    
+    if (dados.distancia) document.getElementById('p-distancia').value = dados.distancia;
+    if (dados.tempo) document.getElementById('p-tempo').value = dados.tempo;
+    if (dados.valor) document.getElementById('view-valor-final').innerText = dados.valor;
+
+    // 5. Rota
+    const rotasMatch = textoChat.match(/ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i);
+    if (document.getElementById('p-rotas')) {
+        document.getElementById('p-rotas').value = rotasMatch ? rotasMatch[1].trim() : '';
+    }
+
+    // 6. Horário
+    const campoHorario = document.getElementById('p-horario');
+    if (campoHorario) {
+        campoHorario.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Recálculo final
+    if (typeof window.calcularTudo === 'function') window.calcularTudo();
+};
+
+// =====================================================================
+// UTILS
+// =====================================================================
+window.formatarTelefone = function(tel) {
+    if (!tel) return '';
+    if (tel.length === 11) return tel.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+    if (tel.length === 10) return tel.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    return tel;
 };
 
 window.salvarPedidoAPI = async function () {
