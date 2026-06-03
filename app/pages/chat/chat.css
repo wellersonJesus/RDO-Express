@@ -1,9 +1,12 @@
-/* --- Estilos de Contatos (Escopo Protegido) --- */
+/* ==========================================================================
+   1. ESTRUTURA DE CONTATOS E CHAT
+   ========================================================================== */
+
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 10px 12px !important;
-    display: flex;
+    display: flex !important;
     align-items: center;
     border-bottom: 1px solid #f8f9fa;
 }
@@ -17,47 +20,80 @@
     border-left: 4px solid #dc3545 !important;
 }
 
-/* Redução visual para interface limpa */
-.contact-name { font-size: 0.9rem; color: #212529; }
+.contact-name { font-size: 0.9rem; color: #212529; font-weight: 600; }
 .small.text-muted { font-size: 0.75rem; }
 
-/* --- Ajuste de Mapa (Prevenção de Erros de Render) --- */
-#mapa-container {
-    height: 400px;
-    width: 100%;
-    min-height: 300px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-    /* Evita que o mapa quebre o layout do modal */
-    z-index: 1; 
-}
-
-/* Garante que o Leaflet preencha o container */
-#mapa-container .leaflet-container {
-    width: 100%;
-    height: 100%;
-}
-
-/* --- Estilização do Chat --- */
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
-    /* Background padrão mais sutil */
-    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)), 
+                      url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
 }
 
+/* ==========================================================================
+   2. MAPA E RENDERIZAÇÃO GEOGRÁFICA (PROTEÇÃO DE MODAL)
+   ========================================================================== */
+
+/* Container Principal do Mapa */
 #container-mapa-visual {
     width: 100% !important;
     height: 350px !important;
     display: block !important;
     background-color: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1; /* Garante que o mapa não fique atrás de outros elementos do modal */
 }
+
+/* Fallback para container antigo (evitar duplicidade) */
+#mapa-container {
+    height: 350px;
+    width: 100%;
+    background-color: #f8f9fa;
+}
+
+/* Garantia que o Leaflet preencha o container */
+.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ==========================================================================
+   3. ELEMENTOS DINÂMICOS DO MAPA (TOOLTIPS/ÍCONES)
+   ========================================================================== */
 
 .leaflet-tooltip {
     background: rgba(0, 0, 0, 0.8) !important;
-    color: white !important;
+    color: #ffffff !important;
     border: none !important;
     font-size: 12px !important;
+    padding: 5px 10px !important;
     border-radius: 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Ajuste de ícones personalizados */
+.custom-div-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ==========================================================================
+   4. UTILITÁRIOS DE LAYOUT (MODAIS)
+   ========================================================================== */
+
+/* Evita que o modal fique com rolagem quebrada */
+.modal-body {
+    overflow-x: hidden;
+}
+
+/* Spinner de carregamento para ícones */
+.spinner-rotate {
+    animation: rotation 1s infinite linear;
+}
+
+@keyframes rotation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(359deg); }
 }

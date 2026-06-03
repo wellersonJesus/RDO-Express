@@ -212,61 +212,39 @@ window.renderizarMapaUnificado = function () {
     const container = document.getElementById('container-mapa-visual');
     if (!container || !window.dadosPedidoAtual?.coordenadas) return;
 
-    // 1. Limpeza de instância anterior
-    if (window.mapaInstancia) {
-        window.mapaInstancia.remove();
-        window.mapaInstancia = null;
-    }
+    if (window.mapaInstancia) { window.mapaInstancia.remove(); window.mapaInstancia = null; }
 
-    // 2. Inicialização do mapa
     const coords = window.dadosPedidoAtual.coordenadas;
+    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']; // Lista de cores para rotas
+    
     window.mapaInstancia = L.map('container-mapa-visual').setView([coords[0].lat, coords[0].lng], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
 
-    // 3. Definição dos ícones específicos
-    const iconeBandeira = L.divIcon({ 
-        html: '<div style="font-size: 20px;">🏁</div>', 
-        className: 'custom-div-icon' 
-    });
-    const iconeDestino = L.divIcon({ 
-        html: '<div style="font-size: 20px;">📍</div>', 
-        className: 'custom-div-icon' 
-    });
+    // Definição dos ícones
+    const criarIcone = (html) => L.divIcon({ html: `<div style="font-size: 20px;">${html}</div>`, className: 'custom-div-icon' });
+    const iconeBandeira = criarIcone('🏁');
+    const iconeParada = criarIcone('📌');
+    const iconeFinal = criarIcone('📍');
 
-    // 4. Extração das descrições das rotas para o tooltip
-    const textoRotas = document.getElementById('p-rotas')?.value || "";
-    const listaRotas = textoRotas.split('\n').filter(l => l.includes('De:') && l.includes('Para:'));
+    const listaRotas = document.getElementById('p-rotas')?.value.split('\n').filter(l => l.includes('De:')) || [];
 
-    // 5. Renderização dos pontos e linhas
     for (let i = 0; i < coords.length; i += 2) {
-        if (coords[i + 1]) {
-            const pInicio = coords[i];
-            const pFim = coords[i + 1];
-            const descricao = listaRotas[i / 2] || "Rota";
+        if (!coords[i + 1]) break;
+        
+        const cor = cores[(i / 2) % cores.length];
+        const descricao = listaRotas[i / 2] || "Rota";
 
-            // Desenha a linha tracejada
-            L.polyline([
-                [pInicio.lat, pInicio.lng], 
-                [pFim.lat, pFim.lng]
-            ], { 
-                color: '#dc3545', 
-                weight: 4, 
-                dashArray: '10, 10' 
-            }).addTo(window.mapaInstancia);
+        // Linha com cor dinâmica
+        L.polyline([ [coords[i].lat, coords[i].lng], [coords[i+1].lat, coords[i+1].lng] ], 
+            { color: cor, weight: 5, dashArray: '10, 10' }).addTo(window.mapaInstancia);
 
-            // Marcador de Início (Bandeira)
-            L.marker([pInicio.lat, pInicio.lng], { icon: iconeBandeira })
-             .addTo(window.mapaInstancia)
-             .bindTooltip(descricao, { permanent: false, direction: 'top' });
+        // Ícone Início (Bandeira)
+        L.marker([coords[i].lat, coords[i].lng], { icon: iconeBandeira }).addTo(window.mapaInstancia).bindTooltip(descricao);
 
-            // Marcador de Destino (Ponto)
-            L.marker([pFim.lat, pFim.lng], { icon: iconeDestino })
-             .addTo(window.mapaInstancia)
-             .bindTooltip(descricao, { permanent: false, direction: 'top' });
-        }
+        // Lógica: Se for último ponto, ícone FINAL, se não, ícone PARADA
+        const iconePonto = (i + 2 >= coords.length) ? iconeFinal : iconeParada;
+        L.marker([coords[i+1].lat, coords[i+1].lng], { icon: iconePonto }).addTo(window.mapaInstancia).bindTooltip(descricao);
     }
-
-    // Ajusta o zoom para enquadrar todas as rotas
     window.mapaInstancia.fitBounds(coords.map(c => [c.lat, c.lng]), { padding: [50, 50] });
 };
 
@@ -292,38 +270,61 @@ window.renderizarFooterResumo = function (el) {
 
 window.iniciarFluxoCheckout = async function () {
     const msgInput = document.getElementById('msg-input');
-    if (!msgInput || !msgInput.value.trim()) return;
+    if (!msgInput || !msgInput.value.trim()) {
+        console.warn("Input de mensagem vazio ou inválido.");
+        return;
+    }
 
-    // 1. Extrai solicitante antes de abrir o modal
+    // 1. Extração inicial protegida
     const texto = msgInput.value;
-    const solicitante = texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente';
+    const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
+    const solicitante = solicitanteMatch ? solicitanteMatch[1].trim() : 'Cliente';
 
-    await window.loadModal('modal_mapa.html');
+    // 2. Carregamento do Modal
+    try {
+        await window.loadModal('modal_mapa.html');
+    } catch (e) {
+        console.error("Erro ao carregar o modal do mapa:", e);
+        return;
+    }
+
     const modalEl = document.getElementById('modalMapa');
+    if (!modalEl) {
+        console.error("Elemento 'modalMapa' não encontrado no DOM.");
+        return;
+    }
+
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
 
+    // 3. Execução pós-abertura do modal
     modalEl.addEventListener('shown.bs.modal', async () => {
-        // Atualiza header
         const elHeader = document.getElementById('header-nome-solicitante');
-        if (elHeader) elHeader.innerText = solicitante;
-
         const resumoEl = document.getElementById('resumo-total');
-        if (resumoEl) resumoEl.innerHTML = "Calculando rota e valores...";
+        
+        if (elHeader) elHeader.innerText = solicitante;
+        if (resumoEl) resumoEl.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Calculando rota...';
 
         try {
-            const linhas = msgInput.value.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i)?.[1]?.split('\n').filter(l => l.includes('De:') && l.includes('Para:')) || [];
+            // Regex para capturar rotas de forma segura
+            const rotaMatch = msgInput.value.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
+            const linhas = rotaMatch ? rotaMatch[1].split('\n').filter(l => l.includes('De:') && l.includes('Para:')) : [];
             
+            if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada no formato solicitado.");
+
             let kmTotal = 0, minTotal = 0, listaCoords = [];
 
-            for (let linha of linhas) {
+            for (const linha of linhas) {
                 const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
                 if (partes.length >= 2) {
                     const p1 = await buscarCoordenadasEndereco(partes[0]);
                     const p2 = await buscarCoordenadasEndereco(partes[1]);
+                    
                     if (p1 && p2) {
-                        const resp = await fetch(`https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`);
+                        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+                        const resp = await fetch(url);
                         const data = await resp.json();
+                        
                         if (data.routes?.[0]) {
                             kmTotal += (data.routes[0].distance / 1000);
                             minTotal += (data.routes[0].duration / 60);
@@ -333,22 +334,28 @@ window.iniciarFluxoCheckout = async function () {
                 }
             }
 
-            // AGORA 'solicitante' existe neste escopo
+            if (listaCoords.length === 0) throw new Error("Não foi possível calcular trajetos válidos.");
+
+            // 4. Cálculo do Valor (Exemplo: R$ 3,00/km)
+            const precoPorKm = 3.00;
+            const valorCalculado = (kmTotal * precoPorKm).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // 5. Persistência de Estado (Fonte única da verdade)
             window.dadosPedidoAtual = {
-                solicitante: solicitante, 
+                solicitante: solicitante,
                 distancia: kmTotal.toFixed(1),
                 tempo: formatarTempoHumano(minTotal),
                 coordenadas: listaCoords,
-                valor: "R$ 0,00"
+                valor: valorCalculado
             };
 
+            // 6. Renderização
             window.renderizarFooterResumo(resumoEl);
-            if (listaCoords.length > 0) window.renderizarMapaUnificado();
-            else throw new Error("Não foi possível processar a rota.");
+            window.renderizarMapaUnificado();
 
         } catch (err) {
-            console.error("Falha no checkout:", err);
-            window.exibirErroRodape("Erro: " + err.message);
+            console.error("Erro no processamento da rota:", err);
+            window.exibirErroRodape(err.message);
         }
     }, { once: true });
 };
