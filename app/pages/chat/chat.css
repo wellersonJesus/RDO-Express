@@ -15,7 +15,6 @@
     background-color: #f1f3f5;
 }
 
-/* Estilo para contatos offline */
 #lista-contatos-chat .contact-item-clean.offline {
     opacity: 0.6;
     cursor: not-allowed;
@@ -31,7 +30,6 @@
     border-left: 4px solid #dc3545 !important;
 }
 
-/* Tipografia Refinada */
 .contact-name { 
     font-weight: 500 !important; 
     font-size: 0.95rem !important;
@@ -56,21 +54,18 @@
    2. MAPA E RENDERIZAÇÃO GEOGRÁFICA
    ========================================================================== */
 
-#container-mapa-visual {
+#container-mapa-visual, #mapa-container {
     width: 100% !important;
     height: 350px !important;
+}
+
+#container-mapa-visual {
     display: block !important;
     background-color: #f8f9fa;
     border-radius: 8px;
     overflow: hidden;
     position: relative;
     z-index: 1;
-}
-
-#mapa-container {
-    height: 350px;
-    width: 100%;
-    background-color: #f8f9fa;
 }
 
 .leaflet-container {
@@ -95,7 +90,7 @@
 }
 
 /* ==========================================================================
-   3. SISTEMA DE ERROS E FEEDBACK (NOVO)
+   3. SISTEMA DE ERROS E FEEDBACK
    ========================================================================== */
 
 .alert-error-minimal {
@@ -133,16 +128,10 @@
 }
 
 .spinner-rotate {
-    animation: rotation 1s infinite linear;
-}
-
-.spinner-rotate {
     display: inline-block;
     animation: spin 1s linear infinite;
 }
-@keyframes spin { 100% { transform: rotate(360deg); } }
 
-@keyframes rotation {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(359deg); }
+@keyframes spin { 
+    100% { transform: rotate(360deg); } 
 }
