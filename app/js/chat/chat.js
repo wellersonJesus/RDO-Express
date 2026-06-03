@@ -556,27 +556,42 @@ window.formatarTelefone = function (tel) {
 };
 
 window.salvarPedidoAPI = async function () {
-    // Acesso seguro via ID (certifique-se de que o botão no seu HTML tenha este ID)
     const btn = document.getElementById('btn-emitir-pedido');
     const form = document.getElementById('form-checkout');
-    const msgInput = document.getElementById('msg-input'); // O "aviãozinho"
+    const msgInput = document.getElementById('msg-input');
+    const errorMsg = document.getElementById('form-error-msg');
+    
+    // Lista de campos obrigatórios
+    const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km'];
+    let formularioValido = true;
 
-    // 1. Validação do formulário
-    if (!form.checkValidity()) {
-        form.classList.add('was-validated');
+    // Limpar erros anteriores
+    errorMsg.classList.add('d-none');
+    camposObrigatorios.forEach(id => document.getElementById(id).classList.remove('is-invalid'));
+
+    // Validar campos
+    camposObrigatorios.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value || el.value.trim() === "") {
+            el.classList.add('is-invalid');
+            formularioValido = false;
+        }
+    });
+
+    if (!formularioValido) {
+        errorMsg.innerText = "Por favor, preencha todos os campos obrigatórios.";
+        errorMsg.classList.remove('d-none');
         return;
     }
 
-    // 2. Feedback visual: Inicia o spinner
+    // Ação visual: Spinner
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
-
-    // Pausa de 50ms para garantir que o navegador desenhe o ícone na tela
-    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    await new Promise(resolve => setTimeout(resolve, 50)); // Renderizar spinner
 
     try {
-        // Coleta de dados
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
         const dados = {
             id_mensagens_chat: window.AppRDO.clienteId || 'N/A',
@@ -586,31 +601,26 @@ window.salvarPedidoAPI = async function () {
             rotas: document.getElementById('p-rotas').value,
             retorno: document.getElementById('p-retorno').options[document.getElementById('p-retorno').selectedIndex].text,
             obs: document.getElementById('p-obs').value,
-            mercadoria: "Pedido RDO",
             valor_corrida: document.getElementById('view-valor-final').innerText
         };
 
-        // Chamada da API
         const response = await API.call('addpedido', dados);
         if (response.status === 'error') throw new Error(response.message);
 
-        // Modelo de mensagem EXATO
-        // Dentro da função salvarPedidoAPI, ajuste a montagem da variável 'msg':
-        // Processamento das Rotas: Adiciona o ícone 📍 em cada linha
-const rotasFormatadas = dados.rotas.split('\n')
-    .map(linha => linha.trim() ? `📍${linha.trim()}` : '')
-    .filter(linha => linha !== '')
-    .join('\n');
+        // Formatação das rotas com marcadores
+        const rotasFormatadas = dados.rotas.split('\n')
+            .map(linha => linha.trim() ? `📍${linha.trim()}` : '')
+            .filter(linha => linha !== '')
+            .join('\n');
 
-// Construção exata do modelo solicitado
-const msg = `📦 ${nomeCliente}
+        const msg = `📦 NOME: ${nomeCliente}
 
 N.SERVIÇO: RDO${response.id || '...'}
 SOLICITANTE: ${dados.solicitante} | CONTATO: ${dados.contato}
 HORÁRIO: ${dados.horario}
 -
-MERCADORIA: ${dados.mercadoria}
-RETORNO: ${dados.retorno}
+MERCADORIA: Pedido RDO
+TROCA/RETORNO: ${dados.retorno}
 -
 ROTA(s): 
 ${rotasFormatadas}
@@ -618,20 +628,16 @@ ${rotasFormatadas}
 OBSERVAÇÃO: ${dados.obs}
 ${dados.valor_corrida}`;
 
-        // 3. Atualiza o chat e limpa o input do "aviãozinho"
         await window.enviarMensagemParaChat(msg);
+        
+        // Limpeza e Sucesso
         if (msgInput) msgInput.value = '';
-
-        // 4. Finalização: Fecha o modal
-        const modalEl = document.getElementById('modalFormulario');
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
+        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
 
     } catch (err) {
-        console.error("Erro na emissão:", err);
-        alert("Erro ao emitir pedido. Tente novamente.");
-
-        // Restaura o botão apenas se houver erro
+        console.error(err);
+        errorMsg.innerText = "Erro ao emitir pedido. Tente novamente.";
+        errorMsg.classList.remove('d-none');
         btn.disabled = false;
         btn.innerHTML = originalContent;
     }
@@ -647,10 +653,11 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false) {
         <div class="message-wrapper position-relative">
             <div class="${isRecebida ? 'message-received' : 'message-sent'}">
                 ${texto}
-                <!-- Ícone sem fundo, maior, circular -->
-                <div class="status-icon" title="Aguardando" style="position: absolute; bottom: -12px; left: -14px; cursor: help;">
-                    <i class="bi bi-clock-history" style="font-size: 22px; color: #6c757d;"></i>
-                </div>
+                ${!isRecebida ? `
+                    <div class="status-icon" title="Aguardando" style="position: absolute; bottom: -12px; left: -14px; cursor: help;">
+                        <i class="bi bi-clock-history" style="font-size: 22px; color: #6c757d;"></i>
+                    </div>
+                ` : ''}
             </div>
         </div>
     `;

@@ -189,6 +189,19 @@
     padding-bottom: 28px !important; /* Ajustado para o novo tamanho do ícone */
 }
 
+/* Validação de Erro */
+.form-control.is-invalid, .form-select.is-invalid {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
+
+/* Spinner Rotate */
+.spinner-rotate {
+    animation: rotate 1s linear infinite;
+    display: inline-block;
+}
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 @keyframes spin { 
     100% { transform: rotate(360deg); } 
 }
