@@ -556,56 +556,78 @@ window.formatarTelefone = function (tel) {
 };
 
 window.salvarPedidoAPI = async function () {
-    const btn = document.querySelector('[onclick="window.salvarPedidoAPI()"]');
+    // Usamos o ID que adicionamos, é muito mais seguro
+    const btn = document.getElementById('btn-emitir-pedido');
     const form = document.getElementById('form-checkout');
-    const msgInput = document.getElementById('msg-input'); // O "campo do aviãozinho"
     
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
     }
 
-    // 1. Iniciar Spinner
+    // 1. Estados iniciais e feedback visual
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
+    
+    // FORÇA O NAVEGADOR A RENDERIZAR O SPINNER ANTES DA API
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
-        // ... (coleta de dados igual a anterior) ...
-        const dados = { /* ... dados ... */ };
-        
+        const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
+        const dados = {
+            id_mensagens_chat: window.AppRDO.clienteId || 'N/A',
+            solicitante: document.getElementById('p-solicitante').value,
+            contato: document.getElementById('p-contato').value,
+            horario: document.getElementById('p-horario').value,
+            rotas: document.getElementById('p-rotas').value,
+            retorno: document.getElementById('p-retorno').options[document.getElementById('p-retorno').selectedIndex].text,
+            obs: document.getElementById('p-obs').value,
+            mercadoria: "Pedido RDO",
+            valor_corrida: document.getElementById('view-valor-final').innerText
+        };
+
         const response = await API.call('addpedido', dados);
         if (response.status === 'error') throw new Error(response.message);
 
-        // 2. Formatar mensagem e enviar ao chat
-        const msg = `📦 NOME: ${window.AppRDO?.clienteSelecionado || 'N/A'}\n\nN.SERVIÇO: ${response.id || 'RDO'}\n...`;
-        
-        await window.enviarMensagemParaChat(msg);
+        // Modelo de mensagem EXATO
+        const msg = `📦 NOME: ${nomeCliente}
 
-        // 3. LIMPEZA E FINALIZAÇÃO
-        if (msgInput) msgInput.value = ''; // Limpa o campo do aviãozinho
-        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+N.SERVIÇO: ${response.id || 'RDO'}
+SOLICITANTE: ${dados.solicitante}
+CONTATO: ${dados.contato}
+MERCADORIA: ${dados.mercadoria}
+ROTA: ${dados.rotas}
+HORÁRIO: ${dados.horario}
+TROCA/RETORNO: ${dados.retorno}
+OBSERVAÇÃO: ${dados.obs}`;
+
+        await window.enviarMensagemParaChat(msg);
+        
+        // Finalização: Fecha o modal após sucesso
+        const modalEl = document.getElementById('modalFormulario');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
 
     } catch (err) {
-        alert("Erro ao emitir: " + err.message);
-    } finally {
+        console.error("Erro na emissão:", err);
+        alert("Erro ao emitir pedido. Tente novamente.");
+        // Restaura o botão apenas em caso de erro
         btn.disabled = false;
         btn.innerHTML = originalContent;
     }
+    // NOTA: Não restauramos no finally para sucesso, pois o modal vai sumir.
 };
 
-window.enviarMensagemParaChat = function (texto) {
+window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
-    if (!container) return;
-
-    const placeholder = container.querySelector('.text-muted.my-auto');
-    if (placeholder) placeholder.remove();
-
     const div = document.createElement('div');
-    div.className = 'd-flex justify-content-end mb-2';
+    div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-2`;
+    
     div.innerHTML = `
-        <div class="bg-danger text-white p-3 rounded-4 shadow-sm" style="max-width: 80%; white-space: pre-line; font-size: 0.9rem;">
-            ${texto.replace(/\n/g, '<br>')}
+        <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
+             style="white-space: pre-line; font-size: 0.9rem;">
+            ${texto}
         </div>
     `;
 

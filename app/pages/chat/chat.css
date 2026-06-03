@@ -132,6 +132,39 @@
     animation: spin 1s linear infinite;
 }
 
+
+/* ==========================================================================
+   5. VISUAL FUNDO MENSAGENS CHAT
+   ========================================================================== */
+
+/* Container do Chat */
+#chat-messages-container {
+    background-color: #e5ddd5; /* Fundo padrão WhatsApp */
+}
+
+/* Balão de mensagem recebida (Fundo branco) */
+.message-received {
+    background-color: #ffffff !important;
+    color: #333 !important;
+    border-radius: 0 8px 8px 8px !important;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    padding: 8px 12px;
+    max-width: 80%;
+    margin-bottom: 5px;
+}
+
+/* Balão de mensagem enviada (Seu pedido) */
+.message-sent {
+    background-color: #dcf8c6 !important; /* Verde claro WhatsApp */
+    color: #333 !important;
+    border-radius: 8px 0 8px 8px !important;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    padding: 8px 12px;
+    max-width: 80%;
+    margin-bottom: 5px;
+    margin-left: auto; /* Alinha à direita */
+}
+
 @keyframes spin { 
     100% { transform: rotate(360deg); } 
 }
