@@ -5,9 +5,8 @@ window.AppRDO = window.AppRDO || { debounceTimer: null, listaCarregada: false, o
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 // =====================================================================
-// EVENTOS E OBSERVERS
+// EVENTOS E OBSERVERS DE SEGURANÇA
 // =====================================================================
-// (Mantenha seus EventListeners aqui, apenas troque debounceTimer por window.AppRDO.debounceTimer)
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(() => {
@@ -19,45 +18,18 @@ window.filtrarContatos = function () {
     }, 300);
 };
 
-// =====================================================================
-// OBSERVER PROTEGIDO E DEBUGÁVEL
-// =====================================================================
 if (!window.AppRDO.observerIniciado) {
-    console.log("Iniciando MutationObserver para lista de contatos...");
-
     new MutationObserver((mutations) => {
-        try {
-            const listaExiste = document.getElementById('lista-contatos-chat');
-
-            if (listaExiste) {
-                if (!window.AppRDO.listaCarregada) {
-                    console.log("Lista detectada! Carregando dados...");
-                    window.AppRDO.listaCarregada = true;
-
-                    // Verificação de segurança: a função existe?
-                    if (typeof window.carregarDados === 'function') {
-                        window.carregarDados().catch(err => {
-                            console.error("Erro ao executar carregarDados:", err);
-                        });
-                    } else {
-                        console.error("ERRO: window.carregarDados não está definida!");
-                    }
-                }
-            } else {
-                // Se a lista sumiu do DOM, reseta o estado
-                if (window.AppRDO.listaCarregada) {
-                    console.log("Lista removida do DOM. Resetando estado.");
-                    window.AppRDO.listaCarregada = false;
-                }
-            }
-        } catch (err) {
-            console.error("Erro crítico no MutationObserver:", err);
+        const listaExiste = document.getElementById('lista-contatos-chat');
+        
+        // Só dispara se a lista for detectada pela primeira vez ou após reset
+        if (listaExiste && !window.AppRDO.listaCarregada) {
+            console.log("Detectado DOM: Carregando contatos...");
+            window.carregarDados();
         }
     }).observe(document.body, { childList: true, subtree: true });
 
     window.AppRDO.observerIniciado = true;
-} else {
-    console.warn("O Observer já estava iniciado. Tentativa de duplicação bloqueada.");
 }
 
 // =====================================================================
@@ -85,7 +57,9 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-    if (e.target && e.target.closest('#sync-icon-chat')) {
+    // Verifica se clicou no ícone de sincronizar ou no pai dele
+    if (e.target.closest('#sync-icon-chat')) {
+        console.log("Sincronização manual iniciada...");
         window.carregarDados();
     }
 });
@@ -97,20 +71,25 @@ window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    if (!listEl) return;
+    if (!listEl) {
+        console.error("Contêiner de lista não encontrado!");
+        return;
+    }
+
+    // 1. Feedback visual imediato
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
+    listEl.style.opacity = "0.5"; // Efeito de carregando
 
     try {
         const clientes = await API.call('getclientes') || [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        listEl.innerHTML = clientes.map(cliente => {
+        // 2. Renderização limpa
+        listEl.innerHTML = clientes.length > 0 ? clientes.map(cliente => {
             const id = cliente.id || '';
             const nome = (cliente.nome || cliente.username || 'Sem nome').replace(/'/g, "\\'");
             const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-
             const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
-            const statusText = isOnline ? 'Online' : 'Offline';
             const statusColor = isOnline ? '#28a745' : '#adb5bd';
 
             return `
@@ -123,16 +102,20 @@ window.carregarDados = async function () {
                     </div>
                     <div class="ms-3 overflow-hidden">
                         <div class="contact-name fw-bold">${nome}</div>
-                        <div class="small text-muted">${statusText}</div>
+                        <div class="small text-muted">${isOnline ? 'Online' : 'Offline'}</div>
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join('') : '<div class="p-3 text-center text-muted">Nenhum contato encontrado.</div>';
+
+        window.AppRDO.listaCarregada = true;
 
     } catch (e) {
-        console.error("Erro ao carregar lista:", e);
+        console.error("Erro ao sincronizar dados:", e);
+        listEl.innerHTML = '<div class="p-3 text-danger text-center">Erro ao carregar contatos.</div>';
     } finally {
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
+        listEl.style.opacity = "1";
     }
 };
 
@@ -269,95 +252,88 @@ window.renderizarFooterResumo = function (el) {
 };
 
 window.iniciarFluxoCheckout = async function () {
-    const msgInput = document.getElementById('msg-input');
-    if (!msgInput || !msgInput.value.trim()) {
-        console.warn("Input de mensagem vazio ou inválido.");
-        return;
-    }
-
-    // 1. Extração inicial protegida
-    const texto = msgInput.value;
-    const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
-    const solicitante = solicitanteMatch ? solicitanteMatch[1].trim() : 'Cliente';
-
-    // 2. Carregamento do Modal
     try {
+        const msgInput = document.getElementById('msg-input');
+        if (!msgInput?.value.trim()) {
+            throw new Error("A mensagem do pedido está vazia.");
+        }
+
+        const texto = msgInput.value;
+        const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
+        const solicitante = solicitanteMatch ? solicitanteMatch[1].trim() : 'Cliente';
+
+        // Carregamento do Modal
         await window.loadModal('modal_mapa.html');
-    } catch (e) {
-        console.error("Erro ao carregar o modal do mapa:", e);
-        return;
-    }
-
-    const modalEl = document.getElementById('modalMapa');
-    if (!modalEl) {
-        console.error("Elemento 'modalMapa' não encontrado no DOM.");
-        return;
-    }
-
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-
-    // 3. Execução pós-abertura do modal
-    modalEl.addEventListener('shown.bs.modal', async () => {
-        const elHeader = document.getElementById('header-nome-solicitante');
-        const resumoEl = document.getElementById('resumo-total');
+        const modalEl = document.getElementById('modalMapa');
+        if (!modalEl) throw new Error("Estrutura do mapa não encontrada.");
         
-        if (elHeader) elHeader.innerText = solicitante;
-        if (resumoEl) resumoEl.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Calculando rota...';
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
 
-        try {
-            // Regex para capturar rotas de forma segura
-            const rotaMatch = msgInput.value.match(/ROTA:([\s\S]*?)(?=TROCA|PRIORIDADE|OBSERVAÇÃO|$)/i);
-            const linhas = rotaMatch ? rotaMatch[1].split('\n').filter(l => l.includes('De:') && l.includes('Para:')) : [];
+        modalEl.addEventListener('shown.bs.modal', async () => {
+            const elHeader = document.getElementById('header-nome-solicitante');
+            const resumoEl = document.getElementById('resumo-total');
             
-            if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada no formato solicitado.");
+            if (elHeader) elHeader.innerText = solicitante;
+            if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
 
-            let kmTotal = 0, minTotal = 0, listaCoords = [];
+            try {
+                const rotaMatch = texto.match(/ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i);
+                const linhas = rotaMatch ? rotaMatch[1].split('\n').filter(l => l.includes('De:') && l.includes('Para:')) : [];
+                
+                if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada.");
 
-            for (const linha of linhas) {
-                const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
-                if (partes.length >= 2) {
-                    const p1 = await buscarCoordenadasEndereco(partes[0]);
-                    const p2 = await buscarCoordenadasEndereco(partes[1]);
-                    
-                    if (p1 && p2) {
-                        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
-                        const resp = await fetch(url);
-                        const data = await resp.json();
+                let kmTotal = 0, minTotal = 0, listaCoords = [];
+
+                for (const linha of linhas) {
+                    const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
+                    if (partes.length >= 2) {
+                        const p1 = await buscarCoordenadasEndereco(partes[0]);
+                        const p2 = await buscarCoordenadasEndereco(partes[1]);
                         
-                        if (data.routes?.[0]) {
-                            kmTotal += (data.routes[0].distance / 1000);
-                            minTotal += (data.routes[0].duration / 60);
-                            listaCoords.push(p1, p2);
+                        if (p1 && p2) {
+                            const resp = await fetch(`https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`);
+                            const data = await resp.json();
+                            if (data.routes?.[0]) {
+                                kmTotal += (data.routes[0].distance / 1000);
+                                minTotal += (data.routes[0].duration / 60);
+                                listaCoords.push(p1, p2);
+                            }
                         }
                     }
                 }
+
+                if (listaCoords.length === 0) throw new Error("Falha ao traçar rotas.");
+
+                // ARREDONDAMENTO APLICADO: 18.6 vira 19, 18.4 vira 18
+                const kmArredondado = Math.round(kmTotal);
+                const precoPorKm = 3.00;
+                const valorTotal = kmArredondado * precoPorKm;
+
+                // Persistência
+                window.dadosPedidoAtual = {
+                    solicitante: solicitante,
+                    distancia: kmArredondado.toString(), // Salva como string para o input
+                    tempo: formatarTempoHumano(minTotal),
+                    coordenadas: listaCoords,
+                    valor: valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                };
+
+                // Renderização
+                window.renderizarFooterResumo(resumoEl);
+                window.renderizarMapaUnificado();
+
+            } catch (err) {
+                console.error("Erro na lógica do mapa:", err);
+                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
+                window.exibirErroRodape?.(err.message);
             }
+        }, { once: true });
 
-            if (listaCoords.length === 0) throw new Error("Não foi possível calcular trajetos válidos.");
-
-            // 4. Cálculo do Valor (Exemplo: R$ 3,00/km)
-            const precoPorKm = 3.00;
-            const valorCalculado = (kmTotal * precoPorKm).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-            // 5. Persistência de Estado (Fonte única da verdade)
-            window.dadosPedidoAtual = {
-                solicitante: solicitante,
-                distancia: kmTotal.toFixed(1),
-                tempo: formatarTempoHumano(minTotal),
-                coordenadas: listaCoords,
-                valor: valorCalculado
-            };
-
-            // 6. Renderização
-            window.renderizarFooterResumo(resumoEl);
-            window.renderizarMapaUnificado();
-
-        } catch (err) {
-            console.error("Erro no processamento da rota:", err);
-            window.exibirErroRodape(err.message);
-        }
-    }, { once: true });
+    } catch (err) {
+        console.error("Erro no início do checkout:", err);
+        alert("Erro ao iniciar checkout: " + err.message);
+    }
 };
 
 async function calcularTrechoIndividual(p1, p2) {
@@ -392,11 +368,13 @@ async function calcularRotaOSRM(p1, p2) {
 // =====================================================================
 window.preencherDadosFormulario = function () {
     try {
-        console.log("Iniciando preenchimento do formulário...");
         const dados = window.dadosPedidoAtual || {};
-        const texto = document.getElementById('msg-input')?.value || '';
+        const msgInput = document.getElementById('msg-input');
+        if (!msgInput) throw new Error("Campo de mensagem (msg-input) não encontrado.");
+        
+        const texto = msgInput.value || '';
 
-        // 1. Mapeamento de Campos (Regex)
+        // Mapeamento de campos de texto
         const campos = [
             { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
             { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
@@ -408,77 +386,70 @@ window.preencherDadosFormulario = function () {
             const el = document.getElementById(c.id);
             if (el) {
                 const match = texto.match(c.regex);
-                if (match) {
-                    el.value = match[1] ? match[1].trim() : match[0];
-                }
-            } else {
-                console.warn(`Elemento não encontrado: ${c.id}`);
+                el.value = match ? (match[1] ? match[1].trim() : match[0].trim()) : '';
             }
         });
 
-        // 2. Garantia do Solicitante
-        const elSolicitante = document.getElementById('p-solicitante');
-        if (elSolicitante && !elSolicitante.value) {
-            elSolicitante.value = dados.solicitante || 'Cliente';
-        }
+        // Preenchimento de Cálculos (Forçando formato de ponto decimal)
+        const elDist = document.getElementById('p-distancia');
+        if (elDist) elDist.value = parseFloat(dados.distancia || 0).toString(); // Força decimal com ponto
 
-        // 3. Preenchimento de Cálculos e Seletores
-        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
-        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
+        const elTempo = document.getElementById('p-tempo');
+        if (elTempo) elTempo.value = dados.tempo || '0 min';
 
-        // 4. Seleção Automática de Dinâmica e Prioridade baseada no texto
+        // Lógica de Seletores Automáticos
         const elDin = document.getElementById('p-dinamica');
         if (elDin) {
-            if (texto.includes('Taxa 05')) elDin.value = '15';
-            else if (texto.includes('Taxa 04')) elDin.value = '10';
-            else if (texto.includes('Taxa 03')) elDin.value = '7';
-            else if (texto.includes('Taxa 02')) elDin.value = '5';
-            else elDin.value = '0';
+            const taxaMatch = texto.match(/Taxa 0([1-5])/i);
+            const valoresTaxa = { '1': '0', '2': '5', '3': '7', '4': '10', '5': '15' };
+            elDin.value = taxaMatch ? (valoresTaxa[taxaMatch[1]] || '0') : '0';
         }
 
         const elPrior = document.getElementById('p-prioridade');
         if (elPrior) {
-            if (texto.includes('Urgente')) elPrior.value = '7';
-            else if (texto.includes('Agendado')) elPrior.value = '5';
+            if (/Urgente/i.test(texto)) elPrior.value = '7';
+            else if (/Agendado/i.test(texto)) elPrior.value = '5';
             else elPrior.value = '0';
         }
 
-        // 5. Execução do Cálculo Final
-        if (typeof window.calcularTudo === 'function') {
-            window.calcularTudo();
-            console.log("Formulário preenchido e cálculo realizado com sucesso.");
-        }
+        if (typeof window.calcularTudo === 'function') window.calcularTudo();
 
     } catch (error) {
-        console.error("ERRO CRÍTICO no preenchimento do formulário:", error);
+        console.error("ERRO CRÍTICO no preenchimento:", error.message);
+        window.exibirErroRodape?.("Erro ao carregar dados: " + error.message);
     }
 };
 
 window.calcularTudo = function () {
-    // Função utilitária para capturar valores e tratar vírgulas
-    const parse = (id) => {
-        const val = document.getElementById(id)?.value;
-        if (!val) return 0;
-        // Transforma vírgula em ponto para cálculo e converte em float
-        return parseFloat(String(val).replace(',', '.')) || 0;
-    };
+    try {
+        // Função utilitária: limpa a string, troca vírgula por ponto e garante float
+        const parse = (id) => {
+            const val = document.getElementById(id)?.value;
+            if (!val) return 0;
+            // Remove qualquer caractere que não seja dígito, ponto ou vírgula
+            const limpo = String(val).replace(',', '.');
+            return parseFloat(limpo) || 0;
+        };
 
-    const km = parse('p-distancia');
-    const valorKm = parse('p-valor-km');
-    const taxaDin = parse('p-dinamica');
-    const prioridade = parse('p-prioridade');
-    const retorno = parse('p-retorno'); // 0 ou 0.6 (60%)
+        const km = parse('p-distancia');
+        const valorKm = parse('p-valor-km');
+        const taxaDin = parse('p-dinamica');
+        const prioridade = parse('p-prioridade');
+        const retorno = parse('p-retorno');
 
-    // Cálculo do subtotal + taxas fixas
-    let subtotal = (km * valorKm) + taxaDin + prioridade;
+        // Cálculo Preciso
+        let subtotal = (km * valorKm) + taxaDin + prioridade;
+        let total = subtotal + (subtotal * retorno);
 
-    // Aplicação da taxa de retorno
-    let total = subtotal + (subtotal * retorno);
-
-    // Atualização visual
-    const view = document.getElementById('view-valor-final');
-    if (view) {
-        view.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        // Formatação Final
+        const view = document.getElementById('view-valor-final');
+        if (view) {
+            view.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+    } catch (error) {
+        console.error("ERRO NO CÁLCULO:", error.message);
+        const view = document.getElementById('view-valor-final');
+        if (view) view.innerText = "Erro no cálculo";
     }
 };
 
