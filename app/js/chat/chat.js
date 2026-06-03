@@ -668,19 +668,17 @@ ${dados.valor_corrida}`;
 window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
     const div = document.createElement('div');
+    div.className = 'message-wrapper';
 
-    div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-3`;
-
+    // Envolvemos o texto na classe message-body para controlar o espaço
     div.innerHTML = `
-        <div class="message-wrapper position-relative">
-            <div class="${isRecebida ? 'message-received' : 'message-sent'}">
-                ${texto}
-                ${!isRecebida ? `
-                    <div class="status-icon" title="Aguardando" style="position: absolute; bottom: -12px; left: -14px; cursor: help;">
-                        <i class="bi bi-clock-history" style="font-size: 22px; color: #6c757d;"></i>
-                    </div>
-                ` : ''}
-            </div>
+        <div class="${isRecebida ? 'message-received' : 'message-sent'}">
+            <div class="message-body">${texto}</div>
+            ${!isRecebida ? `
+                <div class="status-icon" title="Aguardando">
+                    <i class="bi bi-clock-history" style="font-size: 18px; color: #6c757d;"></i>
+                </div>
+            ` : ''}
         </div>
     `;
 
