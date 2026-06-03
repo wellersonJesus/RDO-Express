@@ -392,15 +392,15 @@ async function calcularRotaOSRM(p1, p2) {
 // =====================================================================
 window.preencherDadosFormulario = function () {
     try {
-        console.log("Iniciando preenchimento do formulário...");
         const dados = window.dadosPedidoAtual || {};
         const texto = document.getElementById('msg-input')?.value || '';
 
-        // 1. Mapeamento de campos (Regex)
+        // Ajuste aqui: Regex focado em ignorar tudo após TROCA/RETORNO
         const campos = [
             { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
             { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
-            { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i },
+            // Nova regex: captura até encontrar TROCA, RETORNO, OBSERVAÇÃO ou fim da linha
+            { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i },
             { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
         ];
 
@@ -409,46 +409,20 @@ window.preencherDadosFormulario = function () {
             if (el) {
                 const match = texto.match(c.regex);
                 if (match) {
+                    // .trim() remove espaços extras ou quebras de linha no final do bloco
                     el.value = match[1] ? match[1].trim() : match[0];
-                    console.log(`Campo ${c.id} preenchido com sucesso.`);
-                } else {
-                    console.warn(`Aviso: Regex não encontrou valor para o campo ${c.id}`);
                 }
-            } else {
-                console.error(`ERRO: Elemento HTML com ID '${c.id}' não encontrado no formulário.`);
             }
         });
 
-        // 2. Garantia de persistência do Solicitante (Prioriza o objeto global se o regex falhar)
-        const elSolicitante = document.getElementById('p-solicitante');
-        if (elSolicitante && (!elSolicitante.value || elSolicitante.value === 'Carregando...')) {
-            elSolicitante.value = dados.solicitante || 'Cliente';
-        }
+        // Preenchimento de cálculos
+        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '';
+        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '';
 
-        // 3. Campos de cálculo direto do objeto
-        const camposCalculo = [
-            { id: 'p-distancia', valor: dados.distancia },
-            { id: 'p-tempo', valor: dados.tempo }
-        ];
-
-        camposCalculo.forEach(c => {
-            const el = document.getElementById(c.id);
-            if (el) {
-                el.value = c.valor || '0';
-            } else {
-                console.warn(`Aviso: Campo de cálculo '${c.id}' não encontrado.`);
-            }
-        });
-
-        // 4. Dispara o cálculo final
-        if (typeof window.calcularTudo === 'function') {
-            window.calcularTudo();
-        } else {
-            console.error("ERRO: window.calcularTudo não está definida.");
-        }
+        if (typeof window.calcularTudo === 'function') window.calcularTudo();
 
     } catch (error) {
-        console.error("ERRO CRÍTICO ao preencher formulário:", error);
+        console.error("Erro ao preencher formulário:", error);
     }
 };
 
