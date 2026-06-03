@@ -120,25 +120,18 @@ window.carregarDados = async function () {
 };
 
 window.abrirConversa = function (id, nome, urlImagem) {
-    clienteSelecionado = id;
+    try {
+        // Armazena com segurança
+        window.AppRDO.clienteSelecionado = nome;
+        window.AppRDO.clienteId = id;
 
-    const nameEl = document.getElementById('chat-header-name');
-    if (nameEl) nameEl.innerText = nome;
-
-    const logoEl = document.getElementById('chat-header-logo');
-    if (logoEl) {
-        if (urlImagem) {
-            logoEl.src = urlImagem;
-            logoEl.classList.remove('d-none');
-        } else {
-            logoEl.classList.add('d-none');
-        }
-    }
-
-    const items = document.querySelectorAll('.list-group-item');
-    items.forEach(el => el.classList.remove('selected-contact'));
-    if (window.event && window.event.currentTarget) {
-        window.event.currentTarget.classList.add('selected-contact');
+        // Atualiza a UI do chat imediatamente
+        const nameEl = document.getElementById('chat-header-name');
+        if (nameEl) nameEl.innerText = nome;
+        
+        console.log("Cliente fixado no AppRDO:", window.AppRDO.clienteSelecionado);
+    } catch (err) {
+        console.error("Erro ao abrir conversa:", err);
     }
 };
 
@@ -254,27 +247,31 @@ window.renderizarFooterResumo = function (el) {
 window.iniciarFluxoCheckout = async function () {
     try {
         const msgInput = document.getElementById('msg-input');
-        if (!msgInput?.value.trim()) {
-            throw new Error("A mensagem do pedido está vazia.");
-        }
+        if (!msgInput?.value.trim()) throw new Error("A mensagem do pedido está vazia.");
 
+        // 1. Definição segura dos nomes
         const texto = msgInput.value;
-        const solicitanteMatch = texto.match(/SOLICITANTE:\s*(.*)/i);
-        const solicitante = solicitanteMatch ? solicitanteMatch[1].trim() : 'Cliente';
+        const solicitante = (texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente').trim();
+        // Garante que buscamos o valor mais recente do AppRDO
+        const nomeCliente = window.AppRDO?.clienteSelecionado || 'Nenhum cliente selecionado';
 
-        // Carregamento do Modal
+        // 2. Carregamento do Modal Mapa
         await window.loadModal('modal_mapa.html');
         const modalEl = document.getElementById('modalMapa');
-        if (!modalEl) throw new Error("Estrutura do mapa não encontrada.");
+        if (!modalEl) throw new Error("Estrutura do modal 'modalMapa' não encontrada.");
         
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
 
+        // 3. Lógica interna pós-exibição
         modalEl.addEventListener('shown.bs.modal', async () => {
-            const elHeader = document.getElementById('header-nome-solicitante');
+            // Atualização dos elementos de cabeçalho
+            const elCliente = document.getElementById('header-nome-cliente');
+            const elSolicitante = document.getElementById('header-nome-solicitante');
             const resumoEl = document.getElementById('resumo-total');
             
-            if (elHeader) elHeader.innerText = solicitante;
+            if (elCliente) elCliente.innerText = nomeCliente;
+            if (elSolicitante) elSolicitante.innerText = solicitante;
             if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
 
             try {
@@ -292,7 +289,8 @@ window.iniciarFluxoCheckout = async function () {
                         const p2 = await buscarCoordenadasEndereco(partes[1]);
                         
                         if (p1 && p2) {
-                            const resp = await fetch(`https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`);
+                            const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+                            const resp = await fetch(url);
                             const data = await resp.json();
                             if (data.routes?.[0]) {
                                 kmTotal += (data.routes[0].distance / 1000);
@@ -305,34 +303,34 @@ window.iniciarFluxoCheckout = async function () {
 
                 if (listaCoords.length === 0) throw new Error("Falha ao traçar rotas.");
 
-                // ARREDONDAMENTO APLICADO: 18.6 vira 19, 18.4 vira 18
-                const kmArredondado = Math.round(kmTotal);
-                const precoPorKm = 3.00;
-                const valorTotal = kmArredondado * precoPorKm;
-
-                // Persistência
+                // Persistência Centralizada
                 window.dadosPedidoAtual = {
                     solicitante: solicitante,
-                    distancia: kmArredondado.toString(), // Salva como string para o input
+                    cliente: nomeCliente, // Salva o nome do cliente aqui
+                    distancia: Math.round(kmTotal).toString(),
                     tempo: formatarTempoHumano(minTotal),
                     coordenadas: listaCoords,
-                    valor: valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    valor: ((Math.round(kmTotal) * 3.00)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                 };
 
                 // Renderização
                 window.renderizarFooterResumo(resumoEl);
                 window.renderizarMapaUnificado();
+                
+                // Dispara o preenchimento automático
+                if (typeof window.preencherDadosFormulario === 'function') {
+                    window.preencherDadosFormulario();
+                }
 
             } catch (err) {
-                console.error("Erro na lógica do mapa:", err);
-                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
-                window.exibirErroRodape?.(err.message);
+                console.error("Erro na lógica de mapa:", err);
+                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger small">Erro: ${err.message}</span>`;
             }
         }, { once: true });
 
     } catch (err) {
-        console.error("Erro no início do checkout:", err);
-        alert("Erro ao iniciar checkout: " + err.message);
+        console.error("Erro no checkout:", err);
+        window.exibirErroRodape?.("Erro: " + err.message);
     }
 };
 
@@ -370,13 +368,25 @@ window.preencherDadosFormulario = function () {
     try {
         const dados = window.dadosPedidoAtual || {};
         const msgInput = document.getElementById('msg-input');
-        if (!msgInput) throw new Error("Campo de mensagem (msg-input) não encontrado.");
-        
-        const texto = msgInput.value || '';
+        const texto = msgInput ? msgInput.value : '';
 
-        // Mapeamento de campos de texto
+        // 1. Definição do Nome do Cliente (Fonte de Verdade: AppRDO)
+        // Se AppRDO estiver vazio, tenta ler do header do chat, se falhar, assume 'Não identificado'
+        const nomeCliente = window.AppRDO?.clienteSelecionado || 
+                            document.getElementById('chat-header-name')?.innerText || 
+                            'Não identificado';
+
+        // Atualiza o header dentro do formulário (fixo para o problema de exibição)
+        const elHeader = document.getElementById('header-nome-cliente');
+        if (elHeader) {
+            elHeader.innerText = nomeCliente;
+            elHeader.classList.remove('text-muted'); // Remove o estilo de 'Carregando...'
+            elHeader.classList.add('text-dark');
+        }
+
+        // 2. Mapeamento de campos fixos
         const campos = [
-            { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
+            { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i, fallback: nomeCliente },
             { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
             { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i },
             { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
@@ -386,18 +396,22 @@ window.preencherDadosFormulario = function () {
             const el = document.getElementById(c.id);
             if (el) {
                 const match = texto.match(c.regex);
-                el.value = match ? (match[1] ? match[1].trim() : match[0].trim()) : '';
+                // Se encontrar o match, usa ele. Se não, usa o fallback (ex: nome do cliente no solicitante)
+                el.value = match ? (match[1] ? match[1].trim() : match[0].trim()) : (c.fallback || '');
             }
         });
 
-        // Preenchimento de Cálculos (Forçando formato de ponto decimal)
-        const elDist = document.getElementById('p-distancia');
-        if (elDist) elDist.value = parseFloat(dados.distancia || 0).toString(); // Força decimal com ponto
+        // 3. Preenchimento de Cálculos (Objeto dadosPedidoAtual)
+        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
+        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
+        
+        // 4. Horário
+        const elHorario = document.getElementById('p-horario');
+        if (elHorario && !elHorario.value) {
+            elHorario.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
 
-        const elTempo = document.getElementById('p-tempo');
-        if (elTempo) elTempo.value = dados.tempo || '0 min';
-
-        // Lógica de Seletores Automáticos
+        // 5. Lógica de Seletores Automáticos
         const elDin = document.getElementById('p-dinamica');
         if (elDin) {
             const taxaMatch = texto.match(/Taxa 0([1-5])/i);
@@ -412,10 +426,11 @@ window.preencherDadosFormulario = function () {
             else elPrior.value = '0';
         }
 
+        // 6. Recalculo final
         if (typeof window.calcularTudo === 'function') window.calcularTudo();
 
     } catch (error) {
-        console.error("ERRO CRÍTICO no preenchimento:", error.message);
+        console.error("ERRO CRÍTICO no preenchimento do formulário:", error);
         window.exibirErroRodape?.("Erro ao carregar dados: " + error.message);
     }
 };
