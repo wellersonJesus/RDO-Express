@@ -190,38 +190,33 @@ window.renderizarMapaUnificado = function () {
 
     if (window.mapaInstancia) { window.mapaInstancia.remove(); window.mapaInstancia = null; }
 
-    const coords = window.dadosPedidoAtual.coordenadas;
-    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']; // Lista de cores para rotas
+    const trajetos = window.dadosPedidoAtual.coordenadas; // Array de arrays de pontos
+    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
     
-    window.mapaInstancia = L.map('container-mapa-visual').setView([coords[0].lat, coords[0].lng], 13);
+    window.mapaInstancia = L.map('container-mapa-visual').setView(trajetos[0][0], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
 
-    // Definição dos ícones
     const criarIcone = (html) => L.divIcon({ html: `<div style="font-size: 20px;">${html}</div>`, className: 'custom-div-icon' });
-    const iconeBandeira = criarIcone('🏁');
-    const iconeParada = criarIcone('📌');
-    const iconeFinal = criarIcone('📍');
+    
+    trajetos.forEach((caminho, index) => {
+        const cor = cores[index % cores.length];
 
-    const listaRotas = document.getElementById('p-rotas')?.value.split('\n').filter(l => l.includes('De:')) || [];
+        // Desenha o trajeto real (ondulado conforme as ruas)
+        L.polyline(caminho, { 
+            color: cor, 
+            weight: 5, 
+            dashArray: '8, 8',
+            opacity: 0.9 
+        }).addTo(window.mapaInstancia);
 
-    for (let i = 0; i < coords.length; i += 2) {
-        if (!coords[i + 1]) break;
-        
-        const cor = cores[(i / 2) % cores.length];
-        const descricao = listaRotas[i / 2] || "Rota";
-
-        // Linha com cor dinâmica
-        L.polyline([ [coords[i].lat, coords[i].lng], [coords[i+1].lat, coords[i+1].lng] ], 
-            { color: cor, weight: 5, dashArray: '10, 10' }).addTo(window.mapaInstancia);
-
-        // Ícone Início (Bandeira)
-        L.marker([coords[i].lat, coords[i].lng], { icon: iconeBandeira }).addTo(window.mapaInstancia).bindTooltip(descricao);
-
-        // Lógica: Se for último ponto, ícone FINAL, se não, ícone PARADA
-        const iconePonto = (i + 2 >= coords.length) ? iconeFinal : iconeParada;
-        L.marker([coords[i+1].lat, coords[i+1].lng], { icon: iconePonto }).addTo(window.mapaInstancia).bindTooltip(descricao);
-    }
-    window.mapaInstancia.fitBounds(coords.map(c => [c.lat, c.lng]), { padding: [50, 50] });
+        // Ícones de Início (🏁) e Fim (📍)
+        L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(window.mapaInstancia);
+        L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(window.mapaInstancia);
+    });
+    
+    // Ajusta o mapa para mostrar tudo
+    const todosPontos = trajetos.flat();
+    window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
 
 window.exibirErroRodape = function (mensagem) {
@@ -249,30 +244,25 @@ window.iniciarFluxoCheckout = async function () {
         const msgInput = document.getElementById('msg-input');
         if (!msgInput?.value.trim()) throw new Error("A mensagem do pedido está vazia.");
 
-        // 1. Definição segura dos nomes
         const texto = msgInput.value;
         const solicitante = (texto.match(/SOLICITANTE:\s*(.*)/i)?.[1] || 'Cliente').trim();
-        // Garante que buscamos o valor mais recente do AppRDO
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'Nenhum cliente selecionado';
 
-        // 2. Carregamento do Modal Mapa
         await window.loadModal('modal_mapa.html');
         const modalEl = document.getElementById('modalMapa');
-        if (!modalEl) throw new Error("Estrutura do modal 'modalMapa' não encontrada.");
+        if (!modalEl) throw new Error("Estrutura do modal não encontrada.");
         
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
 
-        // 3. Lógica interna pós-exibição
         modalEl.addEventListener('shown.bs.modal', async () => {
-            // Atualização dos elementos de cabeçalho
             const elCliente = document.getElementById('header-nome-cliente');
             const elSolicitante = document.getElementById('header-nome-solicitante');
             const resumoEl = document.getElementById('resumo-total');
             
             if (elCliente) elCliente.innerText = nomeCliente;
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
+            if (resumoEl) resumoEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Traçando rota real...';
 
             try {
                 const rotaMatch = texto.match(/ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i);
@@ -280,7 +270,7 @@ window.iniciarFluxoCheckout = async function () {
                 
                 if (linhas.length === 0) throw new Error("Nenhuma rota válida encontrada.");
 
-                let kmTotal = 0, minTotal = 0, listaCoords = [];
+                let kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
                 for (const linha of linhas) {
                     const partes = linha.split(/Para:|De:/gi).filter(p => p.trim().length > 3);
@@ -289,47 +279,44 @@ window.iniciarFluxoCheckout = async function () {
                         const p2 = await buscarCoordenadasEndereco(partes[1]);
                         
                         if (p1 && p2) {
-                            const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false`;
+                            // A chave está aqui: overview=full e geometries=geojson
+                            const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
                             const resp = await fetch(url);
                             const data = await resp.json();
+                            
                             if (data.routes?.[0]) {
                                 kmTotal += (data.routes[0].distance / 1000);
                                 minTotal += (data.routes[0].duration / 60);
-                                listaCoords.push(p1, p2);
+                                // Converte [lng, lat] para [lat, lng] para o Leaflet
+                                const pontosRota = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                                listaCaminhos.push(pontosRota);
                             }
                         }
                     }
                 }
 
-                if (listaCoords.length === 0) throw new Error("Falha ao traçar rotas.");
+                if (listaCaminhos.length === 0) throw new Error("Não foi possível traçar o trajeto.");
 
-                // Persistência Centralizada
                 window.dadosPedidoAtual = {
                     solicitante: solicitante,
-                    cliente: nomeCliente, // Salva o nome do cliente aqui
+                    cliente: nomeCliente,
                     distancia: Math.round(kmTotal).toString(),
                     tempo: formatarTempoHumano(minTotal),
-                    coordenadas: listaCoords,
+                    coordenadas: listaCaminhos, // Agora listaCaminhos é um array de trajetos
                     valor: ((Math.round(kmTotal) * 3.00)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                 };
 
-                // Renderização
                 window.renderizarFooterResumo(resumoEl);
                 window.renderizarMapaUnificado();
-                
-                // Dispara o preenchimento automático
-                if (typeof window.preencherDadosFormulario === 'function') {
-                    window.preencherDadosFormulario();
-                }
+                if (typeof window.preencherDadosFormulario === 'function') window.preencherDadosFormulario();
 
             } catch (err) {
-                console.error("Erro na lógica de mapa:", err);
+                console.error("Erro no trajeto:", err);
                 if (resumoEl) resumoEl.innerHTML = `<span class="text-danger small">Erro: ${err.message}</span>`;
             }
         }, { once: true });
-
     } catch (err) {
-        console.error("Erro no checkout:", err);
+        console.error("Erro crítico:", err);
         window.exibirErroRodape?.("Erro: " + err.message);
     }
 };
