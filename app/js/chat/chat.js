@@ -560,7 +560,7 @@ window.salvarPedidoAPI = async function () {
     const form = document.getElementById('form-checkout');
     const msgInput = document.getElementById('msg-input');
     const errorMsg = document.getElementById('form-error-msg');
-    
+
     // Lista de campos obrigatórios
     const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km'];
     let formularioValido = true;
@@ -588,7 +588,7 @@ window.salvarPedidoAPI = async function () {
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
-    
+
     await new Promise(resolve => setTimeout(resolve, 50)); // Renderizar spinner
 
     try {
@@ -629,7 +629,7 @@ OBSERVAÇÃO: ${dados.obs}
 ${dados.valor_corrida}`;
 
         await window.enviarMensagemParaChat(msg);
-        
+
         // Limpeza e Sucesso
         if (msgInput) msgInput.value = '';
         bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
@@ -646,9 +646,9 @@ ${dados.valor_corrida}`;
 window.enviarMensagemParaChat = function (texto, isRecebida = false) {
     const container = document.getElementById('chat-messages-container');
     const div = document.createElement('div');
-    
+
     div.className = `d-flex ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-3`;
-    
+
     div.innerHTML = `
         <div class="message-wrapper position-relative">
             <div class="${isRecebida ? 'message-received' : 'message-sent'}">
