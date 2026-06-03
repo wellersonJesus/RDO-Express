@@ -71,20 +71,14 @@ window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    if (!listEl) {
-        console.error("Contêiner de lista não encontrado!");
-        return;
-    }
-
-    // 1. Feedback visual imediato
+    if (!listEl) return;
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
-    listEl.style.opacity = "0.5"; // Efeito de carregando
+    listEl.style.opacity = "0.5";
 
     try {
         const clientes = await API.call('getclientes') || [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // 2. Renderização limpa
         listEl.innerHTML = clientes.length > 0 ? clientes.map(cliente => {
             const id = cliente.id || '';
             const nome = (cliente.nome || cliente.username || 'Sem nome').replace(/'/g, "\\'");
@@ -92,16 +86,17 @@ window.carregarDados = async function () {
             const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
             const statusColor = isOnline ? '#28a745' : '#adb5bd';
 
+            // A MUDANÇA ESTÁ AQUI NO ONCLICK (passamos o isOnline agora):
             return `
                 <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
-                     onclick="window.abrirConversa('${id}', '${nome}', '${imagem}')">
+                     onclick="window.abrirConversa('${id}', '${nome}', '${imagem}', ${isOnline})">
                     <div class="position-relative">
                         <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
                         <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
                               style="width:10px; height:10px; background-color: ${statusColor};"></span>
                     </div>
                     <div class="ms-3 overflow-hidden">
-                        <div class="contact-name fw-bold">${nome}</div>
+                        <div class="contact-name">${nome}</div>
                         <div class="small text-muted">${isOnline ? 'Online' : 'Offline'}</div>
                     </div>
                 </div>
@@ -109,30 +104,36 @@ window.carregarDados = async function () {
         }).join('') : '<div class="p-3 text-center text-muted">Nenhum contato encontrado.</div>';
 
         window.AppRDO.listaCarregada = true;
-
     } catch (e) {
-        console.error("Erro ao sincronizar dados:", e);
-        listEl.innerHTML = '<div class="p-3 text-danger text-center">Erro ao carregar contatos.</div>';
+        console.error("Erro ao sincronizar:", e);
     } finally {
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
         listEl.style.opacity = "1";
     }
 };
 
-window.abrirConversa = function (id, nome, urlImagem) {
-    try {
-        // Armazena com segurança
-        window.AppRDO.clienteSelecionado = nome;
-        window.AppRDO.clienteId = id;
+window.abrirConversa = function (id, nome, urlImagem, isOnline) {
+    // Verifica status booleano ou string
+    const statusOnline = isOnline === true || String(isOnline).toUpperCase() === 'TRUE';
 
-        // Atualiza a UI do chat imediatamente
-        const nameEl = document.getElementById('chat-header-name');
-        if (nameEl) nameEl.innerText = nome;
+    if (!statusOnline) {
+        // Atualiza a mensagem
+        const msgEl = document.getElementById('modal-atencao-mensagem');
+        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline. Não é possível enviar mensagens.`;
         
-        console.log("Cliente fixado no AppRDO:", window.AppRDO.clienteSelecionado);
-    } catch (err) {
-        console.error("Erro ao abrir conversa:", err);
+        // Abre o modal
+        const modalElement = document.getElementById('modalAtencao');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        return; 
     }
+
+    // Se estiver online, segue o fluxo normal
+    window.AppRDO.clienteSelecionado = nome;
+    window.AppRDO.clienteId = id;
+    const nameEl = document.getElementById('chat-header-name');
+    if (nameEl) nameEl.innerText = nome;
 };
 
 // =====================================================================
