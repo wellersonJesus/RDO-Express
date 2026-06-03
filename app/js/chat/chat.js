@@ -190,18 +190,22 @@ window.renderizarMapaUnificado = function () {
 
     if (window.mapaInstancia) { window.mapaInstancia.remove(); window.mapaInstancia = null; }
 
-    const trajetos = window.dadosPedidoAtual.coordenadas; // Array de arrays de pontos
+    const trajetos = window.dadosPedidoAtual.coordenadas;
     const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
     
     window.mapaInstancia = L.map('container-mapa-visual').setView(trajetos[0][0], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
 
-    const criarIcone = (html) => L.divIcon({ html: `<div style="font-size: 20px;">${html}</div>`, className: 'custom-div-icon' });
-    
+    const criarIcone = (html) => L.divIcon({ 
+        html: `<div style="font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">${html}</div>`, 
+        className: 'custom-div-icon',
+        iconSize: [25, 25]
+    });
+
     trajetos.forEach((caminho, index) => {
         const cor = cores[index % cores.length];
 
-        // Desenha o trajeto real (ondulado conforme as ruas)
+        // 1. Desenha o trajeto real
         L.polyline(caminho, { 
             color: cor, 
             weight: 5, 
@@ -209,12 +213,24 @@ window.renderizarMapaUnificado = function () {
             opacity: 0.9 
         }).addTo(window.mapaInstancia);
 
-        // Ícones de Início (🏁) e Fim (📍)
-        L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(window.mapaInstancia);
-        L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(window.mapaInstancia);
+        // 2. Lógica de Ícones Inteligente para evitar sobreposição
+        // Se for o primeiro trajeto, coloca Bandeira no início
+        if (index === 0) {
+            L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(window.mapaInstancia);
+        }
+
+        // Se for o último trajeto, coloca o marcador FINAL
+        if (index === trajetos.length - 1) {
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(window.mapaInstancia);
+        } else {
+            // Pontos de parada intermediários (onde acaba um e começa o outro)
+            // Deslocamos levemente o ícone ou usamos um marcador de conexão para não esconder a bandeira
+            L.marker(caminho[caminho.length - 1], { 
+                icon: criarIcone('🔄') // Ícone de transição/parada intermediária
+            }).addTo(window.mapaInstancia);
+        }
     });
     
-    // Ajusta o mapa para mostrar tudo
     const todosPontos = trajetos.flat();
     window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
