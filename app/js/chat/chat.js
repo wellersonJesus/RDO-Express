@@ -130,35 +130,45 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) nameEl.innerText = nome;
 
-    // 3. Reset do Chat (Limpa a tela anterior)
+    // 3. Reset do Chat
     const container = document.getElementById('chat-messages-container');
     if (container) {
         container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-arrow-repeat spinner-rotate"></i> Carregando histórico...</div>';
     }
 
-    // 4. Carregar Histórico do Banco (API)
+    // 4. Carregar Histórico do Banco
     try {
         const todosPedidos = await API.call('getpedidos');
-        // Filtra pedidos vinculados a este cliente
         const pedidosDoCliente = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => p.id_mensagens_chat == id);
 
-        // Limpa o spinner de carregamento
         if (container) container.innerHTML = '';
 
-        // Renderiza os pedidos salvos
+        // Renderiza com o modelo padronizado
         pedidosDoCliente.forEach(pedido => {
+            // Formata rotas se vierem com quebra de linha ou vírgula
+            const rotas = (pedido.depara || '').split('\n')
+                .map(l => l.trim() ? `📍${l.trim()}` : '')
+                .filter(l => l !== '')
+                .join('\n');
+
             const msgFormatada = `📦 NOME: ${nome}
 
 N.SERVIÇO: ${pedido.id || 'N/A'}
-SOLICITANTE: ${pedido.solicitante}
-CONTATO: ${pedido.contato}
-MERCADORIA: ${pedido.mercadoria}
-ROTA: ${pedido.depara}
-HORÁRIO: ${pedido.horario}
-TROCA/RETORNO: ${pedido.troca_retorno}
-OBSERVAÇÃO: ${pedido.observacao}`;
+SOLICITANTE: ${pedido.solicitante || 'N/A'} | CONTATO: ${pedido.contato || 'N/A'}
+HORÁRIO: ${pedido.horario || 'N/A'}
+-
+MERCADORIA: ${pedido.mercadoria || 'Pedido RDO'}
+TROCA/RETORNO: ${pedido.troca_retorno || 'Não'}
+-
+ROTA(s): 
+${rotas}
+-
+OBSERVAÇÃO: ${pedido.obs || pedido.observacao || ''}
+${pedido.valor_corrida || ''}`;
 
-            window.enviarMensagemParaChat(msgFormatada);
+            // IMPORTANTE: Passamos o pedido.id como terceiro parâmetro aqui!
+            // Isso ativa o "data-pedido-id" no chat e libera o modal de motoboys.
+            window.enviarMensagemParaChat(msgFormatada, false, pedido.id);
         });
 
     } catch (e) {
@@ -580,8 +590,9 @@ window.formatarTelefone = function (tel) {
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
-    
-    // Validação básica
+    const msgInput = document.getElementById('msg-input'); // Campo do "aviãozinho"
+
+    // Validação
     const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km'];
     if (camposObrigatorios.some(id => !document.getElementById(id).value.trim())) {
         errorMsg.innerText = "Preencha os campos obrigatórios.";
@@ -594,39 +605,49 @@ window.salvarPedidoAPI = async function () {
 
     try {
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
-        const pedidoData = {
-            id_mensagens_chat: window.AppRDO.clienteId || 'N/A',
-            solicitante: document.getElementById('p-solicitante').value,
-            contato: document.getElementById('p-contato').value,
-            horario: document.getElementById('p-horario').value,
+        const d = {
+            solicitante: document.getElementById('p-solicitante').value || '',
+            contato: document.getElementById('p-contato').value || '',
+            horario: document.getElementById('p-horario').value || '',
             mercadoria: "Pedido RDO",
-            depara: document.getElementById('p-rotas').value,
-            troca_retorno: document.getElementById('p-retorno').value,
-            obs: document.getElementById('p-obs').value,
-            status: "⏳ Aguardando",
-            valor_corrida: document.getElementById('view-valor-final').innerText
+            rotas: document.getElementById('p-rotas').value || '',
+            retorno: document.getElementById('p-retorno').value || 'Não',
+            obs: document.getElementById('p-obs').value || '',
+            valor: document.getElementById('view-valor-final').innerText || 'R$ 0,00'
         };
 
-        // 1. Salva o Pedido
-        const respPedido = await API.call('addpedido', pedidoData);
+        // 1. Salva no banco (Pedidos + Mensagens)
+        const respPedido = await API.call('addpedido', { ...d, id_mensagens_chat: window.AppRDO.clienteId });
         if (respPedido.status !== 'success') throw new Error(respPedido.message);
+        const rdoId = respPedido.id;
 
-        const rdoId = respPedido.id; // Ex: RDO52478
+        // 2. CORPO COMPLETO: Template fixo solicitado
+        const msgFormatada = `📦 NOME: ${nomeCliente}
 
-        // 2. Salva a Mensagem vinculada
-        const msgData = {
-            jid: window.AppRDO.clienteId,
-            texto: `📦 Pedido ${rdoId} criado para ${pedidoData.solicitante}`,
-            status_emoji: '⏳',
-            pedido_id: rdoId // AQUI ESTÁ O VÍNCULO QUE VOCÊ PRECISAVA
-        };
-        await API.call('addmensagem', msgData);
+N.SERVIÇO: ${rdoId}
+SOLICITANTE: ${d.solicitante} | CONTATO: ${d.contato}
+HORÁRIO: ${d.horario}
+-
+MERCADORIA: ${d.mercadoria}
+TROCA/RETORNO: ${d.retorno}
+-
+ROTA(s): 
+${d.rotas.split('\n').map(l => l.trim() ? `📍${l.trim()}` : '').join('\n')}
+-
+OBSERVAÇÃO: ${d.obs}
+${d.valor}`;
 
-        // 3. Atualiza o Chat visualmente
-        const msgFormatada = `📦 NOME: ${nomeCliente}\n\nN.SERVIÇO: ${rdoId}\nSOLICITANTE: ${pedidoData.solicitante}\nCONTATO: ${pedidoData.contato}\nROTA: ${pedidoData.depara}`;
-        await window.enviarMensagemParaChat(msgFormatada, false, rdoId); // Passa o ID aqui!
+        // 3. Envia para o chat e LIMPA O INPUT
+        await window.enviarMensagemParaChat(msgFormatada, false, rdoId);
+        
+        // LIMPEZA DO CAMPO DE ENVIO:
+        if (msgInput) {
+            msgInput.value = ''; // Libera o campo para novas mensagens
+        }
 
         bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+        limparBackdrops(); // Função que você já possui
+
     } catch (err) {
         console.error(err);
         errorMsg.innerText = "Erro ao salvar: " + err.message;
