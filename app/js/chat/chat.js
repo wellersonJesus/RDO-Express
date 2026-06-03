@@ -532,41 +532,43 @@ window.voltarParaMapa = async function () {
 };
 
 window.preencherDadosFormulario = function() {
-    console.log("Iniciando preenchimento...");
+    const dados = window.dadosPedidoAtual || {};
+    const msgInput = document.getElementById('msg-input');
+    const textoChat = msgInput ? msgInput.value : '';
+
+    console.log("Debug Preenchimento:", { dados, textoChat });
+
+    // 1. Nome do Cliente (O que foi selecionado na lista do chat)
+    const nomeCliente = document.getElementById('chat-header-name')?.innerText || 'Não identificado';
+    const elHeaderCliente = document.getElementById('header-nome-cliente');
+    if (elHeaderCliente) elHeaderCliente.innerText = nomeCliente;
     
-    // Tenta encontrar o modal explicitamente
-    const modal = document.getElementById('modalFormulario');
-    if (!modal) {
-        console.error("ERRO: Modal não encontrado no DOM!");
-        return;
+    // Campo Solicitante (Se houver "SOLICITANTE:" no texto, usa, senão, o próprio nome do cliente)
+    const solicitanteMatch = textoChat.match(/SOLICITANTE:\s*(.*)/i);
+    const inputSolicitante = document.getElementById('p-solicitante');
+    if (inputSolicitante) {
+        inputSolicitante.value = solicitanteMatch ? solicitanteMatch[1].trim() : nomeCliente;
     }
 
-    const dados = window.dadosPedidoAtual || {};
-    const textoChat = document.getElementById('msg-input')?.value || '';
-    const nomeCliente = document.getElementById('chat-header-name')?.innerText || 'Não identificado';
-
-    // 1. Cliente Header
-    const elHeader = document.getElementById('header-nome-cliente');
-    if (elHeader) elHeader.innerText = nomeCliente;
-
-    // 2. Solicitante
-    const solicitanteMatch = textoChat.match(/SOLICITANTE:\s*(.*)/i);
-    const campoSolicitante = document.getElementById('p-solicitante');
-    if (campoSolicitante) campoSolicitante.value = solicitanteMatch ? solicitanteMatch[1].trim() : nomeCliente;
-
-    // 3. Telefone
+    // 2. Telefone (Extraído da mensagem)
     const matchTelefone = textoChat.match(/\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/);
     const campoContato = document.getElementById('p-contato');
     if (campoContato && matchTelefone) {
         campoContato.value = window.formatarTelefone(matchTelefone[0].replace(/\D/g, ''));
     }
 
-    // 4. Preenchimento de campos de cálculo (Forçando leitura do objeto)
-    console.log("Dados disponíveis para preencher:", dados);
-    
-    if (dados.distancia) document.getElementById('p-distancia').value = dados.distancia;
-    if (dados.tempo) document.getElementById('p-tempo').value = dados.tempo;
-    if (dados.valor) document.getElementById('view-valor-final').innerText = dados.valor;
+    // 3. Observação (Nova lógica de extração)
+    // Busca tudo que estiver após "OBSERVAÇÃO:" até o final da linha
+    const obsMatch = textoChat.match(/OBSERVAÇÃO:\s*(.*)/i);
+    const campoObs = document.getElementById('p-obs');
+    if (campoObs) {
+        campoObs.value = obsMatch ? obsMatch[1].trim() : '';
+    }
+
+    // 4. Campos Calculados (Distância/Tempo)
+    if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '';
+    if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '';
+    if (document.getElementById('view-valor-final')) document.getElementById('view-valor-final').innerText = dados.valor || 'R$ 0,00';
 
     // 5. Rota
     const rotasMatch = textoChat.match(/ROTA:([\s\S]*?)(?=OBSERVAÇÃO|PRIORIDADE|$)/i);
@@ -575,12 +577,11 @@ window.preencherDadosFormulario = function() {
     }
 
     // 6. Horário
-    const campoHorario = document.getElementById('p-horario');
-    if (campoHorario) {
-        campoHorario.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (document.getElementById('p-horario')) {
+        document.getElementById('p-horario').value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Recálculo final
+    // Dispara cálculo final
     if (typeof window.calcularTudo === 'function') window.calcularTudo();
 };
 
