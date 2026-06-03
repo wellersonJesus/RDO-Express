@@ -392,14 +392,14 @@ async function calcularRotaOSRM(p1, p2) {
 // =====================================================================
 window.preencherDadosFormulario = function () {
     try {
+        console.log("Iniciando preenchimento do formulário...");
         const dados = window.dadosPedidoAtual || {};
         const texto = document.getElementById('msg-input')?.value || '';
 
-        // Ajuste aqui: Regex focado em ignorar tudo após TROCA/RETORNO
+        // 1. Mapeamento de Campos (Regex)
         const campos = [
             { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i },
             { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
-            // Nova regex: captura até encontrar TROCA, RETORNO, OBSERVAÇÃO ou fim da linha
             { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i },
             { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
         ];
@@ -409,20 +409,48 @@ window.preencherDadosFormulario = function () {
             if (el) {
                 const match = texto.match(c.regex);
                 if (match) {
-                    // .trim() remove espaços extras ou quebras de linha no final do bloco
                     el.value = match[1] ? match[1].trim() : match[0];
                 }
+            } else {
+                console.warn(`Elemento não encontrado: ${c.id}`);
             }
         });
 
-        // Preenchimento de cálculos
-        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '';
-        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '';
+        // 2. Garantia do Solicitante
+        const elSolicitante = document.getElementById('p-solicitante');
+        if (elSolicitante && !elSolicitante.value) {
+            elSolicitante.value = dados.solicitante || 'Cliente';
+        }
 
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
+        // 3. Preenchimento de Cálculos e Seletores
+        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
+        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
+
+        // 4. Seleção Automática de Dinâmica e Prioridade baseada no texto
+        const elDin = document.getElementById('p-dinamica');
+        if (elDin) {
+            if (texto.includes('Taxa 05')) elDin.value = '15';
+            else if (texto.includes('Taxa 04')) elDin.value = '10';
+            else if (texto.includes('Taxa 03')) elDin.value = '7';
+            else if (texto.includes('Taxa 02')) elDin.value = '5';
+            else elDin.value = '0';
+        }
+
+        const elPrior = document.getElementById('p-prioridade');
+        if (elPrior) {
+            if (texto.includes('Urgente')) elPrior.value = '7';
+            else if (texto.includes('Agendado')) elPrior.value = '5';
+            else elPrior.value = '0';
+        }
+
+        // 5. Execução do Cálculo Final
+        if (typeof window.calcularTudo === 'function') {
+            window.calcularTudo();
+            console.log("Formulário preenchido e cálculo realizado com sucesso.");
+        }
 
     } catch (error) {
-        console.error("Erro ao preencher formulário:", error);
+        console.error("ERRO CRÍTICO no preenchimento do formulário:", error);
     }
 };
 
