@@ -301,3 +301,41 @@
     animation: rotate 1s linear infinite !important;
     display: inline-block !important;
 }
+
+/* ==========================================================================
+   REFINAMENTO VISUAL DOS MODAIS (Padrão Vermelho Suave)
+   ========================================================================== */
+
+/* Definição de cores para manter o padrão "RDO" */
+:root {
+    --vermelho-rdo: #dc3545;
+    --vermelho-suave: #f8d7da;
+}
+
+/* Títulos do SweetAlert (Gerenciar Pedido e Quem pegou o pedido?) */
+.swal2-title {
+    color: var(--vermelho-rdo) !important;
+    font-weight: 600 !important;
+}
+
+/* Botões de Ação (Confirmar/OK) */
+.swal2-confirm {
+    background-color: var(--vermelho-rdo) !important;
+}
+
+/* Botões de Seleção (Status e Motoboys) */
+.swal2-html-container .btn-outline-primary {
+    color: var(--vermelho-rdo) !important;
+    border-color: var(--vermelho-rdo) !important;
+}
+
+.swal2-html-container .btn-outline-primary:hover {
+    background-color: var(--vermelho-suave) !important;
+    color: var(--vermelho-rdo) !important;
+}
+
+.swal2-html-container .btn-info {
+    background-color: var(--vermelho-suave) !important;
+    border-color: #f5c6cb !important;
+    color: var(--vermelho-rdo) !important;
+}

@@ -9,10 +9,8 @@ window.loadPage = function(page, title, subtitle) {
         .then(res => res.text())
         .then(html => {
             container.innerHTML = html;
-            
-            // --- ESTA É A MUDANÇA ESSENCIAL ---
             if (page === 'bot' && typeof window.initBotPage === 'function') {
-                window.initBotPage(); // Agora o bot.js recebe o comando de "acordar"
+                window.initBotPage();
             }
             if (page === 'usuarios') {
                 carregarDadosUsuarios();
@@ -29,7 +27,7 @@ window.abrirModalStatus = function(msgId) {
         { label: "✅ Concluído", value: "CONCLUIDO" }
     ];
 
-    // Cria o HTML dos botões de status
+    // Note: Usamos a classe 'btn-outline-primary' que será estilizada pelo CSS Vermelho Suave
     let htmlOptions = statusOptions.map(opt => `
         <button class="btn btn-outline-primary w-100 mb-2" 
                 onclick="window.selecionarStatus('${msgId}', '${opt.value}', '${opt.label}')">
@@ -41,35 +39,46 @@ window.abrirModalStatus = function(msgId) {
         title: 'Gerenciar Pedido',
         html: htmlOptions,
         showCancelButton: true,
-        cancelButtonText: 'Fechar'
+        cancelButtonText: 'Fechar',
+        confirmButtonText: 'Cancelar' // Apenas um fallback
     });
 };
 
 window.selecionarStatus = function(msgId, statusValue, statusLabel) {
     if (statusValue === "ROTA") {
-        // Se for rota, abre seleção de motoboy
+        // Seleção de Motoboy (usamos btn-info que via CSS foi mapeado para vermelho suave)
         let optionsMotoboy = window.listaMotoboys.map(m => 
-            `<button class="btn btn-info text-white w-100 mb-2" onclick="window.confirmarStatus('${msgId}', '${statusLabel}', '${m}')">${m}</button>`
+            `<button class="btn btn-info w-100 mb-2" onclick="window.confirmarStatus('${msgId}', '${statusLabel}', '${m}')">${m}</button>`
         ).join('');
 
         Swal.fire({
             title: 'Quem pegou o pedido?',
-            html: optionsMotoboy
+            html: optionsMotoboy,
+            showCancelButton: true,
+            cancelButtonText: 'Voltar'
         });
     } else {
-        // Se for cancelado ou concluído, confirma direto
         window.confirmarStatus(msgId, statusLabel);
     }
 };
 
 window.confirmarStatus = function(msgId, statusLabel, motoboy = "") {
     const statusEl = document.getElementById('status-' + msgId);
+    
+    // Extrai o emoji do início da string
     const emoji = statusLabel.substring(0, 2);
     const textoMotoboy = motoboy ? ` | Motoboy: ${motoboy}` : "";
+    const textoCompleto = statusLabel.replace(/📦|⭕|✅/g, '').trim() + textoMotoboy;
     
     if (statusEl) {
         statusEl.innerHTML = `<span style="font-size: 24px;">${emoji}</span>`;
-        statusEl.setAttribute('title', statusLabel + textoMotoboy);
+        statusEl.setAttribute('title', textoCompleto);
     }
-    Swal.fire('Atualizado!', `Status alterado para: ${statusLabel}${motoboy ? ' com ' + motoboy : ''}`, 'success');
+    
+    Swal.fire({
+        title: 'Atualizado!',
+        text: `Status: ${statusLabel}${motoboy ? ' com ' + motoboy : ''}`,
+        icon: 'success',
+        confirmButtonColor: '#d9534f' // Força o botão de OK ser vermelho
+    });
 };
