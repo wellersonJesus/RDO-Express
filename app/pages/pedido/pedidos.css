@@ -1,0 +1,42 @@
+/* Estilização de Status e Badges */
+.status-badge { 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 0.65rem; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+}
+
+.bg-status-pending { background-color: #fef3c7; color: #92400e; }
+.bg-status-route { background-color: #e0f2fe; color: #075985; }
+.bg-status-done { background-color: #dcfce7; color: #166534; }
+.bg-status-cancel { background-color: #fee2e2; color: #991b1b; }
+
+/* Botões de Ação na Tabela */
+.btn-action { 
+    background: #f8f9fa; 
+    border: none; 
+    color: #adb5bd; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    transition: 0.2s; 
+}
+
+.btn-action:hover { 
+    background: #e9ecef; 
+    color: #dc3545; 
+}
+
+/* Utilitários */
+.fs-7 { font-size: 0.7rem; }
+.opacity-10 { opacity: 0.1; }
+
+/* Animação de Sync */
+.loading-spin { 
+    display: inline-block; 
+    animation: spin 1s linear infinite; 
+}
+
+@keyframes spin { 
+    100% { transform: rotate(360deg); } 
+}
