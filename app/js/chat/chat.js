@@ -590,66 +590,49 @@ window.formatarTelefone = function (tel) {
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
-    const msgInput = document.getElementById('msg-input'); // Campo do "aviãozinho"
-
+    
     // Validação
     const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km'];
-    if (camposObrigatorios.some(id => !document.getElementById(id).value.trim())) {
+    if (camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim())) {
         errorMsg.innerText = "Preencha os campos obrigatórios.";
         errorMsg.classList.remove('d-none');
         return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Emitindo...`;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
 
     try {
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
         const d = {
-            solicitante: document.getElementById('p-solicitante').value || '',
-            contato: document.getElementById('p-contato').value || '',
-            horario: document.getElementById('p-horario').value || '',
+            solicitante: document.getElementById('p-solicitante').value,
+            contato: document.getElementById('p-contato').value,
+            horario: document.getElementById('p-horario').value,
             mercadoria: "Pedido RDO",
-            rotas: document.getElementById('p-rotas').value || '',
+            rotas: document.getElementById('p-rotas').value,
             retorno: document.getElementById('p-retorno').value || 'Não',
-            obs: document.getElementById('p-obs').value || '',
-            valor: document.getElementById('view-valor-final').innerText || 'R$ 0,00'
+            obs: document.getElementById('p-obs').value,
+            valor: document.getElementById('view-valor-final').innerText,
+            id_mensagens_chat: window.AppRDO.clienteId
         };
 
-        // 1. Salva no banco (Pedidos + Mensagens)
-        const respPedido = await API.call('addpedido', { ...d, id_mensagens_chat: window.AppRDO.clienteId });
-        if (respPedido.status !== 'success') throw new Error(respPedido.message);
-        const rdoId = respPedido.id;
+        // Montagem do texto igual ao que vai para a tela
+        const rotasFormatadas = d.rotas.split('\n').map(l => l.trim() ? `📍${l.trim()}` : '').join('\n');
+        const msgFormatada = `📦 NOME: ${nomeCliente}\n\nN.SERVIÇO: [AGUARDANDO]\nSOLICITANTE: ${d.solicitante} | CONTATO: ${d.contato}\nHORÁRIO: ${d.horario}\n-\nMERCADORIA: ${d.mercadoria}\nTROCA/RETORNO: ${d.retorno}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${d.obs}\n${d.valor}`;
 
-        // 2. CORPO COMPLETO: Template fixo solicitado
-        const msgFormatada = `📦 NOME: ${nomeCliente}
-
-N.SERVIÇO: ${rdoId}
-SOLICITANTE: ${d.solicitante} | CONTATO: ${d.contato}
-HORÁRIO: ${d.horario}
--
-MERCADORIA: ${d.mercadoria}
-TROCA/RETORNO: ${d.retorno}
--
-ROTA(s): 
-${d.rotas.split('\n').map(l => l.trim() ? `📍${l.trim()}` : '').join('\n')}
--
-OBSERVAÇÃO: ${d.obs}
-${d.valor}`;
-
-        // 3. Envia para o chat e LIMPA O INPUT
-        await window.enviarMensagemParaChat(msgFormatada, false, rdoId);
+        // Chamada única para a função refatorada no App Script
+        const resp = await API.call('finalizarpedido', { ...d, mensagem_formatada: msgFormatada });
         
-        // LIMPEZA DO CAMPO DE ENVIO:
-        if (msgInput) {
-            msgInput.value = ''; // Libera o campo para novas mensagens
-        }
+        if (resp.status !== 'success') throw new Error(resp.message);
 
+        // Sucesso: Atualiza o chat localmente com o ID retornado
+        window.enviarMensagemParaChat(msgFormatada.replace('[AGUARDANDO]', resp.id), false, resp.id);
+        
+        document.getElementById('msg-input').value = '';
         bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
-        limparBackdrops(); // Função que você já possui
+        limparBackdrops();
 
     } catch (err) {
-        console.error(err);
         errorMsg.innerText = "Erro ao salvar: " + err.message;
         errorMsg.classList.remove('d-none');
     } finally {
