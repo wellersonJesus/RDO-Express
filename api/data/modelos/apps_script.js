@@ -2,135 +2,103 @@ var SECRET_KEY = "aquieumakdjdddggjrtr";
 
 function doPost(e) {
   try {
-    if (!e?.postData?.contents) return response({ status: "error", message: "Requisição inválida" });
-    const data = JSON.parse(e.postData.contents);
-    if (data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
+    if (!e || !e.postData || !e.postData.contents) return response({ status: "error", message: "Payload vazio" });
+    var data = JSON.parse(e.postData.contents);
+    var action = String(data.action || "").toLowerCase().trim();
 
-    const action = (data.action || "").toLowerCase();
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // 1. Rota de Login (Não exige API Key)
+    if (action === 'login') return response(handleLogin(data.username, data.password));
 
-    // Roteador de Ações Especiais (Fora da lógica de mapaAbas)
-    if (action === 'finalizarpedido') {
-      const sheet = getSheetCaseInsensitive(ss, "pedidos");
-      if (!sheet) return response({ status: "error", message: "Aba 'pedidos' não encontrada" });
-      return response(handleSalvarPedidoComChat(sheet, data));
-    }
+    // 2. Segurança
+    if (!data.apiKey || data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
 
-    // Lógica para Ações Padrão
-    const mapaAbas = {
-      "mensagem": "chat", "chat": "chat", "mensagens_chat": "chat",
-      "pedido": "pedidos", "pedidos": "pedidos",
-      "colaborador": "colaboradores", "colaboradores": "colaboradores"
+    // 3. Mapeamento
+    var mapaEntidades = {
+      "usuario": "usuarios", "cliente": "clientes", "colaborador": "colaboradores",
+      "bot": "botconfig", "chat": "chat", "pedido": "pedidos", "financeiro": "financeiro"
     };
 
-    // Remove apenas os prefixos de ação, nunca o nome da entidade
-    const entity = action.replace(/^(get|add|delete|update|save)/, '');
-    const nomeAba = mapaAbas[entity] || entity;
-    const sheet = getSheetCaseInsensitive(ss, nomeAba);
+    var entity = action.replace(/get|add|delete|update|save|finalizar/g, '').toLowerCase().trim();
+    var nomeAba = mapaEntidades[entity] || entity;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = getSheetCaseInsensitive(ss, nomeAba);
 
-    if (!sheet) return response({ status: "error", message: "Aba não encontrada: " + nomeAba });
+    if (!sheet) return response({ status: "error", message: "Tabela não encontrada: " + nomeAba });
 
-    // Roteador de Handlers
+    // 4. Operações
+    if (action === 'finalizarpedido') return response(handleSalvarPedidoComChat(sheet, data));
     if (action.startsWith('get')) return response(handleGet(sheet));
-    if (action.startsWith('add')) return response(handleAdd(sheet, data, entity));
+    if (action.startsWith('add') || action.startsWith('save')) return response(handleAdd(sheet, data, nomeAba));
     if (action.startsWith('update')) return response(handleUpdate(sheet, data));
     if (action.startsWith('delete')) return response(handleDelete(sheet, data.id));
 
-    return response({ status: "error", message: "Ação não suportada" });
-
+    return response({ status: "error", message: "Ação não suportada: " + action });
   } catch (err) {
-    return response({ status: "error", message: err.toString() });
+    return response({ status: "error", message: "Erro crítico: " + err.toString() });
   }
 }
 
-// Helper para garantir resposta JSON padrão
-function response(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
+// Funções únicas e consolidadas
+function handleLogin(user) {
+  var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
+  if (!sheet) return { status: "error", message: "Tabela usuários não encontrada" };
 
-// Lógica de Geração de ID Automática
-function generateId(sheet, entity) {
-  var rows = sheet.getDataRange().getValues();
-  var idIndex = rows[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
-  
-  if (idIndex === -1) return null;
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(h => String(h).toLowerCase().trim());
+  var userIndex = headers.indexOf("username");
+  var passIndex = headers.indexOf("password");
+  var tipoIndex = headers.indexOf("tipo");
 
-  var maxId = 0;
-  for (var i = 1; i < rows.length; i++) {
-    var val = String(rows[i][idIndex]).replace("RDO", "");
-    if (!isNaN(val) && parseInt(val) > maxId) maxId = parseInt(val);
-  }
-  
-  var nextId = maxId + 1;
-  return (entity === "pedido" || entity === "pedidos") ? "RDO" + nextId : nextId;
+  var userRow = data.slice(1).find(r => String(r[userIndex]).trim() === user);
+
+  if (!userRow) return { status: "error", message: "Usuário não encontrado" };
+
+  // Retorna o hash para o Node.js validar
+  return {
+    status: "success",
+    user: {
+      username: user,
+      tipo: userRow[tipoIndex],
+      password: String(userRow[passIndex]).trim()
+    }
+  };
 }
 
 function handleAdd(sheet, data, entity) {
-  var headers = sheet.getDataRange().getValues()[0].map(function(h) { return String(h).toLowerCase().trim(); });
+  var headers = sheet.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
   var idIndex = headers.indexOf("id");
-  
-  if (idIndex !== -1 && (!data.id || data.id === "")) {
-    data.id = generateId(sheet, entity);
-  }
-
-  var newRow = headers.map(function(h) { return data[h] || ""; });
-  sheet.appendRow(newRow);
-  return { status: "success", message: "Adicionado com sucesso!", id: data.id };
-}
-
-// --- Funções de Suporte Mantidas ---
-function getSheetCaseInsensitive(ss, entityName) {
-  var sheets = ss.getSheets();
-  for (var i = 0; i < sheets.length; i++) {
-    var name = sheets[i].getName().toLowerCase().trim();
-    if (name === entityName.toLowerCase()) return sheets[i];
-  }
-  return null;
+  if (idIndex !== -1 && (!data.id || data.id === "")) data.id = generateId(sheet, entity);
+  sheet.appendRow(headers.map(h => data[h] || ""));
+  return { status: "success", message: "Adicionado!", id: data.id };
 }
 
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
-  var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
-  var data = [];
-  for (var i = 1; i < rows.length; i++) {
+  var headers = rows[0].map(h => String(h).toLowerCase().trim());
+  return rows.slice(1).map(row => {
     var obj = {};
-    for (var j = 0; j < headers.length; j++) {
-      if (headers[j] !== "") obj[headers[j]] = rows[i][j];
-    }
-    data.push(obj);
-  }
-  return data;
+    headers.forEach((h, i) => { if (h !== "") obj[h] = row[i]; });
+    return obj;
+  });
 }
 
 function handleUpdate(sheet, data) {
   var rows = sheet.getDataRange().getValues();
-  var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
+  var headers = rows[0].map(h => String(h).toLowerCase().trim());
   var idIndex = headers.indexOf("id");
-  
-  if (idIndex === -1) return { status: "error", message: "Coluna 'id' não encontrada." };
-
-  // Garantir comparação de string limpa
-  var valorBusca = String(data.id || "").trim();
-
   for (var i = 1; i < rows.length; i++) {
-    var idLinha = String(rows[i][idIndex]).trim();
-    if (idLinha === valorBusca) {
-      for (var j = 0; j < headers.length; j++) {
-        // Se a chave existir no objeto de dados, atualiza a célula
-        if (data.hasOwnProperty(headers[j])) {
-          sheet.getRange(i + 1, j + 1).setValue(data[headers[j]]);
-        }
-      }
+    if (String(rows[i][idIndex]).trim() === String(data.id).trim()) {
+      headers.forEach((h, j) => { if (data.hasOwnProperty(h)) sheet.getRange(i + 1, j + 1).setValue(data[h]); });
       return { status: "success", message: "Atualizado!" };
     }
   }
-  return { status: "error", message: "ID " + valorBusca + " não encontrado." };
+  return { status: "error", message: "ID não encontrado." };
 }
 
 function handleDelete(sheet, id) {
   var rows = sheet.getDataRange().getValues();
-  var idIndex = rows[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
+  var idIndex = rows[0].map(h => String(h).toLowerCase().trim()).indexOf("id");
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][idIndex]).trim() == String(id).trim()) {
       sheet.deleteRow(i + 1);
@@ -143,39 +111,24 @@ function handleDelete(sheet, id) {
 function handleSalvarPedidoComChat(sheetPedidos, data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
-  
-  // 1. Processar Pedido
-  const headersPedidos = sheetPedidos.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
-  data.id = generateId(sheetPedidos, "pedido");
-  
-  // Ajuste: O nome do campo no seu banco é "depara" e "observacao"
-  // O código abaixo garante que o dado enviado pelo JS (rotas/obs) entre na coluna certa
-  data.depara = data.rotas || "";
-  data.observacao = data.obs || "";
-  data.id_chat = data.id_mensagens_chat || "";
-  
-  const rowPedido = headersPedidos.map(h => data[h] || "");
-  sheetPedidos.appendRow(rowPedido);
-
-  // 2. Processar Chat
+  data.id = generateId(sheetPedidos, "pedidos");
+  const headers = sheetPedidos.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
+  sheetPedidos.appendRow(headers.map(h => data[h] || ""));
   if (sheetChat) {
-    const headersChat = sheetChat.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
-    const novaLinhaChat = headersChat.map(h => {
-      if (h === "id") return "MSG" + new Date().getTime();
-      if (h === "pedido_id") return data.id;
-      if (h === "id_numero") return data.id_mensagens_chat || "";
-      if (h === "texto") return data.mensagem_formatada;
-      if (h === "horario") return new Date().toLocaleTimeString();
-      if (h === "data") return new Date().toLocaleDateString();
-      if (h === "finalizado") return "TRUE";
-      return "";
-    });
-    sheetChat.appendRow(novaLinhaChat);
+    sheetChat.appendRow(["MSG" + new Date().getTime(), data.id_mensagens_chat || "", data.id, data.mensagem_formatada || "", new Date().toLocaleTimeString(), new Date().toLocaleDateString(), "TRUE"]);
   }
-
-  return { status: "success", message: "Pedido e Chat salvos!", id: data.id };
+  return { status: "success", message: "Salvo!", id: data.id };
 }
 
-function response(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+function getSheetCaseInsensitive(ss, name) { return ss.getSheets().find(s => s.getName().toLowerCase().trim() === name.toLowerCase()); }
+function generateId(sheet, entity) {
+  var rows = sheet.getDataRange().getValues();
+  var idIndex = rows[0].map(h => String(h).toLowerCase().trim()).indexOf("id");
+  var maxId = 0;
+  for (var i = 1; i < rows.length; i++) {
+    var val = parseInt(String(rows[i][idIndex]).replace("RDO", ""));
+    if (!isNaN(val) && val > maxId) maxId = val;
+  }
+  return (entity.includes("pedido")) ? "RDO" + (maxId + 1) : (maxId + 1);
 }
+function response(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
