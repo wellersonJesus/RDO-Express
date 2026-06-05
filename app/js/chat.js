@@ -101,67 +101,43 @@ window.carregarDados = async function () {
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    // 1. Verificação de status
     const statusOnline = isOnline === true || String(isOnline).toUpperCase() === 'TRUE';
-
     if (!statusOnline) {
         const msgEl = document.getElementById('modal-atencao-mensagem');
-        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline. Não é possível enviar mensagens.`;
+        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline.`;
         new bootstrap.Modal(document.getElementById('modalAtencao')).show();
         return;
     }
 
-    // 2. Atualizar estado e cabeçalho
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
-
+    
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) nameEl.innerText = nome;
 
-    // 3. Reset do Chat
     const container = document.getElementById('chat-messages-container');
-    if (container) {
-        container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-arrow-repeat spinner-rotate"></i> Carregando histórico...</div>';
-    }
+    container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-arrow-repeat spinner-rotate"></i> Carregando...</div>';
 
-    // 4. Carregar Histórico do Banco
     try {
         const todosPedidos = await API.call('getpedidos');
-        const pedidosDoCliente = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => p.id_mensagens_chat == id);
+        const pedidosDoCliente = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => String(p.id_mensagens_chat) === String(id));
 
-        if (container) container.innerHTML = '';
+        container.innerHTML = ''; 
 
-        // Renderiza com o modelo padronizado
         pedidosDoCliente.forEach(pedido => {
-            // Formata rotas se vierem com quebra de linha ou vírgula
-            const rotas = (pedido.depara || '').split('\n')
-                .map(l => l.trim() ? `📍${l.trim()}` : '')
-                .filter(l => l !== '')
-                .join('\n');
+            let texto = pedido.mensagem || '';
+            
+            // CORREÇÃO: Se o texto estiver sem quebras de linha (colado), tenta restaurar
+            // Isso acontece se o banco gravou mal o dado
+            if (texto.length > 20 && !texto.includes('\n')) {
+                texto = texto.replace(/SOLICITANTE:|CONTATO:|MERCADORIA:|ROTA:|HORÁRIO:|RETORNO:|OBSERVAÇÃO:/gi, (match) => `\n${match}`);
+            }
 
-            const msgFormatada = `📦 NOME: ${nome}
-
-N.SERVIÇO: ${pedido.id || 'N/A'}
-SOLICITANTE: ${pedido.solicitante || 'N/A'} | CONTATO: ${pedido.contato || 'N/A'}
-HORÁRIO: ${pedido.horario || 'N/A'}
--
-MERCADORIA: ${pedido.mercadoria || 'Pedido RDO'}
-TROCA/RETORNO: ${pedido.troca_retorno || 'Não'}
--
-ROTA(s): 
-${rotas}
--
-OBSERVAÇÃO: ${pedido.obs || pedido.observacao || ''}
-${pedido.valor_corrida || ''}`;
-
-            // IMPORTANTE: Passamos o pedido.id como terceiro parâmetro aqui!
-            // Isso ativa o "data-pedido-id" no chat e libera o modal de motoboys.
-            window.enviarMensagemParaChat(msgFormatada, false, pedido.id);
+            window.enviarMensagemParaChat(texto || "Pedido sem detalhes.", false, pedido.id);
         });
-
     } catch (e) {
         console.error("Erro ao carregar histórico:", e);
-        if (container) container.innerHTML = '<div class="text-center text-muted">Erro ao carregar histórico.</div>';
+        container.innerHTML = '<div class="text-center text-danger">Erro ao carregar histórico.</div>';
     }
 };
 
@@ -575,21 +551,10 @@ window.salvarPedidoAPI = async function () {
     const errorMsg = document.getElementById('form-error-msg');
     const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas'];
 
-    // Reset de validação visual
     camposObrigatorios.forEach(id => document.getElementById(id)?.classList.remove('is-invalid-field'));
     errorMsg.classList.add('d-none');
 
-    // 1. Validação de campos obrigatórios
-    let camposInvalidos = [];
-    camposObrigatorios.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el || !el.value.trim()) {
-            el?.classList.add('is-invalid-field');
-            camposInvalidos.push(id);
-        }
-    });
-
-    if (camposInvalidos.length > 0) {
+    if (camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim())) {
         errorMsg.innerText = "Atenção: Preencha todos os campos obrigatórios.";
         errorMsg.classList.remove('d-none');
         return;
@@ -601,10 +566,13 @@ window.salvarPedidoAPI = async function () {
         return;
     }
 
-    const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+
+    const linhasRota = getVal('p-rotas').split('\n').map((l, i) => `      ${i + 1}. (${l.trim()})`).join('\n');
+    const msgFormatada = `📦 ${window.AppRDO.clienteSelecionado || 'N/A'}\n\nN.SERVIÇO: [ID_GERADO]\n.\nSOLICITANTE: ${getVal('p-solicitante')}\nCONTATO: ${getVal('p-contato')}\nMERCADORIA: ${getVal('p-mercadoria')}\n.\nROTA: \n${linhasRota}\nHORÁRIO: ${getVal('p-horario')}\nRETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n.\nOBSERVAÇÃO: ${getVal('p-obs')}\n${getVal('view-valor-final')}`;
 
     const d = {
-        id_mensagens_chat: window.AppRDO.clienteId,
+        id_mensagens_chat: String(window.AppRDO.clienteId),
         solicitante: getVal('p-solicitante'),
         contato: getVal('p-contato'),
         horario: getVal('p-horario'),
@@ -612,49 +580,27 @@ window.salvarPedidoAPI = async function () {
         rotas_texto: getVal('p-rotas'),
         retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
         obs: getVal('p-obs'),
-        valor: getVal('view-valor-final')
+        valor_corrida: getVal('view-valor-final'),
+        mensagem: msgFormatada
     };
 
-    // Separação para o banco
-    const linhas = d.rotas_texto.split('\n');
-    d.de = linhas.map(l => l.split('|')[0]?.replace(/De:/gi, '').trim()).filter(x => x).join(' | ');
-    d.para = linhas.map(l => l.split('|')[1]?.replace(/Para:/gi, '').trim()).filter(x => x).join(' | ');
-
-    // 2. Modelo de Mensagem Padronizado
-    const msgFormatada = `📦 ${window.AppRDO.clienteSelecionado || 'N/A'}
-
-N.SERVIÇO: [AGUARDANDO]
-.
-SOLICITANTE: ${d.solicitante}
-CONTATO: ${d.contato}
-MERCADORIA: ${d.mercadoria}
-.
-ROTA: 
-${d.rotas_texto.split('\n').map((l, i) => `      ${i+1}. (${l.trim()})`).join('\n')}
-HORÁRIO: ${d.horario}
-RETORNO: ${d.retorno}
-.
-OBSERVAÇÃO: ${d.obs}
-${d.valor}`;
-
-    // 3. Feedback visual (Ícone de Loop)
     btn.disabled = true;
-    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...`;
 
     try {
+        // Envia o objeto puro. A API.call deve converter para JSON internamente.
         const resp = await API.call('finalizarpedido', d);
-        if (resp.status !== 'success') throw new Error(resp.message);
-
-        // Envio para o chat
-        const msgFinal = msgFormatada.replace('[AGUARDANDO]', resp.id);
-        window.enviarMensagemParaChat(msgFinal, false, resp.id);
         
-        // Limpeza do input global
-        const msgInput = document.getElementById('msg-input');
-        if (msgInput) msgInput.value = ''; 
-
-        bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
-        window.limparBackdrops();
+        if (resp && resp.status === 'success') {
+            const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id || 'N/A');
+            window.enviarMensagemParaChat(msgFinal, false, resp.id);
+            
+            if(document.getElementById('msg-input')) document.getElementById('msg-input').value = '';
+            bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+            window.limparBackdrops();
+        } else {
+            throw new Error(resp?.message || "Erro desconhecido ao salvar.");
+        }
     } catch (err) {
         errorMsg.innerText = "Erro ao salvar: " + err.message;
         errorMsg.classList.remove('d-none');

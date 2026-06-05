@@ -8,10 +8,42 @@
 
     // Inicialização
     const init = () => {
-        state.bsModal = new bootstrap.Modal(document.getElementById('modalPedidoDetalhes') || document.createElement('div'));
-        state.bsModalAtencao = new bootstrap.Modal(document.getElementById('modalAtencaoPedido') || document.createElement('div'));
+        const modalEl = document.getElementById('modalPedidoDetalhes');
+        const modalAtencaoEl = document.getElementById('modalAtencaoPedido');
+        
+        if (modalEl) state.bsModal = new bootstrap.Modal(modalEl);
+        if (modalAtencaoEl) state.bsModalAtencao = new bootstrap.Modal(modalAtencaoEl);
+        
         carregarPedidos();
     };
+
+    // Função que estava faltando e causava o erro
+    function renderizarTabela() {
+        const container = document.getElementById('tabela-pedidos-body');
+        if (!container) {
+            console.warn("Elemento 'tabela-pedidos-body' não encontrado.");
+            return;
+        }
+
+        container.innerHTML = state.dadosChat.map(chat => {
+            // Tenta encontrar um pedido vinculado a este chat
+            const pedido = state.dadosPedidos.find(p => String(p.id_mensagens_chat) === String(chat.id));
+            
+            return `
+                <tr>
+                    <td>${chat.id}</td>
+                    <td>${pedido ? pedido.solicitante : 'Sem pedido'}</td>
+                    <td>${pedido ? pedido.mercadoria : '-'}</td>
+                    <td>${pedido ? pedido.valor_corrida : '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="window.abrirDetalhes('${chat.id}')">
+                            Detalhes
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
 
     // Busca consolidada
     async function carregarPedidos() {
@@ -19,24 +51,32 @@
         if (syncBtn) syncBtn.classList.add('loading-spin');
         
         try {
-            // Alterado de 'getmensagens_chat' para 'getchat' (ou apenas 'chat', ajuste conforme o endpoint esperado no seu backend)
             const [resChat, resPedidos] = await Promise.all([
                 API.call('getchat'), 
                 API.call('getpedidos')
             ]);
-            state.dadosChat = (resChat || []).filter(m => String(m.finalizado) === "true").reverse();
-            state.dadosPedidos = resPedidos || [];
-            renderizarTabela();
-        } catch (e) { console.error("Erro carregamento:", e); } 
-        finally { if (syncBtn) syncBtn.classList.remove('loading-spin'); }
+            
+            state.dadosChat = Array.isArray(resChat) ? resChat.filter(m => String(m.finalizado) === "true").reverse() : [];
+            state.dadosPedidos = Array.isArray(resPedidos) ? resPedidos : [];
+            
+            renderizarTabela(); // Agora a função existe no mesmo escopo
+        } catch (e) { 
+            console.error("Erro no carregamento:", e); 
+        } finally { 
+            if (syncBtn) syncBtn.classList.remove('loading-spin'); 
+        }
     }
+
+    // Expor funções necessárias para o HTML (onclick)
+    window.abrirDetalhes = function(chatId) {
+        console.log("Abrindo detalhes do chat:", chatId);
+        // Lógica de abrir modal aqui
+    };
 
     // Lógica Unificada de Salvamento
     async function salvarPedido(payloadChat, payloadPedido, isNovo = false) {
         try {
-            // Alterado de 'updatemensagens_chat' para 'updatechat'
             await API.call('updatechat', payloadChat);
-            
             if (isNovo) {
                 await API.call('addpedidos', payloadPedido);
             } else {
@@ -47,8 +87,6 @@
         } catch (err) {
             console.error("Erro ao salvar pedido:", err);
             return false;
-        } finally {
-            console.log("Processo de salvamento finalizado.");
         }
     }
 

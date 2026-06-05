@@ -11,18 +11,18 @@ function doPost(e) {
 
     // 2. Segurança
     if (!data.apiKey || data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
-
+    
     // 3. Mapeamento
     var mapaEntidades = {
       "usuario": "usuarios", "cliente": "clientes", "colaborador": "colaboradores",
       "bot": "botconfig", "chat": "chat", "pedido": "pedidos", "financeiro": "financeiro"
     };
-
+    
     var entity = action.replace(/get|add|delete|update|save|finalizar/g, '').toLowerCase().trim();
     var nomeAba = mapaEntidades[entity] || entity;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = getSheetCaseInsensitive(ss, nomeAba);
-
+    
     if (!sheet) return response({ status: "error", message: "Tabela não encontrada: " + nomeAba });
 
     // 4. Operações
@@ -31,10 +31,10 @@ function doPost(e) {
     if (action.startsWith('add') || action.startsWith('save')) return response(handleAdd(sheet, data, nomeAba));
     if (action.startsWith('update')) return response(handleUpdate(sheet, data));
     if (action.startsWith('delete')) return response(handleDelete(sheet, data.id));
-
+    
     return response({ status: "error", message: "Ação não suportada: " + action });
-  } catch (err) {
-    return response({ status: "error", message: "Erro crítico: " + err.toString() });
+  } catch (err) { 
+    return response({ status: "error", message: "Erro crítico: " + err.toString() }); 
   }
 }
 
@@ -42,25 +42,25 @@ function doPost(e) {
 function handleLogin(user) {
   var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
   if (!sheet) return { status: "error", message: "Tabela usuários não encontrada" };
-
+  
   var data = sheet.getDataRange().getValues();
   var headers = data[0].map(h => String(h).toLowerCase().trim());
   var userIndex = headers.indexOf("username");
   var passIndex = headers.indexOf("password");
   var tipoIndex = headers.indexOf("tipo");
-
+  
   var userRow = data.slice(1).find(r => String(r[userIndex]).trim() === user);
-
+  
   if (!userRow) return { status: "error", message: "Usuário não encontrado" };
-
+  
   // Retorna o hash para o Node.js validar
-  return {
-    status: "success",
-    user: {
-      username: user,
-      tipo: userRow[tipoIndex],
-      password: String(userRow[passIndex]).trim()
-    }
+  return { 
+    status: "success", 
+    user: { 
+      username: user, 
+      tipo: userRow[tipoIndex], 
+      password: String(userRow[passIndex]).trim() 
+    } 
   };
 }
 
@@ -111,24 +111,54 @@ function handleDelete(sheet, id) {
 function handleSalvarPedidoComChat(sheetPedidos, data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
+  
+  // 1. Gera o ID do pedido
   data.id = generateId(sheetPedidos, "pedidos");
-  const headers = sheetPedidos.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
-  sheetPedidos.appendRow(headers.map(h => data[h] || ""));
+  
+  // 2. Salva na aba Pedidos (Dinâmico conforme cabeçalhos)
+  const headersPedidos = sheetPedidos.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
+  sheetPedidos.appendRow(headersPedidos.map(h => data[h] || ""));
+  
+  // 3. Salva na aba Chat (Dinâmico)
   if (sheetChat) {
-    sheetChat.appendRow(["MSG" + new Date().getTime(), data.id_mensagens_chat || "", data.id, data.mensagem_formatada || "", new Date().toLocaleTimeString(), new Date().toLocaleDateString(), "TRUE"]);
+    const headersChat = sheetChat.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
+    
+    // Mapeamento dinâmico para garantir que os dados caiam na coluna certa
+    const row = headersChat.map(h => {
+      if (h === "id") return "MSG" + new Date().getTime();
+      if (h === "id_mensagens_chat") return data.id_mensagens_chat || "";
+      if (h === "id_pedido") return data.id; // Ajuste o nome da coluna conforme sua planilha
+      if (h === "texto" || h === "mensagem") return data.mensagem || data.mensagem_formatada || "";
+      if (h === "horadata") return new Date().toLocaleString('pt-BR');
+      if (h === "finalizado") return "TRUE";
+      return "";
+    });
+    
+    sheetChat.appendRow(row);
   }
-  return { status: "success", message: "Salvo!", id: data.id };
+  
+  return { status: "success", message: "Salvo com sucesso!", id: data.id };
 }
 
 function getSheetCaseInsensitive(ss, name) { return ss.getSheets().find(s => s.getName().toLowerCase().trim() === name.toLowerCase()); }
+
 function generateId(sheet, entity) {
-  var rows = sheet.getDataRange().getValues();
-  var idIndex = rows[0].map(h => String(h).toLowerCase().trim()).indexOf("id");
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return (entity.includes("pedido")) ? "RDO1" : 1;
+  
+  var headers = data[0].map(h => String(h).toLowerCase().trim());
+  var idIndex = headers.indexOf("id");
+  
   var maxId = 0;
-  for (var i = 1; i < rows.length; i++) {
-    var val = parseInt(String(rows[i][idIndex]).replace("RDO", ""));
+  for (var i = 1; i < data.length; i++) {
+    var rawId = String(data[i][idIndex] || "0");
+    // Extrai apenas os números, ignorando "RDO"
+    var val = parseInt(rawId.replace(/[^0-9]/g, ''));
     if (!isNaN(val) && val > maxId) maxId = val;
   }
-  return (entity.includes("pedido")) ? "RDO" + (maxId + 1) : (maxId + 1);
+  
+  var nextId = maxId + 1;
+  return (entity.includes("pedido")) ? "RDO" + nextId : nextId;
 }
+
 function response(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
