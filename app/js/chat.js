@@ -548,7 +548,6 @@ window.formatarTelefone = function (tel) {
 
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
-    const errorMsg = document.getElementById('form-error-msg');
     const camposObrigatorios = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
     let ehValido = true;
 
@@ -569,17 +568,23 @@ window.salvarPedidoAPI = async function () {
 
     try {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
-        const rotasLista = getVal('p-rotas').split('\n');
-        const rotasFormatadas = rotasLista.map((l, i) => `📍${i + 1}. ${l.trim()}`).join('\n');
         const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
         
-        // Modelo de mensagem EXATO
+        // Formatação das rotas conforme modelo solicitado
+        const rotasRaw = getVal('p-rotas').split('\n');
+        const rotasFormatadas = rotasRaw.map((l, i) => {
+            const partes = l.split('|');
+            const de = partes[0] ? partes[0].trim() : "";
+            const para = partes[1] ? partes[1].trim() : "";
+            return `📍${i + 1}. De: ${de} | \n      Para: ${para}`;
+        }).join('\n');
+
+        // Modelo de mensagem EXATO conforme solicitado
         const msgFormatada = `📦 SOLICITANTE: ${getVal('p-solicitante')}
 
 N.SERVIÇO: [ID_GERADO]
 SOLICITANTE: ${getVal('p-solicitante')} 
-CONTATO: ${getVal('p-contato')}
-HORÁRIO: ${getVal('p-horario')}
+CONTATO: ${getVal('p-contato')} | HR: ${getVal('p-horario')}
 -
 MERCADORIA: ${getVal('p-mercadoria')}
 RETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}
@@ -605,11 +610,19 @@ ${valorFinal}`;
         };
 
         const resp = await API.call('finalizarpedido', payload);
+        
         if (resp?.status === 'success') {
-            window.enviarMensagemParaChat(msgFormatada.replace('[ID_GERADO]', resp.id), false, resp.id);
+            // Substitui o ID gerado na mensagem antes de enviar para o chat
+            const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id);
+            window.enviarMensagemParaChat(msgFinal, false, resp.id);
+            
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+        } else {
+            throw new Error(resp?.message || "Erro no servidor.");
         }
+    } catch (err) {
+        console.error("Erro no salvamento:", err);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
