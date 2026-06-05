@@ -1,12 +1,6 @@
-// =====================================================================
-// PROTEÇÃO E ESTADO GLOBAL
-// =====================================================================
 window.AppRDO = window.AppRDO || { debounceTimer: null, listaCarregada: false, observerIniciado: false };
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
-// =====================================================================
-// EVENTOS E OBSERVERS DE SEGURANÇA
-// =====================================================================
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(() => {
@@ -32,9 +26,6 @@ if (!window.AppRDO.observerIniciado) {
     window.AppRDO.observerIniciado = true;
 }
 
-// =====================================================================
-// EVENTOS GLOBAIS E DELEGAÇÃO
-// =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const inputContato = document.getElementById('p-contato');
     if (inputContato) {
@@ -64,9 +55,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// =====================================================================
-// FUNÇÕES DE CONTATOS E CHAT
-// =====================================================================
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
@@ -177,9 +165,6 @@ ${pedido.valor_corrida || ''}`;
     }
 };
 
-// =====================================================================
-// FORMATAÇÕES HUMANAS (Tempo e KM)
-// =====================================================================
 function formatarTempoHumano(minutosTotais) {
     const mins = Math.ceil(minutosTotais);
     if (mins < 60) {
@@ -194,9 +179,6 @@ function formatarTempoHumano(minutosTotais) {
     return `${horas} h ${minsRestantes} min`;
 }
 
-// =====================================================================
-// NOVO SISTEMA DE CÁLCULO DE ROTAS (EFEITO GOOGLE MAPS)
-// =====================================================================
 async function buscarCoordenadasEndereco(enderecoTexto) {
     try {
         // Limpeza agressiva: remove números de lista (1.), pipes, hífen e espaços extras
@@ -223,9 +205,6 @@ async function buscarCoordenadasEndereco(enderecoTexto) {
     }
 }
 
-// =====================================================================
-// 1. RENDERIZAÇÃO UNIFICADA DO RODAPÉ (NUNCA ALTERAR PARA .innerText) E SEGURA
-// =====================================================================
 window.renderizarMapaUnificado = function () {
     const container = document.getElementById('container-mapa-visual');
     if (!container || !window.dadosPedidoAtual?.coordenadas) return;
@@ -316,38 +295,49 @@ window.analisarMensagemEntrada = function(texto) {
 };
 
 window.iniciarFluxoCheckout = async function () {
-    try {
-        const msgInput = document.getElementById('msg-input');
-        if (!msgInput?.value.trim()) throw new Error("A mensagem do pedido está vazia.");
+    const msgInput = document.getElementById('msg-input');
+    const msgAtencao = document.getElementById('modal-atencao-mensagem');
+    const modalAtencaoEl = document.getElementById('modalAtencao');
 
+    // 1. VERIFICAÇÃO CRÍTICA: Cliente selecionado
+    if (!window.AppRDO?.clienteId) {
+        if (msgAtencao) {
+            msgAtencao.innerText = "Atenção: Você precisa selecionar um cliente na lista à esquerda.";
+        }
+        if (modalAtencaoEl) {
+            new bootstrap.Modal(modalAtencaoEl).show();
+        }
+        return; // Interrompe o fluxo imediatamente
+    }
+
+    // 2. VERIFICAÇÃO CRÍTICA: Mensagem preenchida
+    if (!msgInput || !msgInput.value.trim()) {
+        if (msgAtencao) {
+            msgAtencao.innerText = "Atenção: Digite ou cole a mensagem do pedido antes de enviar.";
+        }
+        if (modalAtencaoEl) {
+            new bootstrap.Modal(modalAtencaoEl).show();
+        }
+        return; // Interrompe o fluxo imediatamente
+    }
+
+    // 3. FLUXO PRINCIPAL (Só executa se as validações acima passarem)
+    try {
         let texto = msgInput.value;
 
-        // 1. LIMPEZA PREVENTIVA: Removemos bullets, números de lista e espaços desnecessários
-        // Isso resolve o problema do "1. De:" virar apenas "De:"
+        // Limpeza e Extração
         texto = texto.replace(/^\d+\.\s*/gm, ''); 
-
-        // 2. EXTRAÇÃO ROBUSTA
-        // Busca o nome do solicitante (padrão após "SOLICITANTE:")
         const solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)?.[1] || "Não informado").trim();
-
-        // Busca o contato (procura qualquer número com formato de tel, ignorando se escreveu errado "CONATO")
-        const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || 
-                         texto.match(/(\d{4,5}-?\d{4})/)?.[0] || "").trim();
-
-        // Busca as rotas: Procura linhas que contenham "De:" E "Para:"
-        // Não importa se tem "ROTA:" escrito antes ou não
+        const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || "").trim();
         const linhasRota = texto.split('\n').filter(l => /de:/i.test(l) && /para:/i.test(l));
 
-        console.log("DEBUG RDO - Captura:", { solicitante, contato, rotas: linhasRota });
-
-        // 3. VALIDAÇÃO FLEXÍVEL
         if (!contato || linhasRota.length === 0) {
-            throw new Error("Formato inválido. Certifique-se de enviar o Contato e as rotas no formato 'De: X Para: Y'.");
+            throw new Error("Formato inválido. Use o padrão 'De: X Para: Y'.");
         }
 
-        const nomeCliente = window.AppRDO?.clienteSelecionado || 'Nenhum cliente selecionado';
+        const nomeCliente = window.AppRDO.clienteSelecionado;
 
-        // --- FLUXO DO MODAL (Mantido conforme seu sistema) ---
+        // Carrega o modal de mapa
         await window.loadModal('modal_mapa.html');
         const modalEl = document.getElementById('modalMapa');
         const modal = new bootstrap.Modal(modalEl);
@@ -363,7 +353,6 @@ window.iniciarFluxoCheckout = async function () {
                 let kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
                 for (const linha of linhasRota) {
-                    // Limpa "De:" e "Para:" da string antes de buscar
                     const p = linha.split(/Para:|\|/gi).map(x => x.replace(/De:/gi, '').trim());
                     if (p.length >= 2) {
                         const p1 = await buscarCoordenadasEndereco(p[0]);
@@ -428,9 +417,6 @@ async function calcularRotaOSRM(p1, p2) {
     } catch (e) { return null; }
 }
 
-// =====================================================================
-// TRANSIÇÃO FORMULÁRIO E FINALIZAÇÃO
-// =====================================================================
 window.preencherDadosFormulario = function () {
     try {
         const dados = window.dadosPedidoAtual || {};
@@ -577,9 +563,6 @@ window.voltarParaMapa = async function () {
     modalMapa.show();
 };
 
-// =====================================================================
-// UTILS
-// =====================================================================
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     if (tel.length === 11) return tel.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
@@ -591,53 +574,86 @@ window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
     
-    // Validação
-    const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km'];
-    if (camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim())) {
-        errorMsg.innerText = "Preencha os campos obrigatórios.";
-        errorMsg.classList.remove('d-none');
+    // 1. BLINDAGEM: Verifica se o cliente foi selecionado antes de qualquer processamento
+    if (!window.AppRDO?.clienteId) {
+        if (errorMsg) {
+            errorMsg.innerText = "Erro: Nenhum cliente selecionado no chat. Selecione um contato primeiro.";
+            errorMsg.classList.remove('d-none');
+        }
+        // Se houver modal de atenção, abre ele para alertar o atendente
+        const modalAtencao = document.getElementById('modalAtencao');
+        if (modalAtencao) new bootstrap.Modal(modalAtencao).show();
         return;
     }
 
-    btn.disabled = true;
-    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
+    // 2. Validação de campos obrigatórios
+    const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km', 'p-mercadoria'];
+    const camposInvalidos = camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim());
+    
+    if (camposInvalidos) {
+        if (errorMsg) {
+            errorMsg.innerText = "Atenção: Preencha todos os campos obrigatórios (incluindo Mercadoria).";
+            errorMsg.classList.remove('d-none');
+        }
+        return;
+    }
+
+    // 3. Feedback visual de carregamento
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
+    }
 
     try {
         const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
+        
+        // Coleta de dados garantida
         const d = {
-            solicitante: document.getElementById('p-solicitante').value,
-            contato: document.getElementById('p-contato').value,
-            horario: document.getElementById('p-horario').value,
-            mercadoria: "Pedido RDO",
-            rotas: document.getElementById('p-rotas').value,
+            solicitante: document.getElementById('p-solicitante').value.trim(),
+            contato: document.getElementById('p-contato').value.trim(),
+            horario: document.getElementById('p-horario').value.trim(),
+            mercadoria: document.getElementById('p-mercadoria').value.trim(),
+            rotas: document.getElementById('p-rotas').value.trim(),
             retorno: document.getElementById('p-retorno').value || 'Não',
-            obs: document.getElementById('p-obs').value,
-            valor: document.getElementById('view-valor-final').innerText,
+            obs: document.getElementById('p-obs').value.trim(),
+            valor: document.getElementById('view-valor-final').innerText.trim(),
             id_mensagens_chat: window.AppRDO.clienteId
         };
 
-        // Montagem do texto igual ao que vai para a tela
+        // Montagem da mensagem formatada
         const rotasFormatadas = d.rotas.split('\n').map(l => l.trim() ? `📍${l.trim()}` : '').join('\n');
         const msgFormatada = `📦 NOME: ${nomeCliente}\n\nN.SERVIÇO: [AGUARDANDO]\nSOLICITANTE: ${d.solicitante} | CONTATO: ${d.contato}\nHORÁRIO: ${d.horario}\n-\nMERCADORIA: ${d.mercadoria}\nTROCA/RETORNO: ${d.retorno}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${d.obs}\n${d.valor}`;
 
-        // Chamada única para a função refatorada no App Script
+        // Chamada de API com tratamento de resultado
         const resp = await API.call('finalizarpedido', { ...d, mensagem_formatada: msgFormatada });
         
-        if (resp.status !== 'success') throw new Error(resp.message);
+        if (!resp || resp.status !== 'success') {
+            throw new Error(resp?.message || "Erro inesperado ao comunicar com o servidor.");
+        }
 
-        // Sucesso: Atualiza o chat localmente com o ID retornado
+        // Sucesso: Atualiza o chat localmente
         window.enviarMensagemParaChat(msgFormatada.replace('[AGUARDANDO]', resp.id), false, resp.id);
         
-        document.getElementById('msg-input').value = '';
-        bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
-        limparBackdrops();
+        // Limpeza de UI pós-sucesso
+        const inputMsg = document.getElementById('msg-input');
+        if (inputMsg) inputMsg.value = '';
+        
+        const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
+        if (modalForm) modalForm.hide();
+        
+        if (typeof window.limparBackdrops === 'function') window.limparBackdrops();
 
     } catch (err) {
-        errorMsg.innerText = "Erro ao salvar: " + err.message;
-        errorMsg.classList.remove('d-none');
+        console.error("Erro no fluxo de salvar pedido:", err);
+        if (errorMsg) {
+            errorMsg.innerText = "Erro ao salvar: " + err.message;
+            errorMsg.classList.remove('d-none');
+        }
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = "Emitir Pedido";
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = "Emitir Pedido";
+        }
     }
 };
 
@@ -665,6 +681,55 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = 
 
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+};
+
+window.enviarMensagemGeral = async function () {
+    const input = document.getElementById('msg-input');
+    const texto = input?.value?.trim();
+    const btnEnviar = document.getElementById('btn-enviar-mensagem'); // Ajuste o ID conforme seu HTML
+
+    // 1. trava de segurança: Cliente obrigatório
+    if (!window.AppRDO?.clienteId) {
+        const msgEl = document.getElementById('modal-atencao-mensagem');
+        if (msgEl) {
+            msgEl.innerText = "Você precisa selecionar um cliente na lista à esquerda antes de enviar uma mensagem.";
+        }
+        const modalAtencao = new bootstrap.Modal(document.getElementById('modalAtencao'));
+        modalAtencao.show();
+        return;
+    }
+
+    // 2. Validação básica
+    if (!texto) return;
+
+    if (btnEnviar) btnEnviar.disabled = true;
+
+    try {
+        // 3. Envio para o Backend
+        const resp = await API.call('sendmessage', {
+            id_chat: window.AppRDO.clienteId,
+            mensagem: texto
+        });
+
+        if (resp.status !== 'success') {
+            throw new Error(resp.message || "Erro ao enviar mensagem.");
+        }
+
+        // 4. Sucesso: Usa sua função original de renderização
+        // Passamos 'false' para isRecebida (mensagem enviada pelo atendente)
+        window.enviarMensagemParaChat(texto, false, "");
+
+        // 5. Limpeza
+        if (input) input.value = '';
+
+    } catch (err) {
+        console.error("Erro no envio:", err);
+        const msgEl = document.getElementById('modal-atencao-mensagem');
+        if (msgEl) msgEl.innerText = "Erro: " + err.message;
+        new bootstrap.Modal(document.getElementById('modalAtencao')).show();
+    } finally {
+        if (btnEnviar) btnEnviar.disabled = false;
+    }
 };
 
 function limparBackdrops() {

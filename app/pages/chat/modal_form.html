@@ -17,9 +17,19 @@
                             <label class="text-muted small">SOLICITANTE*</label>
                             <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light" readonly required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="text-muted small">CONTATO</label>
                             <input type="text" id="p-contato" class="form-control form-control-sm border-0 bg-light">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">MERCADORIA*</label>
+                            <select id="p-mercadoria" class="form-select form-select-sm border-0 bg-light" required>
+                                <option value="">Selecione...</option>
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="text-muted small">HORÁRIO</label>
@@ -92,21 +102,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    (function() {
-        const modalEl = document.getElementById('modalFormulario');
-        modalEl.addEventListener('shown.bs.modal', function() {
-            const el = document.getElementById('header-nome-cliente');
-            const cliente = window.AppRDO?.clienteSelecionado;
-            if (el && cliente) {
-                el.innerText = cliente;
-            } else if (el) {
-                el.innerText = "Cliente não identificado";
-                const err = document.getElementById('form-error-msg');
-                err.innerText = "Erro: Nome do cliente perdido no contexto.";
-                err.classList.remove('d-none');
-            }
-        }, { once: true });
-    })();
-</script>
