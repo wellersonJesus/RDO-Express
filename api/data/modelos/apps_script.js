@@ -111,32 +111,54 @@ function handleDelete(sheet, id) {
 function handleSalvarPedidoComChat(sheetPedidos, data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
+  
+  // 1. Gera o ID do pedido (ex: RDO1)
   data.id = generateId(sheetPedidos, "pedidos");
   
-  // Processamento de Rotas para a aba Pedidos
-  const linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
-  data.de = linhasRota.map(l => l.split('|')[0] ? l.split('|')[0].replace(/De:/i, '').trim() : "").join(', ');
-  data.para = linhasRota.map(l => l.split('|')[1] ? l.split('|')[1].replace(/Para:/i, '').trim() : "").join(', ');
+  // 2. Processamento de Rotas
+  var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
+  data.de = linhasRota.map(function(l) {
+    return l.split('|')[0] ? l.split('|')[0].replace(/De:/i, '').trim() : "";
+  }).join(', ');
+  
+  data.para = linhasRota.map(function(l) {
+    return l.split('|')[1] ? l.split('|')[1].replace(/Para:/i, '').trim() : "";
+  }).join(', ');
 
-  // ABA PEDIDOS: Ordem das colunas: id, id_chat, solicitante, contato, horario, mercadoria, de, para, retorno, prioridade, valor_corrida, observacao
+  // 3. Limpeza do ID do cliente
+  var idChatLimpo = String(data.id_chat).replace(/\D/g, '');
+
+  // 4. ABA PEDIDOS: Gravação
   sheetPedidos.appendRow([
-    data.id, data.id_chat, data.solicitante, data.contato, 
-    data.horario, data.mercadoria, data.de, data.para, 
-    data.retorno, data.prioridade || "N/A", data.valor_corrida, data.observacao
+    data.id, 
+    idChatLimpo, 
+    data.solicitante, 
+    data.contato, 
+    data.horario, 
+    data.mercadoria, 
+    data.de, 
+    data.para, 
+    data.retorno, 
+    data.prioridade || "N/A", 
+    data.valor_corrida, 
+    data.observacao
   ]);
 
-  // ABA CHAT: Ordem: jid_numero, pedido_id, texto, hora, data, finalizado
+  // 5. ABA CHAT: Gravação do histórico
+  // Seguindo a estrutura: id, pedido_id, texto, hora, data, jid_numero, finalizado
   if (sheetChat) {
-    const agora = new Date();
+    var agora = new Date();
     sheetChat.appendRow([
-      data.id_chat, 
-      data.id, 
-      data.mensagem, 
-      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
-      agora.toLocaleDateString('pt-BR'),
-      "TRUE"
+      data.id,                              // id (coluna 1)
+      data.id,                              // pedido_id (coluna 2 - RDOx)
+      data.mensagem,                        // texto (coluna 3 - ONDE O CHAT VAI LER)
+      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}), // hora (coluna 4)
+      agora.toLocaleDateString('pt-BR'),    // data (coluna 5)
+      idChatLimpo,                          // jid_numero (coluna 6 - ONDE O FILTRO VAI PESQUISAR)
+      "TRUE"                                // finalizado (coluna 7)
     ]);
   }
+
   return { status: "success", id: data.id };
 }
 

@@ -705,106 +705,92 @@ ${valorFinal}`;
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    // 1. Preparação Inicial: Limpa o cabeçalho e seleciona o cliente
-    window.AppRDO.clienteSelecionado = nome;
-    window.AppRDO.clienteId = id;
-
+    const container = document.getElementById('chat-messages-container');
+    const idLimpo = String(id).replace(/\D/g, '');
+    
+    // Atualiza cabeçalho
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
         nameEl.className = 'text-dark fw-bold';
     }
 
-    // 2. Feedback Visual Imediato: Ícone centralizado de carregamento
-    const container = document.getElementById('chat-messages-container');
+    // Feedback visual de "Buscando..." com o spinner
     container.innerHTML = `
-        <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
-            <div class="text-center text-muted">
-                <i class="bi bi-arrow-repeat spinner-rotate" style="font-size: 2rem;"></i>
-                <p>Buscando mensagens...</p>
-            </div>
+        <div class="text-center p-4">
+            <div class="spinner-rotate" style="font-size: 2rem; color: #dc3545;">🔄</div>
+            <div class="mt-2 text-muted">Buscando mensagens do chat...</div>
         </div>
     `;
 
-    // 3. Destaca o item na lista
-    document.querySelectorAll('.contact-item-clean').forEach(el => el.classList.remove('active-contact'));
-    const itemAtivo = document.getElementById(`item-contato-${id}`);
-    if (itemAtivo) itemAtivo.classList.add('active-contact');
-
-    // 4. Busca o histórico no banco
     try {
         const todasMensagens = await API.call('getchat');
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
-            String(m.jid_numero || "").trim().endsWith(String(id).trim())
-        );
+        
+        // Verifica se a API retornou algo válido
+        if (!todasMensagens) throw new Error("A API não retornou dados.");
 
-        // 5. Exibição Final
-        container.innerHTML = ''; // Limpa o ícone de carregamento
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => {
+            return String(m.jid_numero || "").trim() === idLimpo;
+        });
+
+        // Limpa o spinner após a busca
+        container.innerHTML = '';
 
         if (historico.length === 0) {
-            // Caso não exista histórico
-            container.innerHTML = `
-                <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
-                    <div class="text-center text-muted p-3">
-                        <i class="bi bi-chat-dots" style="font-size: 2rem;"></i>
-                        <p>Nenhuma mensagem histórica com <strong>${nome}</strong>.</p>
-                    </div>
-                </div>
-            `;
+            container.innerHTML = `<div class="text-center p-3 text-muted">Nenhum histórico encontrado para este contato.</div>`;
         } else {
-            // Exibe o histórico encontrado
             historico.forEach(msg => {
+                // Passa o texto e o pedido_id
                 window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
             });
         }
     } catch (e) {
-        console.error("Erro ao buscar histórico:", e);
+        console.error("[ERRO ABRIR CONVERSA]:", e);
+        // Exibe o erro na tela para você saber exatamente o que aconteceu
         container.innerHTML = `
-            <div class="text-center p-3 text-danger">
-                <i class="bi bi-exclamation-triangle"></i> Erro ao carregar histórico. Tente novamente.
+            <div class="alert alert-danger m-3">
+                <strong>Erro ao carregar mensagens:</strong><br>
+                ${e.message}
+                <br><br>
+                <button class="btn btn-sm btn-outline-danger" onclick="abrirConversa('${id}', '${nome}')">Tentar Novamente</button>
             </div>
         `;
     }
 };
 
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
-    const container = document.getElementById('chat-messages-container');
-    
-    // 1. Evitar duplicidade: Verifica se este pedido específico já está na tela antes de adicionar
-    if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
-        return; 
-    }
+    try {
+        const container = document.getElementById('chat-messages-container');
+        if (!container) return;
 
-    const div = document.createElement('div');
-    div.className = 'message-wrapper';
-    const msgId = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const dataId = pedidoId ? String(pedidoId).replace(/\D/g, '') : 'new-' + Date.now();
+        if (document.querySelector(`[data-pedido-id="${dataId}"]`)) return;
 
-    // 2. Formatação do texto: Substitui quebras de linha por <br> para manter a legibilidade
-    const textoFormatado = (texto || "").replace(/\n/g, '<br>');
+        // Limpeza e formatação
+        let textoFinal = (texto || "").toString().replace(/\[ID_GERADO\]/g, pedidoId || "N/A");
+        let textoFormatado = textoFinal.replace(/\n/g, '<br>');
 
-    div.innerHTML = `
-        <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
-             id="${msgId}" 
-             data-pedido-id="${pedidoId}" 
-             onclick="window.abrirModalStatus('${msgId}')"
-             style="cursor: pointer; position: relative;">
-            <div class="message-body">${textoFormatado}</div>
-            
-            ${!isRecebida ? `
-                <div class="status-icon" id="status-${msgId}" title="Clique para alterar status" style="text-align: right; margin-top: 5px;">
-                    <span style="font-size: 16px;">${pedidoId ? '✅' : '⏳'}</span>
+        const div = document.createElement('div');
+        div.className = 'message-wrapper';
+
+        div.innerHTML = `
+            <div class="${isRecebida ? 'message-received' : 'message-sent'}" data-pedido-id="${dataId}">
+                <div class="message-body">
+                    ${textoFormatado}
                 </div>
-            ` : ''}
-        </div>
-    `;
+                ${!isRecebida ? `
+                    <div class="status-icon">
+                        <span>✅</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
 
-    container.appendChild(div);
-    
-    // 3. Scroll suave para a última mensagem
-    container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth'
-    });
+        container.appendChild(div);
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    } catch (err) {
+        console.error("[ERRO NA RENDERIZAÇÃO]:", err);
+    }
 };
 
 window.enviarMensagemGeral = async function () {

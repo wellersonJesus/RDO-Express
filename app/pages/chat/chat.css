@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. CONTATOS
+   1. ESTRUTURA DE CONTATOS E CHAT
    ========================================================================== */
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
@@ -10,26 +10,8 @@
     border-bottom: 1px solid #f8f9fa;
 }
 
-.contact-item-clean:hover { 
-    background-color: #fee2e2 !important; 
-    transition: background-color 0.2s;
-}
-
-.contact-item-clean.active-contact {
-    background-color: #ffeef0 !important;
-    border-left: 4px solid #dc3545 !important;
-}
-
-@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.spinner-rotate { animation: rotate 1s linear infinite !important; }
-
-#lista-contatos-chat .contact-item-clean:hover { 
-    background-color: #fee2e2 !important; 
-}
-
-#lista-contatos-chat .contact-item-clean.active-chat {
-    background-color: #ffeef0 !important;
-    border-left: 4px solid #dc3545 !important;
+#lista-contatos-chat .contact-item-clean:hover {
+    background-color: #f1f3f5;
 }
 
 #lista-contatos-chat .contact-item-clean.offline {
@@ -38,27 +20,45 @@
     background-color: #f8f9fa;
 }
 
-#lista-contatos-chat .contact-item-clean.offline:hover { background-color: #f8f9fa !important; }
+#lista-contatos-chat .contact-item-clean.offline:hover {
+    background-color: #f8f9fa !important;
+}
 
 #lista-contatos-chat .selected-contact {
     background-color: #ffeef0 !important;
     border-left: 4px solid #dc3545 !important;
 }
 
-.contact-name { font-weight: 500 !important; font-size: 0.95rem !important; color: #333; letter-spacing: -0.2px; }
-.small.text-muted { font-size: 0.75rem; }
-#chat-header-name { font-weight: 600 !important; color: #2c3e50 !important; }
+.contact-name {
+    font-weight: 500 !important;
+    font-size: 0.95rem !important;
+    color: #333;
+    letter-spacing: -0.2px;
+}
+
+.small.text-muted {
+    font-size: 0.75rem;
+}
+
+#chat-header-name {
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+}
 
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
-    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)), 
-                      url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)),
+        url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
 }
 
 /* ==========================================================================
-   2. MAPA E ERROS
+   2. MAPA E RENDERIZAÇÃO GEOGRÁFICA
    ========================================================================== */
-#container-mapa-visual, #mapa-container { width: 100% !important; height: 350px !important; }
+#container-mapa-visual,
+#mapa-container {
+    width: 100% !important;
+    height: 350px !important;
+}
 
 #container-mapa-visual {
     display: block !important;
@@ -69,7 +69,10 @@
     z-index: 1;
 }
 
-.leaflet-container { width: 100% !important; height: 100% !important; }
+.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+}
 
 .leaflet-tooltip {
     background: rgba(0, 0, 0, 0.8) !important;
@@ -78,9 +81,12 @@
     font-size: 12px !important;
     padding: 5px 10px !important;
     border-radius: 4px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* ==========================================================================
+   3. SISTEMA DE ERROS E FEEDBACK
+   ========================================================================== */
 .alert-error-minimal {
     padding: 12px 16px;
     background-color: #fff5f5;
@@ -96,84 +102,139 @@
 
 .map-error-overlay {
     position: absolute;
-    top: 50%; left: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     background: white;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     text-align: center;
     z-index: 1000;
 }
 
 /* ==========================================================================
-   3. MENSAGENS CHAT (Layout Flexível)
+   4. VISUAL ESTRUTURADO DE MENSAGENS CHAT
    ========================================================================== */
-.message-wrapper { position: relative; margin-bottom: 20px; display: flex; flex-direction: column; }
-
-.message-sent, .message-received {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 12px 18px;
-    max-width: 85%;
-    width: fit-content;
-    min-width: 100px;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    white-space: pre-wrap;
-    word-wrap: break-word;
+.status-icon {
+    position: absolute;
+    bottom: -18px; /* Parte inferior do balão */
+    left: -5px;    /* Deslocado para fora à esquerda */
+    font-size: 1.6rem !important; /* Ícone bem maior */
+    z-index: 20;
+    transition: transform 0.2s ease;
 }
 
-.message-sent:hover, .message-received:hover { filter: brightness(0.95); transition: filter 0.2s; }
+/* Corpo da mensagem: Garante alinhamento total */
+.message-body {
+    text-align: left;
+    margin-bottom: 5px;
+}
 
-.message-sent { background-color: #dcf8c6 !important; margin-left: auto; margin-right: 10px; border-bottom-right-radius: 2px; }
-.message-received { background-color: #ffffff !important; margin-right: auto; margin-left: 10px; border-bottom-left-radius: 2px; }
+/* Ajuste no balão para comportar o ícone "pendurado" */
+.message-sent, .message-received {
+    padding: 18px 22px !important; /* Topo/Base 18px, Lados 22px */
+    margin-bottom: 30px !important; /* Espaço entre mensagens */
+}
+
+.message-wrapper {
+    position: relative;
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-sent:hover,
+.message-received:hover {
+    filter: brightness(0.95);
+    transition: filter 0.2s;
+}
+
+.message-sent {
+    background-color: #dcf8c6 !important;
+    margin-left: auto;
+    margin-right: 10px;
+    border-bottom-right-radius: 2px;
+}
+
+.message-received {
+    background-color: #ffffff !important;
+    margin-right: auto;
+    margin-left: 10px;
+    border-bottom-left-radius: 2px;
+}
+
+.message-body {
+    margin-bottom: 4px;
+    text-align: left;
+}
 
 .status-icon {
     position: absolute;
-    bottom: -15px; left: 2px; z-index: 10;
-    transition: transform 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    bottom: -20px;
+    left: 2px;
+    z-index: 10;
+    font-size: 1rem;
     cursor: pointer !important;
-    width: 24px; height: 24px;
 }
 
-.status-icon span { line-height: 24px; display: inline-block; }
-
 /* ==========================================================================
-   4. ANIMAÇÕES E UTILITÁRIOS
+   5. ANIMAÇÕES E UTILITÁRIOS
    ========================================================================== */
-@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
 
-.spinner-rotate { animation: rotate 1s linear infinite !important; display: inline-block !important; }
+    to {
+        transform: rotate(360deg);
+    }
+}
 
-#btn-emitir-pedido .spinner-rotate { margin-right: 8px; }
-.is-invalid { border: 1px solid #dc3545 !important; background-color: #fff8f8 !important; }
+.spinner-rotate {
+    animation: rotate 1s linear infinite !important;
+    display: inline-block !important;
+}
 
-#msg-input {
-    max-height: 100px;
-    overflow-y: auto;
-    resize: none;
+.is-invalid {
+    border: 1px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
 }
 
 /* ==========================================================================
-   5. REFINAMENTO DE MODAIS (Padrão RDO)
+   6. MODAIS (Padrão RDO)
    ========================================================================== */
 :root {
     --vermelho-rdo: #dc3545;
     --vermelho-suave: #f8d7da;
 }
 
-.swal2-title { color: var(--vermelho-rdo) !important; font-weight: 600 !important; }
-.swal2-confirm { background-color: var(--vermelho-rdo) !important; }
-.swal2-html-container .btn-outline-primary { color: var(--vermelho-rdo) !important; border-color: var(--vermelho-rdo) !important; }
-.swal2-html-container .btn-outline-primary:hover { background-color: var(--vermelho-suave) !important; color: var(--vermelho-rdo) !important; }
-.swal2-html-container .btn-info { background-color: var(--vermelho-suave) !important; border-color: #f5c6cb !important; color: var(--vermelho-rdo) !important; }
+.swal2-title {
+    color: var(--vermelho-rdo) !important;
+    font-weight: 600 !important;
+}
 
-#modalFormulario .modal-body label { font-weight: 400 !important; letter-spacing: 0.02em; }
+.swal2-confirm {
+    background-color: var(--vermelho-rdo) !important;
+}
 
+.swal2-html-container .btn-outline-primary {
+    color: var(--vermelho-rdo) !important;
+    border-color: var(--vermelho-rdo) !important;
+}
+
+.swal2-html-container .btn-outline-primary:hover {
+    background-color: var(--vermelho-suave) !important;
+    color: var(--vermelho-rdo) !important;
+}
+
+.swal2-html-container .btn-info {
+    background-color: var(--vermelho-suave) !important;
+    border-color: #f5c6cb !important;
+    color: var(--vermelho-rdo) !important;
+}
+
+#modalFormulario .modal-body label {
+    font-weight: 400 !important;
+    letter-spacing: 0.02em;
+}
