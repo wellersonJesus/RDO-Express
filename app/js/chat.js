@@ -548,14 +548,14 @@ window.formatarTelefone = function (tel) {
 
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
-    // Adicionado 'p-contato' na lista de obrigatórios
+    const errorMsg = document.getElementById('form-error-msg');
     const camposObrigatorios = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
     let ehValido = true;
 
     camposObrigatorios.forEach(id => {
         const el = document.getElementById(id);
         if (!el || !el.value.trim()) {
-            el.classList.add('is-invalid'); 
+            el.classList.add('is-invalid');
             ehValido = false;
         } else {
             el.classList.remove('is-invalid');
@@ -569,10 +569,26 @@ window.salvarPedidoAPI = async function () {
 
     try {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
+        const rotasLista = getVal('p-rotas').split('\n');
+        const rotasFormatadas = rotasLista.map((l, i) => `📍${i + 1}. ${l.trim()}`).join('\n');
         const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
         
-        // Formatação final conforme solicitado
-        const msgFormatada = `N.SERVIÇO: [ID_GERADO]\nSOLICITANTE: ${getVal('p-solicitante')} | CONTATO: ${getVal('p-contato')}\nHORÁRIO: ${getVal('p-horario')}\n-\nMERCADORIA: ${getVal('p-mercadoria')}\nTROCA/RETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n-\nROTA(s): \n${getVal('p-rotas').split('\n').map(l => `📍${l.trim()}`).join('\n')}\n-\nOBSERVAÇÃO: ${getVal('p-obs')}\n${valorFinal}`;
+        // Modelo de mensagem EXATO
+        const msgFormatada = `📦 SOLICITANTE: ${getVal('p-solicitante')}
+
+N.SERVIÇO: [ID_GERADO]
+SOLICITANTE: ${getVal('p-solicitante')} 
+CONTATO: ${getVal('p-contato')}
+HORÁRIO: ${getVal('p-horario')}
+-
+MERCADORIA: ${getVal('p-mercadoria')}
+RETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}
+-
+ROTA(s): 
+${rotasFormatadas}
+-
+OBSERVAÇÃO: ${getVal('p-obs')}
+${valorFinal}`;
 
         const payload = {
             action: 'finalizarpedido',
@@ -581,6 +597,7 @@ window.salvarPedidoAPI = async function () {
             contato: getVal('p-contato'),
             horario: getVal('p-horario'),
             mercadoria: getVal('p-mercadoria'),
+            retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
             rotas_texto: getVal('p-rotas'),
             valor_corrida: valorFinal,
             observacao: getVal('p-obs'),
@@ -588,16 +605,11 @@ window.salvarPedidoAPI = async function () {
         };
 
         const resp = await API.call('finalizarpedido', payload);
-        
         if (resp?.status === 'success') {
             window.enviarMensagemParaChat(msgFormatada.replace('[ID_GERADO]', resp.id), false, resp.id);
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
-        } else {
-            throw new Error(resp?.message || "Erro ao salvar no servidor.");
         }
-    } catch (err) {
-        console.error("Erro no salvamento:", err);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";

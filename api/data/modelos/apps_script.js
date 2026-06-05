@@ -113,29 +113,28 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
   data.id = generateId(sheetPedidos, "pedidos");
   
-  // Processamento de Rotas
+  // Processamento de Rotas para a aba Pedidos
   const linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
   data.de = linhasRota.map(l => l.split('|')[0] ? l.split('|')[0].replace(/De:/i, '').trim() : "").join(', ');
   data.para = linhasRota.map(l => l.split('|')[1] ? l.split('|')[1].replace(/Para:/i, '').trim() : "").join(', ');
 
-  // ABA PEDIDOS: Ordem exata das colunas
+  // ABA PEDIDOS: Ordem das colunas: id, id_chat, solicitante, contato, horario, mercadoria, de, para, retorno, prioridade, valor_corrida, observacao
   sheetPedidos.appendRow([
     data.id, data.id_chat, data.solicitante, data.contato, 
     data.horario, data.mercadoria, data.de, data.para, 
-    data.retorno, data.prioridade, data.valor_corrida, data.observacao
+    data.retorno, data.prioridade || "N/A", data.valor_corrida, data.observacao
   ]);
 
-  // ABA CHAT: Ordem exata (id, jid_numero, pedido_id, texto, hora, data, finalizado)
+  // ABA CHAT: Ordem: jid_numero, pedido_id, texto, hora, data, finalizado
   if (sheetChat) {
     const agora = new Date();
     sheetChat.appendRow([
-      "MSG" + new Date().getTime(), // id
-      data.id_chat,                 // jid_numero
-      data.id,                      // pedido_id
-      data.mensagem,                // texto (Mensagem formatada com valor)
-      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}), // hora
-      agora.toLocaleDateString('pt-BR'), // data
-      "TRUE"                        // finalizado
+      data.id_chat, 
+      data.id, 
+      data.mensagem, 
+      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+      agora.toLocaleDateString('pt-BR'),
+      "TRUE"
     ]);
   }
   return { status: "success", id: data.id };
