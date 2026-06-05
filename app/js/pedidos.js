@@ -19,8 +19,9 @@
         if (syncBtn) syncBtn.classList.add('loading-spin');
         
         try {
+            // Alterado de 'getmensagens_chat' para 'getchat' (ou apenas 'chat', ajuste conforme o endpoint esperado no seu backend)
             const [resChat, resPedidos] = await Promise.all([
-                API.call('getmensagens_chat'),
+                API.call('getchat'), 
                 API.call('getpedidos')
             ]);
             state.dadosChat = (resChat || []).filter(m => String(m.finalizado) === "true").reverse();
@@ -30,10 +31,12 @@
         finally { if (syncBtn) syncBtn.classList.remove('loading-spin'); }
     }
 
-    // Lógica Unificada de Salvamento (Edição ou Nova Criação)
+    // Lógica Unificada de Salvamento
     async function salvarPedido(payloadChat, payloadPedido, isNovo = false) {
         try {
-            await API.call('updatemensagens_chat', payloadChat);
+            // Alterado de 'updatemensagens_chat' para 'updatechat'
+            await API.call('updatechat', payloadChat);
+            
             if (isNovo) {
                 await API.call('addpedidos', payloadPedido);
             } else {
@@ -49,6 +52,5 @@
         }
     }
 
-    // Não esqueça de chamar o init() e fechar a IIFE
     init();
-})(); 
+})();
