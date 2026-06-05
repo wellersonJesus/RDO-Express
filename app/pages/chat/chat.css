@@ -231,6 +231,11 @@
    5. VISUAL ESTRUTURADO DE MENSAGENS CHAT (Ajuste Final - Ícone "Clean")
    ========================================================================== */
 
+.is-invalid {
+    border: 1px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
+
 /* Wrapper que mantém a posição relativa */
 .message-wrapper {
     position: relative;

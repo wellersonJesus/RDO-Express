@@ -573,60 +573,86 @@ window.formatarTelefone = function (tel) {
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
-    
-    if (!window.AppRDO?.clienteId) {
-        errorMsg.innerText = "Erro: Selecione um cliente primeiro.";
+    const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas'];
+
+    // Reset de validação visual
+    camposObrigatorios.forEach(id => document.getElementById(id)?.classList.remove('is-invalid-field'));
+    errorMsg.classList.add('d-none');
+
+    // 1. Validação de campos obrigatórios
+    let camposInvalidos = [];
+    camposObrigatorios.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()) {
+            el?.classList.add('is-invalid-field');
+            camposInvalidos.push(id);
+        }
+    });
+
+    if (camposInvalidos.length > 0) {
+        errorMsg.innerText = "Atenção: Preencha todos os campos obrigatórios.";
         errorMsg.classList.remove('d-none');
         return;
     }
 
-    const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+    if (!window.AppRDO?.clienteId) {
+        errorMsg.innerText = "Erro: Selecione um cliente no chat.";
+        errorMsg.classList.remove('d-none');
+        return;
+    }
 
-    // 1. Coleta todos os dados do formulário
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
+
     const d = {
         id_mensagens_chat: window.AppRDO.clienteId,
         solicitante: getVal('p-solicitante'),
         contato: getVal('p-contato'),
         horario: getVal('p-horario'),
         mercadoria: getVal('p-mercadoria'),
-        retorno: getVal('p-retorno'),
-        dinamica: getVal('p-dinamica'),
-        prioridade: getVal('p-prioridade'),
-        valor_corrida: getVal('view-valor-final'),
-        obs: getVal('p-obs')
+        rotas_texto: getVal('p-rotas'),
+        retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
+        obs: getVal('p-obs'),
+        valor: getVal('view-valor-final')
     };
 
-    // 2. Lógica de Separação DE / PARA
-    // Assume que a entrada no textarea p-rotas está como "De: X | Para: Y"
-    const rotasTexto = getVal('p-rotas');
-    
-    // Divide pela linha, depois separa pelo "|"
-    // O que estiver antes do "|" vai para 'de', o que estiver depois vai para 'para'
-    const partes = rotasTexto.split('|');
-    
-    // Limpa os termos: remove "De:" e "Para:" se existirem, e remove espaços extras
-    d.de = partes[0] ? partes[0].replace(/de:/gi, '').trim() : '';
-    d.para = partes[1] ? partes[1].replace(/para:/gi, '').trim() : '';
+    // Separação para o banco
+    const linhas = d.rotas_texto.split('\n');
+    d.de = linhas.map(l => l.split('|')[0]?.replace(/De:/gi, '').trim()).filter(x => x).join(' | ');
+    d.para = linhas.map(l => l.split('|')[1]?.replace(/Para:/gi, '').trim()).filter(x => x).join(' | ');
 
-    // 3. Validação
-    if (!d.solicitante || !d.de || !d.para || !d.mercadoria) {
-        errorMsg.innerText = "Preencha os campos obrigatórios (Solicitante, Rota e Mercadoria).";
-        errorMsg.classList.remove('d-none');
-        return;
-    }
+    // 2. Modelo de Mensagem Padronizado
+    const msgFormatada = `📦 ${window.AppRDO.clienteSelecionado || 'N/A'}
 
+N.SERVIÇO: [AGUARDANDO]
+.
+SOLICITANTE: ${d.solicitante}
+CONTATO: ${d.contato}
+MERCADORIA: ${d.mercadoria}
+.
+ROTA: 
+${d.rotas_texto.split('\n').map((l, i) => `      ${i+1}. (${l.trim()})`).join('\n')}
+HORÁRIO: ${d.horario}
+RETORNO: ${d.retorno}
+.
+OBSERVAÇÃO: ${d.obs}
+${d.valor}`;
+
+    // 3. Feedback visual (Ícone de Loop)
     btn.disabled = true;
-    btn.innerHTML = `Processando...`;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
 
     try {
         const resp = await API.call('finalizarpedido', d);
-        
         if (resp.status !== 'success') throw new Error(resp.message);
 
-        // Feedback no chat
-        const msgFormatada = `📦 PEDIDO #${resp.id}\nSOLICITANTE: ${d.solicitante}\nDE: ${d.de}\nPARA: ${d.para}\nVALOR: ${d.valor_corrida}`;
-        window.enviarMensagemParaChat(msgFormatada, false, resp.id);
+        // Envio para o chat
+        const msgFinal = msgFormatada.replace('[AGUARDANDO]', resp.id);
+        window.enviarMensagemParaChat(msgFinal, false, resp.id);
         
+        // Limpeza do input global
+        const msgInput = document.getElementById('msg-input');
+        if (msgInput) msgInput.value = ''; 
+
         bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
         window.limparBackdrops();
     } catch (err) {
