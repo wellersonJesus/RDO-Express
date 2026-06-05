@@ -112,32 +112,46 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
   
-  // 1. Gera o ID do pedido
+  // 1. Gera o ID
   data.id = generateId(sheetPedidos, "pedidos");
   
-  // 2. Salva na aba Pedidos (Dinâmico conforme cabeçalhos)
-  const headersPedidos = sheetPedidos.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
-  sheetPedidos.appendRow(headersPedidos.map(h => data[h] || ""));
+  // 2. Processamento robusto de rotas
+  const linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
+  const deList = [];
+  const paraList = [];
   
-  // 3. Salva na aba Chat (Dinâmico)
+  linhasRota.forEach(l => {
+    const partes = l.split('|');
+    if (partes.length >= 2) {
+      deList.push(partes[0].replace(/De:/i, '').trim());
+      paraList.push(partes[1].replace(/Para:/i, '').trim());
+    }
+  });
+  
+  data.de = deList.join(', ');
+  data.para = paraList.join(', ');
+
+  // 3. Salvar Pedidos (Corrigido: lista de argumentos explícita)
+  // Certifique-se de que esta lista segue a ordem das colunas da planilha!
+  sheetPedidos.appendRow([
+    data.id, data.id_chat, data.solicitante, data.contato, 
+    data.horario, data.mercadoria, data.de, data.para, 
+    data.retorno, data.prioridade, data.valor_corrida, data.observacao
+  ]);
+
+  // 4. Salvar Aba Chat (id_chat, pedido_id, hora, data, finalizado)
   if (sheetChat) {
-    const headersChat = sheetChat.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
-    
-    // Mapeamento dinâmico para garantir que os dados caiam na coluna certa
-    const row = headersChat.map(h => {
-      if (h === "id") return "MSG" + new Date().getTime();
-      if (h === "id_mensagens_chat") return data.id_mensagens_chat || "";
-      if (h === "id_pedido") return data.id; // Ajuste o nome da coluna conforme sua planilha
-      if (h === "texto" || h === "mensagem") return data.mensagem || data.mensagem_formatada || "";
-      if (h === "horadata") return new Date().toLocaleString('pt-BR');
-      if (h === "finalizado") return "TRUE";
-      return "";
-    });
-    
-    sheetChat.appendRow(row);
+    const agora = new Date();
+    sheetChat.appendRow([
+      data.id_chat, 
+      data.id, 
+      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+      agora.toLocaleDateString('pt-BR'),
+      "TRUE"
+    ]);
   }
   
-  return { status: "success", message: "Salvo com sucesso!", id: data.id };
+  return { status: "success", id: data.id };
 }
 
 function getSheetCaseInsensitive(ss, name) { return ss.getSheets().find(s => s.getName().toLowerCase().trim() === name.toLowerCase()); }

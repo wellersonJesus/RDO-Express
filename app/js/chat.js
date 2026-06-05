@@ -550,63 +550,72 @@ window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
     const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas'];
+    let ehValido = true;
 
-    camposObrigatorios.forEach(id => document.getElementById(id)?.classList.remove('is-invalid-field'));
-    errorMsg.classList.add('d-none');
+    camposObrigatorios.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()) {
+            el.classList.add('is-invalid'); // Borda vermelha via Bootstrap
+            ehValido = false;
+        } else {
+            el.classList.remove('is-invalid');
+        }
+    });
 
-    if (camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim())) {
-        errorMsg.innerText = "Atenção: Preencha todos os campos obrigatórios.";
-        errorMsg.classList.remove('d-none');
-        return;
-    }
-
-    if (!window.AppRDO?.clienteId) {
-        errorMsg.innerText = "Erro: Selecione um cliente no chat.";
-        errorMsg.classList.remove('d-none');
-        return;
-    }
-
-    const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
-
-    const linhasRota = getVal('p-rotas').split('\n').map((l, i) => `      ${i + 1}. (${l.trim()})`).join('\n');
-    const msgFormatada = `📦 ${window.AppRDO.clienteSelecionado || 'N/A'}\n\nN.SERVIÇO: [ID_GERADO]\n.\nSOLICITANTE: ${getVal('p-solicitante')}\nCONTATO: ${getVal('p-contato')}\nMERCADORIA: ${getVal('p-mercadoria')}\n.\nROTA: \n${linhasRota}\nHORÁRIO: ${getVal('p-horario')}\nRETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n.\nOBSERVAÇÃO: ${getVal('p-obs')}\n${getVal('view-valor-final')}`;
-
-    const d = {
-        id_mensagens_chat: String(window.AppRDO.clienteId),
-        solicitante: getVal('p-solicitante'),
-        contato: getVal('p-contato'),
-        horario: getVal('p-horario'),
-        mercadoria: getVal('p-mercadoria'),
-        rotas_texto: getVal('p-rotas'),
-        retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
-        obs: getVal('p-obs'),
-        valor_corrida: getVal('view-valor-final'),
-        mensagem: msgFormatada
-    };
+    if (!ehValido) return; // Removemos a exibição da mensagem de erro de texto
 
     btn.disabled = true;
-    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...`;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Emitindo...`; // Ícone de loading padrão
 
     try {
-        // Envia o objeto puro. A API.call deve converter para JSON internamente.
-        const resp = await API.call('finalizarpedido', d);
+        const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
+        const rotasRaw = getVal('p-rotas');
         
-        if (resp && resp.status === 'success') {
-            const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id || 'N/A');
-            window.enviarMensagemParaChat(msgFinal, false, resp.id);
-            
-            if(document.getElementById('msg-input')) document.getElementById('msg-input').value = '';
+        const payload = {
+            id_chat: String(window.AppRDO.clienteId),
+            solicitante: getVal('p-solicitante'),
+            contato: getVal('p-contato'),
+            horario: getVal('p-horario'),
+            mercadoria: getVal('p-mercadoria'),
+            rotas_texto: rotasRaw, // Enviamos tudo para o backend processar
+            mensagem: `📦 NOME: ${window.AppRDO.clienteSelecionado}\n...`, // Seu formato completo
+            valor_corrida: document.getElementById('view-valor-final').innerText
+        };
+
+        const resp = await API.call('finalizarpedido', payload);
+        if (resp?.status === 'success') {
+            window.enviarMensagemParaChat(payload.mensagem, false, resp.id);
+            // Limpeza
+            document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
-            window.limparBackdrops();
-        } else {
-            throw new Error(resp?.message || "Erro desconhecido ao salvar.");
         }
-    } catch (err) {
-        errorMsg.innerText = "Erro ao salvar: " + err.message;
-        errorMsg.classList.remove('d-none');
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
+    }
+};
+
+window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
+    window.AppRDO.clienteSelecionado = nome;
+    window.AppRDO.clienteId = id;
+    document.getElementById('chat-header-name').innerText = nome;
+    
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = '<div class="text-center text-muted">Carregando histórico...</div>';
+
+    try {
+        const todosPedidos = await API.call('getpedidos');
+        // Filtro rigoroso: garante que só carregue o que pertence a este ID de cliente
+        const historico = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => 
+            String(p.id_mensagens_chat) === String(id)
+        );
+
+        container.innerHTML = ''; 
+        historico.forEach(pedido => {
+            window.enviarMensagemParaChat(pedido.mensagem || "Pedido vazio", false, pedido.id);
+        });
+    } catch (e) {
+        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar histórico.</div>';
     }
 };
 

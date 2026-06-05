@@ -143,6 +143,10 @@
 /* ==========================================================================
    5. VISUAL ESTRUTURADO DE MENSAGENS CHAT (Refinado e Estável)
    ========================================================================== */
+#chat-messages-container .message-body {
+    white-space: pre-wrap; /* Força o navegador a respeitar as quebras de linha */
+    word-break: break-word;
+}
 
 .message-wrapper {
     position: relative;
