@@ -574,86 +574,67 @@ window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const errorMsg = document.getElementById('form-error-msg');
     
-    // 1. BLINDAGEM: Verifica se o cliente foi selecionado antes de qualquer processamento
     if (!window.AppRDO?.clienteId) {
-        if (errorMsg) {
-            errorMsg.innerText = "Erro: Nenhum cliente selecionado no chat. Selecione um contato primeiro.";
-            errorMsg.classList.remove('d-none');
-        }
-        // Se houver modal de atenção, abre ele para alertar o atendente
-        const modalAtencao = document.getElementById('modalAtencao');
-        if (modalAtencao) new bootstrap.Modal(modalAtencao).show();
+        errorMsg.innerText = "Erro: Selecione um cliente primeiro.";
+        errorMsg.classList.remove('d-none');
         return;
     }
 
-    // 2. Validação de campos obrigatórios
-    const camposObrigatorios = ['p-solicitante', 'p-distancia', 'p-rotas', 'p-valor-km', 'p-mercadoria'];
-    const camposInvalidos = camposObrigatorios.some(id => !document.getElementById(id)?.value?.trim());
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+
+    // 1. Coleta todos os dados do formulário
+    const d = {
+        id_mensagens_chat: window.AppRDO.clienteId,
+        solicitante: getVal('p-solicitante'),
+        contato: getVal('p-contato'),
+        horario: getVal('p-horario'),
+        mercadoria: getVal('p-mercadoria'),
+        retorno: getVal('p-retorno'),
+        dinamica: getVal('p-dinamica'),
+        prioridade: getVal('p-prioridade'),
+        valor_corrida: getVal('view-valor-final'),
+        obs: getVal('p-obs')
+    };
+
+    // 2. Lógica de Separação DE / PARA
+    // Assume que a entrada no textarea p-rotas está como "De: X | Para: Y"
+    const rotasTexto = getVal('p-rotas');
     
-    if (camposInvalidos) {
-        if (errorMsg) {
-            errorMsg.innerText = "Atenção: Preencha todos os campos obrigatórios (incluindo Mercadoria).";
-            errorMsg.classList.remove('d-none');
-        }
+    // Divide pela linha, depois separa pelo "|"
+    // O que estiver antes do "|" vai para 'de', o que estiver depois vai para 'para'
+    const partes = rotasTexto.split('|');
+    
+    // Limpa os termos: remove "De:" e "Para:" se existirem, e remove espaços extras
+    d.de = partes[0] ? partes[0].replace(/de:/gi, '').trim() : '';
+    d.para = partes[1] ? partes[1].replace(/para:/gi, '').trim() : '';
+
+    // 3. Validação
+    if (!d.solicitante || !d.de || !d.para || !d.mercadoria) {
+        errorMsg.innerText = "Preencha os campos obrigatórios (Solicitante, Rota e Mercadoria).";
+        errorMsg.classList.remove('d-none');
         return;
     }
 
-    // 3. Feedback visual de carregamento
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate"></i> Processando...`;
-    }
+    btn.disabled = true;
+    btn.innerHTML = `Processando...`;
 
     try {
-        const nomeCliente = window.AppRDO?.clienteSelecionado || 'N/A';
+        const resp = await API.call('finalizarpedido', d);
         
-        // Coleta de dados garantida
-        const d = {
-            solicitante: document.getElementById('p-solicitante').value.trim(),
-            contato: document.getElementById('p-contato').value.trim(),
-            horario: document.getElementById('p-horario').value.trim(),
-            mercadoria: document.getElementById('p-mercadoria').value.trim(),
-            rotas: document.getElementById('p-rotas').value.trim(),
-            retorno: document.getElementById('p-retorno').value || 'Não',
-            obs: document.getElementById('p-obs').value.trim(),
-            valor: document.getElementById('view-valor-final').innerText.trim(),
-            id_mensagens_chat: window.AppRDO.clienteId
-        };
+        if (resp.status !== 'success') throw new Error(resp.message);
 
-        // Montagem da mensagem formatada
-        const rotasFormatadas = d.rotas.split('\n').map(l => l.trim() ? `📍${l.trim()}` : '').join('\n');
-        const msgFormatada = `📦 NOME: ${nomeCliente}\n\nN.SERVIÇO: [AGUARDANDO]\nSOLICITANTE: ${d.solicitante} | CONTATO: ${d.contato}\nHORÁRIO: ${d.horario}\n-\nMERCADORIA: ${d.mercadoria}\nTROCA/RETORNO: ${d.retorno}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${d.obs}\n${d.valor}`;
-
-        // Chamada de API com tratamento de resultado
-        const resp = await API.call('finalizarpedido', { ...d, mensagem_formatada: msgFormatada });
+        // Feedback no chat
+        const msgFormatada = `📦 PEDIDO #${resp.id}\nSOLICITANTE: ${d.solicitante}\nDE: ${d.de}\nPARA: ${d.para}\nVALOR: ${d.valor_corrida}`;
+        window.enviarMensagemParaChat(msgFormatada, false, resp.id);
         
-        if (!resp || resp.status !== 'success') {
-            throw new Error(resp?.message || "Erro inesperado ao comunicar com o servidor.");
-        }
-
-        // Sucesso: Atualiza o chat localmente
-        window.enviarMensagemParaChat(msgFormatada.replace('[AGUARDANDO]', resp.id), false, resp.id);
-        
-        // Limpeza de UI pós-sucesso
-        const inputMsg = document.getElementById('msg-input');
-        if (inputMsg) inputMsg.value = '';
-        
-        const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
-        if (modalForm) modalForm.hide();
-        
-        if (typeof window.limparBackdrops === 'function') window.limparBackdrops();
-
+        bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+        window.limparBackdrops();
     } catch (err) {
-        console.error("Erro no fluxo de salvar pedido:", err);
-        if (errorMsg) {
-            errorMsg.innerText = "Erro ao salvar: " + err.message;
-            errorMsg.classList.remove('d-none');
-        }
+        errorMsg.innerText = "Erro ao salvar: " + err.message;
+        errorMsg.classList.remove('d-none');
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = "Emitir Pedido";
-        }
+        btn.disabled = false;
+        btn.innerHTML = "EMITIR PEDIDO";
     }
 };
 

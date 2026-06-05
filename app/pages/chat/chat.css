@@ -201,6 +201,11 @@
     margin-right: 8px;
 }
 
+#modalFormulario .modal-body label {
+    font-weight: 400 !important; /* Regular, bem clean */
+    letter-spacing: 0.02em;      /* Pequeno espaçamento para leitura */
+}
+
 /* ==========================================================================
    4. ANIMAÇÕES E EFEITOS (RESTAURADOS)
    ========================================================================== */
