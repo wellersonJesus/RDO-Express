@@ -708,51 +708,54 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     const container = document.getElementById('chat-messages-container');
     const idLimpo = String(id).replace(/\D/g, '');
     
-    // Atualiza cabeçalho
+    // Atualiza nome no cabeçalho imediatamente
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
         nameEl.className = 'text-dark fw-bold';
     }
 
-    // Feedback visual de "Buscando..." com o spinner
+    // ESTADO 1: BUSCANDO - Usa o ícone de Loop Cinza
     container.innerHTML = `
-        <div class="text-center p-4">
-            <div class="spinner-rotate" style="font-size: 2rem; color: #dc3545;">🔄</div>
-            <div class="mt-2 text-muted">Buscando mensagens do chat...</div>
+        <div class="chat-status-container">
+            <span class="icon-sync-gray">⟳</span>
+            <div style="font-size: 0.85rem; margin-top: 2px;">Buscando mensagens...</div>
         </div>
     `;
 
     try {
         const todasMensagens = await API.call('getchat');
-        
-        // Verifica se a API retornou algo válido
-        if (!todasMensagens) throw new Error("A API não retornou dados.");
+        if (!todasMensagens) throw new Error("Falha ao obter dados");
 
         const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => {
             return String(m.jid_numero || "").trim() === idLimpo;
         });
 
-        // Limpa o spinner após a busca
-        container.innerHTML = '';
+        // Limpa o estado de busca antes de renderizar as mensagens
+        container.innerHTML = ''; 
 
         if (historico.length === 0) {
-            container.innerHTML = `<div class="text-center p-3 text-muted">Nenhum histórico encontrado para este contato.</div>`;
+            // ESTADO 2: VAZIO - Usa o Balão Transparente
+            container.innerHTML = `
+                <div class="chat-status-container">
+                    <div class="icon-bubble-transparent">💬</div>
+                    <div style="font-size: 0.85rem; margin-top: 2px;">Nenhum histórico encontrado para este contato.</div>
+                </div>
+            `;
         } else {
+            // Renderiza o histórico encontrado
             historico.forEach(msg => {
-                // Passa o texto e o pedido_id
                 window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
             });
         }
     } catch (e) {
         console.error("[ERRO ABRIR CONVERSA]:", e);
-        // Exibe o erro na tela para você saber exatamente o que aconteceu
+        // ESTADO 3: ERRO
         container.innerHTML = `
-            <div class="alert alert-danger m-3">
-                <strong>Erro ao carregar mensagens:</strong><br>
-                ${e.message}
-                <br><br>
-                <button class="btn btn-sm btn-outline-danger" onclick="abrirConversa('${id}', '${nome}')">Tentar Novamente</button>
+            <div class="chat-status-container text-danger">
+                <div style="font-size: 1.5rem;">⚠️</div>
+                <div style="font-size: 0.85rem; margin-top: 2px;">Erro ao carregar histórico.</div>
+                <button class="btn btn-sm btn-outline-danger mt-2" onclick="abrirConversa('${id}', '${nome}')">Tentar Novamente</button>
             </div>
         `;
     }
@@ -761,35 +764,33 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     try {
         const container = document.getElementById('chat-messages-container');
-        if (!container) return;
-
         const dataId = pedidoId ? String(pedidoId).replace(/\D/g, '') : 'new-' + Date.now();
-        if (document.querySelector(`[data-pedido-id="${dataId}"]`)) return;
-
-        // Limpeza e formatação
-        let textoFinal = (texto || "").toString().replace(/\[ID_GERADO\]/g, pedidoId || "N/A");
-        let textoFormatado = textoFinal.replace(/\n/g, '<br>');
 
         const div = document.createElement('div');
         div.className = 'message-wrapper';
 
+        // O clique na div principal dispara o modal de edição
         div.innerHTML = `
-            <div class="${isRecebida ? 'message-received' : 'message-sent'}" data-pedido-id="${dataId}">
-                <div class="message-body">
-                    ${textoFormatado}
-                </div>
+            <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
+                 data-pedido-id="${dataId}" 
+                 onclick="window.abrirModalEdicao('${dataId}')" 
+                 style="cursor: pointer;">
+                
+                <div class="message-body">${texto.replace(/\n/g, '<br>')}</div>
+                
                 ${!isRecebida ? `
-                    <div class="status-icon">
-                        <span>✅</span>
+                    <div class="status-icon" 
+                         title="Status do Pedido / Motoboy" 
+                         onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')">
+                        ✔
                     </div>
                 ` : ''}
             </div>
         `;
 
         container.appendChild(div);
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } catch (err) {
-        console.error("[ERRO NA RENDERIZAÇÃO]:", err);
+        console.error("Erro na renderização:", err);
     }
 };
 
