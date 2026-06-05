@@ -1,4 +1,10 @@
-window.AppRDO = window.AppRDO || { debounceTimer: null, listaCarregada: false, observerIniciado: false };
+window.AppRDO = window.AppRDO || { 
+    debounceTimer: null, 
+    listaCarregada: false, 
+    observerIniciado: false,
+    isFetching: false // Nova trava de segurança
+};
+
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 window.filtrarContatos = function () {
@@ -38,106 +44,153 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('input', (e) => {
-    if (e.target && e.target.id === 'chat-search') window.filtrarContatos();
+    // 1. Input de Telefone (p-contato)
+    if (e.target && e.target.id === 'p-contato') {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length > 11) val = val.substring(0, 11);
+        e.target.value = typeof window.formatarTelefone === 'function' ? window.formatarTelefone(val) : val;
+    }
+
+    // 2. Filtro de busca de contatos
+    if (e.target && e.target.id === 'chat-search') {
+        window.filtrarContatos();
+    }
 });
 
 document.addEventListener('change', (e) => {
+    // 3. Cálculo de formulário (agora com segurança de escopo)
     if (e.target && e.target.closest('#modalFormulario')) {
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
+        if (typeof window.calcularTudo === 'function') {
+            window.calcularTudo();
+        }
     }
 });
 
 document.addEventListener('click', (e) => {
-    // Verifica se clicou no ícone de sincronizar ou no pai dele
+    // 4. Ícone de Sincronização (Botão de Loop/Sincronizar)
+    // O .closest garante que, mesmo clicando no ícone dentro do botão, ele capture o clique.
     if (e.target.closest('#sync-icon-chat')) {
         console.log("Sincronização manual iniciada...");
-        window.carregarDados();
+        
+        // Verificação de segurança: Só sincroniza se não estiver processando
+        if (window.AppRDO && !window.AppRDO.isFetching) {
+            window.carregarDados();
+        } else {
+            console.warn("Sincronização já em curso ou sistema indisponível.");
+        }
     }
 });
 
 window.carregarDados = async function () {
+    // 1. Definição de elementos e estado
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
+    // Se o elemento não existir, aborta para não gerar erro de null
     if (!listEl) return;
+
+    // 2. Trava de segurança contra chamadas simultâneas (evita 502 por sobrecarga)
+    if (window.AppRDO.isFetching) {
+        console.warn("Sincronização já em andamento. Ignorando chamada.");
+        return;
+    }
+
+    window.AppRDO.isFetching = true; // Ativa a trava
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
-    listEl.style.opacity = "0.5";
 
     try {
-        const clientes = await API.call('getclientes') || [];
+        // 3. Chamada à API com tratamento de timeout/erro
+        const clientes = await API.call('getclientes');
+
+        // Validação de segurança: se a API retornar algo diferente de array, força array vazio
+        const listaClientes = Array.isArray(clientes) ? clientes : [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        listEl.innerHTML = clientes.length > 0 ? clientes.map(cliente => {
-            const id = cliente.id || '';
-            const nome = (cliente.nome || cliente.username || 'Sem nome').replace(/'/g, "\\'");
-            const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-            const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
-            const statusColor = isOnline ? '#28a745' : '#adb5bd';
+        // 4. Renderização limpa
+        if (listaClientes.length === 0) {
+            listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
+        } else {
+            listEl.innerHTML = listaClientes.map(cliente => {
+                const id = cliente.id || '';
+                const nome = (cliente.nome || cliente.username || 'Sem nome');
+                const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
+                const statusColor = isOnline ? '#28a745' : '#adb5bd';
 
-            // A MUDANÇA ESTÁ AQUI NO ONCLICK (passamos o isOnline agora):
-            return `
-                <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
-                     onclick="window.abrirConversa('${id}', '${nome}', '${imagem}', ${isOnline})">
-                    <div class="position-relative">
-                        <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
-                        <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
-                              style="width:10px; height:10px; background-color: ${statusColor};"></span>
+                return `
+                    <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
+                         id="item-contato-${id}"
+                         onclick="window.abrirConversa('${id}', '${nome}')">
+                        <div class="position-relative">
+                            <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
+                            <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
+                                  style="width:10px; height:10px; background-color: ${statusColor};"></span>
+                        </div>
+                        <div class="ms-3 overflow-hidden">
+                            <div class="contact-name">${nome}</div>
+                            <div class="small text-muted">${isOnline ? 'Online' : 'Offline'}</div>
+                        </div>
                     </div>
-                    <div class="ms-3 overflow-hidden">
-                        <div class="contact-name">${nome}</div>
-                        <div class="small text-muted">${isOnline ? 'Online' : 'Offline'}</div>
-                    </div>
-                </div>
-            `;
-        }).join('') : '<div class="p-3 text-center text-muted">Nenhum contato encontrado.</div>';
+                `;
+            }).join('');
+        }
+        
+        window.AppRDO.listaCarregada = true; // Marca como concluído
 
-        window.AppRDO.listaCarregada = true;
     } catch (e) {
-        console.error("Erro ao sincronizar:", e);
+        console.error("Erro crítico na sincronização:", e);
+        // Feedback visual de erro caso o servidor falhe (502)
+        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos. Tente novamente.</div>`;
     } finally {
+        // 5. Garantia de limpeza (Release da trava)
+        window.AppRDO.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
-        listEl.style.opacity = "1";
     }
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    const statusOnline = isOnline === true || String(isOnline).toUpperCase() === 'TRUE';
+    console.log(`[DEBUG] Abrindo conversa com: ${nome} | ID: ${id} | Status bruto: ${isOnline}`);
+
+    // 1. Lógica robusta de status
+    const statusOnline = (isOnline === true || String(isOnline).toUpperCase() === 'TRUE');
+
+    // 2. BLOQUEIO SE OFFLINE
     if (!statusOnline) {
+        console.warn(`[Bloqueio] Cliente ${nome} está offline.`);
         const msgEl = document.getElementById('modal-atencao-mensagem');
-        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline.`;
-        new bootstrap.Modal(document.getElementById('modalAtencao')).show();
-        return;
+        const modalEl = document.getElementById('modalAtencao');
+        
+        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline no momento.`;
+        if (modalEl) new bootstrap.Modal(modalEl).show();
+        
+        return; // Interrompe tudo
     }
 
+    // 3. FLUXO ONLINE: Se chegou aqui, o cliente está online
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
     
+    // Atualiza o Cabeçalho
     const nameEl = document.getElementById('chat-header-name');
-    if (nameEl) nameEl.innerText = nome;
+    if (nameEl) {
+        nameEl.innerText = nome;
+        nameEl.classList.add('text-dark', 'fw-bold');
+    }
 
-    const container = document.getElementById('chat-messages-container');
-    container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-arrow-repeat spinner-rotate"></i> Carregando...</div>';
+    // Reset visual da lista
+    document.querySelectorAll('.contact-item-clean').forEach(el => el.classList.remove('active-contact'));
+    const itemAtivo = document.getElementById(`item-contato-${id}`);
+    if (itemAtivo) itemAtivo.classList.add('active-contact');
 
-    try {
-        const todosPedidos = await API.call('getpedidos');
-        const pedidosDoCliente = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => String(p.id_mensagens_chat) === String(id));
-
-        container.innerHTML = ''; 
-
-        pedidosDoCliente.forEach(pedido => {
-            let texto = pedido.mensagem || '';
-            
-            // CORREÇÃO: Se o texto estiver sem quebras de linha (colado), tenta restaurar
-            // Isso acontece se o banco gravou mal o dado
-            if (texto.length > 20 && !texto.includes('\n')) {
-                texto = texto.replace(/SOLICITANTE:|CONTATO:|MERCADORIA:|ROTA:|HORÁRIO:|RETORNO:|OBSERVAÇÃO:/gi, (match) => `\n${match}`);
-            }
-
-            window.enviarMensagemParaChat(texto || "Pedido sem detalhes.", false, pedido.id);
-        });
-    } catch (e) {
-        console.error("Erro ao carregar histórico:", e);
-        container.innerHTML = '<div class="text-center text-danger">Erro ao carregar histórico.</div>';
+    // 4. AÇÃO AUTOMÁTICA: Abrir fluxo do Mapa/Pedido
+    // Em vez de carregar histórico de mensagens, chamamos sua função de checkout
+    console.log("Status ONLINE validado. Abrindo fluxo de checkout...");
+    
+    // Isso deve disparar o modal do mapa automaticamente
+    if (typeof window.iniciarFluxoCheckout === 'function') {
+        window.iniciarFluxoCheckout();
+    } else {
+        console.error("Função iniciarFluxoCheckout não encontrada.");
     }
 };
 
@@ -252,7 +305,7 @@ window.renderizarFooterResumo = function (el) {
     `;
 };
 
-window.analisarMensagemEntrada = function(texto) {
+window.analisarMensagemEntrada = function (texto) {
     // Expressões regulares flexíveis para encontrar os dados
     const regexSolicitante = /SOLICITANTE:\s*(.*)/i;
     const regexKM = /(?:KM|DISTÂNCIA):\s*(\d+)/i;
@@ -266,7 +319,7 @@ window.analisarMensagemEntrada = function(texto) {
     if (solicitante && km && rota) {
         return { solicitante, km, rota, valido: true };
     }
-    
+
     return { valido: false };
 };
 
@@ -434,7 +487,7 @@ window.preencherDadosFormulario = function () {
             // Busca o padrão: (DDD) 9XXXX-XXXX ou apenas números
             const regexTel = /(?:\(?\d{2}\)?\s?)?\d{4,5}[-\s]?\d{4}/;
             const matchTel = texto.match(regexTel);
-            
+
             if (matchTel) {
                 // Limpa o que foi capturado, deixando apenas números
                 let numLimpo = matchTel[0].replace(/\D/g, '');
@@ -557,7 +610,7 @@ window.voltarParaMapa = async function () {
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     let val = String(tel).replace(/\D/g, ''); // Remove tudo que não é número
-    
+
     // Fixo com 8 dígitos (XXXX-XXXX)
     if (val.length === 8) {
         return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
@@ -596,7 +649,7 @@ window.salvarPedidoAPI = async function () {
     try {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
         const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
-        
+
         const rotasRaw = getVal('p-rotas').split('\n');
         const rotasFormatadas = rotasRaw.map((l, i) => {
             const partes = l.split('|');
@@ -632,12 +685,12 @@ ${valorFinal}`;
         };
 
         const resp = await API.call('finalizarpedido', payload);
-        
+
         if (resp?.status === 'success') {
             const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id);
             // IMPORTANTE: Ao enviar para o chat, garantimos que o pedidoId esteja presente
             window.enviarMensagemParaChat(msgFinal, false, resp.id);
-            
+
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
         } else {
@@ -651,115 +704,137 @@ ${valorFinal}`;
     }
 };
 
-window.abrirConversa = async function (id, nome) {
-    console.log("--- INICIANDO ABERTURA DE CONVERSA ---");
-    console.log("ID solicitado:", id);
-    
+window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
+    // 1. Preparação Inicial: Limpa o cabeçalho e seleciona o cliente
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
-    
+
+    const nameEl = document.getElementById('chat-header-name');
+    if (nameEl) {
+        nameEl.innerText = nome;
+        nameEl.className = 'text-dark fw-bold';
+    }
+
+    // 2. Feedback Visual Imediato: Ícone centralizado de carregamento
     const container = document.getElementById('chat-messages-container');
-    
+    container.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
+            <div class="text-center text-muted">
+                <i class="bi bi-arrow-repeat spinner-rotate" style="font-size: 2rem;"></i>
+                <p>Buscando mensagens...</p>
+            </div>
+        </div>
+    `;
+
+    // 3. Destaca o item na lista
+    document.querySelectorAll('.contact-item-clean').forEach(el => el.classList.remove('active-contact'));
+    const itemAtivo = document.getElementById(`item-contato-${id}`);
+    if (itemAtivo) itemAtivo.classList.add('active-contact');
+
+    // 4. Busca o histórico no banco
     try {
         const todasMensagens = await API.call('getchat');
-        console.log("Dados brutos do chat (API):", todasMensagens);
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
+            String(m.jid_numero || "").trim().endsWith(String(id).trim())
+        );
 
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => {
-            // O teste de ferro: Comparar o final da string (caso o banco tenha 10003 e o id seja 3)
-            const idBanco = String(m.jid_numero || "").trim();
-            const idAlvo = String(id).trim();
-            const match = idBanco.endsWith(idAlvo);
-            return match;
-        });
-
-        console.log("Histórico filtrado:", historico);
+        // 5. Exibição Final
+        container.innerHTML = ''; // Limpa o ícone de carregamento
 
         if (historico.length === 0) {
-            container.innerHTML = `<div class="text-center">Nenhum histórico encontrado para o ID ${id}.</div>`;
+            // Caso não exista histórico
+            container.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
+                    <div class="text-center text-muted p-3">
+                        <i class="bi bi-chat-dots" style="font-size: 2rem;"></i>
+                        <p>Nenhuma mensagem histórica com <strong>${nome}</strong>.</p>
+                    </div>
+                </div>
+            `;
         } else {
-            container.innerHTML = '';
+            // Exibe o histórico encontrado
             historico.forEach(msg => {
                 window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
             });
         }
     } catch (e) {
-        console.error("Erro na busca:", e);
+        console.error("Erro ao buscar histórico:", e);
+        container.innerHTML = `
+            <div class="text-center p-3 text-danger">
+                <i class="bi bi-exclamation-triangle"></i> Erro ao carregar histórico. Tente novamente.
+            </div>
+        `;
     }
 };
 
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     const container = document.getElementById('chat-messages-container');
+    
+    // 1. Evitar duplicidade: Verifica se este pedido específico já está na tela antes de adicionar
+    if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
+        return; 
+    }
+
     const div = document.createElement('div');
     div.className = 'message-wrapper';
-    const msgId = 'msg-' + Date.now();
+    const msgId = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
-    // Note o atributo data-pedido-id="${pedidoId}"
+    // 2. Formatação do texto: Substitui quebras de linha por <br> para manter a legibilidade
+    const textoFormatado = (texto || "").replace(/\n/g, '<br>');
+
     div.innerHTML = `
         <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
              id="${msgId}" 
              data-pedido-id="${pedidoId}" 
              onclick="window.abrirModalStatus('${msgId}')"
-             style="cursor: pointer;">
-            <div class="message-body">${texto}</div>
+             style="cursor: pointer; position: relative;">
+            <div class="message-body">${textoFormatado}</div>
+            
             ${!isRecebida ? `
-                <div class="status-icon" id="status-${msgId}" title="Clique para alterar status">
-                    <span style="font-size: 24px;">⏳</span>
+                <div class="status-icon" id="status-${msgId}" title="Clique para alterar status" style="text-align: right; margin-top: 5px;">
+                    <span style="font-size: 16px;">${pedidoId ? '✅' : '⏳'}</span>
                 </div>
             ` : ''}
         </div>
     `;
 
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    
+    // 3. Scroll suave para a última mensagem
+    container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+    });
 };
 
 window.enviarMensagemGeral = async function () {
     const input = document.getElementById('msg-input');
     const texto = input?.value?.trim();
-    const btnEnviar = document.getElementById('btn-enviar-mensagem'); // Ajuste o ID conforme seu HTML
 
-    // 1. trava de segurança: Cliente obrigatório
+    // 1. Validação de Cliente
     if (!window.AppRDO?.clienteId) {
-        const msgEl = document.getElementById('modal-atencao-mensagem');
-        if (msgEl) {
-            msgEl.innerText = "Você precisa selecionar um cliente na lista à esquerda antes de enviar uma mensagem.";
-        }
-        const modalAtencao = new bootstrap.Modal(document.getElementById('modalAtencao'));
-        modalAtencao.show();
+        window.exibirModalAviso("Selecione um cliente antes de enviar.");
         return;
     }
 
-    // 2. Validação básica
-    if (!texto) return;
-
-    if (btnEnviar) btnEnviar.disabled = true;
-
-    try {
-        // 3. Envio para o Backend
-        const resp = await API.call('sendmessage', {
-            id_chat: window.AppRDO.clienteId,
-            mensagem: texto
-        });
-
-        if (resp.status !== 'success') {
-            throw new Error(resp.message || "Erro ao enviar mensagem.");
-        }
-
-        // 4. Sucesso: Usa sua função original de renderização
-        // Passamos 'false' para isRecebida (mensagem enviada pelo atendente)
-        window.enviarMensagemParaChat(texto, false, "");
-
-        // 5. Limpeza
-        if (input) input.value = '';
-
-    } catch (err) {
-        console.error("Erro no envio:", err);
-        const msgEl = document.getElementById('modal-atencao-mensagem');
-        if (msgEl) msgEl.innerText = "Erro: " + err.message;
-        new bootstrap.Modal(document.getElementById('modalAtencao')).show();
-    } finally {
-        if (btnEnviar) btnEnviar.disabled = false;
+    // 2. Validação de Conteúdo (A mensagem de pedido)
+    if (!texto) {
+        window.exibirModalAviso("Por favor, digite a mensagem do pedido.");
+        return;
     }
+
+    // 3. Validação de Status (Se cliente estiver offline, bloqueia o envio)
+    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+    if (!isMasterOn) {
+        window.exibirModalAviso("Sistema offline. Não é possível enviar mensagens.");
+        return;
+    }
+
+    // 4. AÇÃO: Disparar fluxo de checkout apenas no envio
+    console.log("Validando pedido para o cliente:", window.AppRDO.clienteSelecionado);
+    
+    // Agora o modal só abre aqui, no clique do "aviãozinho"
+    await window.iniciarFluxoCheckout(); 
 };
 
 function limparBackdrops() {

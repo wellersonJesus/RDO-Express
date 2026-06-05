@@ -1,7 +1,6 @@
 /* ==========================================================================
-   1. ESTRUTURA DE CONTATOS E CHAT
+   1. CONTATOS
    ========================================================================== */
-
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
     transition: all 0.2s ease;
@@ -11,8 +10,26 @@
     border-bottom: 1px solid #f8f9fa;
 }
 
-#lista-contatos-chat .contact-item-clean:hover {
-    background-color: #f1f3f5;
+.contact-item-clean:hover { 
+    background-color: #fee2e2 !important; 
+    transition: background-color 0.2s;
+}
+
+.contact-item-clean.active-contact {
+    background-color: #ffeef0 !important;
+    border-left: 4px solid #dc3545 !important;
+}
+
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spinner-rotate { animation: rotate 1s linear infinite !important; }
+
+#lista-contatos-chat .contact-item-clean:hover { 
+    background-color: #fee2e2 !important; 
+}
+
+#lista-contatos-chat .contact-item-clean.active-chat {
+    background-color: #ffeef0 !important;
+    border-left: 4px solid #dc3545 !important;
 }
 
 #lista-contatos-chat .contact-item-clean.offline {
@@ -21,28 +38,16 @@
     background-color: #f8f9fa;
 }
 
-#lista-contatos-chat .contact-item-clean.offline:hover {
-    background-color: #f8f9fa !important;
-}
+#lista-contatos-chat .contact-item-clean.offline:hover { background-color: #f8f9fa !important; }
 
 #lista-contatos-chat .selected-contact {
     background-color: #ffeef0 !important;
     border-left: 4px solid #dc3545 !important;
 }
 
-.contact-name { 
-    font-weight: 500 !important; 
-    font-size: 0.95rem !important;
-    color: #333;
-    letter-spacing: -0.2px;
-}
-
+.contact-name { font-weight: 500 !important; font-size: 0.95rem !important; color: #333; letter-spacing: -0.2px; }
 .small.text-muted { font-size: 0.75rem; }
-
-#chat-header-name {
-    font-weight: 600 !important;
-    color: #2c3e50 !important;
-}
+#chat-header-name { font-weight: 600 !important; color: #2c3e50 !important; }
 
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
@@ -51,13 +56,9 @@
 }
 
 /* ==========================================================================
-   2. MAPA E RENDERIZAÇÃO GEOGRÁFICA
+   2. MAPA E ERROS
    ========================================================================== */
-
-#container-mapa-visual, #mapa-container {
-    width: 100% !important;
-    height: 350px !important;
-}
+#container-mapa-visual, #mapa-container { width: 100% !important; height: 350px !important; }
 
 #container-mapa-visual {
     display: block !important;
@@ -68,10 +69,7 @@
     z-index: 1;
 }
 
-.leaflet-container {
-    width: 100% !important;
-    height: 100% !important;
-}
+.leaflet-container { width: 100% !important; height: 100% !important; }
 
 .leaflet-tooltip {
     background: rgba(0, 0, 0, 0.8) !important;
@@ -82,16 +80,6 @@
     border-radius: 4px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-
-.custom-div-icon {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* ==========================================================================
-   3. SISTEMA DE ERROS E FEEDBACK
-   ========================================================================== */
 
 .alert-error-minimal {
     padding: 12px 16px;
@@ -108,8 +96,7 @@
 
 .map-error-overlay {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     background: white;
     padding: 20px;
@@ -120,40 +107,9 @@
 }
 
 /* ==========================================================================
-   4. ANIMAÇÕES E EFEITOS (RESTAURADOS)
+   3. MENSAGENS CHAT (Layout Flexível)
    ========================================================================== */
-
-/* Garante que o efeito de rotação funcione globalmente */
-@keyframes rotate { 
-    from { transform: rotate(0deg); } 
-    to { transform: rotate(360deg); } 
-}
-
-/* Aplica a animação especificamente para a classe de loop */
-.spinner-rotate {
-    animation: rotate 1s linear infinite !important;
-    display: inline-block !important;
-}
-
-/* Mantém o comportamento de spin para outros componentes, se necessário */
-@keyframes spin { 
-    100% { transform: rotate(360deg); } 
-}
-
-/* ==========================================================================
-   5. VISUAL ESTRUTURADO DE MENSAGENS CHAT (Refinado e Estável)
-   ========================================================================== */
-#chat-messages-container .message-body {
-    white-space: pre-wrap; /* Força o navegador a respeitar as quebras de linha */
-    word-break: break-word;
-}
-
-.message-wrapper {
-    position: relative;
-    margin-bottom: 10px;
-    display: flex;
-    flex-direction: column;
-}
+.message-wrapper { position: relative; margin-bottom: 20px; display: flex; flex-direction: column; }
 
 .message-sent, .message-received {
     position: relative;
@@ -161,101 +117,7 @@
     flex-direction: column;
     padding: 12px 18px;
     max-width: 85%;
-    width: fit-content; 
-    min-width: 100px;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    white-space: pre-wrap; 
-}
-
-.message-sent {
-    background-color: #dcf8c6 !important;
-    margin-left: auto;
-    margin-right: 10px;
-    border-bottom-right-radius: 2px;
-}
-
-.message-received {
-    background-color: #ffffff !important;
-    margin-right: auto;
-    margin-left: 10px;
-    border-bottom-left-radius: 2px;
-}
-
-/* Corpo da mensagem: ajuste dinâmico */
-.message-body {
-    margin-bottom: 4px;
-}
-
-/* Ícone de status: posicionado à direita do rodapé do balão */
-.status-icon {
-    display: flex;
-    align-self: flex-end; 
-    margin-top: 2px;
-    margin-right: 2px;    
-    z-index: 5;
-    transition: transform 0.2s ease;
-    cursor: help;
-}
-
-/* Certifica que o botão que aciona o loop no formulário funcione */
-#btn-emitir-pedido .spinner-rotate {
-    margin-right: 8px;
-}
-
-#modalFormulario .modal-body label {
-    font-weight: 400 !important; /* Regular, bem clean */
-    letter-spacing: 0.02em;      /* Pequeno espaçamento para leitura */
-}
-
-/* ==========================================================================
-   4. ANIMAÇÕES E EFEITOS (RESTAURADOS)
-   ========================================================================== */
-
-/* Garante que o efeito de rotação funcione globalmente */
-@keyframes rotate { 
-    from { transform: rotate(0deg); } 
-    to { transform: rotate(360deg); } 
-}
-
-/* Aplica a animação especificamente para a classe de loop */
-.spinner-rotate {
-    animation: rotate 1s linear infinite !important;
-    display: inline-block !important;
-}
-
-/* Mantém o comportamento de spin para outros componentes, se necessário */
-@keyframes spin { 
-    100% { transform: rotate(360deg); } 
-}
-
-/* ==========================================================================
-   5. VISUAL ESTRUTURADO DE MENSAGENS CHAT (Ajuste Final - Ícone "Clean")
-   ========================================================================== */
-
-.is-invalid {
-    border: 1px solid #dc3545 !important;
-    background-color: #fff8f8 !important;
-}
-
-/* Wrapper que mantém a posição relativa */
-.message-wrapper {
-    position: relative;
-    margin-bottom: 20px; /* Espaço extra embaixo para o ícone que fica "pendurado" */
-    display: flex;
-    flex-direction: column;
-}
-
-/* Corpo do balão limpo */
-.message-sent, .message-received {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 12px 18px; 
-    max-width: 85%;
-    width: fit-content; 
+    width: fit-content;
     min-width: 100px;
     font-size: 0.95rem;
     line-height: 1.5;
@@ -265,91 +127,53 @@
     word-wrap: break-word;
 }
 
-/* Efeito de destaque ao passar o mouse na mensagem */
-.message-sent:hover, .message-received:hover {
-    filter: brightness(0.95);
-    transition: filter 0.2s;
-}
+.message-sent:hover, .message-received:hover { filter: brightness(0.95); transition: filter 0.2s; }
 
-.message-sent {
-    background-color: #dcf8c6 !important;
-    margin-left: auto;
-    margin-right: 10px;
-    border-bottom-right-radius: 2px;
-}
+.message-sent { background-color: #dcf8c6 !important; margin-left: auto; margin-right: 10px; border-bottom-right-radius: 2px; }
+.message-received { background-color: #ffffff !important; margin-right: auto; margin-left: 10px; border-bottom-left-radius: 2px; }
 
-.message-received {
-    background-color: #ffffff !important;
-    margin-right: auto;
-    margin-left: 10px;
-    border-bottom-left-radius: 2px;
-}
-
-/* Garante que o ícone do status tenha o tamanho consistente */
 .status-icon {
     position: absolute;
-    bottom: -15px; 
-    left: 2px;
-    z-index: 10;
+    bottom: -15px; left: 2px; z-index: 10;
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer !important;
-    width: 24px;  /* Tamanho fixo igual ao do relógio */
-    height: 24px;
+    width: 24px; height: 24px;
 }
 
-/* Garante que o span (emoji) mantenha o alinhamento */
-.status-icon span {
-    line-height: 24px;
-    display: inline-block;
-}
+.status-icon span { line-height: 24px; display: inline-block; }
 
-@keyframes rotate { 
-    from { transform: rotate(0deg); } 
-    to { transform: rotate(360deg); } 
-}
+/* ==========================================================================
+   4. ANIMAÇÕES E UTILITÁRIOS
+   ========================================================================== */
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.spinner-rotate {
-    animation: rotate 1s linear infinite !important;
-    display: inline-block !important;
+.spinner-rotate { animation: rotate 1s linear infinite !important; display: inline-block !important; }
+
+#btn-emitir-pedido .spinner-rotate { margin-right: 8px; }
+.is-invalid { border: 1px solid #dc3545 !important; background-color: #fff8f8 !important; }
+
+#msg-input {
+    max-height: 100px;
+    overflow-y: auto;
+    resize: none;
 }
 
 /* ==========================================================================
-   REFINAMENTO VISUAL DOS MODAIS (Padrão Vermelho Suave)
+   5. REFINAMENTO DE MODAIS (Padrão RDO)
    ========================================================================== */
-
-/* Definição de cores para manter o padrão "RDO" */
 :root {
     --vermelho-rdo: #dc3545;
     --vermelho-suave: #f8d7da;
 }
 
-/* Títulos do SweetAlert (Gerenciar Pedido e Quem pegou o pedido?) */
-.swal2-title {
-    color: var(--vermelho-rdo) !important;
-    font-weight: 600 !important;
-}
+.swal2-title { color: var(--vermelho-rdo) !important; font-weight: 600 !important; }
+.swal2-confirm { background-color: var(--vermelho-rdo) !important; }
+.swal2-html-container .btn-outline-primary { color: var(--vermelho-rdo) !important; border-color: var(--vermelho-rdo) !important; }
+.swal2-html-container .btn-outline-primary:hover { background-color: var(--vermelho-suave) !important; color: var(--vermelho-rdo) !important; }
+.swal2-html-container .btn-info { background-color: var(--vermelho-suave) !important; border-color: #f5c6cb !important; color: var(--vermelho-rdo) !important; }
 
-/* Botões de Ação (Confirmar/OK) */
-.swal2-confirm {
-    background-color: var(--vermelho-rdo) !important;
-}
+#modalFormulario .modal-body label { font-weight: 400 !important; letter-spacing: 0.02em; }
 
-/* Botões de Seleção (Status e Motoboys) */
-.swal2-html-container .btn-outline-primary {
-    color: var(--vermelho-rdo) !important;
-    border-color: var(--vermelho-rdo) !important;
-}
-
-.swal2-html-container .btn-outline-primary:hover {
-    background-color: var(--vermelho-suave) !important;
-    color: var(--vermelho-rdo) !important;
-}
-
-.swal2-html-container .btn-info {
-    background-color: var(--vermelho-suave) !important;
-    border-color: #f5c6cb !important;
-    color: var(--vermelho-rdo) !important;
-}

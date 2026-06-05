@@ -1,104 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDO Express | Painel</title>
-
-    <script>
-        (function () {
-            if (!localStorage.getItem('rdo_auth')) {
-                window.location.replace('/login');
-            }
-        })();
-    </script>
+    <script>(function(){ if(!localStorage.getItem('rdo_auth')) window.location.replace('/login'); })();</script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
- 
     <link rel="stylesheet" href="/css/global.css">
-    
     <link rel="stylesheet" href="/pages/administracao/administracao.css">
     <link rel="stylesheet" href="/pages/bot/bot.css">
     <link rel="stylesheet" href="/pages/chat/chat.css">
     <link rel="stylesheet" href="/pages/dashboard/dashboard.css">
     <link rel="stylesheet" href="/pages/pedidos/pedidos.css">
-    <link rel="stylesheet" href="/pages/login/login.css">
-    
 </head>
 
 <body>
     <aside class="sidebar" id="sidebar">
-        <div class="logo-box p-3 text-center d-flex align-items-center justify-content-center"
-            style="height: 70px; background: white;">
+        <div class="logo-box p-3 text-center d-flex align-items-center justify-content-center" style="height: 70px; background: white;">
             <div class="logo-full d-flex align-items-center gap-2">
                 <i class="bi bi-lightning-charge-fill text-danger fs-4"></i>
-                <span class="text-danger fw-bold" style="font-size: 1.2rem;">RDO <span
-                        class="text-dark">Express</span></span>
+                <span class="text-danger fw-bold" style="font-size: 1.2rem;">RDO <span class="text-dark">Express</span></span>
             </div>
         </div>
 
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#"
-                    onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')"><span
-                        class="menu-text">Dashboard</span></a>
-                <a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')"><span
-                        class="menu-text">Chat</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')"><span class="menu-text">Dashboard</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')"><span class="menu-text">Chat</span></a>
             </div>
         </div>
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-people"></i> <span class="menu-text">Gestão</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('pedidos', 'Pedidos', 'Gestão de solicitações')"><span
-                        class="menu-text">Pedidos</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('pedidos', 'Pedidos', 'Gestão de solicitações')"><span class="menu-text">Pedidos</span></a>
             </div>
         </div>
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-bank"></i> <span class="menu-text">Administração</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#"
-                    onclick="loadPage('administracao', 'Administração', 'Controle de Cadastro RDO interno')"><span
-                        class="menu-text">Administração</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('administracao', 'Administração', 'Controle de Cadastro RDO interno')"><span class="menu-text">Administração</span></a>
             </div>
         </div>
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-wallet2"></i> <span class="menu-text">Financeiro</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('financeiro', 'Financeiro', 'Controle de fluxo')"><span
-                        class="menu-text">Financeiro</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('financeiro', 'Financeiro', 'Controle de fluxo')"><span class="menu-text">Financeiro</span></a>
             </div>
         </div>
         <div class="menu-group">
-            <div class="menu-title"><i class="bi bi-file-earmark-bar-graph"></i> <span
-                    class="menu-text">Relatório</span></div>
+            <div class="menu-title"><i class="bi bi-file-earmark-bar-graph"></i> <span class="menu-text">Relatório</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatórios', 'Dados operacionais')"><span
-                        class="menu-text">Relatórios</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatórios', 'Dados operacionais')"><span class="menu-text">Relatórios</span></a>
             </div>
         </div>
         <div class="menu-group">
-            <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span
-                    class="menu-text">Automatização</span></div>
+            <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span class="menu-text">Automatização</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#"
-                    onclick="loadPage('bot', 'Configuração Bot', 'Monitoramento WhatsApp')"><span
-                        class="menu-text">Bot</span></a>
-                <a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')"><span
-                        class="menu-text">Segurança</span></a>
-                <a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')"><span
-                        class="menu-text">Logs</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('bot', 'Configuração Bot', 'Monitoramento WhatsApp')"><span class="menu-text">Bot</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('seguranca', 'Segurança', 'Definições do sistema')"><span class="menu-text">Segurança</span></a>
+                <a class="nav-link" href="#" onclick="loadPage('logs', 'Logs', 'Histórico de eventos')"><span class="menu-text">Logs</span></a>
             </div>
         </div>
 
         <div class="mt-auto p-3 text-center">
-            <button class="btn btn-outline-danger w-100 rounded-pill" onclick="abrirModalLogout()" title="Sair">
-                <i class="bi bi-box-arrow-left"></i> <span class="menu-text">Sair</span>
+            <button class="btn btn-outline-danger w-100 rounded-pill" onclick="abrirModalLogout()">
+                <i class="bi bi-box-arrow-left"></i> <span class="menu-text">Encerrar</span>
             </button>
         </div>
     </aside>
@@ -106,46 +77,35 @@
     <main class="main-content">
         <header class="top-navbar px-4">
             <div class="d-flex align-items-center">
-                <button id="toggle-btn" class="btn btn-light me-3 border-0 bg-transparent" onclick="toggleSidebar()"><i
-                        class="bi bi-list fs-4"></i></button>
+                <button class="btn btn-light me-3 border-0 bg-transparent" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i class="bi bi-list fs-4"></i></button>
                 <div>
                     <h1 id="page-title" class="h6 mb-0 fw-bold">Dashboard</h1>
-                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size: 0.7rem;">Visão geral
-                        operacional</p>
+                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size: 0.7rem;">Carregando...</p>
                 </div>
             </div>
-            <div class="user-area">
+
+            <div class="user-area d-flex align-items-center gap-3">
                 <div class="text-end d-none d-md-block">
-                    <div id="display-username" class="fw-bold small text-dark">Carregando...</div>
-                    <div id="display-cargo" class="text-danger small" style="font-size: 0.7rem; font-weight: 600;">...
-                    </div>
+                    <div id="display-username" class="fw-bold small text-dark">...</div>
+                    <div id="display-cargo" class="text-danger small" style="font-size: 0.7rem; font-weight: 600;">...</div>
                 </div>
-                <button class="profile-btn border-0 bg-transparent p-0" onclick="abrirModalLogout()">
-                    <div id="avatar-container"
-                        style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                        <i class="bi bi-person-fill text-white"></i>
-                    </div>
-                </button>
+                <div id="avatar-container" style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;" onclick="abrirModalLogout()">
+                    <i class="bi bi-person-fill text-white"></i>
+                </div>
             </div>
         </header>
+        
         <div class="p-4" id="router-view"></div>
     </main>
 
     <div id="modal-container"></div>
-
-    <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+    
+    <div class="modal fade" id="logoutModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-content">
                 <div class="modal-body text-center p-4">
-                    <div class="mb-3"><i class="bi bi-box-arrow-left text-danger" style="font-size: 3.5rem;"></i></div>
-                    <h5 class="fw-bold mb-2">Encerrar sessão?</h5>
-                    <p class="text-muted mb-4 small">Você será desconectado do sistema RDO Express.</p>
-                    <div class="d-flex gap-2 justify-content-center">
-                        <button type="button" class="btn btn-light w-50 rounded-pill"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-danger w-50 rounded-pill fw-bold"
-                            onclick="logout()">Sair</button>
-                    </div>
+                    <h5>Encerrar sessão?</h5>
+                    <button class="btn btn-danger w-100 rounded-pill" onclick="localStorage.clear(); window.location.replace('/login');">Sair</button>
                 </div>
             </div>
         </div>
@@ -165,47 +125,24 @@
     <script src="/js/administracao.js"></script>
 
     <script>
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
-
-        // Função global para atualizar o avatar
-        window.atualizarAvatar = () => {
-            const avatarContainer = document.getElementById('avatar-container');
-            const imagem = localStorage.getItem('imagem');
-
-            if (imagem && imagem !== 'null' && imagem !== '' && imagem !== 'undefined') {
-                avatarContainer.innerHTML = `<img src="${imagem}" alt="User" style="width:100%; height:100%; object-fit:cover;">`;
-                avatarContainer.style.background = 'transparent';
-            }
-        };
-
         document.addEventListener('DOMContentLoaded', () => {
             const user = localStorage.getItem('username');
             const cargo = localStorage.getItem('tipo');
-
-            if (user) {
-                document.getElementById('display-username').innerText = user;
-                document.getElementById('display-cargo').innerText = cargo;
+            
+            if(user) { 
+                document.getElementById('display-username').innerText = user; 
+                document.getElementById('display-cargo').innerText = cargo; 
             }
-
-            window.atualizarAvatar(); // Chama ao carregar o app
-
-            // Carrega a página inicial
-            if (typeof window.loadPage === 'function') {
-                window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
-            }
+            
+            // Inicialização dos recursos globais
+            if(typeof window.atualizarAvatar === 'function') window.atualizarAvatar();
+            if(typeof window.loadPage === 'function') window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
         });
 
-        function logout() {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.replace('/login');
-        }
-
-        function abrirModalLogout() {
-            new bootstrap.Modal(document.getElementById('logoutModal')).show();
+        function abrirModalLogout() { 
+            const myModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+            myModal.show(); 
         }
     </script>
-
 </body>
-
 </html>
