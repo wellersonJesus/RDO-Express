@@ -82,45 +82,41 @@ document.addEventListener('click', (e) => {
 });
 
 window.carregarDados = async function () {
-    // 1. Definição de elementos e estado
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    // Se o elemento não existir, aborta para não gerar erro de null
     if (!listEl) return;
 
-    // 2. Trava de segurança contra chamadas simultâneas (evita 502 por sobrecarga)
     if (window.AppRDO.isFetching) {
-        console.warn("Sincronização já em andamento. Ignorando chamada.");
+        console.warn("Sincronização já em andamento.");
         return;
     }
 
-    window.AppRDO.isFetching = true; // Ativa a trava
+    window.AppRDO.isFetching = true;
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
     try {
-        // 3. Chamada à API com tratamento de timeout/erro
         const clientes = await API.call('getclientes');
-
-        // Validação de segurança: se a API retornar algo diferente de array, força array vazio
         const listaClientes = Array.isArray(clientes) ? clientes : [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // 4. Renderização limpa
         if (listaClientes.length === 0) {
             listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
         } else {
             listEl.innerHTML = listaClientes.map(cliente => {
-                const id = cliente.id || '';
+                const id = String(cliente.id || '');
                 const nome = (cliente.nome || cliente.username || 'Sem nome');
                 const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
                 const statusColor = isOnline ? '#28a745' : '#adb5bd';
+                
+                // Adiciona a classe 'active-contact' caso este ID seja o selecionado atualmente
+                const classeAtiva = (window.AppRDO.clienteId === id) ? 'active-contact' : '';
 
                 return `
-                    <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
+                    <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ${classeAtiva}" 
                          id="item-contato-${id}"
-                         onclick="window.abrirConversa('${id}', '${nome}')">
+                         onclick="window.selecionarEAbrir('${id}', '${nome}', ${isOnline})">
                         <div class="position-relative">
                             <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
                             <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
@@ -135,17 +131,29 @@ window.carregarDados = async function () {
             }).join('');
         }
         
-        window.AppRDO.listaCarregada = true; // Marca como concluído
+        window.AppRDO.listaCarregada = true;
 
     } catch (e) {
         console.error("Erro crítico na sincronização:", e);
-        // Feedback visual de erro caso o servidor falhe (502)
-        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos. Tente novamente.</div>`;
+        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos.</div>`;
     } finally {
-        // 5. Garantia de limpeza (Release da trava)
         window.AppRDO.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
+};
+
+// Esta função garante que o clique no cliente sempre dispare o fluxo correto
+window.selecionarEAbrir = function(id, nome, isOnline) {
+    // 1. Atualiza ID global
+    window.AppRDO.clienteId = id;
+    window.AppRDO.clienteSelecionado = nome;
+
+    // 2. Atualiza UI de seleção
+    document.querySelectorAll('.contact-item-clean').forEach(el => el.classList.remove('active-contact'));
+    document.getElementById(`item-contato-${id}`)?.classList.add('active-contact');
+
+    // 3. Abre o fluxo (ou abre conversa, conforme sua lógica de checkout)
+    window.abrirConversa(id, nome, null, isOnline);
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
@@ -761,26 +769,27 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     }
 };
 
+// 1. Função de renderização com segregação de eventos
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     try {
         const container = document.getElementById('chat-messages-container');
-        const dataId = pedidoId ? String(pedidoId).replace(/\D/g, '') : 'new-' + Date.now();
+        if (!container) return;
 
+        const dataId = pedidoId ? String(pedidoId).replace(/\D/g, '') : 'new-' + Date.now();
+        
         const div = document.createElement('div');
         div.className = 'message-wrapper';
 
-        // O clique na div principal dispara o modal de edição
         div.innerHTML = `
             <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
                  data-pedido-id="${dataId}" 
-                 onclick="window.abrirModalEdicao('${dataId}')" 
-                 style="cursor: pointer;">
+                 onclick="window.abrirModalEdicao('${dataId}')">
                 
                 <div class="message-body">${texto.replace(/\n/g, '<br>')}</div>
                 
                 ${!isRecebida ? `
                     <div class="status-icon" 
-                         title="Status do Pedido / Motoboy" 
+                         title="Clique para alterar status" 
                          onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')">
                         ✔
                     </div>
@@ -789,6 +798,7 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = 
         `;
 
         container.appendChild(div);
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } catch (err) {
         console.error("Erro na renderização:", err);
     }

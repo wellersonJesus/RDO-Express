@@ -79,8 +79,9 @@
 
 .icon-bubble-transparent {
     font-size: 3rem;
-    color: transparent; 
-    -webkit-text-stroke: 1.5px #aaa; /* Contorno cinza fino */
+    color: transparent;
+    -webkit-text-stroke: 1.5px #aaa;
+    /* Contorno cinza fino */
     margin-bottom: 2px;
     opacity: 0.7;
 }
@@ -89,7 +90,8 @@
 .icon-bubble-thin {
     width: 50px;
     height: 40px;
-    border: 1.5px solid #777; /* Borda mais fina */
+    border: 1.5px solid #777;
+    /* Borda mais fina */
     border-radius: 10px;
     position: relative;
     display: flex;
@@ -99,6 +101,7 @@
     color: #777;
     margin-bottom: 5px;
 }
+
 /* A setinha do balão */
 .icon-bubble-thin::after {
     content: "";
@@ -118,9 +121,11 @@
 /* Estilo do balão transparente para o "Histórico Vazio" */
 .empty-bubble-icon {
     border: 2px solid #4a4a4a;
-    border-radius: 50%; /* Balão circular */
+    border-radius: 50%;
+    /* Balão circular */
     position: relative;
 }
+
 .empty-bubble-icon::after {
     content: "•••";
     letter-spacing: 2px;
@@ -199,12 +204,17 @@
    ========================================================================== */
 .status-icon {
     position: absolute !important;
-    bottom: -22px !important; /* Move para mais baixo (fora da borda) */
-    left: -10px !important;   /* Move para mais à esquerda */
-    font-size: 1.6rem !important; /* Aumenta o tamanho do ícone */
-    color: #4a4a4a;           /* Cor para dar contraste */
-    z-index: 5;
-    pointer-events: none;     /* Mantém a "mãozinha" funcionando no corpo da mensagem */
+    bottom: -22px !important;
+    left: 2px !important;
+    /* Ajustado para a direita conforme pedido */
+    font-size: 1.6rem !important;
+    color: #4a4a4a;
+    z-index: 10;
+    cursor: help !important;
+    /* Indica ação informativa */
+    pointer-events: auto !important;
+    /* Aceita clique */
+    transition: transform 0.2s;
 }
 
 /* Corpo da mensagem: Garante alinhamento total */
@@ -214,13 +224,16 @@
 }
 
 /* Ajuste no balão para comportar o ícone "pendurado" */
-.message-sent, .message-received {
+.message-sent,
+.message-received {
     position: relative;
     padding: 15px 20px !important;
     margin-bottom: 30px !important;
-    cursor: pointer; /* Mãozinha para abrir Modal */
+    /* Espaço para o ícone deslocado */
+    cursor: pointer;
     border-radius: 8px;
     background: #fff;
+    display: inline-block;
 }
 
 .message-wrapper {
@@ -255,23 +268,49 @@
     text-align: left;
 }
 
-.status-icon {
-    position: absolute !important;
-    bottom: -22px !important;
-    left: 2px !important; /* Movido um pouco para a direita */
-    font-size: 1.6rem !important;
-    cursor: help !important; 
-    pointer-events: auto !important;
-    color: #4a4a4a; /* Cor padrão */
+.status-icon:hover {
+    transform: scale(1.1);
 }
 
-.status-icon:hover {
-    transform: scale(1.2); /* Efeito sutil ao passar o mouse */
+/* Estado de busca/vazio */
+.chat-status-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #555;
+    gap: 2px;
 }
 
 .icon-sync-gray {
     font-size: 2.5rem;
-    color: #666; /* Cinza solicitado */
+    color: #666;
+    animation: rotate 1s linear infinite;
+    display: inline-block;
+}
+
+.icon-bubble-transparent {
+    font-size: 3rem;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #aaa;
+    opacity: 0.7;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.icon-sync-gray {
+    font-size: 2.5rem;
+    color: #666;
+    /* Cinza solicitado */
     animation: rotate 1s linear infinite;
     display: inline-block;
 }
@@ -295,15 +334,18 @@
     justify-content: center;
     font-size: 1.5rem;
     color: #ccc;
-    background: transparent; /* Fundo transparente */
+    background: transparent;
+    /* Fundo transparente */
     margin-bottom: 5px;
 }
 
 /* Ícone de Loop (Buscando) - Cinza/Preto e próximo ao texto */
 .icon-loop-status {
     font-size: 2.5rem;
-    color: #666; /* Cor cinza/preto conforme solicitado */
-    margin-bottom: 5px; /* Reduzido para ficar mais junto ao texto */
+    color: #666;
+    /* Cor cinza/preto conforme solicitado */
+    margin-bottom: 5px;
+    /* Reduzido para ficar mais junto ao texto */
     animation: rotate 1s linear infinite;
     display: inline-block;
 }
@@ -311,8 +353,10 @@
 /* Ícone de Balão (Nenhum histórico) - Cinza/Preto */
 .icon-empty-chat {
     font-size: 3rem;
-    color: #666; /* Cor cinza/preto */
-    margin-bottom: 2px; /* Muito próximo ao texto */
+    color: #666;
+    /* Cor cinza/preto */
+    margin-bottom: 2px;
+    /* Muito próximo ao texto */
 }
 
 /* ==========================================================================
