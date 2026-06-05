@@ -111,46 +111,33 @@ function handleDelete(sheet, id) {
 function handleSalvarPedidoComChat(sheetPedidos, data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetChat = getSheetCaseInsensitive(ss, "chat");
-  
-  // 1. Gera o ID
   data.id = generateId(sheetPedidos, "pedidos");
   
-  // 2. Processamento robusto de rotas
+  // Processamento de Rotas
   const linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
-  const deList = [];
-  const paraList = [];
-  
-  linhasRota.forEach(l => {
-    const partes = l.split('|');
-    if (partes.length >= 2) {
-      deList.push(partes[0].replace(/De:/i, '').trim());
-      paraList.push(partes[1].replace(/Para:/i, '').trim());
-    }
-  });
-  
-  data.de = deList.join(', ');
-  data.para = paraList.join(', ');
+  data.de = linhasRota.map(l => l.split('|')[0] ? l.split('|')[0].replace(/De:/i, '').trim() : "").join(', ');
+  data.para = linhasRota.map(l => l.split('|')[1] ? l.split('|')[1].replace(/Para:/i, '').trim() : "").join(', ');
 
-  // 3. Salvar Pedidos (Corrigido: lista de argumentos explícita)
-  // Certifique-se de que esta lista segue a ordem das colunas da planilha!
+  // ABA PEDIDOS: Ordem exata das colunas
   sheetPedidos.appendRow([
     data.id, data.id_chat, data.solicitante, data.contato, 
     data.horario, data.mercadoria, data.de, data.para, 
     data.retorno, data.prioridade, data.valor_corrida, data.observacao
   ]);
 
-  // 4. Salvar Aba Chat (id_chat, pedido_id, hora, data, finalizado)
+  // ABA CHAT: Ordem exata (id, jid_numero, pedido_id, texto, hora, data, finalizado)
   if (sheetChat) {
     const agora = new Date();
     sheetChat.appendRow([
-      data.id_chat, 
-      data.id, 
-      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
-      agora.toLocaleDateString('pt-BR'),
-      "TRUE"
+      "MSG" + new Date().getTime(), // id
+      data.id_chat,                 // jid_numero
+      data.id,                      // pedido_id
+      data.mensagem,                // texto (Mensagem formatada com valor)
+      agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}), // hora
+      agora.toLocaleDateString('pt-BR'), // data
+      "TRUE"                        // finalizado
     ]);
   }
-  
   return { status: "success", id: data.id };
 }
 

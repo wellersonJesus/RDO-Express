@@ -548,54 +548,63 @@ window.formatarTelefone = function (tel) {
 
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
-    const errorMsg = document.getElementById('form-error-msg');
-    const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas'];
+    // Adicionado 'p-contato' na lista de obrigatórios
+    const camposObrigatorios = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
     let ehValido = true;
 
     camposObrigatorios.forEach(id => {
         const el = document.getElementById(id);
         if (!el || !el.value.trim()) {
-            el.classList.add('is-invalid'); // Borda vermelha via Bootstrap
+            el.classList.add('is-invalid'); 
             ehValido = false;
         } else {
             el.classList.remove('is-invalid');
         }
     });
 
-    if (!ehValido) return; // Removemos a exibição da mensagem de erro de texto
+    if (!ehValido) return;
 
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Emitindo...`; // Ícone de loading padrão
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Emitindo...`;
 
     try {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
-        const rotasRaw = getVal('p-rotas');
+        const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
         
+        // Formatação final conforme solicitado
+        const msgFormatada = `N.SERVIÇO: [ID_GERADO]\nSOLICITANTE: ${getVal('p-solicitante')} | CONTATO: ${getVal('p-contato')}\nHORÁRIO: ${getVal('p-horario')}\n-\nMERCADORIA: ${getVal('p-mercadoria')}\nTROCA/RETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n-\nROTA(s): \n${getVal('p-rotas').split('\n').map(l => `📍${l.trim()}`).join('\n')}\n-\nOBSERVAÇÃO: ${getVal('p-obs')}\n${valorFinal}`;
+
         const payload = {
+            action: 'finalizarpedido',
             id_chat: String(window.AppRDO.clienteId),
             solicitante: getVal('p-solicitante'),
             contato: getVal('p-contato'),
             horario: getVal('p-horario'),
             mercadoria: getVal('p-mercadoria'),
-            rotas_texto: rotasRaw, // Enviamos tudo para o backend processar
-            mensagem: `📦 NOME: ${window.AppRDO.clienteSelecionado}\n...`, // Seu formato completo
-            valor_corrida: document.getElementById('view-valor-final').innerText
+            rotas_texto: getVal('p-rotas'),
+            valor_corrida: valorFinal,
+            observacao: getVal('p-obs'),
+            mensagem: msgFormatada
         };
 
         const resp = await API.call('finalizarpedido', payload);
+        
         if (resp?.status === 'success') {
-            window.enviarMensagemParaChat(payload.mensagem, false, resp.id);
-            // Limpeza
+            window.enviarMensagemParaChat(msgFormatada.replace('[ID_GERADO]', resp.id), false, resp.id);
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+        } else {
+            throw new Error(resp?.message || "Erro ao salvar no servidor.");
         }
+    } catch (err) {
+        console.error("Erro no salvamento:", err);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
     }
 };
 
-window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
+window.abrirConversa = async function (id, nome) {
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
     document.getElementById('chat-header-name').innerText = nome;
@@ -604,15 +613,18 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     container.innerHTML = '<div class="text-center text-muted">Carregando histórico...</div>';
 
     try {
-        const todosPedidos = await API.call('getpedidos');
-        // Filtro rigoroso: garante que só carregue o que pertence a este ID de cliente
-        const historico = (Array.isArray(todosPedidos) ? todosPedidos : []).filter(p => 
-            String(p.id_mensagens_chat) === String(id)
+        // Buscamos na aba CHAT que contém a estrutura completa
+        const todasMensagens = await API.call('getchat');
+        
+        // Filtro correto usando a coluna 'jid_numero'
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
+            String(m.jid_numero) === String(id)
         );
 
         container.innerHTML = ''; 
-        historico.forEach(pedido => {
-            window.enviarMensagemParaChat(pedido.mensagem || "Pedido vazio", false, pedido.id);
+        historico.forEach(msg => {
+            // A mensagem agora está no campo 'texto' da aba chat
+            window.enviarMensagemParaChat(msg.texto || "Pedido sem conteúdo", false, msg.pedido_id);
         });
     } catch (e) {
         container.innerHTML = '<div class="text-danger text-center">Erro ao carregar histórico.</div>';
