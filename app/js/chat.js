@@ -400,47 +400,60 @@ window.preencherDadosFormulario = function () {
         const texto = msgInput ? msgInput.value : '';
 
         // 1. Definição do Nome do Cliente (Fonte de Verdade: AppRDO)
-        // Se AppRDO estiver vazio, tenta ler do header do chat, se falhar, assume 'Não identificado'
         const nomeCliente = window.AppRDO?.clienteSelecionado ||
             document.getElementById('chat-header-name')?.innerText ||
             'Não identificado';
 
-        // Atualiza o header dentro do formulário (fixo para o problema de exibição)
+        // Atualiza o header dentro do formulário
         const elHeader = document.getElementById('header-nome-cliente');
         if (elHeader) {
             elHeader.innerText = nomeCliente;
-            elHeader.classList.remove('text-muted'); // Remove o estilo de 'Carregando...'
+            elHeader.classList.remove('text-muted');
             elHeader.classList.add('text-dark');
         }
 
-        // 2. Mapeamento de campos fixos
+        // 2. Mapeamento de campos fixos (Solicitante, Rota, Observação)
         const campos = [
-            { id: 'p-solicitante', regex: /SOLICITANTE:\s*(.*)/i, fallback: nomeCliente },
-            { id: 'p-contato', regex: /\(?\d{2}\)?\s?9?\d{4,5}-?\d{4}/ },
+            { id: 'p-solicitante', regex: /(?:SOLICITANTE|NOME):\s*(.*)/i, fallback: nomeCliente },
             { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i },
-            { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i }
+            { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i, fallback: 'N/A' }
         ];
 
         campos.forEach(c => {
             const el = document.getElementById(c.id);
             if (el) {
                 const match = texto.match(c.regex);
-                // Se encontrar o match, usa ele. Se não, usa o fallback (ex: nome do cliente no solicitante)
                 el.value = match ? (match[1] ? match[1].trim() : match[0].trim()) : (c.fallback || '');
             }
         });
 
-        // 3. Preenchimento de Cálculos (Objeto dadosPedidoAtual)
+        // 3. CAPTURA INTELIGENTE E FORÇADA DO TELEFONE
+        // Esta Regex busca qualquer formato de número (com ou sem DDD, com ou sem parênteses/hífen)
+        const elContato = document.getElementById('p-contato');
+        if (elContato) {
+            // Busca o padrão: (DDD) 9XXXX-XXXX ou apenas números
+            const regexTel = /(?:\(?\d{2}\)?\s?)?\d{4,5}[-\s]?\d{4}/;
+            const matchTel = texto.match(regexTel);
+            
+            if (matchTel) {
+                // Limpa o que foi capturado, deixando apenas números
+                let numLimpo = matchTel[0].replace(/\D/g, '');
+                // Aplica a formatação via sua função global
+                elContato.value = window.formatarTelefone(numLimpo);
+            }
+        }
+
+        // 4. Preenchimento de Cálculos (OSRM)
         if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
         if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
 
-        // 4. Horário
+        // 5. Horário (Hora atual caso esteja vazio)
         const elHorario = document.getElementById('p-horario');
         if (elHorario && !elHorario.value) {
             elHorario.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // 5. Lógica de Seletores Automáticos
+        // 6. Lógica de Valores Dinâmicos (Taxas/Prioridade)
         const elDin = document.getElementById('p-dinamica');
         if (elDin) {
             const taxaMatch = texto.match(/Taxa 0([1-5])/i);
@@ -455,8 +468,10 @@ window.preencherDadosFormulario = function () {
             else elPrior.value = '0';
         }
 
-        // 6. Recalculo final
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
+        // 7. Recálculo final do valor da corrida
+        if (typeof window.calcularTudo === 'function') {
+            window.calcularTudo();
+        }
 
     } catch (error) {
         console.error("ERRO CRÍTICO no preenchimento do formulário:", error);
@@ -541,9 +556,21 @@ window.voltarParaMapa = async function () {
 
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
-    if (tel.length === 11) return tel.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
-    if (tel.length === 10) return tel.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
-    return tel;
+    let val = String(tel).replace(/\D/g, ''); // Remove tudo que não é número
+    
+    // Fixo com 8 dígitos (XXXX-XXXX)
+    if (val.length === 8) {
+        return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    }
+    // Fixo com 10 dígitos (DDD + 8 dígitos)
+    if (val.length === 10) {
+        return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    }
+    // Celular com 11 dígitos (DDD + 9 + 4 + 4)
+    if (val.length === 11) {
+        return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+    }
+    return val;
 };
 
 window.salvarPedidoAPI = async function () {
@@ -570,16 +597,12 @@ window.salvarPedidoAPI = async function () {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
         const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
         
-        // Formatação das rotas conforme modelo solicitado
         const rotasRaw = getVal('p-rotas').split('\n');
         const rotasFormatadas = rotasRaw.map((l, i) => {
             const partes = l.split('|');
-            const de = partes[0] ? partes[0].trim() : "";
-            const para = partes[1] ? partes[1].trim() : "";
-            return `📍${i + 1}. De: ${de} | \n      Para: ${para}`;
+            return `📍${i + 1}. De: ${partes[0]?.trim() || ''} | \n      Para: ${partes[1]?.trim() || ''}`;
         }).join('\n');
 
-        // Modelo de mensagem EXATO conforme solicitado
         const msgFormatada = `📦 SOLICITANTE: ${getVal('p-solicitante')}
 
 N.SERVIÇO: [ID_GERADO]
@@ -602,7 +625,6 @@ ${valorFinal}`;
             contato: getVal('p-contato'),
             horario: getVal('p-horario'),
             mercadoria: getVal('p-mercadoria'),
-            retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
             rotas_texto: getVal('p-rotas'),
             valor_corrida: valorFinal,
             observacao: getVal('p-obs'),
@@ -612,17 +634,17 @@ ${valorFinal}`;
         const resp = await API.call('finalizarpedido', payload);
         
         if (resp?.status === 'success') {
-            // Substitui o ID gerado na mensagem antes de enviar para o chat
             const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id);
+            // IMPORTANTE: Ao enviar para o chat, garantimos que o pedidoId esteja presente
             window.enviarMensagemParaChat(msgFinal, false, resp.id);
             
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
         } else {
-            throw new Error(resp?.message || "Erro no servidor.");
+            throw new Error(resp?.message || "Erro ao salvar.");
         }
     } catch (err) {
-        console.error("Erro no salvamento:", err);
+        console.error("Erro:", err);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
@@ -630,29 +652,38 @@ ${valorFinal}`;
 };
 
 window.abrirConversa = async function (id, nome) {
+    console.log("--- INICIANDO ABERTURA DE CONVERSA ---");
+    console.log("ID solicitado:", id);
+    
     window.AppRDO.clienteSelecionado = nome;
     window.AppRDO.clienteId = id;
-    document.getElementById('chat-header-name').innerText = nome;
     
     const container = document.getElementById('chat-messages-container');
-    container.innerHTML = '<div class="text-center text-muted">Carregando histórico...</div>';
-
+    
     try {
-        // Buscamos na aba CHAT que contém a estrutura completa
         const todasMensagens = await API.call('getchat');
-        
-        // Filtro correto usando a coluna 'jid_numero'
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
-            String(m.jid_numero) === String(id)
-        );
+        console.log("Dados brutos do chat (API):", todasMensagens);
 
-        container.innerHTML = ''; 
-        historico.forEach(msg => {
-            // A mensagem agora está no campo 'texto' da aba chat
-            window.enviarMensagemParaChat(msg.texto || "Pedido sem conteúdo", false, msg.pedido_id);
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => {
+            // O teste de ferro: Comparar o final da string (caso o banco tenha 10003 e o id seja 3)
+            const idBanco = String(m.jid_numero || "").trim();
+            const idAlvo = String(id).trim();
+            const match = idBanco.endsWith(idAlvo);
+            return match;
         });
+
+        console.log("Histórico filtrado:", historico);
+
+        if (historico.length === 0) {
+            container.innerHTML = `<div class="text-center">Nenhum histórico encontrado para o ID ${id}.</div>`;
+        } else {
+            container.innerHTML = '';
+            historico.forEach(msg => {
+                window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
+            });
+        }
     } catch (e) {
-        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar histórico.</div>';
+        console.error("Erro na busca:", e);
     }
 };
 

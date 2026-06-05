@@ -1,37 +1,57 @@
-(function() {
+(function () {
     let state = {
         dadosChat: [],
         dadosPedidos: [],
-        bsModal: null,
-        bsModalAtencao: null
+        bsModal: null
     };
 
-    // Inicialização
+    // Inicialização robusta
     const init = () => {
         const modalEl = document.getElementById('modalPedidoDetalhes');
-        const modalAtencaoEl = document.getElementById('modalAtencaoPedido');
-        
         if (modalEl) state.bsModal = new bootstrap.Modal(modalEl);
-        if (modalAtencaoEl) state.bsModalAtencao = new bootstrap.Modal(modalAtencaoEl);
-        
         carregarPedidos();
     };
 
-    // Função que estava faltando e causava o erro
+    async function carregarPedidos() {
+        const syncBtn = document.getElementById('sync-pedidos');
+        if (syncBtn) syncBtn.classList.add('loading-spin');
+
+        try {
+            // Se as abas no Sheets forem diferentes de 'chat' ou 'pedidos', mude aqui:
+            const [resChat, resPedidos] = await Promise.all([
+                API.call('getchat'),
+                API.call('getpedidos')
+            ]);
+
+            // Tratamento: garante que os dados sejam arrays
+            state.dadosChat = Array.isArray(resChat) ? resChat : [];
+            state.dadosPedidos = Array.isArray(resPedidos) ? resPedidos : [];
+
+            console.log("Chat carregado:", state.dadosChat.length);
+            console.log("Pedidos carregados:", state.dadosPedidos.length);
+
+            renderizarTabela();
+        } catch (e) {
+            console.error("Erro na comunicação com o servidor:", e);
+        } finally {
+            if (syncBtn) syncBtn.classList.remove('loading-spin');
+        }
+    }
+
     function renderizarTabela() {
         const container = document.getElementById('tabela-pedidos-body');
-        if (!container) {
-            console.warn("Elemento 'tabela-pedidos-body' não encontrado.");
-            return;
-        }
+        if (!container) return;
 
         container.innerHTML = state.dadosChat.map(chat => {
-            // Tenta encontrar um pedido vinculado a este chat
-            const pedido = state.dadosPedidos.find(p => String(p.id_mensagens_chat) === String(chat.id));
-            
+            // CRÍTICO: Verifique se 'id_mensagens_chat' é o nome exato da coluna na planilha 'pedidos'
+            // Se na planilha se chamar 'id_chat', mude para p.id_chat
+            const pedido = state.dadosPedidos.find(p =>
+                String(p.id_mensagens_chat || p.id_chat || "").trim() === String(chat.id).trim()
+            );
+
             return `
                 <tr>
-                    <td>${chat.id}</td>
+                    <td>${chat.id || '-'}</td>
                     <td>${pedido ? pedido.solicitante : 'Sem pedido'}</td>
                     <td>${pedido ? pedido.mercadoria : '-'}</td>
                     <td>${pedido ? pedido.valor_corrida : '-'}</td>
@@ -45,50 +65,16 @@
         }).join('');
     }
 
-    // Busca consolidada
-    async function carregarPedidos() {
-        const syncBtn = document.getElementById('sync-pedidos');
-        if (syncBtn) syncBtn.classList.add('loading-spin');
-        
-        try {
-            const [resChat, resPedidos] = await Promise.all([
-                API.call('getchat'), 
-                API.call('getpedidos')
-            ]);
-            
-            state.dadosChat = Array.isArray(resChat) ? resChat.filter(m => String(m.finalizado) === "true").reverse() : [];
-            state.dadosPedidos = Array.isArray(resPedidos) ? resPedidos : [];
-            
-            renderizarTabela(); // Agora a função existe no mesmo escopo
-        } catch (e) { 
-            console.error("Erro no carregamento:", e); 
-        } finally { 
-            if (syncBtn) syncBtn.classList.remove('loading-spin'); 
+    window.abrirDetalhes = function (chatId) {
+        const pedido = state.dadosPedidos.find(p => String(p.id_mensagens_chat || p.id_chat).trim() === String(chatId).trim());
+        if (pedido) {
+            console.log("Pedido encontrado:", pedido);
+            // Aqui você deve popular seu modal com os dados do pedido
+            state.bsModal.show();
+        } else {
+            alert("Nenhum pedido vinculado a este chat.");
         }
-    }
-
-    // Expor funções necessárias para o HTML (onclick)
-    window.abrirDetalhes = function(chatId) {
-        console.log("Abrindo detalhes do chat:", chatId);
-        // Lógica de abrir modal aqui
     };
-
-    // Lógica Unificada de Salvamento
-    async function salvarPedido(payloadChat, payloadPedido, isNovo = false) {
-        try {
-            await API.call('updatechat', payloadChat);
-            if (isNovo) {
-                await API.call('addpedidos', payloadPedido);
-            } else {
-                await API.call('updatepedidos', payloadPedido);
-            }
-            await carregarPedidos();
-            return true;
-        } catch (err) {
-            console.error("Erro ao salvar pedido:", err);
-            return false;
-        }
-    }
 
     init();
 })();
