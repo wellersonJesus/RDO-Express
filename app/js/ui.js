@@ -1,20 +1,3 @@
-window.atualizarAvatar = () => {
-    const avatarContainer = document.getElementById('avatar-container');
-    // Pegamos a chave 'imagem' que deve ser definida no seu login.js
-    const imagem = localStorage.getItem('imagem'); 
-
-    if (avatarContainer) {
-        if (imagem && imagem !== 'null' && imagem !== '' && imagem !== 'undefined') {
-            // Se a imagem for uma URL válida, exibe a imagem
-            avatarContainer.innerHTML = `<img src="${imagem}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-            avatarContainer.style.background = 'transparent';
-        } else {
-            // Fallback para o ícone padrão
-            avatarContainer.innerHTML = `<i class="bi bi-person-fill text-white"></i>`;
-        }
-    }
-};
-
 window.loadPage = function(page, title, subtitle) {
     const container = document.getElementById('router-view');
     if (!container) return;

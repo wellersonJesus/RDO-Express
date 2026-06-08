@@ -33,14 +33,35 @@ if (!window.AppRDO.observerIniciado) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const inputContato = document.getElementById('p-contato');
-    if (inputContato) {
-        inputContato.addEventListener('input', function (e) {
-            let val = e.target.value.replace(/\D/g, '');
-            if (val.length > 11) val = val.substring(0, 11);
-            e.target.value = window.formatarTelefone(val);
-        });
+    // 1. Dados de texto
+    const user = localStorage.getItem('username');
+    const cargo = localStorage.getItem('tipo');
+    const imgUrl = localStorage.getItem('imagem');
+
+    if (user) document.getElementById('display-username').innerText = user;
+    if (cargo) document.getElementById('display-cargo').innerText = cargo;
+
+    // 2. Lógica de Avatar do Usuário (Ajustada)
+    const imgElement = document.getElementById('user-avatar-img');
+    const iconElement = document.getElementById('user-avatar-icon');
+
+    if (imgUrl && imgUrl.startsWith('http')) {
+        imgElement.src = imgUrl;
+        imgElement.style.display = 'block';
+        iconElement.style.display = 'none';
+        
+        // Se a imagem no servidor falhar, volta para o ícone
+        imgElement.onerror = () => {
+            imgElement.style.display = 'none';
+            iconElement.style.display = 'block';
+        };
+    } else {
+        imgElement.style.display = 'none';
+        iconElement.style.display = 'block';
     }
+
+    // Inicialização do sistema
+    if (typeof window.loadPage === 'function') window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
 });
 
 document.addEventListener('input', (e) => {
@@ -81,44 +102,70 @@ document.addEventListener('click', (e) => {
     }
 });
 
+/**
+ * Função refatorada: Carrega dados com diagnóstico de erro e fallback de imagem
+ */
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    if (!listEl) return;
-
-    if (window.AppRDO.isFetching) {
-        console.warn("Sincronização já em andamento.");
+    // 1. Verificações de segurança iniciais
+    if (!listEl) {
+        console.error("DEBUG: Elemento lista-contatos-chat não encontrado no DOM.");
         return;
     }
 
+    if (window.AppRDO && window.AppRDO.isFetching) {
+        console.warn("DEBUG: Sincronização já em andamento.");
+        return;
+    }
+
+    // Inicializa objeto AppRDO se não existir
+    window.AppRDO = window.AppRDO || { isFetching: false, listaCarregada: false, clienteId: null };
     window.AppRDO.isFetching = true;
+    
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
+    // Atualiza o header global
+    if (typeof window.atualizarAvatar === 'function') {
+        window.atualizarAvatar();
+    }
+
     try {
+        // 2. Chamada da API
         const clientes = await API.call('getclientes');
+        console.log("DEBUG - Dados recebidos da API (inspecione este objeto abaixo):", clientes);
+
+        if (!clientes) throw new Error("A API retornou uma resposta vazia ou indefinida.");
+        
         const listaClientes = Array.isArray(clientes) ? clientes : [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
+        // 3. Renderização
         if (listaClientes.length === 0) {
             listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
         } else {
             listEl.innerHTML = listaClientes.map(cliente => {
                 const id = String(cliente.id || '');
                 const nome = (cliente.nome || cliente.username || 'Sem nome');
-                const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                
+                // Fallback múltiplo: tenta identificar a imagem independente do nome da coluna
+                const urlPadrao = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                const urlRaw = cliente.imagem || cliente.foto || cliente.avatar || cliente.img || '';
+                const imagem = (urlRaw && urlRaw.startsWith('http')) ? urlRaw : urlPadrao;
+                
                 const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
                 const statusColor = isOnline ? '#28a745' : '#adb5bd';
                 
-                // Adiciona a classe 'active-contact' caso este ID seja o selecionado atualmente
                 const classeAtiva = (window.AppRDO.clienteId === id) ? 'active-contact' : '';
 
                 return `
                     <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ${classeAtiva}" 
                          id="item-contato-${id}"
-                         onclick="window.selecionarEAbrir('${id}', '${nome}', ${isOnline})">
+                         onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
                         <div class="position-relative">
-                            <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
+                            <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;" 
+                                 onerror="this.onerror=null; this.src='${urlPadrao}'; console.log('DEBUG: Erro ao carregar imagem para:', '${nome}');">
                             <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
                                   style="width:10px; height:10px; background-color: ${statusColor};"></span>
                         </div>
@@ -134,15 +181,17 @@ window.carregarDados = async function () {
         window.AppRDO.listaCarregada = true;
 
     } catch (e) {
-        console.error("Erro crítico na sincronização:", e);
-        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos.</div>`;
+        console.error("ERRO CRÍTICO NA SINCRONIZAÇÃO:", e);
+        listEl.innerHTML = `
+            <div class="p-3 text-center text-danger small">
+                Erro ao carregar contatos: ${e.message}
+            </div>`;
     } finally {
         window.AppRDO.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 };
 
-// Esta função garante que o clique no cliente sempre dispare o fluxo correto
 window.selecionarEAbrir = function(id, nome, isOnline) {
     // 1. Atualiza ID global
     window.AppRDO.clienteId = id;

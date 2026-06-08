@@ -14,17 +14,15 @@ const PUBLIC_PATH = path.join(__dirname, 'app');
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Middleware de Logs
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     next();
 });
 
+// Proxy para Google Apps Script
 app.post('/api/proxy', async (req, res) => {
     try {
-        if (!process.env.API_URL || !process.env.SECRET_KEY) {
-            throw new Error("Variáveis de ambiente não configuradas.");
-        }
-
         const response = await fetch(process.env.API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -35,19 +33,23 @@ app.post('/api/proxy', async (req, res) => {
         res.status(response.status).json(data);
     } catch (error) {
         console.error("ERRO NO PROXY:", error);
-        res.status(502).json({ status: 'error', message: 'Falha no servidor de dados' });
+        res.status(502).json({ status: 'error', message: 'Falha na comunicação com o servidor de dados' });
     }
 });
 
-app.use(express.static(path.resolve(__dirname, 'app')));
+// Servir arquivos estáticos da pasta 'app'
+app.use(express.static(PUBLIC_PATH));
 
+// Rota SPA (Single Page Application)
 app.get('*', (req, res) => {
-    const isFile = /\.(js|css|png|jpg|jpeg|gif|ico|json|svg)$/.test(req.path);
-    if (isFile) {
-        return res.status(404).send('Arquivo não encontrado');
+    // Se a rota não for um arquivo, serve o index.html
+    const isFile = /\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff2?|ttf)$/.test(req.path);
+    if (!isFile) {
+        res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
+    } else {
+        res.status(404).send('Not Found');
     }
-    res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`💤 Servidor operante em http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`💤 Servidor rodando em http://localhost:${PORT}`));

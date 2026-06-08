@@ -9,7 +9,7 @@
                         <small class="text-muted" style="font-size: 0.75rem;">Atendimento RDO</small>
                     </div>
                 </div>
-                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="carregarDados()">
+                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="window.carregarDados()">
                     <i id="sync-icon-chat" class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
@@ -87,3 +87,10 @@
     </div>
   </div>
 </div>
+
+<script>
+    // Executa a carga dos dados assim que a página é injetada no DOM pelo router
+    if (typeof window.carregarDados === 'function') {
+        window.carregarDados();
+    }
+</script>

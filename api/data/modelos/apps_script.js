@@ -44,22 +44,32 @@ function handleLogin(user) {
   if (!sheet) return { status: "error", message: "Tabela usuários não encontrada" };
   
   var data = sheet.getDataRange().getValues();
-  var headers = data[0].map(h => String(h).toLowerCase().trim());
+  if (data.length < 2) return { status: "error", message: "Nenhum usuário cadastrado" };
+
+  var headers = data[0].map(function(h) { return String(h).toLowerCase().trim(); });
   var userIndex = headers.indexOf("username");
   var passIndex = headers.indexOf("password");
   var tipoIndex = headers.indexOf("tipo");
   
-  var userRow = data.slice(1).find(r => String(r[userIndex]).trim() === user);
+  // Identifica a coluna de imagem/foto/avatar de forma dinâmica
+  var imgIndex = headers.findIndex(function(h) { 
+    return ["foto", "avatar", "imagem", "url_foto", "img"].indexOf(h) !== -1; 
+  });
+  
+  var userRow = data.slice(1).find(function(r) { 
+    return String(r[userIndex]).trim() === user; 
+  });
   
   if (!userRow) return { status: "error", message: "Usuário não encontrado" };
   
-  // Retorna o hash para o Node.js validar
+  // Monta o objeto de resposta incluindo a imagem encontrada (ou string vazia se não houver coluna)
   return { 
     status: "success", 
     user: { 
       username: user, 
       tipo: userRow[tipoIndex], 
-      password: String(userRow[passIndex]).trim() 
+      password: String(userRow[passIndex]).trim(),
+      imagem: imgIndex !== -1 ? String(userRow[imgIndex]) : ""
     } 
   };
 }
@@ -75,10 +85,20 @@ function handleAdd(sheet, data, entity) {
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
-  var headers = rows[0].map(h => String(h).toLowerCase().trim());
+  
+  // Normaliza cabeçalhos: remove espaços, converte para minúsculo e padroniza nomes de imagem
+  var headers = rows[0].map(h => {
+    var key = String(h).toLowerCase().trim();
+    // Mapeia variações comuns para a chave padrão 'imagem'
+    if (["foto", "avatar", "imagem_url", "url_foto"].includes(key)) return "imagem";
+    return key;
+  });
+
   return rows.slice(1).map(row => {
     var obj = {};
-    headers.forEach((h, i) => { if (h !== "") obj[h] = row[i]; });
+    headers.forEach((h, i) => { 
+      if (h !== "") obj[h] = row[i]; 
+    });
     return obj;
   });
 }

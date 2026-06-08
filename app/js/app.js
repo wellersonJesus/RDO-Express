@@ -1,3 +1,9 @@
+window.AppRDO = window.AppRDO || {
+    isFetching: false,
+    listaCarregada: false,
+    clienteId: null
+};
+
 window.loadPage = async function(page, title, subtitle) {
     const container = document.getElementById('router-view');
     if (!container) return;
@@ -35,4 +41,32 @@ window.loadModal = function(arquivo) {
         .then(html => {
             document.getElementById('modal-container').innerHTML = html;
         });
+};
+
+window.atualizarAvatar = () => {
+    const imgElement = document.getElementById('user-avatar-img');
+    const iconElement = document.getElementById('user-avatar-icon');
+    const imagem = localStorage.getItem('imagem');
+
+    if (!imgElement || !iconElement) return;
+
+    // Validação estrita
+    const hasValidImage = imagem && 
+                          imagem !== 'null' && 
+                          imagem !== 'undefined' && 
+                          imagem.trim().length > 0;
+
+    if (hasValidImage) {
+        imgElement.src = imagem;
+        imgElement.style.display = 'block';
+        iconElement.style.display = 'none';
+        
+        imgElement.onerror = () => {
+            imgElement.style.display = 'none';
+            iconElement.style.display = 'block';
+        };
+    } else {
+        imgElement.style.display = 'none';
+        iconElement.style.display = 'block';
+    }
 };
