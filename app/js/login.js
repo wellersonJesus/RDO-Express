@@ -1,5 +1,3 @@
-// /js/login.js
-
 window.togglePasswordVisibility = function() {
     const passInput = document.getElementById('pass');
     const icon = document.getElementById('togglePassIcon');
@@ -22,8 +20,12 @@ window.togglePasswordVisibility = function() {
         const user = document.getElementById('user').value.trim();
         const pass = document.getElementById('pass').value.trim();
 
+        // Salva o texto original para restaurar em caso de erro
+        const originalText = btn.innerHTML;
+        
+        // Aplica o efeito de carregamento
         btn.disabled = true;
-        btn.innerText = "Autenticando...";
+        btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate me-2"></i> Autenticando...`;
         msg.innerText = "";
 
         try {
@@ -36,13 +38,11 @@ window.togglePasswordVisibility = function() {
             const resData = await response.json();
 
             if (response.ok && resData.status === 'success') {
-                // Persistência de sessão
                 localStorage.setItem('rdo_auth', 'true');
                 localStorage.setItem('username', resData.user.username);
                 localStorage.setItem('tipo', resData.user.tipo);
                 localStorage.setItem('imagem', resData.user.imagem || resData.user.foto || resData.user.avatar || '');
                 
-                // Redireciona para a raiz. O index.html tratará de carregar o Dashboard
                 window.location.replace('/');
             } else {
                 throw new Error(resData.message || "Credenciais inválidas.");
@@ -50,8 +50,10 @@ window.togglePasswordVisibility = function() {
         } catch (err) {
             console.error("Erro no login:", err);
             msg.innerText = err.message || "Erro de conexão com o servidor.";
+            
+            // Restaura o botão original caso falhe
             btn.disabled = false;
-            btn.innerText = "Acessar Painel";
+            btn.innerHTML = originalText;
         }
     };
 })();
