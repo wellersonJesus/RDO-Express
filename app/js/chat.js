@@ -328,18 +328,76 @@ window.analisarMensagemEntrada = function (texto) {
 };
 
 window.iniciarFluxoCheckout = async function () {
-    if (window.AppRDO.isProcessingCheckout) return;
-    window.AppRDO.isProcessingCheckout = true;
+    const msgInput = document.getElementById('msg-input');
+    const texto = msgInput?.value?.trim();
 
-    try {
-        // ... (Logica de extração de dados já contida na sua parte 2)
-        await window.loadModal('modal_mapa.html');
-        // ... (Renderização do modal)
-    } catch (err) {
-        window.exibirErroRodape?.(err.message);
-    } finally {
-        window.AppRDO.isProcessingCheckout = false;
+    if (!texto) {
+        window.exibirModalAviso("Por favor, digite os dados do pedido.");
+        return;
     }
+
+    // Processamento dos dados
+    const solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)?.[1] || "Não informado").trim();
+    const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || "").trim();
+    const linhasRota = texto.split('\n').filter(l => /de:/i.test(l) && /para:/i.test(l));
+
+    if (linhasRota.length === 0) {
+        window.exibirModalAviso("Formato de rota inválido. Use 'De: X Para: Y'.");
+        return;
+    }
+
+    // Carrega o modal do mapa
+    await window.loadModal('modal_mapa.html');
+    const modalEl = document.getElementById('modalMapa');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Adiciona evento ONCE para rodar apenas quando o modal abrir
+    modalEl.addEventListener('shown.bs.modal', async () => {
+        const elSolicitante = document.getElementById('header-nome-solicitante');
+        const resumoEl = document.getElementById('resumo-total');
+        if (elSolicitante) elSolicitante.innerText = solicitante;
+        if (resumoEl) resumoEl.innerHTML = 'Calculando rotas...';
+
+        try {
+            let kmTotal = 0, minTotal = 0, listaCaminhos = [];
+
+            for (const linha of linhasRota) {
+                const p = linha.split(/Para:|\|/gi).map(x => x.replace(/De:/gi, '').trim());
+                if (p.length >= 2) {
+                    const p1 = await buscarCoordenadasEndereco(p[0]);
+                    const p2 = await buscarCoordenadasEndereco(p[1]);
+                    if (p1 && p2) {
+                        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
+                        const resp = await fetch(url);
+                        const data = await resp.json();
+                        if (data.routes?.[0]) {
+                            kmTotal += (data.routes[0].distance / 1000);
+                            minTotal += (data.routes[0].duration / 60);
+                            listaCaminhos.push(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
+                        }
+                    }
+                }
+            }
+
+            // ATUALIZAÇÃO DO ESTADO GLOBAL (Para ser lido pelo formulário depois)
+            window.dadosPedidoAtual = {
+                solicitante, contato, 
+                cliente: window.AppRDO.clienteSelecionado,
+                distancia: Math.round(kmTotal).toString(),
+                tempo: formatarTempoHumano(minTotal),
+                coordenadas: listaCaminhos,
+                valor: (Math.round(kmTotal) * 3.00).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                rawInput: texto // Salva o input original aqui
+            };
+
+            window.renderizarFooterResumo(resumoEl);
+            window.renderizarMapaUnificado();
+        } catch (err) {
+            if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
+        }
+    }, { once: true });
+
+    modal.show();
 };
 
 async function calcularTrechoIndividual(p1, p2) {
@@ -504,6 +562,22 @@ window.prosseguirParaFormulario = async function () {
     }, { once: true });
 
     modalForm.show();
+};
+
+window.avancarParaFormulario = function () {
+    document.getElementById('step-mapa').classList.add('d-none');
+    document.getElementById('step-formulario').classList.remove('d-none');
+    
+    // Dispara preenchimento do formulário
+    if (typeof window.preencherDadosFormulario === 'function') {
+        window.preencherDadosFormulario();
+    }
+};
+
+window.voltarParaChat = function () {
+    document.getElementById('step-formulario').classList.add('d-none');
+    document.getElementById('step-mapa').classList.add('d-none');
+    document.getElementById('step-chat').classList.remove('d-none');
 };
 
 window.voltarParaMapa = async function () {
@@ -676,6 +750,23 @@ window.enviarMensagemGeral = async function () {
     // Dispara o fluxo
     console.log("Iniciando fluxo de checkout para:", window.AppRDO.clienteSelecionado);
     await window.iniciarFluxoCheckout(); 
+};
+
+window.exibirModalAviso = function(mensagem) {
+    const elModal = document.getElementById('modalAtencao');
+    const elTexto = document.getElementById('modal-atencao-mensagem');
+    
+    if (elTexto) {
+        elTexto.innerText = mensagem;
+    }
+    
+    if (elModal) {
+        const bsModal = new bootstrap.Modal(elModal);
+        bsModal.show();
+    } else {
+        // Fallback caso o elemento não exista no DOM
+        alert(mensagem);
+    }
 };
 
 function limparBackdrops() {
