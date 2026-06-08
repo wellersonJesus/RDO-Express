@@ -194,12 +194,31 @@ window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
     }
 };
 
-window.confirmarStatusComMotoboy = function() {
+window.confirmarStatusComMotoboy = async function() {
+    const btn = document.getElementById('btn-confirmar-motoboy');
     const select = document.getElementById('select-motoboy');
+    
+    if (!select.value) {
+        window.exibirModalAviso("Por favor, selecione um motoboy.");
+        return;
+    }
+
+    // 1. Estados de Loading
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate me-2"></i>Salvando...`;
+
+    // 2. Executa a gravação
     const motoboyId = select.value;
     const motoboyNome = select.options[select.selectedIndex].text;
     
-    window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
+    try {
+        await window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
+    } catch (e) {
+        // Se der erro, volta o botão ao estado normal
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
 };
 
 window.confirmarStatusFinal = async function(status, extra = {}) {
