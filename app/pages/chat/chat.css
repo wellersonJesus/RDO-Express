@@ -73,9 +73,15 @@
     bottom: -18px !important;
     left: 5px !important;
     font-size: 1.4rem !important;
-    color: #28a745 !important;
     z-index: 10;
     pointer-events: auto !important;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+/* Cor cinza para o estado de "Aguardando" */
+.status-pending {
+    color: #6c757d !important; /* Cinza Bootstrap */
 }
 
 /* ==========================================================================
@@ -133,4 +139,25 @@
 .btn-danger {
     background-color: var(--vermelho-rdo) !important;
     border-color: var(--vermelho-rdo) !important;
+}
+
+/* Botões de Status */
+.btn-status-option {
+    background-color: #e7f1ff; /* Azul muito suave */
+    color: #0d6efd;
+    border: 1px solid #cce5ff;
+    transition: 0.3s;
+}
+.btn-status-option:hover {
+    background-color: #d1e7fd;
+}
+
+/* Botão de Confirmação (OK/Confirmar) */
+.btn-confirm-status {
+    background-color: #f8d7da; /* Vermelho muito suave */
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+.btn-confirm-status:hover {
+    background-color: #f1b0b7;
 }

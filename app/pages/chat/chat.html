@@ -20,8 +20,10 @@
         <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column" style="height: 600px;">
             <div class="p-3 border-bottom">
                 <div class="input-group bg-light rounded-pill px-2">
-                    <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
-                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Pesquisar...">
+                    <span class="input-group-text bg-transparent border-0"><i
+                            class="bi bi-search text-secondary"></i></span>
+                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none"
+                        placeholder="Pesquisar...">
                 </div>
             </div>
             <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1"></div>
@@ -29,16 +31,19 @@
     </div>
 
     <div class="col-md-8">
-        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
-            
+        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column"
+            style="height: 600px;">
+
             <div id="step-chat" class="d-flex flex-column h-100">
                 <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
-                    <img id="chat-header-logo" src="" class="rounded-circle d-none" style="width: 40px; height: 40px; object-fit: cover;">
+                    <img id="chat-header-logo" src="" class="rounded-circle d-none"
+                        style="width: 40px; height: 40px; object-fit: cover;">
                     <div class="ms-3">
                         <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
                     </div>
                 </div>
-                <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
+                <div id="chat-messages-container"
+                    class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
                     <div class="text-center text-muted my-auto">
                         <i class="bi bi-chat-dots fs-1 d-block mb-2"></i>
                         <p>Selecione um contato na lista</p>
@@ -46,7 +51,8 @@
                 </div>
                 <div class="p-3 bg-white border-top">
                     <div class="input-group bg-light rounded-pill p-1">
-                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Digite a mensagem de pedido..."></textarea>
+                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1"
+                            placeholder="Digite a mensagem de pedido..."></textarea>
                         <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="window.iniciarFluxoCheckout()">
                             <i class="bi bi-send-fill"></i>
                         </button>
@@ -56,36 +62,68 @@
 
             <div id="step-mapa" class="d-none d-flex flex-column h-100 p-4">
                 <h6 class="fw-bold text-danger mb-3">Definir Rota</h6>
-                <div id="map-placeholder" class="flex-grow-1 bg-light rounded-3 border mb-3 d-flex align-items-center justify-content-center">
+                <div id="map-placeholder"
+                    class="flex-grow-1 bg-light rounded-3 border mb-3 d-flex align-items-center justify-content-center">
                     <span class="text-muted">Mapa de Rotas</span>
                 </div>
-                <button class="btn btn-danger rounded-pill" onclick="window.avancarParaFormulario()">Avançar para Cálculo</button>
+                <button class="btn btn-danger rounded-pill" onclick="window.avancarParaFormulario()">Avançar para
+                    Cálculo</button>
             </div>
 
             <div id="step-formulario" class="d-none d-flex flex-column h-100 p-4 overflow-auto">
                 <h6 class="fw-bold text-danger mb-3">Detalhes do Pedido</h6>
                 <div id="container-linhas-rotas" class="mb-3"></div>
-                <button class="btn btn-success rounded-pill mt-auto" onclick="window.salvarPedidoAPI()">FINALIZAR PEDIDO</button>
+                <button class="btn btn-success rounded-pill mt-auto" onclick="window.salvarPedidoAPI()">FINALIZAR
+                    PEDIDO</button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="modalAtencao" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header border-0 bg-danger text-white">
-        <h5 class="modal-title">Atenção</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center py-4">
-        <p id="modal-atencao-mensagem" class="mb-0 fw-bold">O cliente está offline.</p>
-      </div>
-      <div class="modal-footer border-0 justify-content-center">
-        <button type="button" class="btn btn-danger rounded-pill px-4" data-bs-dismiss="modal">Entendido</button>
-      </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title">Atenção</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p id="modal-atencao-mensagem" class="mb-0 fw-bold">O cliente está offline.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-danger rounded-pill px-4"
+                    data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
     </div>
-  </div>
+</div>
+
+<div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body">
+                <div class="d-grid gap-2" id="box-botoes-status">
+                    <button class="btn btn-status-option" onclick="window.selecionarStatus('EM_ROTA')">
+                        <i class="bi bi-truck me-2"></i>Em Rota
+                    </button>
+                    <button class="btn btn-status-option" onclick="window.atualizarStatusPedido('CONCLUIDO')">
+                        <i class="bi bi-check-circle me-2"></i>Concluído
+                    </button>
+                    <button class="btn btn-status-option" onclick="window.atualizarStatusPedido('CANCELADO')">
+                        <i class="bi bi-x-circle me-2"></i>Cancelado
+                    </button>
+                </div>
+
+                <div id="box-selecao-motoboy" class="d-none mt-3">
+                    <label class="small fw-bold text-muted mb-1">Selecione o Motoboy:</label>
+                    <select id="select-motoboy" class="form-select form-select-sm"></select>
+                    <button class="btn btn-confirm-status w-100 mt-2" onclick="window.confirmarStatusComMotoboy()">
+                        Confirmar Rota
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

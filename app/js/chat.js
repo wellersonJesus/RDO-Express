@@ -1,8 +1,8 @@
-window.AppRDO = window.AppRDO || { 
-    debounceTimer: null, 
-    listaCarregada: false, 
+window.AppRDO = window.AppRDO || {
+    debounceTimer: null,
+    listaCarregada: false,
     isFetching: false,
-    isProcessingCheckout: false 
+    isProcessingCheckout: false
 };
 
 window.iniciarChat = async () => await window.carregarDados();
@@ -13,9 +13,19 @@ window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(() => {
         const termo = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
+        
+        // Busca todos os itens da lista
         document.querySelectorAll('.contact-item-clean').forEach(item => {
-            const nome = item.querySelector('.contact-name')?.innerText.toLowerCase() || '';
-            item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
+            // Busca o nome dentro da div com fw-bold (onde fica o nome do cliente)
+            const nomeElemento = item.querySelector('.fw-bold');
+            const nome = nomeElemento ? nomeElemento.innerText.toLowerCase() : '';
+            
+            // Aplica o filtro
+            if (nome.includes(termo)) {
+                item.style.setProperty('display', 'flex', 'important');
+            } else {
+                item.style.setProperty('display', 'none', 'important');
+            }
         });
     }, 300);
 };
@@ -37,14 +47,14 @@ document.addEventListener('change', (e) => {
     }
 });
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     // Verifica se o clique foi no ícone de sync ou no pai dele
     if (e.target.closest('#sync-icon-chat')) {
         const syncIcon = document.getElementById('sync-icon-chat');
         if (syncIcon && !window.AppRDO.isFetching) {
             console.log("Sincronização manual iniciada...");
             syncIcon.classList.add('spinner-rotate');
-            
+
             // Chama a função global
             window.carregarDados().finally(() => {
                 syncIcon.classList.remove('spinner-rotate');
@@ -56,78 +66,109 @@ document.addEventListener('click', function(e) {
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
+    const searchBtn = document.getElementById('chat-search'); // Seu input de busca
 
     if (!listEl) return;
+
     if (window.AppRDO.isFetching) return;
 
     window.AppRDO.isFetching = true;
+    
+    // Feedback visual: Gira o ícone e desabilita a busca durante a sincronização
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
-
-    // ESTADO: BUSCANDO
-    listEl.innerHTML = `
-        <div class="chat-status-container" style="height: 200px;">
-            <i class="bi bi-search icon-status-large spinner-rotate"></i>
-            <div class="status-label-gray">Buscando contatos...</div>
-        </div>
-    `;
+    if (searchBtn) searchBtn.placeholder = "Sincronizando...";
 
     try {
         const clientes = await API.call('getclientes');
         const listaClientes = Array.isArray(clientes) ? clientes : [];
+        const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        if (listaClientes.length === 0) {
-            listEl.innerHTML = `
-                <div class="chat-status-container" style="height: 200px;">
-                    <i class="bi bi-bootstrap-reboot icon-status-large"></i>
-                    <div class="status-label-gray">Nenhum contato disponível.</div>
-                </div>`;
-        } else {
-            listEl.innerHTML = listaClientes.map(cliente => {
-                const id = String(cliente.id || '');
-                const nome = (cliente.nome || cliente.username || 'Sem nome');
-                const isOnline = String(cliente.status || '').toUpperCase() === 'TRUE';
-                const statusColor = isOnline ? '#28a745' : '#adb5bd';
-                const img = cliente.imagem || cliente.foto || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        // Renderiza os contatos
+        window.renderizarLista(listaClientes, isMasterOn);
+        
+        window.AppRDO.listaCarregada = true;
+        if (searchBtn) searchBtn.placeholder = "Buscar cliente...";
 
-                return `
-                    <div class="list-group-item list-group-item-action contact-item-clean" 
-                         id="item-contato-${id}"
-                         onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
-                        <div class="position-relative">
-                            <img src="${img}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;">
-                            <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
-                                  style="width:10px; height:10px; background-color: ${statusColor};"></span>
-                        </div>
-                        <div class="ms-3 overflow-hidden">
-                            <div class="contact-name">${nome}</div>
-                            <div class="small text-muted">${isOnline ? 'Online' : 'Offline'}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
     } catch (e) {
-        listEl.innerHTML = `
-            <div class="chat-status-container text-danger" style="height: 200px;">
-                <i class="bi bi-exclamation-triangle icon-status-large"></i>
-                <div class="status-label-gray">Falha ao conectar com servidor.</div>
-            </div>`;
+        console.error("Erro na sincronização:", e);
+        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos.</div>`;
     } finally {
         window.AppRDO.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 };
 
-window.selecionarEAbrir = function(id, nome, isOnline) {
+window.selecionarEAbrir = function (id, nome, isOnline) {
     window.AppRDO.clienteId = id;
     window.AppRDO.clienteSelecionado = nome;
     window.abrirConversa(id, nome, null, isOnline);
 };
 
+window.selecionarStatus = async function(status) {
+    if (status === 'EM_ROTA') {
+        // Exibe o seletor de motoboys
+        document.getElementById('box-botoes-status').classList.add('d-none');
+        document.getElementById('box-selecao-motoboy').classList.remove('d-none');
+        
+        // Busca motoboys no banco
+        const motoboys = await API.call('getmotoboys'); 
+        const select = document.getElementById('select-motoboy');
+        select.innerHTML = motoboys.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+        
+        window.AppRDO.statusTemporario = 'EM_ROTA';
+    } else {
+        // Para Concluído/Cancelado, chama direto a atualização
+        window.confirmarStatusFinal(status);
+    }
+};
+
+window.confirmarStatusComMotoboy = function() {
+    const select = document.getElementById('select-motoboy');
+    const motoboyId = select.value;
+    const motoboyNome = select.options[select.selectedIndex].text;
+    
+    window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
+};
+
+window.confirmarStatusFinal = async function(status, extra = {}) {
+    const pedidoId = window.AppRDO.pedidoEmEdicao;
+    try {
+        await API.call('atualizarstatus', { 
+            id: pedidoId, 
+            status: status, 
+            motoboy_id: extra.motoboyId 
+        });
+
+        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+        const badgeContainer = msgEl?.querySelector('.status-badge-container');
+        
+        if (badgeContainer) {
+            const configs = {
+                'EM_ROTA':    { icon: 'bi-truck', text: 'Em Rota', class: 'text-primary' },
+                'CONCLUIDO':  { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'text-success' },
+                'CANCELADO':  { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'text-danger' }
+            };
+            const conf = configs[status];
+            const nomeExibido = extra.motoboyNome ? ` (${extra.motoboyNome})` : '';
+
+            badgeContainer.innerHTML = `
+                <span class="${conf.class}">
+                    <i class="bi ${conf.icon}"></i> ${conf.text}${nomeExibido}
+                </span>
+            `;
+        }
+    } finally {
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus')).hide();
+        // Reset do modal
+        document.getElementById('box-botoes-status').classList.remove('d-none');
+        document.getElementById('box-selecao-motoboy').classList.add('d-none');
+    }
+};
+
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     const container = document.getElementById('chat-messages-container');
     const idLimpo = String(id).replace(/\D/g, '');
-    
+
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
@@ -146,7 +187,7 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
         const todasMensagens = await API.call('getchat');
         if (!todasMensagens) throw new Error("Falha ao obter dados");
 
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m =>
             String(m.jid_numero || "").trim() === idLimpo
         );
 
@@ -175,7 +216,7 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     }
 };
 
-window.abrirModalEdicao = function(msgId) {
+window.abrirModalEdicao = function (msgId) {
     Swal.fire({
         title: 'Gerenciar Mensagem',
         text: 'O que deseja fazer com esta mensagem?',
@@ -196,6 +237,17 @@ window.abrirModalEdicao = function(msgId) {
             if (el) el.parentElement.remove();
         }
     });
+};
+
+window.abrirModalStatus = function (pedidoId) {
+    if (!pedidoId) {
+        console.error("ID do pedido não encontrado");
+        return;
+    }
+    window.AppRDO.pedidoEmEdicao = pedidoId;
+    const modalEl = document.getElementById('modalStatus');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
 };
 
 function formatarTempoHumano(minutosTotais) {
@@ -289,10 +341,36 @@ window.renderizarMapaUnificado = function () {
     window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
 
-window.exibirErroRodape = function (mensagem) {
-    const el = document.getElementById('resumo-total');
-    if (el) el.innerHTML = `<span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> ${mensagem}</span>`;
-    console.error("ERRO RDO:", mensagem);
+window.renderizarLista = function(lista, isMasterOn) {
+    const listEl = document.getElementById('lista-contatos-chat');
+    if (lista.length === 0) {
+        listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
+        return;
+    }
+
+    listEl.innerHTML = lista.map(cliente => {
+        const id = String(cliente.id || '');
+        const nome = (cliente.nome || cliente.username || 'Sem nome');
+        const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
+        const statusColor = isOnline ? '#28a745' : '#adb5bd';
+        
+        return `
+            <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
+                 id="item-contato-${id}"
+                 onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
+                <div class="position-relative">
+                    <img src="${imagem}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
+                    <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
+                          style="width:8px; height:8px; background-color: ${statusColor};"></span>
+                </div>
+                <div class="ms-2 overflow-hidden text-truncate">
+                    <div class="contact-name">${nome}</div>
+                    <div class="small text-muted" style="font-size: 0.7rem;">${isOnline ? 'Online' : 'Offline'}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
 };
 
 window.renderizarFooterResumo = function (el) {
@@ -307,6 +385,28 @@ window.renderizarFooterResumo = function (el) {
         <span class="me-3"><i class="bi bi-geo-alt-fill"></i> ${d.distancia || '0'} km</span>
         <span class="fw-bold"><i class="bi bi-wallet2"></i> ${d.valor || 'R$ 0,00'}</span>
     `;
+};
+
+window.exibirErro = function (erro, contexto = "Erro desconhecido") {
+    console.error(`[${contexto}]:`, erro);
+
+    // Identifica o container de mensagens
+    const container = document.getElementById('chat-messages-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="alert alert-danger m-3 rounded-4 shadow-sm">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Ops!</strong> Algo deu errado ao ${contexto}.
+                <br><small class="text-secondary">${erro.message || erro}</small>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-danger" onclick="window.carregarDados()">Tentar Novamente</button>
+                </div>
+            </div>
+        `;
+    } else {
+        // Fallback caso o chat não esteja visível
+        window.exibirModalAviso(`Falha ao ${contexto}: ${erro.message || erro}`);
+    }
 };
 
 window.analisarMensagemEntrada = function (texto) {
@@ -350,7 +450,7 @@ window.iniciarFluxoCheckout = async function () {
     await window.loadModal('modal_mapa.html');
     const modalEl = document.getElementById('modalMapa');
     const modal = new bootstrap.Modal(modalEl);
-    
+
     // Adiciona evento ONCE para rodar apenas quando o modal abrir
     modalEl.addEventListener('shown.bs.modal', async () => {
         const elSolicitante = document.getElementById('header-nome-solicitante');
@@ -381,7 +481,7 @@ window.iniciarFluxoCheckout = async function () {
 
             // ATUALIZAÇÃO DO ESTADO GLOBAL (Para ser lido pelo formulário depois)
             window.dadosPedidoAtual = {
-                solicitante, contato, 
+                solicitante, contato,
                 cliente: window.AppRDO.clienteSelecionado,
                 distancia: Math.round(kmTotal).toString(),
                 tempo: formatarTempoHumano(minTotal),
@@ -426,6 +526,39 @@ async function calcularRotaOSRM(p1, p2) {
         return null;
     } catch (e) { return null; }
 }
+
+window.calcularTudo = function () {
+    try {
+        // Função utilitária: limpa a string, troca vírgula por ponto e garante float
+        const parse = (id) => {
+            const val = document.getElementById(id)?.value;
+            if (!val) return 0;
+            // Remove qualquer caractere que não seja dígito, ponto ou vírgula
+            const limpo = String(val).replace(',', '.');
+            return parseFloat(limpo) || 0;
+        };
+
+        const km = parse('p-distancia');
+        const valorKm = parse('p-valor-km');
+        const taxaDin = parse('p-dinamica');
+        const prioridade = parse('p-prioridade');
+        const retorno = parse('p-retorno');
+
+        // Cálculo Preciso
+        let subtotal = (km * valorKm) + taxaDin + prioridade;
+        let total = subtotal + (subtotal * retorno);
+
+        // Formatação Final
+        const view = document.getElementById('view-valor-final');
+        if (view) {
+            view.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+    } catch (error) {
+        console.error("ERRO NO CÁLCULO:", error.message);
+        const view = document.getElementById('view-valor-final');
+        if (view) view.innerText = "Erro no cálculo";
+    }
+};
 
 window.preencherDadosFormulario = function () {
     try {
@@ -513,39 +646,6 @@ window.preencherDadosFormulario = function () {
     }
 };
 
-window.calcularTudo = function () {
-    try {
-        // Função utilitária: limpa a string, troca vírgula por ponto e garante float
-        const parse = (id) => {
-            const val = document.getElementById(id)?.value;
-            if (!val) return 0;
-            // Remove qualquer caractere que não seja dígito, ponto ou vírgula
-            const limpo = String(val).replace(',', '.');
-            return parseFloat(limpo) || 0;
-        };
-
-        const km = parse('p-distancia');
-        const valorKm = parse('p-valor-km');
-        const taxaDin = parse('p-dinamica');
-        const prioridade = parse('p-prioridade');
-        const retorno = parse('p-retorno');
-
-        // Cálculo Preciso
-        let subtotal = (km * valorKm) + taxaDin + prioridade;
-        let total = subtotal + (subtotal * retorno);
-
-        // Formatação Final
-        const view = document.getElementById('view-valor-final');
-        if (view) {
-            view.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-    } catch (error) {
-        console.error("ERRO NO CÁLCULO:", error.message);
-        const view = document.getElementById('view-valor-final');
-        if (view) view.innerText = "Erro no cálculo";
-    }
-};
-
 window.prosseguirParaFormulario = async function () {
     const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
     modalMapa?.hide();
@@ -567,7 +667,7 @@ window.prosseguirParaFormulario = async function () {
 window.avancarParaFormulario = function () {
     document.getElementById('step-mapa').classList.add('d-none');
     document.getElementById('step-formulario').classList.remove('d-none');
-    
+
     // Dispara preenchimento do formulário
     if (typeof window.preencherDadosFormulario === 'function') {
         window.preencherDadosFormulario();
@@ -701,47 +801,85 @@ ${valorFinal}`;
     }
 };
 
+window.fecharModalStatus = async function () {
+    const pedidoId = window.AppRDO.pedidoEmEdicao;
+    const novoStatus = window.AppRDO.statusTemporario;
+
+    if (!pedidoId) {
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
+        return;
+    }
+
+    try {
+        // Se o usuário abriu o modal mas não clicou em um status, não faz nada
+        if (novoStatus) {
+            const resp = await API.call('atualizarstatus', {
+                id: pedidoId,
+                status: novoStatus
+            });
+            console.log("Status atualizado na API:", resp);
+        }
+
+        // Atualização Visual (Agora o seletor encontra o atributo data-pedido-id)
+        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+        if (msgEl) {
+            let badge = msgEl.querySelector('.status-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'status-badge small mt-2 fw-bold text-uppercase';
+                msgEl.appendChild(badge);
+            }
+            // Exibe o status formatado
+            badge.innerHTML = `<i class="bi bi-info-circle me-1"></i> ${novoStatus.replace('_', ' ')}`;
+        }
+    } catch (e) {
+        console.error("Erro ao salvar status:", e);
+        window.exibirModalAviso("Erro ao salvar status no servidor.");
+    } finally {
+        window.AppRDO.pedidoEmEdicao = null;
+        window.AppRDO.statusTemporario = null;
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
+    }
+};
+
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     const container = document.getElementById('chat-messages-container');
-    if (!container) return;
-
-    // Se não houver pedidoId (ex: mensagem de sistema), gera um temporário
     const dataId = pedidoId || 'msg-' + Date.now();
-    
+
     const div = document.createElement('div');
     div.className = 'message-wrapper';
-    
-    // O div wrapper da mensagem recebe o clique para exibir status ou excluir
+
+    // O ícone usa a classe .status-icon (do seu CSS) e .spinner-rotate (para o looping)
+    // O title="Aguardando Motoboy" exibe o texto ao passar o mouse
     div.innerHTML = `
         <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
-             id="${dataId}"
-             onclick="window.abrirModalEdicao('${dataId}')"
-             onmouseover="this.style.filter='brightness(0.95)'"
-             onmouseout="this.style.filter='brightness(1)'">
+             data-pedido-id="${dataId}"
+             onclick="window.abrirModalEdicao('${dataId}')">
              
             <div class="message-body">${texto.replace(/\n/g, '<br>')}</div>
             
             ${!isRecebida ? `
-                <div class="status-icon" title="Clique para gerenciar status" onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')">
-                    <i class="bi bi-check2-circle" style="color: #28a745 !important;"></i>
+                <div class="status-icon" 
+                     onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')" 
+                     title="Aguardando Motoboy">
+                    <i class="bi bi-arrow-repeat spinner-rotate"></i>
                 </div>
             ` : ''}
         </div>
     `;
-    
     container.appendChild(div);
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
 };
 
 window.enviarMensagemGeral = async function () {
     const input = document.getElementById('msg-input');
-    
+
     // Validações
     if (!window.AppRDO?.clienteId) {
         Swal.fire('Atenção', 'Selecione um cliente na lista primeiro.', 'warning');
         return;
     }
-    
+
     if (!input || !input.value.trim()) {
         Swal.fire('Atenção', 'Digite o pedido antes de enviar.', 'warning');
         return;
@@ -749,17 +887,17 @@ window.enviarMensagemGeral = async function () {
 
     // Dispara o fluxo
     console.log("Iniciando fluxo de checkout para:", window.AppRDO.clienteSelecionado);
-    await window.iniciarFluxoCheckout(); 
+    await window.iniciarFluxoCheckout();
 };
 
-window.exibirModalAviso = function(mensagem) {
+window.exibirModalAviso = function (mensagem) {
     const elModal = document.getElementById('modalAtencao');
     const elTexto = document.getElementById('modal-atencao-mensagem');
-    
+
     if (elTexto) {
         elTexto.innerText = mensagem;
     }
-    
+
     if (elModal) {
         const bsModal = new bootstrap.Modal(elModal);
         bsModal.show();
@@ -775,3 +913,83 @@ function limparBackdrops() {
     document.body.style.overflow = '';
     document.body.style.paddingRight = '';
 }
+
+window.atualizarStatusPedido = async function(status, extra = {}) {
+    const pedidoId = window.AppRDO.pedidoEmEdicao;
+    try {
+        // Chamada API para persistir a mudança
+        await API.call('atualizarstatus', { 
+            id: pedidoId, 
+            status: status, 
+            motoboy_id: extra.motoboyId 
+        });
+
+        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+        const badgeContainer = msgEl?.querySelector('.status-badge-container');
+        
+        if (badgeContainer) {
+            // Configuração dos ícones padrão para cada status
+            const configs = {
+                'EM_ROTA':    { icon: 'bi-truck', text: 'Em Rota', class: 'text-primary' },
+                'CONCLUIDO':  { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'text-success' },
+                'CANCELADO':  { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'text-danger' }
+            };
+
+            const conf = configs[status];
+            const textoFinal = extra.motoboyNome ? `${conf.text}: ${extra.motoboyNome}` : conf.text;
+
+            // Substitui a ampulheta pelo ícone do novo status
+            badgeContainer.innerHTML = `
+                <span class="${conf.class}" style="font-size: 0.8rem;">
+                    <i class="bi ${conf.icon} me-1"></i> ${textoFinal}
+                </span>
+            `;
+        }
+    } catch (e) {
+        window.exibirModalAviso("Erro ao atualizar status.");
+    } finally {
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus')).hide();
+        // Reset da interface do modal
+        document.getElementById('box-botoes-status')?.classList.remove('d-none');
+        document.getElementById('box-selecao-motoboy')?.classList.add('d-none');
+    }
+};
+
+window.fecharModalStatus = async function () {
+    const pedidoId = window.AppRDO.pedidoEmEdicao;
+    const novoStatus = window.AppRDO.statusTemporario;
+
+    if (!pedidoId || !novoStatus) {
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
+        return;
+    }
+
+    try {
+        await API.call('atualizarstatus', { id: pedidoId, status: novoStatus });
+
+        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+        const badgeContainer = msgEl?.querySelector('.status-badge-container');
+
+        if (badgeContainer) {
+            let config = { icon: '', text: '', class: '' };
+
+            if (novoStatus === 'EM_ROTA') {
+                config = { icon: 'bi-truck', text: 'Em Rota', class: 'bg-primary text-white' };
+            } else if (novoStatus === 'CONCLUIDO') {
+                config = { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'bg-success text-white' };
+            } else if (novoStatus === 'CANCELADO') {
+                config = { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'bg-danger text-white' };
+            }
+
+            badgeContainer.innerHTML = `
+                <span class="badge ${config.class} border">
+                    <i class="bi ${config.icon} me-1"></i> ${config.text}
+                </span>
+            `;
+        }
+    } catch (e) {
+        window.exibirModalAviso("Erro ao atualizar status.");
+    } finally {
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
+    }
+};
