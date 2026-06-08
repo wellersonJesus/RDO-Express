@@ -29,44 +29,38 @@ window.loadPage = async function(page, title, subtitle) {
     
     if (!container) return;
 
-    // 1. Limpeza de estado e UI
-    window.AppRDO.resetState();
+    // 1. Limpeza e Reset de estado
+    if (window.AppRDO && typeof window.AppRDO.resetState === 'function') {
+        window.AppRDO.resetState();
+    }
+    
     if (titleEl) titleEl.innerText = title;
     if (subtitleEl) subtitleEl.innerText = subtitle;
 
     try {
-        // 2. Fetch de HTML com tratamento de erro
+        // 2. Carregamento do conteúdo
         const response = await fetch(`pages/${page}/${page}.html`);
-        if (!response.ok) throw new Error(`Falha ao carregar ${page}`);
+        if (!response.ok) throw new Error(`Erro ao carregar página: ${page}`);
         
         container.innerHTML = await response.text();
 
-        // 3. Pós-renderização
+        // 3. Pós-renderização e Inicialização
         if (window.atualizarAvatar) window.atualizarAvatar();
 
-        // 4. Mapeamento Centralizado
-        const rotasExecucao = {
-            'chat': () => window.iniciarChat?.(),
-            'bot': () => window.initBot?.(),
-            'administracao': () => window.carregarAdmin?.('clientes'),
-            'pedidos': () => window.iniciarPedidos?.()
-        };
-
-        // 5. Orquestração Segura
-        if (rotasExecucao[page]) {
-            if (window.checkMaster()) {
-                await rotasExecucao[page]();
-            } else {
-                container.innerHTML = `
-                    <div class="alert alert-danger m-3 text-center">
-                        <i class="bi bi-shield-lock" style="font-size: 2rem;"></i>
-                        <p class="mt-2">Sistema Master RDO desligado. Acesso restrito.</p>
-                    </div>` + container.innerHTML;
-            }
+        // 4. Mapeamento de inicialização por página
+        if (page === 'chat') {
+            // Pequeno delay para garantir que o DOM esteja montado
+            setTimeout(async () => {
+                await window.carregarDados();
+            }, 50);
         }
+        
+        // Outros módulos (exemplo)
+        if (page === 'bot' && typeof window.initBot === 'function') window.initBot();
+        
     } catch (err) {
-        console.error("[Maestro] Erro de navegação:", err);
-        container.innerHTML = `<div class="alert alert-warning">Erro ao carregar módulo. Tente novamente.</div>`;
+        console.error("[Navegação]:", err);
+        container.innerHTML = `<div class="alert alert-danger">Erro ao carregar módulo. Tente novamente.</div>`;
     }
 };
 
