@@ -1,4 +1,12 @@
-window.checkMaster = () => localStorage.getItem('bot_master_active') === 'true';
+window.checkMaster = () => {
+    try {
+        const status = localStorage.getItem('bot_master_active');
+        return status === 'true';
+    } catch (err) {
+        console.error("[Maestro] Erro ao acessar localStorage:", err);
+        return false; // Default seguro: sistema desligado em caso de erro
+    }
+};
 
 window.AppRDO = {
     isFetching: false,

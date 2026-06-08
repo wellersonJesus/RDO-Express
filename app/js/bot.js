@@ -90,8 +90,26 @@ window.reloadBot = async () => {
 };
 
 window.toggleMaster = () => {
-    localStorage.setItem('bot_master_active', !(localStorage.getItem('bot_master_active') === 'true'));
-    window.initBot();
+    try {
+        // 1. Obtém o estado atual via função global do app.js
+        const currentState = window.checkMaster();
+        const newState = !currentState;
+        
+        // 2. Persiste o novo estado
+        localStorage.setItem('bot_master_active', newState.toString());
+        
+        console.log(`[Bot] Sistema Master RDO alterado para: ${newState ? 'ATIVADO' : 'DESATIVADO'}`);
+        
+        // 3. Atualiza a interface (initBot redesenha a lista com base no novo checkMaster)
+        if (typeof window.initBot === 'function') {
+            window.initBot();
+        } else {
+            // Fallback caso a página não esteja renderizada
+            window.location.reload(); 
+        }
+    } catch (err) {
+        console.error("[Bot] Erro ao alternar Master:", err);
+    }
 };
 
 window.abrirModalCadastro = () => {
@@ -107,24 +125,49 @@ window.abrirModalCadastro = () => {
 };
 
 window.editarBot = async (id) => {
-    const item = window.botState.cache.find(i => i.id == id);
-    if (!item) return;
+    // 1. Trava de segurança absoluta
+    if (!window.checkMaster()) {
+        console.warn("[Segurança] Ação bloqueada: Sistema Master RDO desligado.");
+        // Opcional: Feedback visual ao usuário
+        alert("Atenção: O sistema Master RDO está desligado. Edição bloqueada.");
+        return;
+    }
 
+    // 2. Localização do item no cache
+    const item = window.botState.cache.find(i => i.id == id);
+    if (!item) {
+        console.error(`[Admin] Erro: Registro ${id} não encontrado.`);
+        return;
+    }
+
+    // 3. Sincronização de Estado
     window.botState.idEmEdicao = id;
     window.botState.origemEmEdicao = item.origem;
     
-    // Abre o modal
+    // 4. Abertura do Modal
     await window.abrirModalEspecifico(item.origem, item);
     
-    // Lógica de bloqueio: Clientes e Colaboradores são "ReadOnly"
+    // 5. Aplicação das Regras de Negócio (Read Only)
     const isReadOnly = (item.origem !== 'usuarios');
-    const map = { 'usuarios': 'modalUsuario', 'clientes': 'modalCliente', 'colaboradores': 'modalColaborador' };
+    const map = { 
+        'usuarios': 'modalUsuario', 
+        'clientes': 'modalCliente', 
+        'colaboradores': 'modalColaborador' 
+    };
+    
     const modalEl = document.getElementById(map[item.origem]);
     
     if (modalEl) {
-        modalEl.querySelectorAll('input, select').forEach(i => i.disabled = isReadOnly);
+        const inputs = modalEl.querySelectorAll('input, select');
         const btnSalvar = modalEl.querySelector('.btn-danger');
-        if (btnSalvar) btnSalvar.style.display = isReadOnly ? 'none' : 'block';
+        
+        // Bloqueia inputs se não for 'usuarios'
+        inputs.forEach(i => i.disabled = isReadOnly);
+        
+        // Esconde botão de salvar se for apenas leitura
+        if (btnSalvar) {
+            btnSalvar.style.display = isReadOnly ? 'none' : 'block';
+        }
     }
 };
 

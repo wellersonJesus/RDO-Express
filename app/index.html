@@ -143,8 +143,7 @@
                             data-bs-dismiss="modal">
                             Cancelar
                         </button>
-                        <button type="button" class="btn btn-danger w-50 rounded-pill"
-                            onclick="localStorage.clear(); window.location.replace('/pages/login/login.html');">
+                        <button type="button" class="btn btn-danger w-50 rounded-pill" onclick="logoutSeguro();">
                             <i class="bi bi-box-arrow-right"></i> Sair
                         </button>
                     </div>
@@ -167,8 +166,19 @@
     <script src="/js/administracao.js"></script>
 
     <script>
+        // FUNÇÃO GLOBAL DE LOGOUT (Adicionada ao window para garantir acesso)
+        window.logoutSeguro = function () {
+            localStorage.removeItem('rdo_auth');
+            localStorage.removeItem('username');
+            localStorage.removeItem('tipo');
+            localStorage.removeItem('imagem');
+            // Opcional: localStorage.removeItem('bot_master_active'); // Só remova se quiser resetar o Master ao sair
+
+            window.location.replace('/pages/login/login.html');
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Verificação de Segurança (Redireciona se não estiver logado)
+            // 1. Verificação de Segurança
             if (!localStorage.getItem('rdo_auth')) {
                 window.location.replace('/pages/login/login.html');
                 return;
@@ -177,30 +187,32 @@
             // 2. Preenchimento de perfil do usuário
             const nameEl = document.getElementById('display-username');
             const cargoEl = document.getElementById('display-cargo');
+
             if (nameEl) nameEl.innerText = localStorage.getItem('username') || 'Usuário';
             if (cargoEl) cargoEl.innerText = localStorage.getItem('tipo') || '...';
 
-            // 3. Inicialização de componentes visuais
+            // 3. Inicialização de componentes globais
             if (typeof window.atualizarAvatar === 'function') {
                 window.atualizarAvatar();
             }
 
-            // 4. Carregamento Automático do Dashboard (O fluxo de navegação central)
+            // 4. Orquestração de Roteamento Inicial
             const routerView = document.getElementById('router-view');
-            if (routerView) {
-                // Garante que o Dash abra automaticamente se o painel estiver limpo
+            if (routerView && routerView.innerHTML.trim() === "") {
                 window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
             }
         });
 
+        // Função para abrir o modal de forma segura
         function abrirModalLogout() {
             const modalEl = document.getElementById('logoutModal');
             if (modalEl) {
-                const myModal = new bootstrap.Modal(modalEl);
+                const myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 myModal.show();
             }
         }
     </script>
+
 </body>
 
 </html>
