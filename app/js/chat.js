@@ -102,19 +102,95 @@ window.selecionarEAbrir = function (id, nome, isOnline) {
 
 window.selecionarStatus = async function(status) {
     if (status === 'EM_ROTA') {
-        // Exibe o seletor de motoboys
         document.getElementById('box-botoes-status').classList.add('d-none');
         document.getElementById('box-selecao-motoboy').classList.remove('d-none');
         
-        // Busca motoboys no banco
-        const motoboys = await API.call('getmotoboys'); 
+        const motoboys = await window.obterMotoboysAtivos();
         const select = document.getElementById('select-motoboy');
-        select.innerHTML = motoboys.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+        
+        select.innerHTML = motoboys.map(m => 
+            `<option value="${m.id}">${m.username}</option>`
+        ).join('');
         
         window.AppRDO.statusTemporario = 'EM_ROTA';
     } else {
-        // Para Concluído/Cancelado, chama direto a atualização
         window.confirmarStatusFinal(status);
+    }
+};
+
+window.obterMotoboysAtivos = async function() {
+    try {
+        const todosColaboradores = await API.call('getcolaboradores');
+        // Filtro rigoroso: Cargo Motoboy E status ativo
+        return todosColaboradores.filter(c => 
+            c.colaborador === 'Motoboy' && 
+            String(c.status).toUpperCase() === 'TRUE'
+        );
+    } catch (e) {
+        return [];
+    }
+};
+
+/**
+ * Atualiza o status do pedido no banco de dados e na interface.
+ * @param {string} msgId - ID do elemento HTML da mensagem.
+ * @param {string} statusLabel - Label original (com emoji).
+ * @param {string} motoboyNome - Nome do motoboy, se houver.
+ */
+window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
+    const msgElement = document.querySelector(`[data-pedido-id="${msgId}"]`);
+    if (!msgElement) {
+        console.error("Elemento de mensagem não encontrado para o ID:", msgId);
+        return;
+    }
+
+    const pedidoId = msgElement.getAttribute('data-pedido-id');
+    
+    // 1. Limpeza do texto para salvar no banco
+    // Removemos os emojis para manter o banco de dados limpo
+    const statusLimpo = statusLabel.replace(/📦|⭕|✅|🚀/g, '').trim();
+
+    // 2. Lógica de Interpolação: "NomeMotoboy/Status" ou apenas "Status"
+    const valorParaSalvar = motoboyNome 
+        ? `${motoboyNome}/${statusLimpo}` 
+        : statusLimpo;
+
+    try {
+        // 3. Chamada à API
+        // Usamos 'updatepedido' para que o backend mapeie para a aba 'pedidos'
+        const resposta = await API.call('updatepedido', {
+            id: pedidoId,
+            status: valorParaSalvar
+        });
+
+        if (resposta && resposta.status === 'success') {
+            // 4. Atualização Visual no DOM
+            const statusContainer = msgElement.querySelector('.status-icon');
+            if (statusContainer) {
+                // Remove o spinner de carregamento e aplica o estado final
+                statusContainer.classList.remove('status-pending', 'spinner-rotate');
+                statusContainer.classList.add('status-updated');
+                
+                // Define o título do ícone com a informação completa
+                statusContainer.setAttribute('title', valorParaSalvar);
+                
+                // Exibe o texto ou ícone correspondente ao status
+                statusContainer.innerHTML = `<i class="bi bi-check2-circle"></i>`;
+            }
+
+            Swal.fire({
+                title: 'Sucesso!',
+                text: `Pedido ${pedidoId} atualizado para: ${valorParaSalvar}`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            throw new Error(resposta.message || "Erro desconhecido na API");
+        }
+    } catch (e) {
+        console.error("Erro ao confirmar status:", e);
+        Swal.fire('Erro', 'Não foi possível atualizar: ' + e.message, 'error');
     }
 };
 
@@ -128,42 +204,55 @@ window.confirmarStatusComMotoboy = function() {
 
 window.confirmarStatusFinal = async function(status, extra = {}) {
     const pedidoId = window.AppRDO.pedidoEmEdicao;
+    
+    // 1. Lógica de interpolação solicitada
+    const statusFinal = extra.motoboyNome 
+        ? `${extra.motoboyNome}/${status}` 
+        : status;
+
     try {
-        // Atualiza a API
-        await API.call('atualizarstatus', { 
+        // 2. Chamada corrigida: 'updatepedido' faz o mapeamento correto no backend
+        const resposta = await API.call('updatepedido', { 
             id: pedidoId, 
-            status: status, 
-            motoboy_id: extra.motoboyId 
+            status: statusFinal, 
+            motoboy: extra.motoboyNome || "" 
         });
 
-        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-        const iconEl = msgEl?.querySelector('.status-icon');
-        
-        if (iconEl) {
-            // Definição dos ícones e cores conforme solicitado
-            const configs = {
-                'EM_ROTA':    { icon: 'bi-bicycle', color: '#0d6efd', text: 'Em Rota' },   // Moto (bi-bicycle) + Azul
-                'CONCLUIDO':  { icon: 'bi-check-circle-fill', color: '#28a745', text: 'Concluído' }, // Verde
-                'CANCELADO':  { icon: 'bi-x-circle-fill', color: '#dc3545', text: 'Cancelado' }      // Vermelho
-            };
+        if (resposta && resposta.status === 'success') {
+            // 3. Atualização visual no chat
+            const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+            const iconEl = msgEl?.querySelector('.status-icon');
+            
+            if (iconEl) {
+                const configs = {
+                    'EM_ROTA':    { icon: 'bi-bicycle', color: '#0d6efd', text: 'Em Rota' },
+                    'CONCLUIDO':  { icon: 'bi-check-circle-fill', color: '#28a745', text: 'Concluído' },
+                    'CANCELADO':  { icon: 'bi-x-circle-fill', color: '#dc3545', text: 'Cancelado' }
+                };
 
-            const conf = configs[status];
-            
-            // 1. Remove estados de espera
-            iconEl.classList.remove('status-pending', 'spinner-rotate');
-            
-            // 2. Define novo ícone e cor
-            iconEl.innerHTML = `<i class="bi ${conf.icon}"></i>`;
-            iconEl.style.color = conf.color;
-            
-            // Atualiza o title (dica ao passar o mouse) com o nome do motoboy se houver
-            iconEl.title = extra.motoboyNome ? `${conf.text}: ${extra.motoboyNome}` : conf.text;
+                const conf = configs[status];
+                
+                // Remove animação de espera
+                iconEl.classList.remove('status-pending', 'spinner-rotate');
+                
+                // Aplica estilo e ícone
+                iconEl.innerHTML = `<i class="bi ${conf.icon}"></i>`;
+                iconEl.style.setProperty('color', conf.color, 'important');
+                iconEl.title = statusFinal; // Exibe o status completo no hover
+            }
+        } else {
+            throw new Error(resposta.message || "Erro ao processar atualização");
         }
     } catch (e) {
-        window.exibirModalAviso("Erro ao atualizar status.");
+        console.error("Erro no fluxo de confirmação:", e);
+        window.exibirModalAviso("Erro ao salvar status: " + e.message);
     } finally {
-        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
-        // Reset do modal
+        // Fecha o modal se ele estiver aberto
+        const modalEl = document.getElementById('modalStatus');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        
+        // Reset da interface do modal
         document.getElementById('box-botoes-status')?.classList.remove('d-none');
         document.getElementById('box-selecao-motoboy')?.classList.add('d-none');
     }
@@ -848,22 +937,33 @@ window.fecharModalStatus = async function () {
 
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     const container = document.getElementById('chat-messages-container');
-    const dataId = pedidoId || 'msg-' + Date.now();
+    
+    // Validação de segurança: se o container não existir, aborta para evitar erro de JS
+    if (!container) {
+        console.error("Container de mensagens não encontrado.");
+        return;
+    }
 
+    // Se o pedidoId já existe no DOM, não criamos uma nova mensagem, apenas retornamos
+    if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
+        return;
+    }
+
+    const dataId = pedidoId || 'msg-' + Date.now();
     const div = document.createElement('div');
     div.className = 'message-wrapper';
 
-    // O ícone usa a classe .status-icon (do seu CSS) e .spinner-rotate (para o looping)
-    // O title="Aguardando Motoboy" exibe o texto ao passar o mouse
+    // Construção do HTML com template literais seguros
+    // A classe 'status-pending' garante a cor cinza inicial conforme definido no CSS
     div.innerHTML = `
         <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
              data-pedido-id="${dataId}"
              onclick="window.abrirModalEdicao('${dataId}')">
              
-            <div class="message-body">${texto.replace(/\n/g, '<br>')}</div>
+            <div class="message-body">${texto ? texto.replace(/\n/g, '<br>') : ''}</div>
             
             ${!isRecebida ? `
-                <div class="status-icon" 
+                <div class="status-icon status-pending" 
                      onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')" 
                      title="Aguardando Motoboy">
                     <i class="bi bi-arrow-repeat spinner-rotate"></i>
@@ -871,8 +971,14 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = 
             ` : ''}
         </div>
     `;
+
     container.appendChild(div);
-    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+
+    // Scroll suave apenas se a mensagem for a última
+    container.scrollTo({ 
+        top: container.scrollHeight, 
+        behavior: 'smooth' 
+    });
 };
 
 window.enviarMensagemGeral = async function () {
