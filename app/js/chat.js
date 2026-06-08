@@ -46,30 +46,27 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-    // 4. Ícone de Sincronização (Botão de Loop/Sincronizar)
-    // O .closest garante que, mesmo clicando no ícone dentro do botão, ele capture o clique.
     if (e.target.closest('#sync-icon-chat')) {
-        console.log("Sincronização manual iniciada...");
-        
-        // Verificação de segurança: Só sincroniza se não estiver processando
+        const syncIcon = document.getElementById('sync-icon-chat');
         if (window.AppRDO && !window.AppRDO.isFetching) {
-            window.carregarDados();
-        } else {
-            console.warn("Sincronização já em curso ou sistema indisponível.");
+            // Adiciona animação ao botão ao clicar
+            syncIcon.classList.add('spinner-rotate');
+            window.carregarDados().finally(() => {
+                syncIcon.classList.remove('spinner-rotate');
+            });
         }
     }
 });
 
 window.carregarDados = async function () {
-    // 1. CAMADA DE SEGURANÇA (Porteiro)
-    // Se o Master estiver OFF, o serviço não prossegue e limpa o estado
+    // 1. CAMADA DE SEGURANÇA
     if (!window.checkMaster()) {
         const listEl = document.getElementById('lista-contatos-chat');
         if (listEl) {
             listEl.innerHTML = `
-                <div class="p-3 text-center text-muted small">
-                    <i class="bi bi-shield-lock d-block mb-2"></i>
-                    Sistema Master RDO desligado.
+                <div class="chat-status-container">
+                    <i class="bi bi-shield-lock icon-status-large"></i>
+                    <div class="status-label-gray">Sistema Master RDO desligado.</div>
                 </div>`;
         }
         return; 
@@ -78,50 +75,41 @@ window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    // 2. Verificações de integridade
-    if (!listEl) {
-        console.error("DEBUG: Elemento lista-contatos-chat não encontrado.");
-        return;
-    }
+    if (!listEl) return;
+    if (window.AppRDO.isFetching) return;
 
-    if (window.AppRDO.isFetching) {
-        console.warn("DEBUG: Sincronização já em andamento.");
-        return;
-    }
-
-    // Inicialização segura
     window.AppRDO.isFetching = true;
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
-    // Atualiza o header global (Avatar)
-    if (typeof window.atualizarAvatar === 'function') {
-        window.atualizarAvatar();
-    }
+    // ESTADO: BUSCANDO (Lupa girando)
+    listEl.innerHTML = `
+        <div class="chat-status-container" style="height: 200px;">
+            <i class="bi bi-search icon-status-large spinner-rotate"></i>
+            <div class="status-label-gray">Buscando contatos...</div>
+        </div>
+    `;
+
+    if (typeof window.atualizarAvatar === 'function') window.atualizarAvatar();
 
     try {
-        // 3. Chamada de API com tratamento de erro
         const clientes = await API.call('getclientes');
-        
-        if (!clientes) throw new Error("A API retornou uma resposta vazia.");
-        
         const listaClientes = Array.isArray(clientes) ? clientes : [];
 
-        // 4. Renderização
         if (listaClientes.length === 0) {
-            listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
+            listEl.innerHTML = `
+                <div class="chat-status-container" style="height: 200px;">
+                    <i class="bi bi-bootstrap-reboot icon-status-large"></i>
+                    <div class="status-label-gray">Nenhum contato disponível.</div>
+                </div>`;
         } else {
             listEl.innerHTML = listaClientes.map(cliente => {
                 const id = String(cliente.id || '');
                 const nome = (cliente.nome || cliente.username || 'Sem nome');
-                
                 const urlPadrao = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 const urlRaw = cliente.imagem || cliente.foto || cliente.avatar || cliente.img || '';
                 const imagem = (urlRaw && urlRaw.startsWith('http')) ? urlRaw : urlPadrao;
-                
-                // O isMasterOn aqui é garantido pelo checkMaster() inicial
                 const isOnline = String(cliente.status || '').toUpperCase() === 'TRUE';
                 const statusColor = isOnline ? '#28a745' : '#adb5bd';
-                
                 const classeAtiva = (window.AppRDO.clienteId === id) ? 'active-contact' : '';
 
                 return `
@@ -148,8 +136,9 @@ window.carregarDados = async function () {
     } catch (e) {
         console.error("ERRO CRÍTICO NA SINCRONIZAÇÃO:", e);
         listEl.innerHTML = `
-            <div class="p-3 text-center text-danger small">
-                Falha ao conectar com servidor.
+            <div class="chat-status-container text-danger" style="height: 200px;">
+                <i class="bi bi-exclamation-triangle icon-status-large"></i>
+                <div class="status-label-gray">Falha ao conectar com servidor.</div>
             </div>`;
     } finally {
         window.AppRDO.isFetching = false;
@@ -171,48 +160,55 @@ window.selecionarEAbrir = function(id, nome, isOnline) {
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    console.log(`[DEBUG] Abrindo conversa com: ${nome} | ID: ${id} | Status bruto: ${isOnline}`);
-
-    // 1. Lógica robusta de status
-    const statusOnline = (isOnline === true || String(isOnline).toUpperCase() === 'TRUE');
-
-    // 2. BLOQUEIO SE OFFLINE
-    if (!statusOnline) {
-        console.warn(`[Bloqueio] Cliente ${nome} está offline.`);
-        const msgEl = document.getElementById('modal-atencao-mensagem');
-        const modalEl = document.getElementById('modalAtencao');
-        
-        if (msgEl) msgEl.innerText = `Atenção: O cliente ${nome} está offline no momento.`;
-        if (modalEl) new bootstrap.Modal(modalEl).show();
-        
-        return; // Interrompe tudo
-    }
-
-    // 3. FLUXO ONLINE: Se chegou aqui, o cliente está online
-    window.AppRDO.clienteSelecionado = nome;
-    window.AppRDO.clienteId = id;
+    const container = document.getElementById('chat-messages-container');
+    const idLimpo = String(id).replace(/\D/g, '');
     
-    // Atualiza o Cabeçalho
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
-        nameEl.classList.add('text-dark', 'fw-bold');
+        nameEl.className = 'text-dark fw-bold';
     }
 
-    // Reset visual da lista
-    document.querySelectorAll('.contact-item-clean').forEach(el => el.classList.remove('active-contact'));
-    const itemAtivo = document.getElementById(`item-contato-${id}`);
-    if (itemAtivo) itemAtivo.classList.add('active-contact');
+    // ESTADO: BUSCANDO (Lupa girando)
+    container.innerHTML = `
+        <div class="chat-status-container">
+            <i class="bi bi-search icon-status-large spinner-rotate"></i>
+            <div class="status-label-gray" style="margin-top: 10px;">Buscando mensagens...</div>
+        </div>
+    `;
 
-    // 4. AÇÃO AUTOMÁTICA: Abrir fluxo do Mapa/Pedido
-    // Em vez de carregar histórico de mensagens, chamamos sua função de checkout
-    console.log("Status ONLINE validado. Abrindo fluxo de checkout...");
-    
-    // Isso deve disparar o modal do mapa automaticamente
-    if (typeof window.iniciarFluxoCheckout === 'function') {
-        window.iniciarFluxoCheckout();
-    } else {
-        console.error("Função iniciarFluxoCheckout não encontrada.");
+    try {
+        const todasMensagens = await API.call('getchat');
+        if (!todasMensagens) throw new Error("Falha ao obter dados");
+
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
+            String(m.jid_numero || "").trim() === idLimpo
+        );
+
+        container.innerHTML = ''; // Limpa o estado de loading
+
+        if (historico.length === 0) {
+            // ESTADO: VAZIO
+            container.innerHTML = `
+                <div class="chat-status-container">
+                    <i class="bi bi-bootstrap-reboot icon-status-large"></i>
+                    <div class="status-label-gray" style="margin-top: 10px;">Nenhum histórico encontrado.</div>
+                </div>
+            `;
+        } else {
+            historico.forEach(msg => {
+                window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
+            });
+        }
+    } catch (e) {
+        console.error("[ERRO ABRIR CONVERSA]:", e);
+        // ESTADO: ERRO
+        container.innerHTML = `
+            <div class="chat-status-container text-danger">
+                <i class="bi bi-exclamation-triangle icon-status-large"></i>
+                <div class="status-label-gray" style="margin-top: 10px;">Erro ao carregar histórico.</div>
+            </div>
+        `;
     }
 };
 
@@ -737,18 +733,17 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     const container = document.getElementById('chat-messages-container');
     const idLimpo = String(id).replace(/\D/g, '');
     
-    // Atualiza nome no cabeçalho imediatamente
     const nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
         nameEl.className = 'text-dark fw-bold';
     }
 
-    // ESTADO 1: BUSCANDO - Usa o ícone de Loop Cinza
+    // ESTADO: BUSCANDO - Usando o padrão de lupa giratória
     container.innerHTML = `
         <div class="chat-status-container">
-            <span class="icon-sync-gray">⟳</span>
-            <div style="font-size: 0.85rem; margin-top: 2px;">Buscando mensagens...</div>
+            <i class="bi bi-search icon-status-large spinner-rotate"></i>
+            <div class="status-label-gray" style="margin-top: 10px;">Buscando mensagens...</div>
         </div>
     `;
 
@@ -756,51 +751,50 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
         const todasMensagens = await API.call('getchat');
         if (!todasMensagens) throw new Error("Falha ao obter dados");
 
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => {
-            return String(m.jid_numero || "").trim() === idLimpo;
-        });
+        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m => 
+            String(m.jid_numero || "").trim() === idLimpo
+        );
 
-        // Limpa o estado de busca antes de renderizar as mensagens
-        container.innerHTML = ''; 
+        container.innerHTML = ''; // Limpa o estado de loading
 
         if (historico.length === 0) {
-            // ESTADO 2: VAZIO - Usa o Balão Transparente
+            // ESTADO: VAZIO - Usando o ícone Bootstrap Premium
             container.innerHTML = `
                 <div class="chat-status-container">
-                    <div class="icon-bubble-transparent">💬</div>
-                    <div style="font-size: 0.85rem; margin-top: 2px;">Nenhum histórico encontrado para este contato.</div>
+                    <i class="bi bi-bootstrap-reboot icon-status-large"></i>
+                    <div class="status-label-gray" style="margin-top: 10px;">Nenhum histórico encontrado.</div>
                 </div>
             `;
         } else {
-            // Renderiza o histórico encontrado
             historico.forEach(msg => {
                 window.enviarMensagemParaChat(msg.texto || "Sem conteúdo", false, msg.pedido_id);
             });
         }
     } catch (e) {
-        console.error("[ERRO ABRIR CONVERSA]:", e);
-        // ESTADO 3: ERRO
         container.innerHTML = `
             <div class="chat-status-container text-danger">
-                <div style="font-size: 1.5rem;">⚠️</div>
-                <div style="font-size: 0.85rem; margin-top: 2px;">Erro ao carregar histórico.</div>
-                <button class="btn btn-sm btn-outline-danger mt-2" onclick="abrirConversa('${id}', '${nome}')">Tentar Novamente</button>
+                <i class="bi bi-exclamation-triangle icon-status-large"></i>
+                <div class="status-label-gray" style="margin-top: 10px;">Erro ao carregar histórico.</div>
             </div>
         `;
     }
 };
 
-// 1. Função de renderização com segregação de eventos
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     try {
         const container = document.getElementById('chat-messages-container');
         if (!container) return;
 
+        // Gera um ID único se não houver um pedido associado
         const dataId = pedidoId ? String(pedidoId).replace(/\D/g, '') : 'new-' + Date.now();
         
         const div = document.createElement('div');
         div.className = 'message-wrapper';
 
+        // Estrutura Refatorada:
+        // 1. message-sent/received mantém o alinhamento
+        // 2. status-icon posicionado pelo CSS atualizado (bottom -18px, left 5px)
+        // 3. Ícone de check verde (bi-check2-circle) para mensagens enviadas
         div.innerHTML = `
             <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
                  data-pedido-id="${dataId}" 
@@ -810,18 +804,21 @@ window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = 
                 
                 ${!isRecebida ? `
                     <div class="status-icon" 
-                         title="Clique para alterar status" 
+                         title="Status: Enviado" 
                          onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')">
-                        ✔
+                        <i class="bi bi-check2-circle" style="color: #28a745 !important;"></i>
                     </div>
                 ` : ''}
             </div>
         `;
 
         container.appendChild(div);
+        
+        // Mantém o scroll no final do chat
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        
     } catch (err) {
-        console.error("Erro na renderização:", err);
+        console.error("Erro na renderização da mensagem:", err);
     }
 };
 
