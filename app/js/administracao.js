@@ -2,7 +2,8 @@ window.adminState = {
     origemAtual: 'clientes', 
     cache: [], 
     paginaAtual: 1, 
-    itensPorPagina: 15 // Limite fixo em 15
+    itensPorPagina: 15,
+    isFetching: false // <-- TRAVA DE SEGURANÇA
 };
 
 window.abrirModalCadastro = () => {
@@ -31,44 +32,40 @@ window.mudarPaginaAdmin = (dir) => {
     window.renderizarAdmin();
 };
 
-window.carregarAdmin = async (origem) => {
-    const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-    const tbody = document.getElementById('admin-list');
-
-    // Se o Master estiver desligado, exibe o aviso na tabela e interrompe
-    if (!isMasterOn) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted p-5">
-            <i class="bi bi-exclamation-triangle-fill text-danger d-block mb-3" style="font-size: 2.5rem;"></i>
-            <h5 class="fw-bold">Sistema Master RDO desligado.</h5>
-            <p>Faça um contato com a gestão para liberar o registro.</p>
-        </td></tr>`;
+window.carregarAdmin = async (origem = 'clientes') => {
+    // 1. Verificação de Segurança (Integrada ao Maestro)
+    if (!window.checkMaster()) {
+        const tbody = document.getElementById('admin-list');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-5">
+                <i class="bi bi-shield-lock text-danger d-block mb-3" style="font-size: 2.5rem;"></i>
+                <h5>Sistema Master RDO Desligado</h5>
+            </td></tr>`;
+        }
         return;
     }
 
-    // Se ligado, segue o fluxo normal
+    // 2. Estado e UI
     window.adminState.origemAtual = origem;
     window.adminState.paginaAtual = 1;
-
-    // Atualiza UI dos botões
-    document.querySelectorAll('.btn-tab-custom').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-origem') === origem) btn.classList.add('active');
-    });
-
-    const tituloAba = document.getElementById('titulo-aba');
-    if (tituloAba) tituloAba.innerText = `Gerenciando: ${origem.charAt(0).toUpperCase() + origem.slice(1)}`;
+    window.adminState.isFetching = true;
 
     const syncIcon = document.getElementById('sync-icon-admin');
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
+
+    // UI Feedback
+    document.querySelectorAll('.btn-tab-custom').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-origem') === origem);
+    });
 
     try {
         const res = await window.API.call(`get${origem}`);
         window.adminState.cache = Array.isArray(res) ? res : [];
         window.renderizarAdmin();
     } catch (e) {
-        window.adminState.cache = [];
-        window.renderizarAdmin();
+        console.error("Erro ao carregar admin:", e);
     } finally {
+        window.adminState.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
     }
 };
@@ -99,34 +96,24 @@ window.renderizarAdmin = () => {
     const infoPag = document.getElementById('info-paginacao-admin');
     if (!tbody) return;
 
-    let dados = window.adminState.cache;
-    
-    // Filtro
-    if (window.adminState.filtroAtual) {
-        const termo = window.adminState.filtroAtual.toLowerCase();
-        dados = dados.filter(i => (i.nome || i.username || '').toLowerCase().includes(termo));
-    }
-    
-    // Paginação
-    const totalPag = Math.max(1, Math.ceil(dados.length / window.adminState.itensPorPagina));
-    if (window.adminState.paginaAtual > totalPag) window.adminState.paginaAtual = totalPag;
-    if (infoPag) infoPag.innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
-    
     const inicio = (window.adminState.paginaAtual - 1) * window.adminState.itensPorPagina;
-    const dadosPaginados = dados.slice(inicio, inicio + window.adminState.itensPorPagina);
+    const dadosPaginados = window.adminState.cache.slice(inicio, inicio + window.adminState.itensPorPagina);
 
     tbody.innerHTML = dadosPaginados.map(i => {
         const isActive = String(i.status || '').toUpperCase() === 'TRUE';
         return `<tr>
-            <td class="ps-3"><img src="${i.imagem ? 'https://wsrv.nl/?url=' + encodeURIComponent(i.imagem) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle" style="object-fit:cover;"></td>
+            <td class="ps-3"><img src="${i.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" width="30" class="rounded-circle"></td>
             <td>${i.nome || i.username || 'N/A'}</td>
-            <td><span class="badge ${isActive ? 'bg-success' : 'bg-secondary'} rounded-pill">${isActive ? 'Ativo' : 'Inativo'}</span></td>
-            <td class="text-end pe-3">
+            <td><span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}">${isActive ? 'Ativo' : 'Inativo'}</span></td>
+            <td class="text-end">
                 <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}', false)"><i class="bi bi-pencil-square"></i></button>
                 <button class="btn btn-light btn-sm" onclick="window.editarAdmin('${i.id}', true)"><i class="bi bi-eye"></i></button>
             </td>
         </tr>`;
     }).join('');
+
+    const totalPag = Math.max(1, Math.ceil(window.adminState.cache.length / window.adminState.itensPorPagina));
+    if (infoPag) infoPag.innerText = `Pág ${window.adminState.paginaAtual} de ${totalPag}`;
 };
 
 window.mudarPaginaAdmin = (dir) => {
@@ -141,31 +128,52 @@ window.mudarPaginaAdmin = (dir) => {
 };
 
 window.editarAdmin = async (id, isReadOnly = false) => {
+    // 1. Verificação de Integridade dos Dados
     const item = window.adminState.cache.find(i => i.id == id);
-    if (!item) return;
+    if (!item) {
+        console.error(`[Admin] Erro: Item com ID ${id} não encontrado no cache.`);
+        return;
+    }
 
+    // 2. Sincronização de Estado (Centralizando a edição)
+    // Garantimos que o botState (usado pelo modal de salvamento) saiba exatamente o que está sendo editado
+    window.botState = window.botState || { idEmEdicao: null, origemEmEdicao: null };
     window.botState.idEmEdicao = id;
     window.botState.origemEmEdicao = window.adminState.origemAtual;
     
-    // Abre o modal
+    // 3. Abertura Segura do Modal
+    // Usamos a função auxiliar que já lida com o Fetch dinâmico se necessário
     await window.abrirModalEspecifico(window.adminState.origemAtual, item);
     
-    const modalId = window.adminState.origemAtual === 'clientes' ? 'modalCliente' : 'modalColaborador';
-    const modalEl = document.getElementById(modalId);
+    // 4. Mapeamento dos elementos de interface
+    const map = { 
+        'clientes': 'modalCliente', 
+        'colaboradores': 'modalColaborador',
+        'usuarios': 'modalUsuario'
+    };
+    
+    const modalEl = document.getElementById(map[window.adminState.origemAtual]);
     
     if (modalEl) {
-        const inputs = modalEl.querySelectorAll('input, select');
-        const btnSalvar = modalEl.querySelector('.btn-danger'); // Botão de Salvar
-        
-        // 1. Bloqueia ou libera os inputs
+        // Bloqueio/Desbloqueio seletivo de inputs
+        const inputs = modalEl.querySelectorAll('input, select, textarea');
         inputs.forEach(i => {
             i.disabled = isReadOnly;
         });
 
-        // 2. Controla a visibilidade do botão de salvar
+        // Controle de visibilidade do botão de salvar
+        const btnSalvar = modalEl.querySelector('.btn-danger');
         if (btnSalvar) {
             btnSalvar.style.display = isReadOnly ? 'none' : 'block';
         }
+
+        // Título opcional para o modal (UX Melhorada)
+        const tituloModal = modalEl.querySelector('.modal-title');
+        if (tituloModal) {
+            tituloModal.innerText = isReadOnly ? 'Visualizar Registro' : 'Editar Registro';
+        }
+    } else {
+        console.warn(`[Admin] Elemento modal para ${window.adminState.origemAtual} não encontrado.`);
     }
 };
 

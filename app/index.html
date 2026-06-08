@@ -167,28 +167,37 @@
     <script src="/js/administracao.js"></script>
 
     <script>
-        // Inicialização Global
         document.addEventListener('DOMContentLoaded', () => {
+            // 1. Verificação de Segurança (Redireciona se não estiver logado)
+            if (!localStorage.getItem('rdo_auth')) {
+                window.location.replace('/pages/login/login.html');
+                return;
+            }
+
+            // 2. Preenchimento de perfil do usuário
             const nameEl = document.getElementById('display-username');
             const cargoEl = document.getElementById('display-cargo');
-
-            if (nameEl) nameEl.innerText = localStorage.getItem('username') || '...';
+            if (nameEl) nameEl.innerText = localStorage.getItem('username') || 'Usuário';
             if (cargoEl) cargoEl.innerText = localStorage.getItem('tipo') || '...';
 
-            // Chama a função centralizada
+            // 3. Inicialização de componentes visuais
             if (typeof window.atualizarAvatar === 'function') {
                 window.atualizarAvatar();
             }
+
+            // 4. Carregamento Automático do Dashboard (O fluxo de navegação central)
+            const routerView = document.getElementById('router-view');
+            if (routerView) {
+                // Garante que o Dash abra automaticamente se o painel estiver limpo
+                window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
+            }
         });
 
-        // Função de Logout centralizada e protegida
         function abrirModalLogout() {
             const modalEl = document.getElementById('logoutModal');
             if (modalEl) {
                 const myModal = new bootstrap.Modal(modalEl);
                 myModal.show();
-            } else {
-                console.error("Modal de logout não encontrado no DOM.");
             }
         }
     </script>

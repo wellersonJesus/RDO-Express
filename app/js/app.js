@@ -1,46 +1,76 @@
-window.AppRDO = window.AppRDO || {
+window.checkMaster = () => localStorage.getItem('bot_master_active') === 'true';
+
+window.AppRDO = {
     isFetching: false,
     listaCarregada: false,
-    clienteId: null
+    clienteId: null,
+    resetState: () => {
+        window.AppRDO.isFetching = false;
+        window.AppRDO.listaCarregada = false;
+        // Opcional: Limpar estados globais de outros módulos ao trocar de página
+        if (window.botState) window.botState.isFetching = false;
+        if (window.pedidosState) window.pedidosState.isFetching = false;
+        if (window.adminState) window.adminState.isFetching = false;
+    }
 };
 
 window.loadPage = async function(page, title, subtitle) {
     const container = document.getElementById('router-view');
+    const titleEl = document.getElementById('page-title');
+    const subtitleEl = document.getElementById('page-subtitle');
+    
     if (!container) return;
 
-    // Atualiza título e subtítulo
-    document.getElementById('page-title').innerText = title;
-    document.getElementById('page-subtitle').innerText = subtitle;
+    // 1. Limpeza de estado e UI
+    window.AppRDO.resetState();
+    if (titleEl) titleEl.innerText = title;
+    if (subtitleEl) subtitleEl.innerText = subtitle;
 
     try {
+        // 2. Fetch de HTML com tratamento de erro
         const response = await fetch(`pages/${page}/${page}.html`);
+        if (!response.ok) throw new Error(`Falha ao carregar ${page}`);
+        
         container.innerHTML = await response.text();
 
-        // Garante que o avatar sempre tente atualizar ao trocar de página
+        // 3. Pós-renderização
         if (window.atualizarAvatar) window.atualizarAvatar();
 
-        // MAPEAMENTO DE INICIALIZAÇÃO AUTOMÁTICA
-        // Aqui chamamos as funções que fazem o "polling" dos dados
+        // 4. Mapeamento Centralizado
         const rotasExecucao = {
-            'chat': () => { if(window.iniciarChat) window.iniciarChat(); },
-            'bot': () => { if(window.initBot) window.initBot(); },
-            'administracao': () => { if(window.carregarAdmin) window.carregarAdmin('clientes'); }
+            'chat': () => window.iniciarChat?.(),
+            'bot': () => window.initBot?.(),
+            'administracao': () => window.carregarAdmin?.('clientes'),
+            'pedidos': () => window.iniciarPedidos?.()
         };
 
+        // 5. Orquestração Segura
         if (rotasExecucao[page]) {
-            rotasExecucao[page]();
+            if (window.checkMaster()) {
+                await rotasExecucao[page]();
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-danger m-3 text-center">
+                        <i class="bi bi-shield-lock" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Sistema Master RDO desligado. Acesso restrito.</p>
+                    </div>` + container.innerHTML;
+            }
         }
     } catch (err) {
-        console.error("Erro ao carregar página:", err);
+        console.error("[Maestro] Erro de navegação:", err);
+        container.innerHTML = `<div class="alert alert-warning">Erro ao carregar módulo. Tente novamente.</div>`;
     }
 };
 
-window.loadModal = function(arquivo) {
-    return fetch(`pages/chat/${arquivo}`)
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById('modal-container').innerHTML = html;
-        });
+window.loadModal = async function(arquivo) {
+    try {
+        const res = await fetch(`pages/chat/${arquivo}`);
+        const html = await res.text();
+        const container = document.getElementById('modal-container');
+        if (container) container.innerHTML = html;
+    } catch (e) {
+        console.error("Erro ao carregar modal:", e);
+    }
 };
 
 window.atualizarAvatar = () => {
@@ -50,23 +80,16 @@ window.atualizarAvatar = () => {
 
     if (!imgElement || !iconElement) return;
 
-    // Validação estrita
-    const hasValidImage = imagem && 
-                          imagem !== 'null' && 
-                          imagem !== 'undefined' && 
-                          imagem.trim().length > 0;
+    const isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
 
-    if (hasValidImage) {
+    imgElement.style.display = isValid ? 'block' : 'none';
+    iconElement.style.display = isValid ? 'none' : 'block';
+
+    if (isValid) {
         imgElement.src = imagem;
-        imgElement.style.display = 'block';
-        iconElement.style.display = 'none';
-        
         imgElement.onerror = () => {
             imgElement.style.display = 'none';
             iconElement.style.display = 'block';
         };
-    } else {
-        imgElement.style.display = 'none';
-        iconElement.style.display = 'block';
     }
 };

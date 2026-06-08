@@ -1,8 +1,12 @@
 window.AppRDO = window.AppRDO || { 
     debounceTimer: null, 
     listaCarregada: false, 
-    observerIniciado: false,
     isFetching: false // Nova trava de segurança
+};
+
+window.iniciarChat = async () => {
+    // Apenas orquestra o início
+    await window.carregarDados();
 };
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
@@ -17,52 +21,6 @@ window.filtrarContatos = function () {
         });
     }, 300);
 };
-
-if (!window.AppRDO.observerIniciado) {
-    new MutationObserver((mutations) => {
-        const listaExiste = document.getElementById('lista-contatos-chat');
-
-        // Só dispara se a lista for detectada pela primeira vez ou após reset
-        if (listaExiste && !window.AppRDO.listaCarregada) {
-            console.log("Detectado DOM: Carregando contatos...");
-            window.carregarDados();
-        }
-    }).observe(document.body, { childList: true, subtree: true });
-
-    window.AppRDO.observerIniciado = true;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Dados de texto
-    const user = localStorage.getItem('username');
-    const cargo = localStorage.getItem('tipo');
-    const imgUrl = localStorage.getItem('imagem');
-
-    if (user) document.getElementById('display-username').innerText = user;
-    if (cargo) document.getElementById('display-cargo').innerText = cargo;
-
-    // 2. Lógica de Avatar do Usuário (Ajustada)
-    const imgElement = document.getElementById('user-avatar-img');
-    const iconElement = document.getElementById('user-avatar-icon');
-
-    if (imgUrl && imgUrl.startsWith('http')) {
-        imgElement.src = imgUrl;
-        imgElement.style.display = 'block';
-        iconElement.style.display = 'none';
-        
-        // Se a imagem no servidor falhar, volta para o ícone
-        imgElement.onerror = () => {
-            imgElement.style.display = 'none';
-            iconElement.style.display = 'block';
-        };
-    } else {
-        imgElement.style.display = 'none';
-        iconElement.style.display = 'block';
-    }
-
-    // Inicialização do sistema
-    if (typeof window.loadPage === 'function') window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
-});
 
 document.addEventListener('input', (e) => {
     // 1. Input de Telefone (p-contato)
@@ -102,46 +60,53 @@ document.addEventListener('click', (e) => {
     }
 });
 
-/**
- * Função refatorada: Carrega dados com diagnóstico de erro e fallback de imagem
- */
 window.carregarDados = async function () {
+    // 1. CAMADA DE SEGURANÇA (Porteiro)
+    // Se o Master estiver OFF, o serviço não prossegue e limpa o estado
+    if (!window.checkMaster()) {
+        const listEl = document.getElementById('lista-contatos-chat');
+        if (listEl) {
+            listEl.innerHTML = `
+                <div class="p-3 text-center text-muted small">
+                    <i class="bi bi-shield-lock d-block mb-2"></i>
+                    Sistema Master RDO desligado.
+                </div>`;
+        }
+        return; 
+    }
+
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
 
-    // 1. Verificações de segurança iniciais
+    // 2. Verificações de integridade
     if (!listEl) {
-        console.error("DEBUG: Elemento lista-contatos-chat não encontrado no DOM.");
+        console.error("DEBUG: Elemento lista-contatos-chat não encontrado.");
         return;
     }
 
-    if (window.AppRDO && window.AppRDO.isFetching) {
+    if (window.AppRDO.isFetching) {
         console.warn("DEBUG: Sincronização já em andamento.");
         return;
     }
 
-    // Inicializa objeto AppRDO se não existir
-    window.AppRDO = window.AppRDO || { isFetching: false, listaCarregada: false, clienteId: null };
+    // Inicialização segura
     window.AppRDO.isFetching = true;
-    
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
 
-    // Atualiza o header global
+    // Atualiza o header global (Avatar)
     if (typeof window.atualizarAvatar === 'function') {
         window.atualizarAvatar();
     }
 
     try {
-        // 2. Chamada da API
+        // 3. Chamada de API com tratamento de erro
         const clientes = await API.call('getclientes');
-        console.log("DEBUG - Dados recebidos da API (inspecione este objeto abaixo):", clientes);
-
-        if (!clientes) throw new Error("A API retornou uma resposta vazia ou indefinida.");
+        
+        if (!clientes) throw new Error("A API retornou uma resposta vazia.");
         
         const listaClientes = Array.isArray(clientes) ? clientes : [];
-        const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // 3. Renderização
+        // 4. Renderização
         if (listaClientes.length === 0) {
             listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
         } else {
@@ -149,12 +114,12 @@ window.carregarDados = async function () {
                 const id = String(cliente.id || '');
                 const nome = (cliente.nome || cliente.username || 'Sem nome');
                 
-                // Fallback múltiplo: tenta identificar a imagem independente do nome da coluna
                 const urlPadrao = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 const urlRaw = cliente.imagem || cliente.foto || cliente.avatar || cliente.img || '';
                 const imagem = (urlRaw && urlRaw.startsWith('http')) ? urlRaw : urlPadrao;
                 
-                const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
+                // O isMasterOn aqui é garantido pelo checkMaster() inicial
+                const isOnline = String(cliente.status || '').toUpperCase() === 'TRUE';
                 const statusColor = isOnline ? '#28a745' : '#adb5bd';
                 
                 const classeAtiva = (window.AppRDO.clienteId === id) ? 'active-contact' : '';
@@ -165,7 +130,7 @@ window.carregarDados = async function () {
                          onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
                         <div class="position-relative">
                             <img src="${imagem}" class="rounded-circle" style="width:35px; height:35px; object-fit:cover;" 
-                                 onerror="this.onerror=null; this.src='${urlPadrao}'; console.log('DEBUG: Erro ao carregar imagem para:', '${nome}');">
+                                 onerror="this.onerror=null; this.src='${urlPadrao}';">
                             <span class="position-absolute bottom-0 end-0 rounded-circle border border-white" 
                                   style="width:10px; height:10px; background-color: ${statusColor};"></span>
                         </div>
@@ -184,7 +149,7 @@ window.carregarDados = async function () {
         console.error("ERRO CRÍTICO NA SINCRONIZAÇÃO:", e);
         listEl.innerHTML = `
             <div class="p-3 text-center text-danger small">
-                Erro ao carregar contatos: ${e.message}
+                Falha ao conectar com servidor.
             </div>`;
     } finally {
         window.AppRDO.isFetching = false;
@@ -381,38 +346,41 @@ window.analisarMensagemEntrada = function (texto) {
 };
 
 window.iniciarFluxoCheckout = async function () {
+    // 0. TRAVA DE SEGURANÇA CONTRA CLIQUES DUPLOS E ESTADO OFF
+    if (window.AppRDO.isProcessingCheckout) {
+        console.warn("Processo de checkout já em andamento.");
+        return;
+    }
+    
+    if (!window.checkMaster()) {
+        window.exibirModalAviso("Sistema offline. O fluxo de checkout está desativado.");
+        return;
+    }
+
     const msgInput = document.getElementById('msg-input');
     const msgAtencao = document.getElementById('modal-atencao-mensagem');
     const modalAtencaoEl = document.getElementById('modalAtencao');
 
-    // 1. VERIFICAÇÃO CRÍTICA: Cliente selecionado
+    // 1. VALIDAÇÕES CRÍTICAS
     if (!window.AppRDO?.clienteId) {
-        if (msgAtencao) {
-            msgAtencao.innerText = "Atenção: Você precisa selecionar um cliente na lista à esquerda.";
-        }
-        if (modalAtencaoEl) {
-            new bootstrap.Modal(modalAtencaoEl).show();
-        }
-        return; // Interrompe o fluxo imediatamente
+        if (msgAtencao) msgAtencao.innerText = "Atenção: Você precisa selecionar um cliente na lista à esquerda.";
+        if (modalAtencaoEl) new bootstrap.Modal(modalAtencaoEl).show();
+        return;
     }
 
-    // 2. VERIFICAÇÃO CRÍTICA: Mensagem preenchida
     if (!msgInput || !msgInput.value.trim()) {
-        if (msgAtencao) {
-            msgAtencao.innerText = "Atenção: Digite ou cole a mensagem do pedido antes de enviar.";
-        }
-        if (modalAtencaoEl) {
-            new bootstrap.Modal(modalAtencaoEl).show();
-        }
-        return; // Interrompe o fluxo imediatamente
+        if (msgAtencao) msgAtencao.innerText = "Atenção: Digite ou cole a mensagem do pedido antes de enviar.";
+        if (modalAtencaoEl) new bootstrap.Modal(modalAtencaoEl).show();
+        return;
     }
 
-    // 3. FLUXO PRINCIPAL (Só executa se as validações acima passarem)
+    // Ativa trava de processamento
+    window.AppRDO.isProcessingCheckout = true;
+
     try {
         let texto = msgInput.value;
-
-        // Limpeza e Extração
         texto = texto.replace(/^\d+\.\s*/gm, ''); 
+        
         const solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)?.[1] || "Não informado").trim();
         const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || "").trim();
         const linhasRota = texto.split('\n').filter(l => /de:/i.test(l) && /para:/i.test(l));
@@ -433,7 +401,7 @@ window.iniciarFluxoCheckout = async function () {
             const elSolicitante = document.getElementById('header-nome-solicitante');
             const resumoEl = document.getElementById('resumo-total');
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (resumoEl) resumoEl.innerHTML = 'Processando...';
+            if (resumoEl) resumoEl.innerHTML = 'Processando rotas...';
 
             try {
                 let kmTotal = 0, minTotal = 0, listaCaminhos = [];
@@ -468,11 +436,15 @@ window.iniciarFluxoCheckout = async function () {
                 window.renderizarMapaUnificado();
                 if (typeof window.preencherDadosFormulario === 'function') window.preencherDadosFormulario();
             } catch (err) {
-                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
+                if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro de cálculo: ${err.message}</span>`;
             }
         }, { once: true });
+
     } catch (err) {
         window.exibirErroRodape?.(err.message);
+    } finally {
+        // Libera a trava independentemente do sucesso ou erro
+        window.AppRDO.isProcessingCheckout = false;
     }
 };
 
