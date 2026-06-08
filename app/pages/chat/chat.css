@@ -73,10 +73,10 @@
     bottom: -18px !important;
     left: 5px !important;
     font-size: 1.4rem !important;
+    /* REMOVA A LINHA ABAIXO OU COMENTE ELA */
+    /* color: #28a745 !important; */ 
     z-index: 10;
     pointer-events: auto !important;
-    cursor: pointer;
-    transition: color 0.3s ease;
 }
 
 /* Cor cinza para o estado de "Aguardando" */

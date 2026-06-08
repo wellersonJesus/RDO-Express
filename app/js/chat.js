@@ -14,18 +14,14 @@ window.filtrarContatos = function () {
     window.AppRDO.debounceTimer = setTimeout(() => {
         const termo = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
         
-        // Busca todos os itens da lista
+        // Ajuste: Busca pelo seletor correto dos seus itens de lista
         document.querySelectorAll('.contact-item-clean').forEach(item => {
-            // Busca o nome dentro da div com fw-bold (onde fica o nome do cliente)
-            const nomeElemento = item.querySelector('.fw-bold');
+            // Garante que pegamos o texto do nome dentro do elemento
+            const nomeElemento = item.querySelector('.contact-name');
             const nome = nomeElemento ? nomeElemento.innerText.toLowerCase() : '';
             
-            // Aplica o filtro
-            if (nome.includes(termo)) {
-                item.style.setProperty('display', 'flex', 'important');
-            } else {
-                item.style.setProperty('display', 'none', 'important');
-            }
+            // Aplica display flex ou none
+            item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
         });
     }, 300);
 };
@@ -133,6 +129,7 @@ window.confirmarStatusComMotoboy = function() {
 window.confirmarStatusFinal = async function(status, extra = {}) {
     const pedidoId = window.AppRDO.pedidoEmEdicao;
     try {
+        // Atualiza a API
         await API.call('atualizarstatus', { 
             id: pedidoId, 
             status: status, 
@@ -140,28 +137,35 @@ window.confirmarStatusFinal = async function(status, extra = {}) {
         });
 
         const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-        const badgeContainer = msgEl?.querySelector('.status-badge-container');
+        const iconEl = msgEl?.querySelector('.status-icon');
         
-        if (badgeContainer) {
+        if (iconEl) {
+            // Definição dos ícones e cores conforme solicitado
             const configs = {
-                'EM_ROTA':    { icon: 'bi-truck', text: 'Em Rota', class: 'text-primary' },
-                'CONCLUIDO':  { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'text-success' },
-                'CANCELADO':  { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'text-danger' }
+                'EM_ROTA':    { icon: 'bi-bicycle', color: '#0d6efd', text: 'Em Rota' },   // Moto (bi-bicycle) + Azul
+                'CONCLUIDO':  { icon: 'bi-check-circle-fill', color: '#28a745', text: 'Concluído' }, // Verde
+                'CANCELADO':  { icon: 'bi-x-circle-fill', color: '#dc3545', text: 'Cancelado' }      // Vermelho
             };
-            const conf = configs[status];
-            const nomeExibido = extra.motoboyNome ? ` (${extra.motoboyNome})` : '';
 
-            badgeContainer.innerHTML = `
-                <span class="${conf.class}">
-                    <i class="bi ${conf.icon}"></i> ${conf.text}${nomeExibido}
-                </span>
-            `;
+            const conf = configs[status];
+            
+            // 1. Remove estados de espera
+            iconEl.classList.remove('status-pending', 'spinner-rotate');
+            
+            // 2. Define novo ícone e cor
+            iconEl.innerHTML = `<i class="bi ${conf.icon}"></i>`;
+            iconEl.style.color = conf.color;
+            
+            // Atualiza o title (dica ao passar o mouse) com o nome do motoboy se houver
+            iconEl.title = extra.motoboyNome ? `${conf.text}: ${extra.motoboyNome}` : conf.text;
         }
+    } catch (e) {
+        window.exibirModalAviso("Erro ao atualizar status.");
     } finally {
-        bootstrap.Modal.getInstance(document.getElementById('modalStatus')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
         // Reset do modal
-        document.getElementById('box-botoes-status').classList.remove('d-none');
-        document.getElementById('box-selecao-motoboy').classList.add('d-none');
+        document.getElementById('box-botoes-status')?.classList.remove('d-none');
+        document.getElementById('box-selecao-motoboy')?.classList.add('d-none');
     }
 };
 
