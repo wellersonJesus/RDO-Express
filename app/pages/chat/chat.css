@@ -1,48 +1,87 @@
 /* ==========================================================================
-   1. ESTRUTURA DE CONTATOS
+   1. ESTRUTURA DE CONTATOS (Mantido: Vermelho Suave no Hover)
    ========================================================================== */
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.3s ease;
     padding: 10px 12px !important;
     display: flex !important;
     align-items: center;
     border-bottom: 1px solid #f8f9fa;
 }
 
-#lista-contatos-chat .contact-item-clean:hover { background-color: #f8d7da !important; }
-#lista-contatos-chat .selected-contact { background-color: #ffeef0 !important; border-left: 4px solid #dc3545 !important; }
-.contact-name { font-weight: 500 !important; font-size: 0.95rem !important; color: #333; }
+/* Hover Vermelho Suave na lista de contatos */
+#lista-contatos-chat .contact-item-clean:hover {
+    background-color: #f8d7da !important;
+}
+
+#lista-contatos-chat .active-contact {
+    background-color: #fce8ea !important;
+    border-left: 4px solid #dc3545 !important;
+}
+
+.contact-name {
+    font-weight: 500 !important;
+    font-size: 0.95rem !important;
+    color: #333;
+}
 
 /* ==========================================================================
-   2. ESTRUTURA DE MENSAGENS
+   2. ESTRUTURA DE MENSAGENS (Fundo Branco + Hover Verde Suave)
    ========================================================================== */
-.message-wrapper { position: relative; margin-bottom: 25px; display: flex; flex-direction: column; }
-.message-sent, .message-received {
+.message-wrapper {
+    position: relative;
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-sent,
+.message-received {
     position: relative;
     padding: 15px 20px !important;
     margin-bottom: 15px !important;
     border-radius: 8px;
-    background: #fff;
+    background-color: #ffffff !important;
+    border: 1px solid #e1e1e1;
     display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.3s ease, filter 0.3s ease;
 }
-.message-sent { background-color: #dcf8c6 !important; margin-left: auto; margin-right: 10px; border-bottom-right-radius: 2px; }
-.message-received { background-color: #ffffff !important; margin-right: auto; margin-left: 10px; border-bottom-left-radius: 2px; }
 
+/* Efeito Verde Suave ao passar o mouse na MENSAGEM */
+.message-sent:hover,
+.message-received:hover {
+    background-color: #f1f8f1 !important;
+}
+
+.message-sent {
+    margin-left: auto;
+    margin-right: 10px;
+    border-bottom-right-radius: 2px;
+}
+
+.message-received {
+    margin-right: auto;
+    margin-left: 10px;
+    border-bottom-left-radius: 2px;
+}
+
+/* Ícone de status (verde) posicionado abaixo da mensagem */
 .status-icon {
     position: absolute !important;
     bottom: -18px !important;
     left: 5px !important;
     font-size: 1.4rem !important;
-    color: #28a745 !important; /* Verde conforme solicitado */
+    color: #28a745 !important;
     z-index: 10;
-    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 /* ==========================================================================
-   3. ESTADOS DE BUSCA, FEEDBACK E ERRO (Refatorado - Ícones Premium)
+   3. ESTADOS DE BUSCA E ERRO
    ========================================================================== */
-.chat-status-container, .table-status-container {
+.chat-status-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -53,21 +92,24 @@
     padding: 20px;
 }
 
-/* Tamanho unificado dos ícones de status */
 .icon-status-large {
     font-size: 3.5rem !important;
-    color: #dc3545 !important; /* Vermelho RDO */
+    color: #dc3545 !important;
     display: inline-block;
 }
 
-/* Animação: O Círculo Girando (Loop) */
 .spinner-rotate {
     animation: rotate 1s linear infinite !important;
 }
 
 @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .status-label-gray {
@@ -82,9 +124,13 @@
    ========================================================================== */
 .whatsapp-bg {
     background-color: #e5ddd5 !important;
-    background-image: linear-gradient(rgba(229, 221, 213, 0.9), rgba(229, 221, 213, 0.9)),
-        url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
 }
 
-:root { --vermelho-rdo: #dc3545; }
-.btn-danger { background-color: var(--vermelho-rdo) !important; border-color: var(--vermelho-rdo) !important; }
+:root {
+    --vermelho-rdo: #dc3545;
+}
+
+.btn-danger {
+    background-color: var(--vermelho-rdo) !important;
+    border-color: var(--vermelho-rdo) !important;
+}
