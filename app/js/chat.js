@@ -612,6 +612,52 @@ window.iniciarFluxoCheckout = async function () {
     modal.show();
 };
 
+window.iniciarSalvamento = async function(status) {
+    if (status === 'EM_ROTA') {
+        // Carrega a lista de motoboys ativos
+        const motoboys = await window.obterMotoboysAtivos();
+        const select = document.getElementById('select-motoboy');
+        select.innerHTML = motoboys.map(m => `<option value="${m.id}">${m.username}</option>`).join('');
+        
+        document.getElementById('box-botoes-status').classList.add('d-none');
+        document.getElementById('box-selecao-motoboy').classList.remove('d-none');
+        return;
+    }
+
+    const btn = event.currentTarget;
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate me-2"></i>Salvando...`;
+
+    try {
+        await window.confirmarStatusFinal(status);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+};
+
+window.confirmarStatusComMotoboy = async function() {
+    const btn = document.getElementById('btn-confirmar-motoboy');
+    const select = document.getElementById('select-motoboy');
+    
+    if (!select.value) return window.exibirModalAviso("Selecione um motoboy.");
+
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate me-2"></i>Salvando...`;
+
+    const motoboyId = select.value;
+    const motoboyNome = select.options[select.selectedIndex].text;
+    
+    try {
+        await window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+};
+
 async function calcularTrechoIndividual(p1, p2) {
     // URL específica para evitar otimizações estranhas do OSRM
     const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=false&alternatives=false`;
