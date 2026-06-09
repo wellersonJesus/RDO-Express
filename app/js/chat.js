@@ -253,6 +253,30 @@ window.confirmarStatusComMotoboy = async function () {
     }
 };
 
+window.processarStatus = async function(status) {
+    // 1. Efeito de Loading em todos os botões do modal
+    const modalBody = document.getElementById('box-botoes-status');
+    const botoes = modalBody.querySelectorAll('button');
+    
+    botoes.forEach(btn => {
+        btn.disabled = true;
+        if(btn.innerText.includes(status.replace('_', ' '))) {
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Processando...`;
+        }
+    });
+
+    // 2. Se for 'EM_ROTA', abre a seleção de motoboy (mantendo a lógica anterior)
+    if (status === 'EM_ROTA') {
+        window.selecionarStatus('EM_ROTA');
+        // Reseta os botões para não travar se o usuário voltar
+        botoes.forEach(b => { b.disabled = false; b.innerHTML = b.innerHTML.replace(/<span.*span>/, ''); });
+        return;
+    }
+
+    // 3. Se for CONCLUIDO ou CANCELADO, salva direto
+    await window.confirmarStatusFinal(status);
+};
+
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     const container = document.getElementById('chat-messages-container');
     const idLimpo = String(id).replace(/\D/g, '');

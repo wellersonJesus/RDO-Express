@@ -1,5 +1,11 @@
 <div class="row g-3 h-100">
-    <!-- Header Principal -->
+    <div class="col-12">
+        <div id="global-error-container" class="alert alert-danger d-none rounded-4 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span id="global-error-message"></span>
+        </div>
+    </div>
+
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -18,7 +24,6 @@
         </div>
     </div>
 
-    <!-- Lista de Contatos -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column" style="height: 600px;">
             <div class="p-3 border-bottom d-flex align-items-center gap-2">
@@ -33,13 +38,10 @@
                     <i id="sync-icon-search" class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
-            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
-                <!-- Conteúdo dinâmico -->
-            </div>
+            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1"></div>
         </div>
     </div>
 
-    <!-- Área de Chat -->
     <div class="col-md-8">
         <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column"
             style="height: 600px;">
@@ -50,9 +52,7 @@
                     </div>
                 </div>
                 <div id="chat-messages-container"
-                    class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
-                    <!-- Mensagens dinâmicas -->
-                </div>
+                    class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
                 <div class="p-3 bg-white border-top">
                     <div class="input-group bg-light rounded-pill p-1">
                         <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none" rows="1"
@@ -63,14 +63,12 @@
                     </div>
                 </div>
             </div>
-            <!-- Áreas de fluxos auxiliares -->
             <div id="step-mapa" class="d-none"></div>
             <div id="step-formulario" class="d-none"></div>
         </div>
     </div>
 </div>
 
-<!-- Modal Status -->
 <div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -80,12 +78,12 @@
             </div>
             <div class="modal-body">
                 <div id="box-botoes-status">
-                    <button class="btn btn-outline-primary w-100 mb-3" onclick="window.selecionarStatus('EM_ROTA')">Em
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="window.processarStatus('EM_ROTA')">Em
                         Rota</button>
                     <button class="btn btn-outline-success w-100 mb-3"
-                        onclick="window.confirmarStatusFinal('CONCLUIDO')">Concluído</button>
+                        onclick="window.processarStatus('CONCLUIDO')">Concluído</button>
                     <button class="btn btn-outline-danger w-100 mb-3"
-                        onclick="window.confirmarStatusFinal('CANCELADO')">Cancelado</button>
+                        onclick="window.processarStatus('CANCELADO')">Cancelado</button>
                 </div>
                 <div id="box-selecao-motoboy" class="d-none">
                     <h6 class="fw-bold mb-3">Selecione o Motoboy:</h6>
@@ -103,7 +101,6 @@
     </div>
 </div>
 
-<!-- Modal Mensagem Padrao -->
 <div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -120,12 +117,9 @@ CONATO:
 HORÁRIO ESTIMADO P/ COLETA:  
 MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
 ROTA(s): 
-📍1. De: ... | 
-        Para: ...
-📍2. De: ... | 
-     Para: ... 
-📍3. De: ... | 
-     Para: ... 
+📍1. De: ... | Para: ...
+📍2. De: ... | Para: ... 
+📍3. De: ... | Para: ... 
 RETORNO:  (SIM /NÃO)
 PRIORIDADE: (Normal, Agendado, Urgente) 
 OBSERVAÇÃO: Descreva a observação aqui se necessario
