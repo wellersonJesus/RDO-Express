@@ -13,13 +13,13 @@ window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(() => {
         const termo = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
-        
+
         // Ajuste: Busca pelo seletor correto dos seus itens de lista
         document.querySelectorAll('.contact-item-clean').forEach(item => {
             // Garante que pegamos o texto do nome dentro do elemento
             const nomeElemento = item.querySelector('.contact-name');
             const nome = nomeElemento ? nomeElemento.innerText.toLowerCase() : '';
-            
+
             // Aplica display flex ou none
             item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
         });
@@ -71,7 +71,7 @@ window.carregarDados = async function () {
     if (window.AppRDO.isFetching) return;
 
     window.AppRDO.isFetching = true;
-    
+
     // 2. Feedback visual de carregamento
     if (iconHeader) iconHeader.classList.add('spinner-rotate');
     if (iconSearch) iconSearch.classList.add('spinner-rotate');
@@ -89,13 +89,13 @@ window.carregarDados = async function () {
         const listaClientes = Array.isArray(clientes) ? clientes : [];
         const listaMensagens = Array.isArray(mensagens) ? mensagens : [];
         const listaPedidos = Array.isArray(pedidos) ? pedidos : [];
-        
+
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
         // 4. Renderização
         window.renderizarLista(listaClientes, isMasterOn);
         window.renderizarMensagens(listaMensagens, listaPedidos);
-        
+
         window.AppRDO.listaCarregada = true;
         if (searchInput) searchInput.placeholder = "Buscar cliente...";
 
@@ -107,14 +107,14 @@ window.carregarDados = async function () {
     } finally {
         // 5. Finalização (Retorno dos estados visuais)
         window.AppRDO.isFetching = false;
-        
+
         if (iconHeader) iconHeader.classList.remove('spinner-rotate');
         if (iconSearch) iconSearch.classList.remove('spinner-rotate');
         if (btnSearch) btnSearch.style.opacity = '1';
     }
 };
 
-window.carregarHistoricoMensagens = async function(clienteId) {
+window.carregarHistoricoMensagens = async function (clienteId) {
     const container = document.getElementById('chat-messages-container');
     container.innerHTML = ''; // Limpa o chat atual
 
@@ -140,24 +140,24 @@ window.selecionarEAbrir = function (id, nome, isOnline) {
     window.abrirConversa(id, nome, null, isOnline);
 };
 
-window.selecionarStatus = async function(status) {
+window.selecionarStatus = async function (status) {
     if (status === 'EM_ROTA') {
         // 1. Oculta botões e mostra seletor
         const boxBotoes = document.getElementById('box-botoes-status');
         const boxMotoboy = document.getElementById('box-selecao-motoboy');
-        
+
         if (boxBotoes) boxBotoes.classList.add('d-none');
         if (boxMotoboy) boxMotoboy.classList.remove('d-none');
-        
+
         // 2. Busca dados da API
         const todosColaboradores = await API.call('getcolaboradores').catch(() => []);
-        
+
         // 3. Filtro flexível: Verifica se "MOTOBOY" está contido na string do cargo
         // Isso resolve o caso do Rodrigo ("Atendente/Motoboy") e do Igor ("Motoboy")
         const motoboysAtivos = (Array.isArray(todosColaboradores) ? todosColaboradores : []).filter(c => {
             const cargo = String(c.colaborador || '').toUpperCase();
             const statusAtivo = String(c.status || '').toUpperCase() === 'TRUE';
-            
+
             return cargo.includes('MOTOBOY') && statusAtivo;
         });
 
@@ -173,19 +173,19 @@ window.selecionarStatus = async function(status) {
                 select.innerHTML = '<option value="">Nenhum motoboy disponível</option>';
             }
         }
-        
+
         window.AppRDO.statusTemporario = 'EM_ROTA';
     } else {
         window.confirmarStatusFinal(status);
     }
 };
 
-window.obterMotoboysAtivos = async function() {
+window.obterMotoboysAtivos = async function () {
     try {
         const todosColaboradores = await API.call('getcolaboradores');
         // Filtro rigoroso: Cargo Motoboy E status ativo
-        return todosColaboradores.filter(c => 
-            c.colaborador === 'Motoboy' && 
+        return todosColaboradores.filter(c =>
+            c.colaborador === 'Motoboy' &&
             String(c.status).toUpperCase() === 'TRUE'
         );
     } catch (e) {
@@ -199,7 +199,7 @@ window.obterMotoboysAtivos = async function() {
  * @param {string} statusLabel - Label original (com emoji).
  * @param {string} motoboyNome - Nome do motoboy, se houver.
  */
-window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
+window.confirmarStatus = async function (msgId, statusLabel, motoboyNome = "") {
     const msgElement = document.querySelector(`[data-pedido-id="${msgId}"]`);
     if (!msgElement) {
         console.error("Elemento de mensagem não encontrado para o ID:", msgId);
@@ -207,14 +207,14 @@ window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
     }
 
     const pedidoId = msgElement.getAttribute('data-pedido-id');
-    
+
     // 1. Limpeza do texto para salvar no banco
     // Removemos os emojis para manter o banco de dados limpo
     const statusLimpo = statusLabel.replace(/📦|⭕|✅|🚀/g, '').trim();
 
     // 2. Lógica de Interpolação: "NomeMotoboy/Status" ou apenas "Status"
-    const valorParaSalvar = motoboyNome 
-        ? `${motoboyNome}/${statusLimpo}` 
+    const valorParaSalvar = motoboyNome
+        ? `${motoboyNome}/${statusLimpo}`
         : statusLimpo;
 
     try {
@@ -232,10 +232,10 @@ window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
                 // Remove o spinner de carregamento e aplica o estado final
                 statusContainer.classList.remove('status-pending', 'spinner-rotate');
                 statusContainer.classList.add('status-updated');
-                
+
                 // Define o título do ícone com a informação completa
                 statusContainer.setAttribute('title', valorParaSalvar);
-                
+
                 // Exibe o texto ou ícone correspondente ao status
                 statusContainer.innerHTML = `<i class="bi bi-check2-circle"></i>`;
             }
@@ -256,10 +256,10 @@ window.confirmarStatus = async function(msgId, statusLabel, motoboyNome = "") {
     }
 };
 
-window.confirmarStatusComMotoboy = async function() {
+window.confirmarStatusComMotoboy = async function () {
     const btn = document.getElementById('btn-confirmar-motoboy');
     const select = document.getElementById('select-motoboy');
-    
+
     if (!select.value) {
         window.exibirModalAviso("Por favor, selecione um motoboy.");
         return;
@@ -273,7 +273,7 @@ window.confirmarStatusComMotoboy = async function() {
     // 2. Executa a gravação
     const motoboyId = select.value;
     const motoboyNome = select.options[select.selectedIndex].text;
-    
+
     try {
         await window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
     } catch (e) {
@@ -283,39 +283,39 @@ window.confirmarStatusComMotoboy = async function() {
     }
 };
 
-window.confirmarStatusFinal = async function(status, extra = {}) {
+window.confirmarStatusFinal = async function (status, extra = {}) {
     const pedidoId = window.AppRDO.pedidoEmEdicao;
-    
+
     // 1. Lógica de interpolação solicitada
-    const statusFinal = extra.motoboyNome 
-        ? `${extra.motoboyNome}/${status}` 
+    const statusFinal = extra.motoboyNome
+        ? `${extra.motoboyNome}/${status}`
         : status;
 
     try {
         // 2. Chamada corrigida: 'updatepedido' faz o mapeamento correto no backend
-        const resposta = await API.call('updatepedido', { 
-            id: pedidoId, 
-            status: statusFinal, 
-            motoboy: extra.motoboyNome || "" 
+        const resposta = await API.call('updatepedido', {
+            id: pedidoId,
+            status: statusFinal,
+            motoboy: extra.motoboyNome || ""
         });
 
         if (resposta && resposta.status === 'success') {
             // 3. Atualização visual no chat
             const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
             const iconEl = msgEl?.querySelector('.status-icon');
-            
+
             if (iconEl) {
                 const configs = {
-                    'EM_ROTA':    { icon: 'bi-bicycle', color: '#0d6efd', text: 'Em Rota' },
-                    'CONCLUIDO':  { icon: 'bi-check-circle-fill', color: '#28a745', text: 'Concluído' },
-                    'CANCELADO':  { icon: 'bi-x-circle-fill', color: '#dc3545', text: 'Cancelado' }
+                    'EM_ROTA': { icon: 'bi-bicycle', color: '#0d6efd', text: 'Em Rota' },
+                    'CONCLUIDO': { icon: 'bi-check-circle-fill', color: '#28a745', text: 'Concluído' },
+                    'CANCELADO': { icon: 'bi-x-circle-fill', color: '#dc3545', text: 'Cancelado' }
                 };
 
                 const conf = configs[status];
-                
+
                 // Remove animação de espera
                 iconEl.classList.remove('status-pending', 'spinner-rotate');
-                
+
                 // Aplica estilo e ícone
                 iconEl.innerHTML = `<i class="bi ${conf.icon}"></i>`;
                 iconEl.style.setProperty('color', conf.color, 'important');
@@ -332,7 +332,7 @@ window.confirmarStatusFinal = async function(status, extra = {}) {
         const modalEl = document.getElementById('modalStatus');
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
-        
+
         // Reset da interface do modal
         document.getElementById('box-botoes-status')?.classList.remove('d-none');
         document.getElementById('box-selecao-motoboy')?.classList.add('d-none');
@@ -426,7 +426,7 @@ window.abrirModalEdicao = function (msgId) {
                     if (resposta && resposta.status === 'success') {
                         const el = document.querySelector(`[data-pedido-id="${msgId}"]`);
                         if (el) el.parentElement.remove();
-                        
+
                         Swal.fire('Excluído!', `O pedido #${msgId} foi removido com sucesso.`, 'success');
                     } else {
                         throw new Error("Erro ao excluir no banco.");
@@ -442,12 +442,22 @@ window.abrirModalEdicao = function (msgId) {
 
 window.abrirModalStatus = function (pedidoId) {
     if (!pedidoId) {
-        console.error("ID do pedido não encontrado");
+        console.warn("Nenhum ID de pedido fornecido para o status.");
         return;
     }
+
+    // Armazena o ID do pedido globalmente para referência na função de salvar status
+    window.AppRDO = window.AppRDO || {};
     window.AppRDO.pedidoEmEdicao = pedidoId;
+
     const modalEl = document.getElementById('modalStatus');
-    const modal = new bootstrap.Modal(modalEl);
+    if (!modalEl) {
+        console.error("Elemento 'modalStatus' não encontrado no HTML.");
+        return;
+    }
+
+    // Garante que o Bootstrap tenha a instância e abre o modal
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
 };
 
@@ -542,7 +552,7 @@ window.renderizarMapaUnificado = function () {
     window.mapaInstancia.fitBounds(todosPontos, { padding: [50, 50] });
 };
 
-window.renderizarLista = function(lista, isMasterOn) {
+window.renderizarLista = function (lista, isMasterOn) {
     const listEl = document.getElementById('lista-contatos-chat');
     if (lista.length === 0) {
         listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
@@ -555,7 +565,7 @@ window.renderizarLista = function(lista, isMasterOn) {
         const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         const statusColor = isOnline ? '#28a745' : '#adb5bd';
-        
+
         return `
             <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean" 
                  id="item-contato-${id}"
@@ -574,7 +584,7 @@ window.renderizarLista = function(lista, isMasterOn) {
     }).join('');
 };
 
-window.renderizarMensagens = function(mensagens, pedidos) {
+window.renderizarMensagens = function (mensagens, pedidos) {
     const container = document.getElementById('chat-messages-container');
     container.innerHTML = '';
 
@@ -585,7 +595,7 @@ window.renderizarMensagens = function(mensagens, pedidos) {
 
         const div = document.createElement('div');
         div.className = 'message-wrapper';
-        
+
         // Define se já tem um status para saber se mostra o ícone de pendente ou o de ação
         const temStatus = statusDoBanco && statusDoBanco !== "Aguardando";
 
@@ -604,7 +614,7 @@ window.renderizarMensagens = function(mensagens, pedidos) {
     });
 };
 
-window.getIconePorStatus = function(status) {
+window.getIconePorStatus = function (status) {
     const s = String(status).toUpperCase();
     if (s.includes('EM_ROTA') || s.includes('/')) return '<i class="bi bi-motorcycle" style="color: #dc3545;"></i>';
     if (s.includes('CONCLUIDO')) return '<i class="bi bi-check-circle-fill" style="color: #28a745;"></i>';
@@ -646,6 +656,17 @@ window.exibirErro = function (erro, contexto = "Erro desconhecido") {
         // Fallback caso o chat não esteja visível
         window.exibirModalAviso(`Falha ao ${contexto}: ${erro.message || erro}`);
     }
+};
+
+window.exibirErroNoModal = function (mensagem) {
+    const container = document.getElementById('form-error-container');
+    const texto = document.getElementById('form-error-text');
+
+    texto.innerText = mensagem; // Define a mensagem
+    container.classList.remove('d-none'); // Exibe o container
+
+    // Oculta após 4 segundos automaticamente
+    setTimeout(() => container.classList.add('d-none'), 4000);
 };
 
 window.analisarMensagemEntrada = function (texto) {
@@ -739,7 +760,7 @@ window.iniciarFluxoCheckout = async function () {
     modal.show();
 };
 
-window.iniciarSalvamento = async function(status) {
+window.iniciarSalvamento = async function (status) {
     // Caso seja "EM_ROTA", tratamos a lista de motoboys
     if (status === 'EM_ROTA') {
         const boxBotoes = document.getElementById('box-botoes-status');
@@ -748,17 +769,17 @@ window.iniciarSalvamento = async function(status) {
 
         if (boxBotoes) boxBotoes.classList.add('d-none');
         if (boxMotoboy) boxMotoboy.classList.remove('d-none');
-        
+
         // Busca e filtra usando a lógica flexível de "Motoboy" no cargo
         const todos = await API.call('getcolaboradores').catch(() => []);
-        const motoboys = (Array.isArray(todos) ? todos : []).filter(c => 
-            String(c.colaborador || '').toUpperCase().includes('MOTOBOY') && 
+        const motoboys = (Array.isArray(todos) ? todos : []).filter(c =>
+            String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
             String(c.status || '').toUpperCase() === 'TRUE'
         );
 
         if (select) {
             if (motoboys.length > 0) {
-                select.innerHTML = motoboys.map(m => 
+                select.innerHTML = motoboys.map(m =>
                     `<option value="${m.id}">${m.username}</option>`
                 ).join('');
             } else {
@@ -782,10 +803,10 @@ window.iniciarSalvamento = async function(status) {
     }
 };
 
-window.confirmarStatusComMotoboy = async function() {
+window.confirmarStatusComMotoboy = async function () {
     const btn = document.getElementById('btn-confirmar-motoboy');
     const select = document.getElementById('select-motoboy');
-    
+
     if (!select.value) return window.exibirModalAviso("Selecione um motoboy.");
 
     const textoOriginal = btn.innerHTML;
@@ -794,7 +815,7 @@ window.confirmarStatusComMotoboy = async function() {
 
     const motoboyId = select.value;
     const motoboyNome = select.options[select.selectedIndex].text;
-    
+
     try {
         await window.confirmarStatusFinal('EM_ROTA', { motoboyId, motoboyNome });
     } finally {
@@ -1028,9 +1049,10 @@ window.formatarTelefone = function (tel) {
 
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
-    const camposObrigatorios = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
-    
-    // 1. Validação de campos obrigatórios
+    // Incluí p-distancia e p-valor-km conforme seu HTML pede obrigatório
+    const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas', 'p-valor-km'];
+
+    // 1. Validação Visual
     let ehValido = true;
     camposObrigatorios.forEach(id => {
         const el = document.getElementById(id);
@@ -1042,48 +1064,25 @@ window.salvarPedidoAPI = async function () {
         }
     });
 
-    if (!ehValido) {
-        window.exibirModalAviso("Por favor, preencha todos os campos obrigatórios.");
-        return;
-    }
+    // Se não for válido, interrompe a função silenciosamente
+    if (!ehValido) return;
 
+    // 2. Estado de Loading
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Emitindo...`;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Emitindo...`;
 
     try {
-        // 2. Função auxiliar para pegar valor e sanitizar contra tags HTML perigosas
-        const getVal = (id) => {
-            const el = document.getElementById(id);
-            if (!el) return 'N/A';
-            return el.value.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        };
-
+        const getVal = (id) => document.getElementById(id)?.value.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/A';
         const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
+
         const rotasRaw = getVal('p-rotas').split('\n');
-        
-        // Formata rotas para o modelo de mensagem
         const rotasFormatadas = rotasRaw.map((l, i) => {
             const partes = l.split('|');
             return `📍${i + 1}. De: ${partes[0]?.trim() || ''} | \n      Para: ${partes[1]?.trim() || ''}`;
         }).join('\n');
 
-        // 3. Montagem do modelo com placeholder [ID_GERADO]
-        const msgModelo = `📦 SOLICITANTE: ${getVal('p-solicitante')}
+        const msgModelo = `📦 SOLICITANTE: ${getVal('p-solicitante')}\n\nN.SERVIÇO: [ID_GERADO]\nSOLICITANTE: ${getVal('p-solicitante')} \nCONTATO: ${getVal('p-contato')} | HR: ${getVal('p-horario')}\n-\nMERCADORIA: ${getVal('p-mercadoria')}\nRETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${getVal('p-obs')}\n${valorFinal}`;
 
-N.SERVIÇO: [ID_GERADO]
-SOLICITANTE: ${getVal('p-solicitante')} 
-CONTATO: ${getVal('p-contato')} | HR: ${getVal('p-horario')}
--
-MERCADORIA: ${getVal('p-mercadoria')}
-RETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}
--
-ROTA(s): 
-${rotasFormatadas}
--
-OBSERVAÇÃO: ${getVal('p-obs')}
-${valorFinal}`;
-
-        // 4. Chamada da API
         const resp = await API.call('finalizarpedido', {
             action: 'finalizarpedido',
             id_chat: String(window.AppRDO.clienteId),
@@ -1091,34 +1090,30 @@ ${valorFinal}`;
             mensagem: msgModelo
         });
 
-        // 5. Processamento do Sucesso
         if (resp?.status === 'success') {
             const idReal = resp.id || "N/A";
-            
-            // Cria o span com estilo inline para o ID ficar vermelho
             const idFormatado = `<span style="color: #dc3545; font-weight: bold;">${idReal}</span>`;
-            
-            // Substitui o placeholder e converte quebras de linha para <br>
-            const msgFinal = msgModelo
-                .replace('[ID_GERADO]', idFormatado)
-                .replace(/\n/g, '<br>');
+            const msgFinal = msgModelo.replace('[ID_GERADO]', idFormatado).replace(/\n/g, '<br>');
 
             window.enviarMensagemParaChat(msgFinal, false, idReal);
-            
             document.getElementById('msg-input').value = '';
-            const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
-            if (modalForm) modalForm.hide();
+            bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
         } else {
-            throw new Error(resp?.message || "Erro ao salvar pedido.");
+            throw new Error(resp?.message || "Erro ao salvar.");
         }
     } catch (err) {
-        console.error("Erro fatal ao emitir pedido:", err);
-        window.exibirModalAviso("Falha ao salvar: " + err.message);
+        console.error("Erro:", err);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
     }
 };
+
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('border-danger')) {
+        e.target.classList.remove('border', 'border-danger', 'border-2');
+    }
+});
 
 window.fecharModalStatus = async function () {
     const pedidoId = window.AppRDO.pedidoEmEdicao;
@@ -1164,52 +1159,39 @@ window.fecharModalStatus = async function () {
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
     try {
         const container = document.getElementById('chat-messages-container');
-        if (!container) {
-            console.error("Container de chat não encontrado.");
-            return;
-        }
+        if (!container) return;
 
-        // 1. Evitar duplicidade: se o ID já está na tela, não renderiza de novo
-        if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
-            return;
-        }
+        // Evitar duplicidade de ID no chat
+        if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) return;
 
-        // 2. Criação do elemento de mensagem
         const div = document.createElement('div');
-        div.className = 'message-wrapper';
+        div.className = `d-flex w-100 ${isRecebida ? 'justify-content-start' : 'justify-content-end'}`;
 
-        /**
-         * 3. Estrutura da Mensagem:
-         * O parâmetro 'texto' esperado aqui já deve ser a string formatada 
-         * vinda do banco (com as tags <span> e <br>).
-         */
+        // Estrutura do card
         div.innerHTML = `
-            <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
-                 data-pedido-id="${pedidoId || 'msg-' + Date.now()}"
-                 onclick="window.abrirModalEdicao('${pedidoId}')">
-                 
-                <div class="message-body">${texto}</div>
-                
-                ${!isRecebida ? `
-                    <div class="status-icon status-pending" 
-                         onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')" 
-                         title="Gerenciar Status">
-                        <i class="bi bi-arrow-repeat spinner-rotate"></i>
-                    </div>
-                ` : ''}
+    <div class="card ${isRecebida ? 'bg-white' : 'bg-danger text-white'} border-0 rounded-4 p-3 shadow-sm mb-2" 
+         data-pedido-id="${pedidoId || 'msg-' + Date.now()}"
+         onclick="window.abrirModalEdicao('${pedidoId}')" style="cursor: pointer;">
+         
+        <div class="message-body">${texto}</div>
+        
+        ${!isRecebida ? `
+            <div class="mt-2 text-end status-badge-container" 
+                 onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')" 
+                 style="cursor: pointer;" title="Alterar Status">
+                <i class="bi bi-clock-history"></i>
             </div>
-        `;
+        ` : ''}
+    </div>
+`;
 
         container.appendChild(div);
 
-        // 4. Scroll automático suave
-        container.scrollTo({ 
-            top: container.scrollHeight, 
-            behavior: 'smooth' 
-        });
+        // Scroll suave para o fim
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
 
     } catch (err) {
-        console.error("Erro crítico na renderização da mensagem:", err);
+        console.error("Erro ao renderizar mensagem:", err);
     }
 };
 
@@ -1256,25 +1238,25 @@ function limparBackdrops() {
     document.body.style.paddingRight = '';
 }
 
-window.atualizarStatusPedido = async function(status, extra = {}) {
+window.atualizarStatusPedido = async function (status, extra = {}) {
     const pedidoId = window.AppRDO.pedidoEmEdicao;
     try {
         // Chamada API para persistir a mudança
-        await API.call('atualizarstatus', { 
-            id: pedidoId, 
-            status: status, 
-            motoboy_id: extra.motoboyId 
+        await API.call('atualizarstatus', {
+            id: pedidoId,
+            status: status,
+            motoboy_id: extra.motoboyId
         });
 
         const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
         const badgeContainer = msgEl?.querySelector('.status-badge-container');
-        
+
         if (badgeContainer) {
             // Configuração dos ícones padrão para cada status
             const configs = {
-                'EM_ROTA':    { icon: 'bi-truck', text: 'Em Rota', class: 'text-primary' },
-                'CONCLUIDO':  { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'text-success' },
-                'CANCELADO':  { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'text-danger' }
+                'EM_ROTA': { icon: 'bi-truck', text: 'Em Rota', class: 'text-primary' },
+                'CONCLUIDO': { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'text-success' },
+                'CANCELADO': { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'text-danger' }
             };
 
             const conf = configs[status];
@@ -1297,41 +1279,3 @@ window.atualizarStatusPedido = async function(status, extra = {}) {
     }
 };
 
-window.fecharModalStatus = async function () {
-    const pedidoId = window.AppRDO.pedidoEmEdicao;
-    const novoStatus = window.AppRDO.statusTemporario;
-
-    if (!pedidoId || !novoStatus) {
-        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
-        return;
-    }
-
-    try {
-        await API.call('atualizarstatus', { id: pedidoId, status: novoStatus });
-
-        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-        const badgeContainer = msgEl?.querySelector('.status-badge-container');
-
-        if (badgeContainer) {
-            let config = { icon: '', text: '', class: '' };
-
-            if (novoStatus === 'EM_ROTA') {
-                config = { icon: 'bi-truck', text: 'Em Rota', class: 'bg-primary text-white' };
-            } else if (novoStatus === 'CONCLUIDO') {
-                config = { icon: 'bi-check-circle-fill', text: 'Concluído', class: 'bg-success text-white' };
-            } else if (novoStatus === 'CANCELADO') {
-                config = { icon: 'bi-x-circle-fill', text: 'Cancelado', class: 'bg-danger text-white' };
-            }
-
-            badgeContainer.innerHTML = `
-                <span class="badge ${config.class} border">
-                    <i class="bi ${config.icon} me-1"></i> ${config.text}
-                </span>
-            `;
-        }
-    } catch (e) {
-        window.exibirModalAviso("Erro ao atualizar status.");
-    } finally {
-        bootstrap.Modal.getInstance(document.getElementById('modalStatus'))?.hide();
-    }
-};

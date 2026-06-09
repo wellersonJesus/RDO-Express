@@ -1,5 +1,4 @@
 <div class="row g-3 h-100">
-    <!-- Header Principal -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -18,7 +17,6 @@
         </div>
     </div>
 
-    <!-- Coluna de Contatos -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column" style="height: 600px;">
             <div class="p-3 border-bottom d-flex align-items-center gap-2">
@@ -28,7 +26,6 @@
                     <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none"
                         placeholder="Pesquisar..." onkeyup="window.filtrarContatos()">
                 </div>
-                <!-- Botão de Sincronização lateral (sem fundo) -->
                 <button id="btn-sync-search" class="btn btn-link text-secondary p-2 border-0"
                     onclick="window.carregarDados()" title="Sincronizar">
                     <i id="sync-icon-search" class="bi bi-arrow-repeat"></i>
@@ -38,11 +35,9 @@
         </div>
     </div>
 
-    <!-- Coluna de Conversa -->
     <div class="col-md-8">
         <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column"
             style="height: 600px;">
-            <!-- Conteúdo das Etapas (Chat, Mapa, Formulario) mantido igual -->
             <div id="step-chat" class="d-flex flex-column h-100">
                 <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
                     <img id="chat-header-logo" src="" class="rounded-circle d-none"
@@ -63,9 +58,32 @@
                     </div>
                 </div>
             </div>
-            <!-- Etapas Mapa e Formulário ocultas por padrão -->
             <div id="step-mapa" class="d-none"></div>
             <div id="step-formulario" class="d-none"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-body">
+                <div id="box-botoes-status">
+                    <h6 class="fw-bold mb-3">Alterar status para:</h6>
+                    <button class="btn btn-primary w-100 mb-2" onclick="window.selecionarStatus('EM_ROTA')">Em
+                        Rota</button>
+                    <button class="btn btn-success w-100 mb-2"
+                        onclick="window.confirmarStatusFinal('CONCLUIDO')">Concluído</button>
+                    <button class="btn btn-danger w-100"
+                        onclick="window.confirmarStatusFinal('CANCELADO')">Cancelado</button>
+                </div>
+                <div id="box-selecao-motoboy" class="d-none">
+                    <h6 class="fw-bold mb-3">Selecione o Motoboy:</h6>
+                    <select id="select-motoboy" class="form-select mb-3"></select>
+                    <button id="btn-confirmar-motoboy" class="btn btn-primary w-100"
+                        onclick="window.confirmarStatusComMotoboy()">Confirmar</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
