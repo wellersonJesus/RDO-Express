@@ -1036,12 +1036,12 @@ window.preencherDadosFormulario = function () {
 };
 
 window.salvarPedidoAPI = async function () {
-    const btn = document.getElementById('btn-emitir-pedido');
-    const camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas', 'p-valor-km'];
+    var btn = document.getElementById('btn-emitir-pedido');
+    var camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas', 'p-valor-km'];
 
-    let ehValido = true;
-    camposObrigatorios.forEach(id => {
-        const el = document.getElementById(id);
+    var ehValido = true;
+    camposObrigatorios.forEach(function (id) {
+        var el = document.getElementById(id);
         if (!el || !el.value.trim()) {
             el.classList.add('is-invalid');
             ehValido = false;
@@ -1055,22 +1055,32 @@ window.salvarPedidoAPI = async function () {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Emitindo...';
 
     try {
-        const getVal = (id) => document.getElementById(id)?.value.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;') || 'N/A';
-        const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
+        var getVal = function (id) {
+            var el = document.getElementById(id);
+            return (el?.value || '').trim().replace(/</g, '&lt;').replace(/>/g, '&gt;') || 'N/A';
+        };
+        var valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
 
-        const rotasRaw = getVal('p-rotas').split('\n');
-        const rotasFormatadas = rotasRaw.map((l, i) => {
-            const partes = l.split('|');
-            return `📍${i + 1}. De: ${partes[0]?.trim() || ''} | \n      Para: ${partes[1]?.trim() || ''}`;
+        var rotasRaw = getVal('p-rotas').split('\n');
+        var rotasFormatadas = rotasRaw.map(function (l, i) {
+            var partes = l.split('|');
+            return '📍' + (i + 1) + '. De: ' + (partes[0]?.trim() || '') + ' | \n      Para: ' + (partes[1]?.trim() || '');
         }).join('\n');
 
-        const PLACEHOLDER_ID = '%%ID_PEDIDO%%';
+        var PLACEHOLDER_ID = '%%ID_PEDIDO%%';
+        var retornoLabel = getVal('p-retorno') === '0.6' ? 'Sim' : 'Não';
 
-        const msgTemplate = `📦 SOLICITANTE: ${getVal('p-solicitante')}\n\nN.SERVIÇO: ${PLACEHOLDER_ID}\nSOLICITANTE: ${getVal('p-solicitante')} \nCONTATO: ${getVal('p-contato')} | HR: ${getVal('p-horario')}\n-\nMERCADORIA: ${getVal('p-mercadoria')}\nRETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${getVal('p-obs')}\n${valorFinal}`;
+        var msgTemplate = '📦 SOLICITANTE: ' + getVal('p-solicitante') + '\n\n' +
+            'N.SERVIÇO: ' + PLACEHOLDER_ID + '\n' +
+            'SOLICITANTE: ' + getVal('p-solicitante') + ' \n' +
+            'CONTATO: ' + getVal('p-contato') + ' | HR: ' + getVal('p-horario') + '\n-\n' +
+            'MERCADORIA: ' + getVal('p-mercadoria') + '\n' +
+            'RETORNO: ' + retornoLabel + '\n-\n' +
+            'ROTA(s): \n' + rotasFormatadas + '\n-\n' +
+            'OBSERVAÇÃO: ' + getVal('p-obs') + '\n' +
+            valorFinal;
 
-        const retornoLabel = getVal('p-retorno') === '0.6' ? 'Sim' : 'Não';
-
-        const resp = await API.call('finalizarpedido', {
+        var resp = await API.call('finalizarpedido', {
             action: 'finalizarpedido',
             id_chat: String(window.AppRDO.clienteId),
             solicitante: getVal('p-solicitante'),
@@ -1086,9 +1096,13 @@ window.salvarPedidoAPI = async function () {
         });
 
         if (resp?.status === 'success') {
-            const idReal = resp.id || 'N/A';
-            const idFormatadoHTML = `<span style="color: #dc3545; font-weight: bold;">${idReal}</span>`;
-            const msgParaChat = msgTemplate.replace(PLACEHOLDER_ID, idFormatadoHTML).replace(/\n/g, '<br>');
+            var idReal = resp.id || '0';
+            var idFormatado = typeof window.formatarIdServico === 'function'
+                ? window.formatarIdServico(idReal)
+                : '#RDO' + String(idReal).padStart(3, '0');
+
+            var idFormatadoHTML = '<span style="color: #dc3545; font-weight: bold;">' + idFormatado + '</span>';
+            var msgParaChat = msgTemplate.replace(PLACEHOLDER_ID, idFormatadoHTML).replace(/\n/g, '<br>');
 
             window.enviarMensagemParaChat(msgParaChat, false, idReal);
             document.getElementById('msg-input').value = '';
@@ -1116,7 +1130,7 @@ window.salvarPedidoAPI = async function () {
             try {
                 await API.call('updatechat', {
                     id: resp.id_chat || '',
-                    texto: msgTemplate.replace(PLACEHOLDER_ID, idReal)
+                    texto: msgTemplate.replace(PLACEHOLDER_ID, idFormatado)
                 });
             } catch (updateErr) {
                 console.warn('Aviso: não foi possível atualizar o texto no histórico:', updateErr);

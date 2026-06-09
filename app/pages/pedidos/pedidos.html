@@ -1,6 +1,6 @@
 <div class="row g-3">
     <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
+        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-visible">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-clipboard2-check fs-3 text-danger"></i>
@@ -14,28 +14,48 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <div class="dropdown">
-                        <button class="btn btn-light btn-sm rounded-pill border-0 px-3" type="button"
-                            data-bs-toggle="dropdown">
-                            <i class="bi bi-filter-left fs-5"></i>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end shadow border-0 p-3" style="width: 250px;">
-                            <label class="small fw-bold text-muted mb-2">FILTRAR POR:</label>
-                            <select id="tipo-filtro" class="form-select form-select-sm border-0 bg-light mb-2">
-                                <option value="todos">Todos os Campos</option>
-                                <option value="id">Pedido</option>
-                                <option value="motoboy">Motoboy</option>
-                                <option value="status">Status</option>
-                                <option value="solicitante">Solicitante</option>
-                            </select>
-                            <input type="text" id="filtro-pedido" class="form-control form-control-sm border-0 bg-light"
-                                placeholder="Digite para buscar..." onkeyup="window.RDO_PEDIDOS.filtrar()">
+                    <div class="position-relative d-flex align-items-center dropdown-filtro-wrapper">
+                        <div class="dropdown">
+                            <button
+                                class="btn btn-sm btn-light border rounded-start-pill rounded-end-0 px-2 d-flex align-items-center gap-1"
+                                type="button"
+                                id="dropdownFiltroCategoria"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="true"
+                                aria-expanded="false"
+                                title="Selecionar campo de busca"
+                                style="height: 31px; font-size: 0.72rem;"
+                            >
+                                <i class="bi bi-funnel text-muted"></i>
+                                <span id="filtro-label" class="text-muted d-none d-sm-inline">Todos</span>
+                                <i class="bi bi-chevron-down text-muted" style="font-size: 0.55rem;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-start shadow border-0 rounded-3 py-1" style="min-width: 160px; font-size: 0.78rem; z-index: 1055;">
+                                <li><a class="dropdown-item active" href="#" data-filtro="todos"><i class="bi bi-grid-3x3-gap me-2"></i>Todos</a></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li><a class="dropdown-item" href="#" data-filtro="servico"><i class="bi bi-hash me-2"></i>N.Serviço</a></li>
+                                <li><a class="dropdown-item" href="#" data-filtro="cliente"><i class="bi bi-person me-2"></i>Cliente</a></li>
+                                <li><a class="dropdown-item" href="#" data-filtro="valor"><i class="bi bi-currency-dollar me-2"></i>Valor</a></li>
+                                <li><a class="dropdown-item" href="#" data-filtro="status"><i class="bi bi-circle me-2"></i>Status</a></li>
+                            </ul>
                         </div>
+                        <input
+                            type="text"
+                            id="filtro-pedidos"
+                            class="form-control form-control-sm border-start-0 rounded-start-0 rounded-end-pill"
+                            placeholder="Buscar..."
+                            autocomplete="off"
+                            style="height: 31px; max-width: 180px; font-size: 0.78rem;"
+                        >
                     </div>
-
-                    <button class="btn btn-outline-danger btn-sm rounded-circle"
-                        onclick="window.RDO_PEDIDOS.carregarPedidos()" title="Atualizar">
-                        <i id="sync-pedidos" class="bi bi-arrow-repeat"></i>
+                    <button
+                        id="btn-loop-pedidos"
+                        class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center"
+                        onclick="window.toggleLoopPedidos()"
+                        title="Atualizar pedidos"
+                        style="width: 31px; height: 31px; padding: 0;"
+                    >
+                        <i id="icon-loop-pedidos" class="bi bi-arrow-repeat" style="font-size: 0.9rem;"></i>
                     </button>
                 </div>
             </div>
@@ -43,130 +63,188 @@
     </div>
 
     <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0 fs-7">
-                    <thead class="bg-light">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="table-responsive p-3">
+                <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
+                    <thead class="text-uppercase" style="font-size: 0.65rem; color: #999;">
                         <tr>
-                            <th class="border-0 px-3 py-2 fw-bold text-muted text-uppercase">Pedido</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Solicitante</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Horário</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Motoboy</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Valor</th>
-                            <th class="border-0 py-2 fw-bold text-muted text-uppercase">Status</th>
-                            <th class="border-0 px-3 py-2 text-end fw-bold text-muted text-uppercase">Ações</th>
+                            <th class="ps-3 border-0">N.Serviço</th>
+                            <th class="border-0">Cliente</th>
+                            <th class="border-0">Valor</th>
+                            <th class="border-0">Status</th>
+                            <th class="text-end pe-3 border-0">Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="tabela-pedidos-body" class="bg-white text-secondary"></tbody>
+                    <tbody id="corpo-tabela-pedidos">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
+                                <div class="mt-2" style="font-size: 0.78rem;">Carregando pedidos...</div>
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
-            <div id="loading-pedidos" class="text-center py-4 d-none">
-                <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-            </div>
-            <div id="empty-pedidos" class="text-center py-4 d-none">
-                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
-                <div class="text-muted small mt-2">Nenhum pedido encontrado</div>
+
+            <!-- Paginador - Mesmo modelo da Administração -->
+            <div class="card-footer bg-white border-0 d-flex justify-content-center pb-3">
+                <div class="btn-group shadow-sm">
+                    <button class="btn btn-light" onclick="window.mudarPaginaPedidos(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <button class="btn btn-light" id="info-paginacao-pedidos" disabled style="min-width: 100px;">Pág 1</button>
+                    <button class="btn btn-light" onclick="window.mudarPaginaPedidos(1)"><i class="bi bi-chevron-right"></i></button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Detalhes -->
 <div class="modal fade" id="modalPedidoDetalhes" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="fw-bold mb-0 text-dark">
-                    Pedido <span id="detalhe-titulo" class="text-danger"></span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Detalhes</h5>
+                <div class="mt-1 text-muted small">
+                    Serviço: <span id="detalhe-titulo" class="fw-bold text-dark">—</span>
+                </div>
             </div>
-            <div class="modal-body px-4 pb-4">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <h6 class="text-danger fw-bold small text-uppercase mb-0">Dados do Pedido</h6>
-                        <hr class="my-1 opacity-10">
-                    </div>
+            <div class="modal-body p-4">
+                <div class="row g-2">
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">PEDIDO</label>
-                        <input type="text" id="det-pedido-id"
-                            class="form-control form-control-sm border-0 bg-light fw-bold" readonly>
+                        <label class="text-muted small">N.SERVIÇO</label>
+                        <input type="text" id="det-pedido-id" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-5">
-                        <label class="small text-muted fw-bold">SOLICITANTE</label>
-                        <input type="text" id="det-solicitante" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">Cliente</label>
+                        <input type="text" id="det-cliente" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">CONTATO</label>
-                        <input type="text" id="det-contato" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">CONTATO</label>
+                        <input type="text" id="det-contato" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">MOTOBOY</label>
-                        <input type="text" id="det-motoboy" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">SOLICITANTE</label>
+                        <input type="text" id="det-solicitante" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">STATUS</label>
-                        <input type="text" id="det-status"
-                            class="form-control form-control-sm border-0 bg-light fw-bold" readonly>
+                        <label class="text-muted small">MOTOBOY</label>
+                        <input type="text" id="det-motoboy" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">MERCADORIA</label>
-                        <input type="text" id="det-mercadoria" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
-                    </div>
-
-                    <div class="col-12 mt-3">
-                        <h6 class="text-danger fw-bold small text-uppercase mb-0">Rota e Valores</h6>
-                        <hr class="my-1 opacity-10">
+                        <label class="text-muted small">STATUS</label>
+                        <input type="text" id="det-status" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">DE</label>
-                        <textarea id="det-de" class="form-control form-control-sm border-0 bg-light" rows="2"
-                            readonly></textarea>
+                        <label class="text-muted small">MERCADORIA</label>
+                        <input type="text" id="det-mercadoria" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">PARA</label>
-                        <textarea id="det-para" class="form-control form-control-sm border-0 bg-light" rows="2"
-                            readonly></textarea>
+                        <label class="text-muted small">ROTA (DE)</label>
+                        <textarea id="det-de" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
                     </div>
                     <div class="col-md-4">
-                        <label class="small text-muted fw-bold">RETORNO</label>
-                        <input type="text" id="det-retorno" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">ROTA (PARA)</label>
+                        <textarea id="det-para" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">RETORNO</label>
+                        <input type="text" id="det-retorno" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">HORÁRIO</label>
-                        <input type="text" id="det-horario" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">HORÁRIO</label>
+                        <input type="text" id="det-horario" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">PRIORIDADE</label>
-                        <input type="text" id="det-prioridade" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">PRIORIDADE</label>
+                        <input type="text" id="det-prioridade" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">VALOR</label>
-                        <input type="text" id="det-valor"
-                            class="form-control form-control-sm border-0 bg-light fw-bold text-success" readonly>
+                        <label class="text-muted small">VALOR</label>
+                        <input type="text" id="det-valor" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-3">
-                        <label class="small text-muted fw-bold">ID CHAT</label>
-                        <input type="text" id="det-id-chat" class="form-control form-control-sm border-0 bg-light"
-                            readonly>
+                        <label class="text-muted small">ID CHAT</label>
+                        <input type="text" id="det-id-chat" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-12">
-                        <label class="small text-muted fw-bold">OBSERVAÇÃO</label>
-                        <textarea id="det-obs" class="form-control form-control-sm border-0 bg-light" rows="2"
-                            readonly></textarea>
+                        <label class="text-muted small">OBSERVAÇÃO</label>
+                        <input type="text" id="det-obs" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <button class="btn btn-light w-100 rounded-pill fw-bold py-2 border" data-bs-dismiss="modal">
-                        FECHAR
-                    </button>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Editar Pedido</h5>
+                <div id="edit-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
+                <div class="mt-1 text-muted small">
+                    Serviço: <span id="editar-titulo" class="fw-bold text-dark">—</span>
                 </div>
+            </div>
+            <div class="modal-body p-4">
+                <form id="form-editar-pedido" novalidate>
+                    <input type="hidden" id="edit-pedido-id">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="text-muted small">Cliente</label>
+                            <input type="text" id="edit-solicitante" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">CONTATO</label>
+                            <input type="text" id="edit-contato" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">MERCADORIA</label>
+                            <select id="edit-mercadoria" class="form-select form-select-sm bg-light border-0">
+                                <option value="">Selecione...</option>
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">HORÁRIO</label>
+                            <input type="text" id="edit-horario" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">RETORNO</label>
+                            <select id="edit-retorno" class="form-select form-select-sm bg-light border-0">
+                                <option value="Não">Não</option>
+                                <option value="Sim">Sim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">PRIORIDADE</label>
+                            <select id="edit-prioridade" class="form-select form-select-sm bg-light border-0">
+                                <option value="0">Normal</option>
+                                <option value="5">Agendado</option>
+                                <option value="7">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">ROTA (DE/PARA)</label>
+                            <textarea id="edit-rotas" class="form-control form-control-sm bg-light border-0" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">OBSERVAÇÃO</label>
+                            <input type="text" id="edit-obs" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button id="btn-salvar-edicao" class="btn btn-danger px-4" onclick="window.RDO_PEDIDOS.salvarEdicao()">SALVAR</button>
             </div>
         </div>
     </div>
