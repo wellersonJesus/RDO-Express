@@ -1,5 +1,26 @@
 /* ==========================================================================
-   1. ESTRUTURA DE CONTATOS (Mantido: Vermelho Suave no Hover)
+   1. VARIÁVEIS GLOBAIS
+   ========================================================================== */
+:root {
+    --vermelho-rdo: #dc3545;
+    --bg-chat: #efeae2;
+    --bg-msg-branco: #ffffff;
+    --bg-hover-msg: #f5f5f5;
+    --cor-texto: #111b21;
+    --cor-hora: #667781;
+    --cor-pendente: #6c757d;
+    --sombra-icone: 0 2px 8px rgba(0, 0, 0, 0.18);
+    --tooltip-bg: #333;
+    --tooltip-cor: #fff;
+    --separador-bg: #e1f2fb;
+    --separador-cor: #54656f;
+    --borda-msg: #e1e1e1;
+    --icone-tamanho: 1.8rem;
+    --icone-circulo: 40px;
+}
+
+/* ==========================================================================
+   2. ESTRUTURA DE CONTATOS
    ========================================================================== */
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
@@ -10,14 +31,13 @@
     border-bottom: 1px solid #f8f9fa;
 }
 
-/* Hover Vermelho Suave na lista de contatos */
 #lista-contatos-chat .contact-item-clean:hover {
     background-color: #f8d7da !important;
 }
 
 #lista-contatos-chat .active-contact {
     background-color: #fce8ea !important;
-    border-left: 4px solid #dc3545 !important;
+    border-left: 4px solid var(--vermelho-rdo) !important;
 }
 
 .contact-name {
@@ -27,11 +47,38 @@
 }
 
 /* ==========================================================================
-   2. ESTRUTURA DE MENSAGENS (Fundo Branco + Hover Verde Suave)
+   3. SEPARADOR DE DATA — ESTILO WHATSAPP
+   ========================================================================== */
+/* ==========================================================================
+   3. SEPARADOR DE DATA — ESTILO CLEAN
+   ========================================================================== */
+.chat-date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 18px 0;
+    width: 100%;
+}
+
+.chat-date-badge {
+    background-color: #f0f0f0;
+    color: #999;
+    font-size: 0.73rem;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 8px;
+    box-shadow: none;
+    user-select: none;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   4. MENSAGENS — FUNDO BRANCO, LAYOUT LIMPO
    ========================================================================== */
 .message-wrapper {
     position: relative;
-    margin-bottom: 25px;
+    margin-bottom: 36px;
     display: flex;
     flex-direction: column;
 }
@@ -39,20 +86,22 @@
 .message-sent,
 .message-received {
     position: relative;
-    padding: 15px 20px !important;
-    margin-bottom: 15px !important;
-    border-radius: 8px;
-    background-color: #ffffff !important;
-    border: 1px solid #e1e1e1;
+    padding: 12px 16px 26px 16px !important;
+    border-radius: 10px;
+    background-color: var(--bg-msg-branco) !important;
+    border: 1px solid var(--borda-msg);
     display: inline-block;
     cursor: pointer;
-    transition: background-color 0.3s ease, filter 0.3s ease;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+    max-width: 85%;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-/* Efeito Verde Suave ao passar o mouse na MENSAGEM */
 .message-sent:hover,
 .message-received:hover {
-    background-color: #f1f8f1 !important;
+    background-color: var(--bg-hover-msg) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .message-sent {
@@ -67,25 +116,138 @@
     border-bottom-left-radius: 2px;
 }
 
-/* Ícone de status (verde) posicionado abaixo da mensagem */
-.status-icon {
-    position: absolute !important;
-    bottom: -18px !important;
-    left: 5px !important;
-    font-size: 1.4rem !important;
-    /* REMOVA A LINHA ABAIXO OU COMENTE ELA */
-    /* color: #28a745 !important; */ 
-    z-index: 10;
-    pointer-events: auto !important;
+.message-body {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--cor-texto);
 }
 
-/* Cor cinza para o estado de "Aguardando" */
-.status-pending {
-    color: #6c757d !important; /* Cinza Bootstrap */
+/* Hora da mensagem — canto inferior direito */
+.message-time {
+    position: absolute;
+    bottom: 6px;
+    right: 14px;
+    font-size: 0.68rem;
+    color: var(--cor-hora);
+    user-select: none;
+    white-space: nowrap;
 }
 
 /* ==========================================================================
-   3. ESTADOS DE BUSCA E ERRO
+   5. ÍCONE DE STATUS — PÉ ESQUERDO, FORA DO CORPO, SEM BACKGROUND
+   ========================================================================== */
+.btn-status-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-status-option:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.btn-status-option:active {
+    transform: scale(0.98);
+}
+
+.icone-status {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.status-icon {
+    position: absolute !important;
+    bottom: -18px !important;
+    left: 6px !important;
+    right: auto !important;
+    font-size: 1.5rem !important;
+    z-index: 10;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease;
+    line-height: 1;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+.status-icon:hover {
+    transform: scale(1.35);
+}
+
+/* Aguardando — cinza */
+.status-pending {
+    color: var(--cor-pendente) !important;
+}
+
+/* Atualizado — herda cor do ícone */
+.status-updated {
+    color: inherit !important;
+}
+
+.status-updated .spinner-rotate {
+    animation: none !important;
+}
+
+/* ==========================================================================
+   6. TOOLTIP NO ÍCONE — NOME DO MOTOBOY + STATUS
+   ========================================================================== */
+.status-icon[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-cor);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    z-index: 999;
+    letter-spacing: 0.2px;
+}
+
+.status-icon[data-tooltip]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--tooltip-bg);
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* ==========================================================================
+   7. LOADING, BUSCA E ERRO
    ========================================================================== */
 .chat-status-container {
     display: flex;
@@ -100,7 +262,7 @@
 
 .icon-status-large {
     font-size: 3.5rem !important;
-    color: #dc3545 !important;
+    color: var(--vermelho-rdo) !important;
     display: inline-block;
 }
 
@@ -120,50 +282,100 @@
 
 .status-label-gray {
     font-size: 0.85rem !important;
-    color: #6c757d !important;
+    color: var(--cor-pendente) !important;
     margin-top: 10px;
     font-weight: 500;
 }
 
 /* ==========================================================================
-   4. UTILITÁRIOS
+   8. FUNDO DO CHAT — ESTILO WHATSAPP
    ========================================================================== */
 .whatsapp-bg {
-    background-color: #e5ddd5 !important;
+    background-color: var(--bg-chat) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6cfc4' fill-opacity='0.15'%3E%3Cpath d='M20 0L0 20h10L20 10V0zm0 80L0 60h10l10-10v10h10L20 80zm60-80L60 20h10l10-10V0zM80 80L60 60h10l10-10v10H80z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-:root {
-    --vermelho-rdo: #dc3545;
-}
-
+/* ==========================================================================
+   9. BOTÕES — UTILITÁRIOS
+   ========================================================================== */
 .btn-danger {
     background-color: var(--vermelho-rdo) !important;
     border-color: var(--vermelho-rdo) !important;
 }
 
-/* Botões de Status */
 .btn-status-option {
-    background-color: #e7f1ff; /* Azul muito suave */
+    background-color: #e7f1ff;
     color: #0d6efd;
     border: 1px solid #cce5ff;
     transition: 0.3s;
+    font-weight: 500;
 }
+
 .btn-status-option:hover {
     background-color: #d1e7fd;
 }
 
-/* Botão de Confirmação (OK/Confirmar) */
 .btn-confirm-status {
-    background-color: #f8d7da; /* Vermelho muito suave */
+    background-color: #f8d7da;
     color: #842029;
     border: 1px solid #f5c2c7;
+    font-weight: 500;
 }
+
 .btn-confirm-status:hover {
     background-color: #f1b0b7;
 }
 
-/* Ajuste de cor de texto para o botão de status suave */
 .btn-status-suave-custom {
-    color: #842029 !important; /* Cor do texto no botão vermelho suave */
+    color: #842029 !important;
     border: 1px solid #f5c2c7 !important;
+}
+
+/* ==========================================================================
+   10. SCROLLBAR — ESTILO WHATSAPP
+   ========================================================================== */
+#chat-messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chat-messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-messages-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+
+#chat-messages-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+/* ==========================================================================
+   11. RESPONSIVIDADE
+   ========================================================================== */
+@media (max-width: 768px) {
+
+    .message-sent,
+    .message-received {
+        max-width: 92%;
+        padding: 10px 12px 24px 12px !important;
+    }
+
+    .status-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 1.5rem !important;
+        bottom: -16px !important;
+        right: 8px !important;
+    }
+
+    .message-body {
+        font-size: 0.84rem;
+    }
+
+    .chat-date-badge {
+        font-size: 0.7rem;
+        padding: 4px 12px;
+    }
 }

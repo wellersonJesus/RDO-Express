@@ -1,120 +1,317 @@
+// ═══════════════════════════════════════════════════════════════
+// CHAVE DE SEGURANÇA
+// ═══════════════════════════════════════════════════════════════
 var SECRET_KEY = "aquieumakdjdddggjrtr";
 
+
+// ═══════════════════════════════════════════════════════════════
+// FUNÇÃO PRINCIPAL — doPost
+// ═══════════════════════════════════════════════════════════════
 function doPost(e) {
   try {
-    if (!e || !e.postData || !e.postData.contents) return response({ status: "error", message: "Payload vazio" });
-    
-    var data = JSON.parse(e.postData.contents);
+    // 1. Validação do payload
+    if (!e || !e.postData || !e.postData.contents) {
+      return response({ status: "error", message: "Payload vazio" });
+    }
+
+    var data = {};
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (parseErr) {
+      return response({ status: "error", message: "JSON inválido: " + parseErr.toString() });
+    }
+
     var action = String(data.action || "").toLowerCase().trim();
 
-    if (action === 'login') return response(handleLogin(data.username, data.password));
-    if (!data.apiKey || data.apiKey !== SECRET_KEY) return response({ status: "error", message: "Acesso Negado" });
+    // 2. Validação da action
+    if (!action || action === "") {
+      return response({ status: "error", message: "Nenhuma ação informada (action vazio)" });
+    }
 
+    // 3. Login (não exige apiKey)
+    if (action === "login") {
+      return response(handleLogin(data.username, data.password));
+    }
+
+    // 4. Validação da apiKey (para todas as outras ações)
+    if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+      return response({ status: "error", message: "Acesso Negado" });
+    }
+
+    // 5. Mapa de entidades — traduz o nome da action para o nome da aba
     var mapaEntidades = {
-      "usuario": "usuarios", "cliente": "clientes", "contato": "clientes", "contatos": "clientes",
-      "colaborador": "colaboradores", "colaboradores": "colaboradores", "bot": "botconfig",
-      "chat": "chat", "pedido": "pedidos", "pedidos": "pedidos", "financeiro": "financeiro"
+      "usuario": "usuarios",
+      "usuarios": "usuarios",
+      "cliente": "clientes",
+      "clientes": "clientes",
+      "contato": "clientes",
+      "contatos": "clientes",
+      "colaborador": "colaboradores",
+      "colaboradores": "colaboradores",
+      "bot": "botconfig",
+      "botconfig": "botconfig",
+      "chat": "chat",
+      "pedido": "pedidos",
+      "pedidos": "pedidos",
+      "financeiro": "financeiro"
     };
 
-    var entity = action.replace(/get|add|delete|update|save|finalizar/g, '').toLowerCase().trim();
+    // 6. Extrai a entidade da action (remove os verbos)
+    var entity = action
+      .replace("finalizar", "")
+      .replace("get", "")
+      .replace("add", "")
+      .replace("delete", "")
+      .replace("update", "")
+      .replace("save", "")
+      .toLowerCase()
+      .trim();
+
+    // 7. Resolve o nome da aba na planilha
     var nomeAba = mapaEntidades[entity] || entity;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = getSheetCaseInsensitive(ss, nomeAba);
 
-    if (!sheet) return response({ status: "error", message: "Tabela não encontrada: " + nomeAba });
+    // 8. Verifica se a aba existe
+    if (!sheet) {
+      return response({
+        status: "error",
+        message: "Tabela não encontrada: " + nomeAba + " (action: " + action + ", entity: " + entity + ")"
+      });
+    }
 
-    if (action === 'finalizarpedido') return response(handleSalvarPedidoComChat(sheet, data));
-    if (action.startsWith('get')) return response(handleGet(sheet));
-    if (action.startsWith('add') || action.startsWith('save')) return response(handleAdd(sheet, data, nomeAba));
-    if (action.startsWith('update')) return response(handleUpdate(sheet, data));
-    if (action.startsWith('delete')) return response(handleDelete(sheet, data.id));
+    // 9. Roteamento por tipo de ação
+    if (action === "finalizarpedido") {
+      return response(handleSalvarPedidoComChat(sheet, data));
+    }
 
-    return response({ status: "error", message: "Ação não suportada" });
+    if (action.startsWith("get")) {
+      return response(handleGet(sheet));
+    }
+
+    if (action.startsWith("add") || action.startsWith("save")) {
+      return response(handleAdd(sheet, data, nomeAba));
+    }
+
+    if (action.startsWith("update")) {
+      return response(handleUpdate(sheet, data));
+    }
+
+    if (action.startsWith("delete")) {
+      return response(handleDelete(sheet, data.id));
+    }
+
+    // 10. Nenhuma ação reconhecida
+    return response({ status: "error", message: "Ação não suportada: " + action });
+
   } catch (err) {
-    return response({ status: "error", message: "Erro: " + err.toString() });
+    return response({ status: "error", message: "Erro interno no servidor: " + err.toString() });
   }
 }
 
-// --- FUNÇÕES DE SUPORTE (Onde o handleGet deve estar) ---
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLERS — GET, ADD, UPDATE, DELETE
+// ═══════════════════════════════════════════════════════════════
 
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
-  var headers = rows[0].map(h => String(h).toLowerCase().trim());
-  return rows.slice(1).map(row => {
+  var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
+  return rows.slice(1).map(function(row) {
     var obj = {};
-    headers.forEach((h, i) => { if (h !== "") obj[h] = row[i]; });
+    headers.forEach(function(h, i) {
+      if (h !== "") obj[h] = row[i];
+    });
     return obj;
   });
 }
 
 function handleAdd(sheet, data, entity) {
-  var headers = sheet.getDataRange().getValues()[0].map(h => String(h).toLowerCase().trim());
+  var headers = sheet.getDataRange().getValues()[0].map(function(h) {
+    return String(h).toLowerCase().trim();
+  });
   var idIndex = headers.indexOf("id");
-  if (idIndex !== -1 && (!data.id || data.id === "")) data.id = generateId(sheet, entity);
-  var row = headers.map(h => (h === "id" ? data.id : (data[h] || "")));
+  if (idIndex !== -1 && (!data.id || data.id === "")) {
+    data.id = generateId(sheet, entity);
+  }
+  var row = headers.map(function(h) {
+    return h === "id" ? data.id : (data[h] || "");
+  });
   sheet.appendRow(row);
   return { status: "success", message: "Adicionado!", id: data.id };
 }
 
 function handleUpdate(sheet, data) {
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0].map(h => String(h).toLowerCase().trim());
-  const idIndex = headers.indexOf("id");
-  for (let i = 1; i < values.length; i++) {
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function(h) { return String(h).toLowerCase().trim(); });
+  var idIndex = headers.indexOf("id");
+
+  if (idIndex === -1) {
+    return { status: "error", message: "Coluna 'id' não encontrada na tabela" };
+  }
+
+  if (!data.id) {
+    return { status: "error", message: "ID não informado para atualização" };
+  }
+
+  for (var i = 1; i < values.length; i++) {
     if (String(values[i][idIndex]).trim() === String(data.id).trim()) {
-      Object.keys(data).forEach(key => {
-        const colIndex = headers.indexOf(String(key).toLowerCase().trim());
-        if (colIndex !== -1) sheet.getRange(i + 1, colIndex + 1).setValue(data[key]);
-      });
+      var keys = Object.keys(data);
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        var colIndex = headers.indexOf(String(key).toLowerCase().trim());
+        if (colIndex !== -1) {
+          sheet.getRange(i + 1, colIndex + 1).setValue(data[key]);
+        }
+      }
       return { status: "success", message: "Atualizado!" };
     }
   }
-  return { status: "error", message: "ID não encontrado" };
+  return { status: "error", message: "ID não encontrado: " + data.id };
 }
 
 function handleDelete(sheet, id) {
+  if (!id) {
+    return { status: "error", message: "ID não informado para exclusão" };
+  }
+
   var rows = sheet.getDataRange().getValues();
-  var idIndex = rows[0].map(h => String(h).toLowerCase().trim()).indexOf("id");
+  var idIndex = rows[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
+
+  if (idIndex === -1) {
+    return { status: "error", message: "Coluna 'id' não encontrada na tabela" };
+  }
+
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][idIndex]).trim() == String(id).trim()) {
       sheet.deleteRow(i + 1);
       return { status: "success", message: "Excluído!" };
     }
   }
-  return { status: "error", message: "ID não encontrado" };
+  return { status: "error", message: "ID não encontrado: " + id };
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER — SALVAR PEDIDO COM CHAT
+// ═══════════════════════════════════════════════════════════════
 
 function handleSalvarPedidoComChat(sheetPedidos, data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetChat = getSheetCaseInsensitive(ss, "chat");
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetChat = getSheetCaseInsensitive(ss, "chat");
+
+  if (!sheetChat) {
+    return { status: "error", message: "Tabela 'chat' não encontrada" };
+  }
+
+  // 1. Gera o ID do pedido (ex: RDO000001)
   var idPedido = generateId(sheetPedidos, "pedidos");
   var idChatUnico = generateId(sheetChat, "chat");
+
+  // 2. Processa as rotas
   var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
-  var deStr = linhasRota.map(l => l.split('|')[0] ? l.split('|')[0].replace(/De:/i, '').trim() : "").join(', ');
-  var paraStr = linhasRota.map(l => l.split('|')[1] ? l.split('|')[1].replace(/Para:/i, '').trim() : "").join(', ');
 
-  sheetPedidos.appendRow([idPedido, idChatUnico, data.solicitante, data.contato, data.horario, data.mercadoria, deStr, paraStr, data.retorno, data.prioridade || "N/A", data.valor_corrida, "", "PENDENTE", data.observacao]);
+  var deStr = linhasRota.map(function(l) {
+    var parte = l.split('|')[0];
+    return parte ? parte.replace(/De:/i, '').trim() : "";
+  }).join(', ');
 
-  if (sheetChat) {
-    var agora = new Date();
-    sheetChat.appendRow([idChatUnico, idPedido, data.mensagem, agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), agora.toLocaleDateString('pt-BR'), "TRUE"]);
-  }
-  return { status: "success", id: idPedido };
+  var paraStr = linhasRota.map(function(l) {
+    var parte = l.split('|')[1];
+    return parte ? parte.replace(/Para:/i, '').trim() : "";
+  }).join(', ');
+
+  // 3. Grava o pedido na tabela "pedidos"
+  sheetPedidos.appendRow([
+    idPedido,                  // id
+    idChatUnico,               // id_chat
+    data.solicitante || "",    // solicitante
+    data.contato || "",        // contato
+    data.horario || "",        // horario
+    data.mercadoria || "",     // mercadoria
+    deStr,                     // de
+    paraStr,                   // para
+    data.retorno || "",        // retorno
+    data.prioridade || "N/A",  // prioridade
+    data.valor_corrida || "",  // valor_corrida
+    "",                        // motoboy
+    "PENDENTE",                // status
+    data.observacao || ""      // observacao
+  ]);
+
+  // 4. Substitui [ID_GERADO] pelo ID REAL antes de gravar no chat
+  var mensagemFinal = data.mensagem || "";
+  mensagemFinal = mensagemFinal.replace("[ID_GERADO]", idPedido);
+
+  // 5. Grava na tabela "chat"
+  var agora = new Date();
+  sheetChat.appendRow([
+    idChatUnico,
+    idPedido,
+    mensagemFinal,
+    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    agora.toLocaleDateString('pt-BR'),
+    "TRUE"
+  ]);
+
+  // 6. Retorna o ID real e o ID do chat
+  return {
+    status: "success",
+    id: idPedido,
+    id_chat: idChatUnico
+  };
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER — LOGIN
+// ═══════════════════════════════════════════════════════════════
 
 function handleLogin(user, pass) {
-    var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
-    var data = sheet.getDataRange().getValues();
-    var userRow = data.slice(1).find(r => String(r[1]).trim() === user && String(r[4]).trim() === pass);
-    return userRow ? { status: "success", user: { username: userRow[1], tipo: userRow[2] } } : { status: "error", message: "Credenciais inválidas" };
+  if (!user || !pass) {
+    return { status: "error", message: "Usuário e senha são obrigatórios" };
+  }
+
+  var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
+
+  if (!sheet) {
+    return { status: "error", message: "Tabela 'usuarios' não encontrada" };
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var userRow = null;
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() === String(user).trim() && String(data[i][4]).trim() === String(pass).trim()) {
+      userRow = data[i];
+      break;
+    }
+  }
+
+  if (userRow) {
+    return {
+      status: "success",
+      user: {
+        username: userRow[1],
+        tipo: userRow[2]
+      }
+    };
+  }
+
+  return { status: "error", message: "Credenciais inválidas" };
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════════════════
 
 function generateId(sheet, entity) {
   var data = sheet.getDataRange().getValues();
   if (entity.includes("pedido")) {
     var maxId = 0;
-    var idIndex = data[0].map(h => String(h).toLowerCase().trim()).indexOf("id");
+    var idIndex = data[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
     for (var i = 1; i < data.length; i++) {
       var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ''));
       if (!isNaN(val) && val > maxId) maxId = val;
@@ -125,7 +322,15 @@ function generateId(sheet, entity) {
 }
 
 function getSheetCaseInsensitive(ss, name) {
-  return ss.getSheets().find(s => String(s.getName()).toLowerCase().trim() === name.toLowerCase().trim());
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getName()).toLowerCase().trim() === name.toLowerCase().trim()) {
+      return sheets[i];
+    }
+  }
+  return null;
 }
 
-function response(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
+function response(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
