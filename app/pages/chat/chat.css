@@ -161,3 +161,9 @@
 .btn-confirm-status:hover {
     background-color: #f1b0b7;
 }
+
+/* Ajuste de cor de texto para o botão de status suave */
+.btn-status-suave-custom {
+    color: #842029 !important; /* Cor do texto no botão vermelho suave */
+    border: 1px solid #f5c2c7 !important;
+}

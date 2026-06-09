@@ -60,8 +60,11 @@ document.addEventListener('click', function (e) {
 });
 
 window.carregarDados = async function () {
+    // 1. Definição de elementos e proteção de acesso
     const listEl = document.getElementById('lista-contatos-chat');
-    const syncIcon = document.getElementById('sync-icon-chat');
+    const iconHeader = document.getElementById('sync-icon-header');
+    const iconSearch = document.getElementById('sync-icon-search');
+    const btnSearch = document.getElementById('btn-sync-search');
     const searchInput = document.getElementById('chat-search');
 
     if (!listEl) return;
@@ -69,13 +72,14 @@ window.carregarDados = async function () {
 
     window.AppRDO.isFetching = true;
     
-    // Feedback visual de carregamento
-    if (syncIcon) syncIcon.classList.add('spinner-rotate');
+    // 2. Feedback visual de carregamento
+    if (iconHeader) iconHeader.classList.add('spinner-rotate');
+    if (iconSearch) iconSearch.classList.add('spinner-rotate');
+    if (btnSearch) btnSearch.style.opacity = '0.5'; // Visual de "em processamento"
     if (searchInput) searchInput.placeholder = "Sincronizando...";
 
     try {
-        // 1. Chamadas paralelas para otimizar o tempo de carga
-        // Buscamos clientes para a lista lateral e mensagens/pedidos para o painel principal
+        // 3. Chamadas paralelas para otimizar o tempo de carga
         const [clientes, mensagens, pedidos] = await Promise.all([
             API.call('getclientes'),
             API.call('getchat'),
@@ -88,11 +92,8 @@ window.carregarDados = async function () {
         
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // 2. Renderiza a lista de contatos lateral
+        // 4. Renderização
         window.renderizarLista(listaClientes, isMasterOn);
-        
-        // 3. Renderiza o conteúdo do chat com o estado dos status atualizado
-        // Passamos os pedidos para que a renderização saiba o status de cada um
         window.renderizarMensagens(listaMensagens, listaPedidos);
         
         window.AppRDO.listaCarregada = true;
@@ -104,8 +105,32 @@ window.carregarDados = async function () {
                                 <i class="bi bi-exclamation-triangle"></i> Erro ao carregar dados.
                             </div>`;
     } finally {
+        // 5. Finalização (Retorno dos estados visuais)
         window.AppRDO.isFetching = false;
-        if (syncIcon) syncIcon.classList.remove('spinner-rotate');
+        
+        if (iconHeader) iconHeader.classList.remove('spinner-rotate');
+        if (iconSearch) iconSearch.classList.remove('spinner-rotate');
+        if (btnSearch) btnSearch.style.opacity = '1';
+    }
+};
+
+window.carregarHistoricoMensagens = async function(clienteId) {
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = ''; // Limpa o chat atual
+
+    try {
+        // Busca as mensagens/pedidos gravados no banco para este cliente
+        const historico = await API.call('gethistorico', { id_chat: clienteId });
+
+        if (Array.isArray(historico)) {
+            historico.forEach(pedido => {
+                // Aqui você renderiza cada pedido que veio do banco
+                // A função já trata a formatação do ID em vermelho
+                window.enviarMensagemParaChat(pedido.mensagem, false, pedido.id);
+            });
+        }
+    } catch (e) {
+        console.error("Erro ao carregar histórico:", e);
     }
 };
 
@@ -367,23 +392,50 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
 
 window.abrirModalEdicao = function (msgId) {
     Swal.fire({
-        title: 'Gerenciar Mensagem',
-        text: 'O que deseja fazer com esta mensagem?',
+        title: 'Gerenciar Pedido #' + msgId, // Adicionado ID no título
+        text: 'O que deseja fazer com o pedido #' + msgId + '?',
         icon: 'question',
         showCancelButton: true,
         showDenyButton: true,
         confirmButtonText: 'Ver Status',
         denyButtonText: 'Excluir',
         cancelButtonText: 'Fechar',
-        confirmButtonColor: '#dc3545',
-        denyButtonColor: '#6c757d'
-    }).then((result) => {
+        confirmButtonColor: '#f8d7da',
+        denyButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        customClass: { confirmButton: 'btn-status-suave-custom' }
+    }).then(async (result) => {
         if (result.isConfirmed) {
             window.abrirModalStatus(msgId);
         } else if (result.isDenied) {
-            // Lógica de exclusão
-            const el = document.getElementById(msgId);
-            if (el) el.parentElement.remove();
+            // 1. Exibir alerta de confirmação com o número do pedido
+            const confirmacao = await Swal.fire({
+                title: 'Tem certeza?',
+                text: `O pedido #${msgId} será excluído definitivamente do banco de dados!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, excluir!'
+            });
+
+            if (confirmacao.isConfirmed) {
+                try {
+                    const resposta = await API.call('deletepedido', { id: msgId });
+
+                    if (resposta && resposta.status === 'success') {
+                        const el = document.querySelector(`[data-pedido-id="${msgId}"]`);
+                        if (el) el.parentElement.remove();
+                        
+                        Swal.fire('Excluído!', `O pedido #${msgId} foi removido com sucesso.`, 'success');
+                    } else {
+                        throw new Error("Erro ao excluir no banco.");
+                    }
+                } catch (e) {
+                    console.error("Erro na exclusão:", e);
+                    Swal.fire('Erro', 'Não foi possível excluir o pedido: ' + e.message, 'error');
+                }
+            }
         }
     });
 };
@@ -977,8 +1029,9 @@ window.formatarTelefone = function (tel) {
 window.salvarPedidoAPI = async function () {
     const btn = document.getElementById('btn-emitir-pedido');
     const camposObrigatorios = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
+    
+    // 1. Validação de campos obrigatórios
     let ehValido = true;
-
     camposObrigatorios.forEach(id => {
         const el = document.getElementById(id);
         if (!el || !el.value.trim()) {
@@ -989,22 +1042,33 @@ window.salvarPedidoAPI = async function () {
         }
     });
 
-    if (!ehValido) return;
+    if (!ehValido) {
+        window.exibirModalAviso("Por favor, preencha todos os campos obrigatórios.");
+        return;
+    }
 
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Emitindo...`;
 
     try {
-        const getVal = (id) => document.getElementById(id)?.value?.trim() || 'N/A';
-        const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
+        // 2. Função auxiliar para pegar valor e sanitizar contra tags HTML perigosas
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return 'N/A';
+            return el.value.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        };
 
+        const valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
         const rotasRaw = getVal('p-rotas').split('\n');
+        
+        // Formata rotas para o modelo de mensagem
         const rotasFormatadas = rotasRaw.map((l, i) => {
             const partes = l.split('|');
             return `📍${i + 1}. De: ${partes[0]?.trim() || ''} | \n      Para: ${partes[1]?.trim() || ''}`;
         }).join('\n');
 
-        const msgFormatada = `📦 SOLICITANTE: ${getVal('p-solicitante')}
+        // 3. Montagem do modelo com placeholder [ID_GERADO]
+        const msgModelo = `📦 SOLICITANTE: ${getVal('p-solicitante')}
 
 N.SERVIÇO: [ID_GERADO]
 SOLICITANTE: ${getVal('p-solicitante')} 
@@ -1019,33 +1083,37 @@ ${rotasFormatadas}
 OBSERVAÇÃO: ${getVal('p-obs')}
 ${valorFinal}`;
 
-        const payload = {
+        // 4. Chamada da API
+        const resp = await API.call('finalizarpedido', {
             action: 'finalizarpedido',
             id_chat: String(window.AppRDO.clienteId),
             solicitante: getVal('p-solicitante'),
-            contato: getVal('p-contato'),
-            horario: getVal('p-horario'),
-            mercadoria: getVal('p-mercadoria'),
-            rotas_texto: getVal('p-rotas'),
-            valor_corrida: valorFinal,
-            observacao: getVal('p-obs'),
-            mensagem: msgFormatada
-        };
+            mensagem: msgModelo
+        });
 
-        const resp = await API.call('finalizarpedido', payload);
-
+        // 5. Processamento do Sucesso
         if (resp?.status === 'success') {
-            const msgFinal = msgFormatada.replace('[ID_GERADO]', resp.id);
-            // IMPORTANTE: Ao enviar para o chat, garantimos que o pedidoId esteja presente
-            window.enviarMensagemParaChat(msgFinal, false, resp.id);
+            const idReal = resp.id || "N/A";
+            
+            // Cria o span com estilo inline para o ID ficar vermelho
+            const idFormatado = `<span style="color: #dc3545; font-weight: bold;">${idReal}</span>`;
+            
+            // Substitui o placeholder e converte quebras de linha para <br>
+            const msgFinal = msgModelo
+                .replace('[ID_GERADO]', idFormatado)
+                .replace(/\n/g, '<br>');
 
+            window.enviarMensagemParaChat(msgFinal, false, idReal);
+            
             document.getElementById('msg-input').value = '';
-            bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+            const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
+            if (modalForm) modalForm.hide();
         } else {
-            throw new Error(resp?.message || "Erro ao salvar.");
+            throw new Error(resp?.message || "Erro ao salvar pedido.");
         }
     } catch (err) {
-        console.error("Erro:", err);
+        console.error("Erro fatal ao emitir pedido:", err);
+        window.exibirModalAviso("Falha ao salvar: " + err.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = "EMITIR PEDIDO";
@@ -1094,49 +1162,55 @@ window.fecharModalStatus = async function () {
 };
 
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
-    const container = document.getElementById('chat-messages-container');
-    
-    // Validação de segurança: se o container não existir, aborta para evitar erro de JS
-    if (!container) {
-        console.error("Container de mensagens não encontrado.");
-        return;
+    try {
+        const container = document.getElementById('chat-messages-container');
+        if (!container) {
+            console.error("Container de chat não encontrado.");
+            return;
+        }
+
+        // 1. Evitar duplicidade: se o ID já está na tela, não renderiza de novo
+        if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
+            return;
+        }
+
+        // 2. Criação do elemento de mensagem
+        const div = document.createElement('div');
+        div.className = 'message-wrapper';
+
+        /**
+         * 3. Estrutura da Mensagem:
+         * O parâmetro 'texto' esperado aqui já deve ser a string formatada 
+         * vinda do banco (com as tags <span> e <br>).
+         */
+        div.innerHTML = `
+            <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
+                 data-pedido-id="${pedidoId || 'msg-' + Date.now()}"
+                 onclick="window.abrirModalEdicao('${pedidoId}')">
+                 
+                <div class="message-body">${texto}</div>
+                
+                ${!isRecebida ? `
+                    <div class="status-icon status-pending" 
+                         onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')" 
+                         title="Gerenciar Status">
+                        <i class="bi bi-arrow-repeat spinner-rotate"></i>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        container.appendChild(div);
+
+        // 4. Scroll automático suave
+        container.scrollTo({ 
+            top: container.scrollHeight, 
+            behavior: 'smooth' 
+        });
+
+    } catch (err) {
+        console.error("Erro crítico na renderização da mensagem:", err);
     }
-
-    // Se o pedidoId já existe no DOM, não criamos uma nova mensagem, apenas retornamos
-    if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) {
-        return;
-    }
-
-    const dataId = pedidoId || 'msg-' + Date.now();
-    const div = document.createElement('div');
-    div.className = 'message-wrapper';
-
-    // Construção do HTML com template literais seguros
-    // A classe 'status-pending' garante a cor cinza inicial conforme definido no CSS
-    div.innerHTML = `
-        <div class="${isRecebida ? 'message-received' : 'message-sent'}" 
-             data-pedido-id="${dataId}"
-             onclick="window.abrirModalEdicao('${dataId}')">
-             
-            <div class="message-body">${texto ? texto.replace(/\n/g, '<br>') : ''}</div>
-            
-            ${!isRecebida ? `
-                <div class="status-icon status-pending" 
-                     onclick="event.stopPropagation(); window.abrirModalStatus('${dataId}')" 
-                     title="Aguardando Motoboy">
-                    <i class="bi bi-arrow-repeat spinner-rotate"></i>
-                </div>
-            ` : ''}
-        </div>
-    `;
-
-    container.appendChild(div);
-
-    // Scroll suave apenas se a mensagem for a última
-    container.scrollTo({ 
-        top: container.scrollHeight, 
-        behavior: 'smooth' 
-    });
 };
 
 window.enviarMensagemGeral = async function () {

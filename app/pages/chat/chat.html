@@ -1,108 +1,71 @@
 <div class="row g-3 h-100">
+    <!-- Header Principal -->
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
             <div class="card-body p-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-whatsapp fs-3 text-danger"></i>
                     <div>
-                        <h5 class="fw-bold mb-0"><span style="color: #FF0000;">RDO</span> Express - Chat</h5>
+                        <h5 class="fw-bold mb-0 text-dark"><span class="text-danger">RDO</span> Express - Chat</h5>
                         <small class="text-muted" style="font-size: 0.75rem;">Gestão de Pedidos em Tempo Real</small>
                     </div>
                 </div>
-                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="window.carregarDados()">
-                    <i id="sync-icon-chat" class="bi bi-arrow-repeat"></i>
+                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="window.carregarDados()"
+                    title="Atualizar">
+                    <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Coluna de Contatos -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column" style="height: 600px;">
-            <div class="p-3 border-bottom">
-                <div class="input-group bg-light rounded-pill px-2">
-                    <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
-                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Pesquisar..." onkeyup="window.filtrarContatos()">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <div class="input-group bg-light rounded-pill px-2 flex-grow-1">
+                    <span class="input-group-text bg-transparent border-0"><i
+                            class="bi bi-search text-secondary"></i></span>
+                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none"
+                        placeholder="Pesquisar..." onkeyup="window.filtrarContatos()">
                 </div>
+                <!-- Botão de Sincronização lateral (sem fundo) -->
+                <button id="btn-sync-search" class="btn btn-link text-secondary p-2 border-0"
+                    onclick="window.carregarDados()" title="Sincronizar">
+                    <i id="sync-icon-search" class="bi bi-arrow-repeat"></i>
+                </button>
             </div>
             <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1"></div>
         </div>
     </div>
 
+    <!-- Coluna de Conversa -->
     <div class="col-md-8">
-        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: 600px;">
+        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column"
+            style="height: 600px;">
+            <!-- Conteúdo das Etapas (Chat, Mapa, Formulario) mantido igual -->
             <div id="step-chat" class="d-flex flex-column h-100">
                 <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center">
-                    <img id="chat-header-logo" src="" class="rounded-circle d-none" style="width: 40px; height: 40px; object-fit: cover;">
+                    <img id="chat-header-logo" src="" class="rounded-circle d-none"
+                        style="width: 40px; height: 40px; object-fit: cover;" alt="Logo">
                     <div class="ms-3">
                         <h6 id="chat-header-name" class="fw-bold mb-0">Selecione um contato</h6>
                     </div>
                 </div>
-                <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
-                    <div class="text-center text-muted my-auto">
-                        <i class="bi bi-chat-dots fs-1 d-block mb-2"></i>
-                        <p>Inicie uma conversa para gerenciar pedidos</p>
-                    </div>
-                </div>
+                <div id="chat-messages-container"
+                    class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2"></div>
                 <div class="p-3 bg-white border-top">
                     <div class="input-group bg-light rounded-pill p-1">
-                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3" rows="1" placeholder="Digite o pedido..."></textarea>
+                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none" rows="1"
+                            placeholder="Digite o pedido..." style="resize: none;"></textarea>
                         <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="window.iniciarFluxoCheckout()">
                             <i class="bi bi-send-fill"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
-            <div id="step-mapa" class="d-none d-flex flex-column h-100 p-4">
-                <h6 class="fw-bold text-danger mb-3">Definir Rota</h6>
-                <div id="map-placeholder" class="flex-grow-1 bg-light rounded-3 border mb-3 d-flex align-items-center justify-content-center">
-                    <span class="text-muted">Carregando Mapa...</span>
-                </div>
-                <button class="btn btn-danger rounded-pill" onclick="window.avancarParaFormulario()">Avançar para Cálculo</button>
-            </div>
-
-            <div id="step-formulario" class="d-none d-flex flex-column h-100 p-4 overflow-auto">
-                <h6 class="fw-bold text-danger mb-3">Detalhes do Pedido</h6>
-                <div id="container-linhas-rotas" class="mb-3"></div>
-                <button class="btn btn-success rounded-pill mt-auto" onclick="window.salvarPedidoAPI()">FINALIZAR PEDIDO</button>
-            </div>
+            <!-- Etapas Mapa e Formulário ocultas por padrão -->
+            <div id="step-mapa" class="d-none"></div>
+            <div id="step-formulario" class="d-none"></div>
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="modalAtencao" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body text-center p-4"><p id="modal-atencao-mensagem" class="mb-0 fw-bold"></p></div></div></div>
-</div>
-
-<div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-body">
-                <div class="d-grid gap-2" id="box-botoes-status">
-                    <button class="btn btn-outline-primary w-100" onclick="window.iniciarSalvamento('EM_ROTA')">
-                        <i class="bi bi-motorcycle me-2"></i>Em Rota
-                    </button>
-                    <button class="btn btn-outline-success w-100" onclick="window.iniciarSalvamento('CONCLUIDO')">
-                        <i class="bi bi-check-circle-fill me-2"></i>Concluído
-                    </button>
-                    <button class="btn btn-outline-danger w-100" onclick="window.iniciarSalvamento('CANCELADO')">
-                        <i class="bi bi-x-circle-fill me-2"></i>Cancelado
-                    </button>
-                </div>
-                <div id="box-selecao-motoboy" class="d-none mt-3">
-                    <label class="small fw-bold text-muted mb-1">Selecione o Motoboy:</label>
-                    <select id="select-motoboy" class="form-select form-select-sm"></select>
-                    <button id="btn-confirmar-motoboy" class="btn btn-danger w-100 mt-2" onclick="window.confirmarStatusComMotoboy()">
-                        Confirmar Motoboy
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    window.addEventListener('DOMContentLoaded', () => {
-        if (typeof window.carregarDados === 'function') window.carregarDados();
-    });
-</script>
