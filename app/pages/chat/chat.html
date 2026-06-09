@@ -10,9 +10,7 @@
                     </div>
                 </div>
                 <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="window.carregarDados()"
-                    title="Atualizar">
-                    <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
-                </button>
+                    title="Atualizar"><i id="sync-icon-header" class="bi bi-arrow-repeat"></i></button>
             </div>
         </div>
     </div>
@@ -27,9 +25,8 @@
                         placeholder="Pesquisar..." onkeyup="window.filtrarContatos()">
                 </div>
                 <button id="btn-sync-search" class="btn btn-link text-secondary p-2 border-0"
-                    onclick="window.carregarDados()" title="Sincronizar">
-                    <i id="sync-icon-search" class="bi bi-arrow-repeat"></i>
-                </button>
+                    onclick="window.carregarDados()" title="Sincronizar"><i id="sync-icon-search"
+                        class="bi bi-arrow-repeat"></i></button>
             </div>
             <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1"></div>
         </div>
@@ -52,9 +49,8 @@
                     <div class="input-group bg-light rounded-pill p-1">
                         <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none" rows="1"
                             placeholder="Digite o pedido..." style="resize: none;"></textarea>
-                        <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="window.iniciarFluxoCheckout()">
-                            <i class="bi bi-send-fill"></i>
-                        </button>
+                        <button class="btn btn-danger rounded-pill px-3 ms-1" onclick="window.iniciarFluxoCheckout()"><i
+                                class="bi bi-send-fill"></i></button>
                     </div>
                 </div>
             </div>
@@ -67,9 +63,12 @@
 <div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Alterar Status do Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 <div id="box-botoes-status">
-                    <h6 class="fw-bold mb-3">Alterar status para:</h6>
                     <button class="btn btn-primary w-100 mb-2" onclick="window.selecionarStatus('EM_ROTA')">Em
                         Rota</button>
                     <button class="btn btn-success w-100 mb-2"
@@ -78,12 +77,48 @@
                         onclick="window.confirmarStatusFinal('CANCELADO')">Cancelado</button>
                 </div>
                 <div id="box-selecao-motoboy" class="d-none">
-                    <h6 class="fw-bold mb-3">Selecione o Motoboy:</h6>
+                    <h6 class="fw-bold mt-3">Selecione o Motoboy:</h6>
                     <select id="select-motoboy" class="form-select mb-3"></select>
-                    <button id="btn-confirmar-motoboy" class="btn btn-primary w-100"
-                        onclick="window.confirmarStatusComMotoboy()">Confirmar</button>
+                    <button class="btn btn-primary w-100" onclick="window.confirmarStatusComMotoboy()">Confirmar
+                        Envio</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">MODELO MENSAGENS CLIENTES</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="texto-modelo" class="form-control bg-light" rows="12" readonly
+                    style="font-size: 0.85rem;">📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
+
+SOLICITANTE: 
+CONATO: 
+HORÁRIO ESTIMADO P/ COLETA:  
+MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)
+ROTA(s): 
+📍1. De: ... | 
+        Para: ...
+📍2. De: ... | 
+     Para: ... 
+📍3. De: ... | 
+     Para: ... 
+RETORNO:  (SIM /NÃO)
+PRIORIDADE: (Normal, Agendado, Urgente) 
+OBSERVAÇÃO: Descreva a observação aqui se necessario
+
+Assim que enviar esta mensagem preenchida, 
+calcularemos á sua taxa! 🏁                    
+                    </textarea>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-danger w-100 rounded-pill"
+                    onclick="window.copiarModelo()">Copiar Modelo</button></div>
         </div>
     </div>
 </div>

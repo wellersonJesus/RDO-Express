@@ -390,75 +390,64 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
     }
 };
 
-window.abrirModalEdicao = function (msgId) {
+window.abrirModalEdicao = function (pedidoId) {
     Swal.fire({
-        title: 'Gerenciar Pedido #' + msgId, // Adicionado ID no título
-        text: 'O que deseja fazer com o pedido #' + msgId + '?',
-        icon: 'question',
-        showCancelButton: true,
+        title: 'Gerenciar Pedido',
         showDenyButton: true,
-        confirmButtonText: 'Ver Status',
+        showCancelButton: true,
+        confirmButtonText: 'Mensagem Padrão', // <-- Alterado aqui
         denyButtonText: 'Excluir',
-        cancelButtonText: 'Fechar',
-        confirmButtonColor: '#f8d7da',
-        denyButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        customClass: { confirmButton: 'btn-status-suave-custom' }
-    }).then(async (result) => {
+        cancelButtonText: 'Fechar'
+    }).then((result) => {
         if (result.isConfirmed) {
-            window.abrirModalStatus(msgId);
+            // Abre o modal de Mensagem Padrão diretamente
+            new bootstrap.Modal(document.getElementById('modalMensagemPadrao')).show();
         } else if (result.isDenied) {
-            // 1. Exibir alerta de confirmação com o número do pedido
-            const confirmacao = await Swal.fire({
-                title: 'Tem certeza?',
-                text: `O pedido #${msgId} será excluído definitivamente do banco de dados!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sim, excluir!'
-            });
-
-            if (confirmacao.isConfirmed) {
-                try {
-                    const resposta = await API.call('deletepedido', { id: msgId });
-
-                    if (resposta && resposta.status === 'success') {
-                        const el = document.querySelector(`[data-pedido-id="${msgId}"]`);
-                        if (el) el.parentElement.remove();
-
-                        Swal.fire('Excluído!', `O pedido #${msgId} foi removido com sucesso.`, 'success');
-                    } else {
-                        throw new Error("Erro ao excluir no banco.");
-                    }
-                } catch (e) {
-                    console.error("Erro na exclusão:", e);
-                    Swal.fire('Erro', 'Não foi possível excluir o pedido: ' + e.message, 'error');
-                }
-            }
+            window.excluirPedido(pedidoId);
         }
     });
 };
 
-window.abrirModalStatus = function (pedidoId) {
-    if (!pedidoId) {
-        console.warn("Nenhum ID de pedido fornecido para o status.");
+window.abrirModalStatus = function(pedidoId) {
+    if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') {
+        alert("Pedido inválido.");
         return;
     }
-
-    // Armazena o ID do pedido globalmente para referência na função de salvar status
-    window.AppRDO = window.AppRDO || {};
     window.AppRDO.pedidoEmEdicao = pedidoId;
-
     const modalEl = document.getElementById('modalStatus');
-    if (!modalEl) {
-        console.error("Elemento 'modalStatus' não encontrado no HTML.");
-        return;
+    if (modalEl) {
+        new bootstrap.Modal(modalEl).show();
     }
+};
 
-    // Garante que o Bootstrap tenha a instância e abre o modal
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
+window.abrirModalMensagemPadrao = function() {
+    const modalEl = document.getElementById('modalMensagemPadrao');
+    if (modalEl) {
+        new bootstrap.Modal(modalEl).show();
+    }
+};
+
+window.copiarModelo = function() {
+    const texto = document.getElementById('texto-modelo');
+    
+    // Seleciona e copia o texto
+    texto.select();
+    document.execCommand('copy');
+    
+    // Feedback Premium com SweetAlert2 (estilo do seu projeto)
+    Swal.fire({
+        icon: 'success',
+        title: 'Sucesso!',
+        text: 'Modelo copiado com sucesso!',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+        customClass: {
+            popup: 'rounded-4 shadow' // Borda arredondada premium
+        }
+    });
 };
 
 function formatarTempoHumano(minutosTotais) {
@@ -1156,43 +1145,27 @@ window.fecharModalStatus = async function () {
     }
 };
 
-window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = "") {
-    try {
-        const container = document.getElementById('chat-messages-container');
-        if (!container) return;
+window.enviarMensagemParaChat = function(texto, isRecebida = false, pedidoId = null) {
+    const container = document.getElementById('chat-messages-container');
+    const div = document.createElement('div');
+    div.className = `d-flex w-100 ${isRecebida ? 'justify-content-start' : 'justify-content-end'} mb-2`;
 
-        // Evitar duplicidade de ID no chat
-        if (pedidoId && document.querySelector(`[data-pedido-id="${pedidoId}"]`)) return;
-
-        const div = document.createElement('div');
-        div.className = `d-flex w-100 ${isRecebida ? 'justify-content-start' : 'justify-content-end'}`;
-
-        // Estrutura do card
-        div.innerHTML = `
-    <div class="card ${isRecebida ? 'bg-white' : 'bg-danger text-white'} border-0 rounded-4 p-3 shadow-sm mb-2" 
-         data-pedido-id="${pedidoId || 'msg-' + Date.now()}"
-         onclick="window.abrirModalEdicao('${pedidoId}')" style="cursor: pointer;">
-         
-        <div class="message-body">${texto}</div>
-        
-        ${!isRecebida ? `
-            <div class="mt-2 text-end status-badge-container" 
-                 onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')" 
+    // Visual Premium: Fundo suave, bordas arredondadas e sombra
+    div.innerHTML = `
+        <div class="card ${isRecebida ? 'bg-white' : 'bg-danger-subtle'} border-0 rounded-4 p-3 shadow-sm" 
+             style="max-width: 80%; cursor: pointer;"
+             onclick="window.abrirModalEdicao('${pedidoId}')">
+             
+            <div class="message-body text-dark">${texto.replace(/\n/g, '<br>')}</div>
+            
+            <div class="mt-2 pt-2 border-top border-dark-subtle text-end" 
+                 onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')"
                  style="cursor: pointer;" title="Alterar Status">
-                <i class="bi bi-clock-history"></i>
+                 <span class="badge rounded-pill bg-danger"><i class="bi bi-gear-fill"></i> Status</span>
             </div>
-        ` : ''}
-    </div>
-`;
-
-        container.appendChild(div);
-
-        // Scroll suave para o fim
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-
-    } catch (err) {
-        console.error("Erro ao renderizar mensagem:", err);
-    }
+        </div>
+    `;
+    container.appendChild(div);
 };
 
 window.enviarMensagemGeral = async function () {
