@@ -1,42 +1,78 @@
-/* Estilização de Status e Badges */
-.status-badge { 
-    padding: 2px 8px; 
-    border-radius: 4px; 
-    font-size: 0.65rem; 
-    font-weight: 600; 
-    text-transform: uppercase; 
+.status-badge {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.bg-status-pending { background-color: #fef3c7; color: #92400e; }
-.bg-status-route { background-color: #e0f2fe; color: #075985; }
-.bg-status-done { background-color: #dcfce7; color: #166534; }
-.bg-status-cancel { background-color: #fee2e2; color: #991b1b; }
-
-/* Botões de Ação na Tabela */
-.btn-action { 
-    background: #f8f9fa; 
-    border: none; 
-    color: #adb5bd; 
-    padding: 4px 8px; 
-    border-radius: 6px; 
-    transition: 0.2s; 
+.bg-status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
 }
 
-.btn-action:hover { 
-    background: #e9ecef; 
-    color: #dc3545; 
+.bg-status-route {
+    background-color: #e0f2fe;
+    color: #075985;
 }
 
-/* Utilitários */
-.fs-7 { font-size: 0.7rem; }
-.opacity-10 { opacity: 0.1; }
-
-/* Animação de Sync */
-.loading-spin { 
-    display: inline-block; 
-    animation: spin 1s linear infinite; 
+.bg-status-done {
+    background-color: #dcfce7;
+    color: #166534;
 }
 
-@keyframes spin { 
-    100% { transform: rotate(360deg); } 
+.bg-status-cancel {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-action {
+    background: #f8f9fa;
+    border: none;
+    color: #adb5bd;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.78rem;
+}
+
+.btn-action:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.btn-action-danger:hover {
+    background: #fee2e2;
+    color: #dc3545;
+}
+
+.fs-7 {
+    font-size: 0.75rem;
+}
+
+.opacity-10 {
+    opacity: 0.1;
+}
+
+.spinner-rotate {
+    display: inline-block;
+    animation: spin-pedidos 0.8s linear infinite;
+}
+
+@keyframes spin-pedidos {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#tabela-pedidos-body tr {
+    transition: background-color 0.15s ease;
+}
+
+#tabela-pedidos-body tr:hover {
+    background-color: #fafbfc;
 }

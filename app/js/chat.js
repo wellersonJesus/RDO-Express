@@ -303,26 +303,48 @@ window.StatusModal = (function () {
     let _pedidoId = null;
     let _modalBS = null;
 
+    /* ─── Helpers seguros ─── */
+
     function _el(id) {
-        return document.getElementById(id);
+        return document.getElementById(id) || null;
     }
+
+    function _safeText(el, txt) {
+        if (el && typeof txt === 'string') el.textContent = txt;
+    }
+
+    function _safeClass(el, action, ...cls) {
+        if (!el || !el.classList) return;
+        cls.forEach(c => {
+            if (action === 'add') el.classList.add(c);
+            else if (action === 'remove') el.classList.remove(c);
+            else if (action === 'toggle') el.classList.toggle(c);
+        });
+    }
+
+    /* ─── Reset do modal ─── */
 
     function _resetar() {
-        const texto = _el('modal-status-texto');
-        const icone = _el('modal-status-icone');
-        const boxBotoes = _el('box-botoes-status');
-        const boxMotoboy = _el('box-selecao-motoboy');
-        const select = _el('select-motoboy');
+        try {
+            const texto = _el('modal-status-texto');
+            const icone = _el('modal-status-icone');
+            const boxBotoes = _el('box-botoes-status');
+            const boxMotoboy = _el('box-selecao-motoboy');
+            const select = _el('select-motoboy');
 
-        if (texto) texto.textContent = 'Alterar Status';
-        if (icone) icone.className = 'bi bi-arrow-repeat';
-        if (boxBotoes) boxBotoes.classList.remove('d-none');
-        if (boxMotoboy) boxMotoboy.classList.add('d-none');
-        if (select) {
-            select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
-            select.style.borderColor = '#ddd';
-        }
+            _safeText(texto, 'Alterar Status');
+            if (icone) icone.className = 'bi bi-arrow-repeat';
+            _safeClass(boxBotoes, 'remove', 'd-none');
+            _safeClass(boxMotoboy, 'add', 'd-none');
+
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
+                select.style.borderColor = '#ddd';
+            }
+        } catch (_) { /* silencioso */ }
     }
+
+    /* ─── Carregar motoboys do API ─── */
 
     async function _carregarMotoboys() {
         const select = _el('select-motoboy');
@@ -332,209 +354,311 @@ window.StatusModal = (function () {
 
         try {
             const todos = await API.call('getcolaboradores');
-            const motoboys = (Array.isArray(todos) ? todos : []).filter(c =>
-                String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                String(c.status || '').toUpperCase() === 'TRUE'
-            );
+            const lista = Array.isArray(todos) ? todos : [];
+
+            const motoboys = lista.filter(c => {
+                const cargo = String(c.colaborador || '').toUpperCase();
+                const ativo = String(c.status || '').toUpperCase();
+                return cargo.includes('MOTOBOY') && ativo === 'TRUE';
+            });
 
             if (motoboys.length > 0) {
                 select.innerHTML =
                     '<option value="" disabled selected>Selecione o motoboy...</option>' +
-                    motoboys.map(m =>
-                        `<option value="${m.id}">${m.username || m.nome || 'Sem nome'}</option>`
-                    ).join('');
+                    motoboys.map(m => {
+                        const nome = String(m.username || m.nome || 'Sem nome');
+                        const id = String(m.id || '');
+                        return `<option value="${id}">${nome}</option>`;
+                    }).join('');
             } else {
                 select.innerHTML = '<option value="" disabled selected>Nenhum motoboy disponível</option>';
             }
-        } catch (e) {
+        } catch (_) {
             select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
         }
     }
 
+    /* ─── Spinner no ícone de status (dentro do chat) ─── */
+
     function _setSpinnerNoBotao(pedidoId) {
-        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-        const iconEl = msgEl?.querySelector('.status-icon');
-        if (iconEl) {
+        try {
+            if (!pedidoId) return;
+            const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+            const iconEl = msgEl?.querySelector('.status-icon');
+            if (!iconEl) return;
+
             iconEl.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
-            iconEl.classList.remove('status-updated');
-            iconEl.classList.add('status-pending');
+            _safeClass(iconEl, 'remove', 'status-updated');
+            _safeClass(iconEl, 'add', 'status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        }
+        } catch (_) { /* silencioso */ }
     }
 
-    function _setIconeFinal(pedidoId, status, motoboyNome) {
-        const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-        const iconEl = msgEl?.querySelector('.status-icon');
-        if (iconEl) {
-            iconEl.innerHTML = window.getIconePorStatus(status);
-            iconEl.classList.remove('status-pending');
-            iconEl.classList.add('status-updated');
+    /* ─── Ícone final após resposta da API ─── */
 
-            const statusLabel = status.replace(/_/g, ' ');
+    function _setIconeFinal(pedidoId, status, motoboyNome) {
+        try {
+            if (!pedidoId) return;
+            const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+            const iconEl = msgEl?.querySelector('.status-icon');
+            if (!iconEl) return;
+
+            const iconHTML = typeof window.getIconePorStatus === 'function'
+                ? window.getIconePorStatus(status)
+                : '<i class="bi bi-question-circle"></i>';
+
+            iconEl.innerHTML = iconHTML;
+            _safeClass(iconEl, 'remove', 'status-pending');
+            _safeClass(iconEl, 'add', 'status-updated');
+
+            const statusLabel = String(status || '').replace(/_/g, ' ');
             const tooltip = motoboyNome ? `${motoboyNome} • ${statusLabel}` : statusLabel;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        }
+        } catch (_) { /* silencioso */ }
     }
+
+    /* ─── Atualizar cache local de pedidos (AppRDO) ─── */
 
     function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
-        const pedido = (window.AppRDO.pedidosCache || []).find(
-            p => String(p.id).trim() === String(pedidoId).trim()
-        );
-        if (pedido) {
+        try {
+            const cache = window.AppRDO?.pedidosCache;
+            if (!Array.isArray(cache)) return;
+
+            const pedido = cache.find(
+                p => String(p.id || '').trim() === String(pedidoId || '').trim()
+            );
+            if (!pedido) return;
+
             pedido.status = statusFormatado;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        }
+        } catch (_) { /* silencioso */ }
     }
 
+    /* ─── Executar alteração de status (core) ─── */
+
     async function _executarAlteracao(status, motoboyId) {
-        const motoboyNome = motoboyId
-            ? (_el('select-motoboy')?.options[_el('select-motoboy').selectedIndex]?.text || '')
-            : '';
-        const statusFormatado = motoboyNome ? `${motoboyNome}/${status}` : status;
+        let motoboyNome = '';
+        let statusFormatado = String(status || '');
 
-        _setSpinnerNoBotao(_pedidoId);
-        _modalBS?.hide();
-
+        // ── Extrair nome do motoboy com segurança ──
         try {
-            const payload = { id: _pedidoId, status: statusFormatado, motoboy: motoboyNome };
+            if (motoboyId) {
+                const select = _el('select-motoboy');
+                if (select && select.selectedIndex >= 0) {
+                    motoboyNome = String(select.options[select.selectedIndex]?.text || '').trim();
+                }
+            }
+        } catch (_) {
+            motoboyNome = '';
+        }
+
+        // ── Montar status formatado ──
+        if (motoboyNome) {
+            statusFormatado = `${motoboyNome}/${status}`;
+        }
+
+        // ── Feedback visual: spinner ──
+        _setSpinnerNoBotao(_pedidoId);
+
+        // ── Fechar modal ──
+        try { _modalBS?.hide(); } catch (_) { /* silencioso */ }
+
+        // ── Chamada à API ──
+        try {
+            const payload = {
+                id: String(_pedidoId || ''),
+                status: statusFormatado,
+                motoboy: motoboyNome
+            };
+
             const resposta = await API.call('updatepedido', payload);
 
             if (resposta?.status === 'success') {
+                // ✅ Atualiza cache do chat (AppRDO)
                 _atualizarCache(_pedidoId, statusFormatado, motoboyNome);
+
+                // ✅ Atualiza ícone no chat
                 _setIconeFinal(_pedidoId, status, motoboyNome);
+
+                // ✅ Sincroniza com a aba de pedidos (RDO_PEDIDOS)
+                try {
+                    if (typeof window.RDO_PEDIDOS?.atualizarStatusLocal === 'function') {
+                        window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
+                    }
+                } catch (_) { /* silencioso — aba pode não estar carregada */ }
+
             } else {
                 throw new Error(resposta?.message || 'Falha na API');
             }
+
         } catch (e) {
+            // ❌ Restaura ícone neutro no chat
             _setIconeFinal(_pedidoId, '', '');
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro',
-                html: '<div style="font-size: 0.9rem;">Não foi possível alterar o status.</div>',
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#dc3545',
-                customClass: { popup: 'rounded-4' }
-            });
+
+            // ❌ Exibe alerta de erro
+            try {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    html: '<div style="font-size: 0.9rem;">Não foi possível alterar o status.</div>',
+                    confirmButtonText: 'Fechar',
+                    confirmButtonColor: '#dc3545',
+                    customClass: { popup: 'rounded-4' }
+                });
+            } catch (_) {
+                alert('Erro ao alterar o status do pedido.');
+            }
         }
     }
+
+    /* ─── Abrir modal de status ─── */
 
     function abrir(pedidoId) {
-        if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
+        try {
+            if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
 
-        const pedido = (window.AppRDO.pedidosCache || []).find(
-            p => String(p.id).trim() === String(pedidoId).trim()
-        );
+            const cache = Array.isArray(window.AppRDO?.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            const pedido = cache.find(
+                p => String(p.id || '').trim() === String(pedidoId).trim()
+            );
 
-        const statusBruto = String(pedido?.status || '').trim();
-        const statusPuro = statusBruto.includes('/')
-            ? statusBruto.split('/').pop().trim().toUpperCase()
-            : statusBruto.toUpperCase();
+            const statusBruto = String(pedido?.status || '').trim();
+            const statusPuro = statusBruto.includes('/')
+                ? statusBruto.split('/').pop().trim().toUpperCase()
+                : statusBruto.toUpperCase();
 
-        if (statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO' || statusPuro === 'CANCELADO') {
-            const isConcluido = statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO';
-            Swal.fire({
-                icon: isConcluido ? 'success' : 'error',
-                title: 'Pedido Finalizado',
-                html: `<div style="font-size: 0.93rem; color: #555;">
-                    Este pedido já foi
-                    <strong style="color: ${isConcluido ? '#28a745' : '#dc3545'};">
-                        ${isConcluido ? 'Concluído' : 'Cancelado'}
-                    </strong>
-                    e não pode mais ser alterado.
-                </div>`,
-                confirmButtonText: 'Entendi',
-                confirmButtonColor: '#dc3545',
-                customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
-            });
-            return;
+            if (statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO' || statusPuro === 'CANCELADO') {
+                const isConcluido = statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO';
+                Swal.fire({
+                    icon: isConcluido ? 'success' : 'error',
+                    title: 'Pedido Finalizado',
+                    html: `<div style="font-size: 0.93rem; color: #555;">
+                        Este pedido já foi
+                        <strong style="color: ${isConcluido ? '#28a745' : '#dc3545'};">
+                            ${isConcluido ? 'Concluído' : 'Cancelado'}
+                        </strong>
+                        e não pode mais ser alterado.
+                    </div>`,
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#dc3545',
+                    customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
+                });
+                return;
+            }
+
+            _pedidoId = pedidoId;
+            _resetar();
+
+            const modalEl = _el('modalStatus');
+            if (!modalEl) return;
+
+            if (!_modalBS) {
+                _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+            }
+
+            _modalBS.show();
+        } catch (e) {
+            console.warn('StatusModal.abrir — erro:', e);
         }
-
-        _pedidoId = pedidoId;
-        _resetar();
-
-        if (!_modalBS) {
-            _modalBS = new bootstrap.Modal(_el('modalStatus'), { backdrop: 'static' });
-        }
-
-        _modalBS.show();
     }
+
+    /* ─── Processar escolha de status ─── */
 
     function processar(status) {
-        if (status === 'EM_ROTA') {
-            const texto = _el('modal-status-texto');
-            const icone = _el('modal-status-icone');
-            if (texto) texto.textContent = 'Selecione o Motoboy';
-            if (icone) icone.className = 'bi bi-bicycle';
+        try {
+            if (status === 'EM_ROTA') {
+                const texto = _el('modal-status-texto');
+                const icone = _el('modal-status-icone');
+                _safeText(texto, 'Selecione o Motoboy');
+                if (icone) icone.className = 'bi bi-bicycle';
 
-            _el('box-botoes-status')?.classList.add('d-none');
-            _el('box-selecao-motoboy')?.classList.remove('d-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
+                _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
 
-            _carregarMotoboys();
-            return;
+                _carregarMotoboys();
+                return;
+            }
+
+            const opcoes = {
+                CONCLUIDO: {
+                    titulo: 'Concluir Pedido?',
+                    html: 'Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.',
+                    icone: 'question',
+                    btnTexto: 'Sim, Concluir',
+                    btnCor: '#28a745'
+                },
+                CANCELADO: {
+                    titulo: 'Cancelar Pedido?',
+                    html: 'Ao cancelar, este pedido <strong>não poderá</strong> mais ser reaberto.',
+                    icone: 'warning',
+                    btnTexto: 'Sim, Cancelar',
+                    btnCor: '#dc3545'
+                }
+            };
+
+            const cfg = opcoes[status];
+            if (!cfg) return;
+
+            try { _modalBS?.hide(); } catch (_) { /* silencioso */ }
+
+            Swal.fire({
+                icon: cfg.icone,
+                title: cfg.titulo,
+                html: `<div style="font-size: 0.9rem; color: #555;">${cfg.html}</div>`,
+                showCancelButton: true,
+                confirmButtonText: cfg.btnTexto,
+                cancelButtonText: 'Voltar',
+                confirmButtonColor: cfg.btnCor,
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true,
+                customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await _executarAlteracao(status);
+                }
+            }).catch(() => { /* Swal fechado sem ação */ });
+
+        } catch (e) {
+            console.warn('StatusModal.processar — erro:', e);
         }
-
-        const opcoes = {
-            CONCLUIDO: {
-                titulo: 'Concluir Pedido?',
-                html: 'Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.',
-                icone: 'question',
-                btnTexto: 'Sim, Concluir',
-                btnCor: '#28a745'
-            },
-            CANCELADO: {
-                titulo: 'Cancelar Pedido?',
-                html: 'Ao cancelar, este pedido <strong>não poderá</strong> mais ser reaberto.',
-                icone: 'warning',
-                btnTexto: 'Sim, Cancelar',
-                btnCor: '#dc3545'
-            }
-        };
-
-        const cfg = opcoes[status];
-        if (!cfg) return;
-
-        _modalBS?.hide();
-
-        Swal.fire({
-            icon: cfg.icone,
-            title: cfg.titulo,
-            html: `<div style="font-size: 0.9rem; color: #555;">${cfg.html}</div>`,
-            showCancelButton: true,
-            confirmButtonText: cfg.btnTexto,
-            cancelButtonText: 'Voltar',
-            confirmButtonColor: cfg.btnCor,
-            cancelButtonColor: '#6c757d',
-            reverseButtons: true,
-            customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                await _executarAlteracao(status);
-            }
-        });
     }
+
+    /* ─── Confirmar motoboy selecionado ─── */
 
     async function confirmarMotoboy() {
-        const select = _el('select-motoboy');
-        const motoboyId = select?.value;
+        try {
+            const select = _el('select-motoboy');
+            const motoboyId = select?.value;
 
-        if (!motoboyId) {
-            select.style.borderColor = '#dc3545';
-            select.focus();
-            select.classList.add('animate__animated', 'animate__shakeX');
-            setTimeout(() => {
-                select.style.borderColor = '#ddd';
-                select.classList.remove('animate__animated', 'animate__shakeX');
-            }, 1500);
-            return;
+            if (!motoboyId) {
+                if (select) {
+                    select.style.borderColor = '#dc3545';
+                    select.focus();
+                    _safeClass(select, 'add', 'animate__animated', 'animate__shakeX');
+                    setTimeout(() => {
+                        if (select) {
+                            select.style.borderColor = '#ddd';
+                            _safeClass(select, 'remove', 'animate__animated', 'animate__shakeX');
+                        }
+                    }, 1500);
+                }
+                return;
+            }
+
+            await _executarAlteracao('EM_ROTA', motoboyId);
+        } catch (e) {
+            console.warn('StatusModal.confirmarMotoboy — erro:', e);
         }
-
-        await _executarAlteracao('EM_ROTA', motoboyId);
     }
+
+    /* ─── Voltar para tela inicial do modal ─── */
 
     function voltar() {
         _resetar();
     }
+
+    /* ─── API Pública ─── */
 
     return { abrir, processar, confirmarMotoboy, voltar };
 
@@ -944,6 +1068,8 @@ window.salvarPedidoAPI = async function () {
 
         const msgTemplate = `📦 SOLICITANTE: ${getVal('p-solicitante')}\n\nN.SERVIÇO: ${PLACEHOLDER_ID}\nSOLICITANTE: ${getVal('p-solicitante')} \nCONTATO: ${getVal('p-contato')} | HR: ${getVal('p-horario')}\n-\nMERCADORIA: ${getVal('p-mercadoria')}\nRETORNO: ${getVal('p-retorno') === '0.6' ? 'Sim' : 'Não'}\n-\nROTA(s): \n${rotasFormatadas}\n-\nOBSERVAÇÃO: ${getVal('p-obs')}\n${valorFinal}`;
 
+        const retornoLabel = getVal('p-retorno') === '0.6' ? 'Sim' : 'Não';
+
         const resp = await API.call('finalizarpedido', {
             action: 'finalizarpedido',
             id_chat: String(window.AppRDO.clienteId),
@@ -951,7 +1077,7 @@ window.salvarPedidoAPI = async function () {
             contato: getVal('p-contato'),
             horario: getVal('p-horario'),
             mercadoria: getVal('p-mercadoria'),
-            retorno: getVal('p-retorno') === '0.6' ? 'Sim' : 'Não',
+            retorno: retornoLabel,
             rotas_texto: getVal('p-rotas'),
             observacao: getVal('p-obs'),
             valor_corrida: valorFinal,
@@ -967,6 +1093,25 @@ window.salvarPedidoAPI = async function () {
             window.enviarMensagemParaChat(msgParaChat, false, idReal);
             document.getElementById('msg-input').value = '';
             bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
+
+            if (typeof window.RDO_PEDIDOS?.adicionarPedidoLocal === 'function') {
+                window.RDO_PEDIDOS.adicionarPedidoLocal({
+                    id: idReal,
+                    id_chat: String(window.AppRDO.clienteId),
+                    solicitante: getVal('p-solicitante'),
+                    contato: getVal('p-contato'),
+                    horario: getVal('p-horario'),
+                    mercadoria: getVal('p-mercadoria'),
+                    de: getVal('p-rotas'),
+                    para: '',
+                    retorno: retornoLabel,
+                    prioridade: getVal('p-prioridade'),
+                    valor_corrida: valorFinal,
+                    motoboy: '',
+                    status: 'PENDENTE',
+                    observacao: getVal('p-obs')
+                });
+            }
 
             try {
                 await API.call('updatechat', {
