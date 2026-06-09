@@ -117,15 +117,37 @@ window.selecionarEAbrir = function (id, nome, isOnline) {
 
 window.selecionarStatus = async function(status) {
     if (status === 'EM_ROTA') {
-        document.getElementById('box-botoes-status').classList.add('d-none');
-        document.getElementById('box-selecao-motoboy').classList.remove('d-none');
+        // 1. Oculta botões e mostra seletor
+        const boxBotoes = document.getElementById('box-botoes-status');
+        const boxMotoboy = document.getElementById('box-selecao-motoboy');
         
-        const motoboys = await window.obterMotoboysAtivos();
+        if (boxBotoes) boxBotoes.classList.add('d-none');
+        if (boxMotoboy) boxMotoboy.classList.remove('d-none');
+        
+        // 2. Busca dados da API
+        const todosColaboradores = await API.call('getcolaboradores').catch(() => []);
+        
+        // 3. Filtro flexível: Verifica se "MOTOBOY" está contido na string do cargo
+        // Isso resolve o caso do Rodrigo ("Atendente/Motoboy") e do Igor ("Motoboy")
+        const motoboysAtivos = (Array.isArray(todosColaboradores) ? todosColaboradores : []).filter(c => {
+            const cargo = String(c.colaborador || '').toUpperCase();
+            const statusAtivo = String(c.status || '').toUpperCase() === 'TRUE';
+            
+            return cargo.includes('MOTOBOY') && statusAtivo;
+        });
+
+        // 4. Popula o select
         const select = document.getElementById('select-motoboy');
-        
-        select.innerHTML = motoboys.map(m => 
-            `<option value="${m.id}">${m.username}</option>`
-        ).join('');
+        if (select) {
+            if (motoboysAtivos.length > 0) {
+                select.innerHTML = motoboysAtivos.map(m => {
+                    // Exibe o username mantendo a formatação original do banco
+                    return `<option value="${m.id}">${m.username}</option>`;
+                }).join('');
+            } else {
+                select.innerHTML = '<option value="">Nenhum motoboy disponível</option>';
+            }
+        }
         
         window.AppRDO.statusTemporario = 'EM_ROTA';
     } else {
@@ -666,17 +688,35 @@ window.iniciarFluxoCheckout = async function () {
 };
 
 window.iniciarSalvamento = async function(status) {
+    // Caso seja "EM_ROTA", tratamos a lista de motoboys
     if (status === 'EM_ROTA') {
-        // Carrega a lista de motoboys ativos
-        const motoboys = await window.obterMotoboysAtivos();
+        const boxBotoes = document.getElementById('box-botoes-status');
+        const boxMotoboy = document.getElementById('box-selecao-motoboy');
         const select = document.getElementById('select-motoboy');
-        select.innerHTML = motoboys.map(m => `<option value="${m.id}">${m.username}</option>`).join('');
+
+        if (boxBotoes) boxBotoes.classList.add('d-none');
+        if (boxMotoboy) boxMotoboy.classList.remove('d-none');
         
-        document.getElementById('box-botoes-status').classList.add('d-none');
-        document.getElementById('box-selecao-motoboy').classList.remove('d-none');
-        return;
+        // Busca e filtra usando a lógica flexível de "Motoboy" no cargo
+        const todos = await API.call('getcolaboradores').catch(() => []);
+        const motoboys = (Array.isArray(todos) ? todos : []).filter(c => 
+            String(c.colaborador || '').toUpperCase().includes('MOTOBOY') && 
+            String(c.status || '').toUpperCase() === 'TRUE'
+        );
+
+        if (select) {
+            if (motoboys.length > 0) {
+                select.innerHTML = motoboys.map(m => 
+                    `<option value="${m.id}">${m.username}</option>`
+                ).join('');
+            } else {
+                select.innerHTML = '<option value="">Nenhum motoboy ativo</option>';
+            }
+        }
+        return; // Para a execução aqui para o usuário escolher o motoboy
     }
 
+    // Se for CONCLUIDO ou CANCELADO, segue o fluxo normal
     const btn = event.currentTarget;
     const textoOriginal = btn.innerHTML;
     btn.disabled = true;
