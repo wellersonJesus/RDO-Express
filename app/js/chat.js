@@ -62,32 +62,47 @@ document.addEventListener('click', function (e) {
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const syncIcon = document.getElementById('sync-icon-chat');
-    const searchBtn = document.getElementById('chat-search'); // Seu input de busca
+    const searchInput = document.getElementById('chat-search');
 
     if (!listEl) return;
-
     if (window.AppRDO.isFetching) return;
 
     window.AppRDO.isFetching = true;
     
-    // Feedback visual: Gira o ícone e desabilita a busca durante a sincronização
+    // Feedback visual de carregamento
     if (syncIcon) syncIcon.classList.add('spinner-rotate');
-    if (searchBtn) searchBtn.placeholder = "Sincronizando...";
+    if (searchInput) searchInput.placeholder = "Sincronizando...";
 
     try {
-        const clientes = await API.call('getclientes');
+        // 1. Chamadas paralelas para otimizar o tempo de carga
+        // Buscamos clientes para a lista lateral e mensagens/pedidos para o painel principal
+        const [clientes, mensagens, pedidos] = await Promise.all([
+            API.call('getclientes'),
+            API.call('getchat'),
+            API.call('getpedidos')
+        ]);
+
         const listaClientes = Array.isArray(clientes) ? clientes : [];
+        const listaMensagens = Array.isArray(mensagens) ? mensagens : [];
+        const listaPedidos = Array.isArray(pedidos) ? pedidos : [];
+        
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
-        // Renderiza os contatos
+        // 2. Renderiza a lista de contatos lateral
         window.renderizarLista(listaClientes, isMasterOn);
         
+        // 3. Renderiza o conteúdo do chat com o estado dos status atualizado
+        // Passamos os pedidos para que a renderização saiba o status de cada um
+        window.renderizarMensagens(listaMensagens, listaPedidos);
+        
         window.AppRDO.listaCarregada = true;
-        if (searchBtn) searchBtn.placeholder = "Buscar cliente...";
+        if (searchInput) searchInput.placeholder = "Buscar cliente...";
 
     } catch (e) {
-        console.error("Erro na sincronização:", e);
-        listEl.innerHTML = `<div class="p-3 text-center text-danger small">Erro ao carregar contatos.</div>`;
+        console.error("Erro crítico na sincronização:", e);
+        listEl.innerHTML = `<div class="p-3 text-center text-danger small">
+                                <i class="bi bi-exclamation-triangle"></i> Erro ao carregar dados.
+                            </div>`;
     } finally {
         window.AppRDO.isFetching = false;
         if (syncIcon) syncIcon.classList.remove('spinner-rotate');
@@ -483,6 +498,44 @@ window.renderizarLista = function(lista, isMasterOn) {
             </div>
         `;
     }).join('');
+};
+
+window.renderizarMensagens = function(mensagens, pedidos) {
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = '';
+
+    mensagens.forEach(msg => {
+        // Encontra o pedido correspondente ao ID desta mensagem
+        const pedido = pedidos.find(p => String(p.id).trim() === String(msg.pedido_id).trim());
+        const statusDoBanco = pedido ? pedido.status : null;
+
+        const div = document.createElement('div');
+        div.className = 'message-wrapper';
+        
+        // Define se já tem um status para saber se mostra o ícone de pendente ou o de ação
+        const temStatus = statusDoBanco && statusDoBanco !== "Aguardando";
+
+        div.innerHTML = `
+            <div class="message-sent" data-pedido-id="${msg.pedido_id}" onclick="window.abrirModalEdicao('${msg.pedido_id}')">
+                 <div class="message-body">${msg.texto.replace(/\n/g, '<br>')}</div>
+                 
+                 <div class="status-icon ${temStatus ? 'status-updated' : 'status-pending'}" 
+                      onclick="event.stopPropagation(); window.abrirModalStatus('${msg.pedido_id}')" 
+                      title="${statusDoBanco || 'Aguardando Motoboy'}">
+                      ${temStatus ? window.getIconePorStatus(statusDoBanco) : '<i class="bi bi-arrow-repeat spinner-rotate"></i>'}
+                 </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+};
+
+window.getIconePorStatus = function(status) {
+    const s = String(status).toUpperCase();
+    if (s.includes('EM_ROTA') || s.includes('/')) return '<i class="bi bi-motorcycle" style="color: #dc3545;"></i>';
+    if (s.includes('CONCLUIDO')) return '<i class="bi bi-check-circle-fill" style="color: #28a745;"></i>';
+    if (s.includes('CANCELADO')) return '<i class="bi bi-x-circle-fill" style="color: #dc3545;"></i>';
+    return '<i class="bi bi-arrow-repeat"></i>';
 };
 
 window.renderizarFooterResumo = function (el) {

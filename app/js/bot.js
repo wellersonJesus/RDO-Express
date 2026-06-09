@@ -31,7 +31,8 @@ window.initBot = async () => {
 window.reloadBot = async () => {
     const tbody = document.getElementById('bot-list');
     const infoPag = document.getElementById('info-paginacao');
-    const isMasterOn = window.checkMaster(); // Captura estado atual
+    const filtroSelect = document.getElementById('filtro-tipo');
+    const isMasterOn = window.checkMaster();
     
     if (!tbody) return;
     
@@ -45,21 +46,42 @@ window.reloadBot = async () => {
             window.API.call('getcolaboradores').catch(() => [])
         ]);
         
-        let dados = [
+        // Dados brutos
+        let todosDados = [
             ...(users||[]).map(i => ({...i, origem:'usuarios'})), 
             ...(clients||[]).map(i => ({...i, origem:'clientes'})), 
             ...(cols||[]).map(i => ({...i, origem:'colaboradores'}))
         ];
 
-        window.botState.cache = dados;
-        // ... (lógica de paginação segue o seu padrão original) ...
-        const start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
-        const pageData = dados.slice(start, start + window.botState.itensPorPagina);
+        // --- LÓGICA DO FILTRO INTELIGENTE ---
+        const tipoSelecionado = filtroSelect ? filtroSelect.value : 'TODOS';
+        
+        let dadosFiltrados = todosDados;
+        if (tipoSelecionado !== 'TODOS') {
+            dadosFiltrados = todosDados.filter(item => item.origem === tipoSelecionado);
+        }
 
-        // Renderização com Bloqueio Visual (UX Cinza)
+        // Atualiza o cache com os dados filtrados para a paginação funcionar corretamente
+        window.botState.cache = dadosFiltrados;
+
+        // Resetar para página 1 se o filtro mudar (opcional, mas recomendado)
+        // Caso queira manter a página atual mesmo trocando o filtro, remova a linha abaixo:
+        // window.botState.paginaAtual = 1; 
+
+        // --- LÓGICA DE PAGINAÇÃO ---
+        const totalPag = Math.max(1, Math.ceil(dadosFiltrados.length / window.botState.itensPorPagina));
+        if(window.botState.paginaAtual > totalPag) window.botState.paginaAtual = totalPag;
+        
+        const start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
+        const pageData = dadosFiltrados.slice(start, start + window.botState.itensPorPagina);
+
+        // Atualiza info de página
+        if(infoPag) infoPag.innerText = `Pág ${window.botState.paginaAtual} / ${totalPag}`;
+
+        // Renderização
         tbody.innerHTML = pageData.map(i => {
             const isReadOnly = (i.origem === 'clientes' || i.origem === 'colaboradores');
-            const rowClass = !isMasterOn ? 'text-muted' : ''; // Classe cinza se desligado
+            const rowClass = !isMasterOn ? 'text-muted' : '';
             
             return `<tr class="${rowClass}">
                 <td class="ps-3">
