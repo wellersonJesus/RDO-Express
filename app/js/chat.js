@@ -1,15 +1,23 @@
 window.marcarCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
-
     input.style.border = '2px solid #dc3545';
     input.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
     input.setAttribute('placeholder', '⚠️ Digite os dados do pedido aqui...');
-
     setTimeout(function () {
         input.style.border = '';
         input.style.boxShadow = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
+    }, 3000);
+};
+
+window.marcarCampoFormInvalido = function (campo) {
+    if (!campo) return;
+    campo.style.border = '2px solid #dc3545';
+    campo.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+    setTimeout(function () {
+        campo.style.border = '';
+        campo.style.boxShadow = '';
     }, 3000);
 };
 
@@ -63,6 +71,24 @@ function _limparModalContainer() {
     container.innerHTML = '';
 }
 
+window.loadModal = function (arquivo) {
+    _limparModalContainer();
+    var container = document.getElementById('modal-container');
+    if (!container) return Promise.resolve(false);
+    return fetch('pages/chat/' + arquivo)
+        .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.text();
+        })
+        .then(function (html) {
+            container.innerHTML = html;
+            return true;
+        })
+        .catch(function () {
+            return false;
+        });
+};
+
 window.iniciarChat = async function () {
     await window.carregarDados();
 };
@@ -76,18 +102,21 @@ document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'chat-search') {
         window.filtrarContatos();
     }
-    if (e.target && e.target.classList && e.target.classList.contains('border-danger')) {
-        e.target.classList.remove('border', 'border-danger', 'border-2');
+    if (e.target && e.target.closest && e.target.closest('#modalFormulario')) {
+        e.target.style.border = '';
+        e.target.style.boxShadow = '';
     }
     if (e.target && e.target.id === 'msg-input') {
-        e.target.classList.remove('msg-input-invalido');
-        var grupo = e.target.closest('.input-group');
-        if (grupo) grupo.classList.remove('input-group-invalido');
+        e.target.style.border = '';
+        e.target.style.boxShadow = '';
+        e.target.setAttribute('placeholder', 'Digite o pedido...');
     }
 });
 
 document.addEventListener('change', function (e) {
-    if (e.target && e.target.closest('#modalFormulario')) {
+    if (e.target && e.target.closest && e.target.closest('#modalFormulario')) {
+        e.target.style.border = '';
+        e.target.style.boxShadow = '';
         if (typeof window.calcularTudo === 'function') {
             window.calcularTudo();
         }
@@ -177,11 +206,7 @@ window.validarMensagemModelo = function (texto) {
 
 window.exibirModalValidacao = function (mensagem, opcoes) {
     opcoes = opcoes || {};
-
-    // 1. Busca o modal EXCLUSIVAMENTE pelo ID correto
     var modalEl = document.getElementById('modalValidacao');
-
-    // 2. Se o modal não existe no DOM, usa SweetAlert como fallback seguro
     if (!modalEl) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -196,12 +221,8 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
         }
         return;
     }
-
-    // 3. Preenche a mensagem — usa innerHTML para suportar HTML formatado
     var msgEl = document.getElementById('modal-validacao-mensagem');
     if (msgEl) msgEl.innerHTML = mensagem;
-
-    // 4. Ícone e título personalizáveis
     var iconeEl = document.getElementById('modal-validacao-icone');
     var tituloEl = document.getElementById('modal-validacao-titulo');
     if (iconeEl) {
@@ -210,8 +231,6 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     if (tituloEl) {
         tituloEl.innerText = opcoes.titulo || 'Atenção';
     }
-
-    // 5. Modelo (textarea) — mostra ou esconde
     var modeloContainer = document.getElementById('modal-validacao-modelo');
     var textareaEl = document.getElementById('modal-validacao-textarea');
     if (opcoes.modelo && modeloContainer && textareaEl) {
@@ -220,8 +239,6 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     } else if (modeloContainer) {
         modeloContainer.classList.add('d-none');
     }
-
-    // 6. Limpa qualquer modal aberto e backdrops órfãos
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
         if (inst) {
@@ -232,8 +249,6 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     document.body.classList.remove('modal-open');
     document.body.style.removeProperty('overflow');
     document.body.style.removeProperty('padding-right');
-
-    // 7. Abre o modal correto
     try {
         var instanciaExistente = bootstrap.Modal.getInstance(modalEl);
         if (instanciaExistente) {
@@ -242,7 +257,6 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
         var modal = new bootstrap.Modal(modalEl);
         modal.show();
     } catch (err) {
-        console.error('exibirModalValidacao: erro ao abrir modal', err);
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'warning',
@@ -278,9 +292,8 @@ window.copiarModeloValidacao = function () {
 window.limparCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
-    input.classList.remove('msg-input-invalido');
-    var grupo = input.closest('.input-group');
-    if (grupo) grupo.classList.remove('input-group-invalido');
+    input.style.border = '';
+    input.style.boxShadow = '';
     input.setAttribute('placeholder', 'Digite o pedido...');
 };
 
@@ -385,7 +398,6 @@ window.carregarDados = async function () {
         window.AppRDO.listaCarregada = true;
         if (searchInput) searchInput.placeholder = 'Buscar cliente...';
     } catch (e) {
-        console.error('Erro crítico na sincronização:', e);
         _mostrarContatosEmptyState('Erro ao carregar dados');
     } finally {
         window.AppRDO.isFetching = false;
@@ -405,7 +417,7 @@ window.renderizarLista = function (lista, isMasterOn) {
     var clienteAtivo = window.AppRDO.clienteId;
     listEl.innerHTML = lista.map(function (cliente) {
         var id = String(cliente.id || '');
-        var nome = (cliente.nome || cliente.username || 'Sem nome');
+        var nome = cliente.nome || cliente.username || 'Sem nome';
         var imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         var statusColor = isOnline ? '#28a745' : '#adb5bd';
@@ -431,6 +443,7 @@ window.renderizarLista = function (lista, isMasterOn) {
 window.selecionarEAbrir = function (id, nome, isOnline) {
     window.AppRDO.clienteId = id;
     window.AppRDO.clienteSelecionado = nome;
+    localStorage.setItem('clienteSelecionadoNome', nome);
     document.querySelectorAll('.contact-item-clean').forEach(function (el) {
         el.classList.remove('active-contact');
     });
@@ -489,7 +502,6 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
             window.renderizarMensagens(historico, todosPedidos);
         }
     } catch (e) {
-        console.error('Erro ao carregar conversa:', e);
         container.innerHTML =
             '<div class="chat-empty-state text-danger">' +
             '<i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>' +
@@ -800,9 +812,7 @@ window.StatusModal = (function () {
             if (!modalEl) return;
             _modalBS = _getOrCreateModal(modalEl, { backdrop: 'static' });
             if (_modalBS) _modalBS.show();
-        } catch (e) {
-            console.warn('StatusModal.abrir — erro:', e);
-        }
+        } catch (e) {}
     }
 
     function processar(status) {
@@ -852,9 +862,7 @@ window.StatusModal = (function () {
                     await _executarAlteracao(status);
                 }
             }).catch(function () {});
-        } catch (e) {
-            console.warn('StatusModal.processar — erro:', e);
-        }
+        } catch (e) {}
     }
 
     async function confirmarMotoboy() {
@@ -876,9 +884,7 @@ window.StatusModal = (function () {
                 return;
             }
             await _executarAlteracao('EM_ROTA', motoboyId);
-        } catch (e) {
-            console.warn('StatusModal.confirmarMotoboy — erro:', e);
-        }
+        } catch (e) {}
     }
 
     function voltar() {
@@ -967,71 +973,56 @@ window.excluirPedido = async function (msgId) {
     }
 };
 
-window.renderizarFooterResumo = function (el) {
-    if (!el) return;
-    var d = window.dadosPedidoAtual || {};
-    el.innerHTML =
-        '<span class="me-3"><i class="bi bi-clock-fill"></i> ' + (d.tempo || '--') + '</span>' +
-        '<span class="me-3"><i class="bi bi-geo-alt-fill"></i> ' + (d.distancia || '0') + ' km</span>' +
-        '<span class="fw-bold"><i class="bi bi-wallet2"></i> ' + (d.valor || 'R$ 0,00') + '</span>';
-};
-
-window.buscarCoordenadasEndereco = async function (endereco) {
-    try {
-        var busca = endereco;
-        if (!/MG|Minas/i.test(busca)) {
-            busca += ', MG';
-        }
-        if (!/Brasil|Brazil/i.test(busca)) {
-            busca += ', Brasil';
-        }
-
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&q='
-            + encodeURIComponent(busca) + '&limit=1&countrycodes=br';
-
-        var resp = await fetch(url);
-        var data = await resp.json();
-
-        if (data && data.length > 0) {
-            return {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
-            };
-        }
-
-        console.warn('Geocodificação falhou para:', endereco);
-        return null;
-    } catch (err) {
-        console.error('Erro ao geocodificar:', endereco, err);
-        return null;
-    }
-};
-
 window.renderizarFooterResumo = function (resumoEl) {
     if (!resumoEl || !window.dadosPedidoAtual) return;
     var d = window.dadosPedidoAtual;
     resumoEl.innerHTML =
-        '<span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>' + d.distancia + ' km</strong></span>' +
-        '<span class="me-3"><i class="bi bi-clock me-1"></i><strong>' + d.tempo + '</strong></span>' +
-        '<span><i class="bi bi-cash me-1"></i><strong>' + d.valor + '</strong></span>';
+        '<span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>' + (d.distancia || '0') + ' km</strong></span>' +
+        '<span class="me-3"><i class="bi bi-clock me-1"></i><strong>' + (d.tempo || '--') + '</strong></span>' +
+        '<span><i class="bi bi-cash me-1"></i><strong>' + (d.valor || 'R$ 0,00') + '</strong></span>';
+};
+
+window.buscarCoordenadasEndereco = function (endereco) {
+    return new Promise(function (resolve) {
+        var busca = endereco;
+        if (!/MG|Minas Gerais/i.test(busca)) busca += ', MG';
+        if (!/Brasil|Brazil/i.test(busca)) busca += ', Brasil';
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
+            encodeURIComponent(busca) + '&limit=1&countrycodes=br';
+        fetch(url)
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                if (data && data.length > 0) {
+                    resolve({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+                } else {
+                    resolve(null);
+                }
+            })
+            .catch(function () { resolve(null); });
+    });
 };
 
 window.renderizarMapaUnificado = function () {
     var container = document.getElementById('container-mapa-visual');
-    if (!container) {
-        console.error('#container-mapa-visual não encontrado');
-        return;
+    if (!container) return;
+
+    if (window._leafletMapInstance) {
+        try { window._leafletMapInstance.remove(); } catch (_) {}
+        window._leafletMapInstance = null;
     }
 
-    // Limpa mapa anterior
-    if (window._leafletMapInstance) {
-        window._leafletMapInstance.remove();
-        window._leafletMapInstance = null;
+    if (!container.style.height || container.style.height === '0px') {
+        container.style.height = '350px';
     }
 
     var dados = window.dadosPedidoAtual;
     if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
         container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
+        return;
+    }
+
+    if (typeof L === 'undefined') {
+        container.innerHTML = '<p class="text-center text-danger p-4">Leaflet não carregado.</p>';
         return;
     }
 
@@ -1047,10 +1038,10 @@ window.renderizarMapaUnificado = function () {
 
     var criarIcone = function (emoji) {
         return L.divIcon({
-            html: '<div style="font-size:20px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
+            html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
             className: 'custom-div-icon',
-            iconSize: [25, 25],
-            iconAnchor: [12, 12]
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
         });
     };
 
@@ -1058,61 +1049,43 @@ window.renderizarMapaUnificado = function () {
         if (!caminho || caminho.length === 0) return;
         var cor = cores[i % cores.length];
 
-        // Linha tracejada
         L.polyline(caminho, {
-            color: cor,
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '10, 8'
+            color: cor, weight: 4, opacity: 0.85, dashArray: '10, 8'
         }).addTo(mapa);
 
-        // Marcador origem (primeiro ponto da primeira rota)
         if (i === 0) {
-            L.marker(caminho[0], { icon: criarIcone('🏁') })
-                .addTo(mapa)
-                .bindPopup('<strong>Origem</strong>');
+            L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
         }
 
-        // Marcador destino (último ponto da última rota) ou intermediário
         if (i === dados.coordenadas.length - 1) {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') })
-                .addTo(mapa)
-                .bindPopup('<strong>Destino Final</strong>');
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
         } else {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') })
-                .addTo(mapa)
-                .bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
         }
 
         caminho.forEach(function (p) { todosOsPontos.push(p); });
     });
 
-    // Ajusta zoom
     if (todosOsPontos.length > 0) {
         mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
     }
 
-    // Força recálculo de tamanho
-    setTimeout(function () { mapa.invalidateSize(); }, 300);
+    setTimeout(function () { mapa.invalidateSize(); }, 400);
 };
 
 window.enviarMensagemGeral = async function () {
     var input = document.getElementById('msg-input');
 
-    // Validação 1: cliente selecionado
     if (!window.AppRDO || !window.AppRDO.clienteId) {
         window.exibirModalValidacao('Selecione um cliente na lista primeiro.');
         return;
     }
 
-    // Validação 2: campo de mensagem preenchido
     if (!input || !input.value.trim()) {
         window.marcarCampoInvalido();
-        window.exibirModalValidacao('Por favor, digite os dados do pedido.');
         return;
     }
 
-    // Validação 3: cliente online (se bot master ativo)
     if (window.AppRDO.isMasterOn) {
         var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
             return String(c.id) === String(window.AppRDO.clienteId);
@@ -1125,99 +1098,7 @@ window.enviarMensagemGeral = async function () {
         }
     }
 
-    // Tudo validado — inicia o checkout
     await window.iniciarFluxoCheckout();
-};
-
-window.renderizarFooterResumo = function (resumoEl) {
-    if (!resumoEl || !window.dadosPedidoAtual) return;
-    const d = window.dadosPedidoAtual;
-    resumoEl.innerHTML = `
-        <span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>${d.distancia} km</strong></span>
-        <span class="me-3"><i class="bi bi-clock me-1"></i><strong>${d.tempo}</strong></span>
-        <span><i class="bi bi-cash me-1"></i><strong>${d.valor}</strong></span>
-    `;
-};
-
-window.renderizarMapaUnificado = function () {
-    const container = document.getElementById('mapa-container');
-    if (!container) {
-        console.error('Elemento #mapa-container não encontrado');
-        return;
-    }
-
-    // Limpa mapa anterior se existir
-    if (window._leafletMapInstance) {
-        window._leafletMapInstance.remove();
-        window._leafletMapInstance = null;
-    }
-
-    const dados = window.dadosPedidoAtual;
-    if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
-        container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
-        return;
-    }
-
-    // Cria o mapa
-    const mapa = L.map(container).setView([-19.92, -43.94], 12);
-    window._leafletMapInstance = mapa;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(mapa);
-
-    const cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    const todosOsPontos = [];
-
-    dados.coordenadas.forEach((caminho, i) => {
-        if (!caminho || caminho.length === 0) return;
-
-        const cor = cores[i % cores.length];
-
-        // Linha tracejada
-        L.polyline(caminho, {
-            color: cor,
-            weight: 4,
-            opacity: 0.8,
-            dashArray: '8, 8'
-        }).addTo(mapa);
-
-        // Marcador de origem
-        L.circleMarker(caminho[0], {
-            radius: 7,
-            color: cor,
-            fillColor: cor,
-            fillOpacity: 1
-        }).addTo(mapa).bindPopup(`<strong>Rota ${i + 1} — Origem</strong>`);
-
-        // Marcador de destino
-        L.circleMarker(caminho[caminho.length - 1], {
-            radius: 7,
-            color: cor,
-            fillColor: '#fff',
-            fillOpacity: 1,
-            weight: 3
-        }).addTo(mapa).bindPopup(`<strong>Rota ${i + 1} — Destino</strong>`);
-
-        caminho.forEach(p => todosOsPontos.push(p));
-    });
-
-    // Ajusta zoom para mostrar todas as rotas
-    if (todosOsPontos.length > 0) {
-        mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
-    }
-
-    // Força o Leaflet a recalcular o tamanho
-    setTimeout(() => mapa.invalidateSize(), 300);
-};
-
-window.voltarParaChat = function () {
-    var stepForm = document.getElementById('step-formulario');
-    var stepMapa = document.getElementById('step-mapa');
-    var stepChat = document.getElementById('step-chat');
-    if (stepForm) stepForm.classList.add('d-none');
-    if (stepMapa) stepMapa.classList.add('d-none');
-    if (stepChat) stepChat.classList.remove('d-none');
 };
 
 window.formatarTelefone = function (tel) {
@@ -1227,6 +1108,13 @@ window.formatarTelefone = function (tel) {
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
+};
+
+window.formatarTempoHumano = function (minutos) {
+    var h = Math.floor(minutos / 60);
+    var m = Math.round(minutos % 60);
+    if (h > 0) return h + 'h ' + m + 'min';
+    return m + 'min';
 };
 
 window.formatarDataSeparador = function (dataStr) {
@@ -1297,12 +1185,9 @@ window.exibirModalAviso = function (mensagem) {
 window.extrairRotasDaMensagem = function (texto) {
     var rotas = [];
     var linhas = texto.split('\n');
-
     for (var i = 0; i < linhas.length; i++) {
         var linha = linhas[i].trim();
         if (!linha) continue;
-
-        // Formato: De: ... | Para: ...  OU  De: ... → Para: ...
         var match = linha.match(/De:\s*(.+?)\s*(?:\||–|—|-|→)\s*Para:\s*(.+)/i);
         if (match) {
             rotas.push({
@@ -1311,8 +1196,6 @@ window.extrairRotasDaMensagem = function (texto) {
             });
             continue;
         }
-
-        // Formato: De: ... Para: ... (sem separador)
         var match2 = linha.match(/De:\s*(.+?)\s+Para:\s*(.+)/i);
         if (match2) {
             rotas.push({
@@ -1321,161 +1204,35 @@ window.extrairRotasDaMensagem = function (texto) {
             });
         }
     }
-
     return rotas;
 };
 
-window.buscarCoordenadasEndereco = function (endereco) {
-    return new Promise(function (resolve) {
-        var busca = endereco;
-        if (!/MG|Minas Gerais/i.test(busca)) {
-            busca += ', MG';
-        }
-        if (!/Brasil|Brazil/i.test(busca)) {
-            busca += ', Brasil';
-        }
-
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
-            encodeURIComponent(busca) + '&limit=1&countrycodes=br';
-
-        fetch(url)
-            .then(function (resp) { return resp.json(); })
-            .then(function (data) {
-                if (data && data.length > 0) {
-                    resolve({
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon)
-                    });
-                } else {
-                    console.warn('Geocodificação falhou para:', endereco);
-                    resolve(null);
-                }
-            })
-            .catch(function (err) {
-                console.error('Erro ao geocodificar:', endereco, err);
-                resolve(null);
-            });
-    });
-};
-
-window.formatarTempoHumano = function (minutos) {
-    var h = Math.floor(minutos / 60);
-    var m = Math.round(minutos % 60);
-    if (h > 0) return h + 'h ' + m + 'min';
-    return m + 'min';
-};
-
-window.renderizarFooterResumo = function (resumoEl) {
-    if (!resumoEl || !window.dadosPedidoAtual) return;
-    var d = window.dadosPedidoAtual;
-    resumoEl.innerHTML =
-        '<span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>' + d.distancia + ' km</strong></span>' +
-        '<span class="me-3"><i class="bi bi-clock me-1"></i><strong>' + d.tempo + '</strong></span>' +
-        '<span><i class="bi bi-cash me-1"></i><strong>' + d.valor + '</strong></span>';
-};
-
-window.renderizarMapaUnificado = function () {
-    var container = document.getElementById('container-mapa-visual');
-    if (!container) {
-        console.error('renderizarMapaUnificado: #container-mapa-visual não encontrado');
-        return;
-    }
-
-    // Limpa mapa anterior
-    if (window._leafletMapInstance) {
-        try { window._leafletMapInstance.remove(); } catch (e) { /* ok */ }
-        window._leafletMapInstance = null;
-    }
-
-    // Garante que o container tenha altura
-    if (!container.style.height || container.style.height === '0px') {
-        container.style.height = '350px';
-    }
-
-    var dados = window.dadosPedidoAtual;
-    if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
-        container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
-        return;
-    }
-
-    // Verifica se Leaflet está disponível
-    if (typeof L === 'undefined') {
-        console.error('Leaflet (L) não está carregado!');
-        container.innerHTML = '<p class="text-center text-danger p-4">Erro: Leaflet não carregado.</p>';
-        return;
-    }
-
-    var mapa = L.map(container).setView([-19.92, -43.94], 12);
-    window._leafletMapInstance = mapa;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(mapa);
-
-    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    var todosOsPontos = [];
-
-    var criarIcone = function (emoji) {
-        return L.divIcon({
-            html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
-            className: 'custom-div-icon',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
-        });
-    };
-
-    dados.coordenadas.forEach(function (caminho, i) {
-        if (!caminho || caminho.length === 0) return;
-        var cor = cores[i % cores.length];
-
-        // Linha da rota
-        L.polyline(caminho, {
-            color: cor,
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '10, 8'
-        }).addTo(mapa);
-
-        // Marcador de origem
-        if (i === 0) {
-            L.marker(caminho[0], { icon: criarIcone('🏁') })
-                .addTo(mapa)
-                .bindPopup('<strong>Origem</strong>');
-        }
-
-        // Marcador de destino ou parada
-        if (i === dados.coordenadas.length - 1) {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') })
-                .addTo(mapa)
-                .bindPopup('<strong>Destino Final</strong>');
-        } else {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') })
-                .addTo(mapa)
-                .bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
-        }
-
-        caminho.forEach(function (p) { todosOsPontos.push(p); });
-    });
-
-    if (todosOsPontos.length > 0) {
-        mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
-    }
-
-    setTimeout(function () { mapa.invalidateSize(); }, 400);
+window.voltarParaChat = function () {
+    var stepForm = document.getElementById('step-formulario');
+    var stepMapa = document.getElementById('step-mapa');
+    var stepChat = document.getElementById('step-chat');
+    if (stepForm) stepForm.classList.add('d-none');
+    if (stepMapa) stepMapa.classList.add('d-none');
+    if (stepChat) stepChat.classList.remove('d-none');
 };
 
 window.calcularTudo = function () {
-    var distancia = parseFloat(document.getElementById('p-distancia')?.value) || 0;
-    var valorKm = parseFloat(document.getElementById('p-valor-km')?.value) || 0;
-    var retorno = parseFloat(document.getElementById('p-retorno')?.value) || 0;
-    var dinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
-    var prioridade = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
+    var elDist = document.getElementById('p-distancia');
+    var elVkm = document.getElementById('p-valor-km');
+    var elRet = document.getElementById('p-retorno');
+    var elDin = document.getElementById('p-dinamica');
+    var elPri = document.getElementById('p-prioridade');
+
+    var distancia = parseFloat(elDist ? elDist.value : 0) || 0;
+    var valorKm = parseFloat(elVkm ? elVkm.value : 0) || 0;
+    var retorno = parseFloat(elRet ? elRet.value : 0) || 0;
+    var dinamica = parseFloat(elDin ? elDin.value : 0) || 0;
+    var prioridade = parseFloat(elPri ? elPri.value : 0) || 0;
 
     var base = distancia * valorKm;
     var comRetorno = base + (base * retorno);
     var total = comRetorno + dinamica + prioridade;
 
-    // Valor mínimo
     if (total > 0 && total < 10) total = 10;
 
     var viewEl = document.getElementById('view-valor-final');
@@ -1483,7 +1240,6 @@ window.calcularTudo = function () {
         viewEl.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    // Atualiza no objeto global
     if (window.dadosPedidoAtual) {
         window.dadosPedidoAtual.valorFinal = total;
     }
@@ -1493,12 +1249,10 @@ window.preencherDadosFormulario = function () {
     var d = window.dadosPedidoAtual;
     if (!d) return;
 
-    // ── Nome do cliente (vem da conversa selecionada) ──
     var headerCliente = document.getElementById('header-nome-cliente');
     if (headerCliente) {
         var nomeCliente = d.cliente
-            || window.AppRDO?.clienteSelecionado
-            || window.AppRDO?.nomeClienteSelecionado
+            || (window.AppRDO ? window.AppRDO.clienteSelecionado : null)
             || localStorage.getItem('clienteSelecionadoNome')
             || 'Não identificado';
         headerCliente.innerText = nomeCliente;
@@ -1511,7 +1265,6 @@ window.preencherDadosFormulario = function () {
     if (el('p-distancia')) el('p-distancia').value = d.distancia || '';
     if (el('p-tempo')) el('p-tempo').value = d.tempo || '';
 
-    // Monta as rotas no textarea
     if (el('p-rotas') && d.rawInput) {
         var rotas = window.extrairRotasDaMensagem(d.rawInput);
         var textoRotas = rotas.map(function (r, i) {
@@ -1520,11 +1273,35 @@ window.preencherDadosFormulario = function () {
         el('p-rotas').value = textoRotas;
     }
 
-    // Horário atual
     if (el('p-horario') && !el('p-horario').value) {
         var agora = new Date();
         el('p-horario').value = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
+};
+
+window.validarFormularioCheckout = function () {
+    var ids = ['p-solicitante', 'p-mercadoria', 'p-rotas'];
+    var valido = true;
+    var primeiroCampoInvalido = null;
+
+    for (var i = 0; i < ids.length; i++) {
+        var campo = document.getElementById(ids[i]);
+        if (!campo) continue;
+        campo.style.border = '';
+        campo.style.boxShadow = '';
+        var valor = (campo.value || '').trim();
+        if (!valor) {
+            window.marcarCampoFormInvalido(campo);
+            valido = false;
+            if (!primeiroCampoInvalido) primeiroCampoInvalido = campo;
+        }
+    }
+
+    if (primeiroCampoInvalido) {
+        primeiroCampoInvalido.focus();
+    }
+
+    return valido;
 };
 
 window.iniciarFluxoCheckout = function () {
@@ -1532,11 +1309,7 @@ window.iniciarFluxoCheckout = function () {
     var texto = msgInput ? (msgInput.value || '').trim() : '';
 
     if (!texto) {
-        if (typeof window.exibirModalAviso === 'function') {
-            window.exibirModalAviso('Por favor, digite os dados do pedido.');
-        } else {
-            alert('Por favor, digite os dados do pedido.');
-        }
+        window.marcarCampoInvalido();
         return;
     }
 
@@ -1549,27 +1322,15 @@ window.iniciarFluxoCheckout = function () {
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
-        if (typeof window.exibirModalAviso === 'function') {
-            window.exibirModalAviso("Nenhuma rota encontrada.\nUse o formato:\nDe: Origem | Para: Destino");
-        } else {
-            alert("Nenhuma rota encontrada.\nUse: De: Origem | Para: Destino");
-        }
+        window.exibirModalValidacao('Nenhuma rota encontrada.<br>Use o formato: <strong>De: Origem | Para: Destino</strong>');
         return;
     }
 
-    // Carrega o modal do mapa
     window.loadModal('mapa_clientes.html').then(function (carregou) {
-        if (!carregou) {
-            console.error('Falha ao carregar mapa_clientes.html');
-            alert('Erro ao carregar modal do mapa. Verifique se o arquivo existe em pages/chat/mapa_clientes.html');
-            return;
-        }
+        if (!carregou) return;
 
         var modalEl = document.getElementById('modalMapa');
-        if (!modalEl) {
-            console.error('#modalMapa não encontrado após loadModal');
-            return;
-        }
+        if (!modalEl) return;
 
         var modal = new bootstrap.Modal(modalEl);
 
@@ -1581,7 +1342,6 @@ window.iniciarFluxoCheckout = function () {
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (resumoEl) resumoEl.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Calculando rotas...';
 
-            // Renderiza lista de rotas
             if (listaRotasEl) {
                 listaRotasEl.innerHTML = rotasExtraidas.map(function (r, i) {
                     return '<div class="d-flex align-items-center px-3 py-2 ' + (i > 0 ? 'border-top' : '') + '">' +
@@ -1592,7 +1352,6 @@ window.iniciarFluxoCheckout = function () {
                 }).join('');
             }
 
-            // Calcula rotas via OSRM
             var kmTotal = 0;
             var minTotal = 0;
             var listaCaminhos = [];
@@ -1605,11 +1364,7 @@ window.iniciarFluxoCheckout = function () {
                 ]).then(function (coords) {
                     var p1 = coords[0];
                     var p2 = coords[1];
-
-                    if (!p1 || !p2) {
-                        console.warn('Coordenadas não encontradas para rota:', rota);
-                        return;
-                    }
+                    if (!p1 || !p2) return;
 
                     var url = 'https://router.project-osrm.org/route/v1/driving/' +
                         p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
@@ -1638,8 +1393,7 @@ window.iniciarFluxoCheckout = function () {
                 window.dadosPedidoAtual = {
                     solicitante: solicitante,
                     contato: contato,
-                    cliente: window.AppRDO?.clienteSelecionado
-                        || window.AppRDO?.nomeClienteSelecionado
+                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null)
                         || localStorage.getItem('clienteSelecionadoNome')
                         || 'N/A',
                     distancia: kmArredondado.toString(),
@@ -1651,11 +1405,9 @@ window.iniciarFluxoCheckout = function () {
 
                 window.renderizarFooterResumo(resumoEl);
                 window.renderizarMapaUnificado();
-
             }).catch(function (err) {
-                console.error('Erro ao calcular rotas:', err);
                 if (resumoEl) {
-                    resumoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro: ' + err.message + '</span>';
+                    resumoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
                 }
             });
 
@@ -1670,10 +1422,7 @@ window.prosseguirParaFormulario = function () {
     if (modalMapa) modalMapa.hide();
 
     window.loadModal('form_clientes.html').then(function (carregou) {
-        if (!carregou) {
-            console.error('Falha ao carregar form_clientes.html');
-            return;
-        }
+        if (!carregou) return;
 
         var modalEl = document.getElementById('modalFormulario');
         if (!modalEl) return;
@@ -1706,10 +1455,8 @@ window.voltarParaMapa = function () {
             if (elHeader && window.dadosPedidoAtual) {
                 elHeader.innerText = window.dadosPedidoAtual.solicitante || 'Cliente';
             }
-
             var resumoEl = document.getElementById('resumo-total');
             if (resumoEl) window.renderizarFooterResumo(resumoEl);
-
             window.renderizarMapaUnificado();
         }, { once: true });
 
@@ -1717,91 +1464,272 @@ window.voltarParaMapa = function () {
     });
 };
 
-window.salvarPedidoAPI = function () {
-    var d = window.dadosPedidoAtual;
-    if (!d) {
-        alert('Nenhum dado de pedido encontrado.');
+window.salvarPedidoAPI = async function () {
+    // ─── 1. Validação ───
+    if (typeof window.validarFormularioCheckout === 'function' && !window.validarFormularioCheckout()) {
         return;
     }
 
-    var mercadoria = document.getElementById('p-mercadoria')?.value;
-    var obs = document.getElementById('p-obs')?.value || '';
-    var valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
-    var distancia = document.getElementById('p-distancia')?.value || d.distancia;
-    var horario = document.getElementById('p-horario')?.value || '';
-
-    if (!mercadoria) {
-        var errEl = document.getElementById('form-error-msg');
-        if (errEl) {
-            errEl.classList.remove('d-none');
-            errEl.innerText = 'Selecione a mercadoria!';
+    // ─── 2. Verificar cliente selecionado ───
+    var idCliente = window.AppRDO ? window.AppRDO.clienteId : null;
+    if (!idCliente) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Nenhum cliente selecionado',
+                text: 'Selecione um cliente na lista antes de emitir o pedido.',
+                confirmButtonColor: '#dc3545'
+            });
         }
         return;
     }
 
+    // ─── 3. Captura dos elementos ───
+    var d = window.dadosPedidoAtual || {};
+
+    var elSolicitante = document.getElementById('p-solicitante');
+    var elContato     = document.getElementById('p-contato');
+    var elHorario     = document.getElementById('p-horario');
+    var elMercadoria  = document.getElementById('p-mercadoria');
+    var elRotas       = document.getElementById('p-rotas');
+    var elRetorno     = document.getElementById('p-retorno');
+    var elPrioridade  = document.getElementById('p-prioridade');
+    var elValor       = document.getElementById('view-valor-final');
+    var elObs         = document.getElementById('p-obs');
+
+    // ─── 4. Extrair valores ───
+    var solicitante  = elSolicitante ? elSolicitante.value.trim() : (d.solicitante || '');
+    var contato      = elContato     ? elContato.value.trim()     : (d.contato || '');
+    var horario      = elHorario     ? elHorario.value.trim()     : (d.horario || '');
+    var mercadoria   = elMercadoria  ? elMercadoria.value.trim()  : (d.mercadoria || '');
+    var rotasRaw     = elRotas       ? elRotas.value.trim()       : '';
+    var observacao   = elObs         ? elObs.value.trim()         : '';
+    var valorCorrida = elValor       ? elValor.innerText.trim()   : 'R$ 0,00';
+
+    if (!observacao) observacao = 'N/A';
+
+    // ─── 5. Retorno ───
+    var retorno = 'Não';
+    if (elRetorno) {
+        var rv = (elRetorno.value || '').trim().toUpperCase();
+        if (rv === 'SIM' || rv === 'S' || rv === 'TRUE' || rv === '1') {
+            retorno = 'Sim';
+        }
+    }
+
+    // ─── 6. Prioridade ───
+    var prioridade = elPrioridade ? (elPrioridade.value || '0').trim() : '0';
+
+    // ─── 7. Extrair rotas limpas ───
+    var rotasLimpas = [];
+
+    if (d.rotas && Array.isArray(d.rotas) && d.rotas.length > 0) {
+        rotasLimpas = d.rotas.map(function (r) {
+            return {
+                de:   (r.de || '').replace(/^\d+\.\s*/, '').replace(/^De:\s*/i, '').trim(),
+                para: (r.para || '').replace(/^Para:\s*/i, '').trim()
+            };
+        });
+    } else if (rotasRaw) {
+        var linhas = rotasRaw.split('\n');
+        for (var i = 0; i < linhas.length; i++) {
+            var linha = linhas[i].trim();
+            if (!linha) continue;
+            if (/de:/i.test(linha) && /\|/.test(linha)) {
+                var partes = linha.split('|');
+                rotasLimpas.push({
+                    de:   partes[0].replace(/^De:\s*/i, '').replace(/^\d+\.\s*/, '').trim(),
+                    para: (partes[1] || '').replace(/^Para:\s*/i, '').trim()
+                });
+            }
+        }
+    }
+
+    // ─── 8. Rotas para o backend ───
+    var rotasTextoBackend = rotasLimpas.map(function (r) {
+        return 'De: ' + r.de + ' | Para: ' + r.para;
+    }).join('\n');
+
+    // ─── 9. Rotas formatadas para exibição no chat ───
+    var rotasTextoChat = rotasLimpas.map(function (r, idx) {
+        return '📍' + (idx + 1) + '. De: ' + r.de + ' | \n      Para: ' + r.para;
+    }).join('\n');
+
+    // ─── 10. Montar mensagem no formato padrão ───
+    var mensagemChat = [
+        '📦 SOLICITANTE: ' + solicitante,
+        '',
+        'N.SERVIÇO: [ID_GERADO]',
+        'SOLICITANTE: ' + solicitante + ' ',
+        'CONTATO: ' + contato + ' | HR: ' + horario,
+        '-',
+        'MERCADORIA: ' + mercadoria,
+        'RETORNO: ' + retorno,
+        '-',
+        'ROTA(s): ',
+        rotasTextoChat,
+        '-',
+        'OBSERVAÇÃO: ' + observacao,
+        valorCorrida
+    ].join('\n');
+
+    // ─── 11. Payload com id_cliente ───
     var payload = {
-        cliente: d.cliente,
-        solicitante: d.solicitante,
-        contato: d.contato,
-        mercadoria: mercadoria,
-        horario: horario,
-        distancia: distancia,
-        tempo: d.tempo,
-        rotas: document.getElementById('p-rotas')?.value || '',
-        valor: valorFinal,
-        observacao: obs,
-        status: 'pendente',
-        data: new Date().toISOString()
+        id_cliente:    idCliente,       // ← ESSENCIAL: ID do cliente selecionado
+        solicitante:   solicitante,
+        contato:       contato,
+        horario:       horario,
+        mercadoria:    mercadoria,
+        rotas_texto:   rotasTextoBackend,
+        retorno:       retorno,
+        prioridade:    prioridade,
+        valor_corrida: valorCorrida,
+        observacao:    observacao,
+        mensagem:      mensagemChat
     };
 
-    console.log('Payload do pedido:', payload);
+    console.log('📦 Payload finalizarpedido:', payload);
 
+    // ─── 12. Travar botão ───
     var btnEmitir = document.getElementById('btn-emitir-pedido');
     if (btnEmitir) {
         btnEmitir.disabled = true;
         btnEmitir.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Emitindo...';
     }
 
-    // TODO: Substitua pela URL real da sua API
-    fetch('/api/pedidos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(function (resp) {
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        return resp.json();
-    })
-    .then(function (data) {
-        console.log('Pedido salvo:', data);
+    // ─── 13. Chamada à API ───
+    try {
+        var resposta = await API.call('finalizarpedido', payload);
 
-        // Fecha o modal
-        var modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
-        if (modalForm) modalForm.hide();
+        console.log('✅ Resposta:', resposta);
 
-        // Feedback
-        if (typeof window.exibirModalAviso === 'function') {
-            window.exibirModalAviso('✅ Pedido emitido com sucesso!');
-        } else {
-            alert('Pedido emitido com sucesso!');
+        var idGerado = resposta.id || '';
+        var idChat   = resposta.id_chat || '';   // = id do cliente
+
+        // ─── 14. Fechar modal ───
+        var modalEl = document.getElementById('modalFormulario');
+        if (modalEl) {
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
         }
 
-        // Limpa input
+        // ─── 15. Montar mensagem final (com ID real) ───
+        var mensagemFinal = mensagemChat.replace('[ID_GERADO]', idGerado);
+
+        // ─── 16. Atualizar cache de mensagens (para não precisar recarregar) ───
+        var novaMsgChat = {
+            id:         idChat,
+            pedido_id:  idGerado,
+            texto:      mensagemFinal,
+            hora:       horario || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            data:       new Date().toLocaleDateString('pt-BR'),
+            finalizado: 'TRUE'
+        };
+
+        if (window.AppRDO && window.AppRDO.mensagensCache) {
+            window.AppRDO.mensagensCache.push(novaMsgChat);
+        }
+
+        // ─── 17. Atualizar cache de pedidos ───
+        var novoPedido = {
+            id:            idGerado,
+            id_chat:       idChat,
+            solicitante:   solicitante,
+            contato:       contato,
+            horario:       horario,
+            mercadoria:    mercadoria,
+            retorno:       retorno,
+            prioridade:    prioridade,
+            valor_corrida: valorCorrida,
+            motoboy:       '',
+            status:        'PENDENTE',
+            observacao:    observacao
+        };
+
+        if (window.AppRDO && window.AppRDO.pedidosCache) {
+            window.AppRDO.pedidosCache.push(novoPedido);
+        }
+
+        // ─── 18. Renderizar o balão no chat USANDO a mesma função do histórico ───
+        // Isso garante que o balão fica idêntico aos que já existem
+        var container = document.getElementById('chat-messages-container');
+        if (container) {
+            // Remover empty state se existir
+            var emptyState = container.querySelector('.chat-empty-state');
+            if (emptyState) emptyState.remove();
+
+            // Separador de data "HOJE"
+            var ultimoSeparador = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+            if (!ultimoSeparador || ultimoSeparador.textContent !== 'HOJE') {
+                var separador = document.createElement('div');
+                separador.className = 'chat-date-separator';
+                separador.innerHTML = '<span class="chat-date-badge">HOJE</span>';
+                container.appendChild(separador);
+            }
+
+            // Criar o balão EXATAMENTE como renderizarMensagens faz
+            var horaMsg = novaMsgChat.hora;
+
+            var div = document.createElement('div');
+            div.className = 'message-wrapper';
+            div.innerHTML =
+                '<div class="message-sent" data-pedido-id="' + idGerado + '" ' +
+                'onclick="window.abrirModalEdicao(\'' + idGerado + '\')">' +
+                '<div class="message-body">' + mensagemFinal.replace(/\n/g, '<br>') + '</div>' +
+                '<div class="status-icon status-pending" ' +
+                'onclick="event.stopPropagation(); window.abrirModalStatus(\'' + idGerado + '\')" ' +
+                'data-tooltip="Alterar Status">' +
+                '<i class="bi bi-arrow-repeat spinner-rotate"></i>' +
+                '</div>' +
+                '<span class="message-time">' + horaMsg + '</span>' +
+                '</div>';
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ─── 19. Limpar input ───
         var msgInput = document.getElementById('msg-input');
         if (msgInput) msgInput.value = '';
-    })
-    .catch(function (err) {
-        console.error('Erro ao salvar pedido:', err);
+
+        // ─── 20. Toast de sucesso ───
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Pedido ' + idGerado + ' Emitido!',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                customClass: { popup: 'rounded-4 shadow' }
+            });
+        }
+
+        // ─── 21. Restaurar botão ───
         if (btnEmitir) {
             btnEmitir.disabled = false;
             btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
         }
-        var errEl = document.getElementById('form-error-msg');
-        if (errEl) {
-            errEl.classList.remove('d-none');
-            errEl.innerText = 'Erro ao emitir pedido: ' + err.message;
+
+    } catch (err) {
+        console.error('❌ Erro ao emitir pedido:', err);
+
+        if (btnEmitir) {
+            btnEmitir.disabled = false;
+            btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
         }
-    });
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao emitir pedido',
+                text: err.message || 'Falha ao salvar o pedido.',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    }
 };
 
-console.log('✅ Checkout: todas as funções carregadas com sucesso.');
+
+

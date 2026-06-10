@@ -178,10 +178,17 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return { status: "error", message: "Tabela 'chat' não encontrada" };
   }
 
+  // ─── Gerar ID do pedido ───
   var idPedido = generateId(sheetPedidos, "pedidos");
-  var idChatLinha = generateId(sheetChat, "chat");
-  var idCliente = data.id_cliente || "";
 
+  // ─── ID do cliente (vem do frontend) ───
+  var idCliente = String(data.id_cliente || '').trim();
+
+  if (!idCliente) {
+    return { status: "error", message: "ID do cliente não informado" };
+  }
+
+  // ─── Parsear rotas ───
   var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
 
   var deStr = linhasRota.map(function(l) {
@@ -194,41 +201,50 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return parte ? parte.replace(/Para:/i, '').trim() : "";
   }).join(', ');
 
-  sheetPedidos.appendRow([
-    idPedido,
-    idCliente,
-    data.solicitante || "",
-    data.contato || "",
-    data.horario || "",
-    data.mercadoria || "",
-    deStr,
-    paraStr,
-    data.retorno || "",
-    data.prioridade || "N/A",
-    data.valor_corrida || "",
-    "",
-    "PENDENTE",
-    data.observacao || ""
-  ]);
-
+  // ─── Mensagem formatada ───
   var mensagemFinal = data.mensagem || "";
   mensagemFinal = mensagemFinal.replace("[ID_GERADO]", idPedido);
 
   var agora = new Date();
+  var horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  var dataStr = agora.toLocaleDateString('pt-BR');
+
+  // ─── 1. Salvar na aba CHAT ───
+  // id = ID do cliente (agrupador)
+  // pedido_id = ID do pedido (vinculo)
   sheetChat.appendRow([
-    idChatLinha,
-    idPedido,
-    mensagemFinal,
-    agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    agora.toLocaleDateString('pt-BR'),
-    "TRUE"
+    idCliente,        // id        → ID do cliente (mesmo valor de id_chat em pedidos)
+    idPedido,         // pedido_id → ID do pedido
+    mensagemFinal,    // texto
+    horaStr,          // hora
+    dataStr,          // data
+    "TRUE"            // finalizado
   ]);
 
+  // ─── 2. Salvar na aba PEDIDOS ───
+  sheetPedidos.appendRow([
+    idPedido,                   // id
+    idCliente,                  // id_chat → ID do cliente (vínculo!)
+    data.solicitante || "",     // solicitante
+    data.contato || "",         // contato
+    data.horario || "",         // horario
+    data.mercadoria || "",      // mercadoria
+    deStr,                      // de
+    paraStr,                    // para
+    data.retorno || "",         // retorno
+    data.prioridade || "N/A",   // prioridade
+    data.valor_corrida || "",   // valor_corrida
+    "",                         // motoboy (vazio)
+    "PENDENTE",                 // status
+    data.observacao || ""       // observacao
+  ]);
+
+  // ─── 3. Retornar pro frontend ───
   return {
     status: "success",
     id: idPedido,
-    id_chat: idChatLinha,
-    id_cliente: idCliente
+    id_chat: idCliente,
+    message: "Pedido e chat salvos com sucesso!"
   };
 }
 
