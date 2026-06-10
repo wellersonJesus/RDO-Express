@@ -1,15 +1,7 @@
-// ═══════════════════════════════════════════════════════════════
-// CHAVE DE SEGURANÇA
-// ═══════════════════════════════════════════════════════════════
 var SECRET_KEY = "aquieumakdjdddggjrtr";
 
-
-// ═══════════════════════════════════════════════════════════════
-// FUNÇÃO PRINCIPAL — doPost
-// ═══════════════════════════════════════════════════════════════
 function doPost(e) {
   try {
-    // 1. Validação do payload
     if (!e || !e.postData || !e.postData.contents) {
       return response({ status: "error", message: "Payload vazio" });
     }
@@ -23,22 +15,18 @@ function doPost(e) {
 
     var action = String(data.action || "").toLowerCase().trim();
 
-    // 2. Validação da action
     if (!action || action === "") {
       return response({ status: "error", message: "Nenhuma ação informada (action vazio)" });
     }
 
-    // 3. Login (não exige apiKey)
     if (action === "login") {
       return response(handleLogin(data.username, data.password));
     }
 
-    // 4. Validação da apiKey (para todas as outras ações)
     if (!data.apiKey || data.apiKey !== SECRET_KEY) {
       return response({ status: "error", message: "Acesso Negado" });
     }
 
-    // 5. Mapa de entidades — traduz o nome da action para o nome da aba
     var mapaEntidades = {
       "usuario": "usuarios",
       "usuarios": "usuarios",
@@ -56,7 +44,6 @@ function doPost(e) {
       "financeiro": "financeiro"
     };
 
-    // 6. Extrai a entidade da action (remove os verbos)
     var entity = action
       .replace("finalizar", "")
       .replace("get", "")
@@ -67,12 +54,10 @@ function doPost(e) {
       .toLowerCase()
       .trim();
 
-    // 7. Resolve o nome da aba na planilha
     var nomeAba = mapaEntidades[entity] || entity;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = getSheetCaseInsensitive(ss, nomeAba);
 
-    // 8. Verifica se a aba existe
     if (!sheet) {
       return response({
         status: "error",
@@ -80,7 +65,6 @@ function doPost(e) {
       });
     }
 
-    // 9. Roteamento por tipo de ação
     if (action === "finalizarpedido") {
       return response(handleSalvarPedidoComChat(sheet, data));
     }
@@ -101,18 +85,12 @@ function doPost(e) {
       return response(handleDelete(sheet, data.id));
     }
 
-    // 10. Nenhuma ação reconhecida
     return response({ status: "error", message: "Ação não suportada: " + action });
 
   } catch (err) {
     return response({ status: "error", message: "Erro interno no servidor: " + err.toString() });
   }
 }
-
-
-// ═══════════════════════════════════════════════════════════════
-// HANDLERS — GET, ADD, UPDATE, DELETE
-// ═══════════════════════════════════════════════════════════════
 
 function handleGet(sheet) {
   var rows = sheet.getDataRange().getValues();
@@ -192,11 +170,6 @@ function handleDelete(sheet, id) {
   return { status: "error", message: "ID não encontrado: " + id };
 }
 
-
-// ═══════════════════════════════════════════════════════════════
-// HANDLER — SALVAR PEDIDO COM CHAT
-// ═══════════════════════════════════════════════════════════════
-
 function handleSalvarPedidoComChat(sheetPedidos, data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetChat = getSheetCaseInsensitive(ss, "chat");
@@ -205,11 +178,10 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return { status: "error", message: "Tabela 'chat' não encontrada" };
   }
 
-  // 1. Gera o ID do pedido (ex: RDO000001)
   var idPedido = generateId(sheetPedidos, "pedidos");
-  var idChatUnico = generateId(sheetChat, "chat");
+  var idChatLinha = generateId(sheetChat, "chat");
+  var idCliente = data.id_cliente || "";
 
-  // 2. Processa as rotas
   var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
 
   var deStr = linhasRota.map(function(l) {
@@ -222,32 +194,29 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return parte ? parte.replace(/Para:/i, '').trim() : "";
   }).join(', ');
 
-  // 3. Grava o pedido na tabela "pedidos"
   sheetPedidos.appendRow([
-    idPedido,                  // id
-    idChatUnico,               // id_chat
-    data.solicitante || "",    // solicitante
-    data.contato || "",        // contato
-    data.horario || "",        // horario
-    data.mercadoria || "",     // mercadoria
-    deStr,                     // de
-    paraStr,                   // para
-    data.retorno || "",        // retorno
-    data.prioridade || "N/A",  // prioridade
-    data.valor_corrida || "",  // valor_corrida
-    "",                        // motoboy
-    "PENDENTE",                // status
-    data.observacao || ""      // observacao
+    idPedido,
+    idCliente,
+    data.solicitante || "",
+    data.contato || "",
+    data.horario || "",
+    data.mercadoria || "",
+    deStr,
+    paraStr,
+    data.retorno || "",
+    data.prioridade || "N/A",
+    data.valor_corrida || "",
+    "",
+    "PENDENTE",
+    data.observacao || ""
   ]);
 
-  // 4. Substitui [ID_GERADO] pelo ID REAL antes de gravar no chat
   var mensagemFinal = data.mensagem || "";
   mensagemFinal = mensagemFinal.replace("[ID_GERADO]", idPedido);
 
-  // 5. Grava na tabela "chat"
   var agora = new Date();
   sheetChat.appendRow([
-    idChatUnico,
+    idChatLinha,
     idPedido,
     mensagemFinal,
     agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -255,18 +224,13 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     "TRUE"
   ]);
 
-  // 6. Retorna o ID real e o ID do chat
   return {
     status: "success",
     id: idPedido,
-    id_chat: idChatUnico
+    id_chat: idChatLinha,
+    id_cliente: idCliente
   };
 }
-
-
-// ═══════════════════════════════════════════════════════════════
-// HANDLER — LOGIN
-// ═══════════════════════════════════════════════════════════════
 
 function handleLogin(user, pass) {
   if (!user || !pass) {
@@ -301,11 +265,6 @@ function handleLogin(user, pass) {
 
   return { status: "error", message: "Credenciais inválidas" };
 }
-
-
-// ═══════════════════════════════════════════════════════════════
-// UTILITÁRIOS
-// ═══════════════════════════════════════════════════════════════
 
 function generateId(sheet, entity) {
   var data = sheet.getDataRange().getValues();

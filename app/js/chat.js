@@ -7,7 +7,10 @@ window.AppRDO = window.AppRDO || {
     motoboyCache: [],
     pedidoEmEdicao: null,
     clienteId: null,
-    clienteSelecionado: null
+    clienteSelecionado: null,
+    clientesCache: [],
+    mensagensCache: [],
+    isMasterOn: false
 };
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
@@ -23,7 +26,7 @@ document.addEventListener('input', (e) => {
     if (e.target?.id === 'chat-search') {
         window.filtrarContatos();
     }
-    if (e.target.classList.contains('border-danger')) {
+    if (e.target.classList?.contains('border-danger')) {
         e.target.classList.remove('border', 'border-danger', 'border-2');
     }
 });
@@ -32,18 +35,6 @@ document.addEventListener('change', (e) => {
     if (e.target && e.target.closest('#modalFormulario')) {
         if (typeof window.calcularTudo === 'function') {
             window.calcularTudo();
-        }
-    }
-});
-
-document.addEventListener('click', (e) => {
-    if (e.target.closest('#sync-icon-chat')) {
-        const syncIcon = document.getElementById('sync-icon-chat');
-        if (syncIcon && !window.AppRDO.isFetching) {
-            syncIcon.classList.add('spinner-rotate');
-            window.carregarDados().finally(() => {
-                syncIcon.classList.remove('spinner-rotate');
-            });
         }
     }
 });
@@ -59,11 +50,53 @@ window.filtrarContatos = function () {
     }, 300);
 };
 
+function _setLoopBtnSpinning(containerId, spinning) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const btn = container.querySelector('.chat-loop-btn');
+    if (!btn) return;
+    spinning ? btn.classList.add('spinning') : btn.classList.remove('spinning');
+}
+
+function _mostrarChatEmptyState(texto) {
+    const container = document.getElementById('chat-messages-container');
+    if (!container) return;
+    container.innerHTML = `
+        <div id="chat-empty-state" class="chat-empty-state">
+            <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar mensagens">
+                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
+                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                </svg>
+            </div>
+            <div class="chat-empty-label">${texto}</div>
+        </div>`;
+}
+
+function _mostrarContatosEmptyState(texto) {
+    const listEl = document.getElementById('lista-contatos-chat');
+    if (!listEl) return;
+    listEl.innerHTML = `
+        <div id="contatos-empty-state" class="chat-empty-state">
+            <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar contatos">
+                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
+                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                </svg>
+            </div>
+            <div class="chat-empty-label">${texto}</div>
+        </div>`;
+}
+
 window.carregarDados = async function () {
     const listEl = document.getElementById('lista-contatos-chat');
     const iconHeader = document.getElementById('sync-icon-header');
-    const iconSearch = document.getElementById('sync-icon-search');
-    const btnSearch = document.getElementById('btn-sync-search');
     const searchInput = document.getElementById('chat-search');
 
     if (!listEl || window.AppRDO.isFetching) return;
@@ -71,9 +104,10 @@ window.carregarDados = async function () {
     window.AppRDO.isFetching = true;
 
     if (iconHeader) iconHeader.classList.add('spinner-rotate');
-    if (iconSearch) iconSearch.classList.add('spinner-rotate');
-    if (btnSearch) btnSearch.style.opacity = '0.5';
     if (searchInput) searchInput.placeholder = 'Sincronizando...';
+
+    _setLoopBtnSpinning('contatos-empty-state', true);
+    _setLoopBtnSpinning('chat-empty-state', true);
 
     try {
         const [clientes, mensagens, pedidos] = await Promise.all([
@@ -87,22 +121,43 @@ window.carregarDados = async function () {
         const listaPedidos = Array.isArray(pedidos) ? pedidos : [];
         const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
+        window.AppRDO.clientesCache = listaClientes;
+        window.AppRDO.mensagensCache = listaMensagens;
+        window.AppRDO.pedidosCache = listaPedidos;
+        window.AppRDO.isMasterOn = isMasterOn;
+
         window.renderizarLista(listaClientes, isMasterOn);
-        window.renderizarMensagens(listaMensagens, listaPedidos);
+
+        if (!window.AppRDO.clienteId && listaClientes.length > 0) {
+            const primeiro = listaClientes[0];
+            const id = String(primeiro.id || '');
+            const nome = primeiro.nome || primeiro.username || 'Sem nome';
+            const isOnline = isMasterOn && String(primeiro.status || '').toUpperCase() === 'TRUE';
+            window.selecionarEAbrir(id, nome, isOnline);
+        } else if (window.AppRDO.clienteId) {
+            const clienteAtual = listaClientes.find(c =>
+                String(c.id) === String(window.AppRDO.clienteId)
+            );
+            if (clienteAtual) {
+                const nome = clienteAtual.nome || clienteAtual.username || 'Sem nome';
+                const isOnline = isMasterOn && String(clienteAtual.status || '').toUpperCase() === 'TRUE';
+                window.abrirConversa(window.AppRDO.clienteId, nome, null, isOnline);
+            }
+        } else {
+            _mostrarChatEmptyState('Nenhum contato disponível');
+        }
 
         window.AppRDO.listaCarregada = true;
         if (searchInput) searchInput.placeholder = 'Buscar cliente...';
+
     } catch (e) {
         console.error('Erro crítico na sincronização:', e);
-        listEl.innerHTML = `
-            <div class="p-3 text-center text-danger small">
-                <i class="bi bi-exclamation-triangle"></i> Erro ao carregar dados.
-            </div>`;
+        _mostrarContatosEmptyState('Erro ao carregar dados');
     } finally {
         window.AppRDO.isFetching = false;
         if (iconHeader) iconHeader.classList.remove('spinner-rotate');
-        if (iconSearch) iconSearch.classList.remove('spinner-rotate');
-        if (btnSearch) btnSearch.style.opacity = '1';
+        _setLoopBtnSpinning('contatos-empty-state', false);
+        _setLoopBtnSpinning('chat-empty-state', false);
     }
 };
 
@@ -110,9 +165,11 @@ window.renderizarLista = function (lista, isMasterOn) {
     const listEl = document.getElementById('lista-contatos-chat');
 
     if (lista.length === 0) {
-        listEl.innerHTML = '<div class="p-3 text-center text-muted small">Nenhum contato disponível.</div>';
+        _mostrarContatosEmptyState('Nenhum contato disponível');
         return;
     }
+
+    const clienteAtivo = window.AppRDO.clienteId;
 
     listEl.innerHTML = lista.map(cliente => {
         const id = String(cliente.id || '');
@@ -120,22 +177,109 @@ window.renderizarLista = function (lista, isMasterOn) {
         const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         const statusColor = isOnline ? '#28a745' : '#adb5bd';
+        const isActive = id === String(clienteAtivo);
 
         return `
-            <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean"
+            <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ${isActive ? 'active-contact' : ''}"
                  id="item-contato-${id}"
                  onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
                 <div class="position-relative">
-                    <img src="${imagem}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
-                    <span class="position-absolute bottom-0 end-0 rounded-circle border border-white"
-                          style="width:8px; height:8px; background-color: ${statusColor};"></span>
+                    <img src="${imagem}" class="rounded-circle contact-avatar"
+                         onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                    <span class="position-absolute bottom-0 end-0 rounded-circle border border-white contact-status-dot"
+                          style="background-color: ${statusColor};"></span>
                 </div>
                 <div class="ms-2 overflow-hidden text-truncate">
                     <div class="contact-name">${nome}</div>
-                    <div class="small text-muted" style="font-size: 0.7rem;">${isOnline ? 'Online' : 'Offline'}</div>
+                    <div class="small text-muted contact-status">${isOnline ? 'Online' : 'Offline'}</div>
                 </div>
             </div>`;
     }).join('');
+};
+
+window.selecionarEAbrir = function (id, nome, isOnline) {
+    window.AppRDO.clienteId = id;
+    window.AppRDO.clienteSelecionado = nome;
+
+    document.querySelectorAll('.contact-item-clean').forEach(el => {
+        el.classList.remove('active-contact');
+    });
+
+    const itemAtivo = document.getElementById(`item-contato-${id}`);
+    if (itemAtivo) {
+        itemAtivo.classList.add('active-contact');
+    }
+
+    window.abrirConversa(id, nome, null, isOnline);
+};
+
+window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
+    const container = document.getElementById('chat-messages-container');
+    const idCliente = String(id).trim();
+
+    const nameEl = document.getElementById('chat-header-name');
+    if (nameEl) {
+        nameEl.innerText = nome;
+        nameEl.className = 'text-dark fw-bold';
+    }
+
+    container.innerHTML = `
+        <div class="chat-empty-state">
+            <div class="chat-loop-btn spinning">
+                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
+                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                </svg>
+            </div>
+            <div class="chat-empty-label">Buscando mensagens...</div>
+        </div>`;
+
+    try {
+        let todasMensagens = window.AppRDO.mensagensCache;
+        let todosPedidos = window.AppRDO.pedidosCache;
+
+        if (!todasMensagens || todasMensagens.length === 0 || !todosPedidos || todosPedidos.length === 0) {
+            const [msgs, peds] = await Promise.all([
+                API.call('getchat'),
+                API.call('getpedidos')
+            ]);
+            todasMensagens = Array.isArray(msgs) ? msgs : [];
+            todosPedidos = Array.isArray(peds) ? peds : [];
+            window.AppRDO.mensagensCache = todasMensagens;
+            window.AppRDO.pedidosCache = todosPedidos;
+        }
+
+        const pedidosDoCliente = todosPedidos.filter(p =>
+            String(p.id_chat || '').trim() === idCliente
+        );
+
+        const idsPedidosCliente = new Set(
+            pedidosDoCliente.map(p => String(p.id || '').trim())
+        );
+
+        const historico = todasMensagens.filter(m =>
+            idsPedidosCliente.has(String(m.pedido_id || '').trim())
+        );
+
+        container.innerHTML = '';
+
+        if (historico.length === 0) {
+            _mostrarChatEmptyState('Nenhum histórico encontrado');
+        } else {
+            window.renderizarMensagens(historico, todosPedidos);
+        }
+
+    } catch (e) {
+        console.error('Erro ao carregar conversa:', e);
+        container.innerHTML = `
+            <div class="chat-empty-state text-danger">
+                <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                <div class="chat-empty-label">Erro ao carregar histórico.</div>
+            </div>`;
+    }
 };
 
 window.renderizarMensagens = function (mensagens, pedidos) {
@@ -143,6 +287,11 @@ window.renderizarMensagens = function (mensagens, pedidos) {
     container.innerHTML = '';
 
     window.AppRDO.pedidosCache = pedidos;
+
+    if (!mensagens || mensagens.length === 0) {
+        _mostrarChatEmptyState('Nenhum histórico encontrado');
+        return;
+    }
 
     let ultimaData = null;
 
@@ -156,7 +305,9 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             container.appendChild(separador);
         }
 
-        const pedido = pedidos.find(p => String(p.id).trim() === String(msg.pedido_id).trim());
+        const pedido = pedidos.find(p =>
+            String(p.id).trim() === String(msg.pedido_id).trim()
+        );
         const statusBruto = String(pedido?.status || '').trim();
         const motoboyNome = String(pedido?.motoboy || '').trim();
         const horaMsg = msg.hora || '';
@@ -197,6 +348,9 @@ window.renderizarMensagens = function (mensagens, pedidos) {
 window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = null) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
+
+    const emptyState = container.querySelector('.chat-empty-state');
+    if (emptyState) emptyState.remove();
 
     const hojeLabel = 'HOJE';
     const ultimoSeparador = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
@@ -240,70 +394,9 @@ window.getIconePorStatus = function (status) {
     return '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 };
 
-window.selecionarEAbrir = function (id, nome, isOnline) {
-    window.AppRDO.clienteId = id;
-    window.AppRDO.clienteSelecionado = nome;
-    window.abrirConversa(id, nome, null, isOnline);
-};
-
-window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    const container = document.getElementById('chat-messages-container');
-    const idLimpo = String(id).replace(/\D/g, '');
-
-    const nameEl = document.getElementById('chat-header-name');
-    if (nameEl) {
-        nameEl.innerText = nome;
-        nameEl.className = 'text-dark fw-bold';
-    }
-
-    container.innerHTML = `
-        <div class="chat-status-container">
-            <i class="bi bi-search icon-status-large spinner-rotate"></i>
-            <div class="status-label-gray" style="margin-top: 10px;">Buscando mensagens...</div>
-        </div>`;
-
-    try {
-        const [todasMensagens, todosPedidos] = await Promise.all([
-            API.call('getchat'),
-            API.call('getpedidos')
-        ]);
-
-        if (!todasMensagens) throw new Error('Falha ao obter dados');
-
-        const historico = (Array.isArray(todasMensagens) ? todasMensagens : []).filter(m =>
-            String(m.jid_numero || '').trim() === idLimpo
-        );
-
-        const pedidos = Array.isArray(todosPedidos) ? todosPedidos : [];
-        window.AppRDO.pedidosCache = pedidos;
-
-        container.innerHTML = '';
-
-        if (historico.length === 0) {
-            container.innerHTML = `
-                <div class="chat-status-container">
-                    <i class="bi bi-bootstrap-reboot icon-status-large"></i>
-                    <div class="status-label-gray" style="margin-top: 10px;">Nenhum histórico encontrado.</div>
-                </div>`;
-        } else {
-            window.renderizarMensagens(historico, pedidos);
-        }
-    } catch (e) {
-        console.error('Erro ao carregar conversa:', e);
-        container.innerHTML = `
-            <div class="chat-status-container text-danger">
-                <i class="bi bi-exclamation-triangle icon-status-large"></i>
-                <div class="status-label-gray" style="margin-top: 10px;">Erro ao carregar histórico.</div>
-            </div>`;
-    }
-};
-
 window.StatusModal = (function () {
-
     let _pedidoId = null;
     let _modalBS = null;
-
-    /* ─── Helpers seguros ─── */
 
     function _el(id) {
         return document.getElementById(id) || null;
@@ -318,11 +411,8 @@ window.StatusModal = (function () {
         cls.forEach(c => {
             if (action === 'add') el.classList.add(c);
             else if (action === 'remove') el.classList.remove(c);
-            else if (action === 'toggle') el.classList.toggle(c);
         });
     }
-
-    /* ─── Reset do modal ─── */
 
     function _resetar() {
         try {
@@ -341,16 +431,14 @@ window.StatusModal = (function () {
                 select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
                 select.style.borderColor = '#ddd';
             }
-        } catch (_) { /* silencioso */ }
+        } catch (_) {}
     }
-
-    /* ─── Carregar motoboys do API ─── */
 
     async function _carregarMotoboys() {
         const select = _el('select-motoboy');
         if (!select) return;
 
-        select.innerHTML = '<option value="" disabled selected>⏳ Carregando...</option>';
+        select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
 
         try {
             const todos = await API.call('getcolaboradores');
@@ -367,8 +455,8 @@ window.StatusModal = (function () {
                     '<option value="" disabled selected>Selecione o motoboy...</option>' +
                     motoboys.map(m => {
                         const nome = String(m.username || m.nome || 'Sem nome');
-                        const id = String(m.id || '');
-                        return `<option value="${id}">${nome}</option>`;
+                        const mid = String(m.id || '');
+                        return `<option value="${mid}">${nome}</option>`;
                     }).join('');
             } else {
                 select.innerHTML = '<option value="" disabled selected>Nenhum motoboy disponível</option>';
@@ -377,8 +465,6 @@ window.StatusModal = (function () {
             select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
         }
     }
-
-    /* ─── Spinner no ícone de status (dentro do chat) ─── */
 
     function _setSpinnerNoBotao(pedidoId) {
         try {
@@ -391,10 +477,8 @@ window.StatusModal = (function () {
             _safeClass(iconEl, 'remove', 'status-updated');
             _safeClass(iconEl, 'add', 'status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        } catch (_) { /* silencioso */ }
+        } catch (_) {}
     }
-
-    /* ─── Ícone final após resposta da API ─── */
 
     function _setIconeFinal(pedidoId, status, motoboyNome) {
         try {
@@ -415,33 +499,26 @@ window.StatusModal = (function () {
             const tooltip = motoboyNome ? `${motoboyNome} • ${statusLabel}` : statusLabel;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        } catch (_) { /* silencioso */ }
+        } catch (_) {}
     }
-
-    /* ─── Atualizar cache local de pedidos (AppRDO) ─── */
 
     function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
         try {
             const cache = window.AppRDO?.pedidosCache;
             if (!Array.isArray(cache)) return;
-
             const pedido = cache.find(
                 p => String(p.id || '').trim() === String(pedidoId || '').trim()
             );
             if (!pedido) return;
-
             pedido.status = statusFormatado;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        } catch (_) { /* silencioso */ }
+        } catch (_) {}
     }
-
-    /* ─── Executar alteração de status (core) ─── */
 
     async function _executarAlteracao(status, motoboyId) {
         let motoboyNome = '';
         let statusFormatado = String(status || '');
 
-        // ── Extrair nome do motoboy com segurança ──
         try {
             if (motoboyId) {
                 const select = _el('select-motoboy');
@@ -453,18 +530,14 @@ window.StatusModal = (function () {
             motoboyNome = '';
         }
 
-        // ── Montar status formatado ──
         if (motoboyNome) {
             statusFormatado = `${motoboyNome}/${status}`;
         }
 
-        // ── Feedback visual: spinner ──
         _setSpinnerNoBotao(_pedidoId);
 
-        // ── Fechar modal ──
-        try { _modalBS?.hide(); } catch (_) { /* silencioso */ }
+        try { _modalBS?.hide(); } catch (_) {}
 
-        // ── Chamada à API ──
         try {
             const payload = {
                 id: String(_pedidoId || ''),
@@ -475,28 +548,20 @@ window.StatusModal = (function () {
             const resposta = await API.call('updatepedido', payload);
 
             if (resposta?.status === 'success') {
-                // ✅ Atualiza cache do chat (AppRDO)
                 _atualizarCache(_pedidoId, statusFormatado, motoboyNome);
-
-                // ✅ Atualiza ícone no chat
                 _setIconeFinal(_pedidoId, status, motoboyNome);
 
-                // ✅ Sincroniza com a aba de pedidos (RDO_PEDIDOS)
                 try {
                     if (typeof window.RDO_PEDIDOS?.atualizarStatusLocal === 'function') {
                         window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
                     }
-                } catch (_) { /* silencioso — aba pode não estar carregada */ }
-
+                } catch (_) {}
             } else {
                 throw new Error(resposta?.message || 'Falha na API');
             }
 
         } catch (e) {
-            // ❌ Restaura ícone neutro no chat
             _setIconeFinal(_pedidoId, '', '');
-
-            // ❌ Exibe alerta de erro
             try {
                 Swal.fire({
                     icon: 'error',
@@ -511,8 +576,6 @@ window.StatusModal = (function () {
             }
         }
     }
-
-    /* ─── Abrir modal de status ─── */
 
     function abrir(pedidoId) {
         try {
@@ -563,8 +626,6 @@ window.StatusModal = (function () {
         }
     }
 
-    /* ─── Processar escolha de status ─── */
-
     function processar(status) {
         try {
             if (status === 'EM_ROTA') {
@@ -600,7 +661,7 @@ window.StatusModal = (function () {
             const cfg = opcoes[status];
             if (!cfg) return;
 
-            try { _modalBS?.hide(); } catch (_) { /* silencioso */ }
+            try { _modalBS?.hide(); } catch (_) {}
 
             Swal.fire({
                 icon: cfg.icone,
@@ -617,14 +678,12 @@ window.StatusModal = (function () {
                 if (result.isConfirmed) {
                     await _executarAlteracao(status);
                 }
-            }).catch(() => { /* Swal fechado sem ação */ });
+            }).catch(() => {});
 
         } catch (e) {
             console.warn('StatusModal.processar — erro:', e);
         }
     }
-
-    /* ─── Confirmar motoboy selecionado ─── */
 
     async function confirmarMotoboy() {
         try {
@@ -652,13 +711,9 @@ window.StatusModal = (function () {
         }
     }
 
-    /* ─── Voltar para tela inicial do modal ─── */
-
     function voltar() {
         _resetar();
     }
-
-    /* ─── API Pública ─── */
 
     return { abrir, processar, confirmarMotoboy, voltar };
 
@@ -1082,7 +1137,7 @@ window.salvarPedidoAPI = async function () {
 
         var resp = await API.call('finalizarpedido', {
             action: 'finalizarpedido',
-            id_chat: String(window.AppRDO.clienteId),
+            id_cliente: String(window.AppRDO.clienteId),
             solicitante: getVal('p-solicitante'),
             contato: getVal('p-contato'),
             horario: getVal('p-horario'),
@@ -1161,19 +1216,40 @@ window.formatarTelefone = function (tel) {
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
 
-    const partes = String(dataStr).split('/');
-    if (partes.length !== 3) return null;
+    const raw = String(dataStr);
 
-    const dataMsg = new Date(partes[2], partes[1] - 1, partes[0]);
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    dataMsg.setHours(0, 0, 0, 0);
+    if (raw.includes('T') || raw.includes('-')) {
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const ano = d.getFullYear();
 
-    const diffDias = Math.floor((hoje - dataMsg) / (1000 * 60 * 60 * 24));
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            d.setHours(0, 0, 0, 0);
 
-    if (diffDias === 0) return 'HOJE';
-    if (diffDias === 1) return 'ONTEM';
-    return dataStr;
+            const diffDias = Math.floor((hoje - d) / (1000 * 60 * 60 * 24));
+            if (diffDias === 0) return 'HOJE';
+            if (diffDias === 1) return 'ONTEM';
+            return `${dia}/${mes}/${ano}`;
+        }
+    }
+
+    const partes = raw.split('/');
+    if (partes.length === 3) {
+        const dataMsg = new Date(partes[2], partes[1] - 1, partes[0]);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        dataMsg.setHours(0, 0, 0, 0);
+
+        const diffDias = Math.floor((hoje - dataMsg) / (1000 * 60 * 60 * 24));
+        if (diffDias === 0) return 'HOJE';
+        if (diffDias === 1) return 'ONTEM';
+        return raw;
+    }
+
+    return raw;
 };
 
 window.exibirErro = function (erro, contexto = 'Erro desconhecido') {

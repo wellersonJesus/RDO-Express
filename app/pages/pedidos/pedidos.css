@@ -139,3 +139,72 @@
     font-weight: 500;
     color: #666;
 }
+
+.pedido-id-label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #dc3545;
+  letter-spacing: 0.3px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 50px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.bg-status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.bg-status-route {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.bg-status-done {
+  background: #d4edda;
+  color: #155724;
+}
+
+.bg-status-cancel {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.bg-status-default {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.spinner-rotate {
+  animation: spin-loop 0.8s linear infinite;
+}
+
+@keyframes spin-loop {
+  to { transform: rotate(360deg); }
+}
+
+.dropdown-filtro-wrapper .dropdown-menu {
+  overflow: visible !important;
+  z-index: 1055 !important;
+}
+
+#corpo-tabela-pedidos tr {
+  transition: background 0.15s ease;
+}
+
+#corpo-tabela-pedidos tr:hover {
+  background: #fdf2f3;
+}
+
+.card {
+  overflow: visible !important;
+}

@@ -17,10 +17,45 @@
     --borda-msg: #e1e1e1;
     --icone-tamanho: 1.8rem;
     --icone-circulo: 40px;
+    --loop-stroke: #adb5bd;
+    --loop-stroke-hover: #dc3545;
+    --loop-label-color: #adb5bd;
 }
 
 /* ==========================================================================
-   2. ESTRUTURA DE CONTATOS
+   2. LAYOUT — CARDS PRINCIPAIS
+   ========================================================================== */
+.card-contatos {
+    height: 600px;
+}
+
+.card-chat {
+    height: 600px;
+}
+
+.chat-subtitle {
+    font-size: 0.75rem;
+}
+
+.btn-header-sync {
+    width: 31px;
+    height: 31px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-header-sync i {
+    font-size: 0.9rem;
+}
+
+.chat-textarea {
+    resize: none;
+}
+
+/* ==========================================================================
+   3. ESTRUTURA DE CONTATOS
    ========================================================================== */
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
@@ -42,15 +77,27 @@
 
 .contact-name {
     font-weight: 500 !important;
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     color: #333;
 }
 
+.contact-status {
+    font-size: 0.7rem;
+}
+
+.contact-avatar {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+}
+
+.contact-status-dot {
+    width: 8px;
+    height: 8px;
+}
+
 /* ==========================================================================
-   3. SEPARADOR DE DATA — ESTILO WHATSAPP
-   ========================================================================== */
-/* ==========================================================================
-   3. SEPARADOR DE DATA — ESTILO CLEAN
+   4. SEPARADOR DE DATA — ESTILO CLEAN
    ========================================================================== */
 .chat-date-separator {
     display: flex;
@@ -74,7 +121,7 @@
 }
 
 /* ==========================================================================
-   4. MENSAGENS — FUNDO BRANCO, LAYOUT LIMPO
+   5. MENSAGENS — FUNDO BRANCO, LAYOUT LIMPO
    ========================================================================== */
 .message-wrapper {
     position: relative;
@@ -122,7 +169,6 @@
     color: var(--cor-texto);
 }
 
-/* Hora da mensagem — canto inferior direito */
 .message-time {
     position: absolute;
     bottom: 6px;
@@ -134,7 +180,296 @@
 }
 
 /* ==========================================================================
-   5. ÍCONE DE STATUS — PÉ ESQUERDO, FORA DO CORPO, SEM BACKGROUND
+   6. ÍCONE DE STATUS — PÉ ESQUERDO, SEM BACKGROUND
+   ========================================================================== */
+.status-icon {
+    position: absolute !important;
+    bottom: -18px !important;
+    left: 6px !important;
+    right: auto !important;
+    font-size: 1.5rem !important;
+    z-index: 10;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease;
+    line-height: 1;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+.status-icon:hover {
+    transform: scale(1.35);
+}
+
+.status-pending {
+    color: var(--cor-pendente) !important;
+}
+
+.status-updated {
+    color: inherit !important;
+}
+
+.status-updated .spinner-rotate {
+    animation: none !important;
+}
+
+/* ==========================================================================
+   7. TOOLTIP NO ÍCONE — NOME DO MOTOBOY + STATUS
+   ========================================================================== */
+.status-icon[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-cor);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    z-index: 999;
+    letter-spacing: 0.2px;
+}
+
+.status-icon[data-tooltip]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--tooltip-bg);
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* ==========================================================================
+   8. BOTÕES DE LOOP SVG — ESTILO WHATSAPP
+   ========================================================================== */
+.chat-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    padding: 20px;
+}
+
+.chat-empty-label {
+    font-size: 0.78rem;
+    color: var(--loop-label-color);
+    margin-top: 10px;
+    font-weight: 400;
+    user-select: none;
+}
+
+.chat-loop-btn {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-loop-btn:hover {
+    transform: scale(1.12);
+}
+
+.chat-loop-btn svg {
+    stroke: var(--loop-stroke);
+    transition: stroke 0.2s ease;
+}
+
+.chat-loop-btn:hover svg {
+    stroke: var(--loop-stroke-hover);
+}
+
+.chat-loop-btn.spinning svg {
+    animation: spin-loop-svg 0.8s linear infinite;
+    stroke: var(--loop-stroke-hover);
+}
+
+@keyframes spin-loop-svg {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   9. LOADING E SPINNER GENÉRICO
+   ========================================================================== */
+.chat-status-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    padding: 20px;
+}
+
+.icon-status-large {
+    font-size: 3.5rem !important;
+    color: var(--vermelho-rdo) !important;
+    display: inline-block;
+}
+
+.spinner-rotate {
+    animation: rotate 1s linear infinite !important;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.status-label-gray {
+    font-size: 0.85rem !important;
+    color: var(--cor-pendente) !important;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   10. FUNDO DO CHAT — ESTILO WHATSAPP
+   ========================================================================== */
+.whatsapp-bg {
+    background-color: var(--bg-chat) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6cfc4' fill-opacity='0.15'%3E%3Cpath d='M20 0L0 20h10L20 10V0zm0 80L0 60h10l10-10v10h10L20 80zm60-80L60 20h10l10-10V0zM80 80L60 60h10l10-10v10H80z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ==========================================================================
+   11. MODAL STATUS — ESTILOS
+   ========================================================================== */
+.modal-status-content {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.modal-status-header {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-status-title {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.btn-status-emrota {
+    background: #e7f1ff;
+    color: #0d6efd;
+    border: 1px solid #cce5ff;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px;
+}
+
+.btn-status-emrota:hover {
+    background: #d1e7fd;
+    color: #0d6efd;
+}
+
+.btn-status-concluido {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px;
+}
+
+.btn-status-concluido:hover {
+    background: #c3e6cb;
+    color: #155724;
+}
+
+.btn-status-cancelado {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #dc3545;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px;
+}
+
+.btn-status-cancelado:hover {
+    background: #f1b0b7;
+    color: #721c24;
+}
+
+.label-motoboy {
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.select-motoboy {
+    font-size: 0.85rem;
+    border-radius: 8px;
+    border-color: #ddd;
+}
+
+.btn-motoboy-voltar {
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.btn-motoboy-voltar:hover {
+    background: #e5e5e5;
+    color: #555;
+}
+
+.btn-motoboy-confirmar {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.btn-motoboy-confirmar:hover {
+    background: #c82333;
+    color: #fff;
+}
+
+/* ==========================================================================
+   12. MODAL MENSAGEM PADRÃO
+   ========================================================================== */
+.textarea-modelo {
+    font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   13. BOTÕES DE STATUS (OPÇÕES)
    ========================================================================== */
 .btn-status-option {
     display: flex;
@@ -171,148 +506,12 @@
     flex-shrink: 0;
 }
 
-.status-icon {
-    position: absolute !important;
-    bottom: -18px !important;
-    left: 6px !important;
-    right: auto !important;
-    font-size: 1.5rem !important;
-    z-index: 10;
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    transition: transform 0.2s ease;
-    line-height: 1;
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    width: auto !important;
-    height: auto !important;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
-}
-
-.status-icon:hover {
-    transform: scale(1.35);
-}
-
-/* Aguardando — cinza */
-.status-pending {
-    color: var(--cor-pendente) !important;
-}
-
-/* Atualizado — herda cor do ícone */
-.status-updated {
-    color: inherit !important;
-}
-
-.status-updated .spinner-rotate {
-    animation: none !important;
-}
-
 /* ==========================================================================
-   6. TOOLTIP NO ÍCONE — NOME DO MOTOBOY + STATUS
-   ========================================================================== */
-.status-icon[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-cor);
-    font-size: 0.72rem;
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 6px;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    pointer-events: none;
-    z-index: 999;
-    letter-spacing: 0.2px;
-}
-
-.status-icon[data-tooltip]:hover::before {
-    content: '';
-    position: absolute;
-    bottom: calc(100% + 2px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: var(--tooltip-bg);
-    pointer-events: none;
-    z-index: 999;
-}
-
-/* ==========================================================================
-   7. LOADING, BUSCA E ERRO
-   ========================================================================== */
-.chat-status-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    width: 100%;
-    text-align: center;
-    padding: 20px;
-}
-
-.icon-status-large {
-    font-size: 3.5rem !important;
-    color: var(--vermelho-rdo) !important;
-    display: inline-block;
-}
-
-.spinner-rotate {
-    animation: rotate 1s linear infinite !important;
-}
-
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.status-label-gray {
-    font-size: 0.85rem !important;
-    color: var(--cor-pendente) !important;
-    margin-top: 10px;
-    font-weight: 500;
-}
-
-/* ==========================================================================
-   8. FUNDO DO CHAT — ESTILO WHATSAPP
-   ========================================================================== */
-.whatsapp-bg {
-    background-color: var(--bg-chat) !important;
-    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6cfc4' fill-opacity='0.15'%3E%3Cpath d='M20 0L0 20h10L20 10V0zm0 80L0 60h10l10-10v10h10L20 80zm60-80L60 20h10l10-10V0zM80 80L60 60h10l10-10v10H80z'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* ==========================================================================
-   9. BOTÕES — UTILITÁRIOS
+   14. BOTÕES GERAIS — UTILITÁRIOS
    ========================================================================== */
 .btn-danger {
     background-color: var(--vermelho-rdo) !important;
     border-color: var(--vermelho-rdo) !important;
-}
-
-.btn-status-option {
-    background-color: #e7f1ff;
-    color: #0d6efd;
-    border: 1px solid #cce5ff;
-    transition: 0.3s;
-    font-weight: 500;
-}
-
-.btn-status-option:hover {
-    background-color: #d1e7fd;
 }
 
 .btn-confirm-status {
@@ -332,7 +531,7 @@
 }
 
 /* ==========================================================================
-   10. SCROLLBAR — ESTILO WHATSAPP
+   15. SCROLLBAR — ESTILO WHATSAPP
    ========================================================================== */
 #chat-messages-container::-webkit-scrollbar {
     width: 6px;
@@ -351,10 +550,32 @@
     background-color: rgba(0, 0, 0, 0.35);
 }
 
+#lista-contatos-chat::-webkit-scrollbar {
+    width: 5px;
+}
+
+#lista-contatos-chat::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#lista-contatos-chat::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 5px;
+}
+
+#lista-contatos-chat::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
 /* ==========================================================================
-   11. RESPONSIVIDADE
+   16. RESPONSIVIDADE
    ========================================================================== */
 @media (max-width: 768px) {
+
+    .card-contatos,
+    .card-chat {
+        height: 500px;
+    }
 
     .message-sent,
     .message-received {
@@ -363,11 +584,8 @@
     }
 
     .status-icon {
-        width: 34px;
-        height: 34px;
         font-size: 1.5rem !important;
         bottom: -16px !important;
-        right: 8px !important;
     }
 
     .message-body {
@@ -377,5 +595,14 @@
     .chat-date-badge {
         font-size: 0.7rem;
         padding: 4px 12px;
+    }
+
+    .chat-loop-btn svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .chat-empty-label {
+        font-size: 0.72rem;
     }
 }

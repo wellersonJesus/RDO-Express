@@ -1,0 +1,95 @@
+<!-- Modal Detalhes -->
+<div class="modal fade" id="modalPedidoDetalhes" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Detalhes</h5>
+                <div class="mt-1 text-muted small">
+                    Serviço: <span id="detalhe-titulo" class="fw-bold text-dark">—</span>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="text-muted small">N.SERVIÇO</label>
+                        <input type="text" id="det-pedido-id" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="text-muted small">Cliente</label>
+                        <input type="text" id="det-cliente" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">CONTATO</label>
+                        <input type="text" id="det-contato" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">SOLICITANTE</label>
+                        <input type="text" id="det-solicitante" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">MOTOBOY</label>
+                        <input type="text" id="det-motoboy" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">STATUS</label>
+                        <input type="text" id="det-status" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">MERCADORIA</label>
+                        <input type="text" id="det-mercadoria" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">ROTA (DE)</label>
+                        <textarea id="det-de" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">ROTA (PARA)</label>
+                        <textarea id="det-para" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">RETORNO</label>
+                        <input type="text" id="det-retorno" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-muted small">HORÁRIO</label>
+                        <input type="text" id="det-horario" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-muted small">PRIORIDADE</label>
+                        <input type="text" id="det-prioridade" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-muted small">VALOR</label>
+                        <input type="text" id="det-valor" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-muted small">ID CHAT</label>
+                        <input type="text" id="det-id-chat" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                    <div class="col-12">
+                        <label class="text-muted small">OBSERVAÇÃO</label>
+                        <input type="text" id="det-obs" class="form-control form-control-sm border-0 bg-light" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Editar Pedido</h5>
+                <div id="edit-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
+                <div class="mt-1 text-muted small">
+                    Serviço: <span id="editar-titulo" class="fw-bold text-dark">—</span>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <form id="form-editar-pedido" novalidate>
+                    <input
