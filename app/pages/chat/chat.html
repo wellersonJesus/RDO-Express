@@ -1,5 +1,5 @@
 <!-- ═══════════════════════════════════════════════════════════════
-     RDO EXPRESS — CHAT.HTML (REFATORADO — CSS SEPARADO)
+     RDO EXPRESS — CHAT.HTML (REFATORADO v3 — LIMPO E SEGURO)
      ═══════════════════════════════════════════════════════════════ -->
 
 <div class="row g-3 h-100">
@@ -23,7 +23,7 @@
                             <span class="text-danger">RDO</span> Express - Chat
                         </h5>
                         <small class="text-muted chat-subtitle">
-                            Gestão de Pedidos em Tempo Real
+                            Gestão de Pedidos ...
                         </small>
                     </div>
                 </div>
@@ -47,14 +47,12 @@
                     </span>
                     <input type="text" id="chat-search"
                         class="form-control border-0 bg-transparent shadow-none"
-                        placeholder="Buscar cliente..."
-                        autocomplete="off">
+                        placeholder="Buscar cliente..." autocomplete="off">
                 </div>
             </div>
 
             <!-- Lista de contatos -->
             <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
-                <!-- Estado inicial -->
                 <div id="contatos-empty-state" class="chat-empty-state">
                     <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar contatos">
                         <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
@@ -91,7 +89,6 @@
                 <!-- Corpo das mensagens -->
                 <div id="chat-messages-container"
                     class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
-                    <!-- Estado inicial -->
                     <div id="chat-empty-state" class="chat-empty-state">
                         <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar mensagens">
                             <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
@@ -111,10 +108,9 @@
                     <div class="input-group bg-light rounded-pill p-1">
                         <textarea id="msg-input"
                             class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea"
-                            rows="1"
-                            placeholder="Digite o pedido..."></textarea>
+                            rows="1" placeholder="Digite o pedido..."></textarea>
                         <button class="btn btn-danger rounded-pill px-3 ms-1"
-                            onclick="window.iniciarFluxoCheckout()">
+                            onclick="window.enviarMensagemGeral()">
                             <i class="bi bi-send-fill"></i>
                         </button>
                     </div>
@@ -129,6 +125,9 @@
     </div>
 
 </div>
+
+<!-- ═══ CONTAINER PARA MODAIS DINÂMICOS (mapa e formulário) ═══ -->
+<div id="modal-container"></div>
 
 <!-- ═══ MODAL STATUS ═══ -->
 <div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
@@ -200,7 +199,8 @@
             </div>
 
             <div class="modal-body">
-                <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly>📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
+                <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo"
+                    rows="12" readonly>📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
 
 SOLICITANTE: 
 CONATO: 
@@ -224,3 +224,37 @@ calcularemos á sua taxa! 🏁</textarea>
         </div>
     </div>
 </div>
+
+<!-- ═══ MODAL DE VALIDAÇÃO ═══ -->
+<div class="modal fade" id="modalValidacao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <i id="modal-validacao-icone"
+                        class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                    <h6 class="modal-title fw-bold mb-0" id="modal-validacao-titulo">Atenção</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size: 0.9rem;"></p>
+                <div id="modal-validacao-modelo" class="d-none mt-3">
+                    <textarea id="modal-validacao-textarea"
+                        class="form-control bg-light textarea-modelo" rows="12" readonly></textarea>
+                    <button class="btn btn-outline-danger w-100 rounded-pill mt-2"
+                        onclick="window.copiarModeloValidacao()">
+                        <i class="bi bi-clipboard me-1"></i> Copiar Modelo
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-danger rounded-pill px-4 w-100"
+                    data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Motor de Mapa e Rotas ═══ -->
+<script src="app/js/chat_mapa.js"></script>

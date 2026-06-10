@@ -4,9 +4,9 @@
 
             <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
                 <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Checkout</h5>
-                <!-- Mantido como d-none para não exibir nada -->
                 <div id="form-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
                 <div class="mt-1 text-muted small">
+                    <i class="bi bi-person-fill me-1"></i>
                     Cliente: <span id="header-nome-cliente" class="fw-bold text-dark">Carregando...</span>
                 </div>
             </div>
@@ -16,8 +16,7 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="text-muted small">SOLICITANTE*</label>
-                            <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light"
-                                readonly required>
+                            <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light" readonly required>
                         </div>
                         <div class="col-md-3">
                             <label class="text-muted small">CONTATO</label>
@@ -39,8 +38,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="text-muted small">DISTÂNCIA (KM)*</label>
-                            <input type="number" id="p-distancia" class="form-control form-control-sm border-0 bg-light"
-                                oninput="window.calcularTudo()" required>
+                            <input type="number" id="p-distancia" class="form-control form-control-sm border-0 bg-light" oninput="window.calcularTudo()" required>
                         </div>
                         <div class="col-md-4">
                             <label class="text-muted small">TEMPO</label>
@@ -48,13 +46,11 @@
                         </div>
                         <div class="col-12">
                             <label class="text-muted small">ROTA (DE/PARA)*</label>
-                            <textarea id="p-rotas" class="form-control form-control-sm border-0 bg-light" rows="2"
-                                required></textarea>
+                            <textarea id="p-rotas" class="form-control form-control-sm border-0 bg-light" rows="2" required></textarea>
                         </div>
                         <div class="col-md-3">
                             <label class="text-muted small">VALOR KM*</label>
-                            <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light"
-                                onchange="window.calcularTudo()" required>
+                            <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()" required>
                                 <option value="">Selecione...</option>
                                 <option value="2.02">2,02</option>
                                 <option value="2.20" selected>2,20</option>
@@ -63,16 +59,14 @@
                         </div>
                         <div class="col-md-3">
                             <label class="text-muted small">RETORNO</label>
-                            <select id="p-retorno" class="form-select form-select-sm border-0 bg-light"
-                                onchange="window.calcularTudo()">
+                            <select id="p-retorno" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
                                 <option value="0">Não</option>
                                 <option value="0.6">Sim (60%)</option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="text-muted small">DINÂMICA</label>
-                            <select id="p-dinamica" class="form-select form-select-sm border-0 bg-light"
-                                onchange="window.calcularTudo()">
+                            <select id="p-dinamica" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
                                 <option value="0">R$ 0.00</option>
                                 <option value="5">R$ 5.00</option>
                                 <option value="7">R$ 7.00</option>
@@ -82,8 +76,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="text-muted small">PRIORIDADE</label>
-                            <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light"
-                                onchange="window.calcularTudo()">
+                            <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
                                 <option value="0">Normal</option>
                                 <option value="5">Agendado</option>
                                 <option value="7">Urgente</option>
@@ -102,9 +95,12 @@
             </div>
 
             <div class="modal-footer border-0 px-4 pb-4">
-                <button class="btn btn-light" onclick="window.voltarParaMapa()">Voltar</button>
-                <button id="btn-emitir-pedido" class="btn btn-danger px-4" onclick="window.salvarPedidoAPI()">EMITIR
-                    PEDIDO</button>
+                <button class="btn btn-light" onclick="window.voltarParaMapa()">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </button>
+                <button id="btn-emitir-pedido" class="btn btn-danger px-4" onclick="window.salvarPedidoAPI()">
+                    <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
+                </button>
             </div>
         </div>
     </div>

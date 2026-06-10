@@ -1,3 +1,18 @@
+window.marcarCampoInvalido = function () {
+    var input = document.getElementById('msg-input');
+    if (!input) return;
+
+    input.style.border = '2px solid #dc3545';
+    input.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+    input.setAttribute('placeholder', '⚠️ Digite os dados do pedido aqui...');
+
+    setTimeout(function () {
+        input.style.border = '';
+        input.style.boxShadow = '';
+        input.setAttribute('placeholder', 'Digite o pedido...');
+    }, 3000);
+};
+
 window.AppRDO = window.AppRDO || {
     debounceTimer: null,
     listaCarregada: false,
@@ -15,23 +30,63 @@ window.AppRDO = window.AppRDO || {
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
-window.iniciarChat = async () => await window.carregarDados();
+function _getOrCreateModal(el, options) {
+    if (!el) return null;
+    var existing = bootstrap.Modal.getInstance(el);
+    if (existing) return existing;
+    return new bootstrap.Modal(el, options || {});
+}
 
-document.addEventListener('input', (e) => {
-    if (e.target?.id === 'p-contato') {
-        let val = e.target.value.replace(/\D/g, '');
+function _disposeModal(el) {
+    if (!el) return;
+    try {
+        var instance = bootstrap.Modal.getInstance(el);
+        if (instance) {
+            instance.hide();
+            instance.dispose();
+        }
+    } catch (_) {}
+}
+
+function _limparModalContainer() {
+    var container = document.getElementById('modal-container');
+    if (!container) return;
+    container.querySelectorAll('.modal').forEach(function (modalEl) {
+        _disposeModal(modalEl);
+    });
+    document.querySelectorAll('.modal-backdrop').forEach(function (bd) {
+        bd.remove();
+    });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+    container.innerHTML = '';
+}
+
+window.iniciarChat = async function () {
+    await window.carregarDados();
+};
+
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'p-contato') {
+        var val = e.target.value.replace(/\D/g, '');
         e.target.value = typeof window.formatarTelefone === 'function'
             ? window.formatarTelefone(val) : val;
     }
-    if (e.target?.id === 'chat-search') {
+    if (e.target && e.target.id === 'chat-search') {
         window.filtrarContatos();
     }
-    if (e.target.classList?.contains('border-danger')) {
+    if (e.target && e.target.classList && e.target.classList.contains('border-danger')) {
         e.target.classList.remove('border', 'border-danger', 'border-2');
+    }
+    if (e.target && e.target.id === 'msg-input') {
+        e.target.classList.remove('msg-input-invalido');
+        var grupo = e.target.closest('.input-group');
+        if (grupo) grupo.classList.remove('input-group-invalido');
     }
 });
 
-document.addEventListener('change', (e) => {
+document.addEventListener('change', function (e) {
     if (e.target && e.target.closest('#modalFormulario')) {
         if (typeof window.calcularTudo === 'function') {
             window.calcularTudo();
@@ -39,117 +94,296 @@ document.addEventListener('change', (e) => {
     }
 });
 
+window.MODELO_PADRAO = [
+    '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
+    '',
+    'SOLICITANTE: ',
+    'CONATO: ',
+    'HORÁRIO ESTIMADO P/ COLETA:  ',
+    'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)',
+    'ROTA(s): ',
+    '📍1. De: ... | Para: ...',
+    '📍2. De: ... | Para: ... ',
+    '📍3. De: ... | Para: ... ',
+    'RETORNO:  (SIM /NÃO)',
+    'PRIORIDADE: (Normal, Agendado, Urgente) ',
+    'OBSERVAÇÃO: Descreva a observação aqui se necessario',
+    '',
+    'Assim que enviar esta mensagem preenchida, ',
+    'calcularemos á sua taxa! 🏁'
+].join('\n');
+
+window.CAMPOS_OBRIGATORIOS_MSG = [
+    { chave: 'SOLICITANTE', regex: /(?:SOLICITANTE|NOME|CLIENTE):\s*(.+)/i },
+    { chave: 'CONTATO', regex: /(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i },
+    { chave: 'ROTA', regex: /de:\s*.+\s*\|?\s*para:\s*.+/i }
+];
+
+window.validarClienteOnline = function () {
+    if (!window.AppRDO || !window.AppRDO.clienteId) return false;
+    var cliente = window.AppRDO.clientesCache.find(function (c) {
+        return String(c.id) === String(window.AppRDO.clienteId);
+    });
+    if (!cliente) return false;
+    return window.AppRDO.isMasterOn &&
+        String(cliente.status || '').toUpperCase() === 'TRUE';
+};
+
+window.validarMensagemModelo = function (texto) {
+    if (!texto || !texto.trim()) {
+        return { valido: false, tipo: 'vazio' };
+    }
+    var temSolicitante = false;
+    var temContato = false;
+    var temRota = false;
+    var regexSolicitante = /(?:SOLICITANTE|NOME|CLIENTE)\s*:\s*(.+)/i;
+    var matchSolicitante = texto.match(regexSolicitante);
+    if (matchSolicitante && matchSolicitante[1] && matchSolicitante[1].trim().length > 0) {
+        temSolicitante = true;
+    }
+    var regexContato = /(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*(.+)/i;
+    var matchContato = texto.match(regexContato);
+    if (matchContato && matchContato[1] && matchContato[1].trim().length > 0) {
+        temContato = true;
+    }
+    var linhas = texto.split('\n');
+    var quantidadeRotas = 0;
+    for (var i = 0; i < linhas.length; i++) {
+        var linha = linhas[i].trim();
+        if (/de\s*:/i.test(linha) && /para\s*:/i.test(linha)) {
+            var valorDe = linha.match(/de\s*:\s*([^|]+)/i);
+            var valorPara = linha.match(/para\s*:\s*(.+)/i);
+            var dePreenchido = valorDe && valorDe[1] && valorDe[1].trim().length > 0 && valorDe[1].trim() !== '...';
+            var paraPreenchido = valorPara && valorPara[1] && valorPara[1].trim().length > 0 && valorPara[1].trim() !== '...';
+            if (dePreenchido && paraPreenchido) {
+                quantidadeRotas++;
+            }
+        }
+    }
+    temRota = quantidadeRotas >= 1;
+    if (temSolicitante && temContato && temRota) {
+        return { valido: true, tipo: 'ok', rotas: quantidadeRotas };
+    }
+    var faltando = [];
+    if (!temSolicitante) faltando.push('SOLICITANTE');
+    if (!temContato) faltando.push('CONTATO');
+    if (!temRota) faltando.push('ROTA (De: ... | Para: ...)');
+    return {
+        valido: false,
+        tipo: 'modelo',
+        camposPendentes: faltando
+    };
+};
+
+window.exibirModalValidacao = function (mensagem, opcoes) {
+    opcoes = opcoes || {};
+
+    // 1. Busca o modal EXCLUSIVAMENTE pelo ID correto
+    var modalEl = document.getElementById('modalValidacao');
+
+    // 2. Se o modal não existe no DOM, usa SweetAlert como fallback seguro
+    if (!modalEl) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: opcoes.icone === 'bi-check-circle-fill' ? 'success' : 'warning',
+                title: opcoes.titulo || 'Atenção',
+                html: mensagem,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Entendi'
+            });
+        } else {
+            alert(mensagem.replace(/<[^>]*>/g, ''));
+        }
+        return;
+    }
+
+    // 3. Preenche a mensagem — usa innerHTML para suportar HTML formatado
+    var msgEl = document.getElementById('modal-validacao-mensagem');
+    if (msgEl) msgEl.innerHTML = mensagem;
+
+    // 4. Ícone e título personalizáveis
+    var iconeEl = document.getElementById('modal-validacao-icone');
+    var tituloEl = document.getElementById('modal-validacao-titulo');
+    if (iconeEl) {
+        iconeEl.className = 'bi ' + (opcoes.icone || 'bi-exclamation-triangle-fill') + ' text-warning fs-4';
+    }
+    if (tituloEl) {
+        tituloEl.innerText = opcoes.titulo || 'Atenção';
+    }
+
+    // 5. Modelo (textarea) — mostra ou esconde
+    var modeloContainer = document.getElementById('modal-validacao-modelo');
+    var textareaEl = document.getElementById('modal-validacao-textarea');
+    if (opcoes.modelo && modeloContainer && textareaEl) {
+        textareaEl.value = opcoes.modelo;
+        modeloContainer.classList.remove('d-none');
+    } else if (modeloContainer) {
+        modeloContainer.classList.add('d-none');
+    }
+
+    // 6. Limpa qualquer modal aberto e backdrops órfãos
+    document.querySelectorAll('.modal.show').forEach(function (m) {
+        var inst = bootstrap.Modal.getInstance(m);
+        if (inst) {
+            try { inst.hide(); } catch (_) {}
+        }
+    });
+    document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+
+    // 7. Abre o modal correto
+    try {
+        var instanciaExistente = bootstrap.Modal.getInstance(modalEl);
+        if (instanciaExistente) {
+            try { instanciaExistente.dispose(); } catch (_) {}
+        }
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    } catch (err) {
+        console.error('exibirModalValidacao: erro ao abrir modal', err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atenção',
+                html: mensagem,
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert(mensagem.replace(/<[^>]*>/g, ''));
+        }
+    }
+};
+
+window.copiarModeloValidacao = function () {
+    var texto = document.getElementById('modal-validacao-textarea');
+    if (!texto) return;
+    texto.select();
+    document.execCommand('copy');
+    var btn = texto.nextElementSibling;
+    if (btn) {
+        var original = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Copiado!';
+        btn.classList.remove('btn-outline-danger');
+        btn.classList.add('btn-success');
+        setTimeout(function () {
+            btn.innerHTML = original;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-danger');
+        }, 2000);
+    }
+};
+
+window.limparCampoInvalido = function () {
+    var input = document.getElementById('msg-input');
+    if (!input) return;
+    input.classList.remove('msg-input-invalido');
+    var grupo = input.closest('.input-group');
+    if (grupo) grupo.classList.remove('input-group-invalido');
+    input.setAttribute('placeholder', 'Digite o pedido...');
+};
+
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
-    window.AppRDO.debounceTimer = setTimeout(() => {
-        const termo = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
-        document.querySelectorAll('.contact-item-clean').forEach(item => {
-            const nome = item.querySelector('.contact-name')?.innerText.toLowerCase() || '';
+    window.AppRDO.debounceTimer = setTimeout(function () {
+        var searchEl = document.getElementById('chat-search');
+        var termo = (searchEl ? searchEl.value : '').toLowerCase().trim();
+        document.querySelectorAll('.contact-item-clean').forEach(function (item) {
+            var nameEl = item.querySelector('.contact-name');
+            var nome = (nameEl ? nameEl.innerText : '').toLowerCase();
             item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
         });
     }, 300);
 };
 
 function _setLoopBtnSpinning(containerId, spinning) {
-    const container = document.getElementById(containerId);
+    var container = document.getElementById(containerId);
     if (!container) return;
-    const btn = container.querySelector('.chat-loop-btn');
+    var btn = container.querySelector('.chat-loop-btn');
     if (!btn) return;
     spinning ? btn.classList.add('spinning') : btn.classList.remove('spinning');
 }
 
+function _criarLoopSVG() {
+    return '<svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd" ' +
+        'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M23 4v6h-6"></path>' +
+        '<path d="M1 20v-6h6"></path>' +
+        '<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>' +
+        '<path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>' +
+        '</svg>';
+}
+
 function _mostrarChatEmptyState(texto) {
-    const container = document.getElementById('chat-messages-container');
+    var container = document.getElementById('chat-messages-container');
     if (!container) return;
-    container.innerHTML = `
-        <div id="chat-empty-state" class="chat-empty-state">
-            <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar mensagens">
-                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
-                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-                </svg>
-            </div>
-            <div class="chat-empty-label">${texto}</div>
-        </div>`;
+    container.innerHTML =
+        '<div id="chat-empty-state" class="chat-empty-state">' +
+        '<div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar mensagens">' +
+        _criarLoopSVG() +
+        '</div>' +
+        '<div class="chat-empty-label">' + texto + '</div>' +
+        '</div>';
 }
 
 function _mostrarContatosEmptyState(texto) {
-    const listEl = document.getElementById('lista-contatos-chat');
+    var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
-    listEl.innerHTML = `
-        <div id="contatos-empty-state" class="chat-empty-state">
-            <div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar contatos">
-                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
-                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-                </svg>
-            </div>
-            <div class="chat-empty-label">${texto}</div>
-        </div>`;
+    listEl.innerHTML =
+        '<div id="contatos-empty-state" class="chat-empty-state">' +
+        '<div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar contatos">' +
+        _criarLoopSVG() +
+        '</div>' +
+        '<div class="chat-empty-label">' + texto + '</div>' +
+        '</div>';
 }
 
 window.carregarDados = async function () {
-    const listEl = document.getElementById('lista-contatos-chat');
-    const iconHeader = document.getElementById('sync-icon-header');
-    const searchInput = document.getElementById('chat-search');
-
+    var listEl = document.getElementById('lista-contatos-chat');
+    var iconHeader = document.getElementById('sync-icon-header');
+    var searchInput = document.getElementById('chat-search');
     if (!listEl || window.AppRDO.isFetching) return;
-
     window.AppRDO.isFetching = true;
-
     if (iconHeader) iconHeader.classList.add('spinner-rotate');
     if (searchInput) searchInput.placeholder = 'Sincronizando...';
-
     _setLoopBtnSpinning('contatos-empty-state', true);
     _setLoopBtnSpinning('chat-empty-state', true);
-
     try {
-        const [clientes, mensagens, pedidos] = await Promise.all([
+        var results = await Promise.all([
             API.call('getclientes'),
             API.call('getchat'),
             API.call('getpedidos')
         ]);
-
-        const listaClientes = Array.isArray(clientes) ? clientes : [];
-        const listaMensagens = Array.isArray(mensagens) ? mensagens : [];
-        const listaPedidos = Array.isArray(pedidos) ? pedidos : [];
-        const isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-
+        var listaClientes = Array.isArray(results[0]) ? results[0] : [];
+        var listaMensagens = Array.isArray(results[1]) ? results[1] : [];
+        var listaPedidos = Array.isArray(results[2]) ? results[2] : [];
+        var isMasterOn = localStorage.getItem('bot_master_active') === 'true';
         window.AppRDO.clientesCache = listaClientes;
         window.AppRDO.mensagensCache = listaMensagens;
         window.AppRDO.pedidosCache = listaPedidos;
         window.AppRDO.isMasterOn = isMasterOn;
-
         window.renderizarLista(listaClientes, isMasterOn);
-
         if (!window.AppRDO.clienteId && listaClientes.length > 0) {
-            const primeiro = listaClientes[0];
-            const id = String(primeiro.id || '');
-            const nome = primeiro.nome || primeiro.username || 'Sem nome';
-            const isOnline = isMasterOn && String(primeiro.status || '').toUpperCase() === 'TRUE';
+            var primeiro = listaClientes[0];
+            var id = String(primeiro.id || '');
+            var nome = primeiro.nome || primeiro.username || 'Sem nome';
+            var isOnline = isMasterOn && String(primeiro.status || '').toUpperCase() === 'TRUE';
             window.selecionarEAbrir(id, nome, isOnline);
         } else if (window.AppRDO.clienteId) {
-            const clienteAtual = listaClientes.find(c =>
-                String(c.id) === String(window.AppRDO.clienteId)
-            );
+            var clienteAtual = listaClientes.find(function (c) {
+                return String(c.id) === String(window.AppRDO.clienteId);
+            });
             if (clienteAtual) {
-                const nome = clienteAtual.nome || clienteAtual.username || 'Sem nome';
-                const isOnline = isMasterOn && String(clienteAtual.status || '').toUpperCase() === 'TRUE';
-                window.abrirConversa(window.AppRDO.clienteId, nome, null, isOnline);
+                var nomeAtual = clienteAtual.nome || clienteAtual.username || 'Sem nome';
+                var isOnlineAtual = isMasterOn && String(clienteAtual.status || '').toUpperCase() === 'TRUE';
+                window.abrirConversa(window.AppRDO.clienteId, nomeAtual, null, isOnlineAtual);
             }
         } else {
             _mostrarChatEmptyState('Nenhum contato disponível');
         }
-
         window.AppRDO.listaCarregada = true;
         if (searchInput) searchInput.placeholder = 'Buscar cliente...';
-
     } catch (e) {
         console.error('Erro crítico na sincronização:', e);
         _mostrarContatosEmptyState('Erro ao carregar dados');
@@ -162,226 +396,198 @@ window.carregarDados = async function () {
 };
 
 window.renderizarLista = function (lista, isMasterOn) {
-    const listEl = document.getElementById('lista-contatos-chat');
-
+    var listEl = document.getElementById('lista-contatos-chat');
+    if (!listEl) return;
     if (lista.length === 0) {
         _mostrarContatosEmptyState('Nenhum contato disponível');
         return;
     }
-
-    const clienteAtivo = window.AppRDO.clienteId;
-
-    listEl.innerHTML = lista.map(cliente => {
-        const id = String(cliente.id || '');
-        const nome = (cliente.nome || cliente.username || 'Sem nome');
-        const imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-        const isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
-        const statusColor = isOnline ? '#28a745' : '#adb5bd';
-        const isActive = id === String(clienteAtivo);
-
-        return `
-            <div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ${isActive ? 'active-contact' : ''}"
-                 id="item-contato-${id}"
-                 onclick="window.selecionarEAbrir('${id}', '${nome.replace(/'/g, "\\'")}', ${isOnline})">
-                <div class="position-relative">
-                    <img src="${imagem}" class="rounded-circle contact-avatar"
-                         onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-                    <span class="position-absolute bottom-0 end-0 rounded-circle border border-white contact-status-dot"
-                          style="background-color: ${statusColor};"></span>
-                </div>
-                <div class="ms-2 overflow-hidden text-truncate">
-                    <div class="contact-name">${nome}</div>
-                    <div class="small text-muted contact-status">${isOnline ? 'Online' : 'Offline'}</div>
-                </div>
-            </div>`;
+    var clienteAtivo = window.AppRDO.clienteId;
+    listEl.innerHTML = lista.map(function (cliente) {
+        var id = String(cliente.id || '');
+        var nome = (cliente.nome || cliente.username || 'Sem nome');
+        var imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        var isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
+        var statusColor = isOnline ? '#28a745' : '#adb5bd';
+        var isActive = id === String(clienteAtivo);
+        var nomeEscapado = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return '<div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ' +
+            (isActive ? 'active-contact' : '') + '" ' +
+            'id="item-contato-' + id + '" ' +
+            'onclick="window.selecionarEAbrir(\'' + id + '\', \'' + nomeEscapado + '\', ' + isOnline + ')">' +
+            '<div class="position-relative">' +
+            '<img src="' + imagem + '" class="rounded-circle contact-avatar" ' +
+            'onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
+            '<span class="position-absolute bottom-0 end-0 rounded-circle border border-white contact-status-dot" ' +
+            'style="background-color: ' + statusColor + ';"></span>' +
+            '</div>' +
+            '<div class="ms-2 overflow-hidden text-truncate">' +
+            '<div class="contact-name">' + nome + '</div>' +
+            '<div class="small text-muted contact-status">' + (isOnline ? 'Online' : 'Offline') + '</div>' +
+            '</div></div>';
     }).join('');
 };
 
 window.selecionarEAbrir = function (id, nome, isOnline) {
     window.AppRDO.clienteId = id;
     window.AppRDO.clienteSelecionado = nome;
-
-    document.querySelectorAll('.contact-item-clean').forEach(el => {
+    document.querySelectorAll('.contact-item-clean').forEach(function (el) {
         el.classList.remove('active-contact');
     });
-
-    const itemAtivo = document.getElementById(`item-contato-${id}`);
+    var itemAtivo = document.getElementById('item-contato-' + id);
     if (itemAtivo) {
         itemAtivo.classList.add('active-contact');
     }
-
+    if (!isOnline) {
+        window.exibirModalValidacao(
+            'Por favor, entre em contato com o seu administrador.<strong>O cliente está offline.</strong>'
+        );
+    }
     window.abrirConversa(id, nome, null, isOnline);
 };
 
 window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
-    const container = document.getElementById('chat-messages-container');
-    const idCliente = String(id).trim();
-
-    const nameEl = document.getElementById('chat-header-name');
+    var container = document.getElementById('chat-messages-container');
+    var idCliente = String(id).trim();
+    var nameEl = document.getElementById('chat-header-name');
     if (nameEl) {
         nameEl.innerText = nome;
         nameEl.className = 'text-dark fw-bold';
     }
-
-    container.innerHTML = `
-        <div class="chat-empty-state">
-            <div class="chat-loop-btn spinning">
-                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd"
-                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M1 20v-6h6"></path>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-                </svg>
-            </div>
-            <div class="chat-empty-label">Buscando mensagens...</div>
-        </div>`;
-
+    container.innerHTML =
+        '<div class="chat-empty-state">' +
+        '<div class="chat-loop-btn spinning">' + _criarLoopSVG() + '</div>' +
+        '<div class="chat-empty-label">Buscando mensagens...</div>' +
+        '</div>';
     try {
-        let todasMensagens = window.AppRDO.mensagensCache;
-        let todosPedidos = window.AppRDO.pedidosCache;
-
-        if (!todasMensagens || todasMensagens.length === 0 || !todosPedidos || todosPedidos.length === 0) {
-            const [msgs, peds] = await Promise.all([
+        var todasMensagens = window.AppRDO.mensagensCache;
+        var todosPedidos = window.AppRDO.pedidosCache;
+        if (!todasMensagens || todasMensagens.length === 0 ||
+            !todosPedidos || todosPedidos.length === 0) {
+            var results = await Promise.all([
                 API.call('getchat'),
                 API.call('getpedidos')
             ]);
-            todasMensagens = Array.isArray(msgs) ? msgs : [];
-            todosPedidos = Array.isArray(peds) ? peds : [];
+            todasMensagens = Array.isArray(results[0]) ? results[0] : [];
+            todosPedidos = Array.isArray(results[1]) ? results[1] : [];
             window.AppRDO.mensagensCache = todasMensagens;
             window.AppRDO.pedidosCache = todosPedidos;
         }
-
-        const pedidosDoCliente = todosPedidos.filter(p =>
-            String(p.id_chat || '').trim() === idCliente
+        var pedidosDoCliente = todosPedidos.filter(function (p) {
+            return String(p.id_chat || '').trim() === idCliente;
+        });
+        var idsPedidosCliente = new Set(
+            pedidosDoCliente.map(function (p) { return String(p.id || '').trim(); })
         );
-
-        const idsPedidosCliente = new Set(
-            pedidosDoCliente.map(p => String(p.id || '').trim())
-        );
-
-        const historico = todasMensagens.filter(m =>
-            idsPedidosCliente.has(String(m.pedido_id || '').trim())
-        );
-
+        var historico = todasMensagens.filter(function (m) {
+            return idsPedidosCliente.has(String(m.pedido_id || '').trim());
+        });
         container.innerHTML = '';
-
         if (historico.length === 0) {
             _mostrarChatEmptyState('Nenhum histórico encontrado');
         } else {
             window.renderizarMensagens(historico, todosPedidos);
         }
-
     } catch (e) {
         console.error('Erro ao carregar conversa:', e);
-        container.innerHTML = `
-            <div class="chat-empty-state text-danger">
-                <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
-                <div class="chat-empty-label">Erro ao carregar histórico.</div>
-            </div>`;
+        container.innerHTML =
+            '<div class="chat-empty-state text-danger">' +
+            '<i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>' +
+            '<div class="chat-empty-label">Erro ao carregar histórico.</div>' +
+            '</div>';
     }
 };
 
 window.renderizarMensagens = function (mensagens, pedidos) {
-    const container = document.getElementById('chat-messages-container');
+    var container = document.getElementById('chat-messages-container');
+    if (!container) return;
     container.innerHTML = '';
-
     window.AppRDO.pedidosCache = pedidos;
-
     if (!mensagens || mensagens.length === 0) {
         _mostrarChatEmptyState('Nenhum histórico encontrado');
         return;
     }
-
-    let ultimaData = null;
-
-    mensagens.forEach(msg => {
-        const labelData = window.formatarDataSeparador(msg.data || null);
+    var ultimaData = null;
+    mensagens.forEach(function (msg) {
+        var labelData = window.formatarDataSeparador(msg.data || null);
         if (labelData && labelData !== ultimaData) {
             ultimaData = labelData;
-            const separador = document.createElement('div');
+            var separador = document.createElement('div');
             separador.className = 'chat-date-separator';
-            separador.innerHTML = `<span class="chat-date-badge">${labelData}</span>`;
+            separador.innerHTML = '<span class="chat-date-badge">' + labelData + '</span>';
             container.appendChild(separador);
         }
-
-        const pedido = pedidos.find(p =>
-            String(p.id).trim() === String(msg.pedido_id).trim()
-        );
-        const statusBruto = String(pedido?.status || '').trim();
-        const motoboyNome = String(pedido?.motoboy || '').trim();
-        const horaMsg = msg.hora || '';
-
-        const statusPuro = statusBruto.includes('/')
+        var pedido = pedidos.find(function (p) {
+            return String(p.id).trim() === String(msg.pedido_id).trim();
+        });
+        var statusBruto = String(pedido ? pedido.status : '').trim();
+        var motoboyNome = String(pedido ? pedido.motoboy : '').trim();
+        var horaMsg = msg.hora || '';
+        var statusPuro = statusBruto.includes('/')
             ? statusBruto.split('/').pop().trim()
             : statusBruto;
-
-        const statusUpper = statusPuro.toUpperCase();
-        const isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
-        const isEmRota = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
-        const temStatus = isEmRota || isFinal;
-
-        let tooltipTexto = 'Alterar Status';
+        var statusUpper = statusPuro.toUpperCase();
+        var isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
+        var isEmRota = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
+        var temStatus = isEmRota || isFinal;
+        var tooltipTexto = 'Alterar Status';
         if (temStatus) {
-            const statusLabel = statusPuro.replace(/_/g, ' ');
-            tooltipTexto = motoboyNome ? `${motoboyNome} • ${statusLabel}` : statusLabel;
+            var statusLabel = statusPuro.replace(/_/g, ' ');
+            tooltipTexto = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
         }
-
-        const div = document.createElement('div');
+        var div = document.createElement('div');
         div.className = 'message-wrapper';
-        div.innerHTML = `
-            <div class="message-sent" data-pedido-id="${msg.pedido_id}" onclick="window.abrirModalEdicao('${msg.pedido_id}')">
-                <div class="message-body">${(msg.texto || '').replace(/\n/g, '<br>')}</div>
-                <div class="status-icon ${temStatus ? 'status-updated' : 'status-pending'}"
-                     onclick="event.stopPropagation(); window.abrirModalStatus('${msg.pedido_id}')"
-                     data-tooltip="${tooltipTexto}">
-                     ${temStatus ? window.getIconePorStatus(statusPuro) : '<i class="bi bi-arrow-repeat spinner-rotate"></i>'}
-                </div>
-                <span class="message-time">${horaMsg}</span>
-            </div>`;
+        div.innerHTML =
+            '<div class="message-sent" data-pedido-id="' + msg.pedido_id + '" ' +
+            'onclick="window.abrirModalEdicao(\'' + msg.pedido_id + '\')">' +
+            '<div class="message-body">' + (msg.texto || '').replace(/\n/g, '<br>') + '</div>' +
+            '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
+            'onclick="event.stopPropagation(); window.abrirModalStatus(\'' + msg.pedido_id + '\')" ' +
+            'data-tooltip="' + tooltipTexto + '">' +
+            (temStatus ? window.getIconePorStatus(statusPuro) : '<i class="bi bi-arrow-repeat spinner-rotate"></i>') +
+            '</div>' +
+            '<span class="message-time">' + horaMsg + '</span>' +
+            '</div>';
         container.appendChild(div);
     });
-
     container.scrollTop = container.scrollHeight;
 };
 
-window.enviarMensagemParaChat = function (texto, isRecebida = false, pedidoId = null) {
-    const container = document.getElementById('chat-messages-container');
+window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
+    isRecebida = isRecebida || false;
+    pedidoId = pedidoId || null;
+    var container = document.getElementById('chat-messages-container');
     if (!container) return;
-
-    const emptyState = container.querySelector('.chat-empty-state');
+    var emptyState = container.querySelector('.chat-empty-state');
     if (emptyState) emptyState.remove();
-
-    const hojeLabel = 'HOJE';
-    const ultimoSeparador = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+    var hojeLabel = 'HOJE';
+    var ultimoSeparador = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
     if (!ultimoSeparador || ultimoSeparador.textContent !== hojeLabel) {
-        const separador = document.createElement('div');
+        var separador = document.createElement('div');
         separador.className = 'chat-date-separator';
-        separador.innerHTML = `<span class="chat-date-badge">${hojeLabel}</span>`;
+        separador.innerHTML = '<span class="chat-date-badge">' + hojeLabel + '</span>';
         container.appendChild(separador);
     }
-
-    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-    const div = document.createElement('div');
+    var horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    var div = document.createElement('div');
     div.className = 'message-wrapper';
-    div.innerHTML = `
-        <div class="message-sent" data-pedido-id="${pedidoId}" onclick="window.abrirModalEdicao('${pedidoId}')">
-            <div class="message-body">${texto.replace(/\n/g, '<br>')}</div>
-            <div class="status-icon status-pending"
-                 onclick="event.stopPropagation(); window.abrirModalStatus('${pedidoId}')"
-                 data-tooltip="Alterar Status">
-                 <i class="bi bi-arrow-repeat spinner-rotate"></i>
-            </div>
-            <span class="message-time">${horaAtual}</span>
-        </div>`;
-
+    div.innerHTML =
+        '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
+        'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
+        '<div class="message-body">' + texto.replace(/\n/g, '<br>') + '</div>' +
+        '<div class="status-icon status-pending" ' +
+        'onclick="event.stopPropagation(); window.abrirModalStatus(\'' + pedidoId + '\')" ' +
+        'data-tooltip="Alterar Status">' +
+        '<i class="bi bi-arrow-repeat spinner-rotate"></i>' +
+        '</div>' +
+        '<span class="message-time">' + horaAtual + '</span>' +
+        '</div>';
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 };
 
 window.getIconePorStatus = function (status) {
-    const s = String(status || '').trim().toUpperCase();
+    var s = String(status || '').trim().toUpperCase();
     if (s.includes('EM_ROTA') || s.includes('EM ROTA') || s.includes('/')) {
         return '<i class="bi bi-bicycle" style="color: #0d6efd;"></i>';
     }
@@ -395,8 +601,8 @@ window.getIconePorStatus = function (status) {
 };
 
 window.StatusModal = (function () {
-    let _pedidoId = null;
-    let _modalBS = null;
+    var _pedidoId = null;
+    var _modalBS = null;
 
     function _el(id) {
         return document.getElementById(id) || null;
@@ -406,9 +612,10 @@ window.StatusModal = (function () {
         if (el && typeof txt === 'string') el.textContent = txt;
     }
 
-    function _safeClass(el, action, ...cls) {
+    function _safeClass(el, action) {
         if (!el || !el.classList) return;
-        cls.forEach(c => {
+        var classes = Array.prototype.slice.call(arguments, 2);
+        classes.forEach(function (c) {
             if (action === 'add') el.classList.add(c);
             else if (action === 'remove') el.classList.remove(c);
         });
@@ -416,17 +623,15 @@ window.StatusModal = (function () {
 
     function _resetar() {
         try {
-            const texto = _el('modal-status-texto');
-            const icone = _el('modal-status-icone');
-            const boxBotoes = _el('box-botoes-status');
-            const boxMotoboy = _el('box-selecao-motoboy');
-            const select = _el('select-motoboy');
-
+            var texto = _el('modal-status-texto');
+            var icone = _el('modal-status-icone');
+            var boxBotoes = _el('box-botoes-status');
+            var boxMotoboy = _el('box-selecao-motoboy');
+            var select = _el('select-motoboy');
             _safeText(texto, 'Alterar Status');
             if (icone) icone.className = 'bi bi-arrow-repeat';
             _safeClass(boxBotoes, 'remove', 'd-none');
             _safeClass(boxMotoboy, 'add', 'd-none');
-
             if (select) {
                 select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
                 select.style.borderColor = '#ddd';
@@ -435,28 +640,24 @@ window.StatusModal = (function () {
     }
 
     async function _carregarMotoboys() {
-        const select = _el('select-motoboy');
+        var select = _el('select-motoboy');
         if (!select) return;
-
         select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
-
         try {
-            const todos = await API.call('getcolaboradores');
-            const lista = Array.isArray(todos) ? todos : [];
-
-            const motoboys = lista.filter(c => {
-                const cargo = String(c.colaborador || '').toUpperCase();
-                const ativo = String(c.status || '').toUpperCase();
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
+            var motoboys = lista.filter(function (c) {
+                var cargo = String(c.colaborador || '').toUpperCase();
+                var ativo = String(c.status || '').toUpperCase();
                 return cargo.includes('MOTOBOY') && ativo === 'TRUE';
             });
-
             if (motoboys.length > 0) {
                 select.innerHTML =
                     '<option value="" disabled selected>Selecione o motoboy...</option>' +
-                    motoboys.map(m => {
-                        const nome = String(m.username || m.nome || 'Sem nome');
-                        const mid = String(m.id || '');
-                        return `<option value="${mid}">${nome}</option>`;
+                    motoboys.map(function (m) {
+                        var nome = String(m.username || m.nome || 'Sem nome');
+                        var mid = String(m.id || '');
+                        return '<option value="' + mid + '">' + nome + '</option>';
                     }).join('');
             } else {
                 select.innerHTML = '<option value="" disabled selected>Nenhum motoboy disponível</option>';
@@ -469,10 +670,9 @@ window.StatusModal = (function () {
     function _setSpinnerNoBotao(pedidoId) {
         try {
             if (!pedidoId) return;
-            const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-            const iconEl = msgEl?.querySelector('.status-icon');
+            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+            var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
             if (!iconEl) return;
-
             iconEl.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
             _safeClass(iconEl, 'remove', 'status-updated');
             _safeClass(iconEl, 'add', 'status-pending');
@@ -483,20 +683,17 @@ window.StatusModal = (function () {
     function _setIconeFinal(pedidoId, status, motoboyNome) {
         try {
             if (!pedidoId) return;
-            const msgEl = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-            const iconEl = msgEl?.querySelector('.status-icon');
+            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+            var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
             if (!iconEl) return;
-
-            const iconHTML = typeof window.getIconePorStatus === 'function'
+            var iconHTML = typeof window.getIconePorStatus === 'function'
                 ? window.getIconePorStatus(status)
                 : '<i class="bi bi-question-circle"></i>';
-
             iconEl.innerHTML = iconHTML;
             _safeClass(iconEl, 'remove', 'status-pending');
             _safeClass(iconEl, 'add', 'status-updated');
-
-            const statusLabel = String(status || '').replace(/_/g, ' ');
-            const tooltip = motoboyNome ? `${motoboyNome} • ${statusLabel}` : statusLabel;
+            var statusLabel = String(status || '').replace(/_/g, ' ');
+            var tooltip = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
         } catch (_) {}
@@ -504,11 +701,11 @@ window.StatusModal = (function () {
 
     function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
         try {
-            const cache = window.AppRDO?.pedidosCache;
+            var cache = window.AppRDO ? window.AppRDO.pedidosCache : null;
             if (!Array.isArray(cache)) return;
-            const pedido = cache.find(
-                p => String(p.id || '').trim() === String(pedidoId || '').trim()
-            );
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(pedidoId || '').trim();
+            });
             if (!pedido) return;
             pedido.status = statusFormatado;
             if (motoboyNome) pedido.motoboy = motoboyNome;
@@ -516,50 +713,42 @@ window.StatusModal = (function () {
     }
 
     async function _executarAlteracao(status, motoboyId) {
-        let motoboyNome = '';
-        let statusFormatado = String(status || '');
-
+        var motoboyNome = '';
+        var statusFormatado = String(status || '');
         try {
             if (motoboyId) {
-                const select = _el('select-motoboy');
+                var select = _el('select-motoboy');
                 if (select && select.selectedIndex >= 0) {
-                    motoboyNome = String(select.options[select.selectedIndex]?.text || '').trim();
+                    var opt = select.options[select.selectedIndex];
+                    motoboyNome = String(opt ? opt.text : '').trim();
                 }
             }
         } catch (_) {
             motoboyNome = '';
         }
-
         if (motoboyNome) {
-            statusFormatado = `${motoboyNome}/${status}`;
+            statusFormatado = motoboyNome + '/' + status;
         }
-
         _setSpinnerNoBotao(_pedidoId);
-
-        try { _modalBS?.hide(); } catch (_) {}
-
+        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
         try {
-            const payload = {
+            var payload = {
                 id: String(_pedidoId || ''),
                 status: statusFormatado,
                 motoboy: motoboyNome
             };
-
-            const resposta = await API.call('updatepedido', payload);
-
-            if (resposta?.status === 'success') {
+            var resposta = await API.call('updatepedido', payload);
+            if (resposta && resposta.status === 'success') {
                 _atualizarCache(_pedidoId, statusFormatado, motoboyNome);
                 _setIconeFinal(_pedidoId, status, motoboyNome);
-
                 try {
-                    if (typeof window.RDO_PEDIDOS?.atualizarStatusLocal === 'function') {
+                    if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
                         window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
                     }
                 } catch (_) {}
             } else {
-                throw new Error(resposta?.message || 'Falha na API');
+                throw new Error((resposta && resposta.message) || 'Falha na API');
             }
-
         } catch (e) {
             _setIconeFinal(_pedidoId, '', '');
             try {
@@ -580,47 +769,37 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         try {
             if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-
-            const cache = Array.isArray(window.AppRDO?.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            const pedido = cache.find(
-                p => String(p.id || '').trim() === String(pedidoId).trim()
-            );
-
-            const statusBruto = String(pedido?.status || '').trim();
-            const statusPuro = statusBruto.includes('/')
+            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
+                ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(pedidoId).trim();
+            });
+            var statusBruto = String(pedido ? pedido.status : '').trim();
+            var statusPuro = statusBruto.includes('/')
                 ? statusBruto.split('/').pop().trim().toUpperCase()
                 : statusBruto.toUpperCase();
-
             if (statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO' || statusPuro === 'CANCELADO') {
-                const isConcluido = statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO';
+                var isConcluido = statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO';
                 Swal.fire({
                     icon: isConcluido ? 'success' : 'error',
                     title: 'Pedido Finalizado',
-                    html: `<div style="font-size: 0.93rem; color: #555;">
-                        Este pedido já foi
-                        <strong style="color: ${isConcluido ? '#28a745' : '#dc3545'};">
-                            ${isConcluido ? 'Concluído' : 'Cancelado'}
-                        </strong>
-                        e não pode mais ser alterado.
-                    </div>`,
+                    html: '<div style="font-size: 0.93rem; color: #555;">' +
+                        'Este pedido já foi ' +
+                        '<strong style="color: ' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
+                        (isConcluido ? 'Concluído' : 'Cancelado') +
+                        '</strong> e não pode mais ser alterado.</div>',
                     confirmButtonText: 'Entendi',
                     confirmButtonColor: '#dc3545',
                     customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
                 });
                 return;
             }
-
             _pedidoId = pedidoId;
             _resetar();
-
-            const modalEl = _el('modalStatus');
+            var modalEl = _el('modalStatus');
             if (!modalEl) return;
-
-            if (!_modalBS) {
-                _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static' });
-            }
-
-            _modalBS.show();
+            _modalBS = _getOrCreateModal(modalEl, { backdrop: 'static' });
+            if (_modalBS) _modalBS.show();
         } catch (e) {
             console.warn('StatusModal.abrir — erro:', e);
         }
@@ -629,19 +808,16 @@ window.StatusModal = (function () {
     function processar(status) {
         try {
             if (status === 'EM_ROTA') {
-                const texto = _el('modal-status-texto');
-                const icone = _el('modal-status-icone');
+                var texto = _el('modal-status-texto');
+                var icone = _el('modal-status-icone');
                 _safeText(texto, 'Selecione o Motoboy');
                 if (icone) icone.className = 'bi bi-bicycle';
-
                 _safeClass(_el('box-botoes-status'), 'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
-
                 _carregarMotoboys();
                 return;
             }
-
-            const opcoes = {
+            var opcoes = {
                 CONCLUIDO: {
                     titulo: 'Concluir Pedido?',
                     html: 'Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.',
@@ -657,16 +833,13 @@ window.StatusModal = (function () {
                     btnCor: '#dc3545'
                 }
             };
-
-            const cfg = opcoes[status];
+            var cfg = opcoes[status];
             if (!cfg) return;
-
-            try { _modalBS?.hide(); } catch (_) {}
-
+            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
             Swal.fire({
                 icon: cfg.icone,
                 title: cfg.titulo,
-                html: `<div style="font-size: 0.9rem; color: #555;">${cfg.html}</div>`,
+                html: '<div style="font-size: 0.9rem; color: #555;">' + cfg.html + '</div>',
                 showCancelButton: true,
                 confirmButtonText: cfg.btnTexto,
                 cancelButtonText: 'Voltar',
@@ -674,12 +847,11 @@ window.StatusModal = (function () {
                 cancelButtonColor: '#6c757d',
                 reverseButtons: true,
                 customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
-            }).then(async (result) => {
+            }).then(async function (result) {
                 if (result.isConfirmed) {
                     await _executarAlteracao(status);
                 }
-            }).catch(() => {});
-
+            }).catch(function () {});
         } catch (e) {
             console.warn('StatusModal.processar — erro:', e);
         }
@@ -687,15 +859,14 @@ window.StatusModal = (function () {
 
     async function confirmarMotoboy() {
         try {
-            const select = _el('select-motoboy');
-            const motoboyId = select?.value;
-
+            var select = _el('select-motoboy');
+            var motoboyId = select ? select.value : '';
             if (!motoboyId) {
                 if (select) {
                     select.style.borderColor = '#dc3545';
                     select.focus();
                     _safeClass(select, 'add', 'animate__animated', 'animate__shakeX');
-                    setTimeout(() => {
+                    setTimeout(function () {
                         if (select) {
                             select.style.borderColor = '#ddd';
                             _safeClass(select, 'remove', 'animate__animated', 'animate__shakeX');
@@ -704,7 +875,6 @@ window.StatusModal = (function () {
                 }
                 return;
             }
-
             await _executarAlteracao('EM_ROTA', motoboyId);
         } catch (e) {
             console.warn('StatusModal.confirmarMotoboy — erro:', e);
@@ -715,8 +885,7 @@ window.StatusModal = (function () {
         _resetar();
     }
 
-    return { abrir, processar, confirmarMotoboy, voltar };
-
+    return { abrir: abrir, processar: processar, confirmarMotoboy: confirmarMotoboy, voltar: voltar };
 })();
 
 window.abrirModalStatus = function (pedidoId) {
@@ -736,22 +905,24 @@ window.abrirModalEdicao = function (msgId) {
         },
         buttonsStyling: false,
         allowOutsideClick: true
-    }).then(result => {
+    }).then(function (result) {
         if (result.isConfirmed) window.abrirModalMensagemPadrao();
         else if (result.isDenied) window.excluirPedido(msgId);
     });
 };
 
 window.abrirModalMensagemPadrao = function () {
-    const modalEl = document.getElementById('modalMensagemPadrao');
-    if (modalEl) new bootstrap.Modal(modalEl).show();
+    var modalEl = document.getElementById('modalMensagemPadrao');
+    if (!modalEl) return;
+    var modal = _getOrCreateModal(modalEl);
+    if (modal) modal.show();
 };
 
 window.copiarModelo = function () {
-    const texto = document.getElementById('texto-modelo');
+    var texto = document.getElementById('texto-modelo');
+    if (!texto) return;
     texto.select();
     document.execCommand('copy');
-
     Swal.fire({
         icon: 'success',
         title: 'Sucesso!',
@@ -767,8 +938,7 @@ window.copiarModelo = function () {
 
 window.excluirPedido = async function (msgId) {
     if (!msgId) return;
-
-    const confirm = await Swal.fire({
+    var confirmResult = await Swal.fire({
         title: 'Tem certeza?',
         text: 'Esta ação não pode ser desfeita!',
         icon: 'warning',
@@ -778,18 +948,18 @@ window.excluirPedido = async function (msgId) {
         confirmButtonText: 'Sim, excluir!',
         cancelButtonText: 'Cancelar'
     });
-
-    if (confirm.isConfirmed) {
+    if (confirmResult.isConfirmed) {
         try {
-            const resposta = await API.call('deletepedido', { id: msgId });
-            if (resposta?.status === 'success') {
-                const msgEl = document.querySelector(`[data-pedido-id="${msgId}"]`)?.closest('.message-wrapper');
-                if (msgEl) {
-                    msgEl.remove();
+            var resposta = await API.call('deletepedido', { id: msgId });
+            if (resposta && resposta.status === 'success') {
+                var msgEl = document.querySelector('[data-pedido-id="' + msgId + '"]');
+                var wrapper = msgEl ? msgEl.closest('.message-wrapper') : null;
+                if (wrapper) {
+                    wrapper.remove();
                     Swal.fire('Excluído!', 'O pedido foi removido.', 'success');
                 }
             } else {
-                throw new Error(resposta?.message || 'Erro ao excluir no servidor.');
+                throw new Error((resposta && resposta.message) || 'Erro ao excluir no servidor.');
             }
         } catch (e) {
             Swal.fire('Erro!', 'Não foi possível excluir: ' + e.message, 'error');
@@ -797,416 +967,262 @@ window.excluirPedido = async function (msgId) {
     }
 };
 
-async function buscarCoordenadasEndereco(enderecoTexto) {
-    try {
-        let termo = enderecoTexto
-            .replace(/^\d+\.\s*/, '')
-            .replace(/[||\-]/g, ' ')
-            .trim();
-
-        const busca = encodeURIComponent(termo + ', Belo Horizonte, MG');
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${busca}`;
-
-        const response = await fetch(url);
-        const dados = await response.json();
-
-        return (dados && dados.length > 0)
-            ? { lat: parseFloat(dados[0].lat), lng: parseFloat(dados[0].lon) }
-            : null;
-    } catch (err) {
-        return null;
-    }
-}
-
-function formatarTempoHumano(minutosTotais) {
-    const mins = Math.ceil(minutosTotais);
-    if (mins < 60) return `${mins} min`;
-    const horas = Math.floor(mins / 60);
-    const minsRestantes = mins % 60;
-    return minsRestantes === 0 ? `${horas} h` : `${horas} h ${minsRestantes} min`;
-}
-
-window.renderizarMapaUnificado = function () {
-    const container = document.getElementById('container-mapa-visual');
-    if (!container || !window.dadosPedidoAtual?.coordenadas) return;
-
-    if (window.mapaInstancia) { window.mapaInstancia.remove(); window.mapaInstancia = null; }
-
-    const trajetos = window.dadosPedidoAtual.coordenadas;
-    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-
-    window.mapaInstancia = L.map('container-mapa-visual').setView(trajetos[0][0], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.mapaInstancia);
-
-    const criarIcone = (html) => L.divIcon({
-        html: `<div style="font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));">${html}</div>`,
-        className: 'custom-div-icon',
-        iconSize: [25, 25]
-    });
-
-    trajetos.forEach((caminho, index) => {
-        const cor = cores[index % cores.length];
-
-        L.polyline(caminho, {
-            color: cor, weight: 5, dashArray: '8, 8', opacity: 0.9
-        }).addTo(window.mapaInstancia);
-
-        if (index === 0) L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(window.mapaInstancia);
-
-        if (index === trajetos.length - 1) {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(window.mapaInstancia);
-        } else {
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') }).addTo(window.mapaInstancia);
-        }
-    });
-
-    window.mapaInstancia.fitBounds(trajetos.flat(), { padding: [50, 50] });
-};
-
 window.renderizarFooterResumo = function (el) {
     if (!el) return;
-    const d = window.dadosPedidoAtual || {};
-    el.innerHTML = `
-        <span class="me-3"><i class="bi bi-clock-fill"></i> ${d.tempo || '--'}</span>
-        <span class="me-3"><i class="bi bi-geo-alt-fill"></i> ${d.distancia || '0'} km</span>
-        <span class="fw-bold"><i class="bi bi-wallet2"></i> ${d.valor || 'R$ 0,00'}</span>`;
+    var d = window.dadosPedidoAtual || {};
+    el.innerHTML =
+        '<span class="me-3"><i class="bi bi-clock-fill"></i> ' + (d.tempo || '--') + '</span>' +
+        '<span class="me-3"><i class="bi bi-geo-alt-fill"></i> ' + (d.distancia || '0') + ' km</span>' +
+        '<span class="fw-bold"><i class="bi bi-wallet2"></i> ' + (d.valor || 'R$ 0,00') + '</span>';
+};
+
+window.buscarCoordenadasEndereco = async function (endereco) {
+    try {
+        var busca = endereco;
+        if (!/MG|Minas/i.test(busca)) {
+            busca += ', MG';
+        }
+        if (!/Brasil|Brazil/i.test(busca)) {
+            busca += ', Brasil';
+        }
+
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q='
+            + encodeURIComponent(busca) + '&limit=1&countrycodes=br';
+
+        var resp = await fetch(url);
+        var data = await resp.json();
+
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+        }
+
+        console.warn('Geocodificação falhou para:', endereco);
+        return null;
+    } catch (err) {
+        console.error('Erro ao geocodificar:', endereco, err);
+        return null;
+    }
+};
+
+window.renderizarFooterResumo = function (resumoEl) {
+    if (!resumoEl || !window.dadosPedidoAtual) return;
+    var d = window.dadosPedidoAtual;
+    resumoEl.innerHTML =
+        '<span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>' + d.distancia + ' km</strong></span>' +
+        '<span class="me-3"><i class="bi bi-clock me-1"></i><strong>' + d.tempo + '</strong></span>' +
+        '<span><i class="bi bi-cash me-1"></i><strong>' + d.valor + '</strong></span>';
+};
+
+window.renderizarMapaUnificado = function () {
+    var container = document.getElementById('container-mapa-visual');
+    if (!container) {
+        console.error('#container-mapa-visual não encontrado');
+        return;
+    }
+
+    // Limpa mapa anterior
+    if (window._leafletMapInstance) {
+        window._leafletMapInstance.remove();
+        window._leafletMapInstance = null;
+    }
+
+    var dados = window.dadosPedidoAtual;
+    if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
+        return;
+    }
+
+    var mapa = L.map(container).setView([-19.92, -43.94], 12);
+    window._leafletMapInstance = mapa;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(mapa);
+
+    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    var todosOsPontos = [];
+
+    var criarIcone = function (emoji) {
+        return L.divIcon({
+            html: '<div style="font-size:20px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
+            className: 'custom-div-icon',
+            iconSize: [25, 25],
+            iconAnchor: [12, 12]
+        });
+    };
+
+    dados.coordenadas.forEach(function (caminho, i) {
+        if (!caminho || caminho.length === 0) return;
+        var cor = cores[i % cores.length];
+
+        // Linha tracejada
+        L.polyline(caminho, {
+            color: cor,
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '10, 8'
+        }).addTo(mapa);
+
+        // Marcador origem (primeiro ponto da primeira rota)
+        if (i === 0) {
+            L.marker(caminho[0], { icon: criarIcone('🏁') })
+                .addTo(mapa)
+                .bindPopup('<strong>Origem</strong>');
+        }
+
+        // Marcador destino (último ponto da última rota) ou intermediário
+        if (i === dados.coordenadas.length - 1) {
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') })
+                .addTo(mapa)
+                .bindPopup('<strong>Destino Final</strong>');
+        } else {
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') })
+                .addTo(mapa)
+                .bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
+        }
+
+        caminho.forEach(function (p) { todosOsPontos.push(p); });
+    });
+
+    // Ajusta zoom
+    if (todosOsPontos.length > 0) {
+        mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
+    }
+
+    // Força recálculo de tamanho
+    setTimeout(function () { mapa.invalidateSize(); }, 300);
 };
 
 window.enviarMensagemGeral = async function () {
-    const input = document.getElementById('msg-input');
+    var input = document.getElementById('msg-input');
 
-    if (!window.AppRDO?.clienteId) {
-        Swal.fire('Atenção', 'Selecione um cliente na lista primeiro.', 'warning');
+    // Validação 1: cliente selecionado
+    if (!window.AppRDO || !window.AppRDO.clienteId) {
+        window.exibirModalValidacao('Selecione um cliente na lista primeiro.');
         return;
     }
+
+    // Validação 2: campo de mensagem preenchido
     if (!input || !input.value.trim()) {
-        Swal.fire('Atenção', 'Digite o pedido antes de enviar.', 'warning');
+        window.marcarCampoInvalido();
+        window.exibirModalValidacao('Por favor, digite os dados do pedido.');
         return;
     }
 
+    // Validação 3: cliente online (se bot master ativo)
+    if (window.AppRDO.isMasterOn) {
+        var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
+            return String(c.id) === String(window.AppRDO.clienteId);
+        });
+        if (clienteAtual && String(clienteAtual.status || '').toUpperCase() !== 'TRUE') {
+            window.exibirModalValidacao(
+                'Por favor, entre em contato com o seu administrador.<br><strong>O cliente está offline.</strong>'
+            );
+            return;
+        }
+    }
+
+    // Tudo validado — inicia o checkout
     await window.iniciarFluxoCheckout();
 };
 
-window.iniciarFluxoCheckout = async function () {
-    const msgInput = document.getElementById('msg-input');
-    const texto = msgInput?.value?.trim();
+window.renderizarFooterResumo = function (resumoEl) {
+    if (!resumoEl || !window.dadosPedidoAtual) return;
+    const d = window.dadosPedidoAtual;
+    resumoEl.innerHTML = `
+        <span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>${d.distancia} km</strong></span>
+        <span class="me-3"><i class="bi bi-clock me-1"></i><strong>${d.tempo}</strong></span>
+        <span><i class="bi bi-cash me-1"></i><strong>${d.valor}</strong></span>
+    `;
+};
 
-    if (!texto) {
-        window.exibirModalAviso('Por favor, digite os dados do pedido.');
+window.renderizarMapaUnificado = function () {
+    const container = document.getElementById('mapa-container');
+    if (!container) {
+        console.error('Elemento #mapa-container não encontrado');
         return;
     }
 
-    const solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)?.[1] || 'Não informado').trim();
-    const contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)]+)/i)?.[1] || '').trim();
-    const linhasRota = texto.split('\n').filter(l => /de:/i.test(l) && /para:/i.test(l));
+    // Limpa mapa anterior se existir
+    if (window._leafletMapInstance) {
+        window._leafletMapInstance.remove();
+        window._leafletMapInstance = null;
+    }
 
-    if (linhasRota.length === 0) {
-        window.exibirModalAviso("Formato de rota inválido. Use 'De: X Para: Y'.");
+    const dados = window.dadosPedidoAtual;
+    if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
         return;
     }
 
-    await window.loadModal('modal_mapa.html');
-    const modalEl = document.getElementById('modalMapa');
-    const modal = new bootstrap.Modal(modalEl);
+    // Cria o mapa
+    const mapa = L.map(container).setView([-19.92, -43.94], 12);
+    window._leafletMapInstance = mapa;
 
-    modalEl.addEventListener('shown.bs.modal', async () => {
-        const elSolicitante = document.getElementById('header-nome-solicitante');
-        const resumoEl = document.getElementById('resumo-total');
-        if (elSolicitante) elSolicitante.innerText = solicitante;
-        if (resumoEl) resumoEl.innerHTML = 'Calculando rotas...';
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(mapa);
 
-        try {
-            let kmTotal = 0, minTotal = 0, listaCaminhos = [];
+    const cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    const todosOsPontos = [];
 
-            for (const linha of linhasRota) {
-                const p = linha.split(/Para:|\|/gi).map(x => x.replace(/De:/gi, '').trim());
-                if (p.length >= 2) {
-                    const p1 = await buscarCoordenadasEndereco(p[0]);
-                    const p2 = await buscarCoordenadasEndereco(p[1]);
-                    if (p1 && p2) {
-                        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
-                        const resp = await fetch(url);
-                        const data = await resp.json();
-                        if (data.routes?.[0]) {
-                            kmTotal += (data.routes[0].distance / 1000);
-                            minTotal += (data.routes[0].duration / 60);
-                            listaCaminhos.push(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
-                        }
-                    }
-                }
-            }
+    dados.coordenadas.forEach((caminho, i) => {
+        if (!caminho || caminho.length === 0) return;
 
-            window.dadosPedidoAtual = {
-                solicitante, contato,
-                cliente: window.AppRDO.clienteSelecionado,
-                distancia: Math.round(kmTotal).toString(),
-                tempo: formatarTempoHumano(minTotal),
-                coordenadas: listaCaminhos,
-                valor: (Math.round(kmTotal) * 3.00).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                rawInput: texto
-            };
+        const cor = cores[i % cores.length];
 
-            window.renderizarFooterResumo(resumoEl);
-            window.renderizarMapaUnificado();
-        } catch (err) {
-            if (resumoEl) resumoEl.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
-        }
-    }, { once: true });
+        // Linha tracejada
+        L.polyline(caminho, {
+            color: cor,
+            weight: 4,
+            opacity: 0.8,
+            dashArray: '8, 8'
+        }).addTo(mapa);
 
-    modal.show();
-};
+        // Marcador de origem
+        L.circleMarker(caminho[0], {
+            radius: 7,
+            color: cor,
+            fillColor: cor,
+            fillOpacity: 1
+        }).addTo(mapa).bindPopup(`<strong>Rota ${i + 1} — Origem</strong>`);
 
-window.prosseguirParaFormulario = async function () {
-    const modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
-    modalMapa?.hide();
+        // Marcador de destino
+        L.circleMarker(caminho[caminho.length - 1], {
+            radius: 7,
+            color: cor,
+            fillColor: '#fff',
+            fillOpacity: 1,
+            weight: 3
+        }).addTo(mapa).bindPopup(`<strong>Rota ${i + 1} — Destino</strong>`);
 
-    await window.loadModal('modal_form.html');
-    const modalForm = new bootstrap.Modal(document.getElementById('modalFormulario'));
+        caminho.forEach(p => todosOsPontos.push(p));
+    });
 
-    document.getElementById('modalFormulario').addEventListener('shown.bs.modal', () => {
-        window.preencherDadosFormulario();
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
-    }, { once: true });
+    // Ajusta zoom para mostrar todas as rotas
+    if (todosOsPontos.length > 0) {
+        mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
+    }
 
-    modalForm.show();
-};
-
-window.voltarParaMapa = async function () {
-    const modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
-    if (modalForm) modalForm.hide();
-
-    await window.loadModal('modal_mapa.html');
-    const modalEl = document.getElementById('modalMapa');
-    const modalMapa = new bootstrap.Modal(modalEl);
-
-    modalEl.addEventListener('shown.bs.modal', () => {
-        const elHeader = document.getElementById('header-nome-solicitante');
-        if (elHeader) elHeader.innerText = window.dadosPedidoAtual?.solicitante || 'Cliente';
-
-        const resumoEl = document.getElementById('resumo-total');
-        if (resumoEl) window.renderizarFooterResumo(resumoEl);
-
-        window.renderizarMapaUnificado();
-    }, { once: true });
-
-    modalMapa.show();
+    // Força o Leaflet a recalcular o tamanho
+    setTimeout(() => mapa.invalidateSize(), 300);
 };
 
 window.voltarParaChat = function () {
-    document.getElementById('step-formulario')?.classList.add('d-none');
-    document.getElementById('step-mapa')?.classList.add('d-none');
-    document.getElementById('step-chat')?.classList.remove('d-none');
-};
-
-window.calcularTudo = function () {
-    try {
-        const parse = (id) => {
-            const val = document.getElementById(id)?.value;
-            if (!val) return 0;
-            return parseFloat(String(val).replace(',', '.')) || 0;
-        };
-
-        const km = parse('p-distancia');
-        const valorKm = parse('p-valor-km');
-        const taxaDin = parse('p-dinamica');
-        const prioridade = parse('p-prioridade');
-        const retorno = parse('p-retorno');
-
-        let subtotal = (km * valorKm) + taxaDin + prioridade;
-        let total = subtotal + (subtotal * retorno);
-
-        const view = document.getElementById('view-valor-final');
-        if (view) view.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    } catch (error) {
-        const view = document.getElementById('view-valor-final');
-        if (view) view.innerText = 'Erro no cálculo';
-    }
-};
-
-window.preencherDadosFormulario = function () {
-    try {
-        const dados = window.dadosPedidoAtual || {};
-        const msgInput = document.getElementById('msg-input');
-        const texto = msgInput ? msgInput.value : '';
-
-        const nomeCliente = window.AppRDO?.clienteSelecionado ||
-            document.getElementById('chat-header-name')?.innerText || 'Não identificado';
-
-        const elHeader = document.getElementById('header-nome-cliente');
-        if (elHeader) {
-            elHeader.innerText = nomeCliente;
-            elHeader.classList.remove('text-muted');
-            elHeader.classList.add('text-dark');
-        }
-
-        const campos = [
-            { id: 'p-solicitante', regex: /(?:SOLICITANTE|NOME):\s*(.*)/i, fallback: nomeCliente },
-            { id: 'p-rotas', regex: /ROTA:([\s\S]*?)(?=TROCA|RETORNO|OBSERVAÇÃO|PRIORIDADE|$)/i },
-            { id: 'p-obs', regex: /OBSERVAÇÃO:\s*(.*)/i, fallback: 'N/A' }
-        ];
-
-        campos.forEach(c => {
-            const el = document.getElementById(c.id);
-            if (el) {
-                const match = texto.match(c.regex);
-                el.value = match ? (match[1] ? match[1].trim() : match[0].trim()) : (c.fallback || '');
-            }
-        });
-
-        const elContato = document.getElementById('p-contato');
-        if (elContato) {
-            const regexTel = /(?:\(?\d{2}\)?\s?)?\d{4,5}[-\s]?\d{4}/;
-            const matchTel = texto.match(regexTel);
-            if (matchTel) {
-                elContato.value = window.formatarTelefone(matchTel[0].replace(/\D/g, ''));
-            }
-        }
-
-        if (document.getElementById('p-distancia')) document.getElementById('p-distancia').value = dados.distancia || '0';
-        if (document.getElementById('p-tempo')) document.getElementById('p-tempo').value = dados.tempo || '0 min';
-
-        const elHorario = document.getElementById('p-horario');
-        if (elHorario && !elHorario.value) {
-            elHorario.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        const elDin = document.getElementById('p-dinamica');
-        if (elDin) {
-            const taxaMatch = texto.match(/Taxa 0([1-5])/i);
-            const valoresTaxa = { '1': '0', '2': '5', '3': '7', '4': '10', '5': '15' };
-            elDin.value = taxaMatch ? (valoresTaxa[taxaMatch[1]] || '0') : '0';
-        }
-
-        const elPrior = document.getElementById('p-prioridade');
-        if (elPrior) {
-            if (/Urgente/i.test(texto)) elPrior.value = '7';
-            else if (/Agendado/i.test(texto)) elPrior.value = '5';
-            else elPrior.value = '0';
-        }
-
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
-    } catch (error) {
-        console.error('ERRO CRÍTICO no preenchimento do formulário:', error);
-    }
-};
-
-window.salvarPedidoAPI = async function () {
-    var btn = document.getElementById('btn-emitir-pedido');
-    var camposObrigatorios = ['p-solicitante', 'p-mercadoria', 'p-distancia', 'p-rotas', 'p-valor-km'];
-
-    var ehValido = true;
-    camposObrigatorios.forEach(function (id) {
-        var el = document.getElementById(id);
-        if (!el || !el.value.trim()) {
-            el.classList.add('is-invalid');
-            ehValido = false;
-        } else {
-            el.classList.remove('is-invalid');
-        }
-    });
-    if (!ehValido) return;
-
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Emitindo...';
-
-    try {
-        var getVal = function (id) {
-            var el = document.getElementById(id);
-            return (el?.value || '').trim().replace(/</g, '&lt;').replace(/>/g, '&gt;') || 'N/A';
-        };
-        var valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
-
-        var rotasRaw = getVal('p-rotas').split('\n');
-        var rotasFormatadas = rotasRaw.map(function (l, i) {
-            var partes = l.split('|');
-            return '📍' + (i + 1) + '. De: ' + (partes[0]?.trim() || '') + ' | \n      Para: ' + (partes[1]?.trim() || '');
-        }).join('\n');
-
-        var PLACEHOLDER_ID = '%%ID_PEDIDO%%';
-        var retornoLabel = getVal('p-retorno') === '0.6' ? 'Sim' : 'Não';
-
-        var msgTemplate = '📦 SOLICITANTE: ' + getVal('p-solicitante') + '\n\n' +
-            'N.SERVIÇO: ' + PLACEHOLDER_ID + '\n' +
-            'SOLICITANTE: ' + getVal('p-solicitante') + ' \n' +
-            'CONTATO: ' + getVal('p-contato') + ' | HR: ' + getVal('p-horario') + '\n-\n' +
-            'MERCADORIA: ' + getVal('p-mercadoria') + '\n' +
-            'RETORNO: ' + retornoLabel + '\n-\n' +
-            'ROTA(s): \n' + rotasFormatadas + '\n-\n' +
-            'OBSERVAÇÃO: ' + getVal('p-obs') + '\n' +
-            valorFinal;
-
-        var resp = await API.call('finalizarpedido', {
-            action: 'finalizarpedido',
-            id_cliente: String(window.AppRDO.clienteId),
-            solicitante: getVal('p-solicitante'),
-            contato: getVal('p-contato'),
-            horario: getVal('p-horario'),
-            mercadoria: getVal('p-mercadoria'),
-            retorno: retornoLabel,
-            rotas_texto: getVal('p-rotas'),
-            observacao: getVal('p-obs'),
-            valor_corrida: valorFinal,
-            prioridade: getVal('p-prioridade'),
-            mensagem: msgTemplate.replace(PLACEHOLDER_ID, '[ID_GERADO]')
-        });
-
-        if (resp?.status === 'success') {
-            var idReal = resp.id || '0';
-            var idFormatado = typeof window.formatarIdServico === 'function'
-                ? window.formatarIdServico(idReal)
-                : '#RDO' + String(idReal).padStart(3, '0');
-
-            var idFormatadoHTML = '<span style="color: #dc3545; font-weight: bold;">' + idFormatado + '</span>';
-            var msgParaChat = msgTemplate.replace(PLACEHOLDER_ID, idFormatadoHTML).replace(/\n/g, '<br>');
-
-            window.enviarMensagemParaChat(msgParaChat, false, idReal);
-            document.getElementById('msg-input').value = '';
-            bootstrap.Modal.getInstance(document.getElementById('modalFormulario'))?.hide();
-
-            if (typeof window.RDO_PEDIDOS?.adicionarPedidoLocal === 'function') {
-                window.RDO_PEDIDOS.adicionarPedidoLocal({
-                    id: idReal,
-                    id_chat: String(window.AppRDO.clienteId),
-                    solicitante: getVal('p-solicitante'),
-                    contato: getVal('p-contato'),
-                    horario: getVal('p-horario'),
-                    mercadoria: getVal('p-mercadoria'),
-                    de: getVal('p-rotas'),
-                    para: '',
-                    retorno: retornoLabel,
-                    prioridade: getVal('p-prioridade'),
-                    valor_corrida: valorFinal,
-                    motoboy: '',
-                    status: 'PENDENTE',
-                    observacao: getVal('p-obs')
-                });
-            }
-
-            try {
-                await API.call('updatechat', {
-                    id: resp.id_chat || '',
-                    texto: msgTemplate.replace(PLACEHOLDER_ID, idFormatado)
-                });
-            } catch (updateErr) {
-                console.warn('Aviso: não foi possível atualizar o texto no histórico:', updateErr);
-            }
-        } else {
-            throw new Error(resp?.message || 'Erro ao salvar.');
-        }
-    } catch (err) {
-        if (typeof window.exibirErroNoModal === 'function') {
-            window.exibirErroNoModal('Erro ao emitir pedido: ' + err.message);
-        }
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'EMITIR PEDIDO';
-    }
+    var stepForm = document.getElementById('step-formulario');
+    var stepMapa = document.getElementById('step-mapa');
+    var stepChat = document.getElementById('step-chat');
+    if (stepForm) stepForm.classList.add('d-none');
+    if (stepMapa) stepMapa.classList.add('d-none');
+    if (stepChat) stepChat.classList.remove('d-none');
 };
 
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
-    let val = String(tel).replace(/\D/g, '');
-
+    var val = String(tel).replace(/\D/g, '');
     if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
@@ -1215,74 +1231,577 @@ window.formatarTelefone = function (tel) {
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
-
-    const raw = String(dataStr);
-
+    var raw = String(dataStr);
     if (raw.includes('T') || raw.includes('-')) {
-        const d = new Date(raw);
+        var d = new Date(raw);
         if (!isNaN(d.getTime())) {
-            const dia = String(d.getDate()).padStart(2, '0');
-            const mes = String(d.getMonth() + 1).padStart(2, '0');
-            const ano = d.getFullYear();
-
-            const hoje = new Date();
+            var dia = String(d.getDate()).padStart(2, '0');
+            var mes = String(d.getMonth() + 1).padStart(2, '0');
+            var ano = d.getFullYear();
+            var hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
             d.setHours(0, 0, 0, 0);
-
-            const diffDias = Math.floor((hoje - d) / (1000 * 60 * 60 * 24));
+            var diffDias = Math.floor((hoje - d) / (1000 * 60 * 60 * 24));
             if (diffDias === 0) return 'HOJE';
             if (diffDias === 1) return 'ONTEM';
-            return `${dia}/${mes}/${ano}`;
+            return dia + '/' + mes + '/' + ano;
         }
     }
-
-    const partes = raw.split('/');
+    var partes = raw.split('/');
     if (partes.length === 3) {
-        const dataMsg = new Date(partes[2], partes[1] - 1, partes[0]);
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
+        var dataMsg = new Date(partes[2], partes[1] - 1, partes[0]);
+        var hojeComp = new Date();
+        hojeComp.setHours(0, 0, 0, 0);
         dataMsg.setHours(0, 0, 0, 0);
-
-        const diffDias = Math.floor((hoje - dataMsg) / (1000 * 60 * 60 * 24));
-        if (diffDias === 0) return 'HOJE';
-        if (diffDias === 1) return 'ONTEM';
+        var diffDiasComp = Math.floor((hojeComp - dataMsg) / (1000 * 60 * 60 * 24));
+        if (diffDiasComp === 0) return 'HOJE';
+        if (diffDiasComp === 1) return 'ONTEM';
         return raw;
     }
-
     return raw;
 };
 
-window.exibirErro = function (erro, contexto = 'Erro desconhecido') {
-    const container = document.getElementById('chat-messages-container');
+window.exibirErro = function (erro, contexto) {
+    contexto = contexto || 'Erro desconhecido';
+    var container = document.getElementById('chat-messages-container');
     if (container) {
-        container.innerHTML = `
-            <div class="alert alert-danger m-3 rounded-4 shadow-sm">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>Ops!</strong> Algo deu errado ao ${contexto}.
-                <br><small class="text-secondary">${erro.message || erro}</small>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-danger" onclick="window.carregarDados()">Tentar Novamente</button>
-                </div>
-            </div>`;
+        container.innerHTML =
+            '<div class="alert alert-danger m-3 rounded-4 shadow-sm">' +
+            '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
+            '<strong>Ops!</strong> Algo deu errado ao ' + contexto + '.' +
+            '<br><small class="text-secondary">' + (erro.message || erro) + '</small>' +
+            '<div class="mt-2">' +
+            '<button class="btn btn-sm btn-outline-danger" onclick="window.carregarDados()">Tentar Novamente</button>' +
+            '</div></div>';
     } else {
-        window.exibirModalAviso(`Falha ao ${contexto}: ${erro.message || erro}`);
+        window.exibirModalValidacao('Falha ao ' + contexto + ': ' + (erro.message || erro));
     }
 };
 
 window.exibirErroNoModal = function (mensagem) {
-    const container = document.getElementById('form-error-container');
-    const texto = document.getElementById('form-error-text');
+    var container = document.getElementById('form-error-container');
+    var texto = document.getElementById('form-error-text');
     if (texto) texto.innerText = mensagem;
     if (container) {
         container.classList.remove('d-none');
-        setTimeout(() => container.classList.add('d-none'), 4000);
+        setTimeout(function () {
+            container.classList.add('d-none');
+        }, 4000);
     }
 };
 
 window.exibirModalAviso = function (mensagem) {
-    const elModal = document.getElementById('modalAtencao');
-    const elTexto = document.getElementById('modal-atencao-mensagem');
-    if (elTexto) elTexto.innerText = mensagem;
-    if (elModal) new bootstrap.Modal(elModal).show();
-    else alert(mensagem);
+    window.exibirModalValidacao(mensagem);
 };
+
+window.extrairRotasDaMensagem = function (texto) {
+    var rotas = [];
+    var linhas = texto.split('\n');
+
+    for (var i = 0; i < linhas.length; i++) {
+        var linha = linhas[i].trim();
+        if (!linha) continue;
+
+        // Formato: De: ... | Para: ...  OU  De: ... → Para: ...
+        var match = linha.match(/De:\s*(.+?)\s*(?:\||–|—|-|→)\s*Para:\s*(.+)/i);
+        if (match) {
+            rotas.push({
+                de: match[1].replace(/^\d+[\.\)\-]\s*/, '').trim(),
+                para: match[2].trim()
+            });
+            continue;
+        }
+
+        // Formato: De: ... Para: ... (sem separador)
+        var match2 = linha.match(/De:\s*(.+?)\s+Para:\s*(.+)/i);
+        if (match2) {
+            rotas.push({
+                de: match2[1].replace(/^\d+[\.\)\-]\s*/, '').trim(),
+                para: match2[2].trim()
+            });
+        }
+    }
+
+    return rotas;
+};
+
+window.buscarCoordenadasEndereco = function (endereco) {
+    return new Promise(function (resolve) {
+        var busca = endereco;
+        if (!/MG|Minas Gerais/i.test(busca)) {
+            busca += ', MG';
+        }
+        if (!/Brasil|Brazil/i.test(busca)) {
+            busca += ', Brasil';
+        }
+
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
+            encodeURIComponent(busca) + '&limit=1&countrycodes=br';
+
+        fetch(url)
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                if (data && data.length > 0) {
+                    resolve({
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon)
+                    });
+                } else {
+                    console.warn('Geocodificação falhou para:', endereco);
+                    resolve(null);
+                }
+            })
+            .catch(function (err) {
+                console.error('Erro ao geocodificar:', endereco, err);
+                resolve(null);
+            });
+    });
+};
+
+window.formatarTempoHumano = function (minutos) {
+    var h = Math.floor(minutos / 60);
+    var m = Math.round(minutos % 60);
+    if (h > 0) return h + 'h ' + m + 'min';
+    return m + 'min';
+};
+
+window.renderizarFooterResumo = function (resumoEl) {
+    if (!resumoEl || !window.dadosPedidoAtual) return;
+    var d = window.dadosPedidoAtual;
+    resumoEl.innerHTML =
+        '<span class="me-3"><i class="bi bi-signpost-split me-1"></i><strong>' + d.distancia + ' km</strong></span>' +
+        '<span class="me-3"><i class="bi bi-clock me-1"></i><strong>' + d.tempo + '</strong></span>' +
+        '<span><i class="bi bi-cash me-1"></i><strong>' + d.valor + '</strong></span>';
+};
+
+window.renderizarMapaUnificado = function () {
+    var container = document.getElementById('container-mapa-visual');
+    if (!container) {
+        console.error('renderizarMapaUnificado: #container-mapa-visual não encontrado');
+        return;
+    }
+
+    // Limpa mapa anterior
+    if (window._leafletMapInstance) {
+        try { window._leafletMapInstance.remove(); } catch (e) { /* ok */ }
+        window._leafletMapInstance = null;
+    }
+
+    // Garante que o container tenha altura
+    if (!container.style.height || container.style.height === '0px') {
+        container.style.height = '350px';
+    }
+
+    var dados = window.dadosPedidoAtual;
+    if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
+        return;
+    }
+
+    // Verifica se Leaflet está disponível
+    if (typeof L === 'undefined') {
+        console.error('Leaflet (L) não está carregado!');
+        container.innerHTML = '<p class="text-center text-danger p-4">Erro: Leaflet não carregado.</p>';
+        return;
+    }
+
+    var mapa = L.map(container).setView([-19.92, -43.94], 12);
+    window._leafletMapInstance = mapa;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(mapa);
+
+    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    var todosOsPontos = [];
+
+    var criarIcone = function (emoji) {
+        return L.divIcon({
+            html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
+            className: 'custom-div-icon',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+    };
+
+    dados.coordenadas.forEach(function (caminho, i) {
+        if (!caminho || caminho.length === 0) return;
+        var cor = cores[i % cores.length];
+
+        // Linha da rota
+        L.polyline(caminho, {
+            color: cor,
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '10, 8'
+        }).addTo(mapa);
+
+        // Marcador de origem
+        if (i === 0) {
+            L.marker(caminho[0], { icon: criarIcone('🏁') })
+                .addTo(mapa)
+                .bindPopup('<strong>Origem</strong>');
+        }
+
+        // Marcador de destino ou parada
+        if (i === dados.coordenadas.length - 1) {
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') })
+                .addTo(mapa)
+                .bindPopup('<strong>Destino Final</strong>');
+        } else {
+            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') })
+                .addTo(mapa)
+                .bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
+        }
+
+        caminho.forEach(function (p) { todosOsPontos.push(p); });
+    });
+
+    if (todosOsPontos.length > 0) {
+        mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
+    }
+
+    setTimeout(function () { mapa.invalidateSize(); }, 400);
+};
+
+window.calcularTudo = function () {
+    var distancia = parseFloat(document.getElementById('p-distancia')?.value) || 0;
+    var valorKm = parseFloat(document.getElementById('p-valor-km')?.value) || 0;
+    var retorno = parseFloat(document.getElementById('p-retorno')?.value) || 0;
+    var dinamica = parseFloat(document.getElementById('p-dinamica')?.value) || 0;
+    var prioridade = parseFloat(document.getElementById('p-prioridade')?.value) || 0;
+
+    var base = distancia * valorKm;
+    var comRetorno = base + (base * retorno);
+    var total = comRetorno + dinamica + prioridade;
+
+    // Valor mínimo
+    if (total > 0 && total < 10) total = 10;
+
+    var viewEl = document.getElementById('view-valor-final');
+    if (viewEl) {
+        viewEl.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // Atualiza no objeto global
+    if (window.dadosPedidoAtual) {
+        window.dadosPedidoAtual.valorFinal = total;
+    }
+};
+
+window.preencherDadosFormulario = function () {
+    var d = window.dadosPedidoAtual;
+    if (!d) return;
+
+    // ── Nome do cliente (vem da conversa selecionada) ──
+    var headerCliente = document.getElementById('header-nome-cliente');
+    if (headerCliente) {
+        var nomeCliente = d.cliente
+            || window.AppRDO?.clienteSelecionado
+            || window.AppRDO?.nomeClienteSelecionado
+            || localStorage.getItem('clienteSelecionadoNome')
+            || 'Não identificado';
+        headerCliente.innerText = nomeCliente;
+    }
+
+    var el = function (id) { return document.getElementById(id); };
+
+    if (el('p-solicitante')) el('p-solicitante').value = d.solicitante || '';
+    if (el('p-contato')) el('p-contato').value = d.contato || '';
+    if (el('p-distancia')) el('p-distancia').value = d.distancia || '';
+    if (el('p-tempo')) el('p-tempo').value = d.tempo || '';
+
+    // Monta as rotas no textarea
+    if (el('p-rotas') && d.rawInput) {
+        var rotas = window.extrairRotasDaMensagem(d.rawInput);
+        var textoRotas = rotas.map(function (r, i) {
+            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+        }).join('\n');
+        el('p-rotas').value = textoRotas;
+    }
+
+    // Horário atual
+    if (el('p-horario') && !el('p-horario').value) {
+        var agora = new Date();
+        el('p-horario').value = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+};
+
+window.iniciarFluxoCheckout = function () {
+    var msgInput = document.getElementById('msg-input');
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
+
+    if (!texto) {
+        if (typeof window.exibirModalAviso === 'function') {
+            window.exibirModalAviso('Por favor, digite os dados do pedido.');
+        } else {
+            alert('Por favor, digite os dados do pedido.');
+        }
+        return;
+    }
+
+    var solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado';
+    solicitante = solicitante.trim();
+
+    var contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '';
+    contato = contato.trim();
+
+    var rotasExtraidas = window.extrairRotasDaMensagem(texto);
+
+    if (rotasExtraidas.length === 0) {
+        if (typeof window.exibirModalAviso === 'function') {
+            window.exibirModalAviso("Nenhuma rota encontrada.\nUse o formato:\nDe: Origem | Para: Destino");
+        } else {
+            alert("Nenhuma rota encontrada.\nUse: De: Origem | Para: Destino");
+        }
+        return;
+    }
+
+    // Carrega o modal do mapa
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        if (!carregou) {
+            console.error('Falha ao carregar mapa_clientes.html');
+            alert('Erro ao carregar modal do mapa. Verifique se o arquivo existe em pages/chat/mapa_clientes.html');
+            return;
+        }
+
+        var modalEl = document.getElementById('modalMapa');
+        if (!modalEl) {
+            console.error('#modalMapa não encontrado após loadModal');
+            return;
+        }
+
+        var modal = new bootstrap.Modal(modalEl);
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            var elSolicitante = document.getElementById('header-nome-solicitante');
+            var resumoEl = document.getElementById('resumo-total');
+            var listaRotasEl = document.getElementById('lista-rotas-editavel');
+
+            if (elSolicitante) elSolicitante.innerText = solicitante;
+            if (resumoEl) resumoEl.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Calculando rotas...';
+
+            // Renderiza lista de rotas
+            if (listaRotasEl) {
+                listaRotasEl.innerHTML = rotasExtraidas.map(function (r, i) {
+                    return '<div class="d-flex align-items-center px-3 py-2 ' + (i > 0 ? 'border-top' : '') + '">' +
+                        '<span class="badge bg-danger me-2">' + (i + 1) + '</span>' +
+                        '<span class="text-dark"><strong>De:</strong> ' + r.de +
+                        ' <i class="bi bi-arrow-right mx-1 text-muted"></i> ' +
+                        '<strong>Para:</strong> ' + r.para + '</span></div>';
+                }).join('');
+            }
+
+            // Calcula rotas via OSRM
+            var kmTotal = 0;
+            var minTotal = 0;
+            var listaCaminhos = [];
+            var promessas = [];
+
+            rotasExtraidas.forEach(function (rota) {
+                var promessa = Promise.all([
+                    window.buscarCoordenadasEndereco(rota.de),
+                    window.buscarCoordenadasEndereco(rota.para)
+                ]).then(function (coords) {
+                    var p1 = coords[0];
+                    var p2 = coords[1];
+
+                    if (!p1 || !p2) {
+                        console.warn('Coordenadas não encontradas para rota:', rota);
+                        return;
+                    }
+
+                    var url = 'https://router.project-osrm.org/route/v1/driving/' +
+                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
+                        '?overview=full&geometries=geojson';
+
+                    return fetch(url)
+                        .then(function (resp) { return resp.json(); })
+                        .then(function (data) {
+                            if (data.routes && data.routes[0]) {
+                                kmTotal += (data.routes[0].distance / 1000);
+                                minTotal += (data.routes[0].duration / 60);
+                                listaCaminhos.push(
+                                    data.routes[0].geometry.coordinates.map(function (c) {
+                                        return [c[1], c[0]];
+                                    })
+                                );
+                            }
+                        });
+                });
+                promessas.push(promessa);
+            });
+
+            Promise.all(promessas).then(function () {
+                var kmArredondado = Math.round(kmTotal);
+
+                window.dadosPedidoAtual = {
+                    solicitante: solicitante,
+                    contato: contato,
+                    cliente: window.AppRDO?.clienteSelecionado
+                        || window.AppRDO?.nomeClienteSelecionado
+                        || localStorage.getItem('clienteSelecionadoNome')
+                        || 'N/A',
+                    distancia: kmArredondado.toString(),
+                    tempo: window.formatarTempoHumano(minTotal),
+                    coordenadas: listaCaminhos,
+                    valor: (kmArredondado * 3.00).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                    rawInput: texto
+                };
+
+                window.renderizarFooterResumo(resumoEl);
+                window.renderizarMapaUnificado();
+
+            }).catch(function (err) {
+                console.error('Erro ao calcular rotas:', err);
+                if (resumoEl) {
+                    resumoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro: ' + err.message + '</span>';
+                }
+            });
+
+        }, { once: true });
+
+        modal.show();
+    });
+};
+
+window.prosseguirParaFormulario = function () {
+    var modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
+    if (modalMapa) modalMapa.hide();
+
+    window.loadModal('form_clientes.html').then(function (carregou) {
+        if (!carregou) {
+            console.error('Falha ao carregar form_clientes.html');
+            return;
+        }
+
+        var modalEl = document.getElementById('modalFormulario');
+        if (!modalEl) return;
+
+        var modalForm = new bootstrap.Modal(modalEl);
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            window.preencherDadosFormulario();
+            window.calcularTudo();
+        }, { once: true });
+
+        modalForm.show();
+    });
+};
+
+window.voltarParaMapa = function () {
+    var modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
+    if (modalForm) modalForm.hide();
+
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        if (!carregou) return;
+
+        var modalEl = document.getElementById('modalMapa');
+        if (!modalEl) return;
+
+        var modalMapa = new bootstrap.Modal(modalEl);
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            var elHeader = document.getElementById('header-nome-solicitante');
+            if (elHeader && window.dadosPedidoAtual) {
+                elHeader.innerText = window.dadosPedidoAtual.solicitante || 'Cliente';
+            }
+
+            var resumoEl = document.getElementById('resumo-total');
+            if (resumoEl) window.renderizarFooterResumo(resumoEl);
+
+            window.renderizarMapaUnificado();
+        }, { once: true });
+
+        modalMapa.show();
+    });
+};
+
+window.salvarPedidoAPI = function () {
+    var d = window.dadosPedidoAtual;
+    if (!d) {
+        alert('Nenhum dado de pedido encontrado.');
+        return;
+    }
+
+    var mercadoria = document.getElementById('p-mercadoria')?.value;
+    var obs = document.getElementById('p-obs')?.value || '';
+    var valorFinal = document.getElementById('view-valor-final')?.innerText || 'R$ 0,00';
+    var distancia = document.getElementById('p-distancia')?.value || d.distancia;
+    var horario = document.getElementById('p-horario')?.value || '';
+
+    if (!mercadoria) {
+        var errEl = document.getElementById('form-error-msg');
+        if (errEl) {
+            errEl.classList.remove('d-none');
+            errEl.innerText = 'Selecione a mercadoria!';
+        }
+        return;
+    }
+
+    var payload = {
+        cliente: d.cliente,
+        solicitante: d.solicitante,
+        contato: d.contato,
+        mercadoria: mercadoria,
+        horario: horario,
+        distancia: distancia,
+        tempo: d.tempo,
+        rotas: document.getElementById('p-rotas')?.value || '',
+        valor: valorFinal,
+        observacao: obs,
+        status: 'pendente',
+        data: new Date().toISOString()
+    };
+
+    console.log('Payload do pedido:', payload);
+
+    var btnEmitir = document.getElementById('btn-emitir-pedido');
+    if (btnEmitir) {
+        btnEmitir.disabled = true;
+        btnEmitir.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Emitindo...';
+    }
+
+    // TODO: Substitua pela URL real da sua API
+    fetch('/api/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function (resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+    })
+    .then(function (data) {
+        console.log('Pedido salvo:', data);
+
+        // Fecha o modal
+        var modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
+        if (modalForm) modalForm.hide();
+
+        // Feedback
+        if (typeof window.exibirModalAviso === 'function') {
+            window.exibirModalAviso('✅ Pedido emitido com sucesso!');
+        } else {
+            alert('Pedido emitido com sucesso!');
+        }
+
+        // Limpa input
+        var msgInput = document.getElementById('msg-input');
+        if (msgInput) msgInput.value = '';
+    })
+    .catch(function (err) {
+        console.error('Erro ao salvar pedido:', err);
+        if (btnEmitir) {
+            btnEmitir.disabled = false;
+            btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
+        }
+        var errEl = document.getElementById('form-error-msg');
+        if (errEl) {
+            errEl.classList.remove('d-none');
+            errEl.innerText = 'Erro ao emitir pedido: ' + err.message;
+        }
+    });
+};
+
+console.log('✅ Checkout: todas as funções carregadas com sucesso.');
