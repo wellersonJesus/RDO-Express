@@ -4,13 +4,23 @@ window.pedidosState = {
     isFetching: false,
     filtroCategoria: 'todos',
     paginaAtual: 1,
-    itensPorPagina: 20
+    itensPorPagina: 20,
+    modaisCarregados: false
 };
 
 function _esc(str) {
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function _escAttr(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 window.formatarIdServico = function (id) {
@@ -161,6 +171,15 @@ function _matchFiltro(p, termo, categoria) {
     return false;
 }
 
+function _buscarPedidoNoCache(pedidoId) {
+    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    var idBusca = String(pedidoId).trim();
+    for (var i = 0; i < cache.length; i++) {
+        if (String(cache[i].id || '').trim() === idBusca) return cache[i];
+    }
+    return null;
+}
+
 function _renderizarTabela(lista) {
     var corpo = document.getElementById('corpo-tabela-pedidos');
     if (!corpo) return;
@@ -176,7 +195,7 @@ function _renderizarTabela(lista) {
     _atualizarPaginador(totalFiltrada);
     if (paginada.length === 0) {
         corpo.innerHTML =
-            '<tr><td colspan="5" class="text-center text-muted py-4" style="font-size:0.8rem;">' +
+            '<tr><td colspan="4" class="text-center text-muted py-4" style="font-size:0.8rem;">' +
             (termo
                 ? '<i class="bi bi-search me-1"></i>Nenhum resultado para o filtro.'
                 : '<i class="bi bi-inbox d-block mb-1" style="font-size:1.3rem;"></i>Nenhum pedido encontrado.') +
@@ -187,29 +206,27 @@ function _renderizarTabela(lista) {
         var id = String(p.id || '0');
         var idFormatado = window.formatarIdServico(id);
         var solicitante = _resolverSolicitantePorIdChat(p.id_chat) || String(p.solicitante || '—');
-        var valor = String(p.valor_corrida || 'R$ 0,00');
         var stPuro = _statusPuro(p);
         var badge = _badgeStatus(stPuro);
         var finalizado = _isFinalizado(p);
-        var idEsc = _esc(id);
+        var idSafe = _escAttr(id);
         var acoes = '';
         if (finalizado) {
             acoes =
-                '<button class="btn btn-light btn-sm" onclick="window.RDO_PEDIDOS.abrirDetalhes(\'' + idEsc + '\')" title="Visualizar">' +
+                '<button class="btn btn-light btn-sm" onclick="window.RDO_PEDIDOS.abrirDetalhes(\'' + idSafe + '\')" title="Visualizar">' +
                 '<i class="bi bi-eye"></i></button>';
         } else {
             acoes =
-                '<button class="btn btn-light btn-sm me-1" onclick="window.RDO_PEDIDOS.abrirEdicao(\'' + idEsc + '\')" title="Editar">' +
+                '<button class="btn btn-light btn-sm me-1" onclick="window.RDO_PEDIDOS.abrirEdicao(\'' + idSafe + '\')" title="Editar">' +
                 '<i class="bi bi-pencil-square"></i></button>' +
-                '<button class="btn btn-light btn-sm me-1" onclick="window.RDO_PEDIDOS.abrirDetalhes(\'' + idEsc + '\')" title="Visualizar">' +
+                '<button class="btn btn-light btn-sm me-1" onclick="window.RDO_PEDIDOS.abrirDetalhes(\'' + idSafe + '\')" title="Visualizar">' +
                 '<i class="bi bi-eye"></i></button>' +
-                '<button class="btn btn-light btn-sm" onclick="window.RDO_PEDIDOS.excluirPedido(\'' + idEsc + '\')" title="Excluir">' +
+                '<button class="btn btn-light btn-sm" onclick="window.RDO_PEDIDOS.excluirPedido(\'' + idSafe + '\')" title="Excluir">' +
                 '<i class="bi bi-trash"></i></button>';
         }
-        return '<tr>' +
-            '<td class="ps-3 py-2"><span class="pedido-id-label">' + idFormatado + '</span></td>' +
+        return '<tr style="font-weight:300;">' +
+            '<td class="ps-3 py-2" style="color:#000;">' + idFormatado + '</td>' +
             '<td class="py-2">' + _esc(solicitante) + '</td>' +
-            '<td class="py-2">' + _esc(valor) + '</td>' +
             '<td class="py-2">' + badge + '</td>' +
             '<td class="text-end pe-3 py-2">' + acoes + '</td>' +
             '</tr>';
@@ -218,15 +235,29 @@ function _renderizarTabela(lista) {
 
 async function _carregarModaisPedidos() {
     var container = document.getElementById('modal-pedidos-container');
-    if (!container) return;
-    if (container.dataset.loaded === 'true') return;
+    if (!container) return false;
+    if (window.pedidosState.modaisCarregados) return true;
     try {
-        var resp = await fetch('app/pages/pedidos/form_pedidos.html');
+        var resp = await fetch('pages/pedidos/form_pedidos.html');
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         var html = await resp.text();
         container.innerHTML = html;
-        container.dataset.loaded = 'true';
-    } catch (_) {}
+        window.pedidosState.modaisCarregados = true;
+        return true;
+    } catch (_) {
+        container.innerHTML = '';
+        window.pedidosState.modaisCarregados = false;
+        return false;
+    }
+}
+
+async function _garantirModais() {
+    if (window.pedidosState.modaisCarregados) {
+        var teste = document.getElementById('modalPedidoDetalhes');
+        if (teste) return true;
+        window.pedidosState.modaisCarregados = false;
+    }
+    return await _carregarModaisPedidos();
 }
 
 async function _fetchPedidos() {
@@ -243,7 +274,7 @@ async function _fetchPedidos() {
         var corpo = document.getElementById('corpo-tabela-pedidos');
         if (corpo) {
             corpo.innerHTML =
-                '<tr><td colspan="5" class="text-center text-danger py-4" style="font-size:0.8rem;">' +
+                '<tr><td colspan="4" class="text-center text-danger py-4" style="font-size:0.8rem;">' +
                 '<i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar pedidos.</td></tr>';
         }
     } finally {
@@ -303,7 +334,6 @@ function _bindFiltroCategoria() {
                 todos: 'Buscar...',
                 servico: 'Ex: RDO001',
                 cliente: 'Nome do cliente...',
-                valor: 'Ex: R$ 15,00',
                 status: 'Ex: Pendente, Em Rota...'
             };
             if (input) {
@@ -320,12 +350,13 @@ function _bindFiltroCategoria() {
     });
 }
 
-window.RDO_PEDIDOS.abrirDetalhes = function (pedidoId) {
-    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-    var pedido = null;
-    for (var i = 0; i < cache.length; i++) {
-        if (String(cache[i].id || '').trim() === String(pedidoId).trim()) { pedido = cache[i]; break; }
+window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
+    var ok = await _garantirModais();
+    if (!ok) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar o formulário de detalhes.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
+        return;
     }
+    var pedido = _buscarPedidoNoCache(pedidoId);
     if (!pedido) return;
     var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat) || String(pedido.solicitante || '—');
     var el = function (id) { return document.getElementById(id); };
@@ -349,12 +380,13 @@ window.RDO_PEDIDOS.abrirDetalhes = function (pedidoId) {
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
-window.RDO_PEDIDOS.abrirEdicao = function (pedidoId) {
-    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-    var pedido = null;
-    for (var i = 0; i < cache.length; i++) {
-        if (String(cache[i].id || '').trim() === String(pedidoId).trim()) { pedido = cache[i]; break; }
+window.RDO_PEDIDOS.abrirEdicao = async function (pedidoId) {
+    var ok = await _garantirModais();
+    if (!ok) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar o formulário de edição.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
+        return;
     }
+    var pedido = _buscarPedidoNoCache(pedidoId);
     if (!pedido) {
         Swal.fire({ icon: 'warning', title: 'Não encontrado', text: 'Pedido não localizado.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
         return;
@@ -367,10 +399,15 @@ window.RDO_PEDIDOS.abrirEdicao = function (pedidoId) {
         var el = document.getElementById(id);
         if (!el) return;
         if (el.tagName === 'SELECT') {
+            var found = false;
             for (var i = 0; i < el.options.length; i++) {
-                if (el.options[i].value === val || el.options[i].text === val) { el.selectedIndex = i; return; }
+                if (el.options[i].value === val || el.options[i].text === val) {
+                    el.selectedIndex = i;
+                    found = true;
+                    break;
+                }
             }
-            el.value = val || '';
+            if (!found) el.value = val || '';
         } else {
             el.value = val || '';
         }
@@ -387,7 +424,7 @@ window.RDO_PEDIDOS.abrirEdicao = function (pedidoId) {
     setVal('edit-mercadoria', pedido.mercadoria);
     setVal('edit-horario', pedido.horario);
     setVal('edit-retorno', pedido.retorno);
-    setVal('edit-prioridade', pedido.prioridade);
+    setVal('edit-prioridade', String(pedido.prioridade || '0'));
     var de = String(pedido.de || pedido.rota_de || '').trim();
     var para = String(pedido.para || pedido.rota_para || '').trim();
     var rotasTexto = de && para ? de + ' | ' + para : de || para || '';
@@ -401,7 +438,8 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
     var btn = document.getElementById('btn-salvar-edicao');
     var errDiv = document.getElementById('edit-error-msg');
     try {
-        var id = document.getElementById('edit-pedido-id').value;
+        var idEl = document.getElementById('edit-pedido-id');
+        var id = idEl ? idEl.value.trim() : '';
         if (!id) return;
         var getVal = function (elId) {
             var el = document.getElementById(elId);
@@ -409,7 +447,7 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
         };
         var solicitante = getVal('edit-solicitante');
         if (!solicitante) {
-            if (errDiv) { errDiv.textContent = 'O campo SOLICITANTE é obrigatório.'; errDiv.classList.remove('d-none'); }
+            if (errDiv) { errDiv.textContent = 'O campo CLIENTE é obrigatório.'; errDiv.classList.remove('d-none'); }
             var solEl = document.getElementById('edit-solicitante');
             if (solEl) solEl.focus();
             return;
@@ -429,11 +467,7 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
         };
         var resp = await API.call('updatepedido', payload);
         if (resp && resp.status === 'success') {
-            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            var pedido = null;
-            for (var i = 0; i < cache.length; i++) {
-                if (String(cache[i].id) === String(id)) { pedido = cache[i]; break; }
-            }
+            var pedido = _buscarPedidoNoCache(id);
             if (pedido) {
                 pedido.solicitante = payload.solicitante;
                 pedido.contato = payload.contato;
@@ -442,7 +476,17 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
                 pedido.retorno = payload.retorno;
                 pedido.prioridade = payload.prioridade;
                 pedido.observacao = payload.observacao;
+                if (payload.rotas_texto) {
+                    var partes = payload.rotas_texto.split('|');
+                    if (partes.length >= 2) {
+                        pedido.de = partes[0].trim();
+                        pedido.rota_de = partes[0].trim();
+                        pedido.para = partes[1].trim();
+                        pedido.rota_para = partes[1].trim();
+                    }
+                }
             }
+            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
             _renderizarTabela(cache);
             var modalEl = document.getElementById('modalEditarPedido');
             if (modalEl) {
@@ -462,11 +506,7 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
 
 window.RDO_PEDIDOS.excluirPedido = async function (pedidoId) {
     if (!pedidoId) return;
-    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-    var pedido = null;
-    for (var i = 0; i < cache.length; i++) {
-        if (String(cache[i].id || '').trim() === String(pedidoId).trim()) { pedido = cache[i]; break; }
-    }
+    var pedido = _buscarPedidoNoCache(pedidoId);
     if (pedido && _isFinalizado(pedido)) {
         Swal.fire({ icon: 'info', title: 'Pedido finalizado', html: '<div style="font-size:0.9rem;">Pedidos concluídos ou cancelados não podem ser excluídos.</div>', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
         return;
@@ -489,7 +529,7 @@ window.RDO_PEDIDOS.excluirPedido = async function (pedidoId) {
     try {
         var resp = await API.call('deletepedido', { id: pedidoId });
         if (resp && resp.status === 'success') {
-            window.AppRDO.pedidosCache = cache.filter(function (p) {
+            window.AppRDO.pedidosCache = (Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : []).filter(function (p) {
                 return String(p.id || '').trim() !== String(pedidoId).trim();
             });
             _renderizarTabela(window.AppRDO.pedidosCache);
@@ -502,7 +542,12 @@ window.RDO_PEDIDOS.excluirPedido = async function (pedidoId) {
     }
 };
 
-window.RDO_PEDIDOS.abrirFormNovo = function () {
+window.RDO_PEDIDOS.abrirFormNovo = async function () {
+    var ok = await _garantirModais();
+    if (!ok) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar o formulário.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
+        return;
+    }
     var errDiv = document.getElementById('novo-error-msg');
     if (errDiv) errDiv.classList.add('d-none');
     var chatAtivo = (window.AppRDO && window.AppRDO.chatAtivo) || window.chatAtivo || null;
@@ -586,6 +631,7 @@ window.initPedidos = async function () {
     window.pedidosState.isFetching = false;
     window.pedidosState.filtroCategoria = 'todos';
     window.pedidosState.paginaAtual = 1;
+    window.pedidosState.modaisCarregados = false;
     await _carregarModaisPedidos();
     _bindFiltro();
     _bindFiltroCategoria();
