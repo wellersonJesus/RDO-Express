@@ -1,159 +1,137 @@
-<div class="row g-3">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-visible">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-clipboard2-check fs-3 text-danger"></i>
-                    <div>
-                        <h5 class="fw-bold mb-0 text-dark">
-                            <span class="text-danger">RDO</span> Express - Pedidos
-                        </h5>
-                        <small class="text-muted" style="font-size: 0.75rem;">
-                            Logística e Controle de Entregas
-                        </small>
-                    </div>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <div class="position-relative d-flex align-items-center dropdown-filtro-wrapper">
-                        <div class="dropdown">
-                            <button
-                                class="btn btn-sm btn-light border rounded-start-pill rounded-end-0 px-2 d-flex align-items-center gap-1"
-                                type="button"
-                                id="dropdownFiltroCategoria"
-                                data-bs-toggle="dropdown"
-                                data-bs-auto-close="true"
-                                aria-expanded="false"
-                                title="Selecionar campo de busca"
-                                style="height: 31px; font-size: 0.72rem;"
-                            >
-                                <i class="bi bi-funnel text-muted"></i>
-                                <span id="filtro-label" class="text-muted d-none d-sm-inline">Todos</span>
-                                <i class="bi bi-chevron-down text-muted" style="font-size: 0.55rem;"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-start shadow border-0 rounded-3 py-1" style="min-width: 160px; font-size: 0.78rem; z-index: 1055;">
-                                <li><a class="dropdown-item active" href="#" data-filtro="todos"><i class="bi bi-grid-3x3-gap me-2"></i>Todos</a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li><a class="dropdown-item" href="#" data-filtro="servico"><i class="bi bi-hash me-2"></i>N.Serviço</a></li>
-                                <li><a class="dropdown-item" href="#" data-filtro="cliente"><i class="bi bi-person me-2"></i>Cliente</a></li>
-                                <li><a class="dropdown-item" href="#" data-filtro="valor"><i class="bi bi-currency-dollar me-2"></i>Valor</a></li>
-                                <li><a class="dropdown-item" href="#" data-filtro="status"><i class="bi bi-circle me-2"></i>Status</a></li>
-                            </ul>
+<div class="pedidos-page-wrapper">
+
+    <div class="row g-3">
+
+        <!-- ══════════ Header ══════════ -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-white rounded-4 card-overflow-visible">
+                <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-clipboard2-check fs-3 text-danger"></i>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <span class="text-danger">RDO</span> Express - Pedidos
+                            </h5>
+                            <small class="pedidos-subtitle">
+                                Logística e Controle de Entregas
+                            </small>
                         </div>
-                        <input
-                            type="text"
-                            id="filtro-pedidos"
-                            class="form-control form-control-sm border-start-0 rounded-start-0 rounded-end-pill"
-                            placeholder="Buscar..."
-                            autocomplete="off"
-                            style="height: 31px; max-width: 180px; font-size: 0.78rem;"
-                        >
                     </div>
-                    <button
-                        id="btn-loop-pedidos"
-                        class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center"
-                        onclick="window.toggleLoopPedidos()"
-                        title="Atualizar pedidos"
-                        style="width: 31px; height: 31px; padding: 0;"
-                    >
-                        <i id="icon-loop-pedidos" class="bi bi-arrow-repeat" style="font-size: 0.9rem;"></i>
-                    </button>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <!-- Filtro com dropdown -->
+                        <div class="position-relative d-flex align-items-center dropdown-filtro-wrapper">
+                            <div class="dropdown">
+                                <button
+                                    class="btn btn-sm btn-light border rounded-start-pill rounded-end-0 px-2 d-flex align-items-center gap-1 btn-filtro-dropdown"
+                                    type="button"
+                                    id="dropdownFiltroCategoria"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-auto-close="true"
+                                    aria-expanded="false"
+                                    title="Selecionar campo de busca"
+                                >
+                                    <i class="bi bi-funnel text-muted"></i>
+                                    <span id="filtro-label" class="text-muted d-none d-sm-inline">Todos</span>
+                                    <i class="bi bi-chevron-down text-muted chevron-icon"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-start shadow border-0 rounded-3 py-1 dropdown-filtro-menu">
+                                    <li>
+                                        <a class="dropdown-item active" href="#" data-filtro="todos">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i>Todos
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-filtro="servico">
+                                            <i class="bi bi-hash me-2"></i>N.Serviço
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-filtro="cliente">
+                                            <i class="bi bi-person me-2"></i>Cliente
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-filtro="valor">
+                                            <i class="bi bi-currency-dollar me-2"></i>Valor
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-filtro="status">
+                                            <i class="bi bi-circle me-2"></i>Status
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <input
+                                type="text"
+                                id="filtro-pedidos"
+                                class="form-control form-control-sm border-start-0 rounded-start-0 rounded-end-pill input-filtro-pedidos"
+                                placeholder="Buscar..."
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <!-- Botão Atualizar -->
+                        <button
+                            id="btn-loop-pedidos"
+                            class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center btn-loop"
+                            onclick="window.toggleLoopPedidos()"
+                            title="Atualizar pedidos"
+                        >
+                            <i id="icon-loop-pedidos" class="bi bi-arrow-repeat icon-loop"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="table-responsive p-3">
-                <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
-                    <thead class="text-uppercase" style="font-size: 0.65rem; color: #999;">
-                        <tr>
-                            <th class="ps-3 border-0">N.Serviço</th>
-                            <th class="border-0">Cliente</th>
-                            <th class="border-0">Valor</th>
-                            <th class="border-0">Status</th>
-                            <th class="text-end pe-3 border-0">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-tabela-pedidos">
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
-                                <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                                <div class="mt-2" style="font-size: 0.78rem;">Carregando pedidos...</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+        <!-- ══════════ Tabela ══════════ -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="table-responsive p-3">
+                    <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
+                        <thead class="text-uppercase tabela-pedidos-head">
+                            <tr>
+                                <th class="ps-3 border-0">N.Serviço</th>
+                                <th class="border-0">Cliente</th>
+                                <th class="border-0">Valor</th>
+                                <th class="border-0">Status</th>
+                                <th class="text-end pe-3 border-0">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-pedidos">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
+                                    <div class="mt-2 loading-text">Carregando pedidos...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div class="card-footer bg-white border-0 d-flex justify-content-center pb-3">
-                <div class="btn-group shadow-sm">
-                    <button class="btn btn-light" onclick="window.mudarPaginaPedidos(-1)"><i class="bi bi-chevron-left"></i></button>
-                    <button class="btn btn-light" id="info-paginacao-pedidos" disabled style="min-width: 100px;">Pág 1</button>
-                    <button class="btn btn-light" onclick="window.mudarPaginaPedidos(1)"><i class="bi bi-chevron-right"></i></button>
+                <!-- Paginador -->
+                <div class="card-footer bg-white border-0 d-flex justify-content-center pb-3">
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-light" onclick="window.mudarPaginaPedidos(-1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-light" id="info-paginacao-pedidos" disabled>
+                            Pág 1
+                        </button>
+                        <button class="btn btn-light" onclick="window.mudarPaginaPedidos(1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+
     </div>
+
+    <!-- Container dos modais (carregados via JS) -->
+    <div id="modal-pedidos-container"></div>
+
 </div>
-
-<div id="modal-pedidos-container"></div>
-
-<style>
-@keyframes spin-loop {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-.spinner-rotate {
-    animation: spin-loop 0.8s linear infinite;
-    display: inline-block;
-}
-#tabela-pedidos tbody td {
-    font-size: 0.82rem;
-}
-.pedido-id-label {
-    font-weight: 700;
-    color: #dc3545;
-    font-size: 0.8rem;
-    letter-spacing: 0.3px;
-}
-.pedido-cliente-label {
-    font-weight: 700;
-    color: #212529;
-}
-.pedido-valor-label {
-    font-weight: 700;
-    color: #212529;
-}
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    border-radius: 50px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-}
-.bg-status-pending {
-    background: #fff3cd;
-    color: #856404;
-}
-.bg-status-route {
-    background: #cce5ff;
-    color: #004085;
-}
-.bg-status-done {
-    background: #d4edda;
-    color: #155724;
-}
-.bg-status-cancel {
-    background: #f8d7da;
-    color: #721c24;
-}
-.bg-status-default {
-    background: #e2e3e5;
-    color: #383d41;
-}
-</style>

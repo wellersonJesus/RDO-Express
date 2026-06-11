@@ -1,4 +1,6 @@
-<!-- Modal Detalhes -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL DETALHES DO PEDIDO                        -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalPedidoDetalhes" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -15,7 +17,7 @@
                         <input type="text" id="det-pedido-id" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-5">
-                        <label class="text-muted small">Cliente</label>
+                        <label class="text-muted small">CLIENTE</label>
                         <input type="text" id="det-cliente" class="form-control form-control-sm border-0 bg-light" readonly>
                     </div>
                     <div class="col-md-4">
@@ -79,7 +81,9 @@
     </div>
 </div>
 
-<!-- Modal Editar -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL EDITAR PEDIDO                             -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -92,4 +96,130 @@
             </div>
             <div class="modal-body p-4">
                 <form id="form-editar-pedido" novalidate>
-                    <input
+                    <input type="hidden" id="edit-pedido-id">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="text-muted small">CLIENTE</label>
+                            <input type="text" id="edit-solicitante" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">CONTATO</label>
+                            <input type="text" id="edit-contato" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">MERCADORIA</label>
+                            <select id="edit-mercadoria" class="form-select form-select-sm bg-light border-0">
+                                <option value="">Selecione...</option>
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">HORÁRIO</label>
+                            <input type="text" id="edit-horario" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">RETORNO</label>
+                            <select id="edit-retorno" class="form-select form-select-sm bg-light border-0">
+                                <option value="Não">Não</option>
+                                <option value="Sim">Sim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">PRIORIDADE</label>
+                            <select id="edit-prioridade" class="form-select form-select-sm bg-light border-0">
+                                <option value="0">Normal</option>
+                                <option value="5">Agendado</option>
+                                <option value="7">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">ROTA (DE / PARA)</label>
+                            <textarea id="edit-rotas" class="form-control form-control-sm bg-light border-0" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">OBSERVAÇÃO</label>
+                            <input type="text" id="edit-obs" class="form-control form-control-sm bg-light border-0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button id="btn-salvar-edicao" class="btn btn-danger px-4" onclick="window.RDO_PEDIDOS.salvarEdicao()">SALVAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL NOVO PEDIDO                               -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
+                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Novo Pedido</h5>
+                <div id="novo-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
+            </div>
+            <div class="modal-body p-4">
+                <form id="form-novo-pedido" novalidate>
+                    <input type="hidden" id="novo-id-chat">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="text-muted small">SOLICITANTE</label>
+                            <input type="text" id="novo-solicitante" class="form-control form-control-sm bg-light border-0" readonly placeholder="Definido pelo chat ativo">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">CONTATO</label>
+                            <input type="text" id="novo-contato" class="form-control form-control-sm bg-light border-0" placeholder="Telefone...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="text-muted small">MERCADORIA</label>
+                            <select id="novo-mercadoria" class="form-select form-select-sm bg-light border-0">
+                                <option value="">Selecione...</option>
+                                <option value="Sacola">Sacola</option>
+                                <option value="Coleta">Coleta</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Envelope">Envelope</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">HORÁRIO</label>
+                            <input type="text" id="novo-horario" class="form-control form-control-sm bg-light border-0" placeholder="Ex: 14:30">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">RETORNO</label>
+                            <select id="novo-retorno" class="form-select form-select-sm bg-light border-0">
+                                <option value="Não">Não</option>
+                                <option value="Sim">Sim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">PRIORIDADE</label>
+                            <select id="novo-prioridade" class="form-select form-select-sm bg-light border-0">
+                                <option value="0">Normal</option>
+                                <option value="5">Agendado</option>
+                                <option value="7">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">ROTAS (DE / PARA)</label>
+                            <textarea id="novo-rotas" class="form-control form-control-sm bg-light border-0" rows="2" placeholder="Ex: Rua A, 123 | Rua B, 456"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small">OBSERVAÇÃO</label>
+                            <input type="text" id="novo-obs" class="form-control form-control-sm bg-light border-0" placeholder="Observações adicionais...">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button id="btn-salvar-novo" class="btn btn-danger px-4" onclick="window.RDO_PEDIDOS.salvarNovo()">CRIAR PEDIDO</button>
+            </div>
+        </div>
+    </div>
+</div>

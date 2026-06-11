@@ -1,8 +1,35 @@
-/* ============================================
-   PEDIDOS - ESTILOS COMPLETOS
-   ============================================ */
+/* ── Força ocultar header do layout quando pedidos está ativo ── */
+body:has(.pedidos-page-wrapper) #page-header {
+    display: none !important;
+}
 
-/* --- Tabela --- */
+/* ════════════════════════════════════════════════
+   PEDIDOS — ESTILOS COMPLETOS (Refatorado)
+   ════════════════════════════════════════════════ */
+
+/* ── Layout & Cards ──────────────────────────── */
+
+.card-overflow-visible,
+.card-overflow-visible .card-body {
+    overflow: visible !important;
+}
+
+.pedidos-subtitle {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.loading-text {
+    font-size: 0.78rem;
+}
+
+/* ── Tabela ──────────────────────────────────── */
+
+.tabela-pedidos-head {
+    font-size: 0.65rem;
+    color: #999;
+}
+
 #tabela-pedidos td {
     font-size: 0.75rem !important;
     font-weight: 400 !important;
@@ -16,38 +43,60 @@
 }
 
 #tabela-pedidos tbody tr:hover {
-    background-color: #fafbfc;
+    background-color: #fdf2f3;
 }
 
-/* --- ID do Serviço --- */
+/* ── ID do Serviço ───────────────────────────── */
+
 .pedido-id-label {
+    font-weight: 600;
     font-size: 0.78rem;
-    font-weight: 400;
     color: #dc3545;
+    letter-spacing: 0.3px;
 }
 
-/* --- Badges de Status --- */
+/* ── Badges de Status ────────────────────────── */
+
 .status-badge {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.62rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
 }
 
-.bg-status-pending { background-color: #fff8e1; color: #b8860b; }
-.bg-status-route   { background-color: #e8f4fd; color: #1976d2; }
-.bg-status-done    { background-color: #e8f5e9; color: #2e7d32; }
-.bg-status-cancel  { background-color: #fce4ec; color: #c62828; }
-.bg-status-default { background-color: #f5f5f5; color: #757575; }
+.bg-status-pending {
+    background-color: #fff8e1;
+    color: #b8860b;
+}
 
-/* --- Botões de Ação (MESMO MODELO DA ADMINISTRAÇÃO) ---
-   btn btn-light btn-sm — fundo cinza claro, limpo, discreto
-*/
+.bg-status-route {
+    background-color: #e8f4fd;
+    color: #1976d2;
+}
+
+.bg-status-done {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.bg-status-cancel {
+    background-color: #fce4ec;
+    color: #c62828;
+}
+
+.bg-status-default {
+    background-color: #f5f5f5;
+    color: #757575;
+}
+
+/* ── Botões de Ação na Tabela ────────────────── */
+
 #tabela-pedidos .btn.btn-light.btn-sm {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -61,7 +110,18 @@
     color: #495057;
 }
 
-/* --- Spinner de atualização --- */
+/* ── Botão Loop (Atualizar) ──────────────────── */
+
+.btn-loop {
+    width: 31px;
+    height: 31px;
+    padding: 0;
+}
+
+.icon-loop {
+    font-size: 0.9rem;
+}
+
 .spinner-rotate {
     display: inline-block;
     animation: spin-loop 0.8s linear infinite;
@@ -72,23 +132,29 @@
     to   { transform: rotate(360deg); }
 }
 
-/* ============================================
-   DROPDOWN FILTRO - CORREÇÃO OVERFLOW
-   ============================================ */
+/* ── Dropdown Filtro ─────────────────────────── */
 
-/* Força o card do header a permitir overflow visível */
-.card.overflow-visible,
-.card.overflow-visible .card-body {
-    overflow: visible !important;
-}
-
-/* Wrapper do dropdown — posição relativa para o menu se ancorar */
 .dropdown-filtro-wrapper {
     position: relative;
 }
 
-/* Menu dropdown — posição absoluta, sai por cima do card */
-.dropdown-filtro-wrapper .dropdown-menu {
+.btn-filtro-dropdown {
+    height: 31px;
+    font-size: 0.72rem;
+    transition: all 0.15s ease;
+}
+
+.btn-filtro-dropdown:hover {
+    background-color: #f8f9fa;
+}
+
+.chevron-icon {
+    font-size: 0.55rem;
+}
+
+.dropdown-filtro-menu {
+    min-width: 160px;
+    font-size: 0.78rem;
     z-index: 1055 !important;
     position: absolute !important;
     top: 100% !important;
@@ -98,13 +164,6 @@
     border: 1px solid #eee !important;
 }
 
-/* Item ativo no dropdown — cor danger */
-.dropdown-filtro-wrapper .dropdown-item.active,
-.dropdown-filtro-wrapper .dropdown-item:active {
-    background-color: #dc3545 !important;
-    color: #fff !important;
-}
-
 .dropdown-filtro-wrapper .dropdown-item {
     padding: 6px 14px;
     border-radius: 6px;
@@ -112,99 +171,44 @@
     transition: background-color 0.15s ease;
 }
 
+.dropdown-filtro-wrapper .dropdown-item.active,
+.dropdown-filtro-wrapper .dropdown-item:active {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
 .dropdown-filtro-wrapper .dropdown-item:hover:not(.active) {
     background-color: #f8f9fa;
 }
 
-/* --- Filtro input focus --- */
-#filtro-pedidos:focus {
+/* ── Input do Filtro ─────────────────────────── */
+
+.input-filtro-pedidos {
+    height: 31px;
+    max-width: 180px;
+    font-size: 0.78rem;
+}
+
+.input-filtro-pedidos:focus {
     box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
     border-color: #e4606d;
 }
 
-/* Botão do dropdown hover */
-#dropdownFiltroCategoria {
-    transition: all 0.15s ease;
-}
+/* ── Paginador ───────────────────────────────── */
 
-#dropdownFiltroCategoria:hover {
-    background-color: #f8f9fa;
-}
-
-/* ============================================
-   PAGINADOR (MESMO MODELO DA ADMINISTRAÇÃO)
-   ============================================ */
 #info-paginacao-pedidos {
+    min-width: 100px;
     font-size: 0.78rem;
     font-weight: 500;
     color: #666;
 }
 
-.pedido-id-label {
-  font-weight: 600;
-  font-size: 0.78rem;
-  color: #dc3545;
-  letter-spacing: 0.3px;
+/* ── Modais — Ajustes globais ────────────────── */
+
+#modal-pedidos-container .modal-content {
+    border: 0;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 50px;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-}
-
-.bg-status-pending {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.bg-status-route {
-  background: #cce5ff;
-  color: #004085;
-}
-
-.bg-status-done {
-  background: #d4edda;
-  color: #155724;
-}
-
-.bg-status-cancel {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.bg-status-default {
-  background: #e2e3e5;
-  color: #383d41;
-}
-
-.spinner-rotate {
-  animation: spin-loop 0.8s linear infinite;
-}
-
-@keyframes spin-loop {
-  to { transform: rotate(360deg); }
-}
-
-.dropdown-filtro-wrapper .dropdown-menu {
-  overflow: visible !important;
-  z-index: 1055 !important;
-}
-
-#corpo-tabela-pedidos tr {
-  transition: background 0.15s ease;
-}
-
-#corpo-tabela-pedidos tr:hover {
-  background: #fdf2f3;
-}
-
-.card {
-  overflow: visible !important;
+#modal-pedidos-container .form-control-sm[readonly] {
+    cursor: default;
 }
