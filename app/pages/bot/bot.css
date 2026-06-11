@@ -1,3 +1,7 @@
+/* ══════════════════════════════════════════════
+   BOT PAGE — RDO Express
+   ══════════════════════════════════════════════ */
+
 /* --- Remoção de bordas na tabela --- */
 .card .table-responsive .table,
 .card .table-responsive .table tr,
@@ -10,12 +14,37 @@
     border-bottom: 2px solid #f1f3f5 !important;
 }
 
-/* --- Ajuste de Fonte --- */
-#bot-list td, #bot-list td small {
+/* --- Fonte compacta na tabela --- */
+#bot-list td,
+#bot-list td small {
     font-size: 0.75rem !important;
 }
 
-/* --- Badges Estilizadas --- */
+/* --- Avatar com fallback --- */
+.bot-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #f1f3f5;
+}
+
+.bot-avatar-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF0000 0%, #cc0000 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- Badges de tipo --- */
 .badge-tipo {
     display: inline-block;
     padding: 0.2rem 0.6rem;
@@ -23,11 +52,128 @@
     font-size: 0.65rem !important;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-.badge-tipo[data-tipo="atendente"] { background: #ffe4e6; color: #9f1239; }
-.badge-tipo[data-tipo="grupo"] { background: #f1f3f5; color: #495057; }
-.badge-tipo[data-tipo="SRE Architect"] { background: #dbeafe; color: #1e40af; }
-.badge-tipo[data-tipo="financeiro"] { background: #dcfce7; color: #166534; }
-.badge-tipo[data-tipo="motoboy"] { background: #fef3c7; color: #92400e; }
-.badge-tipo[data-tipo="cliente"] { background: #e0f2fe; color: #0369a1; }
+.badge-usuarios   { background: #ffe4e6; color: #9f1239; }
+.badge-clientes    { background: #e0f2fe; color: #0369a1; }
+.badge-colaboradores { background: #dcfce7; color: #166534; }
+
+/* --- Botão Sync (Loop) — SEM background, SEM borda --- */
+.btn-sync-bot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #FF0000;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-sync-bot:hover {
+    color: #cc0000;
+    transform: scale(1.15);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.btn-sync-bot:focus,
+.btn-sync-bot:active,
+.btn-sync-bot:focus-visible {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* --- Animação de rotação do ícone sync --- */
+.spinner-rotate {
+    animation: spin-bot 0.8s linear infinite;
+}
+
+@keyframes spin-bot {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* --- Hover suave nas linhas --- */
+#bot-list tr {
+    transition: background-color 0.15s ease;
+}
+
+#bot-list tr:hover {
+    background-color: #fafafa;
+}
+
+/* --- Botões de ação na tabela --- */
+#bot-list .btn-action-bot {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    transition: all 0.15s ease;
+}
+
+#bot-list .btn-action-bot:hover {
+    transform: scale(1.08);
+}
+
+/* --- Campo de busca foco --- */
+#busca-nome:focus {
+    box-shadow: none;
+    border-color: #FF0000;
+}
+
+#busca-nome::placeholder {
+    color: #bbb;
+}
+
+/* --- Switch vermelho --- */
+#bot-list .form-check-input:checked {
+    background-color: #FF0000;
+    border-color: #FF0000;
+}
+
+/* --- Mobile Responsivo --- */
+@media (max-width: 576px) {
+    .card-body .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    #filtro-tipo {
+        width: 100% !important;
+    }
+
+    #bot-list td {
+        font-size: 0.7rem !important;
+        padding: 0.4rem 0.3rem !important;
+    }
+
+    .bot-avatar,
+    .bot-avatar-fallback {
+        width: 28px;
+        height: 28px;
+        font-size: 0.6rem;
+    }
+
+    #bot-list .btn-action-bot {
+        width: 26px;
+        height: 26px;
+        font-size: 0.7rem;
+    }
+}
