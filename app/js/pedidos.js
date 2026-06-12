@@ -3,6 +3,7 @@ window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 window.pedidosState = {
     isFetching: false,
     filtroCategoria: 'todos',
+    filtroData: '',
     paginaAtual: 1,
     itensPorPagina: 20,
     modaisCarregados: false
@@ -33,9 +34,34 @@ window.formatarIdServico = function (id) {
     }
 };
 
+function _extrairDataPedido(pedido) {
+    var raw = String(pedido.data || pedido.created_at || pedido.data_criacao || pedido.timestamp || '').trim();
+    if (!raw) return '';
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.substring(0, 10);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) {
+        var partes = raw.substring(0, 10).split('/');
+        return partes[2] + '-' + partes[1] + '-' + partes[0];
+    }
+    var parsed = new Date(raw);
+    if (!isNaN(parsed.getTime())) {
+        var y = parsed.getFullYear();
+        var m = String(parsed.getMonth() + 1).padStart(2, '0');
+        var d = String(parsed.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+    return '';
+}
+
+function _formatarDataExibicao(isoDate) {
+    if (!isoDate || isoDate.length < 10) return '—';
+    var partes = isoDate.substring(0, 10).split('-');
+    if (partes.length !== 3) return '—';
+    return partes[2] + '/' + partes[1] + '/' + partes[0];
+}
+
 window.resolverNomeCliente = function (pedido) {
     try {
-        var idChat = String(pedido.id_chat || '').trim();
+        var idChat = String(pedido.id_chat || pedido.id_cliente || '').trim();
         if (!idChat) return String(pedido.solicitante || '—');
         var clientes = [];
         if (Array.isArray(window.AppRDO && window.AppRDO.clientesCache)) {
@@ -46,7 +72,7 @@ window.resolverNomeCliente = function (pedido) {
         for (var i = 0; i < clientes.length; i++) {
             var c = clientes[i];
             var cId = String(c.id_chat || c.id || '').trim();
-            if (cId === idChat) return String(c.nome || c.name || c.solicitante || '—');
+            if (cId === idChat) return String(c.nome || c.name || c.username || c.solicitante || '—');
         }
         if (window.AppRDO && window.AppRDO.contatosCache) {
             var contato = window.AppRDO.contatosCache[idChat];
@@ -78,7 +104,7 @@ function _resolverSolicitantePorIdChat(idChat) {
         for (var i = 0; i < clientes.length; i++) {
             var c = clientes[i];
             var cId = String(c.id_chat || c.id || '').trim();
-            if (cId === id) return String(c.nome || c.name || c.solicitante || '');
+            if (cId === id) return String(c.nome || c.name || c.username || c.solicitante || '');
         }
         if (window.AppRDO && window.AppRDO.contatosCache) {
             var contato = window.AppRDO.contatosCache[id];
@@ -140,35 +166,41 @@ function _atualizarPaginador(totalFiltrado) {
     info.innerText = 'Pág ' + window.pedidosState.paginaAtual + ' de ' + totalPag;
 }
 
-function _matchFiltro(p, termo, categoria) {
+function _matchFiltroPorCategoria(p, termo, categoria) {
     var t = termo.toLowerCase();
-    if (categoria === 'servico') {
-        var idFmt = window.formatarIdServico(p.id);
-        return idFmt.toLowerCase().indexOf(t) !== -1 || String(p.id || '').toLowerCase().indexOf(t) !== -1;
+    if (!t) return true;
+    switch (categoria) {
+        case 'servico':
+            var idFmt = window.formatarIdServico(p.id);
+            return idFmt.toLowerCase().indexOf(t) !== -1 || String(p.id || '').toLowerCase().indexOf(t) !== -1;
+        case 'data':
+            var dataExib = _formatarDataExibicao(_extrairDataPedido(p));
+            var dataIso = _extrairDataPedido(p);
+            return dataExib.indexOf(t) !== -1 || dataIso.indexOf(t) !== -1;
+        case 'cliente':
+            var nomeCliente = window.resolverNomeCliente(p);
+            return nomeCliente.toLowerCase().indexOf(t) !== -1 || String(p.solicitante || '').toLowerCase().indexOf(t) !== -1;
+        case 'status':
+            return String(p.status || '').toLowerCase().indexOf(t) !== -1;
+        default:
+            var idFmtAll = window.formatarIdServico(p.id);
+            var nomeAll = window.resolverNomeCliente(p);
+            var campos = [
+                idFmtAll, String(p.id || ''), nomeAll, String(p.solicitante || ''),
+                String(p.valor_corrida || ''), String(p.status || ''), String(p.motoboy || ''),
+                String(p.mercadoria || ''), String(p.contato || ''), String(p.observacao || ''),
+                _formatarDataExibicao(_extrairDataPedido(p))
+            ];
+            for (var i = 0; i < campos.length; i++) {
+                if (campos[i].toLowerCase().indexOf(t) !== -1) return true;
+            }
+            return false;
     }
-    if (categoria === 'cliente') {
-        var nome = window.resolverNomeCliente(p);
-        return nome.toLowerCase().indexOf(t) !== -1;
-    }
-    if (categoria === 'valor') {
-        return String(p.valor_corrida || '').toLowerCase().indexOf(t) !== -1;
-    }
-    if (categoria === 'status') {
-        var s = String(p.status || '').trim();
-        var sp = s.indexOf('/') !== -1 ? s.split('/').pop().trim() : s;
-        return sp.toLowerCase().indexOf(t) !== -1 || s.toLowerCase().indexOf(t) !== -1;
-    }
-    var idFmt2 = window.formatarIdServico(p.id);
-    var nomeCliente = window.resolverNomeCliente(p);
-    var campos = [
-        idFmt2, String(p.id || ''), nomeCliente, String(p.solicitante || ''),
-        String(p.valor_corrida || ''), String(p.status || ''), String(p.motoboy || ''),
-        String(p.mercadoria || ''), String(p.contato || ''), String(p.observacao || '')
-    ];
-    for (var i = 0; i < campos.length; i++) {
-        if (campos[i].toLowerCase().indexOf(t) !== -1) return true;
-    }
-    return false;
+}
+
+function _matchData(p, dataFiltro) {
+    if (!dataFiltro) return true;
+    return _extrairDataPedido(p) === dataFiltro;
 }
 
 function _buscarPedidoNoCache(pedidoId) {
@@ -184,9 +216,16 @@ function _renderizarTabela(lista) {
     var corpo = document.getElementById('corpo-tabela-pedidos');
     if (!corpo) return;
     var inputFiltro = document.getElementById('filtro-pedidos');
-    var termo = inputFiltro ? inputFiltro.value.trim().toLowerCase() : '';
+    var termo = inputFiltro ? inputFiltro.value.trim() : '';
+    var dataFiltro = window.pedidosState.filtroData || '';
     var categoria = window.pedidosState.filtroCategoria || 'todos';
-    var filtrada = termo ? lista.filter(function (p) { return _matchFiltro(p, termo, categoria); }) : lista;
+    var filtrada = lista;
+    if (termo) {
+        filtrada = filtrada.filter(function (p) { return _matchFiltroPorCategoria(p, termo, categoria); });
+    }
+    if (dataFiltro) {
+        filtrada = filtrada.filter(function (p) { return _matchData(p, dataFiltro); });
+    }
     var totalFiltrada = filtrada.length;
     var totalPag = Math.max(1, Math.ceil(totalFiltrada / window.pedidosState.itensPorPagina));
     if (window.pedidosState.paginaAtual > totalPag) window.pedidosState.paginaAtual = totalPag;
@@ -195,8 +234,8 @@ function _renderizarTabela(lista) {
     _atualizarPaginador(totalFiltrada);
     if (paginada.length === 0) {
         corpo.innerHTML =
-            '<tr><td colspan="4" class="text-center text-muted py-4" style="font-size:0.8rem;">' +
-            (termo
+            '<tr><td colspan="5" class="text-center text-muted py-4" style="font-size:0.8rem;">' +
+            (termo || dataFiltro
                 ? '<i class="bi bi-search me-1"></i>Nenhum resultado para o filtro.'
                 : '<i class="bi bi-inbox d-block mb-1" style="font-size:1.3rem;"></i>Nenhum pedido encontrado.') +
             '</td></tr>';
@@ -205,7 +244,8 @@ function _renderizarTabela(lista) {
     corpo.innerHTML = paginada.map(function (p) {
         var id = String(p.id || '0');
         var idFormatado = window.formatarIdServico(id);
-        var solicitante = _resolverSolicitantePorIdChat(p.id_chat) || String(p.solicitante || '—');
+        var dataPedido = _formatarDataExibicao(_extrairDataPedido(p));
+        var solicitante = _resolverSolicitantePorIdChat(p.id_chat || p.id_cliente) || String(p.solicitante || '—');
         var stPuro = _statusPuro(p);
         var badge = _badgeStatus(stPuro);
         var finalizado = _isFinalizado(p);
@@ -226,6 +266,7 @@ function _renderizarTabela(lista) {
         }
         return '<tr style="font-weight:300;">' +
             '<td class="ps-3 py-2" style="color:#000;">' + idFormatado + '</td>' +
+            '<td class="py-2">' + _esc(dataPedido) + '</td>' +
             '<td class="py-2">' + _esc(solicitante) + '</td>' +
             '<td class="py-2">' + badge + '</td>' +
             '<td class="text-end pe-3 py-2">' + acoes + '</td>' +
@@ -274,7 +315,7 @@ async function _fetchPedidos() {
         var corpo = document.getElementById('corpo-tabela-pedidos');
         if (corpo) {
             corpo.innerHTML =
-                '<tr><td colspan="4" class="text-center text-danger py-4" style="font-size:0.8rem;">' +
+                '<tr><td colspan="5" class="text-center text-danger py-4" style="font-size:0.8rem;">' +
                 '<i class="bi bi-exclamation-triangle me-1"></i>Erro ao carregar pedidos.</td></tr>';
         }
     } finally {
@@ -282,6 +323,79 @@ async function _fetchPedidos() {
         _atualizarBotaoLoop(false);
     }
 }
+
+function _populateHeader() {
+    var elNome = document.getElementById('header-user-nome');
+    var elCargo = document.getElementById('header-user-cargo');
+    var elAvatar = document.getElementById('header-user-avatar');
+    var elFallback = document.getElementById('header-avatar-fallback');
+
+    var username = localStorage.getItem('username') || 'Usuário';
+    var tipo = localStorage.getItem('tipo') || '';
+    var imagem = localStorage.getItem('imagem');
+
+    if (elNome) elNome.textContent = username;
+    if (elCargo) elCargo.textContent = tipo;
+
+    var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
+    if (isValid && elAvatar) {
+        elAvatar.src = imagem;
+        elAvatar.style.display = 'block';
+        if (elFallback) elFallback.style.display = 'none';
+        elAvatar.onerror = function () {
+            elAvatar.style.display = 'none';
+            if (elFallback) elFallback.style.display = 'flex';
+        };
+    } else {
+        if (elAvatar) elAvatar.style.display = 'none';
+        if (elFallback) elFallback.style.display = 'flex';
+    }
+}
+
+window.toggleDropdownFiltro = function () {
+    var wrapper = document.querySelector('.dropdown-filtro-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.toggle('open');
+};
+
+window.selecionarFiltroTipo = function (tipo, label, el) {
+    window.pedidosState.filtroCategoria = tipo;
+    var labelEl = document.getElementById('label-filtro-tipo');
+    if (labelEl) labelEl.textContent = label;
+
+    var items = document.querySelectorAll('.dropdown-filtro-item');
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.remove('active');
+    }
+    if (el) el.classList.add('active');
+
+    var wrapper = document.querySelector('.dropdown-filtro-wrapper');
+    if (wrapper) wrapper.classList.remove('open');
+
+    var inputFiltro = document.getElementById('filtro-pedidos');
+    var inputData = document.getElementById('filtro-data-pedidos');
+
+    if (tipo === 'data') {
+        if (inputFiltro) inputFiltro.placeholder = 'Ex: 12/06/2026';
+        if (inputData) inputData.style.display = '';
+    } else if (tipo === 'servico') {
+        if (inputFiltro) inputFiltro.placeholder = 'Ex: RDO001';
+        if (inputData) inputData.style.display = '';
+    } else if (tipo === 'cliente') {
+        if (inputFiltro) inputFiltro.placeholder = 'Nome do cliente...';
+        if (inputData) inputData.style.display = '';
+    } else if (tipo === 'status') {
+        if (inputFiltro) inputFiltro.placeholder = 'Ex: Pendente, Concluído...';
+        if (inputData) inputData.style.display = '';
+    } else {
+        if (inputFiltro) inputFiltro.placeholder = 'Buscar...';
+        if (inputData) inputData.style.display = '';
+    }
+
+    window.pedidosState.paginaAtual = 1;
+    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    _renderizarTabela(cache);
+};
 
 window.toggleLoopPedidos = async function () {
     if (window.pedidosState.isFetching) return;
@@ -291,9 +405,16 @@ window.toggleLoopPedidos = async function () {
 window.mudarPaginaPedidos = function (dir) {
     var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
     var inputFiltro = document.getElementById('filtro-pedidos');
-    var termo = inputFiltro ? inputFiltro.value.trim().toLowerCase() : '';
+    var termo = inputFiltro ? inputFiltro.value.trim() : '';
+    var dataFiltro = window.pedidosState.filtroData || '';
     var categoria = window.pedidosState.filtroCategoria || 'todos';
-    var filtrada = termo ? cache.filter(function (p) { return _matchFiltro(p, termo, categoria); }) : cache;
+    var filtrada = cache;
+    if (termo) {
+        filtrada = filtrada.filter(function (p) { return _matchFiltroPorCategoria(p, termo, categoria); });
+    }
+    if (dataFiltro) {
+        filtrada = filtrada.filter(function (p) { return _matchData(p, dataFiltro); });
+    }
     var totalPag = Math.max(1, Math.ceil(filtrada.length / window.pedidosState.itensPorPagina));
     var novaPagina = window.pedidosState.paginaAtual + dir;
     if (novaPagina >= 1 && novaPagina <= totalPag) {
@@ -316,39 +437,57 @@ function _bindFiltro() {
     });
 }
 
-function _bindFiltroCategoria() {
-    var container = document.querySelector('.dropdown-filtro-wrapper');
-    if (!container) return;
-    var items = container.querySelectorAll('.dropdown-menu .dropdown-item[data-filtro]');
-    var label = document.getElementById('filtro-label');
-    var input = document.getElementById('filtro-pedidos');
-    items.forEach(function (item) {
-        item.addEventListener('click', function (e) {
-            e.preventDefault();
-            items.forEach(function (el) { el.classList.remove('active'); });
-            item.classList.add('active');
-            var cat = item.getAttribute('data-filtro');
-            window.pedidosState.filtroCategoria = cat;
-            if (label) label.textContent = item.textContent.trim();
-            var placeholders = {
-                todos: 'Buscar...',
-                servico: 'Ex: RDO001',
-                cliente: 'Nome do cliente...',
-                status: 'Ex: Pendente, Em Rota...'
-            };
-            if (input) {
-                input.placeholder = placeholders[cat] || 'Buscar...';
-                input.value = '';
-                input.focus();
-            }
-            var bsDrop = bootstrap.Dropdown.getInstance(document.getElementById('dropdownFiltroCategoria'));
-            if (bsDrop) bsDrop.hide();
-            window.pedidosState.paginaAtual = 1;
-            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            _renderizarTabela(cache);
-        });
+function _bindFiltroData() {
+    var input = document.getElementById('filtro-data-pedidos');
+    if (!input) return;
+    input.addEventListener('change', function () {
+        window.pedidosState.filtroData = input.value || '';
+        window.pedidosState.paginaAtual = 1;
+        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+        _renderizarTabela(cache);
     });
 }
+
+function _bindCloseDropdownFiltro() {
+    document.addEventListener('click', function (e) {
+        var wrapper = document.querySelector('.dropdown-filtro-wrapper');
+        if (!wrapper) return;
+        if (!wrapper.contains(e.target)) {
+            wrapper.classList.remove('open');
+        }
+    });
+}
+
+window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome) {
+    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    for (var i = 0; i < cache.length; i++) {
+        if (String(cache[i].id || '').trim() === String(pedidoId || '').trim()) {
+            cache[i].status = statusFormatado;
+            if (motoboyNome) cache[i].motoboy = motoboyNome;
+            break;
+        }
+    }
+    var corpo = document.getElementById('corpo-tabela-pedidos');
+    if (corpo) _renderizarTabela(cache);
+};
+
+window.RDO_PEDIDOS.inserirPedidoLocal = function (novoPedido) {
+    if (!novoPedido || !novoPedido.id) return;
+    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    var jaExiste = false;
+    for (var i = 0; i < cache.length; i++) {
+        if (String(cache[i].id || '').trim() === String(novoPedido.id).trim()) {
+            jaExiste = true;
+            break;
+        }
+    }
+    if (!jaExiste) {
+        cache.push(novoPedido);
+        window.AppRDO.pedidosCache = cache;
+    }
+    var corpo = document.getElementById('corpo-tabela-pedidos');
+    if (corpo) _renderizarTabela(cache);
+};
 
 window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
     var ok = await _garantirModais();
@@ -358,7 +497,7 @@ window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
     }
     var pedido = _buscarPedidoNoCache(pedidoId);
     if (!pedido) return;
-    var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat) || String(pedido.solicitante || '—');
+    var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat || pedido.id_cliente) || String(pedido.solicitante || '—');
     var el = function (id) { return document.getElementById(id); };
     if (el('detalhe-titulo')) el('detalhe-titulo').textContent = window.formatarIdServico(pedido.id);
     if (el('det-pedido-id')) el('det-pedido-id').value = window.formatarIdServico(pedido.id);
@@ -374,7 +513,7 @@ window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
     if (el('det-horario')) el('det-horario').value = pedido.horario || '—';
     if (el('det-prioridade')) el('det-prioridade').value = pedido.prioridade || '—';
     if (el('det-valor')) el('det-valor').value = pedido.valor_corrida || '—';
-    if (el('det-id-chat')) el('det-id-chat').value = pedido.id_chat || '—';
+    if (el('det-id-chat')) el('det-id-chat').value = pedido.id_chat || pedido.id_cliente || '—';
     if (el('det-obs')) el('det-obs').value = pedido.observacao || '—';
     var modalEl = document.getElementById('modalPedidoDetalhes');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -418,7 +557,7 @@ window.RDO_PEDIDOS.abrirEdicao = async function (pedidoId) {
     if (errDiv) errDiv.classList.add('d-none');
     var idInput = document.getElementById('edit-pedido-id');
     if (idInput) idInput.value = pedido.id || '';
-    var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat) || String(pedido.solicitante || '');
+    var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat || pedido.id_cliente) || String(pedido.solicitante || '');
     setVal('edit-solicitante', solicitante);
     setVal('edit-contato', pedido.contato);
     setVal('edit-mercadoria', pedido.mercadoria);
@@ -630,10 +769,15 @@ window.RDO_PEDIDOS.preencherSolicitanteDoChat = function (idChat, nome) {
 window.initPedidos = async function () {
     window.pedidosState.isFetching = false;
     window.pedidosState.filtroCategoria = 'todos';
+    window.pedidosState.filtroData = '';
     window.pedidosState.paginaAtual = 1;
     window.pedidosState.modaisCarregados = false;
+    var inputData = document.getElementById('filtro-data-pedidos');
+    if (inputData) inputData.value = '';
+    _populateHeader();
     await _carregarModaisPedidos();
     _bindFiltro();
-    _bindFiltroCategoria();
+    _bindFiltroData();
+    _bindCloseDropdownFiltro();
     await _fetchPedidos();
 };

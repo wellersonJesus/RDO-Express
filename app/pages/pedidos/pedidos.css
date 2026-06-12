@@ -1,17 +1,109 @@
-/* ── Força ocultar header do layout quando pedidos está ativo ── */
 body:has(.pedidos-page-wrapper) #page-header {
     display: none !important;
 }
 
-/* ════════════════════════════════════════════════
-   PEDIDOS — ESTILOS COMPLETOS (Refatorado)
-   ════════════════════════════════════════════════ */
+.pedidos-page-wrapper {
+    padding-top: 0;
+}
 
-/* ── Layout & Cards ──────────────────────────── */
+.btn-hamburger-pedidos {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #495057;
+    transition: color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
+}
 
-.card-overflow-visible,
-.card-overflow-visible .card-body {
-    overflow: visible !important;
+.btn-hamburger-pedidos:hover {
+    color: #dc3545;
+    transform: scale(1.1);
+}
+
+.header-page-title {
+    font-size: 0.95rem;
+    line-height: 1.2;
+}
+
+.header-page-subtitle {
+    font-size: 0.7rem;
+}
+
+.header-user-info {
+    gap: 10px;
+}
+
+.header-user-name {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    color: #333;
+}
+
+.header-user-role {
+    font-size: 0.65rem;
+    line-height: 1.2;
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.header-avatar-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.header-avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 2px solid #eee;
+}
+
+.header-avatar-fallback {
+    width: 40px;
+    height: 40px;
+    background: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.2rem;
+    border-radius: 50%;
+}
+
+.btn-sync-pedidos {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    color: #dc3545;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-sync-pedidos:hover {
+    color: #a71d2a;
+    transform: scale(1.15);
+}
+
+.btn-sync-pedidos:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pedidos-content-area {
+    padding: 16px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .pedidos-subtitle {
@@ -22,8 +114,6 @@ body:has(.pedidos-page-wrapper) #page-header {
 .loading-text {
     font-size: 0.78rem;
 }
-
-/* ── Tabela ──────────────────────────────────── */
 
 .tabela-pedidos-head {
     font-size: 0.65rem;
@@ -46,16 +136,12 @@ body:has(.pedidos-page-wrapper) #page-header {
     background-color: #fdf2f3;
 }
 
-/* ── ID do Serviço ───────────────────────────── */
-
 .pedido-id-label {
     font-weight: 600;
     font-size: 0.78rem;
     color: #dc3545;
     letter-spacing: 0.3px;
 }
-
-/* ── Badges de Status ────────────────────────── */
 
 .status-badge {
     display: inline-flex;
@@ -95,8 +181,6 @@ body:has(.pedidos-page-wrapper) #page-header {
     color: #757575;
 }
 
-/* ── Botões de Ação na Tabela ────────────────── */
-
 #tabela-pedidos .btn.btn-light.btn-sm {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -110,18 +194,6 @@ body:has(.pedidos-page-wrapper) #page-header {
     color: #495057;
 }
 
-/* ── Botão Loop (Atualizar) ──────────────────── */
-
-.btn-loop {
-    width: 31px;
-    height: 31px;
-    padding: 0;
-}
-
-.icon-loop {
-    font-size: 0.9rem;
-}
-
 .spinner-rotate {
     display: inline-block;
     animation: spin-loop 0.8s linear infinite;
@@ -132,56 +204,99 @@ body:has(.pedidos-page-wrapper) #page-header {
     to   { transform: rotate(360deg); }
 }
 
-/* ── Dropdown Filtro ─────────────────────────── */
-
 .dropdown-filtro-wrapper {
     position: relative;
+    display: inline-block;
 }
 
-.btn-filtro-dropdown {
+.btn-filtro-inteligente {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 50px;
+    padding: 4px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
     height: 31px;
-    font-size: 0.72rem;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-.btn-filtro-dropdown:hover {
-    background-color: #f8f9fa;
+.btn-filtro-inteligente:hover {
+    border-color: #dc3545;
+    color: #dc3545;
 }
 
-.chevron-icon {
-    font-size: 0.55rem;
+.btn-filtro-inteligente .bi-funnel-fill {
+    font-size: 0.7rem;
+    color: #dc3545;
+}
+
+.chevron-filtro {
+    font-size: 0.6rem;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-filtro-wrapper.open .chevron-filtro {
+    transform: rotate(180deg);
 }
 
 .dropdown-filtro-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1050;
     min-width: 160px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    animation: fadeInDropFiltro 0.15s ease;
+}
+
+.dropdown-filtro-wrapper.open .dropdown-filtro-menu {
+    display: block;
+}
+
+@keyframes fadeInDropFiltro {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-filtro-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
     font-size: 0.78rem;
-    z-index: 1055 !important;
-    position: absolute !important;
-    top: 100% !important;
-    left: 0 !important;
-    margin-top: 4px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
-    border: 1px solid #eee !important;
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
 }
 
-.dropdown-filtro-wrapper .dropdown-item {
-    padding: 6px 14px;
-    border-radius: 6px;
-    margin: 2px 6px;
-    transition: background-color 0.15s ease;
+.dropdown-filtro-item:hover {
+    background: #fdf2f3;
+    color: #dc3545;
 }
 
-.dropdown-filtro-wrapper .dropdown-item.active,
-.dropdown-filtro-wrapper .dropdown-item:active {
-    background-color: #dc3545 !important;
-    color: #fff !important;
+.dropdown-filtro-item.active {
+    background: #fce4ec;
+    color: #dc3545;
+    font-weight: 600;
 }
 
-.dropdown-filtro-wrapper .dropdown-item:hover:not(.active) {
-    background-color: #f8f9fa;
+.dropdown-filtro-item i {
+    font-size: 0.8rem;
+    width: 16px;
+    text-align: center;
 }
-
-/* ── Input do Filtro ─────────────────────────── */
 
 .input-filtro-pedidos {
     height: 31px;
@@ -194,7 +309,19 @@ body:has(.pedidos-page-wrapper) #page-header {
     border-color: #e4606d;
 }
 
-/* ── Paginador ───────────────────────────────── */
+.input-filtro-data-pedidos {
+    height: 31px;
+    max-width: 150px;
+    font-size: 0.75rem;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+}
+
+.input-filtro-data-pedidos:focus {
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
+    border-color: #e4606d;
+}
 
 #info-paginacao-pedidos {
     min-width: 100px;
@@ -203,12 +330,43 @@ body:has(.pedidos-page-wrapper) #page-header {
     color: #666;
 }
 
-/* ── Modais — Ajustes globais ────────────────── */
-
 #modal-pedidos-container .modal-content {
     border: 0;
 }
 
 #modal-pedidos-container .form-control-sm[readonly] {
     cursor: default;
+}
+
+@media (max-width: 768px) {
+    .header-user-name,
+    .header-user-role {
+        display: none !important;
+    }
+
+    .input-filtro-pedidos {
+        max-width: 140px;
+    }
+
+    .input-filtro-data-pedidos {
+        max-width: 130px;
+    }
+}
+
+@media (max-width: 576px) {
+    .input-filtro-pedidos {
+        max-width: 120px;
+    }
+
+    .input-filtro-data-pedidos {
+        max-width: 120px;
+    }
+
+    .btn-filtro-inteligente span {
+        display: none;
+    }
+
+    .btn-filtro-inteligente {
+        padding: 4px 10px;
+    }
 }
