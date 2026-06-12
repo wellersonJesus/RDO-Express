@@ -9,6 +9,9 @@ window.pedidosState = {
     modaisCarregados: false
 };
 
+window.AppRDO = window.AppRDO || {};
+window.AppRDO.chatsCache = window.AppRDO.chatsCache || [];
+
 function _esc(str) {
     var div = document.createElement('div');
     div.textContent = str;
@@ -34,8 +37,20 @@ window.formatarIdServico = function (id) {
     }
 };
 
+function _buscarDataNoChatCache(pedidoId) {
+    var id = String(pedidoId || '').trim();
+    if (!id) return '';
+    var chats = Array.isArray(window.AppRDO.chatsCache) ? window.AppRDO.chatsCache : [];
+    for (var i = 0; i < chats.length; i++) {
+        if (String(chats[i].pedido_id || '').trim() === id) {
+            return String(chats[i].data || '').trim();
+        }
+    }
+    return '';
+}
+
 function _extrairDataPedido(pedido) {
-    var raw = String(pedido.data || pedido.created_at || pedido.data_criacao || pedido.timestamp || '').trim();
+    var raw = _buscarDataNoChatCache(pedido.id);
     if (!raw) return '';
     if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.substring(0, 10);
     if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) {
@@ -78,13 +93,6 @@ window.resolverNomeCliente = function (pedido) {
             var contato = window.AppRDO.contatosCache[idChat];
             if (contato) return String(contato.nome || contato.name || contato.pushname || '—');
         }
-        if (window.AppRDO && window.AppRDO.chatsCache) {
-            for (var j = 0; j < window.AppRDO.chatsCache.length; j++) {
-                var chat = window.AppRDO.chatsCache[j];
-                var chatId = String(chat.id || chat.id_chat || '').trim();
-                if (chatId === idChat) return String(chat.nome || chat.name || chat.pushname || '—');
-            }
-        }
         return String(pedido.solicitante || '—');
     } catch (_) {
         return String(pedido.solicitante || '—');
@@ -110,13 +118,6 @@ function _resolverSolicitantePorIdChat(idChat) {
             var contato = window.AppRDO.contatosCache[id];
             if (contato) return String(contato.nome || contato.name || contato.pushname || '');
         }
-        if (window.AppRDO && window.AppRDO.chatsCache) {
-            for (var j = 0; j < window.AppRDO.chatsCache.length; j++) {
-                var chat = window.AppRDO.chatsCache[j];
-                var chatId = String(chat.id || chat.id_chat || '').trim();
-                if (chatId === id) return String(chat.nome || chat.name || chat.pushname || '');
-            }
-        }
         return '';
     } catch (_) {
         return '';
@@ -135,12 +136,12 @@ function _isFinalizado(pedido) {
 
 function _badgeStatus(status) {
     var mapa = {
-        'PENDENTE':  { classe: 'bg-status-pending', icon: 'bi-clock' },
-        'EM_ROTA':   { classe: 'bg-status-route',   icon: 'bi-bicycle' },
-        'EM ROTA':   { classe: 'bg-status-route',   icon: 'bi-bicycle' },
-        'CONCLUIDO': { classe: 'bg-status-done',    icon: 'bi-check-circle' },
-        'CONCLUÍDO': { classe: 'bg-status-done',    icon: 'bi-check-circle' },
-        'CANCELADO': { classe: 'bg-status-cancel',  icon: 'bi-x-circle' }
+        'PENDENTE': { classe: 'bg-status-pending', icon: 'bi-clock' },
+        'EM_ROTA': { classe: 'bg-status-route', icon: 'bi-bicycle' },
+        'EM ROTA': { classe: 'bg-status-route', icon: 'bi-bicycle' },
+        'CONCLUIDO': { classe: 'bg-status-done', icon: 'bi-check-circle' },
+        'CONCLUÍDO': { classe: 'bg-status-done', icon: 'bi-check-circle' },
+        'CANCELADO': { classe: 'bg-status-cancel', icon: 'bi-x-circle' }
     };
     var cfg = mapa[status] || { classe: 'bg-status-default', icon: 'bi-question-circle' };
     return '<span class="status-badge ' + cfg.classe + '"><i class="bi ' + cfg.icon + '"></i> ' + status + '</span>';
@@ -301,13 +302,26 @@ async function _garantirModais() {
     return await _carregarModaisPedidos();
 }
 
+async function _fetchChats() {
+    try {
+        var resposta = await API.call('getchat');
+        var lista = Array.isArray(resposta) ? resposta : [];
+        window.AppRDO.chatsCache = lista;
+    } catch (_) {
+        window.AppRDO.chatsCache = [];
+    }
+}
+
 async function _fetchPedidos() {
     if (window.pedidosState.isFetching) return;
     window.pedidosState.isFetching = true;
     _atualizarBotaoLoop(true);
     try {
-        var resposta = await API.call('getpedidos');
-        var lista = Array.isArray(resposta) ? resposta : [];
+        var resChat = API.call('getchat');
+        var resPedidos = API.call('getpedidos');
+        var resultados = await Promise.all([resChat, resPedidos]);
+        window.AppRDO.chatsCache = Array.isArray(resultados[0]) ? resultados[0] : [];
+        var lista = Array.isArray(resultados[1]) ? resultados[1] : [];
         window.AppRDO.pedidosCache = lista;
         window.pedidosState.paginaAtual = 1;
         _renderizarTabela(lista);
@@ -329,14 +343,11 @@ function _populateHeader() {
     var elCargo = document.getElementById('header-user-cargo');
     var elAvatar = document.getElementById('header-user-avatar');
     var elFallback = document.getElementById('header-avatar-fallback');
-
     var username = localStorage.getItem('username') || 'Usuário';
     var tipo = localStorage.getItem('tipo') || '';
     var imagem = localStorage.getItem('imagem');
-
     if (elNome) elNome.textContent = username;
     if (elCargo) elCargo.textContent = tipo;
-
     var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
     if (isValid && elAvatar) {
         elAvatar.src = imagem;
@@ -362,19 +373,15 @@ window.selecionarFiltroTipo = function (tipo, label, el) {
     window.pedidosState.filtroCategoria = tipo;
     var labelEl = document.getElementById('label-filtro-tipo');
     if (labelEl) labelEl.textContent = label;
-
     var items = document.querySelectorAll('.dropdown-filtro-item');
     for (var i = 0; i < items.length; i++) {
         items[i].classList.remove('active');
     }
     if (el) el.classList.add('active');
-
     var wrapper = document.querySelector('.dropdown-filtro-wrapper');
     if (wrapper) wrapper.classList.remove('open');
-
     var inputFiltro = document.getElementById('filtro-pedidos');
     var inputData = document.getElementById('filtro-data-pedidos');
-
     if (tipo === 'data') {
         if (inputFiltro) inputFiltro.placeholder = 'Ex: 12/06/2026';
         if (inputData) inputData.style.display = '';
@@ -391,7 +398,6 @@ window.selecionarFiltroTipo = function (tipo, label, el) {
         if (inputFiltro) inputFiltro.placeholder = 'Buscar...';
         if (inputData) inputData.style.display = '';
     }
-
     window.pedidosState.paginaAtual = 1;
     var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
     _renderizarTabela(cache);
@@ -498,6 +504,7 @@ window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
     var pedido = _buscarPedidoNoCache(pedidoId);
     if (!pedido) return;
     var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat || pedido.id_cliente) || String(pedido.solicitante || '—');
+    var dataPedido = _formatarDataExibicao(_extrairDataPedido(pedido));
     var el = function (id) { return document.getElementById(id); };
     if (el('detalhe-titulo')) el('detalhe-titulo').textContent = window.formatarIdServico(pedido.id);
     if (el('det-pedido-id')) el('det-pedido-id').value = window.formatarIdServico(pedido.id);
@@ -507,14 +514,15 @@ window.RDO_PEDIDOS.abrirDetalhes = async function (pedidoId) {
     if (el('det-motoboy')) el('det-motoboy').value = pedido.motoboy || '—';
     if (el('det-status')) el('det-status').value = pedido.status || '—';
     if (el('det-mercadoria')) el('det-mercadoria').value = pedido.mercadoria || '—';
-    if (el('det-de')) el('det-de').value = pedido.de || pedido.rota_de || '—';
-    if (el('det-para')) el('det-para').value = pedido.para || pedido.rota_para || '—';
+    if (el('det-de')) el('det-de').value = pedido.de || '—';
+    if (el('det-para')) el('det-para').value = pedido.para || '—';
     if (el('det-retorno')) el('det-retorno').value = pedido.retorno || '—';
     if (el('det-horario')) el('det-horario').value = pedido.horario || '—';
     if (el('det-prioridade')) el('det-prioridade').value = pedido.prioridade || '—';
     if (el('det-valor')) el('det-valor').value = pedido.valor_corrida || '—';
     if (el('det-id-chat')) el('det-id-chat').value = pedido.id_chat || pedido.id_cliente || '—';
     if (el('det-obs')) el('det-obs').value = pedido.observacao || '—';
+    if (el('det-data')) el('det-data').value = dataPedido;
     var modalEl = document.getElementById('modalPedidoDetalhes');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
@@ -564,10 +572,8 @@ window.RDO_PEDIDOS.abrirEdicao = async function (pedidoId) {
     setVal('edit-horario', pedido.horario);
     setVal('edit-retorno', pedido.retorno);
     setVal('edit-prioridade', String(pedido.prioridade || '0'));
-    var de = String(pedido.de || pedido.rota_de || '').trim();
-    var para = String(pedido.para || pedido.rota_para || '').trim();
-    var rotasTexto = de && para ? de + ' | ' + para : de || para || '';
-    setVal('edit-rotas', rotasTexto);
+    setVal('edit-de', pedido.de || '');
+    setVal('edit-para', pedido.para || '');
     setVal('edit-obs', pedido.observacao);
     var modalEl = document.getElementById('modalEditarPedido');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -601,7 +607,8 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
             horario: getVal('edit-horario'),
             retorno: getVal('edit-retorno'),
             prioridade: getVal('edit-prioridade'),
-            rotas_texto: getVal('edit-rotas'),
+            de: getVal('edit-de'),
+            para: getVal('edit-para'),
             observacao: getVal('edit-obs')
         };
         var resp = await API.call('updatepedido', payload);
@@ -614,16 +621,9 @@ window.RDO_PEDIDOS.salvarEdicao = async function () {
                 pedido.horario = payload.horario;
                 pedido.retorno = payload.retorno;
                 pedido.prioridade = payload.prioridade;
+                pedido.de = payload.de;
+                pedido.para = payload.para;
                 pedido.observacao = payload.observacao;
-                if (payload.rotas_texto) {
-                    var partes = payload.rotas_texto.split('|');
-                    if (partes.length >= 2) {
-                        pedido.de = partes[0].trim();
-                        pedido.rota_de = partes[0].trim();
-                        pedido.para = partes[1].trim();
-                        pedido.rota_para = partes[1].trim();
-                    }
-                }
             }
             var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
             _renderizarTabela(cache);
@@ -701,7 +701,8 @@ window.RDO_PEDIDOS.abrirFormNovo = async function () {
     if (el('novo-solicitante')) el('novo-solicitante').value = nomeSolicitante;
     if (el('novo-contato')) el('novo-contato').value = '';
     if (el('novo-obs')) el('novo-obs').value = '';
-    if (el('novo-rotas')) el('novo-rotas').value = '';
+    if (el('novo-de')) el('novo-de').value = '';
+    if (el('novo-para')) el('novo-para').value = '';
     if (el('novo-horario')) el('novo-horario').value = '';
     var mercSel = el('novo-mercadoria');
     if (mercSel) mercSel.selectedIndex = 0;
@@ -722,25 +723,32 @@ window.RDO_PEDIDOS.salvarNovo = async function () {
             return el ? el.value.trim() : '';
         };
         var solicitante = getVal('novo-solicitante');
-        var idChat = getVal('novo-id-chat');
+        var idCliente = getVal('novo-id-chat');
         if (!solicitante) {
             if (errDiv) { errDiv.textContent = 'Selecione um chat para definir o solicitante.'; errDiv.classList.remove('d-none'); }
             return;
         }
         if (errDiv) errDiv.classList.add('d-none');
         if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...'; }
+        var deVal = getVal('novo-de');
+        var paraVal = getVal('novo-para');
+        var rotasTexto = '';
+        if (deVal || paraVal) {
+            rotasTexto = 'De: ' + (deVal || '') + ' | Para: ' + (paraVal || '');
+        }
         var payload = {
-            id_chat: idChat,
+            id_cliente: idCliente,
             solicitante: solicitante,
             contato: getVal('novo-contato'),
             mercadoria: getVal('novo-mercadoria'),
             horario: getVal('novo-horario'),
             retorno: getVal('novo-retorno'),
             prioridade: getVal('novo-prioridade'),
-            rotas_texto: getVal('novo-rotas'),
-            observacao: getVal('novo-obs')
+            rotas_texto: rotasTexto,
+            observacao: getVal('novo-obs'),
+            mensagem: 'Pedido [ID_GERADO] criado via painel.'
         };
-        var resp = await API.call('createpedido', payload);
+        var resp = await API.call('finalizarpedido', payload);
         if (resp && resp.status === 'success') {
             var modalEl = document.getElementById('modalNovoPedido');
             if (modalEl) {
