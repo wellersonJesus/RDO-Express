@@ -127,7 +127,7 @@ window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
     '',
     'SOLICITANTE: ',
-    'CONATO: ',
+    'CONTATO: ',
     'HORÁRIO ESTIMADO P/ COLETA:  ',
     'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)',
     'ROTA(s): ',
@@ -380,7 +380,7 @@ window.carregarDados = async function () {
         if (!window.AppRDO.clienteId && listaClientes.length > 0) {
             var primeiro = listaClientes[0];
             var id = String(primeiro.id || '');
-            var nome = primeiro.nome || primeiro.username || 'Sem nome';
+            var nome = primeiro.username || 'Sem nome';
             var isOnline = isMasterOn && String(primeiro.status || '').toUpperCase() === 'TRUE';
             window.selecionarEAbrir(id, nome, isOnline);
         } else if (window.AppRDO.clienteId) {
@@ -388,7 +388,7 @@ window.carregarDados = async function () {
                 return String(c.id) === String(window.AppRDO.clienteId);
             });
             if (clienteAtual) {
-                var nomeAtual = clienteAtual.nome || clienteAtual.username || 'Sem nome';
+                var nomeAtual = clienteAtual.username || 'Sem nome';
                 var isOnlineAtual = isMasterOn && String(clienteAtual.status || '').toUpperCase() === 'TRUE';
                 window.abrirConversa(window.AppRDO.clienteId, nomeAtual, null, isOnlineAtual);
             }
@@ -417,7 +417,7 @@ window.renderizarLista = function (lista, isMasterOn) {
     var clienteAtivo = window.AppRDO.clienteId;
     listEl.innerHTML = lista.map(function (cliente) {
         var id = String(cliente.id || '');
-        var nome = cliente.nome || cliente.username || 'Sem nome';
+        var nome = cliente.username || 'Sem nome';
         var imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         var statusColor = isOnline ? '#28a745' : '#adb5bd';
@@ -486,14 +486,8 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
             window.AppRDO.mensagensCache = todasMensagens;
             window.AppRDO.pedidosCache = todosPedidos;
         }
-        var pedidosDoCliente = todosPedidos.filter(function (p) {
-            return String(p.id_chat || '').trim() === idCliente;
-        });
-        var idsPedidosCliente = new Set(
-            pedidosDoCliente.map(function (p) { return String(p.id || '').trim(); })
-        );
         var historico = todasMensagens.filter(function (m) {
-            return idsPedidosCliente.has(String(m.pedido_id || '').trim());
+            return String(m.id_cliente || '').trim() === idCliente;
         });
         container.innerHTML = '';
         if (historico.length === 0) {
@@ -1005,37 +999,29 @@ window.buscarCoordenadasEndereco = function (endereco) {
 window.renderizarMapaUnificado = function () {
     var container = document.getElementById('container-mapa-visual');
     if (!container) return;
-
     if (window._leafletMapInstance) {
         try { window._leafletMapInstance.remove(); } catch (_) {}
         window._leafletMapInstance = null;
     }
-
     if (!container.style.height || container.style.height === '0px') {
         container.style.height = '350px';
     }
-
     var dados = window.dadosPedidoAtual;
     if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) {
         container.innerHTML = '<p class="text-center text-muted p-4">Nenhuma rota para exibir.</p>';
         return;
     }
-
     if (typeof L === 'undefined') {
         container.innerHTML = '<p class="text-center text-danger p-4">Leaflet não carregado.</p>';
         return;
     }
-
     var mapa = L.map(container).setView([-19.92, -43.94], 12);
     window._leafletMapInstance = mapa;
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(mapa);
-
     var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
     var todosOsPontos = [];
-
     var criarIcone = function (emoji) {
         return L.divIcon({
             html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
@@ -1044,48 +1030,38 @@ window.renderizarMapaUnificado = function () {
             iconAnchor: [14, 14]
         });
     };
-
     dados.coordenadas.forEach(function (caminho, i) {
         if (!caminho || caminho.length === 0) return;
         var cor = cores[i % cores.length];
-
         L.polyline(caminho, {
             color: cor, weight: 4, opacity: 0.85, dashArray: '10, 8'
         }).addTo(mapa);
-
         if (i === 0) {
             L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
         }
-
         if (i === dados.coordenadas.length - 1) {
             L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
         } else {
             L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
         }
-
         caminho.forEach(function (p) { todosOsPontos.push(p); });
     });
-
     if (todosOsPontos.length > 0) {
         mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15));
     }
-
     setTimeout(function () { mapa.invalidateSize(); }, 400);
 };
 
 window.enviarMensagemGeral = async function () {
     var input = document.getElementById('msg-input');
-
     if (!window.AppRDO || !window.AppRDO.clienteId) {
         window.exibirModalValidacao('Selecione um cliente na lista primeiro.');
         return;
     }
-
     if (!input || !input.value.trim()) {
         window.marcarCampoInvalido();
         return;
     }
-
     if (window.AppRDO.isMasterOn) {
         var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
             return String(c.id) === String(window.AppRDO.clienteId);
@@ -1097,7 +1073,6 @@ window.enviarMensagemGeral = async function () {
             return;
         }
     }
-
     await window.iniciarFluxoCheckout();
 };
 
@@ -1222,24 +1197,19 @@ window.calcularTudo = function () {
     var elRet = document.getElementById('p-retorno');
     var elDin = document.getElementById('p-dinamica');
     var elPri = document.getElementById('p-prioridade');
-
     var distancia = parseFloat(elDist ? elDist.value : 0) || 0;
     var valorKm = parseFloat(elVkm ? elVkm.value : 0) || 0;
     var retorno = parseFloat(elRet ? elRet.value : 0) || 0;
     var dinamica = parseFloat(elDin ? elDin.value : 0) || 0;
     var prioridade = parseFloat(elPri ? elPri.value : 0) || 0;
-
     var base = distancia * valorKm;
     var comRetorno = base + (base * retorno);
     var total = comRetorno + dinamica + prioridade;
-
     if (total > 0 && total < 10) total = 10;
-
     var viewEl = document.getElementById('view-valor-final');
     if (viewEl) {
         viewEl.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
-
     if (window.dadosPedidoAtual) {
         window.dadosPedidoAtual.valorFinal = total;
     }
@@ -1248,7 +1218,6 @@ window.calcularTudo = function () {
 window.preencherDadosFormulario = function () {
     var d = window.dadosPedidoAtual;
     if (!d) return;
-
     var headerCliente = document.getElementById('header-nome-cliente');
     if (headerCliente) {
         var nomeCliente = d.cliente
@@ -1257,14 +1226,11 @@ window.preencherDadosFormulario = function () {
             || 'Não identificado';
         headerCliente.innerText = nomeCliente;
     }
-
     var el = function (id) { return document.getElementById(id); };
-
     if (el('p-solicitante')) el('p-solicitante').value = d.solicitante || '';
     if (el('p-contato')) el('p-contato').value = d.contato || '';
     if (el('p-distancia')) el('p-distancia').value = d.distancia || '';
     if (el('p-tempo')) el('p-tempo').value = d.tempo || '';
-
     if (el('p-rotas') && d.rawInput) {
         var rotas = window.extrairRotasDaMensagem(d.rawInput);
         var textoRotas = rotas.map(function (r, i) {
@@ -1272,7 +1238,6 @@ window.preencherDadosFormulario = function () {
         }).join('\n');
         el('p-rotas').value = textoRotas;
     }
-
     if (el('p-horario') && !el('p-horario').value) {
         var agora = new Date();
         el('p-horario').value = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -1283,7 +1248,6 @@ window.validarFormularioCheckout = function () {
     var ids = ['p-solicitante', 'p-mercadoria', 'p-rotas'];
     var valido = true;
     var primeiroCampoInvalido = null;
-
     for (var i = 0; i < ids.length; i++) {
         var campo = document.getElementById(ids[i]);
         if (!campo) continue;
@@ -1296,52 +1260,39 @@ window.validarFormularioCheckout = function () {
             if (!primeiroCampoInvalido) primeiroCampoInvalido = campo;
         }
     }
-
     if (primeiroCampoInvalido) {
         primeiroCampoInvalido.focus();
     }
-
     return valido;
 };
 
 window.iniciarFluxoCheckout = function () {
     var msgInput = document.getElementById('msg-input');
     var texto = msgInput ? (msgInput.value || '').trim() : '';
-
     if (!texto) {
         window.marcarCampoInvalido();
         return;
     }
-
     var solicitante = (texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado';
     solicitante = solicitante.trim();
-
     var contato = (texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '';
     contato = contato.trim();
-
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
-
     if (rotasExtraidas.length === 0) {
         window.exibirModalValidacao('Nenhuma rota encontrada.<br>Use o formato: <strong>De: Origem | Para: Destino</strong>');
         return;
     }
-
     window.loadModal('mapa_clientes.html').then(function (carregou) {
         if (!carregou) return;
-
         var modalEl = document.getElementById('modalMapa');
         if (!modalEl) return;
-
         var modal = new bootstrap.Modal(modalEl);
-
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
             var resumoEl = document.getElementById('resumo-total');
             var listaRotasEl = document.getElementById('lista-rotas-editavel');
-
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (resumoEl) resumoEl.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Calculando rotas...';
-
             if (listaRotasEl) {
                 listaRotasEl.innerHTML = rotasExtraidas.map(function (r, i) {
                     return '<div class="d-flex align-items-center px-3 py-2 ' + (i > 0 ? 'border-top' : '') + '">' +
@@ -1351,12 +1302,10 @@ window.iniciarFluxoCheckout = function () {
                         '<strong>Para:</strong> ' + r.para + '</span></div>';
                 }).join('');
             }
-
             var kmTotal = 0;
             var minTotal = 0;
             var listaCaminhos = [];
             var promessas = [];
-
             rotasExtraidas.forEach(function (rota) {
                 var promessa = Promise.all([
                     window.buscarCoordenadasEndereco(rota.de),
@@ -1365,11 +1314,9 @@ window.iniciarFluxoCheckout = function () {
                     var p1 = coords[0];
                     var p2 = coords[1];
                     if (!p1 || !p2) return;
-
                     var url = 'https://router.project-osrm.org/route/v1/driving/' +
                         p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
                         '?overview=full&geometries=geojson';
-
                     return fetch(url)
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
@@ -1386,10 +1333,8 @@ window.iniciarFluxoCheckout = function () {
                 });
                 promessas.push(promessa);
             });
-
             Promise.all(promessas).then(function () {
                 var kmArredondado = Math.round(kmTotal);
-
                 window.dadosPedidoAtual = {
                     solicitante: solicitante,
                     contato: contato,
@@ -1402,17 +1347,14 @@ window.iniciarFluxoCheckout = function () {
                     valor: (kmArredondado * 3.00).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
                     rawInput: texto
                 };
-
                 window.renderizarFooterResumo(resumoEl);
                 window.renderizarMapaUnificado();
-            }).catch(function (err) {
+            }).catch(function () {
                 if (resumoEl) {
                     resumoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
                 }
             });
-
         }, { once: true });
-
         modal.show();
     });
 };
@@ -1420,20 +1362,15 @@ window.iniciarFluxoCheckout = function () {
 window.prosseguirParaFormulario = function () {
     var modalMapa = bootstrap.Modal.getInstance(document.getElementById('modalMapa'));
     if (modalMapa) modalMapa.hide();
-
     window.loadModal('form_clientes.html').then(function (carregou) {
         if (!carregou) return;
-
         var modalEl = document.getElementById('modalFormulario');
         if (!modalEl) return;
-
         var modalForm = new bootstrap.Modal(modalEl);
-
         modalEl.addEventListener('shown.bs.modal', function () {
             window.preencherDadosFormulario();
             window.calcularTudo();
         }, { once: true });
-
         modalForm.show();
     });
 };
@@ -1441,15 +1378,11 @@ window.prosseguirParaFormulario = function () {
 window.voltarParaMapa = function () {
     var modalForm = bootstrap.Modal.getInstance(document.getElementById('modalFormulario'));
     if (modalForm) modalForm.hide();
-
     window.loadModal('mapa_clientes.html').then(function (carregou) {
         if (!carregou) return;
-
         var modalEl = document.getElementById('modalMapa');
         if (!modalEl) return;
-
         var modalMapa = new bootstrap.Modal(modalEl);
-
         modalEl.addEventListener('shown.bs.modal', function () {
             var elHeader = document.getElementById('header-nome-solicitante');
             if (elHeader && window.dadosPedidoAtual) {
@@ -1459,18 +1392,14 @@ window.voltarParaMapa = function () {
             if (resumoEl) window.renderizarFooterResumo(resumoEl);
             window.renderizarMapaUnificado();
         }, { once: true });
-
         modalMapa.show();
     });
 };
 
 window.salvarPedidoAPI = async function () {
-    // ─── 1. Validação ───
     if (typeof window.validarFormularioCheckout === 'function' && !window.validarFormularioCheckout()) {
         return;
     }
-
-    // ─── 2. Verificar cliente selecionado ───
     var idCliente = window.AppRDO ? window.AppRDO.clienteId : null;
     if (!idCliente) {
         if (typeof Swal !== 'undefined') {
@@ -1483,32 +1412,24 @@ window.salvarPedidoAPI = async function () {
         }
         return;
     }
-
-    // ─── 3. Captura dos elementos ───
     var d = window.dadosPedidoAtual || {};
-
     var elSolicitante = document.getElementById('p-solicitante');
-    var elContato     = document.getElementById('p-contato');
-    var elHorario     = document.getElementById('p-horario');
-    var elMercadoria  = document.getElementById('p-mercadoria');
-    var elRotas       = document.getElementById('p-rotas');
-    var elRetorno     = document.getElementById('p-retorno');
-    var elPrioridade  = document.getElementById('p-prioridade');
-    var elValor       = document.getElementById('view-valor-final');
-    var elObs         = document.getElementById('p-obs');
-
-    // ─── 4. Extrair valores ───
-    var solicitante  = elSolicitante ? elSolicitante.value.trim() : (d.solicitante || '');
-    var contato      = elContato     ? elContato.value.trim()     : (d.contato || '');
-    var horario      = elHorario     ? elHorario.value.trim()     : (d.horario || '');
-    var mercadoria   = elMercadoria  ? elMercadoria.value.trim()  : (d.mercadoria || '');
-    var rotasRaw     = elRotas       ? elRotas.value.trim()       : '';
-    var observacao   = elObs         ? elObs.value.trim()         : '';
-    var valorCorrida = elValor       ? elValor.innerText.trim()   : 'R$ 0,00';
-
+    var elContato = document.getElementById('p-contato');
+    var elHorario = document.getElementById('p-horario');
+    var elMercadoria = document.getElementById('p-mercadoria');
+    var elRotas = document.getElementById('p-rotas');
+    var elRetorno = document.getElementById('p-retorno');
+    var elPrioridade = document.getElementById('p-prioridade');
+    var elValor = document.getElementById('view-valor-final');
+    var elObs = document.getElementById('p-obs');
+    var solicitante = elSolicitante ? elSolicitante.value.trim() : (d.solicitante || '');
+    var contato = elContato ? elContato.value.trim() : (d.contato || '');
+    var horario = elHorario ? elHorario.value.trim() : (d.horario || '');
+    var mercadoria = elMercadoria ? elMercadoria.value.trim() : (d.mercadoria || '');
+    var rotasRaw = elRotas ? elRotas.value.trim() : '';
+    var observacao = elObs ? elObs.value.trim() : '';
+    var valorCorrida = elValor ? elValor.innerText.trim() : 'R$ 0,00';
     if (!observacao) observacao = 'N/A';
-
-    // ─── 5. Retorno ───
     var retorno = 'Não';
     if (elRetorno) {
         var rv = (elRetorno.value || '').trim().toUpperCase();
@@ -1516,17 +1437,12 @@ window.salvarPedidoAPI = async function () {
             retorno = 'Sim';
         }
     }
-
-    // ─── 6. Prioridade ───
     var prioridade = elPrioridade ? (elPrioridade.value || '0').trim() : '0';
-
-    // ─── 7. Extrair rotas limpas ───
     var rotasLimpas = [];
-
     if (d.rotas && Array.isArray(d.rotas) && d.rotas.length > 0) {
         rotasLimpas = d.rotas.map(function (r) {
             return {
-                de:   (r.de || '').replace(/^\d+\.\s*/, '').replace(/^De:\s*/i, '').trim(),
+                de: (r.de || '').replace(/^\d+\.\s*/, '').replace(/^De:\s*/i, '').trim(),
                 para: (r.para || '').replace(/^Para:\s*/i, '').trim()
             };
         });
@@ -1538,24 +1454,18 @@ window.salvarPedidoAPI = async function () {
             if (/de:/i.test(linha) && /\|/.test(linha)) {
                 var partes = linha.split('|');
                 rotasLimpas.push({
-                    de:   partes[0].replace(/^De:\s*/i, '').replace(/^\d+\.\s*/, '').trim(),
+                    de: partes[0].replace(/^De:\s*/i, '').replace(/^\d+\.\s*/, '').trim(),
                     para: (partes[1] || '').replace(/^Para:\s*/i, '').trim()
                 });
             }
         }
     }
-
-    // ─── 8. Rotas para o backend ───
     var rotasTextoBackend = rotasLimpas.map(function (r) {
         return 'De: ' + r.de + ' | Para: ' + r.para;
     }).join('\n');
-
-    // ─── 9. Rotas formatadas para exibição no chat ───
     var rotasTextoChat = rotasLimpas.map(function (r, idx) {
         return '📍' + (idx + 1) + '. De: ' + r.de + ' | \n      Para: ' + r.para;
     }).join('\n');
-
-    // ─── 10. Montar mensagem no formato padrão ───
     var mensagemChat = [
         '📦 SOLICITANTE: ' + solicitante,
         '',
@@ -1572,93 +1482,71 @@ window.salvarPedidoAPI = async function () {
         'OBSERVAÇÃO: ' + observacao,
         valorCorrida
     ].join('\n');
-
-    // ─── 11. Payload com id_cliente ───
     var payload = {
-        id_cliente:    idCliente,       // ← ESSENCIAL: ID do cliente selecionado
-        solicitante:   solicitante,
-        contato:       contato,
-        horario:       horario,
-        mercadoria:    mercadoria,
-        rotas_texto:   rotasTextoBackend,
-        retorno:       retorno,
-        prioridade:    prioridade,
+        id_cliente: idCliente,
+        solicitante: solicitante,
+        contato: contato,
+        horario: horario,
+        mercadoria: mercadoria,
+        rotas_texto: rotasTextoBackend,
+        retorno: retorno,
+        prioridade: prioridade,
         valor_corrida: valorCorrida,
-        observacao:    observacao,
-        mensagem:      mensagemChat
+        observacao: observacao,
+        mensagem: mensagemChat
     };
-
-    console.log('📦 Payload finalizarpedido:', payload);
-
-    // ─── 12. Travar botão ───
     var btnEmitir = document.getElementById('btn-emitir-pedido');
     if (btnEmitir) {
         btnEmitir.disabled = true;
         btnEmitir.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Emitindo...';
     }
-
-    // ─── 13. Chamada à API ───
     try {
         var resposta = await API.call('finalizarpedido', payload);
-
-        console.log('✅ Resposta:', resposta);
-
         var idGerado = resposta.id || '';
-        var idChat   = resposta.id_chat || '';   // = id do cliente
-
-        // ─── 14. Fechar modal ───
+        var idClienteResp = resposta.id_cliente || idCliente;
         var modalEl = document.getElementById('modalFormulario');
         if (modalEl) {
             var modalInstance = bootstrap.Modal.getInstance(modalEl);
             if (modalInstance) modalInstance.hide();
         }
-
-        // ─── 15. Montar mensagem final (com ID real) ───
         var mensagemFinal = mensagemChat.replace('[ID_GERADO]', idGerado);
-
-        // ─── 16. Atualizar cache de mensagens (para não precisar recarregar) ───
+        var horaAgora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        var dataAgora = new Date().toLocaleDateString('pt-BR');
         var novaMsgChat = {
-            id:         idChat,
-            pedido_id:  idGerado,
-            texto:      mensagemFinal,
-            hora:       horario || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            data:       new Date().toLocaleDateString('pt-BR'),
+            id: idClienteResp + '_' + idGerado,
+            id_cliente: idClienteResp,
+            pedido_id: idGerado,
+            texto: mensagemFinal,
+            hora: horaAgora,
+            data: dataAgora,
             finalizado: 'TRUE'
         };
-
         if (window.AppRDO && window.AppRDO.mensagensCache) {
             window.AppRDO.mensagensCache.push(novaMsgChat);
         }
-
-        // ─── 17. Atualizar cache de pedidos ───
         var novoPedido = {
-            id:            idGerado,
-            id_chat:       idChat,
-            solicitante:   solicitante,
-            contato:       contato,
-            horario:       horario,
-            mercadoria:    mercadoria,
-            retorno:       retorno,
-            prioridade:    prioridade,
+            id: idGerado,
+            id_cliente: idClienteResp,
+            solicitante: solicitante,
+            contato: contato,
+            horario: horario,
+            mercadoria: mercadoria,
+            de: rotasLimpas.map(function (r) { return r.de; }).join(', '),
+            para: rotasLimpas.map(function (r) { return r.para; }).join(', '),
+            retorno: retorno,
+            prioridade: prioridade,
             valor_corrida: valorCorrida,
-            motoboy:       '',
-            status:        'PENDENTE',
-            observacao:    observacao
+            motoboy: '',
+            status: 'PENDENTE',
+            observacao: observacao
         };
-
         if (window.AppRDO && window.AppRDO.pedidosCache) {
             window.AppRDO.pedidosCache.push(novoPedido);
         }
-
-        // ─── 18. Renderizar o balão no chat USANDO a mesma função do histórico ───
-        // Isso garante que o balão fica idêntico aos que já existem
         var container = document.getElementById('chat-messages-container');
         if (container) {
-            // Remover empty state se existir
             var emptyState = container.querySelector('.chat-empty-state');
             if (emptyState) emptyState.remove();
-
-            // Separador de data "HOJE"
             var ultimoSeparador = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
             if (!ultimoSeparador || ultimoSeparador.textContent !== 'HOJE') {
                 var separador = document.createElement('div');
@@ -1666,10 +1554,6 @@ window.salvarPedidoAPI = async function () {
                 separador.innerHTML = '<span class="chat-date-badge">HOJE</span>';
                 container.appendChild(separador);
             }
-
-            // Criar o balão EXATAMENTE como renderizarMensagens faz
-            var horaMsg = novaMsgChat.hora;
-
             var div = document.createElement('div');
             div.className = 'message-wrapper';
             div.innerHTML =
@@ -1681,18 +1565,13 @@ window.salvarPedidoAPI = async function () {
                 'data-tooltip="Alterar Status">' +
                 '<i class="bi bi-arrow-repeat spinner-rotate"></i>' +
                 '</div>' +
-                '<span class="message-time">' + horaMsg + '</span>' +
+                '<span class="message-time">' + horaAgora + '</span>' +
                 '</div>';
-
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
-
-        // ─── 19. Limpar input ───
         var msgInput = document.getElementById('msg-input');
         if (msgInput) msgInput.value = '';
-
-        // ─── 20. Toast de sucesso ───
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'success',
@@ -1705,21 +1584,15 @@ window.salvarPedidoAPI = async function () {
                 customClass: { popup: 'rounded-4 shadow' }
             });
         }
-
-        // ─── 21. Restaurar botão ───
         if (btnEmitir) {
             btnEmitir.disabled = false;
             btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
         }
-
     } catch (err) {
-        console.error('❌ Erro ao emitir pedido:', err);
-
         if (btnEmitir) {
             btnEmitir.disabled = false;
             btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
         }
-
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
@@ -1730,6 +1603,3 @@ window.salvarPedidoAPI = async function () {
         }
     }
 };
-
-
-

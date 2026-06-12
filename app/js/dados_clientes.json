@@ -1,0 +1,207 @@
+[
+  {
+    "id": "g7Tk2mRqX9a",
+    "username": "OPIMINAS",
+    "responsavel": "PABLO",
+    "contato": "31999990001",
+    "status": "ATIVO"
+  },
+  {
+    "id": "b3Wp8nLsY4c",
+    "username": "MAURICIO",
+    "responsavel": "JULIO",
+    "contato": "31999990002",
+    "status": "ATIVO"
+  },
+  {
+    "id": "k9Hd5jVfZ1e",
+    "username": "FFASHION",
+    "responsavel": "MALU",
+    "contato": "31999990003",
+    "status": "ATIVO"
+  },
+  {
+    "id": "r2Qm7xBgW6h",
+    "username": "MINAS LASER",
+    "responsavel": "VERONICA",
+    "contato": "31999990004",
+    "status": "ATIVO"
+  },
+  {
+    "id": "t5Nv3cDkP8j",
+    "username": "ESPACO LASER",
+    "responsavel": "KEYLA",
+    "contato": "31999990005",
+    "status": "ATIVO"
+  },
+  {
+    "id": "w1Yz6fGnS0l",
+    "username": "DIAGMAX",
+    "responsavel": "MARLON",
+    "contato": "31999990006",
+    "status": "ATIVO"
+  },
+  {
+    "id": "h4Xa9iJpU3n",
+    "username": "SOS FARMA",
+    "responsavel": "VITOR",
+    "contato": "31999990007",
+    "status": "ATIVO"
+  },
+  {
+    "id": "m8Cb2lKqR7p",
+    "username": "CASA DO PARAFUSO",
+    "responsavel": "ALEXANDRE",
+    "contato": "31999990008",
+    "status": "ATIVO"
+  },
+  {
+    "id": "f6Ld0oMrT9s",
+    "username": "ORTOBOM",
+    "responsavel": "SANDRA",
+    "contato": "31999990009",
+    "status": "ATIVO"
+  },
+  {
+    "id": "j1Ne4pOsV2u",
+    "username": "TOTAL SEGUROS",
+    "responsavel": "CARLOS",
+    "contato": "31999990010",
+    "status": "ATIVO"
+  },
+  {
+    "id": "n3Qf7rPtX5w",
+    "username": "REDE FARMA",
+    "responsavel": "DAIANA",
+    "contato": "31999990011",
+    "status": "ATIVO"
+  },
+  {
+    "id": "q9Sg1tQuZ8y",
+    "username": "AUTO PARTS",
+    "responsavel": "ROBERTO",
+    "contato": "31999990012",
+    "status": "ATIVO"
+  },
+  {
+    "id": "u2Th4vRwB0a",
+    "username": "LOJA DAS TINTAS",
+    "responsavel": "FERNANDA",
+    "contato": "31999990013",
+    "status": "ATIVO"
+  },
+  {
+    "id": "x6Vi8xSyD3c",
+    "username": "PAPELARIA CENTRAL",
+    "responsavel": "GUSTAVO",
+    "contato": "31999990014",
+    "status": "ATIVO"
+  },
+  {
+    "id": "a0Wj2zTaF5e",
+    "username": "GRAFICA RAPIDA",
+    "responsavel": "THIAGO",
+    "contato": "31999990015",
+    "status": "ATIVO"
+  },
+  {
+    "id": "d4Xk6bUcH8g",
+    "username": "PET SAUDE",
+    "responsavel": "CAMILA",
+    "contato": "31999990016",
+    "status": "ATIVO"
+  },
+  {
+    "id": "e7Yl9dVeJ1i",
+    "username": "ESCRITORIO MODELO",
+    "responsavel": "LUCAS",
+    "contato": "31999990017",
+    "status": "ATIVO"
+  },
+  {
+    "id": "i3Zm0fWgL4k",
+    "username": "CONSTRUTORA ALFA",
+    "responsavel": "PATRICIA",
+    "contato": "31999990018",
+    "status": "ATIVO"
+  },
+  {
+    "id": "l8An5hXiN7m",
+    "username": "DENTISTA PRIME",
+    "responsavel": "DR. ALMEIDA",
+    "contato": "31999990019",
+    "status": "ATIVO"
+  },
+  {
+    "id": "o2Bo9jYkP0o",
+    "username": "ACADEMIA TOP",
+    "responsavel": "RAFAEL",
+    "contato": "31999990020",
+    "status": "ATIVO"
+  },
+  {
+    "id": "s5Cp1lZmR3q",
+    "username": "RESTAURANTE SABOR",
+    "responsavel": "CHEF MARCOS",
+    "contato": "31999990021",
+    "status": "ATIVO"
+  },
+  {
+    "id": "v9Dq4nAsT6s",
+    "username": "CONTABILIZA JA",
+    "responsavel": "ADRIANA",
+    "contato": "31999990022",
+    "status": "ATIVO"
+  },
+  {
+    "id": "y1Er7pBuV8u",
+    "username": "ELETRONICA FIX",
+    "responsavel": "WAGNER",
+    "contato": "31999990023",
+    "status": "ATIVO"
+  },
+  {
+    "id": "c6Fs0rCwX2w",
+    "username": "BARBEARIA STYLE",
+    "responsavel": "DIEGO",
+    "contato": "31999990024",
+    "status": "ATIVO"
+  },
+  {
+    "id": "p8Gt3tDyZ5y",
+    "username": "LABORATORIO VIDA",
+    "responsavel": "DRA. HELENA",
+    "contato": "31999990025",
+    "status": "ATIVO"
+  },
+  [
+    {
+      "id": "y1Er3pBuV8u",
+      "username": "ESTETICA BELLA",
+      "responsavel": "DRA. RENATA",
+      "contato": "31999990026",
+      "status": "ATIVO"
+    },
+    {
+      "id": "c5Fs7rCwX2w",
+      "username": "TECH INFORMATICA",
+      "responsavel": "DIEGO",
+      "contato": "31999990027",
+      "status": "ATIVO"
+    },
+    {
+      "id": "g8Gt5tDyZ5y",
+      "username": "FLORICULTURA ROSA",
+      "responsavel": "MARIANA",
+      "contato": "31999990028",
+      "status": "ATIVO"
+    },
+    {
+      "id": "k2Hu8vEaB9a",
+      "username": "SOLAR ENERGIA",
+      "responsavel": "ENG. FABIO",
+      "contato": "31999990029",
+      "status": "ATIVO"
+    }
+  ]
+]
