@@ -3,9 +3,10 @@ window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 window.pedidosState = {
     isFetching: false,
     filtroCategoria: 'todos',
+    filtroStatus: 'todos',
     filtroData: '',
     paginaAtual: 1,
-    itensPorPagina: 20,
+    itensPorPagina: 15,
     modaisCarregados: false
 };
 
@@ -153,9 +154,11 @@ function _atualizarBotaoLoop(girando) {
     if (!icon || !btn) return;
     if (girando) {
         icon.classList.add('spinner-rotate');
+        btn.classList.add('syncing');
         btn.disabled = true;
     } else {
         icon.classList.remove('spinner-rotate');
+        btn.classList.remove('syncing');
         btn.disabled = false;
     }
 }
@@ -167,6 +170,14 @@ function _atualizarPaginador(totalFiltrado) {
     info.innerText = 'Pág ' + window.pedidosState.paginaAtual + ' de ' + totalPag;
 }
 
+function _matchFiltroStatus(pedido, statusFiltro) {
+    if (!statusFiltro || statusFiltro === 'todos') return true;
+    var s = _statusPuro(pedido);
+    if (statusFiltro === 'CONCLUIDO') return s === 'CONCLUIDO' || s === 'CONCLUÍDO';
+    if (statusFiltro === 'EM ROTA') return s === 'EM ROTA' || s === 'EM_ROTA';
+    return s === statusFiltro;
+}
+
 function _matchFiltroPorCategoria(p, termo, categoria) {
     var t = termo.toLowerCase();
     if (!t) return true;
@@ -174,15 +185,9 @@ function _matchFiltroPorCategoria(p, termo, categoria) {
         case 'servico':
             var idFmt = window.formatarIdServico(p.id);
             return idFmt.toLowerCase().indexOf(t) !== -1 || String(p.id || '').toLowerCase().indexOf(t) !== -1;
-        case 'data':
-            var dataExib = _formatarDataExibicao(_extrairDataPedido(p));
-            var dataIso = _extrairDataPedido(p);
-            return dataExib.indexOf(t) !== -1 || dataIso.indexOf(t) !== -1;
         case 'cliente':
             var nomeCliente = window.resolverNomeCliente(p);
             return nomeCliente.toLowerCase().indexOf(t) !== -1 || String(p.solicitante || '').toLowerCase().indexOf(t) !== -1;
-        case 'status':
-            return String(p.status || '').toLowerCase().indexOf(t) !== -1;
         default:
             var idFmtAll = window.formatarIdServico(p.id);
             var nomeAll = window.resolverNomeCliente(p);
@@ -220,7 +225,11 @@ function _renderizarTabela(lista) {
     var termo = inputFiltro ? inputFiltro.value.trim() : '';
     var dataFiltro = window.pedidosState.filtroData || '';
     var categoria = window.pedidosState.filtroCategoria || 'todos';
+    var statusFiltro = window.pedidosState.filtroStatus || 'todos';
     var filtrada = lista;
+    if (statusFiltro && statusFiltro !== 'todos') {
+        filtrada = filtrada.filter(function (p) { return _matchFiltroStatus(p, statusFiltro); });
+    }
     if (termo) {
         filtrada = filtrada.filter(function (p) { return _matchFiltroPorCategoria(p, termo, categoria); });
     }
@@ -236,7 +245,7 @@ function _renderizarTabela(lista) {
     if (paginada.length === 0) {
         corpo.innerHTML =
             '<tr><td colspan="5" class="text-center text-muted py-4" style="font-size:0.8rem;">' +
-            (termo || dataFiltro
+            (termo || dataFiltro || (statusFiltro && statusFiltro !== 'todos')
                 ? '<i class="bi bi-search me-1"></i>Nenhum resultado para o filtro.'
                 : '<i class="bi bi-inbox d-block mb-1" style="font-size:1.3rem;"></i>Nenhum pedido encontrado.') +
             '</td></tr>';
@@ -302,16 +311,6 @@ async function _garantirModais() {
     return await _carregarModaisPedidos();
 }
 
-async function _fetchChats() {
-    try {
-        var resposta = await API.call('getchat');
-        var lista = Array.isArray(resposta) ? resposta : [];
-        window.AppRDO.chatsCache = lista;
-    } catch (_) {
-        window.AppRDO.chatsCache = [];
-    }
-}
-
 async function _fetchPedidos() {
     if (window.pedidosState.isFetching) return;
     window.pedidosState.isFetching = true;
@@ -369,35 +368,69 @@ window.toggleDropdownFiltro = function () {
     wrapper.classList.toggle('open');
 };
 
+window.toggleSubMenuStatus = function (e) {
+    e.stopPropagation();
+    var parent = e.currentTarget.closest('.dropdown-filtro-item-has-sub');
+    if (!parent) return;
+    parent.classList.toggle('sub-open');
+};
+
 window.selecionarFiltroTipo = function (tipo, label, el) {
     window.pedidosState.filtroCategoria = tipo;
+    window.pedidosState.filtroStatus = 'todos';
     var labelEl = document.getElementById('label-filtro-tipo');
     if (labelEl) labelEl.textContent = label;
-    var items = document.querySelectorAll('.dropdown-filtro-item');
+    var items = document.querySelectorAll('.dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)');
     for (var i = 0; i < items.length; i++) {
         items[i].classList.remove('active');
+    }
+    var statusParent = document.querySelector('.dropdown-filtro-item-has-sub');
+    if (statusParent) {
+        statusParent.classList.remove('active', 'sub-open');
+    }
+    var subItems = document.querySelectorAll('.dropdown-filtro-subitem');
+    for (var j = 0; j < subItems.length; j++) {
+        subItems[j].classList.remove('active');
     }
     if (el) el.classList.add('active');
     var wrapper = document.querySelector('.dropdown-filtro-wrapper');
     if (wrapper) wrapper.classList.remove('open');
     var inputFiltro = document.getElementById('filtro-pedidos');
-    var inputData = document.getElementById('filtro-data-pedidos');
-    if (tipo === 'data') {
-        if (inputFiltro) inputFiltro.placeholder = 'Ex: 12/06/2026';
-        if (inputData) inputData.style.display = '';
-    } else if (tipo === 'servico') {
+    if (tipo === 'servico') {
         if (inputFiltro) inputFiltro.placeholder = 'Ex: RDO001';
-        if (inputData) inputData.style.display = '';
     } else if (tipo === 'cliente') {
         if (inputFiltro) inputFiltro.placeholder = 'Nome do cliente...';
-        if (inputData) inputData.style.display = '';
-    } else if (tipo === 'status') {
-        if (inputFiltro) inputFiltro.placeholder = 'Ex: Pendente, Concluído...';
-        if (inputData) inputData.style.display = '';
     } else {
         if (inputFiltro) inputFiltro.placeholder = 'Buscar...';
-        if (inputData) inputData.style.display = '';
     }
+    window.pedidosState.paginaAtual = 1;
+    var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    _renderizarTabela(cache);
+};
+
+window.selecionarFiltroStatus = function (status, label, el) {
+    window.pedidosState.filtroCategoria = 'todos';
+    window.pedidosState.filtroStatus = status;
+    var labelEl = document.getElementById('label-filtro-tipo');
+    if (labelEl) labelEl.textContent = status === 'todos' ? 'Status' : label;
+    var items = document.querySelectorAll('.dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)');
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.remove('active');
+    }
+    var statusParent = document.querySelector('.dropdown-filtro-item-has-sub');
+    if (statusParent) {
+        statusParent.classList.add('active');
+        statusParent.classList.remove('sub-open');
+    }
+    var subItems = document.querySelectorAll('.dropdown-filtro-subitem');
+    for (var j = 0; j < subItems.length; j++) {
+        subItems[j].classList.remove('active');
+    }
+    if (el) el.classList.add('active');
+    var wrapper = document.querySelector('.dropdown-filtro-wrapper');
+    if (wrapper) wrapper.classList.remove('open');
+    var inputFiltro = document.getElementById('filtro-pedidos');
+    if (inputFiltro) inputFiltro.placeholder = 'Buscar...';
     window.pedidosState.paginaAtual = 1;
     var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
     _renderizarTabela(cache);
@@ -414,7 +447,11 @@ window.mudarPaginaPedidos = function (dir) {
     var termo = inputFiltro ? inputFiltro.value.trim() : '';
     var dataFiltro = window.pedidosState.filtroData || '';
     var categoria = window.pedidosState.filtroCategoria || 'todos';
+    var statusFiltro = window.pedidosState.filtroStatus || 'todos';
     var filtrada = cache;
+    if (statusFiltro && statusFiltro !== 'todos') {
+        filtrada = filtrada.filter(function (p) { return _matchFiltroStatus(p, statusFiltro); });
+    }
     if (termo) {
         filtrada = filtrada.filter(function (p) { return _matchFiltroPorCategoria(p, termo, categoria); });
     }
@@ -460,6 +497,8 @@ function _bindCloseDropdownFiltro() {
         if (!wrapper) return;
         if (!wrapper.contains(e.target)) {
             wrapper.classList.remove('open');
+            var subParent = wrapper.querySelector('.dropdown-filtro-item-has-sub');
+            if (subParent) subParent.classList.remove('sub-open');
         }
     });
 }
@@ -777,6 +816,7 @@ window.RDO_PEDIDOS.preencherSolicitanteDoChat = function (idChat, nome) {
 window.initPedidos = async function () {
     window.pedidosState.isFetching = false;
     window.pedidosState.filtroCategoria = 'todos';
+    window.pedidosState.filtroStatus = 'todos';
     window.pedidosState.filtroData = '';
     window.pedidosState.paginaAtual = 1;
     window.pedidosState.modaisCarregados = false;

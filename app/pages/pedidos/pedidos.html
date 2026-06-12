@@ -75,17 +75,37 @@
                                         onclick="window.selecionarFiltroTipo('servico', 'N.Serviço', this)">
                                         <i class="bi bi-hash"></i> N.Serviço
                                     </div>
-                                    <div class="dropdown-filtro-item" data-filtro="data"
-                                        onclick="window.selecionarFiltroTipo('data', 'Data', this)">
-                                        <i class="bi bi-calendar-event"></i> Data
-                                    </div>
                                     <div class="dropdown-filtro-item" data-filtro="cliente"
                                         onclick="window.selecionarFiltroTipo('cliente', 'Cliente', this)">
                                         <i class="bi bi-person"></i> Cliente
                                     </div>
-                                    <div class="dropdown-filtro-item" data-filtro="status"
-                                        onclick="window.selecionarFiltroTipo('status', 'Status', this)">
-                                        <i class="bi bi-flag"></i> Status
+                                    <div class="dropdown-filtro-item dropdown-filtro-item-has-sub" data-filtro="status">
+                                        <div class="dropdown-filtro-item-label" onclick="window.toggleSubMenuStatus(event)">
+                                            <i class="bi bi-flag"></i> Status
+                                            <i class="bi bi-chevron-right chevron-sub"></i>
+                                        </div>
+                                        <div class="dropdown-filtro-submenu" id="submenu-status">
+                                            <div class="dropdown-filtro-subitem" data-status="todos"
+                                                onclick="window.selecionarFiltroStatus('todos', 'Status', this)">
+                                                <i class="bi bi-grid-3x3-gap"></i> Todos
+                                            </div>
+                                            <div class="dropdown-filtro-subitem" data-status="PENDENTE"
+                                                onclick="window.selecionarFiltroStatus('PENDENTE', 'Pendente', this)">
+                                                <i class="bi bi-clock"></i> Pendente
+                                            </div>
+                                            <div class="dropdown-filtro-subitem" data-status="EM ROTA"
+                                                onclick="window.selecionarFiltroStatus('EM ROTA', 'Em Rota', this)">
+                                                <i class="bi bi-bicycle"></i> Em Rota
+                                            </div>
+                                            <div class="dropdown-filtro-subitem" data-status="CONCLUIDO"
+                                                onclick="window.selecionarFiltroStatus('CONCLUIDO', 'Concluído', this)">
+                                                <i class="bi bi-check-circle"></i> Concluído
+                                            </div>
+                                            <div class="dropdown-filtro-subitem" data-status="CANCELADO"
+                                                onclick="window.selecionarFiltroStatus('CANCELADO', 'Cancelado', this)">
+                                                <i class="bi bi-x-circle"></i> Cancelado
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
