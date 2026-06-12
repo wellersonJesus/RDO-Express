@@ -37,21 +37,38 @@
     font-size: 0.75rem;
 }
 
-.btn-header-sync {
-    width: 31px;
-    height: 31px;
-    padding: 0;
+.chat-textarea {
+    resize: none;
+}
+
+/* ==========================================================================
+   2.1 BOTÃO SYNC HEADER CHAT — ÍCONE LIMPO SEM BACKGROUND
+   ========================================================================== */
+.btn-sync-chat {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+    color: #6c757d;
 }
 
-.btn-header-sync i {
-    font-size: 0.9rem;
+.btn-sync-chat:hover {
+    color: var(--vermelho-rdo);
+    transform: scale(1.15);
 }
 
-.chat-textarea {
-    resize: none;
+.btn-sync-chat i {
+    font-size: 1.1rem;
+}
+
+.btn-sync-chat .spinner-rotate {
+    animation: rotate 1s linear infinite;
+    color: var(--vermelho-rdo);
 }
 
 /* ==========================================================================
