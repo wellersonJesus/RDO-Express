@@ -218,54 +218,11 @@ function _carregarScriptExterno(src) {
     });
 }
 
-
 window.atualizarAvatar = function () {
     var imagem = localStorage.getItem('imagem');
-    var username = localStorage.getItem('username') || 'U';
-    var inicial = username.charAt(0).toUpperCase();
     var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
-
-    // ── Avatar do Header Principal (index.html) ──
-    var mainImg = document.getElementById('user-avatar-img');
-    var mainIcon = document.getElementById('user-avatar-icon');
-
-    if (mainImg) {
-        if (isValid) {
-            mainImg.src = imagem;
-            mainImg.style.display = 'block';
-            mainImg.onerror = function () {
-                mainImg.style.display = 'none';
-                if (mainIcon) mainIcon.style.display = '';
-            };
-            if (mainIcon) mainIcon.style.display = 'none';
-        } else {
-            mainImg.style.display = 'none';
-            if (mainIcon) mainIcon.style.display = '';
-        }
-    }
-
-    // ── Avatar do Header de Pedidos (pedidos.html) ──
-    var pedidoImg = document.getElementById('header-user-avatar');
-    var pedidoFallback = document.getElementById('header-avatar-fallback');
-
-    if (pedidoImg) {
-        if (isValid) {
-            pedidoImg.src = imagem;
-            pedidoImg.style.display = 'block';
-            pedidoImg.onerror = function () {
-                pedidoImg.style.display = 'none';
-                if (pedidoFallback) {
-                    pedidoFallback.textContent = inicial;
-                    pedidoFallback.style.display = 'flex';
-                }
-            };
-            if (pedidoFallback) pedidoFallback.style.display = 'none';
-        } else {
-            pedidoImg.style.display = 'none';
-            if (pedidoFallback) {
-                pedidoFallback.textContent = inicial;
-                pedidoFallback.style.display = 'flex';
-            }
-        }
+    if (isValid) {
+        imgElement.src = imagem;  // ← Aqui ele seta a URL diretamente
     }
 };
+

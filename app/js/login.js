@@ -1,32 +1,55 @@
-window.togglePasswordVisibility = function() {
+window.togglePasswordVisibility = function () {
     const passInput = document.getElementById('pass');
     const icon = document.getElementById('togglePassIcon');
     if (!passInput || !icon) return;
-    
+
     const isPassword = passInput.type === 'password';
     passInput.type = isPassword ? 'text' : 'password';
-    icon.className = isPassword ? 'bi bi-eye-slash toggle-password-icon' : 'bi bi-eye toggle-password-icon';
+    icon.className = isPassword
+        ? 'bi bi-eye-slash toggle-password-icon'
+        : 'bi bi-eye toggle-password-icon';
 };
 
-(function() {
+(function () {
     const form = document.getElementById('loginForm');
     if (!form) return;
 
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        
-        const btn = document.getElementById('btnSubmit');
-        const msg = document.getElementById('login-msg');
-        const user = document.getElementById('user').value.trim();
-        const pass = document.getElementById('pass').value.trim();
+    const btn = document.getElementById('btnSubmit');
+    const msg = document.getElementById('login-msg');
+    const inputUser = document.getElementById('user');
+    const inputPass = document.getElementById('pass');
+    const originalBtnHTML = btn.innerHTML;
 
-        // Salva o texto original para restaurar em caso de erro
-        const originalText = btn.innerHTML;
-        
-        // Aplica o efeito de carregamento
-        btn.disabled = true;
-        btn.innerHTML = `<i class="bi bi-arrow-repeat spinner-rotate me-2"></i> Autenticando...`;
-        msg.innerText = "";
+    function setLoading(active) {
+        btn.disabled = active;
+        btn.innerHTML = active
+            ? '<i class="bi bi-arrow-repeat spinner-rotate me-2"></i> Autenticando...'
+            : originalBtnHTML;
+    }
+
+    function showError(text) {
+        msg.className = 'text-center mt-3 text-danger small fw-bold';
+        msg.innerText = text;
+    }
+
+    function clearMsg() {
+        msg.className = 'text-center mt-3 text-danger small fw-bold';
+        msg.innerText = '';
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMsg();
+
+        const user = inputUser.value.trim();
+        const pass = inputPass.value.trim();
+
+        if (!user || !pass) {
+            showError('Preencha usuário e senha.');
+            return;
+        }
+
+        setLoading(true);
 
         try {
             const response = await fetch('/api/proxy', {
@@ -37,23 +60,30 @@ window.togglePasswordVisibility = function() {
 
             const resData = await response.json();
 
-            if (response.ok && resData.status === 'success') {
-                localStorage.setItem('rdo_auth', 'true');
-                localStorage.setItem('username', resData.user.username);
-                localStorage.setItem('tipo', resData.user.tipo);
-                localStorage.setItem('imagem', resData.user.imagem || resData.user.foto || resData.user.avatar || '');
-                
-                window.location.replace('/');
-            } else {
-                throw new Error(resData.message || "Credenciais inválidas.");
+            if (!response.ok || resData.status !== 'success' || !resData.user) {
+                throw new Error(resData.message || 'Usuário ou senha incorretos.');
             }
+
+            const userData = resData.user;
+
+            localStorage.setItem('rdo_auth', 'true');
+            localStorage.setItem('username', userData.username || userData.user || user);
+            localStorage.setItem('tipo', userData.tipo || userData.role || '');
+            localStorage.setItem('imagem', userData.imagem || userData.foto || userData.avatar || '');
+
+            if (resData.token) {
+                localStorage.setItem('rdo_token', resData.token);
+            }
+
+            window.location.replace('/');
+
         } catch (err) {
-            console.error("Erro no login:", err);
-            msg.innerText = err.message || "Erro de conexão com o servidor.";
-            
-            // Restaura o botão original caso falhe
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+            if (err instanceof TypeError && err.message === 'Failed to fetch') {
+                showError('Sem conexão com o servidor.');
+            } else {
+                showError(err.message || 'Erro inesperado. Tente novamente.');
+            }
+            setLoading(false);
         }
-    };
+    });
 })();

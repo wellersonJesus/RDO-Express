@@ -178,17 +178,13 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return { status: "error", message: "Tabela 'chat' não encontrada" };
   }
 
-  // ─── Gerar ID do pedido ───
   var idPedido = generateId(sheetPedidos, "pedidos");
-
-  // ─── ID do cliente (vem do frontend) ───
   var idCliente = String(data.id_cliente || '').trim();
 
   if (!idCliente) {
     return { status: "error", message: "ID do cliente não informado" };
   }
 
-  // ─── Parsear rotas ───
   var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
 
   var deStr = linhasRota.map(function(l) {
@@ -201,7 +197,6 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
     return parte ? parte.replace(/Para:/i, '').trim() : "";
   }).join(', ');
 
-  // ─── Mensagem formatada ───
   var mensagemFinal = data.mensagem || "";
   mensagemFinal = mensagemFinal.replace("[ID_GERADO]", idPedido);
 
@@ -209,77 +204,102 @@ function handleSalvarPedidoComChat(sheetPedidos, data) {
   var horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   var dataStr = agora.toLocaleDateString('pt-BR');
 
-  // ─── 1. Salvar na aba CHAT ───
-  // id = ID do cliente (agrupador)
-  // pedido_id = ID do pedido (vinculo)
+  var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
+
+  // ─── CHAT: id | id_cliente | pedido_id | texto | hora | data | finalizado ───
   sheetChat.appendRow([
-    idCliente,        // id        → ID do cliente (mesmo valor de id_chat em pedidos)
-    idPedido,         // pedido_id → ID do pedido
-    mensagemFinal,    // texto
-    horaStr,          // hora
-    dataStr,          // data
-    "TRUE"            // finalizado
+    idMsg,
+    idCliente,
+    idPedido,
+    mensagemFinal,
+    horaStr,
+    dataStr,
+    "TRUE"
   ]);
 
-  // ─── 2. Salvar na aba PEDIDOS ───
+  // ─── PEDIDOS: id | id_cliente | solicitante | contato | horario | mercadoria | de | para | retorno | prioridade | valor_corrida | motoboy | status | observacao ───
   sheetPedidos.appendRow([
-    idPedido,                   // id
-    idCliente,                  // id_chat → ID do cliente (vínculo!)
-    data.solicitante || "",     // solicitante
-    data.contato || "",         // contato
-    data.horario || "",         // horario
-    data.mercadoria || "",      // mercadoria
-    deStr,                      // de
-    paraStr,                    // para
-    data.retorno || "",         // retorno
-    data.prioridade || "N/A",   // prioridade
-    data.valor_corrida || "",   // valor_corrida
-    "",                         // motoboy (vazio)
-    "PENDENTE",                 // status
-    data.observacao || ""       // observacao
+    idPedido,
+    idCliente,
+    data.solicitante || "",
+    data.contato || "",
+    data.horario || "",
+    data.mercadoria || "",
+    deStr,
+    paraStr,
+    data.retorno || "",
+    data.prioridade || "N/A",
+    data.valor_corrida || "",
+    "",
+    "PENDENTE",
+    data.observacao || ""
   ]);
 
-  // ─── 3. Retornar pro frontend ───
   return {
     status: "success",
     id: idPedido,
-    id_chat: idCliente,
+    id_cliente: idCliente,
     message: "Pedido e chat salvos com sucesso!"
   };
 }
 
 function handleLogin(user, pass) {
-  if (!user || !pass) {
-    return { status: "error", message: "Usuário e senha são obrigatórios" };
-  }
-
-  var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
-
-  if (!sheet) {
-    return { status: "error", message: "Tabela 'usuarios' não encontrada" };
-  }
-
-  var data = sheet.getDataRange().getValues();
-  var userRow = null;
-
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][1]).trim() === String(user).trim() && String(data[i][4]).trim() === String(pass).trim()) {
-      userRow = data[i];
-      break;
+    if (!user || !pass) {
+        return { status: "error", message: "Usuário e senha são obrigatórios" };
     }
-  }
 
-  if (userRow) {
-    return {
-      status: "success",
-      user: {
-        username: userRow[1],
-        tipo: userRow[2]
-      }
-    };
-  }
+    var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
 
-  return { status: "error", message: "Credenciais inválidas" };
+    if (!sheet) {
+        return { status: "error", message: "Tabela 'usuarios' não encontrada" };
+    }
+
+    var rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) {
+        return { status: "error", message: "Nenhum usuário cadastrado" };
+    }
+
+    var headers = rows[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
+
+    var colUser = findColumnIndex(headers, ["username", "usuario", "user", "login", "nome"]);
+    var colPass = findColumnIndex(headers, ["password", "senha", "pass"]);
+    var colTipo = findColumnIndex(headers, ["tipo", "role", "cargo", "perfil"]);
+    var colImg = findColumnIndex(headers, ["imagem", "foto", "avatar", "image"]);
+
+    if (colUser === -1 || colPass === -1) {
+        return {
+            status: "error",
+            message: "Colunas 'username' ou 'password' não encontradas. Headers: " + headers.join(", ")
+        };
+    }
+
+    for (var i = 1; i < rows.length; i++) {
+        var rowUser = String(rows[i][colUser]).trim();
+        var rowPass = String(rows[i][colPass]).trim();
+
+        if (rowUser === String(user).trim() && rowPass === String(pass).trim()) {
+            return {
+                status: "success",
+                user: {
+                    username: rowUser,
+                    tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+                    imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
+                }
+            };
+        }
+    }
+
+    return { status: "error", message: "Usuário ou senha incorretos" };
+}
+
+function findColumnIndex(headers, possibleNames) {
+    for (var n = 0; n < possibleNames.length; n++) {
+        var idx = headers.indexOf(possibleNames[n]);
+        if (idx !== -1) return idx;
+    }
+    return -1;
 }
 
 function generateId(sheet, entity) {
@@ -291,7 +311,8 @@ function generateId(sheet, entity) {
       var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ''));
       if (!isNaN(val) && val > maxId) maxId = val;
     }
-    return "RDO" + ("000000" + (maxId + 1)).slice(-6);
+    var next = maxId + 1;
+    return "RDO" + (next < 10 ? "0" + next : String(next));
   }
   return Math.random().toString(36).substring(2, 13).toUpperCase();
 }

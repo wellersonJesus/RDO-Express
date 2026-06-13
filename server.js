@@ -3,129 +3,202 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-
 const PUBLIC_PATH = path.join(__dirname, 'app');
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// ═══════════════════════════════════════════════════════════════
-// Middleware de Logs
-// ═══════════════════════════════════════════════════════════════
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     next();
 });
 
-// ═══════════════════════════════════════════════════════════════
-// Proxy para Google Apps Script
-// ═══════════════════════════════════════════════════════════════
-app.post('/api/proxy', async (req, res) => {
-    try {
-        // 1. Validação: verifica se a URL da API está configurada
-        if (!process.env.API_URL) {
-            console.error("ERRO: API_URL não está definida no .env");
-            return res.status(500).json({
-                status: 'error',
-                message: 'URL da API não configurada no servidor'
+async function fetchGAS(payload) {
+    const url = process.env.API_URL;
+    if (!url) throw new Error('API_URL não configurada');
+
+    const body = JSON.stringify(payload);
+
+    let response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body,
+        redirect: 'manual'
+    });
+
+    if (response.status === 301 || response.status === 302) {
+        const redirectUrl = response.headers.get('location');
+        if (redirectUrl) {
+            response = await fetch(redirectUrl, {
+                method: 'GET',
+                redirect: 'follow'
             });
         }
+    }
 
-        // 2. Monta o payload (injeta a apiKey do servidor)
-        var payload = JSON.stringify({
-            ...req.body,
+    const text = await response.text();
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        throw new Error('Resposta inválida do GAS: ' + text.substring(0, 300));
+    }
+}
+
+async function buscarUsuarioGAS(username) {
+    try {
+        const result = await fetchGAS({
+            action: 'getUsuarios',
             apiKey: process.env.SECRET_KEY
         });
 
-        console.log(`[PROXY] Action: ${req.body.action || 'N/A'}`);
+        console.log('[DEBUG] getUsuarios retornou:', Array.isArray(result) ? result.length + ' usuários' : typeof result);
 
-        // 3. Faz a requisição ao Google Apps Script
-        //    CORREÇÃO CRÍTICA: redirect: 'follow' é o padrão,
-        //    mas o Google redireciona 302 e o fetch converte POST → GET.
-        //    Solução: seguir o redirect manualmente.
-        var response = await fetch(process.env.API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: payload,
-            redirect: 'follow'
-        });
+        if (!Array.isArray(result)) return null;
 
-        // 4. Se o Google retornou redirect e o fetch não seguiu corretamente,
-        //    vamos tratar manualmente
-        if (response.status === 302 || response.status === 301) {
-            var redirectUrl = response.headers.get('location');
-            console.log(`[PROXY] Redirect detectado: ${redirectUrl}`);
+        for (const u of result) {
+            const uName = String(u.username || u.user || u.login || '').trim();
+            if (uName === username) {
+                console.log('[DEBUG] Usuário encontrado. Campos:', JSON.stringify(Object.keys(u)));
+                console.log('[DEBUG] imagem:', JSON.stringify(u.imagem));
+                console.log('[DEBUG] Objeto completo:', JSON.stringify(u).substring(0, 500));
+                return u;
+            }
+        }
+        console.log('[DEBUG] Usuário "' + username + '" NÃO encontrado na lista');
+    } catch (err) {
+        console.error('[LOGIN] Erro ao buscar avatar no GAS:', err.message);
+    }
+    return null;
+}
 
-            if (redirectUrl) {
-                response = await fetch(redirectUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: payload,
-                    redirect: 'follow'
+app.post('/api/proxy', async (req, res) => {
+    try {
+        const { action, username, password } = req.body;
+
+        if (action === 'login') {
+            console.log(`[LOGIN] Tentativa: "${username}"`);
+
+            const masterLogin = process.env.MASTER_LOGIN;
+            const masterHash = process.env.MASTER_PASS_HASH;
+            const masterPlain = process.env.MASTER_PASS;
+
+            if (masterLogin && username === masterLogin) {
+                let senhaOk = false;
+
+                if (masterHash) {
+                    const cleanHash = masterHash.replace(/\$\$/g, '$');
+                    try {
+                        senhaOk = await bcrypt.compare(password, cleanHash);
+                    } catch {
+                        senhaOk = false;
+                    }
+                }
+
+                if (!senhaOk && masterPlain) {
+                    senhaOk = password === masterPlain;
+                }
+
+                if (senhaOk) {
+                    console.log('[LOGIN] ✅ Master autenticado');
+
+                    const gasUser = await buscarUsuarioGAS(masterLogin);
+
+                    const imagem = gasUser?.imagem || gasUser?.foto || gasUser?.avatar || gasUser?.image || '';
+                    const tipo = gasUser?.tipo || gasUser?.role || gasUser?.cargo || process.env.MASTER_CARGO || 'Admin';
+
+                    console.log(`[LOGIN] Avatar: ${imagem ? 'Encontrado' : 'Não encontrado'}`);
+
+                    return res.json({
+                        status: 'success',
+                        user: {
+                            username: masterLogin,
+                            tipo,
+                            imagem
+                        }
+                    });
+                }
+
+                console.log('[LOGIN] ❌ Senha Master incorreta');
+                return res.status(401).json({
+                    status: 'error',
+                    message: 'Usuário ou senha incorretos.'
+                });
+            }
+
+            console.log('[LOGIN] Encaminhando para GAS...');
+
+            try {
+                const gasResult = await fetchGAS({
+                    action: 'login',
+                    username,
+                    password,
+                    apiKey: process.env.SECRET_KEY
+                });
+
+                console.log('[LOGIN] Resposta GAS:', JSON.stringify(gasResult));
+
+                if (gasResult.status === 'success' && gasResult.user) {
+                    return res.json(gasResult);
+                }
+
+                return res.status(401).json({
+                    status: 'error',
+                    message: gasResult.message || 'Usuário ou senha incorretos.'
+                });
+            } catch (gasErr) {
+                console.error('[LOGIN] Erro GAS:', gasErr.message);
+                return res.status(502).json({
+                    status: 'error',
+                    message: 'Falha ao comunicar com o servidor de dados.'
                 });
             }
         }
 
-        // 5. Lê a resposta como texto primeiro (mais seguro)
-        var responseText = await response.text();
-        console.log(`[PROXY] Status: ${response.status} | Tamanho: ${responseText.length} chars`);
-
-        // 6. Tenta parsear como JSON
-        var data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error("[PROXY] Resposta não é JSON válido:", responseText.substring(0, 500));
-            return res.status(502).json({
+        if (!process.env.API_URL) {
+            return res.status(500).json({
                 status: 'error',
-                message: 'Resposta inválida do servidor de dados',
-                debug: responseText.substring(0, 200)
+                message: 'API_URL não configurada no servidor'
             });
         }
 
-        // 7. Retorna o JSON para o frontend
-        return res.status(200).json(data);
+        const payload = { ...req.body, apiKey: process.env.SECRET_KEY };
+        console.log(`[PROXY] Action: ${action || 'N/A'}`);
+
+        const data = await fetchGAS(payload);
+        return res.json(data);
 
     } catch (error) {
-        console.error("[PROXY] ERRO:", error.message || error);
+        console.error('[PROXY] ERRO:', error.message);
         return res.status(502).json({
             status: 'error',
             message: 'Falha na comunicação com o servidor de dados',
-            debug: error.message || 'Erro desconhecido'
+            debug: error.message
         });
     }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// Servir arquivos estáticos da pasta 'app'
-// ═══════════════════════════════════════════════════════════════
 app.use(express.static(PUBLIC_PATH));
 
-// ═══════════════════════════════════════════════════════════════
-// Rota SPA (Single Page Application)
-// ═══════════════════════════════════════════════════════════════
 app.get('*', (req, res) => {
-    var isFile = /\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff2?|ttf)$/.test(req.path);
-    if (!isFile) {
-        res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
-    } else {
-        res.status(404).send('Not Found');
+    if (/\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff2?|ttf)$/.test(req.path)) {
+        return res.status(404).send('Not Found');
     }
+    res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
 });
 
-// ═══════════════════════════════════════════════════════════════
-// Iniciar servidor
-// ═══════════════════════════════════════════════════════════════
-var PORT = process.env.PORT || 3000;
-app.listen(PORT, function() {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
     console.log('=========================================');
-    console.log('  Servidor rodando em http://localhost:' + PORT);
-    console.log('  API_URL: ' + (process.env.API_URL ? 'Configurada' : 'NÃO CONFIGURADA!'));
-    console.log('  SECRET_KEY: ' + (process.env.SECRET_KEY ? 'Configurada' : 'NÃO CONFIGURADA!'));
+    console.log(`  Servidor rodando em http://localhost:${PORT}`);
+    console.log(`  API_URL: ${process.env.API_URL ? 'OK' : 'NÃO CONFIGURADA!'}`);
+    console.log(`  SECRET_KEY: ${process.env.SECRET_KEY ? 'OK' : 'NÃO CONFIGURADA!'}`);
+    console.log(`  MASTER_LOGIN: ${process.env.MASTER_LOGIN || 'N/A'}`);
     console.log('=========================================');
 });
