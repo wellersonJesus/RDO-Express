@@ -1,0 +1,106 @@
+/* ══════════════════════════════════════════════
+   ADMIN – Estilos do módulo Administração
+   ══════════════════════════════════════════════ */
+
+/* ── Tabs ── */
+#adminTabs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    border: none;
+    gap: 10px;
+}
+
+.btn-tab-admin {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-tab-admin:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-tab-admin.active {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
+/* ── Tabela ── */
+#admin-list td {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #333;
+}
+
+/* ── Validação de campos ── */
+.input-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
+
+/* ── Animação de sync (spinning) ── */
+@keyframes adminSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.admin-sync-spinning {
+    display: inline-block;
+    animation: adminSpin 0.8s linear infinite;
+    color: #dc3545 !important;
+}
+
+/* ── Botão sync: estado padrão ── */
+#btn-sync-admin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+}
+
+#sync-icon-admin {
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+/* ── Botão sync: vermelho quando girando ── */
+#sync-icon-admin.admin-sync-spinning {
+    color: #dc3545 !important;
+}
+
+/* ── Spinner vermelho no botão salvar do form ── */
+#spinner-salvar-admin.admin-sync-spinning {
+    color: #fff !important;
+}
+
+/* ── Loading "Buscando dados..." na tabela ── */
+.admin-loading-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #dc3545;
+    user-select: none;
+}
+
+/* ── Efeito dos três pontos animados ── */
+.admin-dots::after {
+    content: '';
+    animation: adminDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes adminDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}

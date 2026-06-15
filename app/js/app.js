@@ -1,7 +1,6 @@
 window.checkMaster = function () {
     try {
-        var status = localStorage.getItem('bot_master_active');
-        return status === 'true';
+        return localStorage.getItem('bot_master_active') === 'true';
     } catch (err) {
         return false;
     }
@@ -29,57 +28,53 @@ window.AppRDO.resetState = function () {
             window.pedidosState.intervaloId = null;
         }
     }
-    if (window.adminState) window.adminState.isFetching = false;
-
-    /* ── Limpeza de modais órfãos ── */
+    if (window.adminState) {
+        window.adminState.fetching = false;
+        window.adminState.formCarregado = false;
+    }
     _cleanupModais();
 };
 
 function _cleanupModais() {
-    // Fecha modais abertos
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
         if (inst) {
             try { inst.hide(); } catch (_) {}
         }
     });
-    // Remove backdrops
     document.querySelectorAll('.modal-backdrop').forEach(function (b) {
         b.remove();
     });
-    // Limpa classes e estilos residuais do body
     document.body.classList.remove('modal-open');
     document.body.style.removeProperty('overflow');
     document.body.style.removeProperty('padding-right');
-
-    // Limpa container de modais de pedidos
     var modalContainer = document.getElementById('modal-pedidos-container');
     if (modalContainer) {
         modalContainer.innerHTML = '';
         delete modalContainer.dataset.loaded;
     }
+    var adminModalContainer = document.getElementById('admin-modal-container');
+    if (adminModalContainer) {
+        adminModalContainer.innerHTML = '';
+    }
 }
 
 window.loadPage = async function (page, title, subtitle) {
-    var container  = document.getElementById('router-view');
-    var headerEl   = document.getElementById('page-header');
-    var titleEl    = document.getElementById('page-title');
+    var container = document.getElementById('router-view');
+    var headerEl = document.getElementById('page-header');
+    var titleEl = document.getElementById('page-title');
     var subtitleEl = document.getElementById('page-subtitle');
 
     if (!container) return;
 
-    // ── Reset de estado global ──
     if (typeof window.AppRDO !== 'undefined' &&
         typeof window.AppRDO.resetState === 'function') {
         window.AppRDO.resetState();
     }
 
-    // ── Lista de páginas que possuem header próprio ──
     var paginasComHeaderProprio = ['pedidos'];
     var esconderHeader = paginasComHeaderProprio.indexOf(page) !== -1;
 
-    // ── Controle do header do layout principal ──
-    // Usa !important para vencer o "display: flex" da classe .top-navbar
     if (headerEl) {
         if (esconderHeader) {
             headerEl.setAttribute('style', 'display: none !important');
@@ -88,20 +83,17 @@ window.loadPage = async function (page, title, subtitle) {
         }
     }
 
-    // Seta título/subtítulo para páginas que usam o header do layout
     if (!esconderHeader) {
         if (titleEl) titleEl.innerText = title || '';
         if (subtitleEl) subtitleEl.innerText = subtitle || '';
     }
 
-    // ── Ajuste do padding do router-view ──
     if (esconderHeader) {
         container.style.paddingTop = '0';
     } else {
         container.style.paddingTop = '';
     }
 
-    // ── Carregamento da página ──
     try {
         var response = await fetch('pages/' + page + '/' + page + '.html');
         if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -112,7 +104,6 @@ window.loadPage = async function (page, title, subtitle) {
             window.atualizarAvatar();
         }
 
-        // ── Inicialização específica por página ──
         switch (page) {
             case 'chat':
                 setTimeout(async function () {
@@ -131,16 +122,19 @@ window.loadPage = async function (page, title, subtitle) {
                 break;
 
             case 'bot':
-                if (typeof window.initBot === 'function') {
-                    window.initBot();
-                }
+                setTimeout(function () {
+                    if (typeof window.initBot === 'function') {
+                        window.initBot();
+                    }
+                }, 50);
                 break;
 
             case 'admin':
-            case 'administracao':
-                if (typeof window.initAdmin === 'function') {
-                    window.initAdmin();
-                }
+                setTimeout(async function () {
+                    if (typeof window.initAdmin === 'function') {
+                        await window.initAdmin();
+                    }
+                }, 50);
                 break;
         }
 
@@ -218,14 +212,12 @@ function _carregarScriptExterno(src) {
     });
 }
 
-
 window.atualizarAvatar = function () {
     var imagem = localStorage.getItem('imagem');
     var username = localStorage.getItem('username') || 'U';
     var inicial = username.charAt(0).toUpperCase();
     var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
 
-    // ── Avatar do Header Principal (index.html) ──
     var mainImg = document.getElementById('user-avatar-img');
     var mainIcon = document.getElementById('user-avatar-icon');
 
@@ -244,7 +236,6 @@ window.atualizarAvatar = function () {
         }
     }
 
-    // ── Avatar do Header de Pedidos (pedidos.html) ──
     var pedidoImg = document.getElementById('header-user-avatar');
     var pedidoFallback = document.getElementById('header-avatar-fallback');
 

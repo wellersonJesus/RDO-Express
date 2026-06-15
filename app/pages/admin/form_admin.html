@@ -1,0 +1,118 @@
+<div class="modal fade" id="modalFormAdmin" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <h5 class="modal-title fw-bold" id="form-admin-titulo">Novo Registro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pt-3 pb-2">
+                <div id="form-admin-erro" class="alert alert-danger d-none py-2 px-3 rounded-3" style="font-size:0.8rem;"></div>
+
+                <div id="campos-cliente">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Nome / Empresa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-username" placeholder="Nome do cliente ou empresa">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Responsável <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-responsavel" placeholder="Nome do responsável">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Contato <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-contato" placeholder="Telefone ou WhatsApp">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">E-mail</label>
+                            <input type="email" class="form-control form-control-sm rounded-3" id="c-email" placeholder="email@exemplo.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">CPF / CNPJ</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-cpf_cnpj" placeholder="000.000.000-00">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Endereço</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-endereco" placeholder="Rua, número, bairro">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Imagem (URL)</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="c-imagem" placeholder="https://...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Status</label>
+                            <select class="form-select form-select-sm rounded-3" id="c-status">
+                                <option value="TRUE">Ativo</option>
+                                <option value="FALSE">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="campos-colaborador" class="d-none">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Nome Completo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="col-username" placeholder="Nome do colaborador">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">CPF / CNPJ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="col-cpf_cnpj" placeholder="000.000.000-00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Contato</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="col-contato" placeholder="Telefone ou WhatsApp">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">E-mail</label>
+                            <input type="email" class="form-control form-control-sm rounded-3" id="col-email" placeholder="email@exemplo.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Imagem (URL)</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" id="col-imagem" placeholder="https://...">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold d-block" style="font-size:0.75rem;">Funções <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap gap-3 mt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input col-funcao" type="checkbox" value="Motorista" id="fn-motorista">
+                                    <label class="form-check-label" style="font-size:0.8rem;" for="fn-motorista">Motorista</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-funcao" type="checkbox" value="Motoboy" id="fn-motoboy">
+                                    <label class="form-check-label" style="font-size:0.8rem;" for="fn-motoboy">Motoboy</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-funcao" type="checkbox" value="Auxiliar" id="fn-auxiliar">
+                                    <label class="form-check-label" style="font-size:0.8rem;" for="fn-auxiliar">Auxiliar</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input col-funcao" type="checkbox" value="Operador" id="fn-operador">
+                                    <label class="form-check-label" style="font-size:0.8rem;" for="fn-operador">Operador</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="div-comissao" class="col-md-6 d-none">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Comissão (%)</label>
+                            <input type="number" class="form-control form-control-sm rounded-3" id="col-comissao" placeholder="Ex: 10" min="0" max="100">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:0.75rem;">Status</label>
+                            <select class="form-select form-select-sm rounded-3" id="col-status">
+                                <option value="TRUE">Ativo</option>
+                                <option value="FALSE">Inativo</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="col-colaborador">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-2">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4" id="btn-salvar-form-admin">
+                    <i class="bi bi-arrow-repeat d-none" id="spinner-salvar-admin"></i>
+                    <span id="txt-salvar-admin">Salvar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
