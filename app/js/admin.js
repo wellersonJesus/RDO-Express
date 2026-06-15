@@ -304,7 +304,6 @@
                 preencherInput("c-cpf_cnpj", item.cpf_cnpj || "");
                 preencherInput("c-endereco", item.endereco || "");
                 preencherInput("c-imagem", item.imagem || "");
-                preencherSelect("c-status", item.status);
             } else {
                 preencherInput("col-username", item.username || item.nome || "");
                 preencherInput("col-cpf_cnpj", item.cpf_cnpj || "");
@@ -367,7 +366,7 @@
             cpf_cnpj: (document.getElementById("c-cpf_cnpj") || {}).value || "",
             endereco: (document.getElementById("c-endereco") || {}).value || "",
             imagem: (document.getElementById("c-imagem") || {}).value || "",
-            status: (document.getElementById("c-status") || {}).value || "TRUE"
+            status: "TRUE"
         };
     }
 
