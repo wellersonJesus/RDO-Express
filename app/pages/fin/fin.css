@@ -1,128 +1,29 @@
-.fin-header-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background: #fff;
-    border-bottom: 1px solid #f0f0f0;
-    position: sticky;
-    top: 0;
-    z-index: 1050;
-    min-height: 54px;
+/* ==========================================================================
+   RDO EXPRESS — FIN.CSS (REFATORADO v4 — PADRÃO HEADER CHAT)
+   ========================================================================== */
+
+/* ==========================================================================
+   1. VARIÁVEIS
+   ========================================================================== */
+:root {
+    --fin-vermelho: #dc3545;
+    --fin-verde: #198754;
+    --fin-azul: #0d6efd;
+    --fin-roxo: #6f42c1;
+    --fin-cinza: #6c757d;
+    --fin-bg-hover: #fafafa;
 }
 
-.fin-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.fin-header-hamburger {
-    background: none;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    transition: color 0.2s ease;
-}
-
-.fin-header-hamburger i {
-    font-size: 1.4rem;
-}
-
-.fin-header-hamburger:hover {
-    color: #dc3545;
-}
-
-.fin-header-info {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.2;
-}
-
-.fin-header-title {
-    font-size: .88rem;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.fin-header-desc {
-    font-size: .68rem;
-    color: #999;
-    font-weight: 400;
-}
-
-.fin-header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.fin-header-user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    line-height: 1.2;
-}
-
-.fin-header-user-nome {
-    font-size: .78rem;
-    font-weight: 600;
-    color: #333;
-}
-
-.fin-header-user-cargo {
-    font-size: .65rem;
-    color: #999;
-    font-weight: 400;
-}
-
-.fin-header-avatar-box {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    overflow: hidden;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: box-shadow 0.2s ease;
-}
-
-.fin-header-avatar-box:hover {
-    box-shadow: 0 0 0 2px #dc3545;
-}
-
-.fin-header-avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.fin-header-avatar-fallback {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #e9ecef;
-    color: #6c757d;
-    font-size: 1rem;
-    border-radius: 50%;
-}
-
-.fin-body {
-    padding: 0;
-}
-
+/* ==========================================================================
+   2. BODY / LAYOUT
+   ========================================================================== */
 .fin-subtitle {
     font-size: 0.75rem;
 }
 
+/* ==========================================================================
+   3. BOTÃO SYNC — PADRÃO CHAT (ícone limpo, sem background)
+   ========================================================================== */
 .btn-sync-fin {
     background: none;
     border: none;
@@ -133,11 +34,11 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.2s ease, color 0.2s ease;
-    color: #6c757d;
+    color: var(--fin-cinza);
 }
 
 .btn-sync-fin:hover {
-    color: #dc3545;
+    color: var(--fin-vermelho);
     transform: scale(1.15);
 }
 
@@ -148,7 +49,7 @@
 
 .btn-sync-fin i.fin-sync-spinning {
     animation: finSpin 0.8s linear infinite;
-    color: #dc3545;
+    color: var(--fin-vermelho);
 }
 
 @keyframes finSpin {
@@ -156,6 +57,9 @@
     to { transform: rotate(360deg); }
 }
 
+/* ==========================================================================
+   4. CARDS RESUMO
+   ========================================================================== */
 .card-resumo-fin {
     border: none;
     border-radius: 12px;
@@ -168,6 +72,9 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
 }
 
+/* ==========================================================================
+   5. TABS DE NAVEGAÇÃO
+   ========================================================================== */
 .btn-tab-fin {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -181,27 +88,33 @@
 }
 
 .btn-tab-fin:hover {
-    color: #dc3545;
-    border-color: #dc3545;
+    color: var(--fin-vermelho);
+    border-color: var(--fin-vermelho);
 }
 
 .btn-tab-fin.active {
-    background: #dc3545;
+    background: var(--fin-vermelho);
     color: #fff;
-    border-color: #dc3545;
+    border-color: var(--fin-vermelho);
 }
 
+/* ==========================================================================
+   6. FILTRO MÊS
+   ========================================================================== */
 .input-filtro-fin {
     max-width: 160px;
     font-size: .76rem;
     font-weight: 400;
 }
 
+/* ==========================================================================
+   7. BOTÃO NOVO LANÇAMENTO
+   ========================================================================== */
 .btn-novo-fin {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #dc3545;
+    background: var(--fin-vermelho);
     color: #fff;
     border: none;
     border-radius: 20px;
@@ -223,6 +136,9 @@
     box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
+/* ==========================================================================
+   8. BOTÃO TOGGLE VALORES (OLHINHO)
+   ========================================================================== */
 .btn-toggle-fin {
     width: 32px;
     height: 32px;
@@ -238,26 +154,33 @@
 
 .btn-toggle-fin i {
     font-size: .92rem;
-    color: #6c757d;
+    color: var(--fin-cinza);
     transition: color 0.3s ease;
 }
 
 .btn-toggle-fin:hover i {
-    color: #dc3545;
+    color: var(--fin-vermelho);
 }
 
 .btn-toggle-fin.valores-ativos i {
-    color: #dc3545;
+    color: var(--fin-vermelho);
 }
 
+/* ==========================================================================
+   9. TABELA — CABEÇALHO
+   ========================================================================== */
 .tabela-fin-head th {
     font-size: .7rem;
-    color: #6c757d;
+    color: var(--fin-cinza);
     letter-spacing: .04em;
     padding: 8px 10px;
     white-space: nowrap;
+    border-bottom: 1px solid #f0f0f0;
 }
 
+/* ==========================================================================
+   10. TABELA — CORPO
+   ========================================================================== */
 #tabela-fin-body td {
     font-size: .76rem;
     font-weight: 400;
@@ -271,9 +194,12 @@
 }
 
 #tabela-fin-body tr:hover {
-    background-color: #fafafa;
+    background-color: var(--fin-bg-hover);
 }
 
+/* ==========================================================================
+   11. BOTÕES DE AÇÃO (VER / EDITAR / EXCLUIR)
+   ========================================================================== */
 .btn-acao-fin {
     width: 28px;
     height: 28px;
@@ -286,7 +212,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
-    color: #6c757d;
+    color: var(--fin-cinza);
 }
 
 .btn-acao-fin i {
@@ -295,11 +221,14 @@
 }
 
 .btn-acao-fin:hover {
-    background: #dc3545;
-    border-color: #dc3545;
+    background: var(--fin-vermelho);
+    border-color: var(--fin-vermelho);
     color: #fff;
 }
 
+/* ==========================================================================
+   12. BADGES DE STATUS
+   ========================================================================== */
 .badge-fin-pago {
     background: #dcfce7;
     color: #16a34a;
@@ -336,6 +265,9 @@
     border-radius: 10px;
 }
 
+/* ==========================================================================
+   13. PAGINAÇÃO
+   ========================================================================== */
 .fin-pag-info {
     font-size: .7rem;
     font-weight: 400;
@@ -348,6 +280,9 @@
     min-width: 28px;
 }
 
+/* ==========================================================================
+   14. MODAIS — CONTEÚDO
+   ========================================================================== */
 .modal-fin-content {
     border: none;
     border-radius: 14px;
@@ -359,6 +294,9 @@
     font-weight: 400;
 }
 
+/* ==========================================================================
+   15. FORMULÁRIO — LABELS E INPUTS
+   ========================================================================== */
 .fin-label {
     font-size: .7rem;
     font-weight: 500;
@@ -371,11 +309,17 @@
     border-radius: 8px;
 }
 
+/* ==========================================================================
+   16. LOADING INICIAL
+   ========================================================================== */
 .fin-loading-text-init {
     font-size: .78rem;
     color: #999;
 }
 
+/* ==========================================================================
+   17. MODAL VISUALIZAR — LINHAS DE DETALHE
+   ========================================================================== */
 .fin-view-row {
     display: flex;
     justify-content: space-between;
@@ -391,7 +335,7 @@
 .fin-view-label {
     font-size: .72rem;
     font-weight: 500;
-    color: #6c757d;
+    color: var(--fin-cinza);
     text-transform: uppercase;
     letter-spacing: .03em;
 }
@@ -403,33 +347,55 @@
     text-align: right;
 }
 
-.fin-extrato-entrada {
-    border-left: 3px solid #198754;
+/* ==========================================================================
+   18. EXTRATO — BORDA LATERAL COLORIDA
+   ========================================================================== */
+.fin-extrato-entrada td:first-child {
+    border-left: 3px solid var(--fin-verde);
 }
 
-.fin-extrato-saida {
-    border-left: 3px solid #dc3545;
+.fin-extrato-saida td:first-child {
+    border-left: 3px solid var(--fin-vermelho);
 }
 
+/* ==========================================================================
+   19. TOAST — ANIMAÇÃO
+   ========================================================================== */
+@keyframes finToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==========================================================================
+   20. RESPONSIVIDADE
+   ========================================================================== */
 @media (max-width: 768px) {
-    .fin-header-bar {
-        padding: 8px 12px;
+    .fin-subtitle {
+        font-size: 0.68rem;
     }
 
-    .fin-header-desc {
-        display: none;
+    .tabela-fin-head th {
+        font-size: .65rem;
     }
 
-    .fin-header-user-info {
-        display: none;
+    #tabela-fin-body td {
+        font-size: .72rem;
+        padding: 6px 8px;
     }
 
-    .fin-header-hamburger i {
-        font-size: 1.2rem;
+    .btn-acao-fin {
+        width: 26px;
+        height: 26px;
     }
 
-    .fin-header-title {
-        font-size: .8rem;
+    .btn-acao-fin i {
+        font-size: .68rem;
     }
 }
 
@@ -450,17 +416,9 @@
     .input-filtro-fin {
         max-width: 130px;
     }
-}
 
-/* ── Toast animation ── */
-@keyframes finToastIn {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
+    .btn-novo-fin {
+        padding: 5px 14px;
+        font-size: .72rem;
     }
 }
-

@@ -39,7 +39,6 @@ window.AppRDO.resetState = function () {
 
     if (window.financeiroState) {
         window.financeiroState.fetching = false;
-        window.financeiroState.formCarregado = false;
     }
 
     limparModais();
@@ -127,8 +126,6 @@ window.loadPage = function (page, title, subtitle) {
 
     container.style.paddingTop = esconderHeader ? '0' : '';
 
-    console.log('[loadPage] Carregando:', page);
-
     return fetch('pages/' + page + '/' + page + '.html')
         .then(function (res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -142,20 +139,16 @@ window.loadPage = function (page, title, subtitle) {
             }
 
             setTimeout(function () {
-                console.log('[loadPage] Inicializando módulo:', page);
                 if (MODULE_MAP[page]) {
                     MODULE_MAP[page]();
-                } else {
-                    console.log('[loadPage] Nenhum init para:', page);
                 }
             }, 80);
         })
         .catch(function (err) {
-            console.error('[loadPage] Erro ao carregar:', page, err.message);
             container.innerHTML =
                 '<div class="alert alert-danger m-3 rounded-3">' +
                 '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                'Erro ao carregar módulo <strong>' + page + '</strong>. Verifique o console.' +
+                'Erro ao carregar m\u00f3dulo <strong>' + page + '</strong>. Verifique o console.' +
                 '</div>';
         });
 };
@@ -249,6 +242,12 @@ window.atualizarAvatar = function () {
     atualizarAvatarEl(
         document.getElementById('header-user-avatar'),
         document.getElementById('header-avatar-fallback'),
+        imagem, inicial, isValid, true
+    );
+
+    atualizarAvatarEl(
+        document.getElementById('fin-user-avatar'),
+        document.querySelector('#fin-header .fin-header-avatar-fallback'),
         imagem, inicial, isValid, true
     );
 };
