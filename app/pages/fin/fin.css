@@ -1,0 +1,99 @@
+/* ══════════════════════════════════════════════
+   FIN – Estilos do módulo Financeiro
+   ══════════════════════════════════════════════ */
+
+/* ── Tabs ── */
+#finTabs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    border: none;
+    gap: 10px;
+}
+
+.btn-tab-fin {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-tab-fin:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-tab-fin.active {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
+/* ── Tabela ── */
+#fin-list td {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #333;
+}
+
+/* ── Animação de sync (spinning) ── */
+@keyframes finSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fin-sync-spinning {
+    display: inline-block;
+    animation: finSpin 0.8s linear infinite;
+    color: #dc3545 !important;
+}
+
+/* ── Botão sync ── */
+#btn-sync-fin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+}
+
+#sync-icon-fin {
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+#sync-icon-fin.fin-sync-spinning {
+    color: #dc3545 !important;
+}
+
+/* ── Loading "Buscando dados..." na tabela ── */
+.fin-loading-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #dc3545;
+    user-select: none;
+}
+
+.fin-dots::after {
+    content: '';
+    animation: finDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes finDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}
+
+/* ── Validação de campos ── */
+.fin-input-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
