@@ -2,21 +2,19 @@
     <div class="modal-dialog modal-dialog-centered modal-md">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h6 class="fw-bold mb-0" id="form-despesa-titulo">Nova Conta</h6>
+                <h6 class="fw-bold mb-0" id="form-despesa-titulo" style="font-size:.88rem;">Nova Conta</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body px-4 pt-3 pb-2">
                 <div class="alert alert-danger small py-2 d-none" id="form-despesa-erro"></div>
-
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold mb-1">Descrição <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="desp-descricao" placeholder="Ex: Aluguel, Combustível">
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Vencimento <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-sm fin-input" id="desp-vencimento">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold mb-1">Categoria</label>
-                        <select class="form-select form-select-sm" id="desp-categoria">
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Categoria</label>
+                        <select class="form-select form-select-sm fin-input" id="desp-categoria">
                             <option value="Fixa">Fixa</option>
                             <option value="Variável">Variável</option>
                             <option value="Operacional">Operacional</option>
@@ -26,26 +24,35 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold mb-1">Valor <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="desp-valor" placeholder="0,00">
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Valor <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm fin-input" id="desp-valor" placeholder="0,00" inputmode="decimal">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold mb-1">Vencimento <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control form-control-sm" id="desp-vencimento">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold mb-1">Pagamento</label>
-                        <input type="date" class="form-control form-control-sm" id="desp-pagamento">
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Pagamento</label>
+                        <input type="date" class="form-control form-control-sm fin-input" id="desp-pagamento">
                     </div>
                 </div>
-
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold mb-1">Forma de Pagamento</label>
-                        <select class="form-select form-select-sm" id="desp-forma">
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Descrição <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm fin-input" id="desp-descricao" placeholder="Ex: Aluguel, Combustível">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fin-label mb-1">Status</label>
+                        <select class="form-select form-select-sm fin-input" id="desp-status">
+                            <option value="Aberto">Em Aberto</option>
+                            <option value="Pago">Pago</option>
+                            <option value="Vencido">Vencido</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="form-label fin-label mb-1">Forma de Pagamento</label>
+                        <select class="form-select form-select-sm fin-input" id="desp-forma">
                             <option value="">Selecione</option>
                             <option value="Pix">Pix</option>
                             <option value="Dinheiro">Dinheiro</option>
@@ -54,28 +61,17 @@
                             <option value="Transferência">Transferência</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold mb-1">Status</label>
-                        <select class="form-select form-select-sm" id="desp-status">
-                            <option value="Aberto">Em Aberto</option>
-                            <option value="Pago">Pago</option>
-                            <option value="Vencido">Vencido</option>
-                            <option value="Cancelado">Cancelado</option>
-                        </select>
-                    </div>
                 </div>
-
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="form-label small fw-semibold mb-1">Observação</label>
-                        <textarea class="form-control form-control-sm" id="desp-observacao" rows="2" placeholder="Detalhes adicionais..."></textarea>
+                        <label class="form-label fin-label mb-1">Observação</label>
+                        <textarea class="form-control form-control-sm fin-input" id="desp-observacao" rows="2" placeholder="Detalhes adicionais..."></textarea>
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer border-0 px-4 pb-4 pt-2">
-                <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-despesa">
+                <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.74rem;">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-despesa" style="font-size:.74rem;">
                     <span class="spinner-border spinner-border-sm d-none me-1" id="spinner-salvar-despesa"></span>
                     <span id="txt-salvar-despesa">Salvar</span>
                 </button>
