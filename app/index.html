@@ -23,7 +23,6 @@
     <link rel="stylesheet" href="/pages/dashboard/dashboard.css">
     <link rel="stylesheet" href="/pages/pedidos/pedidos.css">
     <link rel="stylesheet" href="/pages/fin/fin.css">
-
 </head>
 
 <body>
@@ -107,7 +106,6 @@
     </aside>
 
     <main class="main-content">
-
         <header id="page-header" class="top-navbar px-4">
             <div class="d-flex align-items-center">
                 <button class="btn btn-light me-3 border-0 bg-transparent"
@@ -116,9 +114,7 @@
                 </button>
                 <div>
                     <h1 id="page-title" class="h6 mb-0 fw-bold">Dashboard</h1>
-                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size: 0.7rem;">
-                        Carregando...
-                    </p>
+                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size: 0.7rem;">Carregando...</p>
                 </div>
             </div>
 
@@ -128,24 +124,22 @@
                     <div id="display-cargo" class="text-danger small" style="font-size: 0.7rem; font-weight: 600;">...
                     </div>
                 </div>
-
-                <div id="avatar-container" style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%;
-                           display: flex; align-items: center; justify-content: center;
-                           overflow: hidden; cursor: pointer;" onclick="abrirModalLogout()">
+                <div id="avatar-container"
+                    style="width:40px;height:40px;background:#dc3545;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;"
+                    onclick="abrirModalLogout()">
                     <img id="user-avatar-img" src="" alt="Avatar"
-                        style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        style="width:100%;height:100%;object-fit:cover;display:none;">
                     <i id="user-avatar-icon" class="bi bi-person-fill text-white fs-4"></i>
                 </div>
             </div>
         </header>
 
         <div class="p-4" id="router-view"></div>
-
     </main>
 
     <div id="modal-container"></div>
 
-    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-sm border-0">
                 <div class="modal-body text-center p-4">
@@ -183,7 +177,6 @@
     <script src="/js/admin.js"></script>
     <script src="/js/fin.js"></script>
 
-
     <script>
         window.logoutSeguro = function () {
             localStorage.removeItem('rdo_auth');
@@ -192,6 +185,11 @@
             localStorage.removeItem('imagem');
             window.location.replace('/pages/login/login.html');
         };
+
+        function abrirModalLogout() {
+            var el = document.getElementById('logoutModal');
+            if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             if (!localStorage.getItem('rdo_auth')) {
@@ -208,18 +206,11 @@
                 window.atualizarAvatar();
             }
 
-            var routerView = document.getElementById('router-view');
-            if (routerView && routerView.innerHTML.trim() === '') {
+            var rv = document.getElementById('router-view');
+            if (rv && rv.innerHTML.trim() === '') {
                 window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
             }
         });
-
-        function abrirModalLogout() {
-            var modalEl = document.getElementById('logoutModal');
-            if (modalEl) {
-                bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            }
-        }
     </script>
 
 </body>

@@ -1,254 +1,295 @@
 var SECRET_KEY = "aquieumakdjdddggjrtr";
 
 function doPost(e) {
-  try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return response({ status: "error", message: "Payload vazio" });
-    }
-
-    var data = {};
     try {
-      data = JSON.parse(e.postData.contents);
-    } catch (parseErr) {
-      return response({ status: "error", message: "JSON inválido: " + parseErr.toString() });
-    }
-
-    var action = String(data.action || "").toLowerCase().trim();
-
-    if (!action || action === "") {
-      return response({ status: "error", message: "Nenhuma ação informada (action vazio)" });
-    }
-
-    if (action === "login") {
-      return response(handleLogin(data.username, data.password));
-    }
-
-    if (!data.apiKey || data.apiKey !== SECRET_KEY) {
-      return response({ status: "error", message: "Acesso Negado" });
-    }
-
-    var mapaEntidades = {
-      "usuario": "usuarios",
-      "usuarios": "usuarios",
-      "cliente": "clientes",
-      "clientes": "clientes",
-      "contato": "clientes",
-      "contatos": "clientes",
-      "colaborador": "colaboradores",
-      "colaboradores": "colaboradores",
-      "bot": "botconfig",
-      "botconfig": "botconfig",
-      "chat": "chat",
-      "pedido": "pedidos",
-      "pedidos": "pedidos",
-      "financeiro": "financeiro"
-    };
-
-    var entity = action
-      .replace("finalizar", "")
-      .replace("get", "")
-      .replace("add", "")
-      .replace("delete", "")
-      .replace("update", "")
-      .replace("save", "")
-      .toLowerCase()
-      .trim();
-
-    var nomeAba = mapaEntidades[entity] || entity;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = getSheetCaseInsensitive(ss, nomeAba);
-
-    if (!sheet) {
-      return response({
-        status: "error",
-        message: "Tabela não encontrada: " + nomeAba + " (action: " + action + ", entity: " + entity + ")"
-      });
-    }
-
-    if (action === "finalizarpedido") {
-      return response(handleSalvarPedidoComChat(sheet, data));
-    }
-
-    if (action.startsWith("get")) {
-      return response(handleGet(sheet));
-    }
-
-    if (action.startsWith("add") || action.startsWith("save")) {
-      return response(handleAdd(sheet, data, nomeAba));
-    }
-
-    if (action.startsWith("update")) {
-      return response(handleUpdate(sheet, data));
-    }
-
-    if (action.startsWith("delete")) {
-      return response(handleDelete(sheet, data.id));
-    }
-
-    return response({ status: "error", message: "Ação não suportada: " + action });
-
-  } catch (err) {
-    return response({ status: "error", message: "Erro interno no servidor: " + err.toString() });
-  }
-}
-
-function handleGet(sheet) {
-  var rows = sheet.getDataRange().getValues();
-  if (rows.length <= 1) return [];
-  var headers = rows[0].map(function(h) { return String(h).toLowerCase().trim(); });
-  return rows.slice(1).map(function(row) {
-    var obj = {};
-    headers.forEach(function(h, i) {
-      if (h !== "") obj[h] = row[i];
-    });
-    return obj;
-  });
-}
-
-function handleAdd(sheet, data, entity) {
-  var headers = sheet.getDataRange().getValues()[0].map(function(h) {
-    return String(h).toLowerCase().trim();
-  });
-  var idIndex = headers.indexOf("id");
-  if (idIndex !== -1 && (!data.id || data.id === "")) {
-    data.id = generateId(sheet, entity);
-  }
-  var row = headers.map(function(h) {
-    return h === "id" ? data.id : (data[h] || "");
-  });
-  sheet.appendRow(row);
-  return { status: "success", message: "Adicionado!", id: data.id };
-}
-
-function handleUpdate(sheet, data) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(h) { return String(h).toLowerCase().trim(); });
-  var idIndex = headers.indexOf("id");
-
-  if (idIndex === -1) {
-    return { status: "error", message: "Coluna 'id' não encontrada na tabela" };
-  }
-
-  if (!data.id) {
-    return { status: "error", message: "ID não informado para atualização" };
-  }
-
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][idIndex]).trim() === String(data.id).trim()) {
-      var keys = Object.keys(data);
-      for (var k = 0; k < keys.length; k++) {
-        var key = keys[k];
-        var colIndex = headers.indexOf(String(key).toLowerCase().trim());
-        if (colIndex !== -1) {
-          sheet.getRange(i + 1, colIndex + 1).setValue(data[key]);
+        if (!e || !e.postData || !e.postData.contents) {
+            return responder({ status: "error", message: "Payload vazio" });
         }
-      }
-      return { status: "success", message: "Atualizado!" };
+
+        var data = {};
+        try {
+            data = JSON.parse(e.postData.contents);
+        } catch (parseErr) {
+            return responder({ status: "error", message: "JSON inválido: " + parseErr.toString() });
+        }
+
+        var action = String(data.action || "").toLowerCase().trim();
+
+        if (!action) {
+            return responder({ status: "error", message: "Nenhuma ação informada" });
+        }
+
+        if (action === "login") {
+            return responder(processarLogin(data.username, data.password));
+        }
+
+        if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+            return responder({ status: "error", message: "Acesso Negado" });
+        }
+
+        var entidade = extrairEntidade(action);
+        var nomeAba = mapearEntidade(entidade);
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = buscarAba(ss, nomeAba);
+
+        if (!sheet) {
+            return responder({
+                status: "error",
+                message: "Tabela não encontrada: " + nomeAba + " (action: " + action + ")"
+            });
+        }
+
+        if (action === "finalizarpedido") {
+            return responder(processarPedidoComChat(sheet, data));
+        }
+
+        if (action.indexOf("get") === 0) {
+            return responder(processarGet(sheet));
+        }
+
+        if (action.indexOf("add") === 0 || action.indexOf("save") === 0) {
+            return responder(processarAdd(sheet, data, nomeAba));
+        }
+
+        if (action.indexOf("update") === 0) {
+            return responder(processarUpdate(sheet, data));
+        }
+
+        if (action.indexOf("delete") === 0) {
+            return responder(processarDelete(sheet, data.id));
+        }
+
+        return responder({ status: "error", message: "Ação não suportada: " + action });
+    } catch (err) {
+        return responder({ status: "error", message: "Erro interno: " + err.toString() });
     }
-  }
-  return { status: "error", message: "ID não encontrado: " + data.id };
 }
 
-function handleDelete(sheet, id) {
-  if (!id) {
-    return { status: "error", message: "ID não informado para exclusão" };
-  }
+function extrairEntidade(action) {
+    return action
+        .replace("finalizar", "")
+        .replace("get", "")
+        .replace("add", "")
+        .replace("delete", "")
+        .replace("update", "")
+        .replace("save", "")
+        .toLowerCase()
+        .trim();
+}
 
-  var rows = sheet.getDataRange().getValues();
-  var idIndex = rows[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
+function mapearEntidade(entity) {
+    var mapa = {
+        "usuario": "usuarios",
+        "usuarios": "usuarios",
+        "cliente": "clientes",
+        "clientes": "clientes",
+        "contato": "clientes",
+        "contatos": "clientes",
+        "colaborador": "colaboradores",
+        "colaboradores": "colaboradores",
+        "bot": "botconfig",
+        "botconfig": "botconfig",
+        "chat": "chat",
+        "pedido": "pedidos",
+        "pedidos": "pedidos",
+        "financeiro": "financeiro"
+    };
+    return mapa[entity] || entity;
+}
 
-  if (idIndex === -1) {
-    return { status: "error", message: "Coluna 'id' não encontrada na tabela" };
-  }
-
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][idIndex]).trim() == String(id).trim()) {
-      sheet.deleteRow(i + 1);
-      return { status: "success", message: "Excluído!" };
+function buscarAba(ss, nome) {
+    var sheets = ss.getSheets();
+    var nomeLower = nome.toLowerCase().trim();
+    for (var i = 0; i < sheets.length; i++) {
+        if (String(sheets[i].getName()).toLowerCase().trim() === nomeLower) {
+            return sheets[i];
+        }
     }
-  }
-  return { status: "error", message: "ID não encontrado: " + id };
+    return null;
 }
 
-function handleSalvarPedidoComChat(sheetPedidos, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetChat = getSheetCaseInsensitive(ss, "chat");
-
-  if (!sheetChat) {
-    return { status: "error", message: "Tabela 'chat' não encontrada" };
-  }
-
-  var idPedido = generateId(sheetPedidos, "pedidos");
-  var idCliente = String(data.id_cliente || '').trim();
-
-  if (!idCliente) {
-    return { status: "error", message: "ID do cliente não informado" };
-  }
-
-  var linhasRota = data.rotas_texto ? data.rotas_texto.split('\n') : [];
-
-  var deStr = linhasRota.map(function(l) {
-    var parte = l.split('|')[0];
-    return parte ? parte.replace(/De:/i, '').trim() : "";
-  }).join(', ');
-
-  var paraStr = linhasRota.map(function(l) {
-    var parte = l.split('|')[1];
-    return parte ? parte.replace(/Para:/i, '').trim() : "";
-  }).join(', ');
-
-  var mensagemFinal = data.mensagem || "";
-  mensagemFinal = mensagemFinal.replace("[ID_GERADO]", idPedido);
-
-  var agora = new Date();
-  var horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  var dataStr = agora.toLocaleDateString('pt-BR');
-
-  var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
-
-  // ─── CHAT: id | id_cliente | pedido_id | texto | hora | data | finalizado ───
-  sheetChat.appendRow([
-    idMsg,
-    idCliente,
-    idPedido,
-    mensagemFinal,
-    horaStr,
-    dataStr,
-    "TRUE"
-  ]);
-
-  // ─── PEDIDOS: id | id_cliente | solicitante | contato | horario | mercadoria | de | para | retorno | prioridade | valor_corrida | motoboy | status | observacao ───
-  sheetPedidos.appendRow([
-    idPedido,
-    idCliente,
-    data.solicitante || "",
-    data.contato || "",
-    data.horario || "",
-    data.mercadoria || "",
-    deStr,
-    paraStr,
-    data.retorno || "",
-    data.prioridade || "N/A",
-    data.valor_corrida || "",
-    "",
-    "PENDENTE",
-    data.observacao || ""
-  ]);
-
-  return {
-    status: "success",
-    id: idPedido,
-    id_cliente: idCliente,
-    message: "Pedido e chat salvos com sucesso!"
-  };
+function obterHeaders(sheet) {
+    return sheet.getDataRange().getValues()[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
 }
 
-function handleLogin(user, pass) {
+function processarGet(sheet) {
+    var rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) return [];
+
+    var headers = rows[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
+
+    var resultado = [];
+    for (var i = 1; i < rows.length; i++) {
+        var obj = {};
+        for (var j = 0; j < headers.length; j++) {
+            if (headers[j] !== "") {
+                obj[headers[j]] = rows[i][j];
+            }
+        }
+        resultado.push(obj);
+    }
+    return resultado;
+}
+
+function processarAdd(sheet, data, entity) {
+    var headers = obterHeaders(sheet);
+    var idIndex = headers.indexOf("id");
+
+    if (idIndex !== -1 && (!data.id || data.id === "")) {
+        data.id = gerarId(sheet, entity);
+    }
+
+    var row = [];
+    for (var i = 0; i < headers.length; i++) {
+        if (headers[i] === "id") {
+            row.push(data.id);
+        } else {
+            row.push(data[headers[i]] || "");
+        }
+    }
+
+    sheet.appendRow(row);
+    return { status: "success", message: "Adicionado!", id: data.id };
+}
+
+function processarUpdate(sheet, data) {
+    var values = sheet.getDataRange().getValues();
+    var headers = values[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
+    var idIndex = headers.indexOf("id");
+
+    if (idIndex === -1) {
+        return { status: "error", message: "Coluna 'id' não encontrada" };
+    }
+
+    if (!data.id) {
+        return { status: "error", message: "ID não informado para atualização" };
+    }
+
+    var idBusca = String(data.id).trim();
+
+    for (var i = 1; i < values.length; i++) {
+        if (String(values[i][idIndex]).trim() === idBusca) {
+            var keys = Object.keys(data);
+            for (var k = 0; k < keys.length; k++) {
+                var colIndex = headers.indexOf(String(keys[k]).toLowerCase().trim());
+                if (colIndex !== -1) {
+                    sheet.getRange(i + 1, colIndex + 1).setValue(data[keys[k]]);
+                }
+            }
+            return { status: "success", message: "Atualizado!" };
+        }
+    }
+
+    return { status: "error", message: "ID não encontrado: " + data.id };
+}
+
+function processarDelete(sheet, id) {
+    if (!id) {
+        return { status: "error", message: "ID não informado para exclusão" };
+    }
+
+    var rows = sheet.getDataRange().getValues();
+    var headers = rows[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
+    var idIndex = headers.indexOf("id");
+
+    if (idIndex === -1) {
+        return { status: "error", message: "Coluna 'id' não encontrada" };
+    }
+
+    var idBusca = String(id).trim();
+
+    for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][idIndex]).trim() === idBusca) {
+            sheet.deleteRow(i + 1);
+            return { status: "success", message: "Excluído!" };
+        }
+    }
+
+    return { status: "error", message: "ID não encontrado: " + id };
+}
+
+function processarPedidoComChat(sheetPedidos, data) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetChat = buscarAba(ss, "chat");
+
+    if (!sheetChat) {
+        return { status: "error", message: "Tabela 'chat' não encontrada" };
+    }
+
+    var idPedido = gerarId(sheetPedidos, "pedidos");
+    var idCliente = String(data.id_cliente || "").trim();
+
+    if (!idCliente) {
+        return { status: "error", message: "ID do cliente não informado" };
+    }
+
+    var linhasRota = data.rotas_texto ? data.rotas_texto.split("\n") : [];
+
+    var deStr = linhasRota.map(function (l) {
+        var parte = l.split("|")[0];
+        return parte ? parte.replace(/De:/i, "").trim() : "";
+    }).join(", ");
+
+    var paraStr = linhasRota.map(function (l) {
+        var parte = l.split("|")[1];
+        return parte ? parte.replace(/Para:/i, "").trim() : "";
+    }).join(", ");
+
+    var mensagemFinal = (data.mensagem || "").replace("[ID_GERADO]", idPedido);
+    var agora = new Date();
+    var horaStr = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    var dataStr = agora.toLocaleDateString("pt-BR");
+    var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
+
+    sheetChat.appendRow([
+        idMsg,
+        idCliente,
+        idPedido,
+        mensagemFinal,
+        horaStr,
+        dataStr,
+        "TRUE"
+    ]);
+
+    sheetPedidos.appendRow([
+        idPedido,
+        idCliente,
+        data.solicitante || "",
+        data.contato || "",
+        data.horario || "",
+        data.mercadoria || "",
+        deStr,
+        paraStr,
+        data.retorno || "",
+        data.prioridade || "N/A",
+        data.valor_corrida || "",
+        "",
+        "PENDENTE",
+        data.observacao || ""
+    ]);
+
+    return {
+        status: "success",
+        id: idPedido,
+        id_cliente: idCliente,
+        message: "Pedido e chat salvos com sucesso!"
+    };
+}
+
+function processarLogin(user, pass) {
     if (!user || !pass) {
         return { status: "error", message: "Usuário e senha são obrigatórios" };
     }
 
-    var sheet = getSheetCaseInsensitive(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
+    var sheet = buscarAba(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
 
     if (!sheet) {
         return { status: "error", message: "Tabela 'usuarios' não encontrada" };
@@ -263,23 +304,26 @@ function handleLogin(user, pass) {
         return String(h).toLowerCase().trim();
     });
 
-    var colUser = findColumnIndex(headers, ["username", "usuario", "user", "login", "nome"]);
-    var colPass = findColumnIndex(headers, ["password", "senha", "pass"]);
-    var colTipo = findColumnIndex(headers, ["tipo", "role", "cargo", "perfil"]);
-    var colImg = findColumnIndex(headers, ["imagem", "foto", "avatar", "image"]);
+    var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+    var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
+    var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+    var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
 
     if (colUser === -1 || colPass === -1) {
         return {
             status: "error",
-            message: "Colunas 'username' ou 'password' não encontradas. Headers: " + headers.join(", ")
+            message: "Colunas 'username' ou 'password' não encontradas"
         };
     }
+
+    var userTrim = String(user).trim();
+    var passTrim = String(pass).trim();
 
     for (var i = 1; i < rows.length; i++) {
         var rowUser = String(rows[i][colUser]).trim();
         var rowPass = String(rows[i][colPass]).trim();
 
-        if (rowUser === String(user).trim() && rowPass === String(pass).trim()) {
+        if (rowUser === userTrim && rowPass === passTrim) {
             return {
                 status: "success",
                 user: {
@@ -294,39 +338,46 @@ function handleLogin(user, pass) {
     return { status: "error", message: "Usuário ou senha incorretos" };
 }
 
-function findColumnIndex(headers, possibleNames) {
-    for (var n = 0; n < possibleNames.length; n++) {
-        var idx = headers.indexOf(possibleNames[n]);
+function buscarColuna(headers, nomesPossiveis) {
+    for (var n = 0; n < nomesPossiveis.length; n++) {
+        var idx = headers.indexOf(nomesPossiveis[n]);
         if (idx !== -1) return idx;
     }
     return -1;
 }
 
-function generateId(sheet, entity) {
-  var data = sheet.getDataRange().getValues();
-  if (entity.includes("pedido")) {
-    var maxId = 0;
-    var idIndex = data[0].map(function(h) { return String(h).toLowerCase().trim(); }).indexOf("id");
-    for (var i = 1; i < data.length; i++) {
-      var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ''));
-      if (!isNaN(val) && val > maxId) maxId = val;
+function gerarId(sheet, entity) {
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0].map(function (h) {
+        return String(h).toLowerCase().trim();
+    });
+    var idIndex = headers.indexOf("id");
+
+    if (entity.indexOf("pedido") !== -1) {
+        var maxId = 0;
+        for (var i = 1; i < data.length; i++) {
+            var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ""), 10);
+            if (!isNaN(val) && val > maxId) maxId = val;
+        }
+        var next = maxId + 1;
+        return "RDO" + (next < 10 ? "0" + next : String(next));
     }
-    var next = maxId + 1;
-    return "RDO" + (next < 10 ? "0" + next : String(next));
-  }
-  return Math.random().toString(36).substring(2, 13).toUpperCase();
+
+    if (entity.indexOf("financeiro") !== -1) {
+        var maxFin = 0;
+        for (var j = 1; j < data.length; j++) {
+            var numPart = parseInt(String(data[j][idIndex]).replace(/[^0-9]/g, ""), 10);
+            if (!isNaN(numPart) && numPart > maxFin) maxFin = numPart;
+        }
+        var nextFin = maxFin + 1;
+        var padded = String(nextFin);
+        while (padded.length < 4) padded = "0" + padded;
+        return "FIN" + padded;
+    }
+
+    return Math.random().toString(36).substring(2, 13).toUpperCase();
 }
 
-function getSheetCaseInsensitive(ss, name) {
-  var sheets = ss.getSheets();
-  for (var i = 0; i < sheets.length; i++) {
-    if (String(sheets[i].getName()).toLowerCase().trim() === name.toLowerCase().trim()) {
-      return sheets[i];
-    }
-  }
-  return null;
-}
-
-function response(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+function responder(obj) {
+    return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }

@@ -1,15 +1,60 @@
-/* ══════════════════════════════════════════════
-   FIN – Estilos do módulo Financeiro
-   ══════════════════════════════════════════════ */
-
-/* ── Tabs ── */
-#finTabs {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
+#cards-resumo-fin .card {
     border: none;
-    gap: 10px;
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+#cards-resumo-fin .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+#btn-novo-fin {
+    transition: all 0.2s ease;
+}
+
+#btn-novo-fin:hover {
+    background: #c82333;
+    border-color: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+#btn-refresh-fin {
+    transition: color 0.3s ease;
+}
+
+#btn-refresh-fin:hover #sync-icon-fin {
+    color: #dc3545 !important;
+}
+
+#sync-icon-fin {
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+#sync-icon-fin.fin-sync-spinning {
+    display: inline-block;
+    animation: finSpin 0.8s linear infinite;
+    color: #dc3545 !important;
+}
+
+@keyframes finSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#btn-toggle-valores {
+    transition: color 0.3s ease;
+}
+
+#btn-toggle-valores:hover i {
+    color: #dc3545 !important;
+}
+
+#btn-toggle-valores.valores-ativos i {
+    color: #dc3545 !important;
 }
 
 .btn-tab-fin {
@@ -35,43 +80,90 @@
     border-color: #dc3545;
 }
 
-/* ── Tabela ── */
-#fin-list td {
-    font-size: 0.75rem;
+#tabela-fin-body td {
+    font-size: 0.74rem;
     font-weight: 400;
     color: #333;
+    padding: 6px 10px;
 }
 
-/* ── Animação de sync (spinning) ── */
-@keyframes finSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+#tabela-fin-body tr {
+    transition: background-color 0.15s ease;
 }
 
-.fin-sync-spinning {
-    display: inline-block;
-    animation: finSpin 0.8s linear infinite;
-    color: #dc3545 !important;
+#tabela-fin-body tr:hover {
+    background-color: #fff5f5;
 }
 
-/* ── Botão sync ── */
-#btn-sync-fin {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.3s ease;
+#tabela-fin-body .btn-link {
+    font-size: 0.78rem;
+    padding: 0;
+    line-height: 1;
 }
 
-#sync-icon-fin {
-    color: #6c757d;
-    transition: color 0.3s ease;
+#tabela-fin-body .btn-link:hover {
+    color: #dc3545;
 }
 
-#sync-icon-fin.fin-sync-spinning {
-    color: #dc3545 !important;
+.badge-fin-pago {
+    background: #dcfce7;
+    color: #16a34a;
+    font-weight: 500;
+    font-size: 0.66rem;
+    padding: 3px 8px;
+    border-radius: 10px;
 }
 
-/* ── Loading "Buscando dados..." na tabela ── */
+.badge-fin-pendente {
+    background: #fef9c3;
+    color: #a16207;
+    font-weight: 500;
+    font-size: 0.66rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.badge-fin-recebido {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 500;
+    font-size: 0.66rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.badge-fin-cancelado {
+    background: #f3f4f6;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 0.66rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+#fin-pag-controls .btn {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    min-width: 28px;
+}
+
+#modal-fin .modal-content {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+#modal-fin .form-control::placeholder {
+    color: #bbb;
+    font-weight: 400;
+}
+
+.fin-input-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
+
 .fin-loading-text {
     font-size: 0.85rem;
     font-weight: 500;
@@ -92,8 +184,29 @@
     100% { content: ''; }
 }
 
-/* ── Validação de campos ── */
-.fin-input-error {
-    border: 2px solid #dc3545 !important;
-    background-color: #fff8f8 !important;
+#spinner-salvar-fin.fin-spinner-active {
+    color: #fff !important;
+}
+
+.fin-extrato-entrada {
+    border-left: 3px solid #198754;
+}
+
+.fin-extrato-saida {
+    border-left: 3px solid #dc3545;
+}
+
+@media (max-width: 576px) {
+    #cards-resumo-fin .col-6 {
+        flex: 0 0 50%;
+    }
+
+    #fin-tabs {
+        flex-wrap: wrap;
+    }
+
+    .btn-tab-fin {
+        font-size: 0.72rem;
+        padding: 5px 12px;
+    }
 }

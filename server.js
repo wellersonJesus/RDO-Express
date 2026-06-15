@@ -14,47 +14,50 @@ const PUBLIC_PATH = path.join(__dirname, 'app');
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-app.use((req, res, next) => {
-    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+app.use(function (req, res, next) {
+    console.log('[' + new Date().toLocaleTimeString() + '] ' + req.method + ' ' + req.url);
     next();
 });
 
 async function fetchGAS(payload) {
-    const url = process.env.API_URL;
+    var url = process.env.API_URL;
     if (!url) throw new Error('API_URL não configurada');
 
-    const body = JSON.stringify(payload);
+    var body = JSON.stringify(payload);
 
-    let response = await fetch(url, {
+    console.log('[GAS] Enviando payload:', JSON.stringify(payload).substring(0, 200));
+
+    var response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body,
-        redirect: 'manual'
+        body: body,
+        redirect: 'follow'
     });
 
-    if (response.status === 301 || response.status === 302) {
-        const redirectUrl = response.headers.get('location');
-        if (redirectUrl) {
-            response = await fetch(redirectUrl, {
-                method: 'GET',
-                redirect: 'follow'
-            });
-        }
-    }
+    console.log('[GAS] Status:', response.status, '| URL final:', response.url);
 
-    const text = await response.text();
+    var text = await response.text();
+
+    console.log('[GAS] Resposta bruta (200 chars):', text.substring(0, 200));
+
+    if (!text || text.trim().length === 0) {
+        throw new Error('GAS retornou resposta vazia (status ' + response.status + ')');
+    }
 
     try {
         return JSON.parse(text);
-    } catch {
-        throw new Error('Resposta inválida do GAS: ' + text.substring(0, 300));
+    } catch (e) {
+        if (text.indexOf('<!DOCTYPE') !== -1 || text.indexOf('<html') !== -1) {
+            throw new Error('GAS retornou HTML ao invés de JSON. Verifique se o script está publicado como Web App.');
+        }
+        throw new Error('JSON inválido do GAS: ' + text.substring(0, 300));
     }
 }
 
 async function buscarUsuarioGAS(username) {
     try {
-        const result = await fetchGAS({
-            action: 'getUsuarios',
+        var result = await fetchGAS({
+            action: 'getusuarios',
             apiKey: process.env.SECRET_KEY
         });
 
@@ -62,41 +65,55 @@ async function buscarUsuarioGAS(username) {
 
         if (!Array.isArray(result)) return null;
 
-        for (const u of result) {
-            const uName = String(u.username || u.user || u.login || '').trim();
+        for (var i = 0; i < result.length; i++) {
+            var u = result[i];
+            var uName = String(u.username || u.user || u.login || '').trim();
             if (uName === username) {
-                console.log('[DEBUG] Usuário encontrado. Campos:', JSON.stringify(Object.keys(u)));
-                console.log('[DEBUG] imagem:', JSON.stringify(u.imagem));
-                console.log('[DEBUG] Objeto completo:', JSON.stringify(u).substring(0, 500));
+                console.log('[DEBUG] Usuário encontrado:', uName);
                 return u;
             }
         }
-        console.log('[DEBUG] Usuário "' + username + '" NÃO encontrado na lista');
+
+        console.log('[DEBUG] Usuário "' + username + '" não encontrado na lista');
     } catch (err) {
         console.error('[LOGIN] Erro ao buscar avatar no GAS:', err.message);
     }
     return null;
 }
 
-app.post('/api/proxy', async (req, res) => {
+app.post('/api/proxy', async function (req, res) {
     try {
-        const { action, username, password } = req.body;
+        var body = req.body || {};
+        var action = String(body.action || '').toLowerCase().trim();
+
+        console.log('[PROXY] Action recebida:', action);
+        console.log('[PROXY] Body keys:', Object.keys(body).join(', '));
+
+        if (!action) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Nenhuma ação informada'
+            });
+        }
 
         if (action === 'login') {
-            console.log(`[LOGIN] Tentativa: "${username}"`);
+            var username = String(body.username || '').trim();
+            var password = String(body.password || '');
 
-            const masterLogin = process.env.MASTER_LOGIN;
-            const masterHash = process.env.MASTER_PASS_HASH;
-            const masterPlain = process.env.MASTER_PASS;
+            console.log('[LOGIN] Tentativa: "' + username + '"');
+
+            var masterLogin = process.env.MASTER_LOGIN;
+            var masterHash = process.env.MASTER_PASS_HASH;
+            var masterPlain = process.env.MASTER_PASS;
 
             if (masterLogin && username === masterLogin) {
-                let senhaOk = false;
+                var senhaOk = false;
 
                 if (masterHash) {
-                    const cleanHash = masterHash.replace(/\$\$/g, '$');
+                    var cleanHash = masterHash.replace(/\$\$/g, '$');
                     try {
                         senhaOk = await bcrypt.compare(password, cleanHash);
-                    } catch {
+                    } catch (e) {
                         senhaOk = false;
                     }
                 }
@@ -106,26 +123,29 @@ app.post('/api/proxy', async (req, res) => {
                 }
 
                 if (senhaOk) {
-                    console.log('[LOGIN] ✅ Master autenticado');
+                    console.log('[LOGIN] Master autenticado');
 
-                    const gasUser = await buscarUsuarioGAS(masterLogin);
+                    var gasUser = await buscarUsuarioGAS(masterLogin);
 
-                    const imagem = gasUser?.imagem || gasUser?.foto || gasUser?.avatar || gasUser?.image || '';
-                    const tipo = gasUser?.tipo || gasUser?.role || gasUser?.cargo || process.env.MASTER_CARGO || 'Admin';
+                    var imagem = '';
+                    var tipo = process.env.MASTER_CARGO || 'Admin';
 
-                    console.log(`[LOGIN] Avatar: ${imagem ? 'Encontrado' : 'Não encontrado'}`);
+                    if (gasUser) {
+                        imagem = gasUser.imagem || gasUser.foto || gasUser.avatar || gasUser.image || '';
+                        tipo = gasUser.tipo || gasUser.role || gasUser.cargo || tipo;
+                    }
 
                     return res.json({
                         status: 'success',
                         user: {
                             username: masterLogin,
-                            tipo,
-                            imagem
+                            tipo: tipo,
+                            imagem: imagem
                         }
                     });
                 }
 
-                console.log('[LOGIN] ❌ Senha Master incorreta');
+                console.log('[LOGIN] Senha Master incorreta');
                 return res.status(401).json({
                     status: 'error',
                     message: 'Usuário ou senha incorretos.'
@@ -135,22 +155,21 @@ app.post('/api/proxy', async (req, res) => {
             console.log('[LOGIN] Encaminhando para GAS...');
 
             try {
-                const gasResult = await fetchGAS({
+                var gasResult = await fetchGAS({
                     action: 'login',
-                    username,
-                    password,
-                    apiKey: process.env.SECRET_KEY
+                    username: username,
+                    password: password
                 });
 
-                console.log('[LOGIN] Resposta GAS:', JSON.stringify(gasResult));
+                console.log('[LOGIN] Resposta GAS:', JSON.stringify(gasResult).substring(0, 200));
 
-                if (gasResult.status === 'success' && gasResult.user) {
+                if (gasResult && gasResult.status === 'success' && gasResult.user) {
                     return res.json(gasResult);
                 }
 
                 return res.status(401).json({
                     status: 'error',
-                    message: gasResult.message || 'Usuário ou senha incorretos.'
+                    message: (gasResult && gasResult.message) ? gasResult.message : 'Usuário ou senha incorretos.'
                 });
             } catch (gasErr) {
                 console.error('[LOGIN] Erro GAS:', gasErr.message);
@@ -168,10 +187,21 @@ app.post('/api/proxy', async (req, res) => {
             });
         }
 
-        const payload = { ...req.body, apiKey: process.env.SECRET_KEY };
-        console.log(`[PROXY] Action: ${action || 'N/A'}`);
+        var payload = {};
+        var bodyKeys = Object.keys(body);
+        for (var k = 0; k < bodyKeys.length; k++) {
+            if (bodyKeys[k] !== 'apiKey') {
+                payload[bodyKeys[k]] = body[bodyKeys[k]];
+            }
+        }
+        payload.apiKey = process.env.SECRET_KEY;
 
-        const data = await fetchGAS(payload);
+        console.log('[PROXY] Encaminhando action:', payload.action);
+
+        var data = await fetchGAS(payload);
+
+        console.log('[PROXY] Resposta tipo:', typeof data, '| Array?', Array.isArray(data));
+
         return res.json(data);
 
     } catch (error) {
@@ -186,19 +216,20 @@ app.post('/api/proxy', async (req, res) => {
 
 app.use(express.static(PUBLIC_PATH));
 
-app.get('*', (req, res) => {
+app.get('*', function (req, res) {
     if (/\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff2?|ttf)$/.test(req.path)) {
         return res.status(404).send('Not Found');
     }
     res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function () {
     console.log('=========================================');
-    console.log(`  Servidor rodando em http://localhost:${PORT}`);
-    console.log(`  API_URL: ${process.env.API_URL ? 'OK' : 'NÃO CONFIGURADA!'}`);
-    console.log(`  SECRET_KEY: ${process.env.SECRET_KEY ? 'OK' : 'NÃO CONFIGURADA!'}`);
-    console.log(`  MASTER_LOGIN: ${process.env.MASTER_LOGIN || 'N/A'}`);
+    console.log('  Servidor rodando em http://localhost:' + PORT);
+    console.log('  API_URL: ' + (process.env.API_URL ? 'OK' : 'NAO CONFIGURADA!'));
+    console.log('  SECRET_KEY: ' + (process.env.SECRET_KEY ? 'OK' : 'NAO CONFIGURADA!'));
+    console.log('  MASTER_LOGIN: ' + (process.env.MASTER_LOGIN || 'N/A'));
+    console.log('  Static path: ' + PUBLIC_PATH);
     console.log('=========================================');
 });
