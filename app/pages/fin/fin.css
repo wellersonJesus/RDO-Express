@@ -1093,3 +1093,28 @@
         gap: 3px;
     }
 }
+
+.btn-sort-data {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    padding: 0 2px;
+    cursor: pointer;
+    color: #adb5bd;
+    font-size: .7rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    vertical-align: middle;
+}
+
+.btn-sort-data:hover {
+    color: var(--fin-vermelho);
+}
+
+.btn-sort-data.active {
+    color: var(--fin-vermelho);
+}

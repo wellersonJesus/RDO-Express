@@ -131,17 +131,22 @@
                             <table class="table table-hover align-middle border-0 mb-0" id="tabela-fin-todos">
                                 <thead class="text-uppercase tabela-fin-head">
                                     <tr>
-                                        <th class="ps-3 border-0 fw-normal" style="width:20%;">Data</th>
-                                        <th class="border-0 fw-normal" style="width:20%;">Tipo</th>
-                                        <th class="border-0 fw-normal" style="width:20%;">Descrição</th>
-                                        <th class="border-0 fw-normal" style="width:15%;">Valor</th>
-                                        <th class="border-0 fw-normal text-center" style="width:10%;">Situação</th>
-                                        <th class="text-end pe-3 border-0 fw-normal" style="width:15%;">Ações</th>
+                                        <th class="ps-3 border-0 fw-normal" style="width:25%;">
+                                            <span class="d-inline-flex align-items-center gap-1">
+                                                Data
+                                                <button class="btn-sort-data" id="btn-sort-data-todos" title="Ordenar por data">
+                                                    <i class="bi bi-arrow-down" id="icon-sort-data-todos"></i>
+                                                </button>
+                                            </span>
+                                        </th>
+                                        <th class="border-0 fw-normal" style="width:25%;">Valor</th>
+                                        <th class="border-0 fw-normal text-center" style="width:20%;">Situação</th>
+                                        <th class="text-end pe-3 border-0 fw-normal" style="width:30%;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabela-fin-body-todos">
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="4" class="text-center text-muted py-4">
                                             <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
                                             <div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div>
                                         </td>

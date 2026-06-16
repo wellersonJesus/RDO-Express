@@ -8,6 +8,7 @@
         filtroSituacao: 'todos',
         filtroBusca: '',
         fetching: false,
+        sortDataDesc: true,
         todos: { pagina: 1, porPagina: 15, totalPag: 1 },
         caixa: { pagina: 1, porPagina: 20, totalPag: 1, dataInicio: '', dataFim: '' },
         extrato: { pagina: 1, porPagina: 20, totalPag: 1, periodo: 'diario', dataRef: '', dados: [] }
@@ -140,6 +141,8 @@
         els.pagPrevTodos = document.getElementById('fin-pag-prev-todos');
         els.pagNextTodos = document.getElementById('fin-pag-next-todos');
         els.pagLabelTodos = document.getElementById('fin-pag-label-todos');
+        els.btnSortData = document.getElementById('btn-sort-data-todos');
+        els.iconSortData = document.getElementById('icon-sort-data-todos');
         els.caixaDataInicio = document.getElementById('caixa-data-inicio');
         els.caixaDataFim = document.getElementById('caixa-data-fim');
         els.btnFiltrarCaixa = document.getElementById('btn-filtrar-caixa');
@@ -185,6 +188,15 @@
         if (els.btnNovo) els.btnNovo.addEventListener('click', function () { abrirModal(null); });
         if (els.btnToggle) els.btnToggle.addEventListener('click', function () { toggleValores(); });
         if (els.btnSalvar) els.btnSalvar.addEventListener('click', function () { salvar(); });
+
+        if (els.btnSortData) {
+            els.btnSortData.addEventListener('click', function () {
+                state.sortDataDesc = !state.sortDataDesc;
+                atualizarIconeSort();
+                state.todos.pagina = 1;
+                renderTodos();
+            });
+        }
 
         if (els.filtroBusca) {
             els.filtroBusca.addEventListener('input', function () {
@@ -273,6 +285,16 @@
                 previewValor();
             });
         }
+    }
+
+    function atualizarIconeSort() {
+        if (!els.iconSortData || !els.btnSortData) return;
+        if (state.sortDataDesc) {
+            els.iconSortData.className = 'bi bi-arrow-down';
+        } else {
+            els.iconSortData.className = 'bi bi-arrow-up';
+        }
+        els.btnSortData.classList.add('active');
     }
 
     function spinOn() {
@@ -375,7 +397,11 @@
         if (!els.tbodyTodos) return;
         atualizarResumo();
         var lista = dadosFiltradosTodos();
-        lista.sort(function (a, b) { return (b.dataISO || '').localeCompare(a.dataISO || ''); });
+        if (state.sortDataDesc) {
+            lista.sort(function (a, b) { return (b.dataISO || '').localeCompare(a.dataISO || ''); });
+        } else {
+            lista.sort(function (a, b) { return (a.dataISO || '').localeCompare(b.dataISO || ''); });
+        }
         var total = lista.length;
         state.todos.totalPag = Math.max(1, Math.ceil(total / state.todos.porPagina));
         if (state.todos.pagina > state.todos.totalPag) state.todos.pagina = state.todos.totalPag;
@@ -383,7 +409,7 @@
         var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
         var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
         if (!pagina.length) {
-            els.tbodyTodos.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
+            els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
         } else {
             var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
             els.tbodyTodos.innerHTML = pagina.map(function (d, i) {
@@ -393,8 +419,6 @@
                 var valorTxt = state.valoresVisiveis ? ((isE ? '+ ' : '- ') + formatarMoeda(val)) : oculto;
                 return '<tr>' +
                     '<td class="ps-3">' + d.dataDisplay + '</td>' +
-                    '<td>' + getTipoBadge(d.tipo) + '</td>' +
-                    '<td class="text-truncate" style="max-width:180px;">' + (d.descricao || '-') + '</td>' +
                     '<td style="color:' + cor + ';font-weight:600;">' + valorTxt + '</td>' +
                     '<td class="text-center">' + getStatusBadge(d.situacao) + '</td>' +
                     '<td class="text-end pe-3"><div class="d-inline-flex gap-1">' +
@@ -972,7 +996,7 @@
         state.fetching = true;
         spinOn();
         if (els.tbodyTodos) {
-            els.tbodyTodos.innerHTML = '<tr><td colspan="6" class="text-center py-5">' +
+            els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center py-5">' +
                 '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
                 '<div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div></td></tr>';
         }
@@ -1013,6 +1037,7 @@
         state.filtroTipo = 'todos';
         state.filtroSituacao = 'todos';
         state.filtroBusca = '';
+        state.sortDataDesc = true;
         state.todos.pagina = 1;
         state.caixa.pagina = 1;
         state.caixa.dataInicio = '';
@@ -1023,6 +1048,7 @@
         mascaraValor(els.finValor);
         if (els.extratoDataRef) els.extratoDataRef.value = new Date().toISOString().split('T')[0];
         registrarEventos();
+        atualizarIconeSort();
         carregarDados();
     };
 
