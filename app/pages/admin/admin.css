@@ -1,97 +1,354 @@
-/* ══════════════════════════════════════════════
-   ADMIN – Estilos do módulo Administração
-   ══════════════════════════════════════════════ */
+/* ============================================
+   ADMINISTRAÇÃO
+   ============================================ */
 
-/* ── Tabs ── */
-#adminTabs {
-    list-style: none;
+/* --- Layout --- */
+.admin-page-wrapper {
     padding: 0;
-    margin: 0;
+}
+
+.admin-content-area {
     display: flex;
-    border: none;
-    gap: 10px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.btn-tab-admin {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-tab-admin:hover {
-    color: #dc3545;
-    border-color: #dc3545;
-}
-
-.btn-tab-admin.active {
-    background: #dc3545;
-    color: #fff;
-    border-color: #dc3545;
-}
-
-/* ── Tabela ── */
-#admin-list td {
+.admin-subtitle {
     font-size: 0.75rem;
-    font-weight: 400;
-    color: #333;
+    color: #6c757d;
 }
 
-/* ── Validação de campos ── */
-.input-error {
-    border: 2px solid #dc3545 !important;
-    background-color: #fff8f8 !important;
+/* --- Botão Sync Header --- */
+.btn-sync-admin {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
 }
 
-/* ── Animação de sync (spinning) ── */
-@keyframes adminSpin {
+.btn-sync-admin.syncing {
+    color: #dc3545;
+}
+
+.btn-sync-admin:hover {
+    transform: scale(1.15);
+}
+
+.btn-sync-admin:disabled {
+    cursor: not-allowed;
+}
+
+/* --- Spinner Rotate (sync + loading) --- */
+.spinner-rotate {
+    display: inline-block;
+    animation: spin-loop 0.8s linear infinite;
+}
+
+@keyframes spin-loop {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-.admin-sync-spinning {
-    display: inline-block;
-    animation: adminSpin 0.8s linear infinite;
-    color: #dc3545 !important;
+/* --- Tabs de Navegação --- */
+.admin-tabs-nav {
+    display: flex;
+    gap: 24px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0;
 }
 
-/* ── Botão sync: estado padrão ── */
-#btn-sync-admin {
+.admin-tab {
+    position: relative;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #999;
+    padding: 6px 0 10px 0;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.admin-tab:hover {
+    color: #555;
+    text-decoration: none;
+}
+
+.admin-tab.active {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.admin-tab::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #dc3545;
+    border-radius: 2px;
+    transition: width 0.25s ease;
+}
+
+.admin-tab.active::after {
+    width: 100%;
+}
+
+/* --- Input Busca --- */
+.input-filtro-admin {
+    height: 31px;
+    max-width: 180px;
+    font-size: 0.78rem;
+}
+
+.input-filtro-admin:focus {
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
+    border-color: #e4606d;
+}
+
+/* --- Botão Novo --- */
+.btn-novo-admin {
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    height: 31px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    transition: color 0.3s ease;
+    gap: 4px;
 }
 
-#sync-icon-admin {
-    color: #6c757d;
-    transition: color 0.3s ease;
+/* --- Dropdown Filtro --- */
+.dropdown-filtro-wrapper {
+    position: relative;
+    display: inline-block;
 }
 
-/* ── Botão sync: vermelho quando girando ── */
-#sync-icon-admin.admin-sync-spinning {
-    color: #dc3545 !important;
-}
-
-/* ── Spinner vermelho no botão salvar do form ── */
-#spinner-salvar-admin.admin-sync-spinning {
-    color: #fff !important;
-}
-
-/* ── Loading "Buscando dados..." na tabela ── */
-.admin-loading-text {
-    font-size: 0.85rem;
+.btn-filtro-inteligente {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 50px;
+    padding: 4px 14px;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: #dc3545;
-    user-select: none;
+    color: #495057;
+    cursor: pointer;
+    height: 31px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-/* ── Efeito dos três pontos animados ── */
+.btn-filtro-inteligente:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-filtro-inteligente .bi-funnel-fill {
+    font-size: 0.7rem;
+    color: #dc3545;
+}
+
+.chevron-filtro {
+    font-size: 0.6rem;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-filtro-wrapper.open .chevron-filtro {
+    transform: rotate(180deg);
+}
+
+.dropdown-filtro-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1050;
+    min-width: 170px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    animation: fadeInDropFiltro 0.15s ease;
+}
+
+.dropdown-filtro-wrapper.open .dropdown-filtro-menu {
+    display: block;
+}
+
+@keyframes fadeInDropFiltro {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-filtro-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.dropdown-filtro-item:hover {
+    background: #fdf2f3;
+    color: #dc3545;
+}
+
+.dropdown-filtro-item.active {
+    background: #fce4ec;
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.dropdown-filtro-item i {
+    font-size: 0.8rem;
+    width: 16px;
+    text-align: center;
+}
+
+/* --- Submenu Status --- */
+.dropdown-filtro-item-has-sub {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    cursor: default;
+}
+
+.dropdown-filtro-item-has-sub:hover {
+    background: transparent;
+    color: inherit;
+}
+
+.dropdown-filtro-item-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.dropdown-filtro-item-label:hover {
+    background: #fdf2f3;
+    color: #dc3545;
+}
+
+.dropdown-filtro-item-has-sub.active > .dropdown-filtro-item-label {
+    background: #fce4ec;
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.chevron-sub {
+    font-size: 0.55rem;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-filtro-item-has-sub.sub-open .chevron-sub {
+    transform: rotate(90deg);
+}
+
+.dropdown-filtro-submenu {
+    display: none;
+    padding: 2px 0 4px 0;
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+}
+
+.dropdown-filtro-item-has-sub.sub-open .dropdown-filtro-submenu {
+    display: block;
+}
+
+.dropdown-filtro-subitem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px 7px 28px;
+    font-size: 0.73rem;
+    color: #6c757d;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.dropdown-filtro-subitem:hover {
+    background: #fdf2f3;
+    color: #dc3545;
+}
+
+.dropdown-filtro-subitem.active {
+    background: #fce4ec;
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.dropdown-filtro-subitem i {
+    font-size: 0.72rem;
+    width: 14px;
+    text-align: center;
+}
+
+/* --- Tabela --- */
+.tabela-admin-head {
+    font-size: 0.65rem;
+    color: #999;
+}
+
+#admin-list td {
+    font-size: 0.75rem !important;
+    font-weight: 400 !important;
+    color: #333 !important;
+    vertical-align: middle;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+#tabela-admin tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+#tabela-admin tbody tr:hover {
+    background-color: #fdf2f3;
+}
+
+#tabela-admin .btn.btn-light.btn-sm {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    transition: all 0.2s ease;
+}
+
+#tabela-admin .btn.btn-light.btn-sm:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+    color: #495057;
+}
+
+/* --- Loading da Tabela --- */
+.admin-loading-text {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #999;
+}
+
 .admin-dots::after {
     content: '';
     animation: adminDots 1.5s steps(4, end) infinite;
@@ -103,4 +360,62 @@
     50%  { content: '..'; }
     75%  { content: '...'; }
     100% { content: ''; }
+}
+
+/* --- Paginação --- */
+#info-paginacao-admin {
+    min-width: 100px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #666;
+}
+
+/* --- Input com Erro --- */
+.input-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff8f8 !important;
+}
+
+/* --- Modal --- */
+#admin-modal-container .modal-content {
+    border: 0;
+}
+
+#admin-modal-container .form-control-sm[readonly] {
+    cursor: default;
+}
+
+/* --- Responsivo --- */
+@media (max-width: 768px) {
+    .input-filtro-admin {
+        max-width: 140px;
+    }
+}
+
+@media (max-width: 576px) {
+    .admin-tabs-nav {
+        gap: 16px;
+    }
+
+    .admin-tab {
+        font-size: 0.73rem;
+    }
+
+    .input-filtro-admin {
+        max-width: 120px;
+    }
+
+    .btn-novo-admin {
+        font-size: 0.7rem;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .btn-filtro-inteligente span {
+        display: none;
+    }
+
+    .btn-filtro-inteligente {
+        padding: 4px 10px;
+    }
 }

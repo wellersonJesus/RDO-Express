@@ -1,10 +1,3 @@
-/* ==========================================================================
-   RDO EXPRESS — FIN.CSS (REFATORADO v4 — PADRÃO HEADER CHAT)
-   ========================================================================== */
-
-/* ==========================================================================
-   1. VARIÁVEIS
-   ========================================================================== */
 :root {
     --fin-vermelho: #dc3545;
     --fin-verde: #198754;
@@ -14,16 +7,10 @@
     --fin-bg-hover: #fafafa;
 }
 
-/* ==========================================================================
-   2. BODY / LAYOUT
-   ========================================================================== */
 .fin-subtitle {
     font-size: 0.75rem;
 }
 
-/* ==========================================================================
-   3. BOTÃO SYNC — PADRÃO CHAT (ícone limpo, sem background)
-   ========================================================================== */
 .btn-sync-fin {
     background: none;
     border: none;
@@ -37,9 +24,16 @@
     color: var(--fin-cinza);
 }
 
-.btn-sync-fin:hover {
+.btn-sync-fin.syncing {
     color: var(--fin-vermelho);
+}
+
+.btn-sync-fin:hover {
     transform: scale(1.15);
+}
+
+.btn-sync-fin:disabled {
+    cursor: not-allowed;
 }
 
 .btn-sync-fin i {
@@ -47,19 +41,96 @@
     display: inline-block;
 }
 
-.btn-sync-fin i.fin-sync-spinning {
-    animation: finSpin 0.8s linear infinite;
-    color: var(--fin-vermelho);
+.spinner-rotate {
+    display: inline-block;
+    animation: spin-loop 0.8s linear infinite;
 }
 
-@keyframes finSpin {
+@keyframes spin-loop {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-/* ==========================================================================
-   4. CARDS RESUMO
-   ========================================================================== */
+.fin-loading-text {
+    font-size: .78rem;
+    font-weight: 500;
+    color: #999;
+}
+
+.fin-dots::after {
+    content: '';
+    animation: finDotsAnim 1.5s steps(4, end) infinite;
+}
+
+@keyframes finDotsAnim {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+}
+
+.fin-card-icon-wrap {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.fin-card-icon-receita {
+    background: rgba(25, 135, 84, 0.08);
+    color: #198754;
+}
+
+.fin-card-icon-despesa {
+    background: rgba(220, 53, 69, 0.08);
+    color: #dc3545;
+}
+
+.fin-card-icon-saldo {
+    background: rgba(13, 110, 253, 0.08);
+    color: #0d6efd;
+}
+
+.fin-card-icon-registros {
+    background: rgba(111, 66, 193, 0.08);
+    color: #6f42c1;
+}
+
+.fin-card-label {
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    color: #9ca3af;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.fin-card-valor {
+    font-size: .95rem;
+    line-height: 1.2;
+}
+
+.fin-card-receita {
+    border-left: 3px solid rgba(25, 135, 84, 0.3) !important;
+}
+
+.fin-card-despesa {
+    border-left: 3px solid rgba(220, 53, 69, 0.3) !important;
+}
+
+.fin-card-saldo {
+    border-left: 3px solid rgba(13, 110, 253, 0.3) !important;
+}
+
+.fin-card-registros {
+    border-left: 3px solid rgba(111, 66, 193, 0.3) !important;
+}
+
 .card-resumo-fin {
     border: none;
     border-radius: 12px;
@@ -72,9 +143,6 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
 }
 
-/* ==========================================================================
-   5. TABS DE NAVEGAÇÃO
-   ========================================================================== */
 .btn-tab-fin {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -98,18 +166,12 @@
     border-color: var(--fin-vermelho);
 }
 
-/* ==========================================================================
-   6. FILTRO MÊS
-   ========================================================================== */
 .input-filtro-fin {
     max-width: 160px;
     font-size: .76rem;
     font-weight: 400;
 }
 
-/* ==========================================================================
-   7. BOTÃO NOVO LANÇAMENTO
-   ========================================================================== */
 .btn-novo-fin {
     display: inline-flex;
     align-items: center;
@@ -136,9 +198,6 @@
     box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
-/* ==========================================================================
-   8. BOTÃO TOGGLE VALORES (OLHINHO)
-   ========================================================================== */
 .btn-toggle-fin {
     width: 32px;
     height: 32px;
@@ -166,9 +225,6 @@
     color: var(--fin-vermelho);
 }
 
-/* ==========================================================================
-   9. TABELA — CABEÇALHO
-   ========================================================================== */
 .tabela-fin-head th {
     font-size: .7rem;
     color: var(--fin-cinza);
@@ -178,9 +234,6 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-/* ==========================================================================
-   10. TABELA — CORPO
-   ========================================================================== */
 #tabela-fin-body td {
     font-size: .76rem;
     font-weight: 400;
@@ -197,9 +250,6 @@
     background-color: var(--fin-bg-hover);
 }
 
-/* ==========================================================================
-   11. BOTÕES DE AÇÃO (VER / EDITAR / EXCLUIR)
-   ========================================================================== */
 .btn-acao-fin {
     width: 28px;
     height: 28px;
@@ -226,9 +276,6 @@
     color: #fff;
 }
 
-/* ==========================================================================
-   12. BADGES DE STATUS
-   ========================================================================== */
 .badge-fin-pago {
     background: #dcfce7;
     color: #16a34a;
@@ -265,9 +312,6 @@
     border-radius: 10px;
 }
 
-/* ==========================================================================
-   13. PAGINAÇÃO
-   ========================================================================== */
 .fin-pag-info {
     font-size: .7rem;
     font-weight: 400;
@@ -280,9 +324,6 @@
     min-width: 28px;
 }
 
-/* ==========================================================================
-   14. MODAIS — CONTEÚDO
-   ========================================================================== */
 .modal-fin-content {
     border: none;
     border-radius: 14px;
@@ -294,9 +335,6 @@
     font-weight: 400;
 }
 
-/* ==========================================================================
-   15. FORMULÁRIO — LABELS E INPUTS
-   ========================================================================== */
 .fin-label {
     font-size: .7rem;
     font-weight: 500;
@@ -309,17 +347,6 @@
     border-radius: 8px;
 }
 
-/* ==========================================================================
-   16. LOADING INICIAL
-   ========================================================================== */
-.fin-loading-text-init {
-    font-size: .78rem;
-    color: #999;
-}
-
-/* ==========================================================================
-   17. MODAL VISUALIZAR — LINHAS DE DETALHE
-   ========================================================================== */
 .fin-view-row {
     display: flex;
     justify-content: space-between;
@@ -347,9 +374,6 @@
     text-align: right;
 }
 
-/* ==========================================================================
-   18. EXTRATO — BORDA LATERAL COLORIDA
-   ========================================================================== */
 .fin-extrato-entrada td:first-child {
     border-left: 3px solid var(--fin-verde);
 }
@@ -358,69 +382,9 @@
     border-left: 3px solid var(--fin-vermelho);
 }
 
-/* ==========================================================================
-   19. TOAST — ANIMAÇÃO
-   ========================================================================== */
 @keyframes finToastIn {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* ==========================================================================
-   20. RESPONSIVIDADE
-   ========================================================================== */
-@media (max-width: 768px) {
-    .fin-subtitle {
-        font-size: 0.68rem;
-    }
-
-    .tabela-fin-head th {
-        font-size: .65rem;
-    }
-
-    #tabela-fin-body td {
-        font-size: .72rem;
-        padding: 6px 8px;
-    }
-
-    .btn-acao-fin {
-        width: 26px;
-        height: 26px;
-    }
-
-    .btn-acao-fin i {
-        font-size: .68rem;
-    }
-}
-
-@media (max-width: 576px) {
-    #cards-resumo-fin .col-6 {
-        flex: 0 0 50%;
-    }
-
-    #fin-tabs {
-        flex-wrap: wrap;
-    }
-
-    .btn-tab-fin {
-        font-size: 0.7rem;
-        padding: 5px 12px;
-    }
-
-    .input-filtro-fin {
-        max-width: 130px;
-    }
-
-    .btn-novo-fin {
-        padding: 5px 14px;
-        font-size: .72rem;
-    }
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 .fin-filter-btn {
@@ -471,4 +435,57 @@
 
 .fin-dropdown-item.active:hover {
     background: rgba(220, 53, 69, 0.12);
+}
+
+@media (max-width: 768px) {
+    .fin-subtitle {
+        font-size: 0.68rem;
+    }
+    .tabela-fin-head th {
+        font-size: .65rem;
+    }
+    #tabela-fin-body td {
+        font-size: .72rem;
+        padding: 6px 8px;
+    }
+    .btn-acao-fin {
+        width: 26px;
+        height: 26px;
+    }
+    .btn-acao-fin i {
+        font-size: .68rem;
+    }
+    .fin-card-icon-wrap {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 10px;
+        font-size: .95rem;
+    }
+    .fin-card-label {
+        font-size: .58rem;
+    }
+    .fin-card-valor {
+        font-size: .82rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #cards-resumo-fin .col-6 {
+        flex: 0 0 50%;
+    }
+    #fin-tabs {
+        flex-wrap: wrap;
+    }
+    .btn-tab-fin {
+        font-size: 0.7rem;
+        padding: 5px 12px;
+    }
+    .input-filtro-fin {
+        max-width: 130px;
+    }
+    .btn-novo-fin {
+        padding: 5px 14px;
+        font-size: .72rem;
+    }
 }

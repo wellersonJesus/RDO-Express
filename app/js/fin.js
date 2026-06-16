@@ -1,4 +1,5 @@
 (function () {
+
     var state = {
         cache: [],
         pagina: 1,
@@ -9,7 +10,9 @@
         fetching: false,
         totalPag: 1
     };
+
     window.financeiroState = state;
+
     var els = {};
 
     function parseData(raw) {
@@ -22,48 +25,28 @@
                 d = String(dt.getUTCDate()).padStart(2, '0');
                 m = String(dt.getUTCMonth() + 1).padStart(2, '0');
                 y = String(dt.getUTCFullYear());
-                return {
-                    iso: y + '-' + m + '-' + d,
-                    br: d + '/' + m + '/' + y,
-                    display: d + '/' + m + '/' + y.slice(-2)
-                };
+                return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
             }
         }
         if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
             var parts = raw.substring(0, 10).split('-');
             y = parts[0]; m = parts[1]; d = parts[2];
-            return {
-                iso: y + '-' + m + '-' + d,
-                br: d + '/' + m + '/' + y,
-                display: d + '/' + m + '/' + y.slice(-2)
-            };
+            return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
         }
         if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
             var p = raw.split('/');
             d = p[0]; m = p[1]; y = p[2];
-            return {
-                iso: y + '-' + m + '-' + d,
-                br: d + '/' + m + '/' + y,
-                display: d + '/' + m + '/' + y.slice(-2)
-            };
+            return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
         }
         if (/^\d{2}\/\d{2}\/\d{2}$/.test(raw)) {
             var p2 = raw.split('/');
             d = p2[0]; m = p2[1]; y = '20' + p2[2];
-            return {
-                iso: y + '-' + m + '-' + d,
-                br: d + '/' + m + '/' + y,
-                display: d + '/' + m + '/' + p2[2]
-            };
+            return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + p2[2] };
         }
         if (/^\d{2}\/\d{2}$/.test(raw)) {
             d = raw.split('/')[0]; m = raw.split('/')[1];
             y = String(new Date().getFullYear());
-            return {
-                iso: y + '-' + m + '-' + d,
-                br: d + '/' + m + '/' + y,
-                display: d + '/' + m + '/' + y.slice(-2)
-            };
+            return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
         }
         return { iso: '', br: raw, display: raw };
     }
@@ -71,7 +54,7 @@
     function normalizarRegistro(d) {
         var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
         var tipoNorm = 'entrada';
-        if (tipoRaw === 'DESPESA' || tipoRaw === 'SAIDA' || tipoRaw === 'SAÍDA') {
+        if (tipoRaw === 'DESPESA' || tipoRaw === 'SAIDA' || tipoRaw === 'SA\u00cdDA') {
             tipoNorm = 'saida';
         } else if (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA') {
             tipoNorm = 'entrada';
@@ -131,19 +114,7 @@
         els.finStatus = document.getElementById('fin-status');
         els.finPagamento = document.getElementById('fin-pagamento');
         els.finObservacao = document.getElementById('fin-observacao');
-        els.headerNome = document.getElementById('fin-user-nome');
-        els.headerCargo = document.getElementById('fin-user-cargo');
         els.filtroLabel = document.getElementById('filtro-label-fin');
-    }
-
-    function atualizarHeaderUsuario() {
-        var username = localStorage.getItem('username') || 'Usuário';
-        var cargo = localStorage.getItem('tipo') || '';
-        if (els.headerNome) els.headerNome.textContent = username;
-        if (els.headerCargo) els.headerCargo.textContent = cargo;
-        if (typeof window.atualizarAvatar === 'function') {
-            window.atualizarAvatar();
-        }
     }
 
     function registrarEventos() {
@@ -163,26 +134,31 @@
                 renderTabela();
             });
         });
+
         if (els.btnRefresh) {
             els.btnRefresh.addEventListener('click', function () {
                 carregarDados();
             });
         }
+
         if (els.btnNovo) {
             els.btnNovo.addEventListener('click', function () {
                 abrirModal(null);
             });
         }
+
         if (els.btnToggle) {
             els.btnToggle.addEventListener('click', function () {
                 toggleValores();
             });
         }
+
         if (els.btnSalvar) {
             els.btnSalvar.addEventListener('click', function () {
                 salvar();
             });
         }
+
         if (els.filtroMes) {
             els.filtroMes.addEventListener('change', function () {
                 state.mesFiltro = els.filtroMes.value || '';
@@ -190,6 +166,7 @@
                 renderTabela();
             });
         }
+
         if (els.pagPrev) {
             els.pagPrev.addEventListener('click', function () {
                 if (state.pagina > 1) {
@@ -198,6 +175,7 @@
                 }
             });
         }
+
         if (els.pagNext) {
             els.pagNext.addEventListener('click', function () {
                 if (state.pagina < state.totalPag) {
@@ -209,10 +187,13 @@
     }
 
     function spinOn() {
-        if (els.syncIcon) els.syncIcon.classList.add('fin-sync-spinning');
+        if (els.btnRefresh) { els.btnRefresh.classList.add('syncing'); els.btnRefresh.disabled = true; }
+        if (els.syncIcon) els.syncIcon.classList.add('spinner-rotate');
     }
+
     function spinOff() {
-        if (els.syncIcon) els.syncIcon.classList.remove('fin-sync-spinning');
+        if (els.btnRefresh) { els.btnRefresh.classList.remove('syncing'); els.btnRefresh.disabled = false; }
+        if (els.syncIcon) els.syncIcon.classList.remove('spinner-rotate');
     }
 
     function getColCount() {
@@ -222,7 +203,11 @@
 
     function mostrarLoading() {
         if (!els.tbody) return;
-        els.tbody.innerHTML = '<tr><td colspan="' + getColCount() + '" class="text-center py-5"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text-init">Buscando dados...</div></td></tr>';
+        els.tbody.innerHTML =
+            '<tr><td colspan="' + getColCount() + '" class="text-center py-5">' +
+            '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
+            '<div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div>' +
+            '</td></tr>';
     }
 
     function formatarMoeda(v) {
@@ -261,14 +246,14 @@
     }
 
     function confirmarExclusao(item) {
-        var descLabel = item.descricao || 'este lançamento';
+        var descLabel = item.descricao || 'este lan\u00e7amento';
         var valLabel = formatarMoeda(item.valor);
         var isEntrada = item.tipo === 'entrada';
         var tipoLabel = isEntrada ? 'Receita' : 'Despesa';
         var corTipo = isEntrada ? '#198754' : '#dc3545';
         var old = document.getElementById('modal-fin-confirmar-excluir');
         if (old) old.remove();
-        var html = '<div class="modal fade" id="modal-fin-confirmar-excluir" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg" style="border-radius:14px;"><div class="modal-body text-center p-4"><div class="mb-3"><div style="width:52px;height:52px;border-radius:50%;background:rgba(220,53,69,0.08);display:inline-flex;align-items:center;justify-content:center;"><i class="bi bi-trash" style="font-size:1.4rem;color:#dc3545;"></i></div></div><h6 class="fw-bold mb-1" style="font-size:.88rem;">Excluir Lançamento?</h6><p class="text-muted mb-2" style="font-size:.74rem;">Esta ação não poderá ser desfeita.</p><div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:16px;"><div style="font-size:.76rem;font-weight:600;color:#333;">' + descLabel + '</div><div style="font-size:.72rem;color:' + corTipo + ';font-weight:500;">' + tipoLabel + ' \u2022 ' + valLabel + '</div></div><div class="d-flex gap-2"><button type="button" class="btn btn-light btn-sm rounded-pill flex-fill" data-bs-dismiss="modal" style="font-size:.74rem;">Cancelar</button><button type="button" class="btn btn-danger btn-sm rounded-pill flex-fill" id="btn-confirmar-excluir-fin" style="font-size:.74rem;"><i class="bi bi-trash me-1"></i>Excluir</button></div></div></div></div></div>';
+        var html = '<div class="modal fade" id="modal-fin-confirmar-excluir" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg" style="border-radius:14px;"><div class="modal-body text-center p-4"><div class="mb-3"><div style="width:52px;height:52px;border-radius:50%;background:rgba(220,53,69,0.08);display:inline-flex;align-items:center;justify-content:center;"><i class="bi bi-trash" style="font-size:1.4rem;color:#dc3545;"></i></div></div><h6 class="fw-bold mb-1" style="font-size:.88rem;">Excluir Lan\u00e7amento?</h6><p class="text-muted mb-2" style="font-size:.74rem;">Esta a\u00e7\u00e3o n\u00e3o poder\u00e1 ser desfeita.</p><div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:16px;"><div style="font-size:.76rem;font-weight:600;color:#333;">' + descLabel + '</div><div style="font-size:.72rem;color:' + corTipo + ';font-weight:500;">' + tipoLabel + ' \u2022 ' + valLabel + '</div></div><div class="d-flex gap-2"><button type="button" class="btn btn-light btn-sm rounded-pill flex-fill" data-bs-dismiss="modal" style="font-size:.74rem;">Cancelar</button><button type="button" class="btn btn-danger btn-sm rounded-pill flex-fill" id="btn-confirmar-excluir-fin" style="font-size:.74rem;"><i class="bi bi-trash me-1"></i>Excluir</button></div></div></div></div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
         var modalEl = document.getElementById('modal-fin-confirmar-excluir');
         var modalInst = new bootstrap.Modal(modalEl);
@@ -292,15 +277,12 @@
             }
             var okMes = true;
             if (state.mesFiltro) {
-                var mesAno = state.mesFiltro;
-                var parts = mesAno.split('-');
+                var parts = state.mesFiltro.split('-');
                 if (parts.length === 2) {
-                    var filtroY = parts[0];
-                    var filtroM = parts[1];
                     var isoData = d.dataISO || '';
                     if (isoData) {
                         var dp = isoData.split('-');
-                        okMes = dp[0] === filtroY && dp[1] === filtroM;
+                        okMes = dp[0] === parts[0] && dp[1] === parts[1];
                     } else {
                         okMes = false;
                     }
@@ -343,13 +325,13 @@
         var elSaidas = document.getElementById('total-saidas');
         var elSaldo = document.getElementById('total-saldo');
         var elRegistros = document.getElementById('total-registros');
-        if (elEntradas) elEntradas.textContent = (state.valoresVisiveis ? formatarMoeda(entradas) : '\u2022\u2022\u2022\u2022\u2022\u2022');
-        if (elSaidas) elSaidas.textContent = (state.valoresVisiveis ? formatarMoeda(saidas) : '\u2022\u2022\u2022\u2022\u2022\u2022');
+        if (elEntradas) elEntradas.textContent = state.valoresVisiveis ? formatarMoeda(entradas) : '\u2022\u2022\u2022\u2022\u2022\u2022';
+        if (elSaidas) elSaidas.textContent = state.valoresVisiveis ? formatarMoeda(saidas) : '\u2022\u2022\u2022\u2022\u2022\u2022';
         if (elSaldo) {
-            elSaldo.textContent = (state.valoresVisiveis ? formatarMoeda(saldo) : '\u2022\u2022\u2022\u2022\u2022\u2022');
-            elSaldo.style.color = (state.valoresVisiveis ? (saldo >= 0 ? '#198754' : '#dc3545') : '');
+            elSaldo.textContent = state.valoresVisiveis ? formatarMoeda(saldo) : '\u2022\u2022\u2022\u2022\u2022\u2022';
+            elSaldo.style.color = state.valoresVisiveis ? (saldo >= 0 ? '#198754' : '#dc3545') : '';
         }
-        if (elRegistros) elRegistros.textContent = (state.valoresVisiveis ? lista.length.toString() : '\u2022\u2022\u2022\u2022\u2022\u2022');
+        if (elRegistros) elRegistros.textContent = state.valoresVisiveis ? lista.length.toString() : '\u2022\u2022\u2022\u2022\u2022\u2022';
     }
 
     function getStatusBadge(status) {
@@ -377,8 +359,8 @@
             html += '<th class="border-0 fw-normal" style="width:90px;">Tipo</th>';
         }
         html += '<th class="border-0 fw-normal text-end" style="width:130px;">Valor</th>';
-        html += '<th class="border-0 fw-normal text-center" style="width:90px;">Situação</th>';
-        html += '<th class="text-end pe-3 border-0 fw-normal" style="width:110px;">Ações</th>';
+        html += '<th class="border-0 fw-normal text-center" style="width:90px;">Situa\u00e7\u00e3o</th>';
+        html += '<th class="text-end pe-3 border-0 fw-normal" style="width:110px;">A\u00e7\u00f5es</th>';
         html += '</tr>';
         thead.innerHTML = html;
     }
@@ -400,7 +382,10 @@
         var inicio = (state.pagina - 1) * state.porPagina;
         var pagina = lista.slice(inicio, inicio + state.porPagina);
         if (!pagina.length) {
-            els.tbody.innerHTML = '<tr><td colspan="' + getColCount() + '" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i> Nenhum registro encontrado</td></tr>';
+            els.tbody.innerHTML =
+                '<tr><td colspan="' + getColCount() + '" class="text-center text-muted py-4">' +
+                '<i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i> Nenhum registro encontrado' +
+                '</td></tr>';
         } else {
             els.tbody.innerHTML = pagina.map(function (d, i) { return renderLinha(d, i, isExtrato, showTipo); }).join('');
         }
@@ -420,13 +405,17 @@
             colTipo +
             '<td class="text-end" style="color:' + corValor + ';font-weight:600;">' + valorTxt + '</td>' +
             '<td class="text-center">' + getStatusBadge(d.status) + '</td>' +
-            '<td class="text-end pe-3"><div class="d-inline-flex gap-1"><button class="btn-acao-fin btn-view-fin" data-idx="' + idx + '" title="Visualizar"><i class="bi bi-eye"></i></button><button class="btn-acao-fin btn-edit-fin" data-idx="' + idx + '" title="Editar"><i class="bi bi-pencil-square"></i></button><button class="btn-acao-fin btn-del-fin" data-idx="' + idx + '" title="Excluir"><i class="bi bi-trash"></i></button></div></td></tr>';
+            '<td class="text-end pe-3"><div class="d-inline-flex gap-1">' +
+            '<button class="btn-acao-fin btn-view-fin" data-idx="' + idx + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
+            '<button class="btn-acao-fin btn-edit-fin" data-idx="' + idx + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
+            '<button class="btn-acao-fin btn-del-fin" data-idx="' + idx + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
+            '</div></td></tr>';
     }
 
     function renderPaginacao() {
         if (els.pagPrev) els.pagPrev.disabled = state.pagina <= 1;
         if (els.pagNext) els.pagNext.disabled = state.pagina >= state.totalPag;
-        if (els.pagLabel) els.pagLabel.textContent = 'Pág ' + state.pagina + ' de ' + state.totalPag;
+        if (els.pagLabel) els.pagLabel.textContent = 'P\u00e1g ' + state.pagina + ' de ' + state.totalPag;
     }
 
     function bindAcoes(listaPagina) {
@@ -463,23 +452,23 @@
         var formaPgMap = {
             pix: 'PIX',
             dinheiro: 'Dinheiro',
-            cartao_credito: 'Cartão Crédito',
-            cartao_debito: 'Cartão Débito',
+            cartao_credito: 'Cart\u00e3o Cr\u00e9dito',
+            cartao_debito: 'Cart\u00e3o D\u00e9bito',
             boleto: 'Boleto',
-            transferencia: 'Transferência'
+            transferencia: 'Transfer\u00eancia'
         };
         var formaLabel = formaPgMap[d.formaPagamento] || d.formaPagamento || '-';
         var html = '';
-        html += viewRow('Cód. Pedido', d.idPedido || '-');
+        html += viewRow('C\u00f3d. Pedido', d.idPedido || '-');
         html += viewRow('Data', d.dataDisplay || '-');
         html += viewRow('Tipo', '<span style="color:' + corValor + ';font-weight:600;">' + tipoLabel + '</span>');
-        html += viewRow('Descrição', d.descricao || '-');
+        html += viewRow('Descri\u00e7\u00e3o', d.descricao || '-');
         html += viewRow('Motoboy', d.motoboy || '-');
         html += viewRow('Valor', '<span style="color:' + corValor + ';font-weight:700;font-size:.95rem;">' + formatarMoeda(val) + '</span>');
-        html += viewRow('Situação', getStatusBadge(d.status));
+        html += viewRow('Situa\u00e7\u00e3o', getStatusBadge(d.status));
         html += viewRow('Forma Pagto', formaLabel);
         if (d.categoria) html += viewRow('Categoria', d.categoria);
-        if (d.observacao) html += viewRow('Observação', d.observacao);
+        if (d.observacao) html += viewRow('Observa\u00e7\u00e3o', d.observacao);
         els.modalViewBody.innerHTML = html;
         new bootstrap.Modal(els.modalViewEl).show();
     }
@@ -554,7 +543,7 @@
         if (!els.modalEl) return;
         limparFormulario();
         if (item) {
-            if (els.formTitulo) els.formTitulo.innerHTML = '<i class="bi bi-pencil-square text-danger me-2"></i>Editar Lançamento';
+            if (els.formTitulo) els.formTitulo.innerHTML = '<i class="bi bi-pencil-square text-danger me-2"></i>Editar Lan\u00e7amento';
             if (els.finId) els.finId.value = item.id || '';
             if (els.finData) els.finData.value = item.dataISO || '';
             if (els.finTipo) els.finTipo.value = item.tipo || '';
@@ -567,7 +556,7 @@
                 els.finValor.value = parseFloat(item.valor || 0).toFixed(2).replace('.', ',');
             }
         } else {
-            if (els.formTitulo) els.formTitulo.innerHTML = '<i class="bi bi-plus-circle text-danger me-2"></i>Novo Lançamento';
+            if (els.formTitulo) els.formTitulo.innerHTML = '<i class="bi bi-plus-circle text-danger me-2"></i>Novo Lan\u00e7amento';
             if (els.finData) els.finData.value = new Date().toISOString().split('T')[0];
         }
         new bootstrap.Modal(els.modalEl).show();
@@ -587,10 +576,10 @@
         var descricao = els.finDescricao ? els.finDescricao.value.trim() : '';
         var valorRaw = els.finValor ? els.finValor.value.replace(',', '.') : '0';
         var valor = parseFloat(valorRaw) || 0;
-        if (!dataISO) { mostrarErroForm('Informe a data do lançamento.'); return; }
+        if (!dataISO) { mostrarErroForm('Informe a data do lan\u00e7amento.'); return; }
         if (!tipo) { mostrarErroForm('Selecione o tipo: Receita ou Despesa.'); return; }
-        if (!descricao) { mostrarErroForm('Informe a descrição do lançamento.'); return; }
-        if (valor <= 0) { mostrarErroForm('Informe um valor válido maior que zero.'); return; }
+        if (!descricao) { mostrarErroForm('Informe a descri\u00e7\u00e3o do lan\u00e7amento.'); return; }
+        if (valor <= 0) { mostrarErroForm('Informe um valor v\u00e1lido maior que zero.'); return; }
         var dataParts = dataISO.split('-');
         var dataBR = dataParts[2] + '/' + dataParts[1] + '/' + dataParts[0];
         var payload = {
@@ -628,14 +617,14 @@
                 if (sucesso) {
                     var inst = bootstrap.Modal.getInstance(els.modalEl);
                     if (inst) inst.hide();
-                    finToast(id ? 'Lançamento atualizado!' : 'Lançamento criado!', 'success');
+                    finToast(id ? 'Lan\u00e7amento atualizado!' : 'Lan\u00e7amento criado!', 'success');
                     carregarDados();
                 } else {
                     mostrarErroForm('Erro ao salvar: ' + ((res && (res.message || res.msg)) || 'Erro desconhecido'));
                 }
             })
             .catch(function () {
-                mostrarErroForm('Falha na comunicação com o servidor.');
+                mostrarErroForm('Falha na comunica\u00e7\u00e3o com o servidor.');
             })
             .finally(function () {
                 toggleSalvarLoading(false);
@@ -661,14 +650,14 @@
                     }
                 }
                 if (sucesso) {
-                    finToast('Lançamento excluído com sucesso.', 'success');
+                    finToast('Lan\u00e7amento exclu\u00eddo com sucesso.', 'success');
                     carregarDados();
                 } else {
-                    finToast('Erro ao excluir lançamento.', 'danger');
+                    finToast('Erro ao excluir lan\u00e7amento.', 'danger');
                 }
             })
             .catch(function () {
-                finToast('Falha na comunicação com o servidor.', 'danger');
+                finToast('Falha na comunica\u00e7\u00e3o com o servidor.', 'danger');
             });
     }
 
@@ -681,10 +670,10 @@
         state.tabAtual = 'todos';
         state.mesFiltro = '';
         bind();
-        atualizarHeaderUsuario();
         if (els.filtroMes) els.filtroMes.value = '';
         mascaraValor(els.finValor);
         registrarEventos();
         carregarDados();
     };
+
 })();

@@ -95,8 +95,6 @@ var MODULE_MAP = {
     }
 };
 
-var PAGES_SEM_HEADER = ['pedidos', 'fin'];
-
 window.loadPage = function (page, title, subtitle) {
     var container = document.getElementById('router-view');
     var headerEl = document.getElementById('page-header');
@@ -109,22 +107,14 @@ window.loadPage = function (page, title, subtitle) {
         window.AppRDO.resetState();
     }
 
-    var esconderHeader = PAGES_SEM_HEADER.indexOf(page) !== -1;
-
     if (headerEl) {
-        if (esconderHeader) {
-            headerEl.setAttribute('style', 'display: none !important');
-        } else {
-            headerEl.removeAttribute('style');
-        }
+        headerEl.removeAttribute('style');
     }
 
-    if (!esconderHeader) {
-        if (titleEl) titleEl.innerText = title || '';
-        if (subtitleEl) subtitleEl.innerText = subtitle || '';
-    }
+    if (titleEl) titleEl.innerText = title || '';
+    if (subtitleEl) subtitleEl.innerText = subtitle || '';
 
-    container.style.paddingTop = esconderHeader ? '0' : '';
+    container.style.paddingTop = '';
 
     return fetch('pages/' + page + '/' + page + '.html')
         .then(function (res) {
@@ -229,9 +219,11 @@ function carregarScriptExterno(src) {
 
 window.atualizarAvatar = function () {
     var imagem = localStorage.getItem('imagem');
-    var username = localStorage.getItem('username') || 'U';
-    var inicial = username.charAt(0).toUpperCase();
+    var username = localStorage.getItem('username') || 'Usu\u00e1rio';
     var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
+
+    var iniciais = obterIniciaisGlobal(username);
+    var inicial = iniciais || username.charAt(0).toUpperCase();
 
     atualizarAvatarEl(
         document.getElementById('user-avatar-img'),
@@ -244,13 +236,16 @@ window.atualizarAvatar = function () {
         document.getElementById('header-avatar-fallback'),
         imagem, inicial, isValid, true
     );
-
-    atualizarAvatarEl(
-        document.getElementById('fin-user-avatar'),
-        document.querySelector('#fin-header .fin-header-avatar-fallback'),
-        imagem, inicial, isValid, true
-    );
 };
+
+function obterIniciaisGlobal(nome) {
+    if (!nome || nome === 'Usu\u00e1rio' || nome === '...') return '';
+    var partes = nome.trim().split(/\s+/);
+    if (partes.length >= 2) {
+        return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    }
+    return partes[0].substring(0, 2).toUpperCase();
+}
 
 function atualizarAvatarEl(imgEl, fallbackEl, imagem, inicial, isValid, usarTexto) {
     if (!imgEl) return;
