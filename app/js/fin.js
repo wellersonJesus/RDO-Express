@@ -21,7 +21,7 @@
         if (!raw) return { iso: '', br: '', display: '' };
         raw = raw.toString().trim();
         var d, m, y;
-        if (raw.indexOf('T') !== -1) {
+        if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
             var dt = new Date(raw);
             if (!isNaN(dt.getTime())) {
                 d = String(dt.getUTCDate()).padStart(2, '0');
@@ -30,8 +30,8 @@
                 return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
             }
         }
-        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-            var parts = raw.substring(0, 10).split('-');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            var parts = raw.split('-');
             y = parts[0]; m = parts[1]; d = parts[2];
             return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
         }
@@ -45,15 +45,29 @@
             d = p2[0]; m = p2[1]; y = '20' + p2[2];
             return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + p2[2] };
         }
+        if (/^\d{13,}$/.test(raw)) {
+            var dt2 = new Date(parseInt(raw));
+            if (!isNaN(dt2.getTime())) {
+                d = String(dt2.getDate()).padStart(2, '0');
+                m = String(dt2.getMonth() + 1).padStart(2, '0');
+                y = String(dt2.getFullYear());
+                return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
+            }
+        }
+        if (/^\d{4}-\d{2}-\d{2}\s/.test(raw)) {
+            var parts2 = raw.substring(0, 10).split('-');
+            y = parts2[0]; m = parts2[1]; d = parts2[2];
+            return { iso: y + '-' + m + '-' + d, br: d + '/' + m + '/' + y, display: d + '/' + m + '/' + y.slice(-2) };
+        }
         return { iso: '', br: raw, display: raw };
     }
 
     function normalizarRegistro(d) {
         var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
         var tipoNorm = 'entrada';
-        if (tipoRaw === 'DESPESA' || tipoRaw === 'SAIDA' || tipoRaw === 'SA\u00cdDA') {
+        if (tipoRaw === 'DESPESA' || tipoRaw === 'SAIDA' || tipoRaw === 'SA\u00cdDA' || tipoRaw === 'saida') {
             tipoNorm = 'saida';
-        } else if (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA') {
+        } else if (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'entrada') {
             tipoNorm = 'entrada';
         }
         var dataObj = parseData(d.data);
@@ -62,7 +76,13 @@
         if (typeof valorRaw === 'number') {
             valorNorm = valorRaw;
         } else if (typeof valorRaw === 'string') {
-            valorNorm = parseFloat(valorRaw.replace(/\./g, '').replace(',', '.')) || 0;
+            var cleaned = valorRaw.replace('R$', '').replace(/\s/g, '');
+            if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (cleaned.indexOf(',') !== -1) {
+                cleaned = cleaned.replace(',', '.');
+            }
+            valorNorm = parseFloat(cleaned) || 0;
         }
         var situacao = (d.situacao || d.status || 'pendente').toString().trim().toLowerCase();
         return {
@@ -288,7 +308,7 @@
         };
         var cor = cores[tipo] || cores.info;
         var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:' + cor.bg + ';color:#fff;padding:12px 20px;border-radius:10px;font-size:.78rem;box-shadow:0 4px 16px rgba(0,0,0,0.15);display:flex;align-items:center;gap:8px;animation:finToastIn .3s ease;max-width:380px;';
+        toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:' + cor.bg + ';color:#fff;padding:12px 20px;border-radius:10px;font-size:.78rem;box-shadow:0 4px 16px rgba(0,0,0,0.15);display:flex;align-items:center;gap:8px;max-width:380px;';
         toast.innerHTML = '<i class="bi ' + cor.icon + '"></i><span>' + msg + '</span>';
         document.body.appendChild(toast);
         setTimeout(function () {
@@ -342,8 +362,9 @@
                 var busca = state.filtroBusca;
                 var match = (d.descricao || '').toLowerCase().indexOf(busca) !== -1 ||
                     (d.motoboy || '').toLowerCase().indexOf(busca) !== -1 ||
-                    (d.idPedido || '').toLowerCase().indexOf(busca) !== -1 ||
-                    (d.dataBR || '').indexOf(busca) !== -1;
+                    (d.idPedido || '').toString().toLowerCase().indexOf(busca) !== -1 ||
+                    (d.dataBR || '').indexOf(busca) !== -1 ||
+                    (d.id || '').toString().indexOf(busca) !== -1;
                 if (!match) return false;
             }
             return true;
@@ -735,12 +756,8 @@
         els.formErro.classList.remove('d-none');
     }
 
-    function abrirModal(item) {
-        if (!els.modalEl) {
-            els.modalEl = document.getElementById('modalFormFin');
-        }
-        if (!els.modalEl) return;
-
+    function rebindModalEls() {
+        if (!els.modalEl) els.modalEl = document.getElementById('modalFormFin');
         if (!els.btnSalvar) {
             els.btnSalvar = document.getElementById('btn-salvar-form-fin');
             if (els.btnSalvar) els.btnSalvar.addEventListener('click', function () { salvar(); });
@@ -764,7 +781,11 @@
         if (!els.finCategoria) els.finCategoria = document.getElementById('fin-categoria');
         if (!els.finPagamento) els.finPagamento = document.getElementById('fin-pagamento');
         if (!els.finObservacao) els.finObservacao = document.getElementById('fin-observacao');
+    }
 
+    function abrirModal(item) {
+        rebindModalEls();
+        if (!els.modalEl) return;
         limparFormulario();
 
         if (item) {
@@ -851,11 +872,11 @@
             valor: valor,
             motoboy: motoboy,
             situacao: situacao,
-            id_pedido: idPedido,
-            categoria: categoria,
-            pagamento: pagamento,
-            observacao: observacao
+            id_pedido: idPedido
         };
+        if (categoria) payload.categoria = categoria;
+        if (pagamento) payload.pagamento = pagamento;
+        if (observacao) payload.observacao = observacao;
         if (id) payload.id = id;
 
         var action = id ? 'editfinanceiro' : 'addfinanceiro';
@@ -958,11 +979,22 @@
         window.API.call('getfinanceiro')
             .then(function (res) {
                 var raw = [];
-                if (res && res.success && Array.isArray(res.data)) raw = res.data;
-                else if (Array.isArray(res)) raw = res;
+                if (res && res.success !== undefined) {
+                    if (Array.isArray(res.data)) raw = res.data;
+                    else if (Array.isArray(res.financeiro)) raw = res.financeiro;
+                    else if (Array.isArray(res.registros)) raw = res.registros;
+                    else if (Array.isArray(res.lista)) raw = res.lista;
+                    else if (Array.isArray(res.result)) raw = res.result;
+                    else if (Array.isArray(res.results)) raw = res.results;
+                } else if (Array.isArray(res)) {
+                    raw = res;
+                }
+                console.log('[fin] Dados brutos recebidos:', raw.length, raw.length > 0 ? raw[0] : '(vazio)');
                 state.cache = raw.map(function (d) { return normalizarRegistro(d); });
+                console.log('[fin] Dados normalizados:', state.cache.length, state.cache.length > 0 ? state.cache[0] : '(vazio)');
             })
-            .catch(function () {
+            .catch(function (err) {
+                console.error('[fin] Erro ao carregar:', err);
                 state.cache = [];
                 finToast('Erro ao carregar dados financeiros.', 'danger');
             })

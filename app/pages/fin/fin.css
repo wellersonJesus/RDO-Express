@@ -127,14 +127,15 @@
 }
 
 .fin-card-icon-wrap {
-    width: 42px;
-    height: 42px;
-    min-width: 42px;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: .95rem;
+    flex-shrink: 0;
 }
 
 .fin-card-icon-receita {
@@ -158,17 +159,27 @@
 }
 
 .fin-card-label {
-    font-size: .62rem;
+    font-size: .58rem;
     font-weight: 600;
     letter-spacing: .05em;
     color: #9ca3af;
     line-height: 1;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .fin-card-valor {
-    font-size: .95rem;
-    line-height: 1.2;
+    font-weight: 700;
+    font-size: clamp(0.62rem, 1.8vw, 0.78rem);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: block;
 }
 
 .fin-card-receita {
@@ -185,6 +196,26 @@
 
 .fin-card-registros {
     border-left: 3px solid rgba(111, 66, 193, 0.3) !important;
+}
+
+.fin-card .card-body {
+    padding: 8px 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+}
+
+.fin-card .card-body .d-flex {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.fin-card .card-body .d-flex.flex-column {
+    min-width: 0;
+    overflow: hidden;
 }
 
 .input-filtro-fin {
@@ -208,27 +239,63 @@
     gap: 4px;
 }
 
-.btn-toggle-fin {
-    width: 31px;
-    height: 31px;
-    border-radius: 50%;
-    border: 1px solid #dee2e6;
-    background: #fff;
+#btn-toggle-valores {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 2px 4px;
+    color: #9ca3af;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+}
+
+#btn-toggle-valores:hover {
+    color: var(--fin-vermelho);
+}
+
+#btn-toggle-valores:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+#btn-toggle-valores.valores-ativos {
+    color: var(--fin-verde);
+    background: none !important;
+}
+
+.btn-toggle-fin {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 2px 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    transition: color 0.2s ease;
+    color: #9ca3af;
 }
 
 .btn-toggle-fin i {
-    font-size: .82rem;
-    color: var(--fin-cinza);
+    font-size: .92rem;
+    color: inherit;
     transition: color 0.2s ease;
 }
 
 .btn-toggle-fin:hover {
-    border-color: var(--fin-vermelho);
+    border: none !important;
+    background: none !important;
+    color: var(--fin-vermelho);
 }
 
 .btn-toggle-fin:hover i {
@@ -236,12 +303,13 @@
 }
 
 .btn-toggle-fin.valores-ativos {
-    border-color: var(--fin-vermelho);
-    background: rgba(220, 53, 69, 0.05);
+    border: none !important;
+    background: none !important;
+    color: var(--fin-verde);
 }
 
 .btn-toggle-fin.valores-ativos i {
-    color: var(--fin-vermelho);
+    color: var(--fin-verde);
 }
 
 .tabela-fin-head {
@@ -905,22 +973,46 @@
     to { opacity: 1; transform: translateX(0); }
 }
 
+@media (max-width: 991px) {
+    .fin-card-icon-wrap {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 8px;
+        font-size: .85rem;
+    }
+    .fin-card-label {
+        font-size: .54rem;
+    }
+    .fin-card-valor {
+        font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+    }
+    .fin-card .card-body {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+}
+
 @media (max-width: 768px) {
     .input-filtro-fin {
         max-width: 140px;
     }
     .fin-card-icon-wrap {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        border-radius: 10px;
-        font-size: .95rem;
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        border-radius: 8px;
+        font-size: .8rem;
     }
     .fin-card-label {
-        font-size: .58rem;
+        font-size: .52rem;
     }
     .fin-card-valor {
-        font-size: .82rem;
+        font-size: clamp(0.56rem, 1.5vw, 0.68rem);
+    }
+    .fin-card .card-body {
+        padding: 6px 7px;
+        gap: 5px;
     }
     .fin-form-header,
     .fin-extrato-header {
@@ -961,5 +1053,43 @@
     .extrato-periodo-btn {
         font-size: .65rem;
         padding: 3px 8px;
+    }
+    .fin-card-icon-wrap {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 7px;
+        font-size: .75rem;
+    }
+    .fin-card-label {
+        font-size: .5rem;
+        letter-spacing: .03em;
+    }
+    .fin-card-valor {
+        font-size: clamp(0.52rem, 1.3vw, 0.62rem);
+    }
+    .fin-card .card-body {
+        padding: 5px 6px;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 400px) {
+    .fin-card-icon-wrap {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        border-radius: 6px;
+        font-size: .65rem;
+    }
+    .fin-card-label {
+        font-size: .46rem;
+    }
+    .fin-card-valor {
+        font-size: 0.52rem;
+    }
+    .fin-card .card-body {
+        padding: 4px 5px;
+        gap: 3px;
     }
 }
