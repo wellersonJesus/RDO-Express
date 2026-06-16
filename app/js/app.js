@@ -15,6 +15,7 @@ window.AppRDO.pedidosCache = [];
 window.AppRDO.motoboyCache = [];
 window.AppRDO.financeiroCache = [];
 window.AppRDO.isMasterOn = false;
+window.AppRDO.paginaAtual = null;
 
 window.AppRDO.resetState = function () {
     window.AppRDO.isFetching = false;
@@ -41,14 +42,14 @@ window.AppRDO.resetState = function () {
         window.financeiroState.fetching = false;
     }
 
-    limparModais();
+    fecharModaisAbertos();
 };
 
-function limparModais() {
+function fecharModaisAbertos() {
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
         if (inst) {
-            try { inst.hide(); } catch (e) { }
+            try { inst.hide(); } catch (e) {}
         }
     });
 
@@ -59,23 +60,26 @@ function limparModais() {
     document.body.classList.remove('modal-open');
     document.body.style.removeProperty('overflow');
     document.body.style.removeProperty('padding-right');
+}
 
-    var containers = [
-        'modal-pedidos-container',
-        'admin-modal-container',
-        'financeiro-modal-container'
-    ];
-
-    containers.forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = '';
-            if (el.dataset && el.dataset.loaded) {
-                delete el.dataset.loaded;
-            }
+function limparModalContainer() {
+    var container = document.getElementById('modal-container');
+    if (!container) return;
+    container.querySelectorAll('.modal').forEach(function (m) {
+        var inst = bootstrap.Modal.getInstance(m);
+        if (inst) {
+            try { inst.dispose(); } catch (e) {}
         }
     });
+    container.innerHTML = '';
 }
+
+var PAGE_MODALS = {
+    fin: [
+        'pages/fin/form_fin.html',
+        'pages/fin/view_fin.html'
+    ]
+};
 
 var MODULE_MAP = {
     chat: function () {
@@ -95,26 +99,103 @@ var MODULE_MAP = {
     }
 };
 
+function carregarModaisDaPagina(page) {
+    var arquivos = PAGE_MODALS[page];
+    if (!arquivos || !arquivos.length) return Promise.resolve();
+
+    var container = document.getElementById('modal-container');
+    if (!container) return Promise.resolve();
+
+    var promises = arquivos.map(function (url) {
+        return fetch(url)
+            .then(function (r) {
+                if (!r.ok) throw new Error('Modal não encontrado: ' + url);
+                return r.text();
+            })
+            .then(function (html) {
+                html = html.replace(/<link[^>]*>/gi, '');
+
+                var scriptsSrc = [];
+                var scriptsInline = [];
+
+                html = html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, function (match, attrs, content) {
+                    var srcMatch = attrs.match(/src\s*=\s*["']([^"']+)["']/i);
+                    if (srcMatch) {
+                        scriptsSrc.push(srcMatch[1]);
+                    } else if (content.trim()) {
+                        scriptsInline.push(content.trim());
+                    }
+                    return '';
+                });
+
+                var wrapper = document.createElement('div');
+                wrapper.innerHTML = html;
+                container.appendChild(wrapper);
+
+                var chain = Promise.resolve();
+
+                scriptsSrc.forEach(function (src) {
+                    chain = chain.then(function () {
+                        return carregarScriptExterno(src);
+                    });
+                });
+
+                return chain.then(function () {
+                    scriptsInline.forEach(function (code) {
+                        try {
+                            var s = document.createElement('script');
+                            s.textContent = code;
+                            document.body.appendChild(s);
+                            setTimeout(function () {
+                                if (s.parentNode) s.parentNode.removeChild(s);
+                            }, 100);
+                        } catch (e) {}
+                    });
+                });
+            })
+            .catch(function (err) {
+                console.warn('[app] Falha ao carregar modal:', err.message);
+            });
+    });
+
+    return Promise.all(promises);
+}
+
 window.loadPage = function (page, title, subtitle) {
     var container = document.getElementById('router-view');
     var headerEl = document.getElementById('page-header');
     var titleEl = document.getElementById('page-title');
     var subtitleEl = document.getElementById('page-subtitle');
 
-    if (!container) return;
+    if (!container) return Promise.resolve();
 
     if (window.AppRDO && typeof window.AppRDO.resetState === 'function') {
         window.AppRDO.resetState();
     }
 
-    if (headerEl) {
-        headerEl.removeAttribute('style');
-    }
+    window.AppRDO.paginaAtual = page;
 
-    if (titleEl) titleEl.innerText = title || '';
-    if (subtitleEl) subtitleEl.innerText = subtitle || '';
+    if (headerEl) headerEl.removeAttribute('style');
+    if (titleEl) titleEl.textContent = title || '';
+    if (subtitleEl) subtitleEl.textContent = subtitle || '';
 
     container.style.paddingTop = '';
+
+    container.innerHTML =
+        '<div class="text-center py-5">' +
+        '<div class="spinner-border text-danger spinner-border-sm"></div>' +
+        '<div class="mt-2 text-muted" style="font-size:.78rem;">Carregando...</div>' +
+        '</div>';
+
+    fecharModaisAbertos();
+    limparModalContainer();
+
+    document.querySelectorAll('.sidebar .nav-link').forEach(function (link) {
+        link.classList.remove('active');
+        if (link.getAttribute('data-page') === page) {
+            link.classList.add('active');
+        }
+    });
 
     return fetch('pages/' + page + '/' + page + '.html')
         .then(function (res) {
@@ -123,23 +204,25 @@ window.loadPage = function (page, title, subtitle) {
         })
         .then(function (html) {
             container.innerHTML = html;
-
+            return carregarModaisDaPagina(page);
+        })
+        .then(function () {
             if (typeof window.atualizarAvatar === 'function') {
                 window.atualizarAvatar();
             }
 
-            setTimeout(function () {
-                if (MODULE_MAP[page]) {
-                    MODULE_MAP[page]();
-                }
-            }, 80);
+            if (MODULE_MAP[page]) {
+                MODULE_MAP[page]();
+            }
         })
         .catch(function (err) {
             container.innerHTML =
-                '<div class="alert alert-danger m-3 rounded-3">' +
-                '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                'Erro ao carregar m\u00f3dulo <strong>' + page + '</strong>. Verifique o console.' +
+                '<div class="text-center py-5">' +
+                '<i class="bi bi-exclamation-triangle text-warning" style="font-size:2rem;"></i>' +
+                '<div class="mt-2 text-muted" style="font-size:.82rem;">Falha ao carregar o módulo <strong>' + page + '</strong>.</div>' +
+                '<button class="btn btn-outline-danger btn-sm rounded-pill mt-3" onclick="loadPage(\'' + page + '\',\'' + (title || '').replace(/'/g, "\\'") + '\',\'' + (subtitle || '').replace(/'/g, "\\'") + '\')">Tentar novamente</button>' +
                 '</div>';
+            console.error('[app] Erro ao carregar página:', err.message);
         });
 };
 
@@ -147,8 +230,8 @@ window.loadModal = function (arquivo) {
     var container = document.getElementById('modal-container');
     if (!container) return Promise.resolve(false);
 
-    limparModais();
-    container.innerHTML = '';
+    fecharModaisAbertos();
+    limparModalContainer();
 
     return fetch('pages/chat/' + arquivo)
         .then(function (res) {
@@ -193,7 +276,7 @@ window.loadModal = function (arquivo) {
                         setTimeout(function () {
                             if (s.parentNode) s.parentNode.removeChild(s);
                         }, 100);
-                    } catch (e) { }
+                    } catch (e) {}
                 });
                 return true;
             });
@@ -219,7 +302,7 @@ function carregarScriptExterno(src) {
 
 window.atualizarAvatar = function () {
     var imagem = localStorage.getItem('imagem');
-    var username = localStorage.getItem('username') || 'Usu\u00e1rio';
+    var username = localStorage.getItem('username') || 'Usuário';
     var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
 
     var iniciais = obterIniciaisGlobal(username);
@@ -239,7 +322,7 @@ window.atualizarAvatar = function () {
 };
 
 function obterIniciaisGlobal(nome) {
-    if (!nome || nome === 'Usu\u00e1rio' || nome === '...') return '';
+    if (!nome || nome === 'Usuário' || nome === '...') return '';
     var partes = nome.trim().split(/\s+/);
     if (partes.length >= 2) {
         return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();

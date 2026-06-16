@@ -1,0 +1,109 @@
+<div class="modal fade" id="modal-fin-view" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+            <div class="fin-extrato-header" id="fin-view-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="fin-extrato-header-icon" id="fin-view-tipo-icon">
+                            <i class="bi bi-arrow-down-left"></i>
+                        </div>
+                        <div>
+                            <div class="fin-extrato-tipo" id="fin-view-tipo-label">RECEITA</div>
+                            <div class="fin-extrato-date" id="fin-view-data"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="fin-extrato-valor-box">
+                    <div class="fin-extrato-valor-label">VALOR</div>
+                    <div class="fin-extrato-valor" id="fin-view-valor">R$ 0,00</div>
+                </div>
+            </div>
+
+            <div class="modal-body p-0">
+
+                <div class="fin-extrato-status-bar" id="fin-view-status-bar">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="fin-extrato-status-dot" id="fin-view-status-dot"></div>
+                        <span class="fin-extrato-status-text" id="fin-view-status-text">Pendente</span>
+                    </div>
+                    <span class="fin-extrato-id" id="fin-view-id">#0000</span>
+                </div>
+
+                <div class="fin-extrato-body">
+
+                    <div class="fin-extrato-section">
+                        <div class="fin-extrato-section-title">Informações do Lançamento</div>
+                        <div class="fin-extrato-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-file-text"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Descrição</div>
+                                <div class="fin-extrato-row-value" id="fin-view-descricao">-</div>
+                            </div>
+                        </div>
+                        <div class="fin-extrato-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-tag"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Categoria</div>
+                                <div class="fin-extrato-row-value" id="fin-view-categoria">-</div>
+                            </div>
+                        </div>
+                        <div class="fin-extrato-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-credit-card"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Forma de Pagamento</div>
+                                <div class="fin-extrato-row-value" id="fin-view-pagamento">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fin-extrato-divider"></div>
+
+                    <div class="fin-extrato-section">
+                        <div class="fin-extrato-section-title">Detalhes</div>
+                        <div class="fin-extrato-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-bicycle"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Motoboy</div>
+                                <div class="fin-extrato-row-value" id="fin-view-motoboy">-</div>
+                            </div>
+                        </div>
+                        <div class="fin-extrato-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-box-seam"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Pedido Vinculado</div>
+                                <div class="fin-extrato-row-value" id="fin-view-pedido">-</div>
+                            </div>
+                        </div>
+                        <div class="fin-extrato-row" id="fin-view-obs-row">
+                            <div class="fin-extrato-row-icon"><i class="bi bi-chat-left-text"></i></div>
+                            <div class="fin-extrato-row-content">
+                                <div class="fin-extrato-row-label">Observação</div>
+                                <div class="fin-extrato-row-value" id="fin-view-observacao">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="fin-extrato-footer">
+                    <div class="fin-extrato-footer-line">
+                        <i class="bi bi-clock-history"></i>
+                        <span id="fin-view-timestamp"></span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fin-extrato-btn" id="fin-view-btn-editar">
+                            <i class="bi bi-pencil-square me-1"></i>Editar
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>

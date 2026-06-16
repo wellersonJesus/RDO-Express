@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RDO Express | Painel</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <script>
         (function () {
             if (!localStorage.getItem('rdo_auth'))
@@ -29,10 +30,10 @@
 
     <aside class="sidebar" id="sidebar">
         <div class="logo-box p-3 text-center d-flex align-items-center justify-content-center"
-            style="height: 70px; background: white;">
+            style="height:70px;background:white;">
             <div class="logo-full d-flex align-items-center gap-2">
                 <i class="bi bi-lightning-charge-fill text-danger fs-4"></i>
-                <span class="text-danger fw-bold" style="font-size: 1.2rem;">
+                <span class="text-danger fw-bold" style="font-size:1.2rem;">
                     RDO <span class="text-dark">Express</span>
                 </span>
             </div>
@@ -41,10 +42,10 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('dashboard', 'Dashboard', 'Visão geral operacional')">
+                <a class="nav-link" href="#" data-page="dashboard" data-title="Dashboard" data-subtitle="Visão geral operacional">
                     <span class="menu-text">Dashboard</span>
                 </a>
-                <a class="nav-link" href="#" onclick="loadPage('chat', 'Chat', 'Comunicação interna')">
+                <a class="nav-link" href="#" data-page="chat" data-title="Chat" data-subtitle="Comunicação interna">
                     <span class="menu-text">Chat</span>
                 </a>
             </div>
@@ -53,7 +54,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-people"></i> <span class="menu-text">Gestão</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('pedidos', 'Pedidos', 'Gestão de solicitações')">
+                <a class="nav-link" href="#" data-page="pedidos" data-title="Pedidos" data-subtitle="Gestão de solicitações">
                     <span class="menu-text">Pedidos</span>
                 </a>
             </div>
@@ -62,8 +63,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-bank"></i> <span class="menu-text">Administração</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#"
-                    onclick="loadPage('admin', 'Administração', 'Controle de Cadastro RDO interno')">
+                <a class="nav-link" href="#" data-page="admin" data-title="Administração" data-subtitle="Controle de Cadastro RDO interno">
                     <span class="menu-text">Administração</span>
                 </a>
             </div>
@@ -72,34 +72,32 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-wallet2"></i> <span class="menu-text">Financeiro</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('fin', 'Financeiro', 'Controle de fluxo financeiro')">
+                <a class="nav-link" href="#" data-page="fin" data-title="Financeiro" data-subtitle="Controle de fluxo financeiro">
                     <span class="menu-text">Financeiro</span>
                 </a>
             </div>
         </div>
 
         <div class="menu-group">
-            <div class="menu-title"><i class="bi bi-file-earmark-bar-graph"></i> <span
-                    class="menu-text">Relatório</span></div>
+            <div class="menu-title"><i class="bi bi-file-earmark-bar-graph"></i> <span class="menu-text">Relatório</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('relatorio', 'Relatórios', 'Dados operacionais')">
+                <a class="nav-link" href="#" data-page="relatorio" data-title="Relatórios" data-subtitle="Dados operacionais">
                     <span class="menu-text">Relatórios</span>
                 </a>
             </div>
         </div>
 
         <div class="menu-group">
-            <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span
-                    class="menu-text">Automatização</span></div>
+            <div class="menu-title"><i class="bi bi-gear-wide-connected"></i> <span class="menu-text">Automatização</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" onclick="loadPage('bot', 'Configuração Bot', 'Monitoramento WhatsApp')">
+                <a class="nav-link" href="#" data-page="bot" data-title="Configuração Bot" data-subtitle="Monitoramento WhatsApp">
                     <span class="menu-text">Bot</span>
                 </a>
             </div>
         </div>
 
         <div class="mt-auto p-3 text-center sidebar-logout-wrapper">
-            <button class="btn btn-outline-danger w-100 rounded-pill btn-sidebar-logout" onclick="abrirModalLogout()">
+            <button class="btn btn-outline-danger w-100 rounded-pill btn-sidebar-logout" id="btn-logout-sidebar">
                 <i class="bi bi-box-arrow-left"></i> <span class="menu-text">Encerrar</span>
             </button>
         </div>
@@ -108,25 +106,22 @@
     <main class="main-content">
         <header id="page-header" class="top-navbar px-4">
             <div class="d-flex align-items-center">
-                <button class="btn btn-light me-3 border-0 bg-transparent"
-                    onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+                <button class="btn btn-light me-3 border-0 bg-transparent" id="btn-toggle-sidebar">
                     <i class="bi bi-list fs-4"></i>
                 </button>
                 <div>
                     <h1 id="page-title" class="h6 mb-0 fw-bold">Dashboard</h1>
-                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size: 0.7rem;">Carregando...</p>
+                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size:0.7rem;">Carregando...</p>
                 </div>
             </div>
 
             <div class="user-area d-flex align-items-center gap-3">
                 <div class="text-end d-none d-md-block">
                     <div id="display-username" class="fw-bold small text-dark">...</div>
-                    <div id="display-cargo" class="text-danger small" style="font-size: 0.7rem; font-weight: 600;">...
-                    </div>
+                    <div id="display-cargo" class="text-danger small" style="font-size:0.7rem;font-weight:600;">...</div>
                 </div>
                 <div id="avatar-container"
-                    style="width:40px;height:40px;background:#dc3545;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;"
-                    onclick="abrirModalLogout()">
+                    style="width:40px;height:40px;background:#dc3545;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;">
                     <img id="user-avatar-img" src="" alt="Avatar"
                         style="width:100%;height:100%;object-fit:cover;display:none;">
                     <i id="user-avatar-icon" class="bi bi-person-fill text-white fs-4"></i>
@@ -144,7 +139,7 @@
             <div class="modal-content shadow-sm border-0">
                 <div class="modal-body text-center p-4">
                     <div class="mb-3 text-warning">
-                        <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+                        <i class="bi bi-exclamation-triangle" style="font-size:3rem;"></i>
                     </div>
                     <h5 class="fw-bold mb-2">Encerrar sessão?</h5>
                     <p class="text-muted small mb-4">
@@ -152,9 +147,8 @@
                         Certifique-se de que todas as alterações foram salvas antes de continuar.
                     </p>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary w-50 rounded-pill"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-danger w-50 rounded-pill" onclick="logoutSeguro();">
+                        <button type="button" class="btn btn-outline-secondary w-50 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger w-50 rounded-pill" id="btn-logout-confirmar">
                             <i class="bi bi-box-arrow-right"></i> Sair
                         </button>
                     </div>
@@ -199,12 +193,30 @@
 
             var nameEl = document.getElementById('display-username');
             var cargoEl = document.getElementById('display-cargo');
-            if (nameEl) nameEl.innerText = localStorage.getItem('username') || 'Usuário';
-            if (cargoEl) cargoEl.innerText = localStorage.getItem('tipo') || '...';
+            if (nameEl) nameEl.textContent = localStorage.getItem('username') || 'Usuário';
+            if (cargoEl) cargoEl.textContent = localStorage.getItem('tipo') || '...';
 
             if (typeof window.atualizarAvatar === 'function') {
                 window.atualizarAvatar();
             }
+
+            document.getElementById('btn-toggle-sidebar').addEventListener('click', function () {
+                document.getElementById('sidebar').classList.toggle('collapsed');
+            });
+
+            document.getElementById('btn-logout-sidebar').addEventListener('click', abrirModalLogout);
+            document.getElementById('avatar-container').addEventListener('click', abrirModalLogout);
+            document.getElementById('btn-logout-confirmar').addEventListener('click', window.logoutSeguro);
+
+            document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var pg = this.getAttribute('data-page');
+                    var tt = this.getAttribute('data-title');
+                    var st = this.getAttribute('data-subtitle');
+                    window.loadPage(pg, tt, st);
+                });
+            });
 
             var rv = document.getElementById('router-view');
             if (rv && rv.innerHTML.trim() === '') {
