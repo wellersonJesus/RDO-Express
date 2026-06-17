@@ -2,7 +2,7 @@
 
     var state = {
         cache: [],
-        valoresVisiveis: false,
+        caixaValoresVisiveis: false,   // controla visibilidade APENAS na aba Caixa
         tabAtual: 'todos',
         filtroTipo: 'todos',
         filtroSituacao: 'todos',
@@ -18,6 +18,9 @@
 
     var els = {};
 
+    // ═══════════════════════════════════════════
+    // PARSEDATA — Sem alterações
+    // ═══════════════════════════════════════════
     function parseData(raw) {
         if (!raw) return { iso: '', br: '', display: '' };
         raw = raw.toString().trim();
@@ -63,6 +66,9 @@
         return { iso: '', br: raw, display: raw };
     }
 
+    // ═══════════════════════════════════════════
+    // NORMALIZAR REGISTRO — Sem alterações
+    // ═══════════════════════════════════════════
     function normalizarRegistro(d) {
         var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
         var tipoNorm = 'entrada';
@@ -103,11 +109,15 @@
         };
     }
 
+    // ═══════════════════════════════════════════
+    // BIND — Refatorado: removidos IDs antigos,
+    // adicionados novos IDs dos cards no Caixa
+    // ═══════════════════════════════════════════
     function bind() {
         els.btnRefresh = document.getElementById('btn-refresh-fin');
         els.syncIcon = document.getElementById('sync-icon-fin');
         els.btnNovo = document.getElementById('btn-novo-fin');
-        els.btnToggle = document.getElementById('btn-toggle-valores');
+        // els.btnToggle removido — olhinho não existe mais na aba Todos
         els.btnSalvar = document.getElementById('btn-salvar-fin');
         els.modalEl = document.getElementById('modalFormFin');
         els.modalViewEl = document.getElementById('modalViewFin');
@@ -143,17 +153,24 @@
         els.pagLabelTodos = document.getElementById('fin-pag-label-todos');
         els.btnSortData = document.getElementById('btn-sort-data-todos');
         els.iconSortData = document.getElementById('icon-sort-data-todos');
+
+        // Caixa
         els.caixaDataInicio = document.getElementById('caixa-data-inicio');
         els.caixaDataFim = document.getElementById('caixa-data-fim');
         els.btnFiltrarCaixa = document.getElementById('btn-filtrar-caixa');
         els.tbodyCaixa = document.getElementById('tabela-fin-body-caixa');
-        els.caixaTotalEntradas = document.getElementById('caixa-total-entradas');
-        els.caixaTotalSaidas = document.getElementById('caixa-total-saidas');
-        els.caixaTotalSaldo = document.getElementById('caixa-total-saldo');
         els.pagInfoCaixa = document.getElementById('fin-pag-info-caixa');
         els.pagPrevCaixa = document.getElementById('fin-pag-prev-caixa');
         els.pagNextCaixa = document.getElementById('fin-pag-next-caixa');
         els.pagLabelCaixa = document.getElementById('fin-pag-label-caixa');
+
+        // Cards resumo agora na aba Caixa
+        els.caixaCardEntradas = document.getElementById('caixa-card-entradas');
+        els.caixaCardSaidas = document.getElementById('caixa-card-saidas');
+        els.caixaCardSaldo = document.getElementById('caixa-card-saldo');
+        els.caixaCardRegistros = document.getElementById('caixa-card-registros');
+
+        // Extrato
         els.extratoDataRef = document.getElementById('extrato-data-ref');
         els.btnGerarExtrato = document.getElementById('btn-gerar-extrato');
         els.extratoHeaderInfo = document.getElementById('extrato-header-info');
@@ -170,6 +187,9 @@
         els.toolbarTodos = document.getElementById('toolbar-todos-fin');
     }
 
+    // ═══════════════════════════════════════════
+    // REGISTRAR EVENTOS — Refatorado na íntegra
+    // ═══════════════════════════════════════════
     function registrarEventos() {
 
         // ═══════════════════════════════════════════
@@ -237,7 +257,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 3. DROPDOWN FILTRO TIPO + SITUAÇÃO (unificado)
+        // 3. DROPDOWN FILTRO TIPO + SITUAÇÃO
         // ═══════════════════════════════════════════
         var wrapperFiltro = document.getElementById('dropdown-filtro-wrapper-fin');
         var btnFiltro = document.getElementById('btn-filtro-fin');
@@ -248,21 +268,18 @@
 
         if (btnFiltro && menuFiltro && wrapperFiltro) {
 
-            // Abre / fecha dropdown principal
             btnFiltro.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 wrapperFiltro.classList.toggle('open');
             });
 
-            // Fecha ao clicar fora
             document.addEventListener('click', function (e) {
                 if (!wrapperFiltro.contains(e.target)) {
                     wrapperFiltro.classList.remove('open');
                 }
             });
 
-            // Clique nos itens de tipo (Todos / Receitas / Despesas)
             menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-tipo]').forEach(function (item) {
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
@@ -272,11 +289,9 @@
                     state.filtroTipo = tipo || 'todos';
                     state.todos.pagina = 1;
 
-                    // Atualiza label do botão
                     var labelMap = { todos: 'Todos', entrada: 'Receitas', saida: 'Despesas' };
                     if (labelFiltro) labelFiltro.textContent = labelMap[state.filtroTipo] || 'Todos';
 
-                    // Marca item ativo
                     menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-tipo]').forEach(function (el) {
                         el.classList.remove('active');
                     });
@@ -287,7 +302,6 @@
                 });
             });
 
-            // Sub-dropdown de situação: abrir/fechar
             if (btnSubSituacao) {
                 var parentHasSub = btnSubSituacao.closest('.dropdown-filtro-item-has-sub');
 
@@ -300,7 +314,6 @@
                 });
             }
 
-            // Clique nos subitens de situação
             if (submenuSituacao) {
                 submenuSituacao.querySelectorAll('.dropdown-filtro-subitem[data-filtro-situacao]').forEach(function (item) {
                     item.addEventListener('click', function (e) {
@@ -310,13 +323,11 @@
                         state.filtroSituacao = this.getAttribute('data-filtro-situacao') || 'todos';
                         state.todos.pagina = 1;
 
-                        // Marca subitem ativo
                         submenuSituacao.querySelectorAll('.dropdown-filtro-subitem').forEach(function (el) {
                             el.classList.remove('active');
                         });
                         this.classList.add('active');
 
-                        // Atualiza visual do label pai se filtro ativo
                         var parentSub = btnSubSituacao ? btnSubSituacao.closest('.dropdown-filtro-item-has-sub') : null;
                         if (parentSub) {
                             if (state.filtroSituacao !== 'todos') {
@@ -376,7 +387,7 @@
             els.pagPrevCaixa.addEventListener('click', function () {
                 if (state.caixa.pagina > 1) {
                     state.caixa.pagina--;
-                    renderCaixa();
+                    renderCaixaTabela();
                 }
             });
         }
@@ -384,7 +395,7 @@
             els.pagNextCaixa.addEventListener('click', function () {
                 if (state.caixa.pagina < state.caixa.totalPag) {
                     state.caixa.pagina++;
-                    renderCaixa();
+                    renderCaixaTabela();
                 }
             });
         }
@@ -396,7 +407,7 @@
             els.pagPrevExtrato.addEventListener('click', function () {
                 if (state.extrato.pagina > 1) {
                     state.extrato.pagina--;
-                    renderExtrato();
+                    renderExtratoTabela();
                 }
             });
         }
@@ -404,7 +415,7 @@
             els.pagNextExtrato.addEventListener('click', function () {
                 if (state.extrato.pagina < state.extrato.totalPag) {
                     state.extrato.pagina++;
-                    renderExtrato();
+                    renderExtratoTabela();
                 }
             });
         }
@@ -428,46 +439,18 @@
             els.btnGerarExtrato.addEventListener('click', function () {
                 state.extrato.dataRef = els.extratoDataRef ? els.extratoDataRef.value : '';
 
-                // Pega o botão de período ativo
                 var periodoAtivo = document.querySelector('.extrato-periodo-btn.active');
                 state.extrato.periodo = periodoAtivo ? periodoAtivo.getAttribute('data-periodo') : 'diario';
 
                 state.extrato.pagina = 1;
-                renderExtrato();
+                gerarExtrato();
             });
         }
 
         // ═══════════════════════════════════════════
-        // 10. BOTÃO TOGGLE VALORES (olhinho) — SEMPRE VISÍVEL
-        //     Cinza (#adb5bd) = valores visíveis
-        //     Vermelho (#dc3545) = valores ocultos
+        // 10. OLHINHO REMOVIDO DA ABA TODOS
+        //     (seção inteira eliminada)
         // ═══════════════════════════════════════════
-        var btnOlhinho = document.getElementById('btn-toggle-valores');
-        if (btnOlhinho) {
-            btnOlhinho.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                state.valoresVisiveis = !state.valoresVisiveis;
-
-                var icone = this.querySelector('i');
-                if (icone) {
-                    if (state.valoresVisiveis) {
-                        icone.className = 'bi bi-eye';
-                        this.classList.remove('oculto');
-                        this.title = 'Ocultar valores';
-                    } else {
-                        icone.className = 'bi bi-eye-slash';
-                        this.classList.add('oculto');
-                        this.title = 'Mostrar valores';
-                    }
-                }
-
-                renderTodos();
-                if (state.tabAtual === 'caixa') renderCaixa();
-                if (state.tabAtual === 'extrato') renderExtrato();
-            });
-        }
 
         // ═══════════════════════════════════════════
         // 11. BOTÃO REFRESH (recarregar dados)
@@ -483,7 +466,7 @@
         // ═══════════════════════════════════════════
         if (els.btnNovo) {
             els.btnNovo.addEventListener('click', function () {
-                abrirModalNovo();
+                abrirModal(null);
             });
         }
 
@@ -492,7 +475,7 @@
         // ═══════════════════════════════════════════
         if (els.btnSalvar) {
             els.btnSalvar.addEventListener('click', function () {
-                salvarRegistro();
+                salvar();
             });
         }
 
@@ -501,7 +484,7 @@
         // ═══════════════════════════════════════════
         if (els.finValor) {
             els.finValor.addEventListener('input', function () {
-                atualizarPreviewValor();
+                previewValor();
             });
         }
 
@@ -510,7 +493,7 @@
         // ═══════════════════════════════════════════
         if (els.finTipo) {
             els.finTipo.addEventListener('change', function () {
-                atualizarPreviewValor();
+                previewValor();
             });
         }
 
@@ -528,7 +511,7 @@
             }
             if (e.ctrlKey && e.shiftKey && e.key === 'N') {
                 e.preventDefault();
-                abrirModalNovo();
+                abrirModal(null);
             }
             if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
                 e.preventDefault();
@@ -548,6 +531,42 @@
                 state.extrato.periodo = this.getAttribute('data-periodo') || 'diario';
             });
         });
+
+        // ═══════════════════════════════════════════
+        // 18. BOTÃO TOGGLE VALORES (olhinho) — ABA CAIXA
+        //     Controla: Cards Resumo (Receitas, Despesas,
+        //     Saldo, Registros) + RDOPay saldo + tabela
+        // ═══════════════════════════════════════════
+        var btnOlhinhoCaixa = document.getElementById('btn-toggle-caixa-valores');
+        if (btnOlhinhoCaixa) {
+            btnOlhinhoCaixa.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
+
+                // Troca ícone
+                var icone = document.getElementById('icon-toggle-caixa-val');
+                if (icone) {
+                    icone.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
+                }
+
+                // Troca estado visual do botão
+                if (state.caixaValoresVisiveis) {
+                    this.classList.remove('oculto');
+                    this.title = 'Ocultar valores';
+                } else {
+                    this.classList.add('oculto');
+                    this.title = 'Mostrar valores';
+                }
+
+                // Re-renderiza tudo na aba Caixa
+                atualizarResumoCaixa();
+                atualizarRdoPaySaldo();
+                renderCaixaTabela();
+            });
+        }
+
     }
 
     function atualizarIconeSort() {
@@ -609,39 +628,28 @@
         return '<span class="fin-badge-tipo fin-badge-saida"><i class="bi bi-arrow-up-circle-fill"></i> Despesa</span>';
     }
 
-    function atualizarResumo() {
-        var lista = state.cache;
-        var entradas = 0, saidas = 0;
-        lista.forEach(function (d) {
-            if (d.tipo === 'entrada') entradas += d.valor;
-            else if (d.tipo === 'saida') saidas += d.valor;
-        });
-        var saldo = entradas - saidas;
-        var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
-        var elE = document.getElementById('total-entradas');
-        var elS = document.getElementById('total-saidas');
-        var elSa = document.getElementById('total-saldo');
-        var elR = document.getElementById('total-registros');
-        if (elE) elE.textContent = state.valoresVisiveis ? formatarMoeda(entradas) : oculto;
-        if (elS) elS.textContent = state.valoresVisiveis ? formatarMoeda(saidas) : oculto;
-        if (elSa) {
-            elSa.textContent = state.valoresVisiveis ? formatarMoeda(saldo) : oculto;
-            elSa.style.color = state.valoresVisiveis ? (saldo >= 0 ? '#198754' : '#dc3545') : '';
-        }
-        if (elR) elR.textContent = state.valoresVisiveis ? lista.length.toString() : oculto;
-    }
-
+    // ═══════════════════════════════════════════
+    // ATUALIZAR RDO PAY SALDO — Refatorado
+    // Usa dados do período filtrado do Caixa
+    // ═══════════════════════════════════════════
     function atualizarRdoPaySaldo() {
         var el = document.getElementById('rdo-pay-saldo');
         if (!el) return;
         var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
-        if (!state.valoresVisiveis) { el.textContent = oculto; return; }
+        if (!state.caixaValoresVisiveis) {
+            el.textContent = oculto;
+            el.removeAttribute('data-original');
+            return;
+        }
+        var lista = state.caixa.dadosFiltrados || [];
         var totalE = 0, totalS = 0;
-        state.cache.forEach(function (d) {
+        lista.forEach(function (d) {
             if (d.tipo === 'entrada') totalE += d.valor;
             else if (d.tipo === 'saida') totalS += d.valor;
         });
-        el.textContent = formatarMoeda(totalE - totalS);
+        var saldoFormatado = formatarMoeda(totalE - totalS);
+        el.textContent = saldoFormatado;
+        el.setAttribute('data-original', saldoFormatado);
     }
 
     function removerAcentos(str) {
@@ -651,61 +659,34 @@
     function dadosFiltradosTodos() {
         var busca = state.filtroBusca;
         return state.cache.filter(function (d) {
-            // ── Filtro por tipo ──
             if (state.filtroTipo === 'entrada' && d.tipo !== 'entrada') return false;
             if (state.filtroTipo === 'saida' && d.tipo !== 'saida') return false;
-
-            // ── Filtro por situação ──
             if (state.filtroSituacao !== 'todos' && d.situacao !== state.filtroSituacao) return false;
 
-            // ── Busca inteligente ──
             if (busca) {
-                // Normaliza a busca (lowercase + sem acentos)
                 var termo = removerAcentos(busca.toLowerCase().trim());
                 if (!termo) return true;
 
-                // Monta um "pool" com TODAS as informações pesquisáveis do registro
-                var valorFormatado = formatarMoeda(d.valor);                            // R$ 1.250,00
-                var valorSimples = (d.valor || 0).toFixed(2).replace('.', ',');          // 1250,00
-                var valorPonto = (d.valor || 0).toFixed(2);                             // 1250.00
-                var valorInt = String(Math.round(d.valor || 0));                        // 1250
+                var valorFormatado = formatarMoeda(d.valor);
+                var valorSimples = (d.valor || 0).toFixed(2).replace('.', ',');
+                var valorPonto = (d.valor || 0).toFixed(2);
+                var valorInt = String(Math.round(d.valor || 0));
 
-                var situacaoMap = {
-                    pago: 'pago',
-                    recebido: 'recebido',
-                    pendente: 'pendente',
-                    cancelado: 'cancelado'
-                };
-                var tipoMap = {
-                    entrada: 'receita entrada',
-                    saida: 'despesa saida saída'
-                };
+                var situacaoMap = { pago: 'pago', recebido: 'recebido', pendente: 'pendente', cancelado: 'cancelado' };
+                var tipoMap = { entrada: 'receita entrada', saida: 'despesa saida saída' };
 
                 var campos = [
-                    d.id,
-                    d.idPedido,
-                    d.descricao,
-                    d.motoboy,
-                    d.categoria,
-                    d.pagamento,
-                    d.observacao,
-                    d.dataBR,           // 17/06/2026
-                    d.dataDisplay,      // 17/06/26
-                    d.dataISO,          // 2026-06-17
-                    valorFormatado,     // R$ 1.250,00
-                    valorSimples,       // 1250,00
-                    valorPonto,         // 1250.00
-                    valorInt,           // 1250
+                    d.id, d.idPedido, d.descricao, d.motoboy, d.categoria,
+                    d.pagamento, d.observacao, d.dataBR, d.dataDisplay, d.dataISO,
+                    valorFormatado, valorSimples, valorPonto, valorInt,
                     situacaoMap[d.situacao] || d.situacao,
                     tipoMap[d.tipo] || d.tipo
                 ];
 
-                // Junta tudo numa string única normalizada
                 var pool = removerAcentos(
                     campos.map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
                 );
 
-                // Suporte a busca com múltiplas palavras (todas devem casar)
                 var termos = termo.split(/\s+/);
                 for (var i = 0; i < termos.length; i++) {
                     if (termos[i] && pool.indexOf(termos[i]) === -1) return false;
@@ -716,23 +697,32 @@
         });
     }
 
+    // ═══════════════════════════════════════════
+    // RENDER TODOS — Refatorado: sem cards resumo
+    // ═══════════════════════════════════════════
     function renderTodos() {
         if (!els.tbodyTodos) return;
-        atualizarResumo();
+
         var lista = dadosFiltradosTodos();
+
         if (state.sortDataDesc) {
             lista.sort(function (a, b) { return (b.dataISO || '').localeCompare(a.dataISO || ''); });
         } else {
             lista.sort(function (a, b) { return (a.dataISO || '').localeCompare(b.dataISO || ''); });
         }
+
         var total = lista.length;
         state.todos.totalPag = Math.max(1, Math.ceil(total / state.todos.porPagina));
         if (state.todos.pagina > state.todos.totalPag) state.todos.pagina = state.todos.totalPag;
         if (state.todos.pagina < 1) state.todos.pagina = 1;
+
         var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
         var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
+
         if (!pagina.length) {
-            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
+            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">' +
+                '<i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>' +
+                'Nenhum registro encontrado</td></tr>';
         } else {
             els.tbodyTodos.innerHTML = pagina.map(function (d, i) {
                 return '<tr>' +
@@ -750,10 +740,12 @@
                     '</div></td></tr>';
             }).join('');
         }
+
         if (els.pagInfoTodos) els.pagInfoTodos.textContent = total + ' registro' + (total !== 1 ? 's' : '');
         if (els.pagPrevTodos) els.pagPrevTodos.disabled = state.todos.pagina <= 1;
         if (els.pagNextTodos) els.pagNextTodos.disabled = state.todos.pagina >= state.todos.totalPag;
         if (els.pagLabelTodos) els.pagLabelTodos.textContent = 'P\u00e1g ' + state.todos.pagina + ' de ' + state.todos.totalPag;
+
         bindAcoesTodas(pagina);
     }
 
@@ -787,6 +779,10 @@
         return { inicio: y + '-' + m + '-01', fim: y + '-' + m + '-' + String(lastDay).padStart(2, '0') };
     }
 
+    // ═══════════════════════════════════════════
+    // RENDER CAIXA — Refatorado na íntegra
+    // Atualiza: Cards Resumo + RDOPay + Tabela
+    // ═══════════════════════════════════════════
     function renderCaixa() {
         var di = els.caixaDataInicio ? els.caixaDataInicio.value : '';
         var df = els.caixaDataFim ? els.caixaDataFim.value : '';
@@ -800,52 +796,91 @@
         state.caixa.dataInicio = di;
         state.caixa.dataFim = df;
         state.caixa.pagina = 1;
+
         state.caixa.dadosFiltrados = state.cache.filter(function (d) {
             if (!d.dataISO) return false;
             return d.dataISO >= di && d.dataISO <= df;
-        }).sort(function (a, b) { return (a.dataISO || '').localeCompare(b.dataISO || ''); });
+        }).sort(function (a, b) {
+            return (a.dataISO || '').localeCompare(b.dataISO || '');
+        });
+
         atualizarResumoCaixa();
         atualizarRdoPaySaldo();
         renderCaixaTabela();
     }
 
+    // ═══════════════════════════════════════════
+    // ATUALIZAR RESUMO CAIXA — Refatorado
+    // Agora atualiza os 4 cards (Receitas,
+    // Despesas, Saldo, Registros) do período
+    // ═══════════════════════════════════════════
     function atualizarResumoCaixa() {
         var lista = state.caixa.dadosFiltrados || [];
         var totalEntradas = 0;
         var totalSaidas = 0;
         var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
+
         lista.forEach(function (d) {
             if (d.tipo === 'entrada') totalEntradas += d.valor;
             else if (d.tipo === 'saida') totalSaidas += d.valor;
         });
+
         var totalSaldo = totalEntradas - totalSaidas;
-        if (els.caixaTotalEntradas) {
-            els.caixaTotalEntradas.textContent = state.valoresVisiveis ? formatarMoeda(totalEntradas) : oculto;
-            els.caixaTotalEntradas.style.color = '#198754';
+        var totalRegistros = lista.length;
+        var visivel = state.caixaValoresVisiveis;
+
+        // Card RECEITAS
+        if (els.caixaCardEntradas) {
+            els.caixaCardEntradas.textContent = visivel ? formatarMoeda(totalEntradas) : oculto;
+            if (visivel) els.caixaCardEntradas.setAttribute('data-original', formatarMoeda(totalEntradas));
         }
-        if (els.caixaTotalSaidas) {
-            els.caixaTotalSaidas.textContent = state.valoresVisiveis ? formatarMoeda(totalSaidas) : oculto;
-            els.caixaTotalSaidas.style.color = '#dc3545';
+
+        // Card DESPESAS
+        if (els.caixaCardSaidas) {
+            els.caixaCardSaidas.textContent = visivel ? formatarMoeda(totalSaidas) : oculto;
+            if (visivel) els.caixaCardSaidas.setAttribute('data-original', formatarMoeda(totalSaidas));
         }
-        if (els.caixaTotalSaldo) {
-            els.caixaTotalSaldo.textContent = state.valoresVisiveis ? formatarMoeda(totalSaldo) : oculto;
-            els.caixaTotalSaldo.style.color = state.valoresVisiveis ? (totalSaldo >= 0 ? '#0d6efd' : '#dc3545') : '';
+
+        // Card SALDO
+        if (els.caixaCardSaldo) {
+            els.caixaCardSaldo.textContent = visivel ? formatarMoeda(totalSaldo) : oculto;
+            els.caixaCardSaldo.style.color = visivel ? (totalSaldo >= 0 ? '#198754' : '#dc3545') : '';
+            if (visivel) els.caixaCardSaldo.setAttribute('data-original', formatarMoeda(totalSaldo));
+        }
+
+        // Card REGISTROS
+        if (els.caixaCardRegistros) {
+            els.caixaCardRegistros.textContent = visivel ? totalRegistros.toString() : oculto;
+            if (visivel) els.caixaCardRegistros.setAttribute('data-original', totalRegistros.toString());
         }
     }
 
+    // ═══════════════════════════════════════════
+    // RENDER CAIXA TABELA — Refatorado
+    // Saldo por linha = acumulado (Entrada − Saída)
+    // Respeita state.caixaValoresVisiveis
+    // ═══════════════════════════════════════════
     function renderCaixaTabela() {
         if (!els.tbodyCaixa) return;
+
         var lista = state.caixa.dadosFiltrados;
         var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
+        var visivel = state.caixaValoresVisiveis;
         var total = lista.length;
+
         state.caixa.totalPag = Math.max(1, Math.ceil(total / state.caixa.porPagina));
         if (state.caixa.pagina > state.caixa.totalPag) state.caixa.pagina = state.caixa.totalPag;
         if (state.caixa.pagina < 1) state.caixa.pagina = 1;
+
         var inicio = (state.caixa.pagina - 1) * state.caixa.porPagina;
         var pagina = lista.slice(inicio, inicio + state.caixa.porPagina);
+
         if (!pagina.length) {
-            els.tbodyCaixa.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro no per\u00edodo</td></tr>';
+            els.tbodyCaixa.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">' +
+                '<i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>' +
+                'Nenhum registro no per\u00edodo</td></tr>';
         } else {
+            // Calcula saldo acumulado anterior ao range do período
             var saldoAcum = 0;
             state.cache.forEach(function (d) {
                 if (d.dataISO && d.dataISO < state.caixa.dataInicio) {
@@ -853,18 +888,23 @@
                     else if (d.tipo === 'saida') saldoAcum -= d.valor;
                 }
             });
+
+            // Acumula registros antes da página atual
             lista.slice(0, inicio).forEach(function (d) {
                 if (d.tipo === 'entrada') saldoAcum += d.valor;
                 else if (d.tipo === 'saida') saldoAcum -= d.valor;
             });
+
             els.tbodyCaixa.innerHTML = pagina.map(function (d) {
                 var isE = d.tipo === 'entrada';
                 var valE = isE ? d.valor : 0;
                 var valS = !isE ? d.valor : 0;
+
                 if (isE) saldoAcum += d.valor;
                 else saldoAcum -= d.valor;
+
                 var valETxt, valSTxt, saldoTxt;
-                if (state.valoresVisiveis) {
+                if (visivel) {
                     valETxt = valE > 0 ? formatarMoeda(valE) : '-';
                     valSTxt = valS > 0 ? formatarMoeda(valS) : '-';
                     saldoTxt = formatarMoeda(saldoAcum);
@@ -873,9 +913,11 @@
                     valSTxt = valS > 0 ? oculto : '-';
                     saldoTxt = oculto;
                 }
+
                 var corEntrada = valE > 0 ? '#198754' : '#6c757d';
                 var corSaida = valS > 0 ? '#dc3545' : '#6c757d';
-                var corSaldo = state.valoresVisiveis ? (saldoAcum >= 0 ? '#198754' : '#dc3545') : '#333';
+                var corSaldo = visivel ? (saldoAcum >= 0 ? '#198754' : '#dc3545') : '#333';
+
                 return '<tr>' +
                     '<td class="ps-3">' + d.dataDisplay + '</td>' +
                     '<td class="text-truncate" style="max-width:200px;">' + (d.descricao || '-') + '</td>' +
@@ -885,12 +927,17 @@
                     '</tr>';
             }).join('');
         }
+
         if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = total + ' registro' + (total !== 1 ? 's' : '');
         if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
         if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= state.caixa.totalPag;
         if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'P\u00e1g ' + state.caixa.pagina + ' de ' + state.caixa.totalPag;
     }
 
+    // ═══════════════════════════════════════════
+    // GERAR EXTRATO — Sem alterações estruturais
+    // Usa state.caixaValoresVisiveis para visibilidade
+    // ═══════════════════════════════════════════
     function gerarExtrato() {
         var dataRef = els.extratoDataRef ? els.extratoDataRef.value : '';
         if (!dataRef) {
@@ -900,6 +947,7 @@
         var periodo = state.extrato.periodo;
         var ref = new Date(dataRef + 'T12:00:00');
         var di, df, titulo, subtitulo;
+
         if (periodo === 'diario') {
             di = dataRef;
             df = dataRef;
@@ -935,11 +983,16 @@
             var meses = ['Janeiro', 'Fevereiro', 'Mar\u00e7o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             subtitulo = meses[ref.getMonth()] + ' / ' + ref.getFullYear();
         }
+
         var dados = state.cache.filter(function (d) {
             return d.dataISO && d.dataISO >= di && d.dataISO <= df;
-        }).sort(function (a, b) { return (a.dataISO || '').localeCompare(b.dataISO || ''); });
+        }).sort(function (a, b) {
+            return (a.dataISO || '').localeCompare(b.dataISO || '');
+        });
+
         state.extrato.dados = dados;
         state.extrato.pagina = 1;
+
         var totalE = 0, totalS = 0;
         var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
         dados.forEach(function (d) {
@@ -947,36 +1000,43 @@
             else totalS += d.valor;
         });
         var saldo = totalE - totalS;
+
         if (els.extratoHeaderInfo) els.extratoHeaderInfo.classList.remove('d-none');
         if (els.extratoTitulo) els.extratoTitulo.textContent = titulo;
         if (els.extratoSubtitulo) els.extratoSubtitulo.textContent = subtitulo;
-        if (els.extratoTotalEntradas) els.extratoTotalEntradas.textContent = state.valoresVisiveis ? formatarMoeda(totalE) : oculto;
-        if (els.extratoTotalSaidas) els.extratoTotalSaidas.textContent = state.valoresVisiveis ? formatarMoeda(totalS) : oculto;
+        if (els.extratoTotalEntradas) els.extratoTotalEntradas.textContent = formatarMoeda(totalE);
+        if (els.extratoTotalSaidas) els.extratoTotalSaidas.textContent = formatarMoeda(totalS);
         if (els.extratoTotalSaldo) {
-            els.extratoTotalSaldo.textContent = state.valoresVisiveis ? formatarMoeda(saldo) : oculto;
-            els.extratoTotalSaldo.style.color = state.valoresVisiveis ? (saldo >= 0 ? '#0d6efd' : '#dc3545') : '#0d6efd';
+            els.extratoTotalSaldo.textContent = formatarMoeda(saldo);
+            els.extratoTotalSaldo.style.color = saldo >= 0 ? '#0d6efd' : '#dc3545';
         }
+
         renderExtratoTabela();
     }
 
     function renderExtratoTabela() {
         if (!els.tbodyExtrato) return;
+
         var lista = state.extrato.dados;
         var total = lista.length;
-        var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
+
         state.extrato.totalPag = Math.max(1, Math.ceil(total / state.extrato.porPagina));
         if (state.extrato.pagina > state.extrato.totalPag) state.extrato.pagina = state.extrato.totalPag;
         if (state.extrato.pagina < 1) state.extrato.pagina = 1;
+
         var inicio = (state.extrato.pagina - 1) * state.extrato.porPagina;
         var pagina = lista.slice(inicio, inicio + state.extrato.porPagina);
+
         if (!pagina.length) {
-            els.tbodyExtrato.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro no per\u00edodo</td></tr>';
+            els.tbodyExtrato.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">' +
+                '<i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>' +
+                'Nenhum registro no per\u00edodo</td></tr>';
         } else {
             els.tbodyExtrato.innerHTML = pagina.map(function (d) {
                 var isE = d.tipo === 'entrada';
                 var cor = isE ? '#198754' : '#dc3545';
                 var sinal = isE ? '+ ' : '- ';
-                var valorTxt = state.valoresVisiveis ? (sinal + formatarMoeda(d.valor)) : oculto;
+                var valorTxt = sinal + formatarMoeda(d.valor);
                 return '<tr>' +
                     '<td class="ps-3">' + d.dataDisplay + '</td>' +
                     '<td>' + (d.idPedido || '-') + '</td>' +
@@ -988,6 +1048,7 @@
                     '</tr>';
             }).join('');
         }
+
         if (els.pagInfoExtrato) els.pagInfoExtrato.textContent = total + ' registro' + (total !== 1 ? 's' : '');
         if (els.pagPrevExtrato) els.pagPrevExtrato.disabled = state.extrato.pagina <= 1;
         if (els.pagNextExtrato) els.pagNextExtrato.disabled = state.extrato.pagina >= state.extrato.totalPag;
@@ -1007,23 +1068,9 @@
         return p[2] + '/' + p[1] + '/' + p[0];
     }
 
-    function toggleValores() {
-        state.valoresVisiveis = !state.valoresVisiveis;
-        if (els.btnToggle) {
-            els.btnToggle.innerHTML = state.valoresVisiveis ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
-        }
-        var iconCaixa = document.getElementById('icon-toggle-caixa-val');
-        if (iconCaixa) iconCaixa.className = state.valoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
-        atualizarResumo();
-        atualizarRdoPaySaldo();
-        renderTodos();
-        if (state.caixa.dadosFiltrados.length || (state.caixa.dataInicio && state.caixa.dataFim)) {
-            atualizarResumoCaixa();
-            renderCaixaTabela();
-        }
-        if (state.extrato.dados.length) gerarExtrato();
-    }
-
+    // ═══════════════════════════════════════════
+    // ABRIR VIEW — Sem alterações
+    // ═══════════════════════════════════════════
     function abrirView(d) {
         if (!els.modalViewEl) els.modalViewEl = document.getElementById('modalViewFin');
         if (!els.modalViewEl) return;
@@ -1202,12 +1249,15 @@
         var categoria = els.finCategoria ? els.finCategoria.value.trim() : '';
         var pagamento = els.finPagamento ? els.finPagamento.value : '';
         var observacao = els.finObs ? els.finObs.value.trim() : '';
+
         if (!dataISO) { mostrarErroForm('Informe a data.'); return; }
         if (!tipo) { mostrarErroForm('Selecione o tipo.'); return; }
         if (!descricao) { mostrarErroForm('Informe a descri\u00e7\u00e3o.'); return; }
         if (valor <= 0) { mostrarErroForm('Informe um valor v\u00e1lido.'); return; }
+
         var dataParts = dataISO.split('-');
         var dataBR = dataParts[2] + '/' + dataParts[1] + '/' + dataParts[0];
+
         var payload = {
             data: dataBR,
             tipo: tipo,
@@ -1221,8 +1271,10 @@
         if (pagamento) payload.pagamento = pagamento;
         if (observacao) payload.observacao = observacao;
         if (id) payload.id = id;
+
         var action = id ? 'editfinanceiro' : 'addfinanceiro';
         toggleSalvarLoading(true);
+
         window.API.call(action, payload)
             .then(function (res) {
                 var sucesso = false;
@@ -1308,10 +1360,15 @@
             });
     }
 
+    // ═══════════════════════════════════════════
+    // CARREGAR DADOS — Refatorado
+    // Sem referências a atualizarResumo() antigo
+    // ═══════════════════════════════════════════
     function carregarDados() {
         if (state.fetching) return;
         state.fetching = true;
         spinOn();
+
         if (els.tbodyTodos) {
             els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div></td></tr>';
         }
@@ -1321,7 +1378,9 @@
         if (els.tbodyExtrato) {
             els.tbodyExtrato.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div></td></tr>';
         }
+
         state.cache = [];
+
         window.API.call('getfinanceiro')
             .then(function (res) {
                 if (!res) { finToast('Resposta vazia do servidor.', 'info'); return; }
@@ -1352,7 +1411,6 @@
                 state.fetching = false;
                 spinOff();
                 renderTodos();
-                atualizarRdoPaySaldo();
                 renderCaixa();
                 renderExtrato();
             });
@@ -1374,7 +1432,7 @@
         }).join('-');
     }
 
-    function bindPixModal() {
+        function bindPixModal() {
         var btnNovaChave = document.getElementById('btn-nova-chave-pix');
         var formNova = document.getElementById('form-nova-chave-pix');
         var btnCancelar = document.getElementById('btn-cancelar-chave-pix');
@@ -1546,16 +1604,15 @@
                 else if (d.tipo === 'saida') totalS += d.valor;
             });
             var saldo = totalE - totalS;
-            var show = state.valoresVisiveis;
             var oculto = '\u2022\u2022\u2022\u2022\u2022\u2022';
             var elModalE = document.getElementById('extrato-modal-entradas');
             var elModalS = document.getElementById('extrato-modal-saidas');
             var elModalSaldo = document.getElementById('extrato-modal-saldo');
-            if (elModalE) elModalE.textContent = show ? formatarMoeda(totalE) : oculto;
-            if (elModalS) elModalS.textContent = show ? formatarMoeda(totalS) : oculto;
+            if (elModalE) elModalE.textContent = formatarMoeda(totalE);
+            if (elModalS) elModalS.textContent = formatarMoeda(totalS);
             if (elModalSaldo) {
-                elModalSaldo.textContent = show ? formatarMoeda(saldo) : oculto;
-                elModalSaldo.style.color = show ? (saldo >= 0 ? '#0d6efd' : '#dc3545') : '#0d6efd';
+                elModalSaldo.textContent = formatarMoeda(saldo);
+                elModalSaldo.style.color = saldo >= 0 ? '#0d6efd' : '#dc3545';
             }
             var tbody = document.getElementById('extrato-modal-tbody');
             if (!tbody) return;
@@ -1567,7 +1624,7 @@
                 var isE = d.tipo === 'entrada';
                 var cor = isE ? '#198754' : '#dc3545';
                 var sinal = isE ? '+ ' : '- ';
-                var valorTxt = show ? (sinal + formatarMoeda(d.valor)) : oculto;
+                var valorTxt = sinal + formatarMoeda(d.valor);
                 return '<tr>' +
                     '<td class="ps-2" style="font-size:.75rem;">' + d.dataDisplay + '</td>' +
                     '<td class="text-truncate" style="max-width:150px;font-size:.75rem;">' + (d.descricao || '-') + '</td>' +
@@ -1579,10 +1636,15 @@
         });
     }
 
+    // ═══════════════════════════════════════════
+    // INIT FINANCEIRO — Refatorado
+    // Removidas referências ao state.valoresVisiveis
+    // antigo. Agora usa state.caixaValoresVisiveis
+    // ═══════════════════════════════════════════
     window.initFinanceiro = function () {
         state.fetching = false;
         state.cache = [];
-        state.valoresVisiveis = false;
+        state.caixaValoresVisiveis = false;
         state.tabAtual = 'todos';
         state.filtroTipo = 'todos';
         state.filtroSituacao = 'todos';
@@ -1595,6 +1657,7 @@
         state.caixa.dadosFiltrados = [];
         state.extrato.pagina = 1;
         state.extrato.dados = [];
+
         bind();
         mascaraValor(els.finValor);
         if (els.extratoDataRef) els.extratoDataRef.value = new Date().toISOString().split('T')[0];

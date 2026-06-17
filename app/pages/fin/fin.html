@@ -18,6 +18,7 @@
                 </div>
             </div>
         </div>
+
         <div class="row g-3 mt-0">
             <div class="col-12">
                 <div class="card border-0 shadow-sm rounded-4">
@@ -31,9 +32,14 @@
                         </div>
                     </div>
 
-                    <!-- ══════════ ABA TODOS ══════════ -->
+                    <!-- ══════════════════════════════════════════════ -->
+                    <!-- ABA TODOS — Filtros + Busca + Novo + Tabela  -->
+                    <!-- Sem cards resumo, sem olhinho                 -->
+                    <!-- ══════════════════════════════════════════════ -->
                     <div id="fin-tab-content-todos" class="fin-tab-content active">
                         <div class="p-3">
+
+                            <!-- Toolbar -->
                             <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3"
                                 id="toolbar-todos-fin">
 
@@ -62,7 +68,8 @@
                                                 <i class="bi bi-chevron-right chevron-sub"></i>
                                             </div>
                                             <div class="dropdown-filtro-submenu" id="submenu-situacao-fin">
-                                                <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos">
+                                                <div class="dropdown-filtro-subitem active"
+                                                    data-filtro-situacao="todos">
                                                     <i class="bi bi-grid-3x3-gap"></i> Todos
                                                 </div>
                                                 <div class="dropdown-filtro-subitem" data-filtro-situacao="pago">
@@ -87,65 +94,11 @@
                                     class="form-control form-control-sm rounded-pill input-filtro-fin"
                                     placeholder="Buscar..." autocomplete="off">
 
-                                <!-- Botão Olhinho — usa Bootstrap Icons (bi) -->
-                                <button type="button" class="btn-olhinho-clean" id="btn-toggle-valores"
-                                    title="Mostrar/Ocultar valores">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-
                                 <!-- Botão Novo -->
                                 <button id="btn-novo-fin"
                                     class="btn btn-danger btn-sm rounded-pill px-3 btn-novo-fin-action" type="button">
                                     <i class="bi bi-plus-lg"></i> Novo
                                 </button>
-                            </div>
-
-                            <!-- Cards Resumo -->
-                            <div class="row g-2 mb-3" id="cards-resumo-fin">
-                                <div class="col-6 col-md-3">
-                                    <div class="fin-card-resumo fin-card-resumo-receita">
-                                        <div class="fin-card-icon-wrap fin-card-icon-receita">
-                                            <i class="bi bi-graph-up-arrow"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fin-card-label">RECEITAS</div>
-                                            <div id="total-entradas" class="fw-bold fin-card-valor">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="fin-card-resumo fin-card-resumo-despesa">
-                                        <div class="fin-card-icon-wrap fin-card-icon-despesa">
-                                            <i class="bi bi-graph-down-arrow"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fin-card-label">DESPESAS</div>
-                                            <div id="total-saidas" class="fw-bold fin-card-valor">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="fin-card-resumo fin-card-resumo-saldo">
-                                        <div class="fin-card-icon-wrap fin-card-icon-saldo">
-                                            <i class="bi bi-wallet2"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fin-card-label">SALDO</div>
-                                            <div id="total-saldo" class="fw-bold fin-card-valor">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="fin-card-resumo fin-card-resumo-registros">
-                                        <div class="fin-card-icon-wrap fin-card-icon-registros">
-                                            <i class="bi bi-journal-text"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fin-card-label">REGISTROS</div>
-                                            <div id="total-registros" class="fw-bold fin-card-valor">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             <!-- Tabela Todos -->
@@ -167,50 +120,129 @@
                                             <th class="border-0 fw-normal" style="width:14.28%">Tipo</th>
                                             <th class="border-0 fw-normal" style="width:14.28%">Descrição</th>
                                             <th class="border-0 fw-normal" style="width:14.28%">Motoboy</th>
-                                            <th class="border-0 fw-normal text-center" style="width:14.28%">Situação</th>
-                                            <th class="text-end pe-3 border-0 fw-normal" style="width:14.28%">Ações</th>
+                                            <th class="border-0 fw-normal text-center" style="width:14.28%">Situação
+                                            </th>
+                                            <th class="text-end pe-3 border-0 fw-normal" style="width:14.28%">Ações
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-fin-body-todos">
                                         <tr>
                                             <td colspan="7" class="text-center text-muted py-4">
-                                                <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                                                <div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div>
+                                                <div class="spinner-border spinner-border-sm text-danger opacity-50">
+                                                </div>
+                                                <div class="mt-2 fin-loading-text">Buscando dados<span
+                                                        class="fin-dots"></span></div>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
-                            <small id="fin-pag-info-todos" class="text-muted" style="font-size:0.72rem;">0 registros</small>
+
+                        <!-- Paginação Todos -->
+                        <div
+                            class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
+                            <small id="fin-pag-info-todos" class="text-muted" style="font-size:0.72rem;">0
+                                registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-todos" type="button"><i class="bi bi-chevron-left"></i></button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-label-todos" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-todos" type="button"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-todos" type="button">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-label-todos" disabled
+                                    style="min-width:100px;font-size:0.75rem;">Pág 1</button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-todos" type="button">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ══════════ ABA CAIXA ══════════ -->
+                    <!-- ══════════════════════════════════════════════════════════ -->
+                    <!-- ABA CAIXA — Cards Resumo + Olhinho + RDOPay + Tabela     -->
+                    <!-- Cards: Receitas, Despesas, Saldo, Registros (do período) -->
+                    <!-- Olhinho: oculta cards + RDOPay + colunas tabela          -->
+                    <!-- RDOPay Saldo = Entradas − Saídas (período filtrado)      -->
+                    <!-- Tabela Saldo = acumulado linha a linha                    -->
+                    <!-- ══════════════════════════════════════════════════════════ -->
                     <div id="fin-tab-content-caixa" class="fin-tab-content">
                         <div class="p-3">
-                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="date" id="caixa-data-inicio"
-                                        class="form-control form-control-sm rounded-pill"
-                                        style="width:145px;font-size:.74rem;">
-                                    <span class="text-muted" style="font-size:.72rem;">até</span>
-                                    <input type="date" id="caixa-data-fim"
-                                        class="form-control form-control-sm rounded-pill"
-                                        style="width:145px;font-size:.74rem;">
-                                    <button id="btn-filtrar-caixa"
-                                        class="btn btn-outline-danger btn-sm rounded-pill px-3"
-                                        style="font-size:.74rem;" type="button">
-                                        <i class="bi bi-funnel me-1"></i>Filtrar
-                                    </button>
+
+                            <!-- Toolbar: Filtro período + Olhinho -->
+                            <div class="d-flex align-items-center justify-content-end mb-3 flex-wrap gap-2">
+                                <input type="date" id="caixa-data-inicio"
+                                    class="form-control form-control-sm rounded-pill"
+                                    style="width:145px;font-size:.74rem;">
+                                <span class="text-muted" style="font-size:.72rem;">até</span>
+                                <input type="date" id="caixa-data-fim"
+                                    class="form-control form-control-sm rounded-pill"
+                                    style="width:145px;font-size:.74rem;">
+                                <button id="btn-filtrar-caixa"
+                                    class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                                    style="font-size:.74rem;" type="button">
+                                    <i class="bi bi-funnel me-1"></i>Filtrar
+                                </button>
+
+                                <!-- Botão Olhinho — Caixa -->
+                                <button type="button" class="btn-olhinho-clean" id="btn-toggle-caixa-valores"
+                                    title="Mostrar/Ocultar valores">
+                                    <i class="bi bi-eye" id="icon-toggle-caixa-val"></i>
+                                </button>
+                            </div>
+
+                            <!-- Cards Resumo (migrados da aba Todos) -->
+                            <div class="row g-2 mb-3" id="cards-resumo-caixa">
+                                <div class="col-6 col-md-3">
+                                    <div class="fin-card-resumo fin-card-resumo-receita">
+                                        <div class="fin-card-icon-wrap fin-card-icon-receita">
+                                            <i class="bi bi-graph-up-arrow"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fin-card-label">RECEITAS</div>
+                                            <div id="caixa-card-entradas" class="fw-bold fin-card-valor fin-valor-caixa">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="fin-card-resumo fin-card-resumo-despesa">
+                                        <div class="fin-card-icon-wrap fin-card-icon-despesa">
+                                            <i class="bi bi-graph-down-arrow"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fin-card-label">DESPESAS</div>
+                                            <div id="caixa-card-saidas" class="fw-bold fin-card-valor fin-valor-caixa">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="fin-card-resumo fin-card-resumo-saldo">
+                                        <div class="fin-card-icon-wrap fin-card-icon-saldo">
+                                            <i class="bi bi-wallet2"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fin-card-label">SALDO</div>
+                                            <div id="caixa-card-saldo" class="fw-bold fin-card-valor fin-valor-caixa">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="fin-card-resumo fin-card-resumo-registros">
+                                        <div class="fin-card-icon-wrap fin-card-icon-registros">
+                                            <i class="bi bi-journal-text"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fin-card-label">REGISTROS</div>
+                                            <div id="caixa-card-registros" class="fw-bold fin-card-valor fin-valor-caixa">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            <!-- Card RDOPay -->
                             <div class="rdo-pay-header">
                                 <div class="rdo-pay-top">
                                     <div class="d-flex align-items-center gap-2">
@@ -218,37 +250,16 @@
                                             <i class="bi bi-wallet2"></i>
                                         </div>
                                         <span class="rdo-pay-title">RDOPay</span>
-                                        <button class="rdo-pay-eye" id="btn-toggle-caixa-valores"
-                                            title="Mostrar/Ocultar" type="button">
-                                            <i class="bi bi-eye-slash" id="icon-toggle-caixa-val"></i>
-                                        </button>
                                     </div>
                                 </div>
                                 <div class="rdo-pay-saldo-wrap">
-                                    <div class="rdo-pay-saldo-label">Saldo disponível</div>
-                                    <div class="rdo-pay-saldo-valor" id="rdo-pay-saldo">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                    <div class="rdo-pay-saldo-label">Saldo</div>
+                                    <div class="rdo-pay-saldo-valor fin-valor-caixa" id="rdo-pay-saldo">
+                                        &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
                                 </div>
                             </div>
-                            <div class="row g-2 mt-3 mb-3" id="caixa-resumo-cards">
-                                <div class="col-4">
-                                    <div class="caixa-mini-card caixa-mini-entrada">
-                                        <div class="caixa-mini-label">Entradas</div>
-                                        <div class="caixa-mini-valor" id="caixa-total-entradas">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="caixa-mini-card caixa-mini-saida">
-                                        <div class="caixa-mini-label">Saídas</div>
-                                        <div class="caixa-mini-valor" id="caixa-total-saidas">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="caixa-mini-card caixa-mini-saldo">
-                                        <div class="caixa-mini-label">Saldo Período</div>
-                                        <div class="caixa-mini-valor" id="caixa-total-saldo">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
-                                    </div>
-                                </div>
-                            </div>
+
+                            <!-- Ações rápidas RDOPay -->
                             <div class="rdo-pay-actions">
                                 <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalPix">
                                     <div class="rdo-pay-action-icon rdo-pay-icon-pix">
@@ -256,41 +267,47 @@
                                     </div>
                                     <span class="rdo-pay-action-label">Pix</span>
                                 </div>
-                                <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalAdicionarDinheiro">
+                                <div class="rdo-pay-action-item" data-bs-toggle="modal"
+                                    data-bs-target="#modalAdicionarDinheiro">
                                     <div class="rdo-pay-action-icon rdo-pay-icon-add">
                                         <i class="bi bi-plus-circle"></i>
                                     </div>
                                     <span class="rdo-pay-action-label">Adicionar dinheiro</span>
                                 </div>
-                                <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalTransferir">
+                                <div class="rdo-pay-action-item" data-bs-toggle="modal"
+                                    data-bs-target="#modalTransferir">
                                     <div class="rdo-pay-action-icon rdo-pay-icon-transfer">
                                         <i class="bi bi-bank"></i>
                                     </div>
                                     <span class="rdo-pay-action-label">Transferir</span>
                                 </div>
-                                <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalExtratoCaixa">
+                                <div class="rdo-pay-action-item" data-bs-toggle="modal"
+                                    data-bs-target="#modalExtratoCaixa">
                                     <div class="rdo-pay-action-icon rdo-pay-icon-extrato">
                                         <i class="bi bi-journal-text"></i>
                                     </div>
                                     <span class="rdo-pay-action-label">Extrato</span>
                                 </div>
                             </div>
+
+                            <!-- Tabela Caixa -->
                             <div class="table-responsive mt-3">
                                 <table class="table table-hover align-middle border-0 mb-0 fin-table-caixa"
                                     id="tabela-fin-caixa">
                                     <thead class="text-uppercase tabela-fin-head">
                                         <tr>
-                                            <th class="ps-3 border-0 fw-normal">Data</th>
-                                            <th class="border-0 fw-normal">Descrição</th>
-                                            <th class="border-0 fw-normal text-end">Entradas</th>
-                                            <th class="border-0 fw-normal text-end">Saídas</th>
-                                            <th class="text-end pe-3 border-0 fw-normal">Saldo</th>
+                                            <th class="border-0 fw-normal text-center">Data</th>
+                                            <th class="border-0 fw-normal text-center">Descrição</th>
+                                            <th class="border-0 fw-normal text-center">Entrada</th>
+                                            <th class="border-0 fw-normal text-center">Saída</th>
+                                            <th class="border-0 fw-normal text-center">Saldo</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-fin-body-caixa">
                                         <tr>
                                             <td colspan="5" class="text-center text-muted py-4">
-                                                <i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>
+                                                <i class="bi bi-inbox"
+                                                    style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>
                                                 Selecione um período e clique em Filtrar
                                             </td>
                                         </tr>
@@ -298,25 +315,40 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
-                            <small id="fin-pag-info-caixa" class="text-muted" style="font-size:0.72rem;">0 registros</small>
+
+                        <!-- Paginação Caixa -->
+                        <div
+                            class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
+                            <small id="fin-pag-info-caixa" class="text-muted" style="font-size:0.72rem;">0
+                                registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-caixa" type="button"><i class="bi bi-chevron-left"></i></button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-label-caixa" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-caixa" type="button"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-caixa" type="button">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-label-caixa" disabled
+                                    style="min-width:100px;font-size:0.75rem;">Pág 1</button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-caixa" type="button">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ══════════ ABA EXTRATO ══════════ -->
+                    <!-- ══════════════════════════════════════════════ -->
+                    <!-- ABA EXTRATO — Sem alterações                  -->
+                    <!-- ══════════════════════════════════════════════ -->
                     <div id="fin-tab-content-extrato" class="fin-tab-content">
                         <div class="p-3">
                             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <button class="extrato-periodo-btn active" data-periodo="diario" type="button">Diário</button>
-                                    <button class="extrato-periodo-btn" data-periodo="semanal" type="button">Semanal</button>
-                                    <button class="extrato-periodo-btn" data-periodo="quinzenal" type="button">Quinzenal</button>
-                                    <button class="extrato-periodo-btn" data-periodo="mensal" type="button">Mensal</button>
+                                    <button class="extrato-periodo-btn active" data-periodo="diario"
+                                        type="button">Diário</button>
+                                    <button class="extrato-periodo-btn" data-periodo="semanal"
+                                        type="button">Semanal</button>
+                                    <button class="extrato-periodo-btn" data-periodo="quinzenal"
+                                        type="button">Quinzenal</button>
+                                    <button class="extrato-periodo-btn" data-periodo="mensal"
+                                        type="button">Mensal</button>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <input type="date" id="extrato-data-ref"
@@ -329,34 +361,41 @@
                                     </button>
                                 </div>
                             </div>
+
                             <div id="extrato-header-info" class="d-none mb-3">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
                                     <div>
-                                        <div id="extrato-titulo-periodo" class="fw-bold" style="font-size:.88rem;"></div>
-                                        <div id="extrato-subtitulo-periodo" class="text-muted" style="font-size:.72rem;"></div>
+                                        <div id="extrato-titulo-periodo" class="fw-bold" style="font-size:.88rem;">
+                                        </div>
+                                        <div id="extrato-subtitulo-periodo" class="text-muted"
+                                            style="font-size:.72rem;"></div>
                                     </div>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-4">
                                         <div class="caixa-mini-card caixa-mini-entrada">
                                             <div class="caixa-mini-label">Entradas</div>
-                                            <div class="caixa-mini-valor" id="extrato-total-entradas">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                            <div class="caixa-mini-valor" id="extrato-total-entradas">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="caixa-mini-card caixa-mini-saida">
                                             <div class="caixa-mini-label">Saídas</div>
-                                            <div class="caixa-mini-valor" id="extrato-total-saidas">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                            <div class="caixa-mini-valor" id="extrato-total-saidas">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
                                         </div>
                                     </div>
                                     <div class="col-4">
                                         <div class="caixa-mini-card caixa-mini-saldo">
                                             <div class="caixa-mini-label">Saldo</div>
-                                            <div class="caixa-mini-valor" id="extrato-total-saldo">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
+                                            <div class="caixa-mini-valor" id="extrato-total-saldo">
+                                                &#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle border-0 mb-0 fin-table-extrato"
                                     id="tabela-fin-extrato">
@@ -374,7 +413,8 @@
                                     <tbody id="tabela-fin-body-extrato">
                                         <tr>
                                             <td colspan="7" class="text-center text-muted py-4">
-                                                <i class="bi bi-file-earmark-text" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>
+                                                <i class="bi bi-file-earmark-text"
+                                                    style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>
                                                 Selecione o período e clique em Gerar
                                             </td>
                                         </tr>
@@ -382,21 +422,33 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
-                            <small id="fin-pag-info-extrato" class="text-muted" style="font-size:0.72rem;">0 registros</small>
+
+                        <!-- Paginação Extrato -->
+                        <div
+                            class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
+                            <small id="fin-pag-info-extrato" class="text-muted" style="font-size:0.72rem;">0
+                                registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-extrato" type="button"><i class="bi bi-chevron-left"></i></button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-label-extrato" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-extrato" type="button"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-extrato" type="button">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-label-extrato" disabled
+                                    style="min-width:100px;font-size:0.75rem;">Pág 1</button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-extrato" type="button">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ══════════ MODAIS ══════════ -->
+
+    <!-- Modal Pix -->
     <div class="modal fade" id="modalPix" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -411,12 +463,14 @@
                     <p class="text-muted" style="font-size:.82rem;">Funcionalidade Pix em breve disponível.</p>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Adicionar Dinheiro -->
     <div class="modal fade" id="modalAdicionarDinheiro" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -428,17 +482,22 @@
                     <form id="form-adicionar-dinheiro" autocomplete="off">
                         <div class="mb-3">
                             <label class="form-label fw-semibold" style="font-size:.78rem;">Valor (R$)</label>
-                            <input type="text" id="add-dinheiro-valor" class="form-control form-control-sm rounded-pill" placeholder="0,00" required>
+                            <input type="text" id="add-dinheiro-valor"
+                                class="form-control form-control-sm rounded-pill" placeholder="0,00" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold" style="font-size:.78rem;">Descrição</label>
-                            <input type="text" id="add-dinheiro-descricao" class="form-control form-control-sm rounded-pill" placeholder="Ex: Depósito em espécie">
+                            <input type="text" id="add-dinheiro-descricao"
+                                class="form-control form-control-sm rounded-pill"
+                                placeholder="Ex: Depósito em espécie">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-confirmar-add-dinheiro">
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4"
+                        id="btn-confirmar-add-dinheiro">
                         <i class="bi bi-check-lg me-1"></i>Confirmar
                     </button>
                 </div>
@@ -446,6 +505,7 @@
         </div>
     </div>
 
+    <!-- Modal Transferir -->
     <div class="modal fade" id="modalTransferir" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -457,21 +517,28 @@
                     <form id="form-transferir" autocomplete="off">
                         <div class="mb-3">
                             <label class="form-label fw-semibold" style="font-size:.78rem;">Valor (R$)</label>
-                            <input type="text" id="transferir-valor" class="form-control form-control-sm rounded-pill" placeholder="0,00" required>
+                            <input type="text" id="transferir-valor"
+                                class="form-control form-control-sm rounded-pill" placeholder="0,00" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold" style="font-size:.78rem;">Destino</label>
-                            <input type="text" id="transferir-destino" class="form-control form-control-sm rounded-pill" placeholder="Ex: Banco, conta, pessoa...">
+                            <input type="text" id="transferir-destino"
+                                class="form-control form-control-sm rounded-pill"
+                                placeholder="Ex: Banco, conta, pessoa...">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold" style="font-size:.78rem;">Descrição</label>
-                            <input type="text" id="transferir-descricao" class="form-control form-control-sm rounded-pill" placeholder="Ex: Transferência bancária">
+                            <input type="text" id="transferir-descricao"
+                                class="form-control form-control-sm rounded-pill"
+                                placeholder="Ex: Transferência bancária">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-confirmar-transferir">
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4"
+                        id="btn-confirmar-transferir">
                         <i class="bi bi-check-lg me-1"></i>Transferir
                     </button>
                 </div>
@@ -479,6 +546,7 @@
         </div>
     </div>
 
+    <!-- Modal Extrato Caixa -->
     <div class="modal fade" id="modalExtratoCaixa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -488,17 +556,20 @@
                 </div>
                 <div class="modal-body" id="modal-extrato-caixa-body">
                     <div class="text-center text-muted py-4">
-                        <i class="bi bi-journal-text" style="font-size:1.5rem;opacity:.4;display:block;margin-bottom:6px;"></i>
+                        <i class="bi bi-journal-text"
+                            style="font-size:1.5rem;opacity:.4;display:block;margin-bottom:6px;"></i>
                         Nenhum dado de extrato disponível.
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Confirmar Exclusão -->
     <div class="modal fade" id="modalConfirmDeleteFin" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -508,8 +579,10 @@
                     <div class="text-muted" style="font-size:.78rem;">Essa ação não poderá ser desfeita.</div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-confirmar-delete-fin">
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-4"
+                        id="btn-confirmar-delete-fin">
                         <i class="bi bi-trash me-1"></i>Excluir
                     </button>
                 </div>

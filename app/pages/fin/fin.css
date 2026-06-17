@@ -327,16 +327,16 @@
     width: 100%;
 }
 
-.fin-table-caixa thead th:nth-child(1) { width: 20%; }
-.fin-table-caixa thead th:nth-child(2) { width: 20%; }
-.fin-table-caixa thead th:nth-child(3) { width: 20%; }
-.fin-table-caixa thead th:nth-child(4) { width: 20%; }
-.fin-table-caixa thead th:nth-child(5) { width: 20%; }
+.fin-table-caixa thead th {
+    width: 20%;
+    text-align: center;
+}
 
 .fin-table-caixa td {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
 }
 
 .fin-table-extrato {
@@ -1161,11 +1161,6 @@
     background: rgba(220, 53, 69, 0.04);
 }
 
-/* ═══════════════════════════════════════════
-   BOTÃO OLHINHO — SEMPRE VISÍVEL
-   Cinza = valores visíveis (ativo)
-   Vermelho = valores ocultos (desativado)
-   ═══════════════════════════════════════════ */
 .btn-olhinho-clean {
     background: none;
     border: none;
@@ -1178,7 +1173,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Estado padrão: cinza (valores visíveis) */
     color: #adb5bd;
     opacity: 1 !important;
     visibility: visible !important;
@@ -1203,6 +1197,53 @@
 
 .btn-olhinho-clean:not(.oculto):hover {
     color: #6c757d;
+}
+
+.btn-olhinho-caixa {
+    background: none;
+    border: none;
+    outline: none;
+    padding: 4px 6px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.btn-olhinho-caixa:hover {
+    transform: scale(1.15);
+    color: #fff;
+}
+
+.btn-olhinho-caixa:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.btn-olhinho-caixa.oculto {
+    color: #dc3545;
+}
+
+.btn-olhinho-caixa.oculto:hover {
+    color: #ff6b7a;
+}
+
+.fin-valor-hidden {
+    color: transparent !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    user-select: none;
+}
+
+.fin-valor-hidden-light {
+    color: transparent !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    user-select: none;
 }
 
 @media (max-width: 768px) {
