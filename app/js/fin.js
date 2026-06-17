@@ -167,6 +167,7 @@
         els.pagPrevExtrato = document.getElementById('fin-pag-prev-extrato');
         els.pagNextExtrato = document.getElementById('fin-pag-next-extrato');
         els.pagLabelExtrato = document.getElementById('fin-pag-label-extrato');
+        els.toolbarTodos = document.getElementById('toolbar-todos-fin');
     }
 
     function registrarEventos() {
@@ -421,43 +422,22 @@
 
     function renderTodos() {
         if (!els.tbodyTodos) return;
-
         atualizarResumo();
-
         var lista = dadosFiltradosTodos();
-
-        // Ordenação por data
         if (state.sortDataDesc) {
-            lista.sort(function (a, b) {
-                return (b.dataISO || '').localeCompare(a.dataISO || '');
-            });
+            lista.sort(function (a, b) { return (b.dataISO || '').localeCompare(a.dataISO || ''); });
         } else {
-            lista.sort(function (a, b) {
-                return (a.dataISO || '').localeCompare(b.dataISO || '');
-            });
+            lista.sort(function (a, b) { return (a.dataISO || '').localeCompare(b.dataISO || ''); });
         }
-
         var total = lista.length;
-
-        // Paginação
         state.todos.totalPag = Math.max(1, Math.ceil(total / state.todos.porPagina));
         if (state.todos.pagina > state.todos.totalPag) state.todos.pagina = state.todos.totalPag;
         if (state.todos.pagina < 1) state.todos.pagina = 1;
-
         var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
         var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
-
-        // Sem registros
         if (!pagina.length) {
-            els.tbodyTodos.innerHTML =
-                '<tr>' +
-                '<td colspan="7" class="text-center text-muted py-4">' +
-                '<i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>' +
-                'Nenhum registro encontrado' +
-                '</td>' +
-                '</tr>';
+            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
         } else {
-            // Renderizar linhas — 7 colunas (sem Valor)
             els.tbodyTodos.innerHTML = pagina.map(function (d, i) {
                 return '<tr>' +
                     '<td class="ps-3">' + d.dataDisplay + '</td>' +
@@ -471,27 +451,13 @@
                     '<button class="fin-btn-action fin-btn-view btn-view-todos" data-idx="' + i + '" title="Ver"><i class="bi bi-eye"></i></button>' +
                     '<button class="fin-btn-action fin-btn-edit btn-edit-todos" data-idx="' + i + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
                     '<button class="fin-btn-action fin-btn-delete btn-del-todos" data-idx="' + i + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
-                    '</div>' +
-                    '</td>' +
-                    '</tr>';
+                    '</div></td></tr>';
             }).join('');
         }
-
-        // Atualizar controles de paginação
-        if (els.pagInfoTodos) {
-            els.pagInfoTodos.textContent = total + ' registro' + (total !== 1 ? 's' : '');
-        }
-        if (els.pagPrevTodos) {
-            els.pagPrevTodos.disabled = state.todos.pagina <= 1;
-        }
-        if (els.pagNextTodos) {
-            els.pagNextTodos.disabled = state.todos.pagina >= state.todos.totalPag;
-        }
-        if (els.pagLabelTodos) {
-            els.pagLabelTodos.textContent = 'P\u00e1g ' + state.todos.pagina + ' de ' + state.todos.totalPag;
-        }
-
-        // Bind de eventos dos botões de ação
+        if (els.pagInfoTodos) els.pagInfoTodos.textContent = total + ' registro' + (total !== 1 ? 's' : '');
+        if (els.pagPrevTodos) els.pagPrevTodos.disabled = state.todos.pagina <= 1;
+        if (els.pagNextTodos) els.pagNextTodos.disabled = state.todos.pagina >= state.todos.totalPag;
+        if (els.pagLabelTodos) els.pagLabelTodos.textContent = 'P\u00e1g ' + state.todos.pagina + ' de ' + state.todos.totalPag;
         bindAcoesTodas(pagina);
     }
 
@@ -522,10 +488,7 @@
         var y = hoje.getFullYear();
         var m = String(hoje.getMonth() + 1).padStart(2, '0');
         var lastDay = new Date(y, hoje.getMonth() + 1, 0).getDate();
-        return {
-            inicio: y + '-' + m + '-01',
-            fim: y + '-' + m + '-' + String(lastDay).padStart(2, '0')
-        };
+        return { inicio: y + '-' + m + '-01', fim: y + '-' + m + '-' + String(lastDay).padStart(2, '0') };
     }
 
     function renderCaixa() {
@@ -768,71 +731,49 @@
     function abrirView(d) {
         if (!els.modalViewEl) els.modalViewEl = document.getElementById('modalViewFin');
         if (!els.modalViewEl) return;
-
         var isE = d.tipo === 'entrada';
-
         var header = document.getElementById('fin-view-header');
         if (header) {
             header.classList.remove('fin-extrato-header-entrada', 'fin-extrato-header-saida');
             header.classList.add(isE ? 'fin-extrato-header-entrada' : 'fin-extrato-header-saida');
         }
-
         var iconWrap = document.getElementById('fin-view-tipo-icon');
         if (iconWrap) iconWrap.innerHTML = isE ? '<i class="bi bi-arrow-down-left"></i>' : '<i class="bi bi-arrow-up-right"></i>';
-
         var tipoLabel = document.getElementById('fin-view-tipo-label');
         if (tipoLabel) tipoLabel.textContent = isE ? 'RECEITA' : 'DESPESA';
-
         var dataEl = document.getElementById('fin-view-data');
         if (dataEl) dataEl.textContent = d.dataBR || '-';
-
         var valorEl = document.getElementById('fin-view-valor');
         if (valorEl) valorEl.textContent = formatarMoeda(d.valor);
-
         var statusDot = document.getElementById('fin-view-status-dot');
         if (statusDot) statusDot.className = 'fin-extrato-status-dot status-' + (d.situacao || 'pendente');
-
         var statusText = document.getElementById('fin-view-status-text');
         if (statusText) {
             var situacaoMap = { pago: 'Pago', recebido: 'Recebido', pendente: 'Pendente', cancelado: 'Cancelado' };
             statusText.textContent = situacaoMap[d.situacao] || 'Pendente';
         }
-
         var idEl = document.getElementById('fin-view-id');
         if (idEl) idEl.textContent = '#' + (d.id || '0000');
-
         var descEl = document.getElementById('fin-view-descricao');
         if (descEl) descEl.textContent = d.descricao || '-';
-
         var catEl = document.getElementById('fin-view-categoria');
         if (catEl) catEl.textContent = d.categoria || '-';
-
         var pagEl = document.getElementById('fin-view-pagamento');
         if (pagEl) {
-            var pagMap = {
-                pix: 'PIX', dinheiro: 'Dinheiro', cartao_credito: 'Cart\u00e3o Cr\u00e9dito',
-                cartao_debito: 'Cart\u00e3o D\u00e9bito', boleto: 'Boleto', transferencia: 'Transfer\u00eancia'
-            };
+            var pagMap = { pix: 'PIX', dinheiro: 'Dinheiro', cartao_credito: 'Cart\u00e3o Cr\u00e9dito', cartao_debito: 'Cart\u00e3o D\u00e9bito', boleto: 'Boleto', transferencia: 'Transfer\u00eancia' };
             pagEl.textContent = pagMap[(d.pagamento || '').toLowerCase()] || d.pagamento || '-';
         }
-
         var motEl = document.getElementById('fin-view-motoboy');
         if (motEl) motEl.textContent = (d.motoboy && d.motoboy !== '-') ? d.motoboy : '-';
-
         var pedEl = document.getElementById('fin-view-pedido');
         if (pedEl) pedEl.textContent = d.idPedido || '-';
-
         var obsEl = document.getElementById('fin-view-obs');
         if (obsEl) obsEl.textContent = d.observacao || '-';
-
         var tsEl = document.getElementById('fin-view-timestamp');
         if (tsEl) {
             var now = new Date();
-            tsEl.textContent = 'Consultado em ' + String(now.getDate()).padStart(2, '0') + '/' +
-                String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' \u00e0s ' +
-                String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            tsEl.textContent = 'Consultado em ' + String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' \u00e0s ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
         }
-
         var btnEditar = document.getElementById('fin-view-btn-editar');
         if (btnEditar) {
             var newBtn = btnEditar.cloneNode(true);
@@ -843,7 +784,6 @@
                 setTimeout(function () { abrirModal(d); }, 300);
             });
         }
-
         new bootstrap.Modal(els.modalViewEl).show();
     }
 
@@ -900,7 +840,6 @@
         rebindModalEls();
         if (!els.modalEl) return;
         limparFormulario();
-
         if (item) {
             if (els.formTitulo) els.formTitulo.textContent = 'Editar Lan\u00e7amento';
             if (els.formSubtitulo) els.formSubtitulo.textContent = '#' + (item.id || '') + ' \u00b7 ' + (item.dataBR || '');
@@ -932,7 +871,6 @@
             }
             if (els.finData) els.finData.value = new Date().toISOString().split('T')[0];
         }
-
         new bootstrap.Modal(els.modalEl).show();
     }
 
@@ -956,7 +894,6 @@
 
     function salvar() {
         if (els.formErro) els.formErro.classList.add('d-none');
-
         var id = els.finId ? els.finId.value : '';
         var dataISO = els.finData ? els.finData.value : '';
         var tipo = els.finTipo ? els.finTipo.value : '';
@@ -969,15 +906,12 @@
         var categoria = els.finCategoria ? els.finCategoria.value.trim() : '';
         var pagamento = els.finPagamento ? els.finPagamento.value : '';
         var observacao = els.finObs ? els.finObs.value.trim() : '';
-
         if (!dataISO) { mostrarErroForm('Informe a data.'); return; }
         if (!tipo) { mostrarErroForm('Selecione o tipo.'); return; }
         if (!descricao) { mostrarErroForm('Informe a descri\u00e7\u00e3o.'); return; }
         if (valor <= 0) { mostrarErroForm('Informe um valor v\u00e1lido.'); return; }
-
         var dataParts = dataISO.split('-');
         var dataBR = dataParts[2] + '/' + dataParts[1] + '/' + dataParts[0];
-
         var payload = {
             data: dataBR,
             tipo: tipo,
@@ -991,10 +925,8 @@
         if (pagamento) payload.pagamento = pagamento;
         if (observacao) payload.observacao = observacao;
         if (id) payload.id = id;
-
         var action = id ? 'editfinanceiro' : 'addfinanceiro';
         toggleSalvarLoading(true);
-
         window.API.call(action, payload)
             .then(function (res) {
                 var sucesso = false;
@@ -1084,59 +1016,20 @@
         if (state.fetching) return;
         state.fetching = true;
         spinOn();
-
-        // Spinner aba Todos — colspan 7 (sem coluna Valor)
         if (els.tbodyTodos) {
-            els.tbodyTodos.innerHTML =
-                '<tr>' +
-                '<td colspan="7" class="text-center py-5">' +
-                '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
-                '<div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div>' +
-                '</td>' +
-                '</tr>';
+            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div></td></tr>';
         }
-
-        // Spinner aba Caixa — colspan 5
         if (els.tbodyCaixa) {
-            els.tbodyCaixa.innerHTML =
-                '<tr>' +
-                '<td colspan="5" class="text-center text-muted py-4">' +
-                '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
-                '<div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div>' +
-                '</td>' +
-                '</tr>';
+            els.tbodyCaixa.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div></td></tr>';
         }
-
-        // Spinner aba Extrato — colspan 7
         if (els.tbodyExtrato) {
-            els.tbodyExtrato.innerHTML =
-                '<tr>' +
-                '<td colspan="7" class="text-center text-muted py-4">' +
-                '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
-                '<div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div>' +
-                '</td>' +
-                '</tr>';
+            els.tbodyExtrato.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div></td></tr>';
         }
-
-        // Limpar cache antes da requisição
         state.cache = [];
-
         window.API.call('getfinanceiro')
             .then(function (res) {
-                // Resposta vazia
-                if (!res) {
-                    finToast('Resposta vazia do servidor.', 'warning');
-                    return;
-                }
-
-                // Erro explícito da API
-                if (res.success === false) {
-                    var msgErro = res.message || res.error || 'Erro retornado pela API.';
-                    finToast(msgErro, 'danger');
-                    return;
-                }
-
-                // Extrair array de registros de múltiplos formatos possíveis
+                if (!res) { finToast('Resposta vazia do servidor.', 'info'); return; }
+                if (res.success === false) { finToast(res.message || res.error || 'Erro retornado pela API.', 'danger'); return; }
                 var raw = [];
                 if (Array.isArray(res)) {
                     raw = res;
@@ -1148,40 +1041,31 @@
                     else if (Array.isArray(res.result)) raw = res.result;
                     else if (Array.isArray(res.results)) raw = res.results;
                 }
-
-                // Nenhum registro
-                if (!raw.length) {
-                    finToast('Nenhum registro financeiro encontrado.', 'info');
-                    return;
-                }
-
-                // Normalizar registros válidos
+                if (!raw.length) { finToast('Nenhum registro financeiro encontrado.', 'info'); return; }
                 var registrosValidos = [];
                 for (var i = 0; i < raw.length; i++) {
-                    try {
-                        registrosValidos.push(normalizarRegistro(raw[i]));
-                    } catch (e) {
-                        console.warn('[fin] Registro ignorado (índice ' + i + '):', e);
-                    }
+                    try { registrosValidos.push(normalizarRegistro(raw[i])); } catch (e) { }
                 }
-
                 state.cache = registrosValidos;
             })
-            .catch(function (err) {
-                console.error('[fin] Erro ao carregar:', err);
+            .catch(function () {
                 state.cache = [];
                 finToast('Erro ao carregar dados financeiros.', 'danger');
             })
             .finally(function () {
                 state.fetching = false;
                 spinOff();
-
-                // Renderizar todas as abas
                 renderTodos();
                 atualizarRdoPaySaldo();
                 renderCaixa();
                 renderExtrato();
             });
+    }
+
+    function renderExtrato() {
+        if (state.extrato.dados.length) {
+            renderExtratoTabela();
+        }
     }
 
     function gerarChaveAleatoria() {
@@ -1204,33 +1088,11 @@
         var labelInput = document.getElementById('label-input-chave-pix');
         var inputValor = document.getElementById('input-valor-chave-pix');
         var tipoSel = 'cpf';
-
         if (!window.rdoPixChaves) window.rdoPixChaves = [];
-
-        var placeholders = {
-            cpf: '000.000.000-00',
-            email: 'seuemail@exemplo.com',
-            telefone: '(31) 99999-0000',
-            aleatoria: 'Gerada automaticamente'
-        };
-        var labels = {
-            cpf: 'CPF',
-            email: 'E-mail',
-            telefone: 'Telefone',
-            aleatoria: 'Chave aleat\u00f3ria'
-        };
-        var iconMap = {
-            cpf: 'bi-person-vcard',
-            email: 'bi-envelope',
-            telefone: 'bi-phone',
-            aleatoria: 'bi-shuffle'
-        };
-        var corMap = {
-            cpf: '#6c5ce7',
-            email: '#e17055',
-            telefone: '#00b894',
-            aleatoria: '#0984e3'
-        };
+        var placeholders = { cpf: '000.000.000-00', email: 'seuemail@exemplo.com', telefone: '(31) 99999-0000', aleatoria: 'Gerada automaticamente' };
+        var labels = { cpf: 'CPF', email: 'E-mail', telefone: 'Telefone', aleatoria: 'Chave aleat\u00f3ria' };
+        var iconMap = { cpf: 'bi-person-vcard', email: 'bi-envelope', telefone: 'bi-phone', aleatoria: 'bi-shuffle' };
+        var corMap = { cpf: '#6c5ce7', email: '#e17055', telefone: '#00b894', aleatoria: '#0984e3' };
 
         function renderChaves() {
             if (!listaCont) return;
@@ -1268,14 +1130,12 @@
                 if (tipoBtns.length) tipoBtns[0].classList.add('active');
             });
         }
-
         if (btnCancelar) {
             btnCancelar.addEventListener('click', function () {
                 if (formNova) formNova.classList.add('d-none');
                 if (btnNovaChave) btnNovaChave.classList.remove('d-none');
             });
         }
-
         tipoBtns.forEach(function (btn) {
             btn.addEventListener('click', function () {
                 tipoBtns.forEach(function (b) { b.classList.remove('active'); });
@@ -1284,17 +1144,11 @@
                 if (labelInput) labelInput.textContent = labels[tipoSel];
                 if (inputValor) {
                     inputValor.placeholder = placeholders[tipoSel];
-                    if (tipoSel === 'aleatoria') {
-                        inputValor.value = gerarChaveAleatoria();
-                        inputValor.disabled = true;
-                    } else {
-                        inputValor.value = '';
-                        inputValor.disabled = false;
-                    }
+                    if (tipoSel === 'aleatoria') { inputValor.value = gerarChaveAleatoria(); inputValor.disabled = true; }
+                    else { inputValor.value = ''; inputValor.disabled = false; }
                 }
             });
         });
-
         if (btnSalvarChave) {
             btnSalvarChave.addEventListener('click', function () {
                 var val = inputValor ? inputValor.value.trim() : '';
@@ -1306,7 +1160,6 @@
                 finToast('Chave Pix cadastrada!', 'success');
             });
         }
-
         var btnEnviar = document.getElementById('btn-confirmar-pix-envio');
         if (btnEnviar) {
             btnEnviar.addEventListener('click', function () {
@@ -1323,7 +1176,6 @@
                 if (descPix) descPix.value = '';
             });
         }
-
         renderChaves();
     }
 
