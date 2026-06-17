@@ -195,3 +195,27 @@ body {
     background: none !important;
     border: none !important;
 }
+
+/* ═══════════════════════════════════════════════
+   AVATAR FALLBACK — Esconde imagem quebrada
+   ═══════════════════════════════════════════════ */
+img.header-avatar,
+img.user-avatar,
+img.avatar,
+img[data-avatar],
+.avatar-img,
+.user-area img {
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+img.header-avatar[src=""],
+img.user-avatar[src=""],
+img.avatar[src=""],
+img.header-avatar:not([src]),
+img.user-avatar:not([src]),
+img.avatar:not([src]) {
+    visibility: hidden;
+    width: 0;
+    height: 0;
+}

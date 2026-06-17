@@ -300,27 +300,6 @@ function carregarScriptExterno(src) {
     });
 }
 
-window.atualizarAvatar = function () {
-    var imagem = localStorage.getItem('imagem');
-    var username = localStorage.getItem('username') || 'Usuário';
-    var isValid = imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.trim().length > 0;
-
-    var iniciais = obterIniciaisGlobal(username);
-    var inicial = iniciais || username.charAt(0).toUpperCase();
-
-    atualizarAvatarEl(
-        document.getElementById('user-avatar-img'),
-        document.getElementById('user-avatar-icon'),
-        imagem, inicial, isValid, false
-    );
-
-    atualizarAvatarEl(
-        document.getElementById('header-user-avatar'),
-        document.getElementById('header-avatar-fallback'),
-        imagem, inicial, isValid, true
-    );
-};
-
 function obterIniciaisGlobal(nome) {
     if (!nome || nome === 'Usuário' || nome === '...') return '';
     var partes = nome.trim().split(/\s+/);
@@ -330,33 +309,58 @@ function obterIniciaisGlobal(nome) {
     return partes[0].substring(0, 2).toUpperCase();
 }
 
-function atualizarAvatarEl(imgEl, fallbackEl, imagem, inicial, isValid, usarTexto) {
-    if (!imgEl) return;
-
-    if (isValid) {
-        imgEl.src = imagem;
-        imgEl.style.display = 'block';
-        imgEl.onerror = function () {
-            imgEl.style.display = 'none';
-            if (fallbackEl) {
-                if (usarTexto) {
-                    fallbackEl.textContent = inicial;
-                    fallbackEl.style.display = 'flex';
-                } else {
-                    fallbackEl.style.display = '';
-                }
-            }
-        };
-        if (fallbackEl) fallbackEl.style.display = 'none';
-    } else {
-        imgEl.style.display = 'none';
-        if (fallbackEl) {
-            if (usarTexto) {
-                fallbackEl.textContent = inicial;
-                fallbackEl.style.display = 'flex';
-            } else {
-                fallbackEl.style.display = '';
-            }
-        }
-    }
+function gerarAvatarSVG(texto) {
+    var t = (texto && texto.trim()) ? texto.trim() : 'U';
+    return "data:image/svg+xml," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">' +
+        '<rect fill="#dc3545" width="80" height="80" rx="40"/>' +
+        '<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" ' +
+        'fill="#fff" font-size="30" font-family="Poppins,-apple-system,BlinkMacSystemFont,sans-serif" ' +
+        'font-weight="700">' + t + '</text></svg>'
+    );
 }
+
+function urlAvatarConfiavel(url) {
+    if (!url || typeof url !== 'string') return false;
+    var s = url.trim();
+    if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
+    if (s.indexOf('cdn.whatsapp.net') !== -1) return false;
+    if (s.indexOf('whatsapp') !== -1) return false;
+    if (s.indexOf('fbcdn.net') !== -1) return false;
+    if (s.indexOf('data:image/') === 0) return true;
+    if (s.indexOf('/') === 0) return true;
+    if (s.indexOf('http') === 0 && s.indexOf('cdn.whatsapp') === -1) return true;
+    return false;
+}
+
+window.atualizarAvatar = function () {
+    var username = localStorage.getItem('username') || 'Usuário';
+    var iniciais = obterIniciaisGlobal(username) || username.charAt(0).toUpperCase();
+    var imagem = localStorage.getItem('imagem');
+    var svg = gerarAvatarSVG(iniciais);
+    var srcFinal = urlAvatarConfiavel(imagem) ? imagem : svg;
+
+    var img1 = document.getElementById('user-avatar-img');
+    if (img1) {
+        img1.onerror = function () {
+            this.onerror = null;
+            this.src = svg;
+        };
+        img1.src = srcFinal;
+        img1.style.display = 'block';
+        var icon1 = document.querySelector('#avatar-container .avatar-fallback-icon');
+        if (icon1) icon1.style.display = 'none';
+    }
+
+    var img2 = document.getElementById('header-user-avatar');
+    if (img2) {
+        img2.onerror = function () {
+            this.onerror = null;
+            this.src = svg;
+        };
+        img2.src = srcFinal;
+        img2.style.display = 'block';
+        var icon2 = document.querySelector('#header-avatar-container .avatar-fallback-icon');
+        if (icon2) icon2.style.display = 'none';
+    }
+};

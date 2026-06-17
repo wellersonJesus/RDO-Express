@@ -12,7 +12,7 @@
                 window.location.replace('/pages/login/login.html');
         })();
     </script>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -122,10 +122,11 @@
                     <div id="display-cargo" class="text-danger small" style="font-size:0.7rem;font-weight:600;">...</div>
                 </div>
                 <div id="avatar-container"
-                    style="width:40px;height:40px;background:#dc3545;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;">
-                    <img id="user-avatar-img" src="" alt="Avatar"
-                        style="width:100%;height:100%;object-fit:cover;display:none;">
-                    <i id="user-avatar-icon" class="bi bi-person-fill text-white fs-4"></i>
+                    style="width:40px;height:40px;border-radius:50%;overflow:hidden;cursor:pointer;background:#dc3545;display:flex;align-items:center;justify-content:center;">
+                    <img id="user-avatar-img"
+                        alt="Avatar"
+                        style="width:100%;height:100%;object-fit:cover;display:none;border-radius:50%;">
+                    <i class="bi bi-person-fill text-white fs-4 avatar-fallback-icon"></i>
                 </div>
             </div>
         </header>
