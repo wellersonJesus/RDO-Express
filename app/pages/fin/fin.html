@@ -30,60 +30,77 @@
                             </nav>
                         </div>
                     </div>
+
+                    <!-- ══════════ ABA TODOS ══════════ -->
                     <div id="fin-tab-content-todos" class="fin-tab-content active">
                         <div class="p-3">
-                            <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3" id="toolbar-todos-fin">
+                            <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3"
+                                id="toolbar-todos-fin">
+
+                                <!-- Dropdown Filtro Tipo -->
                                 <div class="dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-fin">
-                                    <button class="btn-filtro-inteligente" id="btn-filtro-fin">
+                                    <button class="btn-filtro-inteligente" id="btn-filtro-fin" type="button">
                                         <i class="bi bi-funnel-fill"></i>
                                         <span id="label-filtro-fin">Todos</span>
                                         <i class="bi bi-chevron-down chevron-filtro"></i>
                                     </button>
                                     <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-fin">
-                                        <div class="dropdown-filtro-item active" data-filtro="todos">
+                                        <div class="dropdown-filtro-item active" data-filtro-tipo="todos">
                                             <i class="bi bi-grid-3x3-gap"></i> Todos
                                         </div>
-                                        <div class="dropdown-filtro-item" data-filtro="entrada">
+                                        <div class="dropdown-filtro-item" data-filtro-tipo="entrada">
                                             <i class="bi bi-arrow-down-circle text-success"></i> Receitas
                                         </div>
-                                        <div class="dropdown-filtro-item" data-filtro="saida">
+                                        <div class="dropdown-filtro-item" data-filtro-tipo="saida">
                                             <i class="bi bi-arrow-up-circle text-danger"></i> Despesas
                                         </div>
-                                        <div class="dropdown-filtro-item dropdown-filtro-item-has-sub" data-filtro="situacao">
+
+                                        <!-- Sub-dropdown Situação -->
+                                        <div class="dropdown-filtro-item dropdown-filtro-item-has-sub">
                                             <div class="dropdown-filtro-item-label" id="btn-sub-situacao-fin">
                                                 <i class="bi bi-flag"></i> Situação
                                                 <i class="bi bi-chevron-right chevron-sub"></i>
                                             </div>
                                             <div class="dropdown-filtro-submenu" id="submenu-situacao-fin">
-                                                <div class="dropdown-filtro-subitem active" data-situacao="todos">
+                                                <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos">
                                                     <i class="bi bi-grid-3x3-gap"></i> Todos
                                                 </div>
-                                                <div class="dropdown-filtro-subitem" data-situacao="pago">
+                                                <div class="dropdown-filtro-subitem" data-filtro-situacao="pago">
                                                     <i class="bi bi-check-circle"></i> Pago
                                                 </div>
-                                                <div class="dropdown-filtro-subitem" data-situacao="recebido">
+                                                <div class="dropdown-filtro-subitem" data-filtro-situacao="recebido">
                                                     <i class="bi bi-check-circle"></i> Recebido
                                                 </div>
-                                                <div class="dropdown-filtro-subitem" data-situacao="pendente">
+                                                <div class="dropdown-filtro-subitem" data-filtro-situacao="pendente">
                                                     <i class="bi bi-clock"></i> Pendente
                                                 </div>
-                                                <div class="dropdown-filtro-subitem" data-situacao="cancelado">
+                                                <div class="dropdown-filtro-subitem" data-filtro-situacao="cancelado">
                                                     <i class="bi bi-x-circle"></i> Cancelado
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <input type="text" id="filtro-busca-fin"
+
+                                <!-- Input Busca -->
+                                <input type="search" id="filtro-busca-fin"
                                     class="form-control form-control-sm rounded-pill input-filtro-fin"
                                     placeholder="Buscar..." autocomplete="off">
-                                <button id="btn-toggle-valores" class="btn-olhinho-clean" title="Mostrar/Ocultar Valores">
-                                    <i class="bi bi-eye-slash"></i>
+
+                                <!-- Botão Olhinho — usa Bootstrap Icons (bi) -->
+                                <button type="button" class="btn-olhinho-clean" id="btn-toggle-valores"
+                                    title="Mostrar/Ocultar valores">
+                                    <i class="bi bi-eye"></i>
                                 </button>
-                                <button id="btn-novo-fin" class="btn btn-danger btn-sm rounded-pill px-3 btn-novo-fin-action">
+
+                                <!-- Botão Novo -->
+                                <button id="btn-novo-fin"
+                                    class="btn btn-danger btn-sm rounded-pill px-3 btn-novo-fin-action" type="button">
                                     <i class="bi bi-plus-lg"></i> Novo
                                 </button>
                             </div>
+
+                            <!-- Cards Resumo -->
                             <div class="row g-2 mb-3" id="cards-resumo-fin">
                                 <div class="col-6 col-md-3">
                                     <div class="fin-card-resumo fin-card-resumo-receita">
@@ -130,14 +147,18 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Tabela Todos -->
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle border-0 mb-0 fin-table-todos" id="tabela-fin-todos">
+                                <table class="table table-hover align-middle border-0 mb-0 fin-table-todos"
+                                    id="tabela-fin-todos">
                                     <thead class="text-uppercase tabela-fin-head">
                                         <tr>
                                             <th class="ps-3 border-0 fw-normal" style="width:14.28%">
                                                 <span class="d-inline-flex align-items-center gap-1">
                                                     Data
-                                                    <button class="btn-sort-data" id="btn-sort-data-todos" title="Ordenar por data">
+                                                    <button class="btn-sort-data" id="btn-sort-data-todos"
+                                                        title="Ordenar por data" type="button">
                                                         <i class="bi bi-arrow-down" id="icon-sort-data-todos"></i>
                                                     </button>
                                                 </span>
@@ -164,20 +185,28 @@
                         <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
                             <small id="fin-pag-info-todos" class="text-muted" style="font-size:0.72rem;">0 registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-todos"><i class="bi bi-chevron-left"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-todos" type="button"><i class="bi bi-chevron-left"></i></button>
                                 <button class="btn btn-light btn-sm" id="fin-pag-label-todos" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-todos"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-todos" type="button"><i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- ══════════ ABA CAIXA ══════════ -->
                     <div id="fin-tab-content-caixa" class="fin-tab-content">
                         <div class="p-3">
                             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <input type="date" id="caixa-data-inicio" class="form-control form-control-sm rounded-pill" style="width:145px;font-size:.74rem;">
+                                    <input type="date" id="caixa-data-inicio"
+                                        class="form-control form-control-sm rounded-pill"
+                                        style="width:145px;font-size:.74rem;">
                                     <span class="text-muted" style="font-size:.72rem;">até</span>
-                                    <input type="date" id="caixa-data-fim" class="form-control form-control-sm rounded-pill" style="width:145px;font-size:.74rem;">
-                                    <button id="btn-filtrar-caixa" class="btn btn-outline-danger btn-sm rounded-pill px-3" style="font-size:.74rem;">
+                                    <input type="date" id="caixa-data-fim"
+                                        class="form-control form-control-sm rounded-pill"
+                                        style="width:145px;font-size:.74rem;">
+                                    <button id="btn-filtrar-caixa"
+                                        class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                                        style="font-size:.74rem;" type="button">
                                         <i class="bi bi-funnel me-1"></i>Filtrar
                                     </button>
                                 </div>
@@ -189,7 +218,8 @@
                                             <i class="bi bi-wallet2"></i>
                                         </div>
                                         <span class="rdo-pay-title">RDOPay</span>
-                                        <button class="rdo-pay-eye" id="btn-toggle-caixa-valores" title="Mostrar/Ocultar">
+                                        <button class="rdo-pay-eye" id="btn-toggle-caixa-valores"
+                                            title="Mostrar/Ocultar" type="button">
                                             <i class="bi bi-eye-slash" id="icon-toggle-caixa-val"></i>
                                         </button>
                                     </div>
@@ -246,7 +276,8 @@
                                 </div>
                             </div>
                             <div class="table-responsive mt-3">
-                                <table class="table table-hover align-middle border-0 mb-0 fin-table-caixa" id="tabela-fin-caixa">
+                                <table class="table table-hover align-middle border-0 mb-0 fin-table-caixa"
+                                    id="tabela-fin-caixa">
                                     <thead class="text-uppercase tabela-fin-head">
                                         <tr>
                                             <th class="ps-3 border-0 fw-normal">Data</th>
@@ -270,24 +301,30 @@
                         <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
                             <small id="fin-pag-info-caixa" class="text-muted" style="font-size:0.72rem;">0 registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-caixa"><i class="bi bi-chevron-left"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-caixa" type="button"><i class="bi bi-chevron-left"></i></button>
                                 <button class="btn btn-light btn-sm" id="fin-pag-label-caixa" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-caixa"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-caixa" type="button"><i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- ══════════ ABA EXTRATO ══════════ -->
                     <div id="fin-tab-content-extrato" class="fin-tab-content">
                         <div class="p-3">
                             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <button class="extrato-periodo-btn active" data-periodo="diario">Diário</button>
-                                    <button class="extrato-periodo-btn" data-periodo="semanal">Semanal</button>
-                                    <button class="extrato-periodo-btn" data-periodo="quinzenal">Quinzenal</button>
-                                    <button class="extrato-periodo-btn" data-periodo="mensal">Mensal</button>
+                                    <button class="extrato-periodo-btn active" data-periodo="diario" type="button">Diário</button>
+                                    <button class="extrato-periodo-btn" data-periodo="semanal" type="button">Semanal</button>
+                                    <button class="extrato-periodo-btn" data-periodo="quinzenal" type="button">Quinzenal</button>
+                                    <button class="extrato-periodo-btn" data-periodo="mensal" type="button">Mensal</button>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <input type="date" id="extrato-data-ref" class="form-control form-control-sm rounded-pill" style="width:155px;font-size:.74rem;">
-                                    <button id="btn-gerar-extrato" class="btn btn-outline-danger btn-sm rounded-pill px-3" style="font-size:.74rem;">
+                                    <input type="date" id="extrato-data-ref"
+                                        class="form-control form-control-sm rounded-pill"
+                                        style="width:155px;font-size:.74rem;">
+                                    <button id="btn-gerar-extrato"
+                                        class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                                        style="font-size:.74rem;" type="button">
                                         <i class="bi bi-file-earmark-text me-1"></i>Gerar
                                     </button>
                                 </div>
@@ -321,7 +358,8 @@
                                 </div>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle border-0 mb-0 fin-table-extrato" id="tabela-fin-extrato">
+                                <table class="table table-hover align-middle border-0 mb-0 fin-table-extrato"
+                                    id="tabela-fin-extrato">
                                     <thead class="text-uppercase tabela-fin-head">
                                         <tr>
                                             <th class="ps-3 border-0 fw-normal">Data</th>
@@ -347,9 +385,9 @@
                         <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center px-3 pb-3">
                             <small id="fin-pag-info-extrato" class="text-muted" style="font-size:0.72rem;">0 registros</small>
                             <div class="btn-group shadow-sm">
-                                <button class="btn btn-light btn-sm" id="fin-pag-prev-extrato"><i class="bi bi-chevron-left"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-prev-extrato" type="button"><i class="bi bi-chevron-left"></i></button>
                                 <button class="btn btn-light btn-sm" id="fin-pag-label-extrato" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
-                                <button class="btn btn-light btn-sm" id="fin-pag-next-extrato"><i class="bi bi-chevron-right"></i></button>
+                                <button class="btn btn-light btn-sm" id="fin-pag-next-extrato" type="button"><i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
                     </div>
@@ -357,6 +395,8 @@
             </div>
         </div>
     </div>
+
+    <!-- ══════════ MODAIS ══════════ -->
     <div class="modal fade" id="modalPix" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -376,6 +416,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal fade" id="modalAdicionarDinheiro" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -404,6 +445,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal fade" id="modalTransferir" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -436,6 +478,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal fade" id="modalExtratoCaixa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -455,6 +498,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal fade" id="modalConfirmDeleteFin" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 rounded-4 shadow">

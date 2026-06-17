@@ -1161,29 +1161,48 @@
     background: rgba(220, 53, 69, 0.04);
 }
 
+/* ═══════════════════════════════════════════
+   BOTÃO OLHINHO — SEMPRE VISÍVEL
+   Cinza = valores visíveis (ativo)
+   Vermelho = valores ocultos (desativado)
+   ═══════════════════════════════════════════ */
 .btn-olhinho-clean {
     background: none;
     border: none;
     outline: none;
     padding: 4px 6px;
     font-size: 1.15rem;
-    color: #6c757d;
     cursor: pointer;
     transition: color 0.2s ease, transform 0.2s ease;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    /* Estado padrão: cinza (valores visíveis) */
+    color: #adb5bd;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .btn-olhinho-clean:hover {
-    color: #dc3545;
     transform: scale(1.15);
 }
 
 .btn-olhinho-clean:focus {
     outline: none;
     box-shadow: none;
+}
+
+.btn-olhinho-clean.oculto {
+    color: #dc3545;
+}
+
+.btn-olhinho-clean.oculto:hover {
+    color: #a71d31;
+}
+
+.btn-olhinho-clean:not(.oculto):hover {
+    color: #6c757d;
 }
 
 @media (max-width: 768px) {

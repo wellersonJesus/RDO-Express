@@ -237,70 +237,96 @@
         }
 
         // ═══════════════════════════════════════════
-        // 3. DROPDOWN FILTRO TIPO (Todos / Entradas / Saídas)
+        // 3. DROPDOWN FILTRO TIPO + SITUAÇÃO (unificado)
         // ═══════════════════════════════════════════
-        if (els.btnFiltro && els.dropdownMenu) {
-            els.btnFiltro.addEventListener('click', function (e) {
+        var wrapperFiltro = document.getElementById('dropdown-filtro-wrapper-fin');
+        var btnFiltro = document.getElementById('btn-filtro-fin');
+        var menuFiltro = document.getElementById('dropdown-filtro-menu-fin');
+        var labelFiltro = document.getElementById('label-filtro-fin');
+        var btnSubSituacao = document.getElementById('btn-sub-situacao-fin');
+        var submenuSituacao = document.getElementById('submenu-situacao-fin');
+
+        if (btnFiltro && menuFiltro && wrapperFiltro) {
+
+            // Abre / fecha dropdown principal
+            btnFiltro.addEventListener('click', function (e) {
+                e.preventDefault();
                 e.stopPropagation();
-                els.dropdownMenu.classList.toggle('show');
+                wrapperFiltro.classList.toggle('open');
             });
 
+            // Fecha ao clicar fora
             document.addEventListener('click', function (e) {
-                if (els.dropdownWrapper && !els.dropdownWrapper.contains(e.target)) {
-                    els.dropdownMenu.classList.remove('show');
+                if (!wrapperFiltro.contains(e.target)) {
+                    wrapperFiltro.classList.remove('open');
                 }
             });
 
-            els.dropdownMenu.querySelectorAll('[data-filtro-tipo]').forEach(function (item) {
+            // Clique nos itens de tipo (Todos / Receitas / Despesas)
+            menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-tipo]').forEach(function (item) {
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
+                    e.stopPropagation();
+
                     var tipo = this.getAttribute('data-filtro-tipo');
                     state.filtroTipo = tipo || 'todos';
                     state.todos.pagina = 1;
 
-                    var labelMap = { todos: 'Todos', entrada: 'Entradas', saida: 'Saídas' };
-                    if (els.filtroLabel) els.filtroLabel.textContent = labelMap[state.filtroTipo] || 'Todos';
+                    // Atualiza label do botão
+                    var labelMap = { todos: 'Todos', entrada: 'Receitas', saida: 'Despesas' };
+                    if (labelFiltro) labelFiltro.textContent = labelMap[state.filtroTipo] || 'Todos';
 
-                    els.dropdownMenu.classList.remove('show');
+                    // Marca item ativo
+                    menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-tipo]').forEach(function (el) {
+                        el.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    wrapperFiltro.classList.remove('open');
                     renderTodos();
                 });
             });
-        }
 
-        // ═══════════════════════════════════════════
-        // 4. FILTRO POR SITUAÇÃO
-        // ═══════════════════════════════════════════
-        if (els.btnSubSituacao) {
-            var situacaoMenu = els.btnSubSituacao.closest('.dropdown');
-            var situacaoDropdown = situacaoMenu ? situacaoMenu.querySelector('.dropdown-menu') : null;
+            // Sub-dropdown de situação: abrir/fechar
+            if (btnSubSituacao) {
+                var parentHasSub = btnSubSituacao.closest('.dropdown-filtro-item-has-sub');
 
-            if (situacaoDropdown) {
-                els.btnSubSituacao.addEventListener('click', function (e) {
+                btnSubSituacao.addEventListener('click', function (e) {
+                    e.preventDefault();
                     e.stopPropagation();
-                    situacaoDropdown.classList.toggle('show');
-                });
-
-                document.addEventListener('click', function (e) {
-                    if (situacaoMenu && !situacaoMenu.contains(e.target)) {
-                        situacaoDropdown.classList.remove('show');
+                    if (parentHasSub) {
+                        parentHasSub.classList.toggle('sub-open');
                     }
                 });
+            }
 
-                situacaoDropdown.querySelectorAll('[data-filtro-situacao]').forEach(function (item) {
+            // Clique nos subitens de situação
+            if (submenuSituacao) {
+                submenuSituacao.querySelectorAll('.dropdown-filtro-subitem[data-filtro-situacao]').forEach(function (item) {
                     item.addEventListener('click', function (e) {
                         e.preventDefault();
+                        e.stopPropagation();
+
                         state.filtroSituacao = this.getAttribute('data-filtro-situacao') || 'todos';
                         state.todos.pagina = 1;
-                        situacaoDropdown.classList.remove('show');
 
-                        var labelSit = {
-                            todos: 'Situação',
-                            pago: 'Pago',
-                            recebido: 'Recebido',
-                            pendente: 'Pendente',
-                            cancelado: 'Cancelado'
-                        };
-                        els.btnSubSituacao.innerHTML = '<i class="fas fa-filter me-1"></i>' + (labelSit[state.filtroSituacao] || 'Situação');
+                        // Marca subitem ativo
+                        submenuSituacao.querySelectorAll('.dropdown-filtro-subitem').forEach(function (el) {
+                            el.classList.remove('active');
+                        });
+                        this.classList.add('active');
+
+                        // Atualiza visual do label pai se filtro ativo
+                        var parentSub = btnSubSituacao ? btnSubSituacao.closest('.dropdown-filtro-item-has-sub') : null;
+                        if (parentSub) {
+                            if (state.filtroSituacao !== 'todos') {
+                                parentSub.classList.add('active');
+                            } else {
+                                parentSub.classList.remove('active');
+                            }
+                        }
+
+                        wrapperFiltro.classList.remove('open');
                         renderTodos();
                     });
                 });
@@ -308,15 +334,15 @@
         }
 
         // ═══════════════════════════════════════════
-        // 5. ORDENAÇÃO POR DATA
+        // 4. ORDENAÇÃO POR DATA
         // ═══════════════════════════════════════════
         if (els.btnSortData) {
             els.btnSortData.addEventListener('click', function () {
                 state.sortDataDesc = !state.sortDataDesc;
                 if (els.iconSortData) {
                     els.iconSortData.className = state.sortDataDesc
-                        ? 'fas fa-sort-amount-down'
-                        : 'fas fa-sort-amount-up';
+                        ? 'bi bi-arrow-down'
+                        : 'bi bi-arrow-up';
                 }
                 state.todos.pagina = 1;
                 renderTodos();
@@ -324,7 +350,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 6. PAGINAÇÃO — ABA TODOS
+        // 5. PAGINAÇÃO — ABA TODOS
         // ═══════════════════════════════════════════
         if (els.pagPrevTodos) {
             els.pagPrevTodos.addEventListener('click', function () {
@@ -344,7 +370,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 7. PAGINAÇÃO — ABA CAIXA
+        // 6. PAGINAÇÃO — ABA CAIXA
         // ═══════════════════════════════════════════
         if (els.pagPrevCaixa) {
             els.pagPrevCaixa.addEventListener('click', function () {
@@ -364,7 +390,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 8. PAGINAÇÃO — ABA EXTRATO
+        // 7. PAGINAÇÃO — ABA EXTRATO
         // ═══════════════════════════════════════════
         if (els.pagPrevExtrato) {
             els.pagPrevExtrato.addEventListener('click', function () {
@@ -384,7 +410,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 9. BOTÃO FILTRAR CAIXA (período)
+        // 8. BOTÃO FILTRAR CAIXA (período)
         // ═══════════════════════════════════════════
         if (els.btnFiltrarCaixa) {
             els.btnFiltrarCaixa.addEventListener('click', function () {
@@ -396,14 +422,15 @@
         }
 
         // ═══════════════════════════════════════════
-        // 10. BOTÃO GERAR EXTRATO
+        // 9. BOTÃO GERAR EXTRATO
         // ═══════════════════════════════════════════
         if (els.btnGerarExtrato) {
             els.btnGerarExtrato.addEventListener('click', function () {
                 state.extrato.dataRef = els.extratoDataRef ? els.extratoDataRef.value : '';
 
-                var periodoSel = document.querySelector('input[name="extrato-periodo"]:checked');
-                state.extrato.periodo = periodoSel ? periodoSel.value : 'diario';
+                // Pega o botão de período ativo
+                var periodoAtivo = document.querySelector('.extrato-periodo-btn.active');
+                state.extrato.periodo = periodoAtivo ? periodoAtivo.getAttribute('data-periodo') : 'diario';
 
                 state.extrato.pagina = 1;
                 renderExtrato();
@@ -411,17 +438,29 @@
         }
 
         // ═══════════════════════════════════════════
-        // 11. BOTÃO TOGGLE VALORES (olho)
+        // 10. BOTÃO TOGGLE VALORES (olhinho) — SEMPRE VISÍVEL
+        //     Cinza (#adb5bd) = valores visíveis
+        //     Vermelho (#dc3545) = valores ocultos
         // ═══════════════════════════════════════════
-        if (els.btnToggle) {
-            els.btnToggle.addEventListener('click', function () {
+        var btnOlhinho = document.getElementById('btn-toggle-valores');
+        if (btnOlhinho) {
+            btnOlhinho.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
                 state.valoresVisiveis = !state.valoresVisiveis;
 
                 var icone = this.querySelector('i');
                 if (icone) {
-                    icone.className = state.valoresVisiveis
-                        ? 'fas fa-eye'
-                        : 'fas fa-eye-slash';
+                    if (state.valoresVisiveis) {
+                        icone.className = 'bi bi-eye';
+                        this.classList.remove('oculto');
+                        this.title = 'Ocultar valores';
+                    } else {
+                        icone.className = 'bi bi-eye-slash';
+                        this.classList.add('oculto');
+                        this.title = 'Mostrar valores';
+                    }
                 }
 
                 renderTodos();
@@ -431,7 +470,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 12. BOTÃO REFRESH (recarregar dados)
+        // 11. BOTÃO REFRESH (recarregar dados)
         // ═══════════════════════════════════════════
         if (els.btnRefresh) {
             els.btnRefresh.addEventListener('click', function () {
@@ -440,7 +479,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 13. BOTÃO NOVO REGISTRO
+        // 12. BOTÃO NOVO REGISTRO
         // ═══════════════════════════════════════════
         if (els.btnNovo) {
             els.btnNovo.addEventListener('click', function () {
@@ -449,7 +488,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 14. BOTÃO SALVAR (modal form)
+        // 13. BOTÃO SALVAR (modal form)
         // ═══════════════════════════════════════════
         if (els.btnSalvar) {
             els.btnSalvar.addEventListener('click', function () {
@@ -458,7 +497,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 15. PREVIEW DO VALOR NO MODAL
+        // 14. PREVIEW DO VALOR NO MODAL
         // ═══════════════════════════════════════════
         if (els.finValor) {
             els.finValor.addEventListener('input', function () {
@@ -467,7 +506,7 @@
         }
 
         // ═══════════════════════════════════════════
-        // 16. TIPO MUDA COR DO DESTAQUE NO MODAL
+        // 15. TIPO MUDA COR DO DESTAQUE NO MODAL
         // ═══════════════════════════════════════════
         if (els.finTipo) {
             els.finTipo.addEventListener('change', function () {
@@ -476,10 +515,9 @@
         }
 
         // ═══════════════════════════════════════════
-        // 17. ATALHOS DE TECLADO
+        // 16. ATALHOS DE TECLADO
         // ═══════════════════════════════════════════
         document.addEventListener('keydown', function (e) {
-            // ESC fecha modais
             if (e.key === 'Escape') {
                 if (els.modalEl && els.modalEl.classList.contains('show')) {
                     fecharModal(els.modalEl);
@@ -488,12 +526,10 @@
                     fecharModal(els.modalViewEl);
                 }
             }
-            // Ctrl+Shift+N = novo registro
             if (e.ctrlKey && e.shiftKey && e.key === 'N') {
                 e.preventDefault();
                 abrirModalNovo();
             }
-            // "/" foca no campo de busca
             if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
                 e.preventDefault();
                 if (els.filtroBusca) els.filtroBusca.focus();
@@ -501,11 +537,15 @@
         });
 
         // ═══════════════════════════════════════════
-        // 18. SELEÇÃO PERIODO EXTRATO (radio buttons)
+        // 17. SELEÇÃO PERÍODO EXTRATO (botões toggle)
         // ═══════════════════════════════════════════
-        document.querySelectorAll('input[name="extrato-periodo"]').forEach(function (radio) {
-            radio.addEventListener('change', function () {
-                state.extrato.periodo = this.value;
+        document.querySelectorAll('.extrato-periodo-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.extrato-periodo-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+                state.extrato.periodo = this.getAttribute('data-periodo') || 'diario';
             });
         });
     }
