@@ -171,141 +171,343 @@
     }
 
     function registrarEventos() {
+
+        // ═══════════════════════════════════════════
+        // 1. TROCA DE ABAS
+        // ═══════════════════════════════════════════
         document.querySelectorAll('.fin-tab').forEach(function (tab) {
             tab.addEventListener('click', function (e) {
                 e.preventDefault();
                 var t = this.getAttribute('data-tab');
                 if (!t) return;
+
                 state.tabAtual = t;
-                document.querySelectorAll('.fin-tab').forEach(function (el) { el.classList.remove('active'); });
+
+                document.querySelectorAll('.fin-tab').forEach(function (el) {
+                    el.classList.remove('active');
+                });
                 this.classList.add('active');
-                document.querySelectorAll('.fin-tab-content').forEach(function (el) { el.classList.remove('active'); });
+
+                document.querySelectorAll('.fin-tab-content').forEach(function (el) {
+                    el.classList.remove('active');
+                });
                 var content = document.getElementById('fin-tab-content-' + t);
                 if (content) content.classList.add('active');
+
+                if (t === 'todos') renderTodos();
                 if (t === 'caixa') renderCaixa();
+                if (t === 'extrato') renderExtrato();
             });
         });
 
-        if (els.btnRefresh) els.btnRefresh.addEventListener('click', function () { carregarDados(); });
-        if (els.btnNovo) els.btnNovo.addEventListener('click', function () { abrirModal(null); });
-        if (els.btnToggle) els.btnToggle.addEventListener('click', function () { toggleValores(); });
-        if (els.btnSalvar) els.btnSalvar.addEventListener('click', function () { salvar(); });
+        // ═══════════════════════════════════════════
+        // 2. BUSCA INTELIGENTE (debounce + enter + clear)
+        // ═══════════════════════════════════════════
+        if (els.filtroBusca) {
+            var _buscaTimer = null;
 
+            els.filtroBusca.addEventListener('input', function () {
+                var self = this;
+                if (_buscaTimer) clearTimeout(_buscaTimer);
+                _buscaTimer = setTimeout(function () {
+                    state.filtroBusca = self.value;
+                    state.todos.pagina = 1;
+                    renderTodos();
+                }, 180);
+            });
+
+            els.filtroBusca.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (_buscaTimer) clearTimeout(_buscaTimer);
+                    state.filtroBusca = this.value;
+                    state.todos.pagina = 1;
+                    renderTodos();
+                }
+            });
+
+            els.filtroBusca.addEventListener('search', function () {
+                if (!this.value) {
+                    if (_buscaTimer) clearTimeout(_buscaTimer);
+                    state.filtroBusca = '';
+                    state.todos.pagina = 1;
+                    renderTodos();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 3. DROPDOWN FILTRO TIPO (Todos / Entradas / Saídas)
+        // ═══════════════════════════════════════════
+        if (els.btnFiltro && els.dropdownMenu) {
+            els.btnFiltro.addEventListener('click', function (e) {
+                e.stopPropagation();
+                els.dropdownMenu.classList.toggle('show');
+            });
+
+            document.addEventListener('click', function (e) {
+                if (els.dropdownWrapper && !els.dropdownWrapper.contains(e.target)) {
+                    els.dropdownMenu.classList.remove('show');
+                }
+            });
+
+            els.dropdownMenu.querySelectorAll('[data-filtro-tipo]').forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var tipo = this.getAttribute('data-filtro-tipo');
+                    state.filtroTipo = tipo || 'todos';
+                    state.todos.pagina = 1;
+
+                    var labelMap = { todos: 'Todos', entrada: 'Entradas', saida: 'Saídas' };
+                    if (els.filtroLabel) els.filtroLabel.textContent = labelMap[state.filtroTipo] || 'Todos';
+
+                    els.dropdownMenu.classList.remove('show');
+                    renderTodos();
+                });
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 4. FILTRO POR SITUAÇÃO
+        // ═══════════════════════════════════════════
+        if (els.btnSubSituacao) {
+            var situacaoMenu = els.btnSubSituacao.closest('.dropdown');
+            var situacaoDropdown = situacaoMenu ? situacaoMenu.querySelector('.dropdown-menu') : null;
+
+            if (situacaoDropdown) {
+                els.btnSubSituacao.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    situacaoDropdown.classList.toggle('show');
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (situacaoMenu && !situacaoMenu.contains(e.target)) {
+                        situacaoDropdown.classList.remove('show');
+                    }
+                });
+
+                situacaoDropdown.querySelectorAll('[data-filtro-situacao]').forEach(function (item) {
+                    item.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        state.filtroSituacao = this.getAttribute('data-filtro-situacao') || 'todos';
+                        state.todos.pagina = 1;
+                        situacaoDropdown.classList.remove('show');
+
+                        var labelSit = {
+                            todos: 'Situação',
+                            pago: 'Pago',
+                            recebido: 'Recebido',
+                            pendente: 'Pendente',
+                            cancelado: 'Cancelado'
+                        };
+                        els.btnSubSituacao.innerHTML = '<i class="fas fa-filter me-1"></i>' + (labelSit[state.filtroSituacao] || 'Situação');
+                        renderTodos();
+                    });
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        // 5. ORDENAÇÃO POR DATA
+        // ═══════════════════════════════════════════
         if (els.btnSortData) {
             els.btnSortData.addEventListener('click', function () {
                 state.sortDataDesc = !state.sortDataDesc;
-                atualizarIconeSort();
+                if (els.iconSortData) {
+                    els.iconSortData.className = state.sortDataDesc
+                        ? 'fas fa-sort-amount-down'
+                        : 'fas fa-sort-amount-up';
+                }
                 state.todos.pagina = 1;
                 renderTodos();
             });
         }
 
-        if (els.filtroBusca) {
-            els.filtroBusca.addEventListener('input', function () {
-                state.filtroBusca = this.value.trim().toLowerCase();
-                state.todos.pagina = 1;
+        // ═══════════════════════════════════════════
+        // 6. PAGINAÇÃO — ABA TODOS
+        // ═══════════════════════════════════════════
+        if (els.pagPrevTodos) {
+            els.pagPrevTodos.addEventListener('click', function () {
+                if (state.todos.pagina > 1) {
+                    state.todos.pagina--;
+                    renderTodos();
+                }
+            });
+        }
+        if (els.pagNextTodos) {
+            els.pagNextTodos.addEventListener('click', function () {
+                if (state.todos.pagina < state.todos.totalPag) {
+                    state.todos.pagina++;
+                    renderTodos();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 7. PAGINAÇÃO — ABA CAIXA
+        // ═══════════════════════════════════════════
+        if (els.pagPrevCaixa) {
+            els.pagPrevCaixa.addEventListener('click', function () {
+                if (state.caixa.pagina > 1) {
+                    state.caixa.pagina--;
+                    renderCaixa();
+                }
+            });
+        }
+        if (els.pagNextCaixa) {
+            els.pagNextCaixa.addEventListener('click', function () {
+                if (state.caixa.pagina < state.caixa.totalPag) {
+                    state.caixa.pagina++;
+                    renderCaixa();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 8. PAGINAÇÃO — ABA EXTRATO
+        // ═══════════════════════════════════════════
+        if (els.pagPrevExtrato) {
+            els.pagPrevExtrato.addEventListener('click', function () {
+                if (state.extrato.pagina > 1) {
+                    state.extrato.pagina--;
+                    renderExtrato();
+                }
+            });
+        }
+        if (els.pagNextExtrato) {
+            els.pagNextExtrato.addEventListener('click', function () {
+                if (state.extrato.pagina < state.extrato.totalPag) {
+                    state.extrato.pagina++;
+                    renderExtrato();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 9. BOTÃO FILTRAR CAIXA (período)
+        // ═══════════════════════════════════════════
+        if (els.btnFiltrarCaixa) {
+            els.btnFiltrarCaixa.addEventListener('click', function () {
+                state.caixa.dataInicio = els.caixaDataInicio ? els.caixaDataInicio.value : '';
+                state.caixa.dataFim = els.caixaDataFim ? els.caixaDataFim.value : '';
+                state.caixa.pagina = 1;
+                renderCaixa();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 10. BOTÃO GERAR EXTRATO
+        // ═══════════════════════════════════════════
+        if (els.btnGerarExtrato) {
+            els.btnGerarExtrato.addEventListener('click', function () {
+                state.extrato.dataRef = els.extratoDataRef ? els.extratoDataRef.value : '';
+
+                var periodoSel = document.querySelector('input[name="extrato-periodo"]:checked');
+                state.extrato.periodo = periodoSel ? periodoSel.value : 'diario';
+
+                state.extrato.pagina = 1;
+                renderExtrato();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 11. BOTÃO TOGGLE VALORES (olho)
+        // ═══════════════════════════════════════════
+        if (els.btnToggle) {
+            els.btnToggle.addEventListener('click', function () {
+                state.valoresVisiveis = !state.valoresVisiveis;
+
+                var icone = this.querySelector('i');
+                if (icone) {
+                    icone.className = state.valoresVisiveis
+                        ? 'fas fa-eye'
+                        : 'fas fa-eye-slash';
+                }
+
                 renderTodos();
+                if (state.tabAtual === 'caixa') renderCaixa();
+                if (state.tabAtual === 'extrato') renderExtrato();
             });
         }
 
-        if (els.btnFiltro) {
-            els.btnFiltro.addEventListener('click', function (e) {
-                e.stopPropagation();
-                if (els.dropdownWrapper) els.dropdownWrapper.classList.toggle('open');
+        // ═══════════════════════════════════════════
+        // 12. BOTÃO REFRESH (recarregar dados)
+        // ═══════════════════════════════════════════
+        if (els.btnRefresh) {
+            els.btnRefresh.addEventListener('click', function () {
+                carregarDados();
             });
         }
 
-        document.addEventListener('click', function (e) {
-            if (els.dropdownWrapper && !els.dropdownWrapper.contains(e.target)) {
-                els.dropdownWrapper.classList.remove('open');
+        // ═══════════════════════════════════════════
+        // 13. BOTÃO NOVO REGISTRO
+        // ═══════════════════════════════════════════
+        if (els.btnNovo) {
+            els.btnNovo.addEventListener('click', function () {
+                abrirModalNovo();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 14. BOTÃO SALVAR (modal form)
+        // ═══════════════════════════════════════════
+        if (els.btnSalvar) {
+            els.btnSalvar.addEventListener('click', function () {
+                salvarRegistro();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 15. PREVIEW DO VALOR NO MODAL
+        // ═══════════════════════════════════════════
+        if (els.finValor) {
+            els.finValor.addEventListener('input', function () {
+                atualizarPreviewValor();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 16. TIPO MUDA COR DO DESTAQUE NO MODAL
+        // ═══════════════════════════════════════════
+        if (els.finTipo) {
+            els.finTipo.addEventListener('change', function () {
+                atualizarPreviewValor();
+            });
+        }
+
+        // ═══════════════════════════════════════════
+        // 17. ATALHOS DE TECLADO
+        // ═══════════════════════════════════════════
+        document.addEventListener('keydown', function (e) {
+            // ESC fecha modais
+            if (e.key === 'Escape') {
+                if (els.modalEl && els.modalEl.classList.contains('show')) {
+                    fecharModal(els.modalEl);
+                }
+                if (els.modalViewEl && els.modalViewEl.classList.contains('show')) {
+                    fecharModal(els.modalViewEl);
+                }
+            }
+            // Ctrl+Shift+N = novo registro
+            if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+                e.preventDefault();
+                abrirModalNovo();
+            }
+            // "/" foca no campo de busca
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                if (els.filtroBusca) els.filtroBusca.focus();
             }
         });
 
-        document.querySelectorAll('#dropdown-filtro-menu-fin > .dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)').forEach(function (item) {
-            item.addEventListener('click', function () {
-                var filtro = this.getAttribute('data-filtro');
-                state.filtroTipo = filtro;
-                state.filtroSituacao = 'todos';
-                state.todos.pagina = 1;
-                document.querySelectorAll('#dropdown-filtro-menu-fin > .dropdown-filtro-item').forEach(function (el) { el.classList.remove('active'); });
-                document.querySelectorAll('#submenu-situacao-fin .dropdown-filtro-subitem').forEach(function (el) { el.classList.remove('active'); });
-                this.classList.add('active');
-                var labels = { todos: 'Todos', entrada: 'Receitas', saida: 'Despesas' };
-                if (els.filtroLabel) els.filtroLabel.textContent = labels[filtro] || 'Todos';
-                if (els.dropdownWrapper) els.dropdownWrapper.classList.remove('open');
-                renderTodos();
+        // ═══════════════════════════════════════════
+        // 18. SELEÇÃO PERIODO EXTRATO (radio buttons)
+        // ═══════════════════════════════════════════
+        document.querySelectorAll('input[name="extrato-periodo"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                state.extrato.periodo = this.value;
             });
         });
-
-        if (els.btnSubSituacao) {
-            els.btnSubSituacao.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var parent = this.closest('.dropdown-filtro-item-has-sub');
-                if (parent) parent.classList.toggle('sub-open');
-            });
-        }
-
-        document.querySelectorAll('#submenu-situacao-fin .dropdown-filtro-subitem').forEach(function (item) {
-            item.addEventListener('click', function () {
-                var sit = this.getAttribute('data-situacao');
-                state.filtroSituacao = sit;
-                state.filtroTipo = 'todos';
-                state.todos.pagina = 1;
-                document.querySelectorAll('#dropdown-filtro-menu-fin > .dropdown-filtro-item').forEach(function (el) { el.classList.remove('active'); });
-                document.querySelectorAll('#submenu-situacao-fin .dropdown-filtro-subitem').forEach(function (el) { el.classList.remove('active'); });
-                this.classList.add('active');
-                var parent = this.closest('.dropdown-filtro-item-has-sub');
-                if (parent) parent.classList.add('active');
-                var labelMap = { todos: 'Situa\u00e7\u00e3o', pago: 'Pago', recebido: 'Recebido', pendente: 'Pendente', cancelado: 'Cancelado' };
-                if (els.filtroLabel) els.filtroLabel.textContent = labelMap[sit] || 'Situa\u00e7\u00e3o';
-                if (els.dropdownWrapper) els.dropdownWrapper.classList.remove('open');
-                renderTodos();
-            });
-        });
-
-        if (els.pagPrevTodos) els.pagPrevTodos.addEventListener('click', function () { if (state.todos.pagina > 1) { state.todos.pagina--; renderTodos(); } });
-        if (els.pagNextTodos) els.pagNextTodos.addEventListener('click', function () { if (state.todos.pagina < state.todos.totalPag) { state.todos.pagina++; renderTodos(); } });
-
-        if (els.btnFiltrarCaixa) els.btnFiltrarCaixa.addEventListener('click', function () { renderCaixa(); });
-        if (els.pagPrevCaixa) els.pagPrevCaixa.addEventListener('click', function () { if (state.caixa.pagina > 1) { state.caixa.pagina--; renderCaixaTabela(); } });
-        if (els.pagNextCaixa) els.pagNextCaixa.addEventListener('click', function () { if (state.caixa.pagina < state.caixa.totalPag) { state.caixa.pagina++; renderCaixaTabela(); } });
-
-        document.querySelectorAll('.extrato-periodo-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                document.querySelectorAll('.extrato-periodo-btn').forEach(function (b) { b.classList.remove('active'); });
-                this.classList.add('active');
-                state.extrato.periodo = this.getAttribute('data-periodo');
-            });
-        });
-
-        if (els.btnGerarExtrato) els.btnGerarExtrato.addEventListener('click', function () { gerarExtrato(); });
-        if (els.pagPrevExtrato) els.pagPrevExtrato.addEventListener('click', function () { if (state.extrato.pagina > 1) { state.extrato.pagina--; renderExtratoTabela(); } });
-        if (els.pagNextExtrato) els.pagNextExtrato.addEventListener('click', function () { if (state.extrato.pagina < state.extrato.totalPag) { state.extrato.pagina++; renderExtratoTabela(); } });
-
-        if (els.finValor) {
-            els.finValor.addEventListener('input', function () {
-                previewValor();
-            });
-        }
-
-        var btnToggleCaixa = document.getElementById('btn-toggle-caixa-valores');
-        if (btnToggleCaixa) {
-            btnToggleCaixa.addEventListener('click', function () {
-                state.valoresVisiveis = !state.valoresVisiveis;
-                var icon = document.getElementById('icon-toggle-caixa-val');
-                if (icon) icon.className = state.valoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
-                if (els.btnToggle) {
-                    var gi = els.btnToggle.querySelector('i');
-                    if (gi) gi.className = state.valoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
-                }
-                atualizarResumo();
-                atualizarResumoCaixa();
-                atualizarRdoPaySaldo();
-                renderTodos();
-                if (state.caixa.dadosFiltrados.length) renderCaixaTabela();
-                if (state.extrato.dados.length) gerarExtrato();
-            });
-        }
     }
 
     function atualizarIconeSort() {
@@ -402,20 +604,74 @@
         el.textContent = formatarMoeda(totalE - totalS);
     }
 
+    function removerAcentos(str) {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
     function dadosFiltradosTodos() {
+        var busca = state.filtroBusca;
         return state.cache.filter(function (d) {
+            // ── Filtro por tipo ──
             if (state.filtroTipo === 'entrada' && d.tipo !== 'entrada') return false;
             if (state.filtroTipo === 'saida' && d.tipo !== 'saida') return false;
+
+            // ── Filtro por situação ──
             if (state.filtroSituacao !== 'todos' && d.situacao !== state.filtroSituacao) return false;
-            if (state.filtroBusca) {
-                var busca = state.filtroBusca;
-                var match = (d.descricao || '').toLowerCase().indexOf(busca) !== -1 ||
-                    (d.motoboy || '').toLowerCase().indexOf(busca) !== -1 ||
-                    (d.idPedido || '').toString().toLowerCase().indexOf(busca) !== -1 ||
-                    (d.dataBR || '').indexOf(busca) !== -1 ||
-                    (d.id || '').toString().indexOf(busca) !== -1;
-                if (!match) return false;
+
+            // ── Busca inteligente ──
+            if (busca) {
+                // Normaliza a busca (lowercase + sem acentos)
+                var termo = removerAcentos(busca.toLowerCase().trim());
+                if (!termo) return true;
+
+                // Monta um "pool" com TODAS as informações pesquisáveis do registro
+                var valorFormatado = formatarMoeda(d.valor);                            // R$ 1.250,00
+                var valorSimples = (d.valor || 0).toFixed(2).replace('.', ',');          // 1250,00
+                var valorPonto = (d.valor || 0).toFixed(2);                             // 1250.00
+                var valorInt = String(Math.round(d.valor || 0));                        // 1250
+
+                var situacaoMap = {
+                    pago: 'pago',
+                    recebido: 'recebido',
+                    pendente: 'pendente',
+                    cancelado: 'cancelado'
+                };
+                var tipoMap = {
+                    entrada: 'receita entrada',
+                    saida: 'despesa saida saída'
+                };
+
+                var campos = [
+                    d.id,
+                    d.idPedido,
+                    d.descricao,
+                    d.motoboy,
+                    d.categoria,
+                    d.pagamento,
+                    d.observacao,
+                    d.dataBR,           // 17/06/2026
+                    d.dataDisplay,      // 17/06/26
+                    d.dataISO,          // 2026-06-17
+                    valorFormatado,     // R$ 1.250,00
+                    valorSimples,       // 1250,00
+                    valorPonto,         // 1250.00
+                    valorInt,           // 1250
+                    situacaoMap[d.situacao] || d.situacao,
+                    tipoMap[d.tipo] || d.tipo
+                ];
+
+                // Junta tudo numa string única normalizada
+                var pool = removerAcentos(
+                    campos.map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
+                );
+
+                // Suporte a busca com múltiplas palavras (todas devem casar)
+                var termos = termo.split(/\s+/);
+                for (var i = 0; i < termos.length; i++) {
+                    if (termos[i] && pool.indexOf(termos[i]) === -1) return false;
+                }
             }
+
             return true;
         });
     }
