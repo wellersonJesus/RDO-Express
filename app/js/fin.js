@@ -1,5 +1,8 @@
 (function () {
 
+    var EXTRATO_STORAGE_KEY = 'rdo_extratos_salvos';
+    var EXTRATO_MAX = 50;
+
     var state = {
         cache: [],
         caixaValoresVisiveis: false,
@@ -10,8 +13,7 @@
         fetching: false,
         sortDataDesc: true,
         todos: { pagina: 1, porPagina: 15, totalPag: 1 },
-        caixa: { pagina: 1, porPagina: 10, totalPag: 1, dataInicio: '', dataFim: '', dadosFiltrados: [] },
-        extrato: { extratosGerados: [], idCounter: 0 }
+        caixa: { pagina: 1, porPagina: 10, totalPag: 1, dataInicio: '', dataFim: '', dadosFiltrados: [] }
     };
 
     window.financeiroState = state;
@@ -107,7 +109,9 @@
             categoria: d.categoria || '',
             pagamento: d.pagamento || d.forma_pagamento || '',
             observacao: d.observacao || d.obs || '',
-            grupo: d.grupo || d.category || d.categoria || ''
+            grupo: d.grupo || d.category || d.categoria || '',
+            cliente: d.cliente || d.client || d.nome_cliente || '',
+            solicitante: d.solicitante || d.usuario || d.user || d.nome_solicitante || ''
         };
     }
 
@@ -161,6 +165,7 @@
     function formatDateBR(iso) {
         if (!iso) return '';
         var p = iso.split('-');
+        if (p.length !== 3) return iso;
         return p[2] + '/' + p[1] + '/' + p[0];
     }
 
@@ -174,14 +179,6 @@
     function getDiaSemanaCompleto(dataISO) {
         if (!dataISO) return '';
         var nomes = ['Domingo', 'Segunda-feira', 'Ter\u00e7a-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'S\u00e1bado'];
-        var partes = dataISO.split('-');
-        var dt = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
-        return nomes[dt.getDay()] || '';
-    }
-
-    function getDiaSemanaAbrev(dataISO) {
-        if (!dataISO) return '';
-        var nomes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S\u00e1b'];
         var partes = dataISO.split('-');
         var dt = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
         return nomes[dt.getDay()] || '';
@@ -269,12 +266,8 @@
     function copiarTextoClipboard(texto) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(texto)
-                .then(function () {
-                    finToast('Extrato copiado! Cole no WhatsApp ou onde preferir.', 'success');
-                })
-                .catch(function () {
-                    fallbackCopy(texto);
-                });
+                .then(function () { finToast('Extrato copiado! Cole no WhatsApp ou onde preferir.', 'success'); })
+                .catch(function () { fallbackCopy(texto); });
         } else {
             fallbackCopy(texto);
         }
@@ -282,8 +275,7 @@
 
     function aplicarMascaraValores() {
         var visivel = state.caixaValoresVisiveis;
-        var elementos = document.querySelectorAll('.fin-valor-caixa');
-        elementos.forEach(function (el) {
+        document.querySelectorAll('.fin-valor-caixa').forEach(function (el) {
             if (visivel) {
                 var real = el.getAttribute('data-valor-real');
                 if (real) el.textContent = real;
@@ -310,6 +302,7 @@
                 if (content) content.classList.add('active');
                 if (t === 'todos') renderTodos();
                 if (t === 'caixa') renderCaixa();
+                if (t === 'extrato') renderizarListaExtratos();
             });
         });
 
@@ -357,9 +350,7 @@
                 wrapperFiltro.classList.toggle('open');
             });
             document.addEventListener('click', function (e) {
-                if (!wrapperFiltro.contains(e.target)) {
-                    wrapperFiltro.classList.remove('open');
-                }
+                if (!wrapperFiltro.contains(e.target)) wrapperFiltro.classList.remove('open');
             });
             menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-tipo]').forEach(function (item) {
                 item.addEventListener('click', function (e) {
@@ -959,6 +950,64 @@
         if (els.extratoDataFim) els.extratoDataFim.value = toISO(hoje);
     }
 
+    function salvarExtratoStorage(extrato) {
+        var lista = carregarExtratosStorage();
+        var obj = {
+            id: extrato.id || ('ext_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+            titulo: extrato.titulo || extrato.origem || '-',
+            origem: extrato.origem || '-',
+            tagClass: extrato.tagClass || '',
+            tagLabel: extrato.tagLabel || '',
+            periodoLabel: extrato.periodoLabel || '',
+            criadoEm: extrato.criadoEm || new Date().toLocaleString('pt-BR'),
+            registros: (extrato.registros || []).map(function (r) {
+                return {
+                    dataISO: r.dataISO || '',
+                    dataBR: r.dataBR || '',
+                    descricao: r.descricao || '',
+                    motoboy: r.motoboy || '-',
+                    categoria: r.categoria || '',
+                    situacao: r.situacao || '',
+                    tipo: r.tipo || 'entrada',
+                    valor: r.valor || 0,
+                    idPedido: r.idPedido || '',
+                    _nomeCliente: r._nomeCliente || '',
+                    _solicitante: r._solicitante || '',
+                    _descricao: r._descricao || ''
+                };
+            })
+        };
+        lista.unshift(obj);
+        if (lista.length > EXTRATO_MAX) lista = lista.slice(0, EXTRATO_MAX);
+        try {
+            localStorage.setItem(EXTRATO_STORAGE_KEY, JSON.stringify(lista));
+        } catch (e) {}
+        return obj;
+    }
+
+    function carregarExtratosStorage() {
+        try {
+            var data = localStorage.getItem(EXTRATO_STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function removerExtratoStorage(id) {
+        var extratos = carregarExtratosStorage();
+        extratos = extratos.filter(function (ex) { return ex.id !== id; });
+        localStorage.setItem(EXTRATO_STORAGE_KEY, JSON.stringify(extratos));
+    }
+
+    function buscarExtratoStoragePorId(id) {
+        var extratos = carregarExtratosStorage();
+        for (var i = 0; i < extratos.length; i++) {
+            if (extratos[i].id === id) return extratos[i];
+        }
+        return null;
+    }
+
     function filtrarRegistrosExtrato(dataInicio, dataFim, tipoOrigem, nomeOrigem) {
         var resultado = [];
         for (var i = 0; i < state.cache.length; i++) {
@@ -979,186 +1028,268 @@
         return resultado;
     }
 
+    function carregarDadosPedidos(idsPedidos, callback) {
+        var mapa = {};
+        if (!idsPedidos || idsPedidos.length === 0) {
+            callback(mapa);
+            return;
+        }
+        var pendentes = idsPedidos.length;
+        function verificarFim() {
+            pendentes--;
+            if (pendentes <= 0) callback(mapa);
+        }
+        for (var i = 0; i < idsPedidos.length; i++) {
+            (function (idPed) {
+                firebase.database().ref('pedidos/' + idPed).once('value').then(function (snapPed) {
+                    var pedido = snapPed.val();
+                    if (pedido) {
+                        var idCliente = pedido.id_cliente || pedido.idCliente || '';
+                        var solicitante = pedido.solicitante || pedido.usuario || pedido.user || '-';
+                        var descricao = pedido.descricao || pedido.tipo_servico || pedido.servico || 'Corrida';
+                        if (idCliente) {
+                            firebase.database().ref('clientes/' + idCliente).once('value').then(function (snapCli) {
+                                var cli = snapCli.val();
+                                mapa[idPed] = {
+                                    nomeCliente: cli ? (cli.nome || cli.name || cli.razao_social || cli.fantasia || '-') : '-',
+                                    solicitante: solicitante,
+                                    descricao: descricao
+                                };
+                                verificarFim();
+                            }).catch(function () {
+                                mapa[idPed] = { nomeCliente: '-', solicitante: solicitante, descricao: descricao };
+                                verificarFim();
+                            });
+                        } else {
+                            mapa[idPed] = {
+                                nomeCliente: pedido.cliente || pedido.nome_cliente || '-',
+                                solicitante: solicitante,
+                                descricao: descricao
+                            };
+                            verificarFim();
+                        }
+                    } else {
+                        mapa[idPed] = { nomeCliente: '-', solicitante: '-', descricao: 'Corrida' };
+                        verificarFim();
+                    }
+                }).catch(function () {
+                    mapa[idPed] = { nomeCliente: '-', solicitante: '-', descricao: 'Corrida' };
+                    verificarFim();
+                });
+            })(idsPedidos[i]);
+        }
+    }
+
     function gerarExtrato() {
         if (!els.extratoDataInicio || !els.extratoDataFim || !els.extratoOrigem) return;
-        var dataInicio = els.extratoDataInicio.value;
-        var dataFim = els.extratoDataFim.value;
-        var origemVal = els.extratoOrigem.value;
-        if (!dataInicio || !dataFim) { finToast('Selecione o per\u00edodo (data in\u00edcio e fim).', 'warning'); return; }
-        if (dataInicio > dataFim) { finToast('A data de in\u00edcio n\u00e3o pode ser maior que a data final.', 'warning'); return; }
+        var dataInicio = (els.extratoDataInicio.value || '').trim();
+        var dataFim = (els.extratoDataFim.value || '').trim();
+        var origemVal = (els.extratoOrigem.value || '').trim();
+        if (!dataInicio || !dataFim) { finToast('Selecione o periodo (data inicio e fim).', 'warning'); return; }
+        if (dataInicio > dataFim) { finToast('A data de inicio nao pode ser maior que a data final.', 'warning'); return; }
         if (!origemVal) { finToast('Selecione a origem (motoboy, grupo ou caixa).', 'warning'); return; }
         var tipoOrigem = '';
         var nomeOrigem = '';
         var tagClass = '';
         var tagLabel = '';
         if (origemVal === '__caixa__') {
-            tipoOrigem = 'caixa'; nomeOrigem = 'Caixa Geral'; tagClass = 'caixa'; tagLabel = '\uD83D\uDCB0 Caixa';
+            tipoOrigem = 'caixa'; nomeOrigem = 'Caixa Geral'; tagClass = 'caixa'; tagLabel = 'Caixa';
         } else if (origemVal.indexOf('motoboy::') === 0) {
-            tipoOrigem = 'motoboy'; nomeOrigem = origemVal.replace('motoboy::', ''); tagClass = 'motoboy'; tagLabel = '\uD83C\uDFCD\uFE0F Motoboy';
+            tipoOrigem = 'motoboy'; nomeOrigem = origemVal.replace('motoboy::', ''); tagClass = 'motoboy'; tagLabel = 'Motoboy';
         } else if (origemVal.indexOf('grupo::') === 0) {
-            tipoOrigem = 'grupo'; nomeOrigem = origemVal.replace('grupo::', ''); tagClass = 'grupo'; tagLabel = '\uD83D\uDCC2 Grupo';
+            tipoOrigem = 'grupo'; nomeOrigem = origemVal.replace('grupo::', ''); tagClass = 'grupo'; tagLabel = 'Grupo';
+        } else {
+            tipoOrigem = 'outro'; nomeOrigem = origemVal; tagClass = 'outro'; tagLabel = 'Outro';
         }
-        var registros = filtrarRegistrosExtrato(dataInicio, dataFim, tipoOrigem, nomeOrigem);
-        if (!registros.length) { finToast('Nenhum registro encontrado para este per\u00edodo/origem.', 'info'); return; }
-        var id = ++state.extrato.idCounter;
+        var registros = [];
+        try { registros = filtrarRegistrosExtrato(dataInicio, dataFim, tipoOrigem, nomeOrigem); } catch (e) { finToast('Erro ao filtrar registros.', 'danger'); return; }
+        if (!registros || registros.length === 0) { finToast('Nenhum registro encontrado para este periodo/origem.', 'info'); return; }
+        var idsPedidos = [];
+        for (var i = 0; i < registros.length; i++) {
+            var idPed = registros[i].idPedido || '';
+            if (idPed && idsPedidos.indexOf(idPed) === -1) idsPedidos.push(idPed);
+        }
+        if (idsPedidos.length === 0) {
+            finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim);
+            return;
+        }
+        carregarDadosPedidos(idsPedidos, function (mapaPedidos) {
+            for (var j = 0; j < registros.length; j++) {
+                var pedKey = registros[j].idPedido || '';
+                if (pedKey && mapaPedidos[pedKey]) {
+                    registros[j]._nomeCliente = mapaPedidos[pedKey].nomeCliente || '-';
+                    registros[j]._solicitante = mapaPedidos[pedKey].solicitante || '-';
+                    registros[j]._descricao = mapaPedidos[pedKey].descricao || registros[j].descricao || 'Corrida';
+                }
+            }
+            finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim);
+        });
+    }
+
+    function finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim) {
+        var id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var periodoFormatado = formatDateBR(dataInicio) + ' a ' + formatDateBR(dataFim);
         var extrato = {
             id: id,
             titulo: nomeOrigem,
+            origem: nomeOrigem,
             tipoOrigem: tipoOrigem,
             tagClass: tagClass,
             tagLabel: tagLabel,
             dataInicio: dataInicio,
             dataFim: dataFim,
-            periodoLabel: formatDateBR(dataInicio) + ' a ' + formatDateBR(dataFim),
+            periodoLabel: periodoFormatado,
             registros: registros,
             criadoEm: new Date().toLocaleString('pt-BR')
         };
-        state.extrato.extratosGerados.unshift(extrato);
-        renderizarListaExtratos();
-        finToast('Extrato "' + nomeOrigem + '" gerado com sucesso!', 'success');
+        try { salvarExtratoStorage(extrato); } catch (e) {}
+        try { renderizarListaExtratos(); } catch (e) {}
+        try {
+            var htmlExtrato = montarHtmlExtratoFromObj(extrato);
+            if (els.extratoModalBody) els.extratoModalBody.innerHTML = htmlExtrato;
+            if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'EXTRATO DE CONTA';
+            if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'flex';
+        } catch (e) {}
+        finToast('Extrato "' + nomeOrigem + '" gerado e salvo!', 'success');
     }
 
-    function renderizarListaExtratos() {
-        var lista = els.extratoLista;
-        if (!lista) return;
-        if (!state.extrato.extratosGerados.length) {
-            lista.innerHTML = '<div class="extrato-placeholder" id="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o per\u00edodo, a origem e clique em <strong>Gerar</strong>.</span></div>';
-            return;
-        }
+    function montarHtmlExtratoFromObj(extrato) {
+        if (!extrato || !extrato.registros) return '<p>Sem dados.</p>';
+        var registros = extrato.registros || [];
+        var totalCreditos = 0;
+        var totalDebitos = 0;
         var html = '';
-        for (var i = 0; i < state.extrato.extratosGerados.length; i++) {
-            var ex = state.extrato.extratosGerados[i];
-            var totalEntradas = 0, totalSaidas = 0;
-            for (var r = 0; r < ex.registros.length; r++) {
-                var val = parseFloat(ex.registros[r].valor) || 0;
-                var tipo = (ex.registros[r].tipo || '').toLowerCase();
-                if (tipo === 'entrada' || tipo === 'receita') totalEntradas += val;
-                else totalSaidas += val;
+        html += '<div class="ext-bank-wrap">';
+        html += '<div class="ext-bank-header-block">';
+        html += '<div class="ext-bank-logo">GESTAO &amp; LOGISTICA</div>';
+        html += '<div style="font-size:.62rem;color:#888;letter-spacing:1px;">EXTRATO DE CONTA</div>';
+        html += '</div>';
+        html += '<hr class="ext-bank-divider-double">';
+        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Origem:</span><span class="ext-bank-value">' + escapeHtml(extrato.origem || '-') + '</span></div>';
+        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Periodo:</span><span class="ext-bank-value">' + escapeHtml(extrato.periodoLabel || '-') + '</span></div>';
+        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Emissao:</span><span class="ext-bank-value">' + escapeHtml(extrato.criadoEm || '-') + '</span></div>';
+        html += '<hr class="ext-bank-divider-double">';
+        html += '<div class="ext-bank-section-title">Lancamentos</div>';
+        html += '<hr class="ext-bank-divider">';
+        html += '<div class="ext-bank-lanc-header">';
+        html += '<span class="ext-bank-lanc-col-data">Data</span>';
+        html += '<span class="ext-bank-lanc-col-info">Detalhes</span>';
+        html += '<span class="ext-bank-lanc-col-valor">Valor</span>';
+        html += '<span class="ext-bank-lanc-col-sit">Sit.</span>';
+        html += '</div>';
+        html += '<hr class="ext-bank-divider">';
+        for (var i = 0; i < registros.length; i++) {
+            var r = registros[i];
+            var dataFormatada = r.dataBR || r.dataDisplay || '';
+            var nomeCliente = r._nomeCliente || r.cliente || '-';
+            var solicitante = r._solicitante || r.solicitante || '-';
+            var motoboy = r.motoboy || '-';
+            var descricao = r._descricao || r.descricao || 'Corrida';
+            var situacao = r.situacao || '';
+            var valor = parseFloat(r.valor || 0);
+            var isCredito = (r.tipo === 'entrada');
+            var valorAbs = Math.abs(valor);
+            var valorStr = 'R$ ' + valorAbs.toFixed(2).replace('.', ',');
+            if (isCredito) {
+                totalCreditos += valorAbs;
+                valorStr += ' C';
+            } else {
+                totalDebitos += valorAbs;
+                valorStr += ' D';
             }
-            var saldo = totalEntradas - totalSaidas;
-            html += '<div class="extrato-card" data-extrato-id="' + ex.id + '">' +
-                '<div class="extrato-card-info"><div class="extrato-card-titulo">' + escapeHtml(ex.titulo) + '</div>' +
-                '<div class="extrato-card-periodo"><span class="extrato-card-tag ' + ex.tagClass + '">' + ex.tagLabel + '</span> \u00b7 ' +
-                ex.periodoLabel + ' \u00b7 ' + ex.registros.length + ' reg. \u00b7 Saldo: ' + formatarMoeda(saldo) + '</div></div>' +
-                '<div class="extrato-card-acoes">' +
-                '<button class="extrato-card-btn ver" title="Visualizar" data-acao="ver" data-id="' + ex.id + '"><i class="bi bi-eye"></i></button>' +
-                '<button class="extrato-card-btn copiar" title="Copiar" data-acao="copiar" data-id="' + ex.id + '"><i class="bi bi-clipboard"></i></button>' +
-                '<button class="extrato-card-btn remover" title="Remover" data-acao="remover" data-id="' + ex.id + '"><i class="bi bi-trash3"></i></button>' +
-                '</div></div>';
-        }
-        lista.innerHTML = html;
-        lista.onclick = function (e) {
-            var btn = e.target.closest('[data-acao]');
-            if (!btn) return;
-            var acao = btn.getAttribute('data-acao');
-            var id = parseInt(btn.getAttribute('data-id'), 10);
-            if (acao === 'ver') abrirModalExtrato(id);
-            else if (acao === 'copiar') copiarExtrato(id);
-            else if (acao === 'remover') removerExtrato(id);
-        };
-    }
-
-    function buscarExtratoPorId(id) {
-        for (var i = 0; i < state.extrato.extratosGerados.length; i++) {
-            if (state.extrato.extratosGerados[i].id === id) return state.extrato.extratosGerados[i];
-        }
-        return null;
-    }
-
-    function montarHtmlExtrato(extrato) {
-        var regs = extrato.registros;
-        var porDia = {};
-        var totalEntradas = 0, totalSaidas = 0;
-        for (var i = 0; i < regs.length; i++) {
-            var reg = regs[i];
-            var dia = reg.dataISO || 'sem-data';
-            if (!porDia[dia]) porDia[dia] = [];
-            porDia[dia].push(reg);
-            var val = parseFloat(reg.valor) || 0;
-            if (reg.tipo === 'entrada') totalEntradas += val;
-            else totalSaidas += val;
-        }
-        var saldo = totalEntradas - totalSaidas;
-        var dias = Object.keys(porDia).sort();
-        var html = '<div class="extrato-papel">';
-        html += '<div class="ex-header"><div class="ex-titulo">Extrato \u2014 ' + escapeHtml(extrato.titulo) + '</div>';
-        html += '<div class="ex-subtitulo">' + extrato.periodoLabel + ' \u00b7 ' + extrato.tagLabel + '</div></div>';
-        for (var d = 0; d < dias.length; d++) {
-            var diaKey = dias[d];
-            var itens = porDia[diaKey];
-            html += '<div class="ex-grupo-dia"><div class="ex-dia-titulo">\uD83D\uDCC5 ' + formatDateBR(diaKey) + ' \u2014 ' + getDiaSemanaCompleto(diaKey) + '</div>';
-            for (var j = 0; j < itens.length; j++) {
-                var item = itens[j];
-                var descricao = item.descricao || '--';
-                var valor = parseFloat(item.valor) || 0;
-                var isEntrada = item.tipo === 'entrada';
-                html += '<div class="ex-linha"><span class="ex-desc">' + escapeHtml(descricao) + '</span>' +
-                    '<span class="ex-valor ' + (isEntrada ? 'entrada' : 'saida') + '">' + (isEntrada ? '+' : '-') + ' ' + formatarMoeda(valor) + '</span></div>';
-            }
+            var valorClass = isCredito ? 'credito' : 'debito';
+            var sitLabel = (situacao || '').toUpperCase();
+            var detalheLinha = escapeHtml(nomeCliente) + ' | ' + escapeHtml(solicitante) + ' | ' + escapeHtml(motoboy) + ' | ' + escapeHtml(descricao);
+            html += '<div class="ext-bank-lancamento-row">';
+            html += '<span class="ext-bank-lanc-data">' + escapeHtml(dataFormatada) + '</span>';
+            html += '<span class="ext-bank-lanc-desc-line">' + detalheLinha + '</span>';
+            html += '<span class="ext-bank-lanc-valor ' + valorClass + '">' + valorStr + '</span>';
+            html += '<span class="ext-bank-lanc-sit">' + escapeHtml(sitLabel) + '</span>';
             html += '</div>';
+            html += '<hr class="ext-bank-divider">';
         }
-        html += '<div class="ex-footer">';
-        html += '<div class="ex-resumo"><span>Entradas</span><span class="ex-valor entrada">+ ' + formatarMoeda(totalEntradas) + '</span></div>';
-        html += '<div class="ex-resumo"><span>Sa\u00eddas</span><span class="ex-valor saida">- ' + formatarMoeda(totalSaidas) + '</span></div>';
-        html += '<div class="ex-saldo" style="color:' + (saldo >= 0 ? '#198754' : '#dc3545') + '">SALDO: ' + formatarMoeda(saldo) + '</div>';
-        html += '</div></div>';
+        html += '<hr class="ext-bank-divider-double">';
+        html += '<div class="ext-bank-section-title">Resumo</div>';
+        html += '<hr class="ext-bank-divider">';
+        html += '<div class="ext-bank-totais-row"><span class="ext-bank-tot-label">Total Creditos:</span><span class="ext-bank-tot-valor" style="color:#0a6e2d;">R$ ' + totalCreditos.toFixed(2).replace('.', ',') + ' C</span></div>';
+        html += '<div class="ext-bank-totais-row"><span class="ext-bank-tot-label">Total Debitos:</span><span class="ext-bank-tot-valor" style="color:#b71c1c;">R$ ' + totalDebitos.toFixed(2).replace('.', ',') + ' D</span></div>';
+        html += '<hr class="ext-bank-divider-double">';
+        var saldo = totalCreditos - totalDebitos;
+        var saldoStr = 'R$ ' + Math.abs(saldo).toFixed(2).replace('.', ',');
+        var saldoSufixo = saldo >= 0 ? ' C' : ' D';
+        var saldoCor = saldo >= 0 ? '#0a6e2d' : '#b71c1c';
+        html += '<div class="ext-bank-saldo-final"><span>S &nbsp;A &nbsp;L &nbsp;D &nbsp;O</span><span style="color:' + saldoCor + ';">' + saldoStr + saldoSufixo + '</span></div>';
+        html += '<hr class="ext-bank-divider-double">';
+        html += '<div class="ext-bank-footer-block">Documento gerado automaticamente em ' + escapeHtml(extrato.criadoEm || '-') + '<br>Gestao &amp; Logistica</div>';
+        html += '</div>';
         return html;
     }
 
-    function montarTextoExtrato(extrato) {
-        var regs = extrato.registros;
-        var porDia = {};
-        var totalEntradas = 0, totalSaidas = 0;
+    function montarTextoExtratoFromObj(extrato) {
+        var regs = extrato.registros || [];
+        if (!regs.length) return 'Nenhum lancamento encontrado no periodo.';
+        var totalEnt = 0, totalSai = 0;
+        var agrupado = {};
         for (var i = 0; i < regs.length; i++) {
-            var reg = regs[i];
-            var dia = reg.dataISO || 'sem-data';
-            if (!porDia[dia]) porDia[dia] = [];
-            porDia[dia].push(reg);
-            var val = parseFloat(reg.valor) || 0;
-            if (reg.tipo === 'entrada') totalEntradas += val;
-            else totalSaidas += val;
+            var r = regs[i];
+            var chave = r.dataISO || 'sem-data';
+            if (!agrupado[chave]) agrupado[chave] = [];
+            agrupado[chave].push(r);
+            var v = parseFloat(r.valor) || 0;
+            if (r.tipo === 'entrada') totalEnt += v;
+            else totalSai += v;
         }
-        var saldo = totalEntradas - totalSaidas;
-        var dias = Object.keys(porDia).sort();
+        var saldo = totalEnt - totalSai;
+        var dias = Object.keys(agrupado).sort();
         var linhas = [];
-        linhas.push('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
-        linhas.push('  EXTRATO \u2014 ' + (extrato.titulo || '').toUpperCase());
-        linhas.push('  ' + extrato.periodoLabel);
-        linhas.push('  ' + extrato.tagLabel);
-        linhas.push('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
+        linhas.push('========================================');
+        linhas.push('   GESTAO & LOGISTICA');
+        linhas.push('   EXTRATO DE MOVIMENTACAO');
+        linhas.push('   ' + (extrato.periodoLabel || ''));
+        if (extrato.titulo) linhas.push('   Origem: ' + extrato.titulo);
+        linhas.push('========================================');
         linhas.push('');
+        linhas.push('Entradas: ' + formatarMoeda(totalEnt));
+        linhas.push('Saidas:   ' + formatarMoeda(totalSai));
+        linhas.push('Saldo:    ' + formatarMoeda(saldo));
+        linhas.push('');
+        linhas.push('----------------------------------------');
         for (var d = 0; d < dias.length; d++) {
             var diaKey = dias[d];
-            var itens = porDia[diaKey];
-            linhas.push('\uD83D\uDCC5 ' + formatDateBR(diaKey) + ' \u2014 ' + getDiaSemanaCompleto(diaKey));
-            linhas.push('-------------------------------');
+            var itens = agrupado[diaKey];
+            linhas.push('');
+            linhas.push(formatDateBR(diaKey) + ' - ' + getDiaSemanaCompleto(diaKey));
+            linhas.push('----------------------------');
             for (var j = 0; j < itens.length; j++) {
                 var item = itens[j];
-                var descricao = item.descricao || '--';
+                var nomeCliente = item._nomeCliente || item.cliente || '-';
+                var solicitante = item._solicitante || item.solicitante || '-';
+                var motoboy = (item.motoboy && item.motoboy !== '-') ? item.motoboy : '-';
+                var descricao = item._descricao || item.descricao || 'Corrida';
                 var valor = parseFloat(item.valor) || 0;
-                var sinal = item.tipo === 'entrada' ? '+' : '-';
-                linhas.push('  ' + descricao + '  ' + sinal + ' ' + formatarMoeda(valor));
+                var isEnt = item.tipo === 'entrada';
+                var sinal = isEnt ? '+ ' : '- ';
+                var sit = (item.situacao || '').toUpperCase();
+                linhas.push(nomeCliente + ' | ' + solicitante + ' | ' + motoboy + ' | ' + descricao);
+                linhas.push('  ' + sinal + formatarMoeda(valor) + '  ' + sit);
             }
-            linhas.push('');
         }
-        linhas.push('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
-        linhas.push('  Entradas:  + ' + formatarMoeda(totalEntradas));
-        linhas.push('  Sa\u00eddas:    - ' + formatarMoeda(totalSaidas));
-        linhas.push('  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
-        linhas.push('  SALDO:     ' + formatarMoeda(saldo));
-        linhas.push('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
-        linhas.push('  Gerado em ' + extrato.criadoEm);
+        linhas.push('');
+        linhas.push('========================================');
+        linhas.push('  SALDO FINAL: ' + formatarMoeda(saldo));
+        linhas.push('========================================');
+        linhas.push('  Gerado em ' + (extrato.criadoEm || new Date().toLocaleString('pt-BR')));
         return linhas.join('\n');
     }
 
     function abrirModalExtrato(id) {
-        var extrato = buscarExtratoPorId(id);
+        var extrato = buscarExtratoStoragePorId(id);
         if (!extrato) return;
-        if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'Extrato \u2014 ' + extrato.titulo;
-        if (els.extratoModalBody) els.extratoModalBody.innerHTML = montarHtmlExtrato(extrato);
+        if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'Extrato \u2014 ' + (extrato.titulo || extrato.origem || '-');
+        if (els.extratoModalBody) els.extratoModalBody.innerHTML = montarHtmlExtratoFromObj(extrato);
         if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'flex';
         if (els.extratoModalCopiar) {
-            els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(montarTextoExtrato(extrato)); };
+            els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(montarTextoExtratoFromObj(extrato)); };
         }
     }
 
@@ -1167,20 +1298,56 @@
     }
 
     function copiarExtrato(id) {
-        var extrato = buscarExtratoPorId(id);
+        var extrato = buscarExtratoStoragePorId(id);
         if (!extrato) return;
-        copiarTextoClipboard(montarTextoExtrato(extrato));
+        copiarTextoClipboard(montarTextoExtratoFromObj(extrato));
     }
 
     function removerExtrato(id) {
-        for (var i = 0; i < state.extrato.extratosGerados.length; i++) {
-            if (state.extrato.extratosGerados[i].id === id) {
-                state.extrato.extratosGerados.splice(i, 1);
-                break;
-            }
-        }
+        removerExtratoStorage(id);
         renderizarListaExtratos();
         finToast('Extrato removido.', 'info');
+    }
+
+    function renderizarListaExtratos() {
+        var lista = els.extratoLista;
+        if (!lista) return;
+        var extratos = carregarExtratosStorage();
+        if (!extratos.length) {
+            lista.innerHTML = '<div class="extrato-placeholder" id="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o per\u00edodo, a origem e clique em <strong>Gerar</strong>.</span></div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < extratos.length; i++) {
+            var ex = extratos[i];
+            var totalEntradas = 0, totalSaidas = 0;
+            var regs = ex.registros || [];
+            for (var r = 0; r < regs.length; r++) {
+                var val = parseFloat(regs[r].valor) || 0;
+                if (regs[r].tipo === 'entrada') totalEntradas += val;
+                else totalSaidas += val;
+            }
+            var saldo = totalEntradas - totalSaidas;
+            html += '<div class="extrato-card" data-extrato-id="' + escapeHtml(ex.id) + '">' +
+                '<div class="extrato-card-info"><div class="extrato-card-titulo">' + escapeHtml(ex.titulo || ex.origem || '-') + '</div>' +
+                '<div class="extrato-card-periodo"><span class="extrato-card-tag ' + (ex.tagClass || '') + '">' + escapeHtml(ex.tagLabel || '') + '</span> \u00b7 ' +
+                escapeHtml(ex.periodoLabel || '') + ' \u00b7 ' + regs.length + ' reg. \u00b7 Saldo: ' + formatarMoeda(saldo) + '</div></div>' +
+                '<div class="extrato-card-acoes">' +
+                '<button class="extrato-card-btn ver" title="Visualizar" data-acao="ver" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-eye"></i></button>' +
+                '<button class="extrato-card-btn copiar" title="Copiar" data-acao="copiar" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-clipboard"></i></button>' +
+                '<button class="extrato-card-btn remover" title="Remover" data-acao="remover" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-trash3"></i></button>' +
+                '</div></div>';
+        }
+        lista.innerHTML = html;
+        lista.onclick = function (e) {
+            var btn = e.target.closest('[data-acao]');
+            if (!btn) return;
+            var acao = btn.getAttribute('data-acao');
+            var extratoId = btn.getAttribute('data-id');
+            if (acao === 'ver') abrirModalExtrato(extratoId);
+            else if (acao === 'copiar') copiarExtrato(extratoId);
+            else if (acao === 'remover') removerExtrato(extratoId);
+        };
     }
 
     function initExtrato() {
@@ -1194,12 +1361,8 @@
                 aplicarPeriodoExtrato(this.getAttribute('data-periodo'));
             });
         }
-        if (els.btnGerarExtrato) {
-            els.btnGerarExtrato.addEventListener('click', function () { gerarExtrato(); });
-        }
-        if (els.extratoModalFechar) {
-            els.extratoModalFechar.addEventListener('click', fecharModalExtrato);
-        }
+        if (els.btnGerarExtrato) els.btnGerarExtrato.addEventListener('click', function () { gerarExtrato(); });
+        if (els.extratoModalFechar) els.extratoModalFechar.addEventListener('click', fecharModalExtrato);
         if (els.extratoModalOverlay) {
             els.extratoModalOverlay.addEventListener('click', function (e) {
                 if (e.target === els.extratoModalOverlay) fecharModalExtrato();
@@ -1212,44 +1375,40 @@
         if (state.fetching) return;
         state.fetching = true;
         spinOn();
-        if (els.tbodyTodos) {
-            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Buscando dados<span class="fin-dots"></span></div></td></tr>';
-        }
-        if (els.caixaListaDiaria) {
-            els.caixaListaDiaria.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-danger opacity-50"></div><div class="mt-2 fin-loading-text">Atualizando<span class="fin-dots"></span></div></div>';
-        }
-        state.cache = [];
-        window.API.call('getfinanceiro')
+        window.API.call('getfinanceiro', {})
             .then(function (res) {
-                if (!res) { finToast('Resposta vazia do servidor.', 'info'); return; }
-                if (res.success === false) { finToast(res.message || res.error || 'Erro retornado pela API.', 'danger'); return; }
-                var raw = [];
-                if (Array.isArray(res)) {
-                    raw = res;
-                } else if (typeof res === 'object' && res !== null) {
-                    var chaves = ['data', 'financeiro', 'registros', 'lista', 'result', 'results'];
-                    for (var k = 0; k < chaves.length; k++) {
-                        if (Array.isArray(res[chaves[k]])) { raw = res[chaves[k]]; break; }
+                var dados = [];
+                if (res && res.data && Array.isArray(res.data)) {
+                    dados = res.data;
+                } else if (res && Array.isArray(res)) {
+                    dados = res;
+                } else if (res && typeof res === 'object') {
+                    var keys = Object.keys(res);
+                    for (var k = 0; k < keys.length; k++) {
+                        var item = res[keys[k]];
+                        if (item && typeof item === 'object' && !Array.isArray(item)) {
+                            if (!item.id) item.id = keys[k];
+                            dados.push(item);
+                        }
                     }
                 }
-                if (!raw.length) { finToast('Nenhum registro financeiro encontrado.', 'info'); return; }
-                var registrosValidos = [];
-                for (var i = 0; i < raw.length; i++) {
-                    try { registrosValidos.push(normalizarRegistro(raw[i])); }
-                    catch (e) { }
+                state.cache = [];
+                for (var i = 0; i < dados.length; i++) {
+                    try {
+                        state.cache.push(normalizarRegistro(dados[i]));
+                    } catch (e) {}
                 }
-                state.cache = registrosValidos;
+                renderTodos();
+                renderCaixa();
+                popularOrigem();
+                renderizarListaExtratos();
             })
             .catch(function () {
-                state.cache = [];
                 finToast('Erro ao carregar dados financeiros.', 'danger');
             })
             .finally(function () {
                 state.fetching = false;
                 spinOff();
-                renderTodos();
-                renderCaixa();
-                popularOrigem();
             });
     }
 
@@ -1267,8 +1426,6 @@
         state.caixa.dataInicio = '';
         state.caixa.dataFim = '';
         state.caixa.dadosFiltrados = [];
-        state.extrato.extratosGerados = [];
-        state.extrato.idCounter = 0;
         bind();
         registrarEventos();
         bindAdicionarDinheiroModal();
