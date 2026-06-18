@@ -599,15 +599,25 @@
     function atualizarRdoPaySaldo() {
         var el = document.getElementById('rdo-pay-saldo');
         if (!el) return;
-        var lista = state.caixa.dadosFiltrados || [];
-        var totalEnt = 0, totalSai = 0;
-        for (var i = 0; i < lista.length; i++) {
-            if (lista[i].tipo === 'entrada') { totalEnt += parseFloat(lista[i].valor) || 0; }
-            else { totalSai += parseFloat(lista[i].valor) || 0; }
+
+        var totalEnt = 0;
+        var totalSai = 0;
+
+        for (var i = 0; i < state.cache.length; i++) {
+            var reg = state.cache[i];
+            var val = parseFloat(reg.valor) || 0;
+            if (reg.tipo === 'entrada') {
+                totalEnt += val;
+            } else if (reg.tipo === 'saida') {
+                totalSai += val;
+            }
         }
-        var saldoReal = formatarMoeda(totalEnt - totalSai);
-        el.setAttribute('data-valor-real', saldoReal);
-        el.textContent = state.caixaValoresVisiveis ? saldoReal : 'R$ ****';
+
+        var saldo = totalEnt - totalSai;
+        var saldoFormatado = formatarMoeda(saldo);
+
+        el.setAttribute('data-valor-real', saldoFormatado);
+        el.textContent = state.caixaValoresVisiveis ? saldoFormatado : 'R$ ****';
     }
 
     function atualizarResumoCaixa() {
@@ -723,19 +733,19 @@
 
             html +=
                 '<div class="caixa-dia-item" data-dia="' + diaISO + '" title="Ver lan\u00e7amentos de ' + dataBR + '">' +
-                    '<div class="caixa-dia-item-left">' +
-                        '<div class="caixa-dia-icon"><i class="bi bi-calendar3"></i></div>' +
-                        '<div>' +
-                            '<div class="caixa-dia-info-data">' + dataBR + '</div>' +
-                            '<div class="caixa-dia-info-semana">' + diaSemana + '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="d-flex align-items-center">' +
-                        '<span class="caixa-dia-saldo fin-valor-caixa ' + saldoClass + '" data-valor-real="' + saldoTexto + '">' +
-                            (visivel ? saldoTexto : 'R$ ****') +
-                        '</span>' +
-                        '<i class="bi bi-chevron-right caixa-dia-chevron"></i>' +
-                    '</div>' +
+                '<div class="caixa-dia-item-left">' +
+                '<div class="caixa-dia-icon"><i class="bi bi-calendar3"></i></div>' +
+                '<div>' +
+                '<div class="caixa-dia-info-data">' + dataBR + '</div>' +
+                '<div class="caixa-dia-info-semana">' + diaSemana + '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="d-flex align-items-center">' +
+                '<span class="caixa-dia-saldo fin-valor-caixa ' + saldoClass + '" data-valor-real="' + saldoTexto + '">' +
+                (visivel ? saldoTexto : 'R$ ****') +
+                '</span>' +
+                '<i class="bi bi-chevron-right caixa-dia-chevron"></i>' +
+                '</div>' +
                 '</div>';
         }
 
@@ -756,16 +766,22 @@
     function abrirModalDetalheDia(diaISO, registros) {
         var modalEl = document.getElementById('modalDetalheDia');
         if (!modalEl) return;
+
         var partes = diaISO.split('-');
         var dataBR = partes[2] + '/' + partes[1] + '/' + partes[0];
         var diaSemana = getDiaSemanaCompleto(diaISO);
+
         var tituloEl = document.getElementById('modal-detalhe-dia-titulo');
         if (tituloEl) tituloEl.textContent = dataBR + ' (' + diaSemana + ')';
+
         var bodyEl = document.getElementById('modal-detalhe-dia-body');
         if (!bodyEl) return;
-        var totalEnt = 0, totalSai = 0;
+
+        var totalEnt = 0;
+        var totalSai = 0;
+
         if (!registros || !registros.length) {
-            bodyEl.innerHTML = '<div class="text-center text-muted py-4">Nenhum lan\u00e7amento.</div>';
+            bodyEl.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Nenhum lan\u00e7amento.</td></tr>';
         } else {
             var html = '';
             for (var i = 0; i < registros.length; i++) {
@@ -773,26 +789,30 @@
                 var isE = rr.tipo === 'entrada';
                 if (isE) { totalEnt += parseFloat(rr.valor) || 0; }
                 else { totalSai += parseFloat(rr.valor) || 0; }
-                html += '<div class="detalhe-dia-item"><div>';
-                html += '<div class="detalhe-dia-desc">' + escapeHtml(rr.descricao || '-') + '</div>';
-                html += '<div class="detalhe-dia-meta">';
-                if (rr.idPedido) html += '#' + escapeHtml(rr.idPedido) + ' ';
-                if (rr.motoboy && rr.motoboy !== '-') html += '<i class="bi bi-bicycle"></i> ' + escapeHtml(rr.motoboy);
-                html += '</div></div>';
-                html += isE
-                    ? '<span class="detalhe-dia-valor-entrada">+ ' + formatarMoeda(rr.valor) + '</span>'
-                    : '<span class="detalhe-dia-valor-saida">- ' + formatarMoeda(rr.valor) + '</span>';
-                html += '</div>';
+                var valorClass = isE ? 'detalhe-dia-valor-entrada' : 'detalhe-dia-valor-saida';
+                var valorSinal = isE ? '+ ' : '- ';
+                html += '<tr>';
+                html += '<td>' + escapeHtml(rr.descricao || '-') + '</td>';
+                html += '<td>' + escapeHtml(rr.idPedido || '-') + '</td>';
+                html += '<td>' + escapeHtml(rr.motoboy && rr.motoboy !== '-' ? rr.motoboy : '-') + '</td>';
+                html += '<td class="text-end"><span class="' + valorClass + '">' + valorSinal + formatarMoeda(rr.valor) + '</span></td>';
+                html += '</tr>';
             }
             bodyEl.innerHTML = html;
         }
+
         var saldo = totalEnt - totalSai;
         var elEnt = document.getElementById('modal-detalhe-dia-entradas');
         var elSai = document.getElementById('modal-detalhe-dia-saidas');
         var elSaldo = document.getElementById('modal-detalhe-dia-saldo');
+
         if (elEnt) elEnt.textContent = formatarMoeda(totalEnt);
         if (elSai) elSai.textContent = formatarMoeda(totalSai);
-        if (elSaldo) { elSaldo.textContent = formatarMoeda(saldo); elSaldo.style.color = saldo >= 0 ? '#198754' : '#dc3545'; }
+        if (elSaldo) {
+            elSaldo.textContent = formatarMoeda(saldo);
+            elSaldo.style.color = saldo >= 0 ? '#198754' : '#dc3545';
+        }
+
         new bootstrap.Modal(modalEl).show();
     }
 
