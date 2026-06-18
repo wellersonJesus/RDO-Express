@@ -14,6 +14,7 @@ window.AppRDO.mensagensCache = [];
 window.AppRDO.pedidosCache = [];
 window.AppRDO.motoboyCache = [];
 window.AppRDO.financeiroCache = [];
+window.AppRDO.relatoriosCache = [];
 window.AppRDO.isMasterOn = false;
 window.AppRDO.paginaAtual = null;
 

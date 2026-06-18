@@ -49,7 +49,6 @@
     from {
         transform: rotate(0deg);
     }
-
     to {
         transform: rotate(360deg);
     }
@@ -394,19 +393,15 @@
     0% {
         content: "";
     }
-
     25% {
         content: ".";
     }
-
     50% {
         content: "..";
     }
-
     75% {
         content: "...";
     }
-
     100% {
         content: "";
     }
@@ -528,7 +523,6 @@
         opacity: 0;
         transform: translateY(-6px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -594,7 +588,7 @@
     color: #dc3545;
 }
 
-.dropdown-filtro-item-has-sub.active>.dropdown-filtro-item-label {
+.dropdown-filtro-item-has-sub.active > .dropdown-filtro-item-label {
     background: #fce4ec;
     color: #dc3545;
     font-weight: 600;
@@ -1289,6 +1283,105 @@
     font-size: .78rem;
 }
 
+.extrato-item-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px 14px;
+    gap: 10px;
+    transition: box-shadow .2s ease, transform .1s ease;
+    cursor: pointer;
+}
+
+.extrato-item-card:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+    transform: translateY(-1px);
+}
+
+.extrato-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.extrato-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    flex-shrink: 0;
+}
+
+.extrato-item-titulo {
+    font-size: .78rem;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.extrato-item-sub {
+    font-size: .62rem;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.extrato-item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.extrato-item-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .2s ease;
+    font-size: .72rem;
+    background: #fff;
+    color: #6c757d;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+}
+
+.extrato-item-btn:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: #495057;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+    transform: translateY(-1px);
+}
+
+.extrato-item-btn-ver:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background: rgba(13, 110, 253, .06);
+}
+
+.extrato-item-btn-del:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+    background: rgba(220, 53, 69, .06);
+}
+
 .extrato-card {
     display: flex;
     align-items: center;
@@ -1418,7 +1511,6 @@
     from {
         opacity: 0;
     }
-
     to {
         opacity: 1;
     }
@@ -1441,7 +1533,6 @@
         transform: translateY(30px);
         opacity: 0;
     }
-
     to {
         transform: translateY(0);
         opacity: 1;
@@ -1482,6 +1573,386 @@
     font-size: .73rem;
     line-height: 1.65;
     color: #444;
+}
+
+.extrato-modal-footer {
+    padding: 12px 18px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.extrato-modal-bank {
+    max-width: 520px;
+    width: 100%;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.extrato-modal-header-bank {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.extrato-modal-header-bank .extrato-modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: .7;
+    transition: opacity .2s;
+}
+
+.extrato-modal-header-bank .extrato-modal-close:hover {
+    opacity: 1;
+}
+
+.extrato-modal-body-bank {
+    padding: 0;
+    max-height: 65vh;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.extrato-modal-footer-bank {
+    background: #f5f5f5;
+    border-top: 2px dashed #bbb;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.extrato-btn-copiar-bank {
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 18px;
+    font-size: .72rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 700;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.extrato-btn-copiar-bank:hover {
+    background: #2d2d4e;
+}
+
+.extrato-bank-info {
+    padding: 14px 20px;
+    border-bottom: 1.5px dashed #ccc;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .72rem;
+    line-height: 1.7;
+    color: #333;
+}
+
+.extrato-bank-info div {
+    margin-bottom: 2px;
+}
+
+.extrato-bank-info strong {
+    color: #555;
+}
+
+.extrato-bank-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .70rem;
+}
+
+.extrato-bank-table thead th {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: .62rem;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 1.5px dashed #ccc;
+    white-space: nowrap;
+}
+
+.extrato-bank-table thead th.text-end {
+    text-align: right;
+}
+
+.extrato-bank-table tbody td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.extrato-bank-table tbody td.text-end {
+    text-align: right;
+}
+
+.extrato-bank-table tbody tr:hover {
+    background: #fdf6f6;
+}
+
+.extrato-bank-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.extrato-bank-resumo {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1.5px dashed #ccc;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .72rem;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.extrato-bank-resumo-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.extrato-bank-resumo-item i {
+    font-size: .72rem;
+}
+
+.extrato-bank-resumo-item strong {
+    font-weight: 700;
+}
+
+.ext-bank-wrap {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .76rem;
+    color: #1a1a1a;
+    line-height: 1.6;
+    padding: 18px 20px;
+}
+
+.ext-bank-header-block {
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.ext-bank-logo {
+    font-size: .88rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #1a1a2e;
+}
+
+.ext-bank-divider {
+    border: none;
+    border-top: 1.5px dashed #999;
+    margin: 8px 0;
+}
+
+.ext-bank-divider-double {
+    border: none;
+    border-top: 2px double #555;
+    margin: 8px 0;
+}
+
+.ext-bank-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.ext-bank-info-row .ext-bank-label {
+    color: #666;
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.ext-bank-info-row .ext-bank-value {
+    text-align: right;
+    font-weight: 700;
+    word-break: break-word;
+    flex: 1;
+}
+
+.ext-bank-section-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: .72rem;
+    color: #333;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.ext-bank-lancamento-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 3px 0;
+    gap: 8px;
+}
+
+.ext-bank-lancamento-row .ext-bank-lanc-data {
+    min-width: 62px;
+    color: #555;
+    flex-shrink: 0;
+}
+
+.ext-bank-lancamento-row .ext-bank-lanc-desc {
+    flex: 1;
+    word-break: break-word;
+}
+
+.ext-bank-lancamento-row .ext-bank-lanc-valor {
+    min-width: 90px;
+    text-align: right;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ext-bank-lanc-valor.credito {
+    color: #0a6e2d;
+}
+
+.ext-bank-lanc-valor.debito {
+    color: #b71c1c;
+}
+
+.ext-bank-lancamento-row .ext-bank-lanc-sit {
+    min-width: 60px;
+    text-align: right;
+    font-size: .65rem;
+    color: #888;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.ext-bank-totais-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    padding: 2px 0;
+}
+
+.ext-bank-totais-row .ext-bank-tot-label {
+    color: #333;
+}
+
+.ext-bank-totais-row .ext-bank-tot-valor {
+    text-align: right;
+}
+
+.ext-bank-saldo-final {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: .84rem;
+    padding: 4px 0;
+    color: #1a1a2e;
+}
+
+.ext-bank-footer-block {
+    text-align: center;
+    font-size: .62rem;
+    color: #999;
+    margin-top: 6px;
+    letter-spacing: .5px;
+}
+
+.ext-bank-cliente-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.ext-bank-cliente-row .ext-bank-label {
+    color: #666;
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.ext-bank-cliente-row .ext-bank-value {
+    text-align: right;
+    font-weight: 700;
+    word-break: break-word;
+    flex: 1;
+}
+
+.ext-bank-lanc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: .68rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 2px 0;
+}
+
+.ext-bank-lanc-col-data {
+    min-width: 62px;
+    flex-shrink: 0;
+}
+
+.ext-bank-lanc-col-info {
+    flex: 1;
+}
+
+.ext-bank-lanc-col-valor {
+    min-width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.ext-bank-lanc-col-sit {
+    min-width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.ext-bank-lanc-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ext-bank-lanc-detail-line {
+    display: block;
+    font-size: .70rem;
+    line-height: 1.5;
+    color: #222;
+}
+
+.ext-bank-lanc-detail-line strong {
+    color: #555;
+    font-weight: 700;
+    font-size: .66rem;
+    letter-spacing: .3px;
 }
 
 .extrato-papel {
@@ -1574,13 +2045,6 @@
     padding: 6px;
     border-radius: 6px;
     background: #f8f9fa;
-}
-
-.extrato-modal-footer {
-    padding: 12px 18px;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: flex-end;
 }
 
 .extrato-btn-copiar {
@@ -2047,7 +2511,7 @@
         align-items: stretch;
     }
 
-    .extrato-toolbar-row>div {
+    .extrato-toolbar-row > div {
         justify-content: center;
     }
 
@@ -2073,6 +2537,28 @@
 
     .extrato-papel {
         border-radius: 10px;
+    }
+
+    .extrato-bank-table thead th {
+        font-size: .56rem;
+        padding: 6px 8px;
+    }
+
+    .extrato-bank-table tbody td {
+        font-size: .64rem;
+        padding: 6px 8px;
+        max-width: 80px;
+    }
+
+    .extrato-bank-resumo {
+        padding: 10px 14px;
+        gap: 8px;
+        font-size: .66rem;
+    }
+
+    .extrato-bank-info {
+        padding: 10px 14px;
+        font-size: .66rem;
     }
 }
 
@@ -2253,6 +2739,33 @@
         border-radius: 6px;
     }
 
+    .extrato-item-btn {
+        width: 24px;
+        height: 24px;
+        font-size: .62rem;
+        border-radius: 6px;
+    }
+
+    .extrato-item-icon {
+        width: 30px;
+        height: 30px;
+        font-size: .78rem;
+        border-radius: 8px;
+    }
+
+    .extrato-item-titulo {
+        font-size: .72rem;
+    }
+
+    .extrato-item-sub {
+        font-size: .58rem;
+    }
+
+    .extrato-item-card {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
     .extrato-papel-lancamento {
         padding: 7px 14px;
         gap: 8px;
@@ -2285,251 +2798,47 @@
     .extrato-papel-lanc-solicitante {
         font-size: .52rem;
     }
-}
 
-.extrato-modal-bank {
-    max-width: 520px;
-    width: 100%;
-    background: #fff;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,.18);
-    font-family: 'Courier New', Courier, monospace;
-}
-.extrato-modal-header-bank {
-    background: #1a1a2e;
-    color: #fff;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: .82rem;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    font-family: 'Courier New', Courier, monospace;
-}
-.extrato-modal-header-bank .extrato-modal-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
-    opacity: .7;
-    transition: opacity .2s;
-}
-.extrato-modal-header-bank .extrato-modal-close:hover {
-    opacity: 1;
-}
-.extrato-modal-body-bank {
-    padding: 0;
-    max-height: 65vh;
-    overflow-y: auto;
-    background: #fff;
-}
-.extrato-modal-footer-bank {
-    background: #f5f5f5;
-    border-top: 2px dashed #bbb;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: flex-end;
-}
-.extrato-btn-copiar-bank {
-    background: #1a1a2e;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 18px;
-    font-size: .72rem;
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: 700;
-    letter-spacing: .5px;
-    cursor: pointer;
-    transition: background .2s;
-}
-.extrato-btn-copiar-bank:hover {
-    background: #2d2d4e;
-}
-.ext-bank-wrap {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: .76rem;
-    color: #1a1a1a;
-    line-height: 1.6;
-    padding: 18px 20px;
-}
-.ext-bank-header-block {
-    text-align: center;
-    margin-bottom: 2px;
-}
-.ext-bank-logo {
-    font-size: .88rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #1a1a2e;
-}
-.ext-bank-divider {
-    border: none;
-    border-top: 1.5px dashed #999;
-    margin: 8px 0;
-}
-.ext-bank-divider-double {
-    border: none;
-    border-top: 2px double #555;
-    margin: 8px 0;
-}
-.ext-bank-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 6px;
-}
-.ext-bank-info-row .ext-bank-label {
-    color: #666;
-    white-space: nowrap;
-    min-width: 90px;
-}
-.ext-bank-info-row .ext-bank-value {
-    text-align: right;
-    font-weight: 700;
-    word-break: break-word;
-    flex: 1;
-}
-.ext-bank-section-title {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: .72rem;
-    color: #333;
-    margin-top: 4px;
-    margin-bottom: 2px;
-}
-.ext-bank-lancamento-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 3px 0;
-    gap: 8px;
-}
-.ext-bank-lancamento-row .ext-bank-lanc-data {
-    min-width: 62px;
-    color: #555;
-    flex-shrink: 0;
-}
-.ext-bank-lancamento-row .ext-bank-lanc-desc {
-    flex: 1;
-    word-break: break-word;
-}
-.ext-bank-lancamento-row .ext-bank-lanc-valor {
-    min-width: 90px;
-    text-align: right;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-.ext-bank-lanc-valor.credito {
-    color: #0a6e2d;
-}
-.ext-bank-lanc-valor.debito {
-    color: #b71c1c;
-}
-.ext-bank-lancamento-row .ext-bank-lanc-sit {
-    min-width: 60px;
-    text-align: right;
-    font-size: .65rem;
-    color: #888;
-    text-transform: uppercase;
-    flex-shrink: 0;
-}
-.ext-bank-totais-row {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    padding: 2px 0;
-}
-.ext-bank-totais-row .ext-bank-tot-label {
-    color: #333;
-}
-.ext-bank-totais-row .ext-bank-tot-valor {
-    text-align: right;
-}
-.ext-bank-saldo-final {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    font-size: .84rem;
-    padding: 4px 0;
-    color: #1a1a2e;
-}
-.ext-bank-footer-block {
-    text-align: center;
-    font-size: .62rem;
-    color: #999;
-    margin-top: 6px;
-    letter-spacing: .5px;
-}
-.ext-bank-cliente-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-}
-.ext-bank-cliente-row .ext-bank-label {
-    color: #666;
-    white-space: nowrap;
-    min-width: 90px;
-}
-.ext-bank-cliente-row .ext-bank-value {
-    text-align: right;
-    font-weight: 700;
-    word-break: break-word;
-    flex: 1;
-}
+    .extrato-bank-table thead th {
+        font-size: .50rem;
+        padding: 5px 6px;
+    }
 
-/* Cabecalho da tabela de lancamentos */
-.ext-bank-lanc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-    font-size: .68rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 2px 0;
-}
-.ext-bank-lanc-col-data {
-    min-width: 62px;
-    flex-shrink: 0;
-}
-.ext-bank-lanc-col-info {
-    flex: 1;
-}
-.ext-bank-lanc-col-valor {
-    min-width: 90px;
-    text-align: right;
-    flex-shrink: 0;
-}
-.ext-bank-lanc-col-sit {
-    min-width: 50px;
-    text-align: right;
-    flex-shrink: 0;
-}
+    .extrato-bank-table tbody td {
+        font-size: .58rem;
+        padding: 5px 6px;
+        max-width: 60px;
+    }
 
-/* Linhas de detalhe dentro de cada lancamento */
-.ext-bank-lanc-desc {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-.ext-bank-lanc-detail-line {
-    display: block;
-    font-size: .70rem;
-    line-height: 1.5;
-    color: #222;
-}
-.ext-bank-lanc-detail-line strong {
-    color: #555;
-    font-weight: 700;
-    font-size: .66rem;
-    letter-spacing: .3px;
+    .extrato-bank-resumo {
+        padding: 8px 10px;
+        gap: 6px;
+        font-size: .60rem;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .extrato-bank-info {
+        padding: 8px 10px;
+        font-size: .60rem;
+    }
+
+    .extrato-modal-bank {
+        max-width: 100%;
+    }
+
+    .extrato-modal-header-bank {
+        font-size: .72rem;
+        padding: 10px 14px;
+        letter-spacing: 1px;
+    }
+
+    .extrato-modal-footer-bank {
+        padding: 8px 14px;
+    }
+
+    .extrato-btn-copiar-bank {
+        font-size: .66rem;
+        padding: 5px 14px;
+    }
 }

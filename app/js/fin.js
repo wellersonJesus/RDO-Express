@@ -5,6 +5,8 @@
 
     var state = {
         cache: [],
+        pedidosCache: {},
+        clientesCache: {},
         caixaValoresVisiveis: false,
         tabAtual: 'todos',
         filtroTipo: 'todos',
@@ -95,24 +97,92 @@
             valorNorm = parseFloat(cleaned) || 0;
         }
         var situacao = (d.situacao || d.status || 'pendente').toString().trim().toLowerCase();
+        var idPedido = (d.id_pedido || d.idPedido || d.pedido_id || '').toString().trim();
         return {
-            id: d.id || '',
-            idPedido: d.id_pedido || d.idPedido || '',
+            id: (d.id || '').toString().trim(),
+            idPedido: idPedido,
             dataISO: dataObj.iso,
             dataBR: dataObj.br,
             dataDisplay: dataObj.display,
             tipo: tipoNorm,
-            descricao: d.descricao || '',
+            descricao: (d.descricao || '').toString().trim(),
             valor: valorNorm,
-            motoboy: d.motoboy || '-',
+            motoboy: (d.motoboy || '-').toString().trim(),
             situacao: situacao,
-            categoria: d.categoria || '',
-            pagamento: d.pagamento || d.forma_pagamento || '',
-            observacao: d.observacao || d.obs || '',
-            grupo: d.grupo || d.category || d.categoria || '',
-            cliente: d.cliente || d.client || d.nome_cliente || '',
-            solicitante: d.solicitante || d.usuario || d.user || d.nome_solicitante || ''
+            categoria: (d.categoria || '').toString().trim(),
+            pagamento: (d.pagamento || d.forma_pagamento || '').toString().trim(),
+            observacao: (d.observacao || d.obs || '').toString().trim(),
+            grupo: (d.grupo || d.category || d.categoria || '').toString().trim(),
+            cliente: (d.cliente || '').toString().trim(),
+            solicitante: (d.solicitante || '').toString().trim()
         };
+    }
+
+    function resolverClienteSolicitante() {
+        for (var i = 0; i < state.cache.length; i++) {
+            var reg = state.cache[i];
+            if (reg.cliente && reg.cliente !== '' && reg.cliente !== '-' &&
+                reg.solicitante && reg.solicitante !== '' && reg.solicitante !== '-') {
+                continue;
+            }
+            var idPedido = (reg.idPedido || '').toString().trim();
+            if (!idPedido) {
+                if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
+                if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
+                continue;
+            }
+            var pedido = state.pedidosCache[idPedido];
+            if (!pedido) {
+                if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
+                if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
+                continue;
+            }
+            if (!reg.solicitante || reg.solicitante === '' || reg.solicitante === '-') {
+                reg.solicitante = (pedido.solicitante || '').toString().trim() || '-';
+            }
+            if (!reg.cliente || reg.cliente === '' || reg.cliente === '-') {
+                var idCliente = (pedido.id_cliente || '').toString().trim();
+                if (idCliente && state.clientesCache[idCliente]) {
+                    reg.cliente = (state.clientesCache[idCliente].username || '').toString().trim() || '-';
+                } else {
+                    reg.cliente = '-';
+                }
+            }
+        }
+    }
+
+    function extrairArray(res) {
+        if (!res) return [];
+        if (Array.isArray(res)) return res;
+        if (res.data && Array.isArray(res.data)) return res.data;
+        if (res.status === 'success' && res.data && Array.isArray(res.data)) return res.data;
+        if (typeof res === 'object' && !Array.isArray(res)) {
+            if (res.status || res.message) return [];
+            var arr = [];
+            var keys = Object.keys(res);
+            for (var i = 0; i < keys.length; i++) {
+                var item = res[keys[i]];
+                if (item && typeof item === 'object' && !Array.isArray(item)) {
+                    if (!item.id) item.id = keys[i];
+                    arr.push(item);
+                }
+            }
+            return arr;
+        }
+        return [];
+    }
+
+    function isRespostaSucesso(res) {
+        if (!res) return false;
+        if (res.status === 'success') return true;
+        if (res.success === true || res.success === 'true' || res.success === 1) return true;
+        var msg = (res.message || res.msg || res.mensagem || '').toString().toLowerCase();
+        if (msg.indexOf('adicionado') !== -1 || msg.indexOf('salvo') !== -1 ||
+            msg.indexOf('criado') !== -1 || msg.indexOf('atualizado') !== -1 ||
+            msg.indexOf('editado') !== -1 || msg.indexOf('sucesso') !== -1 ||
+            msg.indexOf('exclu') !== -1 || msg.indexOf('removido') !== -1 ||
+            msg.indexOf('deletado') !== -1) return true;
+        return false;
     }
 
     function bind() {
@@ -427,7 +497,7 @@
                 e.preventDefault();
                 abrirModalForm(null);
             }
-            if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            if (e.key === '/' && ['INPUT', 'TEXTAREA'].indexOf(document.activeElement.tagName) === -1) {
                 e.preventDefault();
                 if (els.filtroBusca) els.filtroBusca.focus();
             }
@@ -460,13 +530,14 @@
                 var valorPonto = (d.valor || 0).toFixed(2);
                 var valorInt = String(Math.round(d.valor || 0));
                 var situacaoMap = { pago: 'pago', recebido: 'recebido', pendente: 'pendente', cancelado: 'cancelado' };
-                var tipoMap = { entrada: 'receita entrada', saida: 'despesa saida sa\u00edda' };
+                var tipoMap = { entrada: 'receita entrada', saida: 'despesa saida' };
                 var campos = [
                     d.id, d.idPedido, d.descricao, d.motoboy, d.categoria,
                     d.pagamento, d.observacao, d.dataBR, d.dataDisplay, d.dataISO,
                     valorFormatado, valorSimples, valorPonto, valorInt,
                     situacaoMap[d.situacao] || d.situacao,
-                    tipoMap[d.tipo] || d.tipo
+                    tipoMap[d.tipo] || d.tipo,
+                    d.cliente, d.solicitante
                 ];
                 var pool = removerAcentos(campos.map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase());
                 var termos = termo.split(/\s+/);
@@ -490,7 +561,7 @@
         var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
         var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
         if (!pagina.length) {
-            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
+            els.tbodyTodos.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;opacity:.4;"></i>Nenhum registro encontrado</td></tr>';
         } else {
             els.tbodyTodos.innerHTML = pagina.map(function (d, i) {
                 return '<tr>' +
@@ -508,8 +579,8 @@
             }).join('');
         }
         if (els.pagInfoTodos) els.pagInfoTodos.textContent = total + ' registro' + (total !== 1 ? 's' : '');
-        if (els.pagPrevTodos) els.pagPrevTodos.disabled = state.todos.pagina <= 1;
-        if (els.pagNextTodos) els.pagNextTodos.disabled = state.todos.pagina >= state.todos.totalPag;
+        if (els.pagPrevTodos) els.pagPrevTodos.disabled = (state.todos.pagina <= 1);
+        if (els.pagNextTodos) els.pagNextTodos.disabled = (state.todos.pagina >= state.todos.totalPag);
         if (els.pagLabelTodos) els.pagLabelTodos.textContent = 'P\u00e1g ' + state.todos.pagina + ' de ' + state.todos.totalPag;
         bindAcoesTodas(pagina);
     }
@@ -550,9 +621,20 @@
             if (lista[i].tipo === 'entrada') totalEnt += parseFloat(lista[i].valor) || 0;
             else totalSai += parseFloat(lista[i].valor) || 0;
         }
-        if (els.caixaCardEntradas) { var ve = formatarMoeda(totalEnt); els.caixaCardEntradas.setAttribute('data-valor-real', ve); els.caixaCardEntradas.textContent = visivel ? ve : 'R$ ****'; }
-        if (els.caixaCardSaidas) { var vs = formatarMoeda(totalSai); els.caixaCardSaidas.setAttribute('data-valor-real', vs); els.caixaCardSaidas.textContent = visivel ? vs : 'R$ ****'; }
-        if (els.caixaCardRegistros) { els.caixaCardRegistros.setAttribute('data-valor-real', lista.length.toString()); els.caixaCardRegistros.textContent = lista.length; }
+        if (els.caixaCardEntradas) {
+            var ve = formatarMoeda(totalEnt);
+            els.caixaCardEntradas.setAttribute('data-valor-real', ve);
+            els.caixaCardEntradas.textContent = visivel ? ve : 'R$ ****';
+        }
+        if (els.caixaCardSaidas) {
+            var vs = formatarMoeda(totalSai);
+            els.caixaCardSaidas.setAttribute('data-valor-real', vs);
+            els.caixaCardSaidas.textContent = visivel ? vs : 'R$ ****';
+        }
+        if (els.caixaCardRegistros) {
+            els.caixaCardRegistros.setAttribute('data-valor-real', lista.length.toString());
+            els.caixaCardRegistros.textContent = lista.length;
+        }
     }
 
     function renderCaixa() {
@@ -560,7 +642,8 @@
         var df = els.caixaDataFim ? els.caixaDataFim.value : '';
         if (!di || !df) {
             var mesAtual = obterMesAtualRange();
-            di = mesAtual.inicio; df = mesAtual.fim;
+            di = mesAtual.inicio;
+            df = mesAtual.fim;
             if (els.caixaDataInicio) els.caixaDataInicio.value = di;
             if (els.caixaDataFim) els.caixaDataFim.value = df;
         }
@@ -687,8 +770,8 @@
         if (state.caixa.pagina > totalPag) state.caixa.pagina = totalPag;
         state.caixa.totalPag = totalPag;
         if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = totalDias > 0 ? totalDias + ' dia' + (totalDias !== 1 ? 's' : '') : '0 registros';
-        if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
-        if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= totalPag;
+        if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = (state.caixa.pagina <= 1);
+        if (els.pagNextCaixa) els.pagNextCaixa.disabled = (state.caixa.pagina >= totalPag);
         if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'P\u00e1g ' + state.caixa.pagina + ' de ' + totalPag;
     }
 
@@ -714,6 +797,8 @@
             '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Pagamento</span><span class="fw-semibold">' + escapeHtml(pagMap[(d.pagamento || '').toLowerCase()] || d.pagamento || '-') + '</span></div>' +
             '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Motoboy</span><span class="fw-semibold">' + escapeHtml(d.motoboy && d.motoboy !== '-' ? d.motoboy : '-') + '</span></div>' +
             '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Pedido</span><span class="fw-semibold">' + escapeHtml(d.idPedido || '-') + '</span></div>' +
+            '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Cliente</span><span class="fw-semibold">' + escapeHtml(d.cliente || '-') + '</span></div>' +
+            '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Solicitante</span><span class="fw-semibold">' + escapeHtml(d.solicitante || '-') + '</span></div>' +
             '<div class="d-flex justify-content-between"><span class="text-muted">Observa\u00e7\u00e3o</span><span class="fw-semibold">' + escapeHtml(d.observacao || '-') + '</span></div></div>' +
             '<div class="text-center mt-2" style="font-size:.6rem;color:#bbb;">Consultado em ' + timestamp + '</div></div>' +
             '<div class="fin-form-footer justify-content-between"><button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="btn-view-editar-dynamic" style="font-size:.72rem;"><i class="bi bi-pencil-square me-1"></i>Editar</button>' +
@@ -804,25 +889,26 @@
         if (valor <= 0) { mostrarErro('Informe um valor v\u00e1lido.'); return; }
         var dataParts = dataISO.split('-');
         var dataBR = dataParts[2] + '/' + dataParts[1] + '/' + dataParts[0];
-        var payload = { data: dataBR, tipo: tipo, descricao: descricao, valor: valor, motoboy: motoboy, situacao: situacao, id_pedido: idPedido };
+        var payload = {
+            data: dataBR,
+            tipo: tipo,
+            descricao: descricao,
+            valor: valor,
+            motoboy: motoboy,
+            situacao: situacao,
+            id_pedido: idPedido
+        };
         if (categoria) payload.categoria = categoria;
         if (pagamento) payload.pagamento = pagamento;
         if (observacao) payload.observacao = observacao;
         if (id) payload.id = id;
-        var action = id ? 'editfinanceiro' : 'addfinanceiro';
+        var action = id ? 'updatefinanceiro' : 'addfinanceiro';
         if (btnSalvar) btnSalvar.disabled = true;
         if (spinner) spinner.classList.remove('d-none');
         if (txtSalvar) txtSalvar.textContent = 'Salvando...';
         window.API.call(action, payload)
             .then(function (res) {
-                var sucesso = false;
-                var msg = '';
-                if (res) {
-                    msg = (res.message || res.msg || res.mensagem || '').toString().toLowerCase();
-                    if (res.success === true || res.success === 'true' || res.success === 1) sucesso = true;
-                    else if (msg.indexOf('adicionado') !== -1 || msg.indexOf('salvo') !== -1 || msg.indexOf('criado') !== -1 || msg.indexOf('atualizado') !== -1 || msg.indexOf('editado') !== -1 || msg.indexOf('sucesso') !== -1) sucesso = true;
-                }
-                if (sucesso) {
+                if (isRespostaSucesso(res)) {
                     var inst = bootstrap.Modal.getInstance(modalEl);
                     if (inst) inst.hide();
                     finToast(id ? 'Lan\u00e7amento atualizado!' : 'Lan\u00e7amento criado!', 'success');
@@ -855,17 +941,14 @@
     }
 
     function excluir(id) {
-        window.API.call('delfinanceiro', { id: id })
+        window.API.call('deletefinanceiro', { id: id })
             .then(function (res) {
-                var sucesso = false;
-                var msg = '';
-                if (res) {
-                    msg = (res.message || res.msg || res.mensagem || '').toString().toLowerCase();
-                    if (res.success === true || res.success === 'true' || res.success === 1) sucesso = true;
-                    else if (msg.indexOf('exclu') !== -1 || msg.indexOf('removido') !== -1 || msg.indexOf('deletado') !== -1 || msg.indexOf('sucesso') !== -1) sucesso = true;
+                if (isRespostaSucesso(res)) {
+                    finToast('Lan\u00e7amento exclu\u00eddo.', 'success');
+                    carregarDados();
+                } else {
+                    finToast('Erro ao excluir: ' + ((res && (res.message || res.msg)) || ''), 'danger');
                 }
-                if (sucesso) { finToast('Lan\u00e7amento exclu\u00eddo.', 'success'); carregarDados(); }
-                else finToast('Erro ao excluir.', 'danger');
             })
             .catch(function () { finToast('Falha na comunica\u00e7\u00e3o.', 'danger'); });
     }
@@ -954,15 +1037,13 @@
         var lista = carregarExtratosStorage();
         var obj = {
             id: extrato.id || ('ext_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
-            titulo: extrato.titulo || extrato.origem || '-',
             origem: extrato.origem || '-',
-            tagClass: extrato.tagClass || '',
-            tagLabel: extrato.tagLabel || '',
             periodoLabel: extrato.periodoLabel || '',
-            criadoEm: extrato.criadoEm || new Date().toLocaleString('pt-BR'),
+            cliente: extrato.cliente || '-',
+            solicitante: extrato.solicitante || '-',
+            criadoEm: new Date().toISOString(),
             registros: (extrato.registros || []).map(function (r) {
                 return {
-                    dataISO: r.dataISO || '',
                     dataBR: r.dataBR || '',
                     descricao: r.descricao || '',
                     motoboy: r.motoboy || '-',
@@ -970,10 +1051,8 @@
                     situacao: r.situacao || '',
                     tipo: r.tipo || 'entrada',
                     valor: r.valor || 0,
-                    idPedido: r.idPedido || '',
-                    _nomeCliente: r._nomeCliente || '',
-                    _solicitante: r._solicitante || '',
-                    _descricao: r._descricao || ''
+                    cliente: r.cliente || '-',
+                    solicitante: r.solicitante || '-'
                 };
             })
         };
@@ -981,7 +1060,7 @@
         if (lista.length > EXTRATO_MAX) lista = lista.slice(0, EXTRATO_MAX);
         try {
             localStorage.setItem(EXTRATO_STORAGE_KEY, JSON.stringify(lista));
-        } catch (e) {}
+        } catch (e) { }
         return obj;
     }
 
@@ -1028,344 +1107,184 @@
         return resultado;
     }
 
-    function carregarDadosPedidos(idsPedidos, callback) {
-        var mapa = {};
-        if (!idsPedidos || idsPedidos.length === 0) {
-            callback(mapa);
-            return;
-        }
-        var pendentes = idsPedidos.length;
-        function verificarFim() {
-            pendentes--;
-            if (pendentes <= 0) callback(mapa);
-        }
-        for (var i = 0; i < idsPedidos.length; i++) {
-            (function (idPed) {
-                firebase.database().ref('pedidos/' + idPed).once('value').then(function (snapPed) {
-                    var pedido = snapPed.val();
-                    if (pedido) {
-                        var idCliente = pedido.id_cliente || pedido.idCliente || '';
-                        var solicitante = pedido.solicitante || pedido.usuario || pedido.user || '-';
-                        var descricao = pedido.descricao || pedido.tipo_servico || pedido.servico || 'Corrida';
-                        if (idCliente) {
-                            firebase.database().ref('clientes/' + idCliente).once('value').then(function (snapCli) {
-                                var cli = snapCli.val();
-                                mapa[idPed] = {
-                                    nomeCliente: cli ? (cli.nome || cli.name || cli.razao_social || cli.fantasia || '-') : '-',
-                                    solicitante: solicitante,
-                                    descricao: descricao
-                                };
-                                verificarFim();
-                            }).catch(function () {
-                                mapa[idPed] = { nomeCliente: '-', solicitante: solicitante, descricao: descricao };
-                                verificarFim();
-                            });
-                        } else {
-                            mapa[idPed] = {
-                                nomeCliente: pedido.cliente || pedido.nome_cliente || '-',
-                                solicitante: solicitante,
-                                descricao: descricao
-                            };
-                            verificarFim();
-                        }
-                    } else {
-                        mapa[idPed] = { nomeCliente: '-', solicitante: '-', descricao: 'Corrida' };
-                        verificarFim();
-                    }
-                }).catch(function () {
-                    mapa[idPed] = { nomeCliente: '-', solicitante: '-', descricao: 'Corrida' };
-                    verificarFim();
-                });
-            })(idsPedidos[i]);
-        }
-    }
-
-    function gerarExtrato() {
-        if (!els.extratoDataInicio || !els.extratoDataFim || !els.extratoOrigem) return;
-        var dataInicio = (els.extratoDataInicio.value || '').trim();
-        var dataFim = (els.extratoDataFim.value || '').trim();
-        var origemVal = (els.extratoOrigem.value || '').trim();
-        if (!dataInicio || !dataFim) { finToast('Selecione o periodo (data inicio e fim).', 'warning'); return; }
-        if (dataInicio > dataFim) { finToast('A data de inicio nao pode ser maior que a data final.', 'warning'); return; }
-        if (!origemVal) { finToast('Selecione a origem (motoboy, grupo ou caixa).', 'warning'); return; }
-        var tipoOrigem = '';
-        var nomeOrigem = '';
-        var tagClass = '';
-        var tagLabel = '';
-        if (origemVal === '__caixa__') {
-            tipoOrigem = 'caixa'; nomeOrigem = 'Caixa Geral'; tagClass = 'caixa'; tagLabel = 'Caixa';
-        } else if (origemVal.indexOf('motoboy::') === 0) {
-            tipoOrigem = 'motoboy'; nomeOrigem = origemVal.replace('motoboy::', ''); tagClass = 'motoboy'; tagLabel = 'Motoboy';
-        } else if (origemVal.indexOf('grupo::') === 0) {
-            tipoOrigem = 'grupo'; nomeOrigem = origemVal.replace('grupo::', ''); tagClass = 'grupo'; tagLabel = 'Grupo';
-        } else {
-            tipoOrigem = 'outro'; nomeOrigem = origemVal; tagClass = 'outro'; tagLabel = 'Outro';
-        }
-        var registros = [];
-        try { registros = filtrarRegistrosExtrato(dataInicio, dataFim, tipoOrigem, nomeOrigem); } catch (e) { finToast('Erro ao filtrar registros.', 'danger'); return; }
-        if (!registros || registros.length === 0) { finToast('Nenhum registro encontrado para este periodo/origem.', 'info'); return; }
-        var idsPedidos = [];
-        for (var i = 0; i < registros.length; i++) {
-            var idPed = registros[i].idPedido || '';
-            if (idPed && idsPedidos.indexOf(idPed) === -1) idsPedidos.push(idPed);
-        }
-        if (idsPedidos.length === 0) {
-            finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim);
-            return;
-        }
-        carregarDadosPedidos(idsPedidos, function (mapaPedidos) {
-            for (var j = 0; j < registros.length; j++) {
-                var pedKey = registros[j].idPedido || '';
-                if (pedKey && mapaPedidos[pedKey]) {
-                    registros[j]._nomeCliente = mapaPedidos[pedKey].nomeCliente || '-';
-                    registros[j]._solicitante = mapaPedidos[pedKey].solicitante || '-';
-                    registros[j]._descricao = mapaPedidos[pedKey].descricao || registros[j].descricao || 'Corrida';
-                }
-            }
-            finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim);
-        });
-    }
-
-    function finalizarExtrato(registros, nomeOrigem, tipoOrigem, tagClass, tagLabel, dataInicio, dataFim) {
-        var id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        var periodoFormatado = formatDateBR(dataInicio) + ' a ' + formatDateBR(dataFim);
-        var extrato = {
-            id: id,
-            titulo: nomeOrigem,
-            origem: nomeOrigem,
-            tipoOrigem: tipoOrigem,
-            tagClass: tagClass,
-            tagLabel: tagLabel,
-            dataInicio: dataInicio,
-            dataFim: dataFim,
-            periodoLabel: periodoFormatado,
-            registros: registros,
-            criadoEm: new Date().toLocaleString('pt-BR')
-        };
-        try { salvarExtratoStorage(extrato); } catch (e) {}
-        try { renderizarListaExtratos(); } catch (e) {}
-        try {
-            var htmlExtrato = montarHtmlExtratoFromObj(extrato);
-            if (els.extratoModalBody) els.extratoModalBody.innerHTML = htmlExtrato;
-            if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'EXTRATO DE CONTA';
-            if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'flex';
-        } catch (e) {}
-        finToast('Extrato "' + nomeOrigem + '" gerado e salvo!', 'success');
-    }
-
     function montarHtmlExtratoFromObj(extrato) {
-        if (!extrato || !extrato.registros) return '<p>Sem dados.</p>';
-        var registros = extrato.registros || [];
-        var totalCreditos = 0;
-        var totalDebitos = 0;
-        var html = '';
-        html += '<div class="ext-bank-wrap">';
-        html += '<div class="ext-bank-header-block">';
-        html += '<div class="ext-bank-logo">GESTAO &amp; LOGISTICA</div>';
-        html += '<div style="font-size:.62rem;color:#888;letter-spacing:1px;">EXTRATO DE CONTA</div>';
-        html += '</div>';
-        html += '<hr class="ext-bank-divider-double">';
-        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Origem:</span><span class="ext-bank-value">' + escapeHtml(extrato.origem || '-') + '</span></div>';
-        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Periodo:</span><span class="ext-bank-value">' + escapeHtml(extrato.periodoLabel || '-') + '</span></div>';
-        html += '<div class="ext-bank-info-row"><span class="ext-bank-label">Emissao:</span><span class="ext-bank-value">' + escapeHtml(extrato.criadoEm || '-') + '</span></div>';
-        html += '<hr class="ext-bank-divider-double">';
-        html += '<div class="ext-bank-section-title">Lancamentos</div>';
-        html += '<hr class="ext-bank-divider">';
-        html += '<div class="ext-bank-lanc-header">';
-        html += '<span class="ext-bank-lanc-col-data">Data</span>';
-        html += '<span class="ext-bank-lanc-col-info">Detalhes</span>';
-        html += '<span class="ext-bank-lanc-col-valor">Valor</span>';
-        html += '<span class="ext-bank-lanc-col-sit">Sit.</span>';
-        html += '</div>';
-        html += '<hr class="ext-bank-divider">';
-        for (var i = 0; i < registros.length; i++) {
-            var r = registros[i];
-            var dataFormatada = r.dataBR || r.dataDisplay || '';
-            var nomeCliente = r._nomeCliente || r.cliente || '-';
-            var solicitante = r._solicitante || r.solicitante || '-';
-            var motoboy = r.motoboy || '-';
-            var descricao = r._descricao || r.descricao || 'Corrida';
-            var situacao = r.situacao || '';
-            var valor = parseFloat(r.valor || 0);
-            var isCredito = (r.tipo === 'entrada');
-            var valorAbs = Math.abs(valor);
-            var valorStr = 'R$ ' + valorAbs.toFixed(2).replace('.', ',');
-            if (isCredito) {
-                totalCreditos += valorAbs;
-                valorStr += ' C';
-            } else {
-                totalDebitos += valorAbs;
-                valorStr += ' D';
-            }
-            var valorClass = isCredito ? 'credito' : 'debito';
-            var sitLabel = (situacao || '').toUpperCase();
-            var detalheLinha = escapeHtml(nomeCliente) + ' | ' + escapeHtml(solicitante) + ' | ' + escapeHtml(motoboy) + ' | ' + escapeHtml(descricao);
-            html += '<div class="ext-bank-lancamento-row">';
-            html += '<span class="ext-bank-lanc-data">' + escapeHtml(dataFormatada) + '</span>';
-            html += '<span class="ext-bank-lanc-desc-line">' + detalheLinha + '</span>';
-            html += '<span class="ext-bank-lanc-valor ' + valorClass + '">' + valorStr + '</span>';
-            html += '<span class="ext-bank-lanc-sit">' + escapeHtml(sitLabel) + '</span>';
-            html += '</div>';
-            html += '<hr class="ext-bank-divider">';
+        var regs = extrato.registros || [];
+        var totalEnt = 0, totalSai = 0;
+        var linhas = '';
+        for (var i = 0; i < regs.length; i++) {
+            var r = regs[i];
+            var isE = r.tipo === 'entrada';
+            var val = parseFloat(r.valor) || 0;
+            if (isE) totalEnt += val; else totalSai += val;
+            linhas += '<tr>' +
+                '<td>' + escapeHtml(r.dataBR || '-') + '</td>' +
+                '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+                '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+                '<td>' + escapeHtml(r.cliente || '-') + '</td>' +
+                '<td>' + escapeHtml(r.solicitante || '-') + '</td>' +
+                '<td class="text-end"><span style="color:' + (isE ? '#198754' : '#dc3545') + ';font-weight:600;">' +
+                (isE ? '+ ' : '- ') + formatarMoeda(val) + '</span></td></tr>';
         }
-        html += '<hr class="ext-bank-divider-double">';
-        html += '<div class="ext-bank-section-title">Resumo</div>';
-        html += '<hr class="ext-bank-divider">';
-        html += '<div class="ext-bank-totais-row"><span class="ext-bank-tot-label">Total Creditos:</span><span class="ext-bank-tot-valor" style="color:#0a6e2d;">R$ ' + totalCreditos.toFixed(2).replace('.', ',') + ' C</span></div>';
-        html += '<div class="ext-bank-totais-row"><span class="ext-bank-tot-label">Total Debitos:</span><span class="ext-bank-tot-valor" style="color:#b71c1c;">R$ ' + totalDebitos.toFixed(2).replace('.', ',') + ' D</span></div>';
-        html += '<hr class="ext-bank-divider-double">';
-        var saldo = totalCreditos - totalDebitos;
-        var saldoStr = 'R$ ' + Math.abs(saldo).toFixed(2).replace('.', ',');
-        var saldoSufixo = saldo >= 0 ? ' C' : ' D';
-        var saldoCor = saldo >= 0 ? '#0a6e2d' : '#b71c1c';
-        html += '<div class="ext-bank-saldo-final"><span>S &nbsp;A &nbsp;L &nbsp;D &nbsp;O</span><span style="color:' + saldoCor + ';">' + saldoStr + saldoSufixo + '</span></div>';
-        html += '<hr class="ext-bank-divider-double">';
-        html += '<div class="ext-bank-footer-block">Documento gerado automaticamente em ' + escapeHtml(extrato.criadoEm || '-') + '<br>Gestao &amp; Logistica</div>';
-        html += '</div>';
+        var saldo = totalEnt - totalSai;
+        var html = '<div class="extrato-bank-info">' +
+            '<div><strong>Origem:</strong> ' + escapeHtml(extrato.origem || '-') + '</div>' +
+            '<div><strong>Per\u00edodo:</strong> ' + escapeHtml(extrato.periodoLabel || '-') + '</div>' +
+            '<div><strong>Gerado em:</strong> ' + escapeHtml(extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '</div>' +
+            '</div>' +
+            '<table class="extrato-bank-table"><thead><tr>' +
+            '<th>Data</th><th>Descri\u00e7\u00e3o</th><th>Motoboy</th><th>Cliente</th><th>Solicitante</th><th class="text-end">Valor</th>' +
+            '</tr></thead><tbody>' + (linhas || '<tr><td colspan="6" class="text-center text-muted py-3">Nenhum registro.</td></tr>') + '</tbody></table>' +
+            '<div class="extrato-bank-resumo">' +
+            '<span class="extrato-bank-resumo-item"><i class="bi bi-arrow-down-circle text-success"></i> Entradas: <strong>' + formatarMoeda(totalEnt) + '</strong></span>' +
+            '<span class="extrato-bank-resumo-item"><i class="bi bi-arrow-up-circle text-danger"></i> Sa\u00eddas: <strong>' + formatarMoeda(totalSai) + '</strong></span>' +
+            '<span class="extrato-bank-resumo-item"><i class="bi bi-wallet2"></i> Saldo: <strong style="color:' + (saldo >= 0 ? '#198754' : '#dc3545') + ';">' + formatarMoeda(saldo) + '</strong></span>' +
+            '</div>';
         return html;
     }
 
-    function montarTextoExtratoFromObj(extrato) {
+    function montarTextoExtratoParaCopiar(extrato) {
         var regs = extrato.registros || [];
-        if (!regs.length) return 'Nenhum lancamento encontrado no periodo.';
         var totalEnt = 0, totalSai = 0;
-        var agrupado = {};
+        var linhas = '';
         for (var i = 0; i < regs.length; i++) {
             var r = regs[i];
-            var chave = r.dataISO || 'sem-data';
-            if (!agrupado[chave]) agrupado[chave] = [];
-            agrupado[chave].push(r);
-            var v = parseFloat(r.valor) || 0;
-            if (r.tipo === 'entrada') totalEnt += v;
-            else totalSai += v;
+            var isE = r.tipo === 'entrada';
+            var val = parseFloat(r.valor) || 0;
+            if (isE) totalEnt += val; else totalSai += val;
+            linhas += (r.dataBR || '-') + ' | ' + (r.descricao || '-') + ' | ' + (r.motoboy || '-') + ' | ' + (r.cliente || '-') + ' | ' + (r.solicitante || '-') + ' | ' + (isE ? '+' : '-') + ' ' + formatarMoeda(val) + '\n';
         }
         var saldo = totalEnt - totalSai;
-        var dias = Object.keys(agrupado).sort();
-        var linhas = [];
-        linhas.push('========================================');
-        linhas.push('   GESTAO & LOGISTICA');
-        linhas.push('   EXTRATO DE MOVIMENTACAO');
-        linhas.push('   ' + (extrato.periodoLabel || ''));
-        if (extrato.titulo) linhas.push('   Origem: ' + extrato.titulo);
-        linhas.push('========================================');
-        linhas.push('');
-        linhas.push('Entradas: ' + formatarMoeda(totalEnt));
-        linhas.push('Saidas:   ' + formatarMoeda(totalSai));
-        linhas.push('Saldo:    ' + formatarMoeda(saldo));
-        linhas.push('');
-        linhas.push('----------------------------------------');
-        for (var d = 0; d < dias.length; d++) {
-            var diaKey = dias[d];
-            var itens = agrupado[diaKey];
-            linhas.push('');
-            linhas.push(formatDateBR(diaKey) + ' - ' + getDiaSemanaCompleto(diaKey));
-            linhas.push('----------------------------');
-            for (var j = 0; j < itens.length; j++) {
-                var item = itens[j];
-                var nomeCliente = item._nomeCliente || item.cliente || '-';
-                var solicitante = item._solicitante || item.solicitante || '-';
-                var motoboy = (item.motoboy && item.motoboy !== '-') ? item.motoboy : '-';
-                var descricao = item._descricao || item.descricao || 'Corrida';
-                var valor = parseFloat(item.valor) || 0;
-                var isEnt = item.tipo === 'entrada';
-                var sinal = isEnt ? '+ ' : '- ';
-                var sit = (item.situacao || '').toUpperCase();
-                linhas.push(nomeCliente + ' | ' + solicitante + ' | ' + motoboy + ' | ' + descricao);
-                linhas.push('  ' + sinal + formatarMoeda(valor) + '  ' + sit);
-            }
-        }
-        linhas.push('');
-        linhas.push('========================================');
-        linhas.push('  SALDO FINAL: ' + formatarMoeda(saldo));
-        linhas.push('========================================');
-        linhas.push('  Gerado em ' + (extrato.criadoEm || new Date().toLocaleString('pt-BR')));
-        return linhas.join('\n');
+        var texto = '========== EXTRATO ==========\n' +
+            'Origem: ' + (extrato.origem || '-') + '\n' +
+            'Per\u00edodo: ' + (extrato.periodoLabel || '-') + '\n' +
+            'Gerado em: ' + (extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '\n' +
+            '-----------------------------\n' +
+            'Data | Descri\u00e7\u00e3o | Motoboy | Cliente | Solicitante | Valor\n' +
+            '-----------------------------\n' +
+            linhas +
+            '-----------------------------\n' +
+            'Entradas: ' + formatarMoeda(totalEnt) + '\n' +
+            'Sa\u00eddas: ' + formatarMoeda(totalSai) + '\n' +
+            'Saldo: ' + formatarMoeda(saldo) + '\n' +
+            '=============================';
+        return texto;
     }
 
-    function abrirModalExtrato(id) {
-        var extrato = buscarExtratoStoragePorId(id);
-        if (!extrato) return;
-        if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'Extrato \u2014 ' + (extrato.titulo || extrato.origem || '-');
-        if (els.extratoModalBody) els.extratoModalBody.innerHTML = montarHtmlExtratoFromObj(extrato);
-        if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'flex';
+    function abrirExtratoModal(extrato) {
+        if (!els.extratoModalOverlay || !els.extratoModalBody) return;
+        if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'EXTRATO - ' + (extrato.origem || 'CONTA').toUpperCase();
+        els.extratoModalBody.innerHTML = montarHtmlExtratoFromObj(extrato);
+        els.extratoModalOverlay.style.display = 'flex';
+        if (els.extratoModalFechar) {
+            els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
+        }
         if (els.extratoModalCopiar) {
-            els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(montarTextoExtratoFromObj(extrato)); };
+            els.extratoModalCopiar.onclick = function () {
+                var texto = montarTextoExtratoParaCopiar(extrato);
+                copiarTextoClipboard(texto);
+            };
         }
-    }
-
-    function fecharModalExtrato() {
-        if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'none';
-    }
-
-    function copiarExtrato(id) {
-        var extrato = buscarExtratoStoragePorId(id);
-        if (!extrato) return;
-        copiarTextoClipboard(montarTextoExtratoFromObj(extrato));
-    }
-
-    function removerExtrato(id) {
-        removerExtratoStorage(id);
-        renderizarListaExtratos();
-        finToast('Extrato removido.', 'info');
+        els.extratoModalOverlay.onclick = function (e) {
+            if (e.target === els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'none';
+        };
     }
 
     function renderizarListaExtratos() {
-        var lista = els.extratoLista;
-        if (!lista) return;
+        var container = els.extratoLista;
+        if (!container) return;
         var extratos = carregarExtratosStorage();
         if (!extratos.length) {
-            lista.innerHTML = '<div class="extrato-placeholder" id="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o per\u00edodo, a origem e clique em <strong>Gerar</strong>.</span></div>';
+            container.innerHTML = '<div class="extrato-placeholder" id="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o per\u00edodo, a origem e clique em <strong>Gerar</strong>.</span></div>';
             return;
         }
         var html = '';
         for (var i = 0; i < extratos.length; i++) {
             var ex = extratos[i];
-            var totalEntradas = 0, totalSaidas = 0;
-            var regs = ex.registros || [];
-            for (var r = 0; r < regs.length; r++) {
-                var val = parseFloat(regs[r].valor) || 0;
-                if (regs[r].tipo === 'entrada') totalEntradas += val;
-                else totalSaidas += val;
-            }
-            var saldo = totalEntradas - totalSaidas;
-            html += '<div class="extrato-card" data-extrato-id="' + escapeHtml(ex.id) + '">' +
-                '<div class="extrato-card-info"><div class="extrato-card-titulo">' + escapeHtml(ex.titulo || ex.origem || '-') + '</div>' +
-                '<div class="extrato-card-periodo"><span class="extrato-card-tag ' + (ex.tagClass || '') + '">' + escapeHtml(ex.tagLabel || '') + '</span> \u00b7 ' +
-                escapeHtml(ex.periodoLabel || '') + ' \u00b7 ' + regs.length + ' reg. \u00b7 Saldo: ' + formatarMoeda(saldo) + '</div></div>' +
-                '<div class="extrato-card-acoes">' +
-                '<button class="extrato-card-btn ver" title="Visualizar" data-acao="ver" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-eye"></i></button>' +
-                '<button class="extrato-card-btn copiar" title="Copiar" data-acao="copiar" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-clipboard"></i></button>' +
-                '<button class="extrato-card-btn remover" title="Remover" data-acao="remover" data-id="' + escapeHtml(ex.id) + '"><i class="bi bi-trash3"></i></button>' +
+            var totalRegs = (ex.registros || []).length;
+            var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
+            html += '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '">' +
+                '<div class="extrato-item-left">' +
+                '<div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
+                '<div>' +
+                '<div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
+                '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' \u00b7 ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
+                '<div class="extrato-item-sub">' + criadoLabel + '</div>' +
+                '</div></div>' +
+                '<div class="extrato-item-actions">' +
+                '<button class="extrato-item-btn extrato-item-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
+                '<button class="extrato-item-btn extrato-item-btn-del" data-id="' + escapeHtml(ex.id) + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
                 '</div></div>';
         }
-        lista.innerHTML = html;
-        lista.onclick = function (e) {
-            var btn = e.target.closest('[data-acao]');
-            if (!btn) return;
-            var acao = btn.getAttribute('data-acao');
-            var extratoId = btn.getAttribute('data-id');
-            if (acao === 'ver') abrirModalExtrato(extratoId);
-            else if (acao === 'copiar') copiarExtrato(extratoId);
-            else if (acao === 'remover') removerExtrato(extratoId);
-        };
+        container.innerHTML = html;
+        container.querySelectorAll('.extrato-item-btn-ver').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var id = this.getAttribute('data-id');
+                var ext = buscarExtratoStoragePorId(id);
+                if (ext) abrirExtratoModal(ext);
+            });
+        });
+        container.querySelectorAll('.extrato-item-btn-del').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var id = this.getAttribute('data-id');
+                removerExtratoStorage(id);
+                finToast('Extrato removido.', 'success');
+                renderizarListaExtratos();
+            });
+        });
+        container.querySelectorAll('.extrato-item-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var id = this.getAttribute('data-extrato-id');
+                var ext = buscarExtratoStoragePorId(id);
+                if (ext) abrirExtratoModal(ext);
+            });
+        });
     }
 
     function initExtrato() {
-        popularOrigem();
-        aplicarPeriodoExtrato('quinzenal');
-        var btnsPeriodo = document.querySelectorAll('.extrato-periodo-btn');
-        for (var p = 0; p < btnsPeriodo.length; p++) {
-            btnsPeriodo[p].addEventListener('click', function () {
-                for (var j = 0; j < btnsPeriodo.length; j++) btnsPeriodo[j].classList.remove('active');
+        aplicarPeriodoExtrato('diario');
+        document.querySelectorAll('.extrato-periodo-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.extrato-periodo-btn').forEach(function (b) { b.classList.remove('active'); });
                 this.classList.add('active');
-                aplicarPeriodoExtrato(this.getAttribute('data-periodo'));
+                var periodo = this.getAttribute('data-periodo');
+                if (periodo) aplicarPeriodoExtrato(periodo);
             });
-        }
-        if (els.btnGerarExtrato) els.btnGerarExtrato.addEventListener('click', function () { gerarExtrato(); });
-        if (els.extratoModalFechar) els.extratoModalFechar.addEventListener('click', fecharModalExtrato);
-        if (els.extratoModalOverlay) {
-            els.extratoModalOverlay.addEventListener('click', function (e) {
-                if (e.target === els.extratoModalOverlay) fecharModalExtrato();
+        });
+        if (els.btnGerarExtrato) {
+            els.btnGerarExtrato.addEventListener('click', function () {
+                var di = els.extratoDataInicio ? els.extratoDataInicio.value : '';
+                var df = els.extratoDataFim ? els.extratoDataFim.value : '';
+                var origemVal = els.extratoOrigem ? els.extratoOrigem.value : '';
+                if (!di || !df) { finToast('Selecione o per\u00edodo.', 'warning'); return; }
+                if (!origemVal) { finToast('Selecione a origem.', 'warning'); return; }
+                var tipoOrigem = '';
+                var nomeOrigem = '';
+                var origemLabel = '';
+                if (origemVal === '__caixa__') {
+                    tipoOrigem = 'caixa';
+                    nomeOrigem = '';
+                    origemLabel = 'Caixa Geral';
+                } else if (origemVal.indexOf('motoboy::') === 0) {
+                    tipoOrigem = 'motoboy';
+                    nomeOrigem = origemVal.replace('motoboy::', '');
+                    origemLabel = 'Motoboy: ' + nomeOrigem;
+                } else if (origemVal.indexOf('grupo::') === 0) {
+                    tipoOrigem = 'grupo';
+                    nomeOrigem = origemVal.replace('grupo::', '');
+                    origemLabel = 'Grupo: ' + nomeOrigem;
+                }
+                var registros = filtrarRegistrosExtrato(di, df, tipoOrigem, nomeOrigem);
+                var periodoLabel = formatDateBR(di) + ' a ' + formatDateBR(df);
+                var extrato = salvarExtratoStorage({
+                    origem: origemLabel,
+                    periodoLabel: periodoLabel,
+                    registros: registros
+                });
+                finToast('Extrato gerado com ' + registros.length + ' registro(s)!', 'success');
+                renderizarListaExtratos();
+                abrirExtratoModal(extrato);
             });
         }
         renderizarListaExtratos();
@@ -1375,36 +1294,58 @@
         if (state.fetching) return;
         state.fetching = true;
         spinOn();
-        window.API.call('getfinanceiro', {})
-            .then(function (res) {
-                var dados = [];
-                if (res && res.data && Array.isArray(res.data)) {
-                    dados = res.data;
-                } else if (res && Array.isArray(res)) {
-                    dados = res;
-                } else if (res && typeof res === 'object') {
-                    var keys = Object.keys(res);
-                    for (var k = 0; k < keys.length; k++) {
-                        var item = res[keys[k]];
-                        if (item && typeof item === 'object' && !Array.isArray(item)) {
-                            if (!item.id) item.id = keys[k];
-                            dados.push(item);
-                        }
+
+        Promise.all([
+            window.API.call('getfinanceiro', {}),
+            window.API.call('getpedidos', {}),
+            window.API.call('getclientes', {})
+        ])
+            .then(function (results) {
+                var clientesArr = extrairArray(results[2]);
+                state.clientesCache = {};
+                for (var c = 0; c < clientesArr.length; c++) {
+                    var cli = clientesArr[c];
+                    var cliId = (cli.id || '').toString().trim();
+                    if (cliId) {
+                        state.clientesCache[cliId] = {
+                            id: cliId,
+                            username: (cli.username || '').toString().trim(),
+                            responsavel: (cli.responsavel || '').toString().trim(),
+                            contato: (cli.contato || '').toString().trim()
+                        };
                     }
                 }
-                state.cache = [];
-                for (var i = 0; i < dados.length; i++) {
-                    try {
-                        state.cache.push(normalizarRegistro(dados[i]));
-                    } catch (e) {}
+
+                var pedidosArr = extrairArray(results[1]);
+                state.pedidosCache = {};
+                for (var p = 0; p < pedidosArr.length; p++) {
+                    var ped = pedidosArr[p];
+                    var pedId = (ped.id || '').toString().trim();
+                    if (pedId) {
+                        state.pedidosCache[pedId] = {
+                            id: pedId,
+                            id_cliente: (ped.id_cliente || '').toString().trim(),
+                            solicitante: (ped.solicitante || '').toString().trim()
+                        };
+                    }
                 }
+
+                var finArr = extrairArray(results[0]);
+                state.cache = [];
+                for (var i = 0; i < finArr.length; i++) {
+                    try {
+                        state.cache.push(normalizarRegistro(finArr[i]));
+                    } catch (e) { }
+                }
+
+                resolverClienteSolicitante();
                 renderTodos();
                 renderCaixa();
                 popularOrigem();
                 renderizarListaExtratos();
             })
             .catch(function () {
-                finToast('Erro ao carregar dados financeiros.', 'danger');
+                finToast('Erro ao carregar dados.', 'danger');
             })
             .finally(function () {
                 state.fetching = false;
@@ -1415,6 +1356,8 @@
     window.initFinanceiro = function () {
         state.fetching = false;
         state.cache = [];
+        state.pedidosCache = {};
+        state.clientesCache = {};
         state.caixaValoresVisiveis = false;
         state.tabAtual = 'todos';
         state.filtroTipo = 'todos';
