@@ -729,16 +729,22 @@
     function abrirModalDetalheDia(diaISO, registros) {
         var modalEl = document.getElementById('modalDetalheDia');
         if (!modalEl) return;
+
         var partes = diaISO.split('-');
         var dataBR = partes[2] + '/' + partes[1] + '/' + partes[0];
         var diaSemana = getDiaSemanaCompleto(diaISO);
+
         var tituloEl = document.getElementById('modal-detalhe-dia-titulo');
         if (tituloEl) tituloEl.textContent = dataBR + ' (' + diaSemana + ')';
+
         var bodyEl = document.getElementById('modal-detalhe-dia-body');
         if (!bodyEl) return;
+
         var totalEnt = 0, totalSai = 0;
+
         if (!registros || !registros.length) {
-            bodyEl.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Nenhum lan\u00e7amento.</td></tr>';
+            // colspan ajustado para 2: apenas Pedido + Valor
+            bodyEl.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">Nenhum lançamento.</td></tr>';
         } else {
             var html = '';
             for (var i = 0; i < registros.length; i++) {
@@ -746,20 +752,33 @@
                 var isE = rr.tipo === 'entrada';
                 if (isE) totalEnt += parseFloat(rr.valor) || 0;
                 else totalSai += parseFloat(rr.valor) || 0;
-                html += '<tr><td>' + escapeHtml(rr.descricao || '-') + '</td><td>' + escapeHtml(rr.idPedido || '-') + '</td>' +
-                    '<td>' + escapeHtml(rr.motoboy && rr.motoboy !== '-' ? rr.motoboy : '-') + '</td>' +
-                    '<td class="text-end"><span class="' + (isE ? 'detalhe-dia-valor-entrada' : 'detalhe-dia-valor-saida') + '">' +
-                    (isE ? '+ ' : '- ') + formatarMoeda(rr.valor) + '</span></td></tr>';
+
+                // Removidas as colunas Descrição e Motoboy
+                html += '<tr>' +
+                    '<td>' + escapeHtml(rr.idPedido || '-') + '</td>' +
+                    '<td class="text-end">' +
+                    '<span class="' + (isE ? 'detalhe-dia-valor-entrada' : 'detalhe-dia-valor-saida') + '">' +
+                    (isE ? '+ ' : '- ') + formatarMoeda(rr.valor) +
+                    '</span>' +
+                    '</td>' +
+                    '</tr>';
             }
             bodyEl.innerHTML = html;
         }
+
         var saldo = totalEnt - totalSai;
+
         var elEnt = document.getElementById('modal-detalhe-dia-entradas');
         var elSai = document.getElementById('modal-detalhe-dia-saidas');
         var elSaldo = document.getElementById('modal-detalhe-dia-saldo');
+
         if (elEnt) elEnt.textContent = formatarMoeda(totalEnt);
         if (elSai) elSai.textContent = formatarMoeda(totalSai);
-        if (elSaldo) { elSaldo.textContent = formatarMoeda(saldo); elSaldo.style.color = saldo >= 0 ? '#198754' : '#dc3545'; }
+        if (elSaldo) {
+            elSaldo.textContent = formatarMoeda(saldo);
+            elSaldo.style.color = saldo >= 0 ? '#198754' : '#dc3545';
+        }
+
         new bootstrap.Modal(modalEl).show();
     }
 
@@ -1107,73 +1126,121 @@
         return resultado;
     }
 
-    function montarHtmlExtratoFromObj(extrato) {
-        var regs = extrato.registros || [];
-        var totalEnt = 0, totalSai = 0;
-        var linhas = '';
-        for (var i = 0; i < regs.length; i++) {
-            var r = regs[i];
-            var isE = r.tipo === 'entrada';
-            var val = parseFloat(r.valor) || 0;
+    /**
+  * @param {Object} extrato - Objeto com os dados do extrato
+  * @param {Array<string>} [colunasOcultas=[]] - Array com os nomes das colunas a remover: ['descricao', 'motoboy']
+  */
+    function montarHtmlExtratoFromObj(extrato, colunasOcultas = []) {
+        const regs = extrato.registros || [];
+
+        // Configuração das colunas
+        const colunasConfig = [
+            { id: 'data', label: 'Data', key: 'dataBR' },
+            { id: 'descricao', label: 'Descrição', key: 'descricao' },
+            { id: 'motoboy', label: 'Motoboy', key: 'motoboy' },
+            { id: 'cliente', label: 'Cliente', key: 'cliente' },
+            { id: 'solicitante', label: 'Solicitante', key: 'solicitante' }
+        ].filter(c => !colunasOcultas.includes(c.id));
+
+        let totalEnt = 0;
+        let totalSai = 0;
+
+        // Gerar linhas
+        const linhas = regs.map(r => {
+            const isE = r.tipo === 'entrada';
+            const val = parseFloat(r.valor) || 0;
+
             if (isE) totalEnt += val; else totalSai += val;
-            linhas += '<tr>' +
-                '<td>' + escapeHtml(r.dataBR || '-') + '</td>' +
-                '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
-                '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
-                '<td>' + escapeHtml(r.cliente || '-') + '</td>' +
-                '<td>' + escapeHtml(r.solicitante || '-') + '</td>' +
-                '<td class="text-end"><span style="color:' + (isE ? '#198754' : '#dc3545') + ';font-weight:600;">' +
-                (isE ? '+ ' : '- ') + formatarMoeda(val) + '</span></td></tr>';
-        }
-        var saldo = totalEnt - totalSai;
-        var html = '<div class="extrato-bank-info">' +
-            '<div><strong>Origem:</strong> ' + escapeHtml(extrato.origem || '-') + '</div>' +
-            '<div><strong>Per\u00edodo:</strong> ' + escapeHtml(extrato.periodoLabel || '-') + '</div>' +
-            '<div><strong>Gerado em:</strong> ' + escapeHtml(extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '</div>' +
-            '</div>' +
-            '<table class="extrato-bank-table"><thead><tr>' +
-            '<th>Data</th><th>Descri\u00e7\u00e3o</th><th>Motoboy</th><th>Cliente</th><th>Solicitante</th><th class="text-end">Valor</th>' +
-            '</tr></thead><tbody>' + (linhas || '<tr><td colspan="6" class="text-center text-muted py-3">Nenhum registro.</td></tr>') + '</tbody></table>' +
-            '<div class="extrato-bank-resumo">' +
-            '<span class="extrato-bank-resumo-item"><i class="bi bi-arrow-down-circle text-success"></i> Entradas: <strong>' + formatarMoeda(totalEnt) + '</strong></span>' +
-            '<span class="extrato-bank-resumo-item"><i class="bi bi-arrow-up-circle text-danger"></i> Sa\u00eddas: <strong>' + formatarMoeda(totalSai) + '</strong></span>' +
-            '<span class="extrato-bank-resumo-item"><i class="bi bi-wallet2"></i> Saldo: <strong style="color:' + (saldo >= 0 ? '#198754' : '#dc3545') + ';">' + formatarMoeda(saldo) + '</strong></span>' +
-            '</div>';
-        return html;
+
+            const tds = colunasConfig.map(col =>
+                `<td>${escapeHtml(r[col.key] || '-')}</td>`
+            ).join('');
+
+            return `
+            <tr>
+                ${tds}
+                <td class="text-end">
+                    <span style="color:${isE ? '#198754' : '#dc3545'}; font-weight:600;">
+                        ${isE ? '+ ' : '- '}${formatarMoeda(val)}
+                    </span>
+                </td>
+            </tr>`;
+        }).join('');
+
+        const saldo = totalEnt - totalSai;
+
+        // Retorno do HTML formatado
+        return `
+        <div class="extrato-bank-info">
+            <div><strong>Origem:</strong> ${escapeHtml(extrato.origem || '-')}</div>
+            <div><strong>Período:</strong> ${escapeHtml(extrato.periodoLabel || '-')}</div>
+            <div><strong>Gerado em:</strong> ${extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-'}</div>
+        </div>
+        
+        <table class="extrato-bank-table">
+            <thead>
+                <tr>
+                    ${colunasConfig.map(c => `<th>${c.label}</th>`).join('')}
+                    <th class="text-end">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${linhas || '<tr><td colspan="' + (colunasConfig.length + 1) + '" class="text-center text-muted py-3">Nenhum registro.</td></tr>'}
+            </tbody>
+        </table>
+
+        <div class="extrato-bank-resumo">
+            <span class="extrato-bank-resumo-item"><i class="bi bi-arrow-down-circle text-success"></i> Entradas: <strong>${formatarMoeda(totalEnt)}</strong></span>
+            <span class="extrato-bank-resumo-item"><i class="bi bi-arrow-up-circle text-danger"></i> Saídas: <strong>${formatarMoeda(totalSai)}</strong></span>
+            <span class="extrato-bank-resumo-item"><i class="bi bi-wallet2"></i> Saldo: <strong style="color:${saldo >= 0 ? '#198754' : '#dc3545'};">${formatarMoeda(saldo)}</strong></span>
+        </div>`;
     }
 
     function montarTextoExtratoParaCopiar(extrato) {
         var regs = extrato.registros || [];
         var totalEnt = 0, totalSai = 0;
         var linhas = '';
+
         for (var i = 0; i < regs.length; i++) {
             var r = regs[i];
             var isE = r.tipo === 'entrada';
             var val = parseFloat(r.valor) || 0;
+
             if (isE) totalEnt += val; else totalSai += val;
-            linhas += (r.dataBR || '-') + ' | ' + (r.descricao || '-') + ' | ' + (r.motoboy || '-') + ' | ' + (r.cliente || '-') + ' | ' + (r.solicitante || '-') + ' | ' + (isE ? '+' : '-') + ' ' + formatarMoeda(val) + '\n';
+
+            linhas +=
+                (r.dataBR || '-') + ' | ' +
+                (r.cliente || '-') + ' | ' +
+                (r.solicitante || '-') + ' | ' +
+                (isE ? '+' : '-') + ' ' + formatarMoeda(val) + '\n';
         }
+
         var saldo = totalEnt - totalSai;
-        var texto = '========== EXTRATO ==========\n' +
+
+        var texto =
+            '========== EXTRATO ==========\n' +
             'Origem: ' + (extrato.origem || '-') + '\n' +
-            'Per\u00edodo: ' + (extrato.periodoLabel || '-') + '\n' +
+            'Período: ' + (extrato.periodoLabel || '-') + '\n' +
             'Gerado em: ' + (extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '\n' +
             '-----------------------------\n' +
-            'Data | Descri\u00e7\u00e3o | Motoboy | Cliente | Solicitante | Valor\n' +
+            'Data | Cliente | Solicitante | Valor\n' +
             '-----------------------------\n' +
             linhas +
             '-----------------------------\n' +
             'Entradas: ' + formatarMoeda(totalEnt) + '\n' +
-            'Sa\u00eddas: ' + formatarMoeda(totalSai) + '\n' +
+            'Saídas: ' + formatarMoeda(totalSai) + '\n' +
             'Saldo: ' + formatarMoeda(saldo) + '\n' +
             '=============================';
+
         return texto;
     }
 
     function abrirExtratoModal(extrato) {
         if (!els.extratoModalOverlay || !els.extratoModalBody) return;
         if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = 'EXTRATO - ' + (extrato.origem || 'CONTA').toUpperCase();
-        els.extratoModalBody.innerHTML = montarHtmlExtratoFromObj(extrato);
+
+        els.extratoModalBody.innerHTML = montarHtmlExtratoFromObj(extrato, ['descricao', 'motoboy']);
+
         els.extratoModalOverlay.style.display = 'flex';
         if (els.extratoModalFechar) {
             els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
@@ -1376,5 +1443,38 @@
         initExtrato();
         carregarDados();
     };
+
+    function renderListaExtratosCaixaModal() {
+        var container = document.getElementById('extrato-lista-caixa');
+        var extratos = carregarExtratosStorage();
+
+        if (!extratos.length) {
+            container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i><div>Nenhum extrato gerado ainda.</div><small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar seus relatórios</small></div>';
+            return;
+        }
+
+        var html = extratos.map(function (ex) {
+            var totalRegs = (ex.registros || []).length;
+            var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
+            return '<div class="extrato-item-card-modal" data-extrato-id="' + escapeHtml(ex.id) + '">' +
+                '<div class="extrato-item-left">' +
+                '<div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
+                '<div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
+                '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
+                '<div class="extrato-item-sub small">' + criadoLabel + '</div></div></div>' +
+                '<div class="extrato-item-actions"><button class="extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-eye"></i></button></div></div>';
+        }).join('');
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.extrato-item-btn-ver-modal').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var id = this.getAttribute('data-id');
+                var ext = buscarExtratoStoragePorId(id);
+                if (ext) abrirExtratoModal(ext);
+            });
+        });
+    }
 
 })();
