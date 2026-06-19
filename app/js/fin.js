@@ -624,12 +624,16 @@
     var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
     var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
     if (!pagina.length) {
-      els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;opacity:.4;"></i><div style="margin-top:4px;">Nenhum registro encontrado</div></td></tr>';
+      els.tbodyTodos.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;opacity:.4;"></i><div style="margin-top:4px;">Nenhum registro encontrado</div></td></tr>';
     } else {
       els.tbodyTodos.innerHTML = pagina.map(function (d, i) {
+        var cliente = (d.cliente && d.cliente !== '-' && d.cliente !== '') ? d.cliente : '-';
+        var motoboy = (d.motoboy && d.motoboy !== '-' && d.motoboy !== '') ? d.motoboy : '-';
         return '<tr>' +
           '<td class="ps-3" style="font-size:.78rem;">' + escapeHtml(d.dataDisplay) + '</td>' +
           '<td style="font-size:.78rem;">' + escapeHtml(d.idPedido || '-') + '</td>' +
+          '<td style="font-size:.78rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(cliente) + '">' + escapeHtml(cliente) + '</td>' +
+          '<td style="font-size:.78rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(motoboy) + '">' + escapeHtml(motoboy) + '</td>' +
           '<td>' + getTipoBadge(d.tipo) + '</td>' +
           '<td class="text-end pe-3"><div class="fin-actions-group">' +
           '<button class="fin-btn-action fin-btn-view btn-view-todos" data-idx="' + i + '" title="Ver"><i class="bi bi-eye"></i></button>' +

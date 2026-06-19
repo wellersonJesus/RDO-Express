@@ -47,7 +47,7 @@
 
 @keyframes spin-sync-fin {
     from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    to   { transform: rotate(360deg); }
 }
 
 .fin-tabs-nav {
@@ -195,18 +195,18 @@
     background: none;
 }
 
-.fin-card-icon-receita { color: #198754; }
-.fin-card-icon-despesa { color: #dc3545; }
-.fin-card-icon-saldo { color: #0d6efd; }
+.fin-card-icon-receita   { color: #198754; }
+.fin-card-icon-despesa   { color: #dc3545; }
+.fin-card-icon-saldo     { color: #0d6efd; }
 .fin-card-icon-registros { color: #6f42c1; }
 
 .fin-card-label {
     font-family: 'Poppins', sans-serif;
     font-size: .5rem;
-    font-weight: 700;
-    letter-spacing: .06em;
+    font-weight: 500;
+    letter-spacing: .05em;
     text-transform: uppercase;
-    color: #222;
+    color: #444;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -216,7 +216,7 @@
 .fin-card-valor {
     font-family: 'Poppins', sans-serif;
     font-size: .78rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: -.02em;
     color: #111 !important;
     line-height: 1.2;
@@ -227,12 +227,14 @@
 
 .caixa-mini-card {
     border-radius: 14px;
-    padding: 12px 14px;
-    text-align: center;
+    padding: 10px 12px;
     overflow: hidden;
     font-family: 'Poppins', sans-serif;
     transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .caixa-mini-card:hover {
@@ -258,27 +260,28 @@
 
 .caixa-mini-label {
     font-family: 'Poppins', sans-serif;
-    font-size: .5rem;
-    font-weight: 700;
-    color: #222;
+    font-size: .52rem;
+    font-weight: 500;
+    color: #444;
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: .05em;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .caixa-mini-valor {
     font-family: 'Poppins', sans-serif;
-    font-size: .78rem;
-    font-weight: 700;
-    margin-top: 2px;
+    font-size: clamp(.58rem, 1.4vw, .78rem);
+    font-weight: 600;
     color: #111;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .tabela-fin-head {
@@ -297,18 +300,12 @@
     width: 100%;
 }
 
-.fin-table-todos thead th:nth-child(1),
-.fin-table-todos thead th:nth-child(2),
-.fin-table-todos thead th:nth-child(3),
-.fin-table-todos thead th:nth-child(4),
-.fin-table-todos thead th:nth-child(5),
-.fin-table-todos thead th:nth-child(6) {
-    width: 14.28%;
-}
-
-.fin-table-todos thead th:nth-child(7) {
-    width: 14.32%;
-}
+.fin-table-todos thead th:nth-child(1) { width: 12%; }
+.fin-table-todos thead th:nth-child(2) { width: 13%; }
+.fin-table-todos thead th:nth-child(3) { width: 18%; }
+.fin-table-todos thead th:nth-child(4) { width: 16%; }
+.fin-table-todos thead th:nth-child(5) { width: 12%; }
+.fin-table-todos thead th:nth-child(6) { width: 29%; }
 
 .fin-table-todos td {
     overflow: hidden;
@@ -630,9 +627,9 @@
     letter-spacing: .02em;
 }
 
-.fin-badge-pago    { background: rgba(25, 135, 84, .1);  color: #198754; }
-.fin-badge-recebido { background: rgba(13, 110, 253, .1); color: #0d6efd; }
-.fin-badge-pendente { background: rgba(255, 193, 7, .15); color: #cc8800; }
+.fin-badge-pago     { background: rgba(25, 135, 84, .1);   color: #198754; }
+.fin-badge-recebido { background: rgba(13, 110, 253, .1);  color: #0d6efd; }
+.fin-badge-pendente { background: rgba(255, 193, 7, .15);  color: #cc8800; }
 .fin-badge-cancelado { background: rgba(108, 117, 125, .1); color: #6c757d; }
 
 .rdo-pay-header {
@@ -752,8 +749,8 @@
     box-shadow: none;
 }
 
-.btn-olhinho-clean.oculto { color: #dc3545; }
-.btn-olhinho-clean.oculto:hover { color: #a71d31; }
+.btn-olhinho-clean.oculto           { color: #dc3545; }
+.btn-olhinho-clean.oculto:hover     { color: #a71d31; }
 .btn-olhinho-clean:not(.oculto):hover { color: #6c757d; }
 
 .caixa-lista-diaria-wrapper {
@@ -765,9 +762,9 @@
     scrollbar-color: #ddd transparent;
 }
 
-.caixa-lista-diaria-wrapper::-webkit-scrollbar { width: 4px; }
-.caixa-lista-diaria-wrapper::-webkit-scrollbar-track { background: transparent; }
-.caixa-lista-diaria-wrapper::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.caixa-lista-diaria-wrapper::-webkit-scrollbar       { width: 4px; }
+.caixa-lista-diaria-wrapper::-webkit-scrollbar-track  { background: transparent; }
+.caixa-lista-diaria-wrapper::-webkit-scrollbar-thumb  { background: #ddd; border-radius: 10px; }
 .caixa-lista-diaria-wrapper::-webkit-scrollbar-thumb:hover { background: #bbb; }
 
 .caixa-dia-item {
@@ -782,8 +779,8 @@
 }
 
 .caixa-dia-item:last-child { border-bottom: none; }
-.caixa-dia-item:hover { background: #fff5f5; }
-.caixa-dia-item:active { transform: scale(.995); }
+.caixa-dia-item:hover      { background: #fff5f5; }
+.caixa-dia-item:active     { transform: scale(.995); }
 
 .caixa-dia-item-left {
     display: flex;
@@ -844,9 +841,9 @@
     scrollbar-color: #ddd transparent;
 }
 
-.detalhe-dia-table-wrapper::-webkit-scrollbar { width: 4px; }
-.detalhe-dia-table-wrapper::-webkit-scrollbar-track { background: transparent; }
-.detalhe-dia-table-wrapper::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.detalhe-dia-table-wrapper::-webkit-scrollbar       { width: 4px; }
+.detalhe-dia-table-wrapper::-webkit-scrollbar-track  { background: transparent; }
+.detalhe-dia-table-wrapper::-webkit-scrollbar-thumb  { background: #ddd; border-radius: 10px; }
 .detalhe-dia-table-wrapper::-webkit-scrollbar-thumb:hover { background: #bbb; }
 
 .detalhe-dia-table {
@@ -870,10 +867,11 @@
     white-space: nowrap;
 }
 
-.detalhe-dia-table thead th:nth-child(1) { width: 38%; }
+.detalhe-dia-table thead th:nth-child(1) { width: 30%; }
 .detalhe-dia-table thead th:nth-child(2) { width: 18%; }
-.detalhe-dia-table thead th:nth-child(3) { width: 22%; }
-.detalhe-dia-table thead th:nth-child(4) { width: 22%; }
+.detalhe-dia-table thead th:nth-child(3) { width: 18%; }
+.detalhe-dia-table thead th:nth-child(4) { width: 18%; }
+.detalhe-dia-table thead th:nth-child(5) { width: 16%; }
 
 .detalhe-dia-table tbody td {
     font-size: .74rem;
@@ -1070,8 +1068,8 @@
     white-space: nowrap;
 }
 
-.extrato-btn-gerar:hover   { background: #b02a37; }
-.extrato-btn-gerar:active  { transform: scale(.96); }
+.extrato-btn-gerar:hover  { background: #b02a37; }
+.extrato-btn-gerar:active { transform: scale(.96); }
 
 .extrato-periodo-btn {
     display: inline-flex;
@@ -1255,9 +1253,9 @@
     scrollbar-color: #ddd transparent;
 }
 
-#extrato-lista-caixa::-webkit-scrollbar { width: 4px; }
-#extrato-lista-caixa::-webkit-scrollbar-track { background: transparent; }
-#extrato-lista-caixa::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+#extrato-lista-caixa::-webkit-scrollbar       { width: 4px; }
+#extrato-lista-caixa::-webkit-scrollbar-track  { background: transparent; }
+#extrato-lista-caixa::-webkit-scrollbar-thumb  { background: #ddd; border-radius: 10px; }
 #extrato-lista-caixa::-webkit-scrollbar-thumb:hover { background: #bbb; }
 
 .extrato-card {
@@ -1535,8 +1533,8 @@
     max-width: 120px;
 }
 
-.extrato-bank-table tbody td.text-end    { text-align: right; }
-.extrato-bank-table tbody tr:hover       { background: #fdf6f6; }
+.extrato-bank-table tbody td.text-end     { text-align: right; }
+.extrato-bank-table tbody tr:hover        { background: #fdf6f6; }
 .extrato-bank-table tbody tr:last-child td { border-bottom: none; }
 
 .extrato-bank-resumo {
@@ -1560,157 +1558,6 @@
 
 .extrato-bank-resumo-item i      { font-size: .72rem; }
 .extrato-bank-resumo-item strong { font-weight: 700; }
-
-.ext-bank-wrap {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: .76rem;
-    color: #1a1a1a;
-    line-height: 1.6;
-    padding: 18px 20px;
-}
-
-.ext-bank-header-block {
-    text-align: center;
-    margin-bottom: 2px;
-}
-
-.ext-bank-logo {
-    font-size: .88rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #1a1a2e;
-}
-
-.ext-bank-divider {
-    border: none;
-    border-top: 1.5px dashed #999;
-    margin: 8px 0;
-}
-
-.ext-bank-divider-double {
-    border: none;
-    border-top: 2px double #555;
-    margin: 8px 0;
-}
-
-.ext-bank-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 6px;
-}
-
-.ext-bank-info-row .ext-bank-label  { color: #666; white-space: nowrap; min-width: 90px; }
-.ext-bank-info-row .ext-bank-value  { text-align: right; font-weight: 700; word-break: break-word; flex: 1; }
-
-.ext-bank-section-title {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: .72rem;
-    color: #333;
-    margin-top: 4px;
-    margin-bottom: 2px;
-}
-
-.ext-bank-lancamento-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 3px 0;
-    gap: 8px;
-}
-
-.ext-bank-lancamento-row .ext-bank-lanc-data  { min-width: 62px; color: #555; flex-shrink: 0; }
-.ext-bank-lancamento-row .ext-bank-lanc-desc  { flex: 1; word-break: break-word; }
-.ext-bank-lancamento-row .ext-bank-lanc-valor { min-width: 90px; text-align: right; font-weight: 700; flex-shrink: 0; }
-
-.ext-bank-lanc-valor.credito { color: #0a6e2d; }
-.ext-bank-lanc-valor.debito  { color: #b71c1c; }
-
-.ext-bank-lancamento-row .ext-bank-lanc-sit {
-    min-width: 60px;
-    text-align: right;
-    font-size: .65rem;
-    color: #888;
-    text-transform: uppercase;
-    flex-shrink: 0;
-}
-
-.ext-bank-totais-row {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    padding: 2px 0;
-}
-
-.ext-bank-totais-row .ext-bank-tot-label { color: #333; }
-.ext-bank-totais-row .ext-bank-tot-valor { text-align: right; }
-
-.ext-bank-saldo-final {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    font-size: .84rem;
-    padding: 4px 0;
-    color: #1a1a2e;
-}
-
-.ext-bank-footer-block {
-    text-align: center;
-    font-size: .62rem;
-    color: #999;
-    margin-top: 6px;
-    letter-spacing: .5px;
-}
-
-.ext-bank-cliente-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-}
-
-.ext-bank-cliente-row .ext-bank-label { color: #666; white-space: nowrap; min-width: 90px; }
-.ext-bank-cliente-row .ext-bank-value { text-align: right; font-weight: 700; word-break: break-word; flex: 1; }
-
-.ext-bank-lanc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-    font-size: .68rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 2px 0;
-}
-
-.ext-bank-lanc-col-data  { min-width: 62px; flex-shrink: 0; }
-.ext-bank-lanc-col-info  { flex: 1; }
-.ext-bank-lanc-col-valor { min-width: 90px; text-align: right; flex-shrink: 0; }
-.ext-bank-lanc-col-sit   { min-width: 50px; text-align: right; flex-shrink: 0; }
-
-.ext-bank-lanc-desc {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-
-.ext-bank-lanc-detail-line {
-    display: block;
-    font-size: .70rem;
-    line-height: 1.5;
-    color: #222;
-}
-
-.ext-bank-lanc-detail-line strong {
-    color: #555;
-    font-weight: 700;
-    font-size: .66rem;
-    letter-spacing: .3px;
-}
 
 .extrato-papel {
     font-family: 'Courier New', Courier, monospace;
@@ -1765,9 +1612,9 @@
     padding-right: 10px;
 }
 
-.extrato-papel .ex-valor          { font-weight: 400; white-space: nowrap; }
-.extrato-papel .ex-valor.entrada  { color: #198754; }
-.extrato-papel .ex-valor.saida    { color: #dc3545; }
+.extrato-papel .ex-valor         { font-weight: 400; white-space: nowrap; }
+.extrato-papel .ex-valor.entrada { color: #198754; }
+.extrato-papel .ex-valor.saida   { color: #dc3545; }
 
 .extrato-papel .ex-footer {
     border-top: 2px dashed #ccc;
@@ -2109,30 +1956,25 @@
     .input-filtro-fin { max-width: 130px; }
     .rdo-pay-actions  { justify-content: center; }
 
-    .fin-card-icon-wrap  { width: 30px; height: 30px; font-size: .85rem; border-radius: 8px; }
-    .fin-card-valor      { font-size: .7rem; }
-    .fin-card-label      { font-size: .46rem; }
-    .fin-card-resumo     { padding: 10px 12px; gap: 8px; }
+    .fin-card-icon-wrap { width: 30px; height: 30px; font-size: .85rem; border-radius: 8px; }
+    .fin-card-valor     { font-size: .7rem; }
+    .fin-card-label     { font-size: .46rem; }
+    .fin-card-resumo    { padding: 10px 12px; gap: 8px; }
 
-    .caixa-mini-card  { padding: 10px 12px; }
-    .caixa-mini-valor { font-size: .7rem; }
-    .caixa-mini-label { font-size: .46rem; }
+    .caixa-mini-card  { padding: 8px 10px; }
+    .caixa-mini-valor { font-size: clamp(.52rem, 1.2vw, .7rem); }
+    .caixa-mini-label { font-size: .44rem; }
 
     .fin-form-header { padding: 14px 18px; }
 
-    .caixa-dia-item      { padding: 10px 14px; }
-    .caixa-dia-icon      { width: 32px; height: 32px; font-size: .8rem; border-radius: 8px; }
-    .caixa-dia-info-data { font-size: .76rem; }
+    .caixa-dia-item       { padding: 10px 14px; }
+    .caixa-dia-icon       { width: 32px; height: 32px; font-size: .8rem; border-radius: 8px; }
+    .caixa-dia-info-data  { font-size: .76rem; }
     .caixa-dia-info-semana { font-size: .65rem; }
-    .caixa-dia-saldo     { font-size: .76rem; }
+    .caixa-dia-saldo      { font-size: .76rem; }
 
     .detalhe-dia-table thead th { font-size: .55rem; padding: 8px 12px; }
     .detalhe-dia-table tbody td { font-size: .68rem; padding: 8px 12px; }
-
-    .detalhe-dia-table thead th:nth-child(1) { width: 35%; }
-    .detalhe-dia-table thead th:nth-child(2) { width: 18%; }
-    .detalhe-dia-table thead th:nth-child(3) { width: 22%; }
-    .detalhe-dia-table thead th:nth-child(4) { width: 25%; }
 
     .extrato-toolbar-row          { flex-direction: column; align-items: stretch; }
     .extrato-toolbar-row > div    { justify-content: center; }
@@ -2148,6 +1990,15 @@
     .extrato-bank-table tbody td { font-size: .64rem; padding: 6px 8px; max-width: 80px; }
     .extrato-bank-resumo { padding: 10px 14px; gap: 8px; font-size: .66rem; }
     .extrato-bank-info   { padding: 10px 14px; font-size: .66rem; }
+
+    .fin-table-todos thead th:nth-child(3),
+    .fin-table-todos tbody td:nth-child(3) { display: none; }
+
+    .fin-table-todos thead th:nth-child(1) { width: 13%; }
+    .fin-table-todos thead th:nth-child(2) { width: 16%; }
+    .fin-table-todos thead th:nth-child(4) { width: 18%; }
+    .fin-table-todos thead th:nth-child(5) { width: 14%; }
+    .fin-table-todos thead th:nth-child(6) { width: 39%; }
 }
 
 @media (max-width: 576px) {
@@ -2155,9 +2006,9 @@
     .fin-tab      { font-size: .68rem; }
     .input-filtro-fin { max-width: 110px; }
 
-    .btn-novo-fin-action { font-size: .65rem; padding-left: 10px; padding-right: 10px; }
-    .btn-filtro-inteligente span { display: none; }
-    .btn-filtro-inteligente      { padding: 4px 10px; }
+    .btn-novo-fin-action            { font-size: .65rem; padding-left: 10px; padding-right: 10px; }
+    .btn-filtro-inteligente span    { display: none; }
+    .btn-filtro-inteligente         { padding: 4px 10px; }
 
     .rdo-pay-saldo-valor  { font-size: 1.2rem; }
     .rdo-pay-action-icon  { width: 36px; height: 36px; font-size: .92rem; }
@@ -2168,11 +2019,11 @@
     .fin-card-valor     { font-size: .62rem; }
     .fin-card-icon-wrap { width: 26px; height: 26px; border-radius: 7px; font-size: .72rem; }
 
-    .caixa-mini-card  { padding: 8px 10px; border-radius: 10px; }
-    .caixa-mini-label { font-size: .42rem; }
-    .caixa-mini-valor { font-size: .62rem; }
+    .caixa-mini-card  { padding: 7px 9px; border-radius: 10px; }
+    .caixa-mini-label { font-size: .40rem; letter-spacing: .03em; }
+    .caixa-mini-valor { font-size: clamp(.48rem, 1.1vw, .62rem); }
 
-    .tabela-fin-head { font-size: .55rem; }
+    .tabela-fin-head  { font-size: .55rem; }
     #tabela-fin-todos td { font-size: .65rem !important; padding-top: 5px; padding-bottom: 5px; }
 
     .fin-btn-action { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
@@ -2180,13 +2031,13 @@
     .fin-form-header      { padding: 12px 16px; }
     .fin-form-header-icon { width: 34px; height: 34px; font-size: .95rem; }
 
-    .caixa-dia-item       { padding: 10px 12px; }
-    .caixa-dia-icon       { width: 28px; height: 28px; font-size: .72rem; border-radius: 7px; }
-    .caixa-dia-item-left  { gap: 10px; }
-    .caixa-dia-info-data  { font-size: .72rem; }
+    .caixa-dia-item        { padding: 10px 12px; }
+    .caixa-dia-icon        { width: 28px; height: 28px; font-size: .72rem; border-radius: 7px; }
+    .caixa-dia-item-left   { gap: 10px; }
+    .caixa-dia-info-data   { font-size: .72rem; }
     .caixa-dia-info-semana { font-size: .6rem; }
-    .caixa-dia-saldo      { font-size: .7rem; }
-    .caixa-dia-chevron    { font-size: .6rem; margin-left: 6px; }
+    .caixa-dia-saldo       { font-size: .7rem; }
+    .caixa-dia-chevron     { font-size: .6rem; margin-left: 6px; }
 
     .caixa-lista-diaria-wrapper { max-height: 360px; border-radius: 10px; }
 
@@ -2196,21 +2047,22 @@
     .detalhe-dia-table thead th:nth-child(3),
     .detalhe-dia-table tbody td:nth-child(3) { display: none; }
 
-    .detalhe-dia-table thead th:nth-child(1) { width: 40%; }
-    .detalhe-dia-table thead th:nth-child(2) { width: 25%; }
-    .detalhe-dia-table thead th:nth-child(4) { width: 35%; }
+    .detalhe-dia-table thead th:nth-child(1) { width: 35%; }
+    .detalhe-dia-table thead th:nth-child(2) { width: 20%; }
+    .detalhe-dia-table thead th:nth-child(4) { width: 22%; }
+    .detalhe-dia-table thead th:nth-child(5) { width: 23%; }
 
     .detalhe-dia-table-wrapper { max-height: 340px; }
 
-    .extrato-card-btn    { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
-    .extrato-item-btn    { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
+    .extrato-card-btn           { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
+    .extrato-item-btn           { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
     .extrato-item-btn-ver-modal { width: 24px; height: 24px; font-size: .62rem; border-radius: 6px; }
 
     .extrato-item-icon   { width: 30px; height: 30px; font-size: .78rem; border-radius: 8px; }
     .extrato-item-titulo { font-size: .72rem; }
     .extrato-item-sub    { font-size: .58rem; }
-    .extrato-item-card   { padding: 8px 12px; gap: 8px; }
-    .extrato-item-card-modal { padding: 8px 12px; gap: 8px; }
+    .extrato-item-card        { padding: 8px 12px; gap: 8px; }
+    .extrato-item-card-modal  { padding: 8px 12px; gap: 8px; }
 
     .extrato-papel-lancamento { padding: 7px 14px; gap: 8px; }
     .extrato-papel-dia-header { padding: 8px 14px 5px 14px; }
@@ -2229,4 +2081,14 @@
     .extrato-modal-header-bank { font-size: .72rem; padding: 10px 14px; letter-spacing: 1px; }
     .extrato-modal-footer-bank { padding: 8px 14px; }
     .extrato-btn-copiar-bank   { font-size: .66rem; padding: 5px 14px; }
+
+    .fin-table-todos thead th:nth-child(3),
+    .fin-table-todos tbody td:nth-child(3),
+    .fin-table-todos thead th:nth-child(4),
+    .fin-table-todos tbody td:nth-child(4) { display: none; }
+
+    .fin-table-todos thead th:nth-child(1) { width: 18%; }
+    .fin-table-todos thead th:nth-child(2) { width: 22%; }
+    .fin-table-todos thead th:nth-child(5) { width: 20%; }
+    .fin-table-todos thead th:nth-child(6) { width: 40%; }
 }
