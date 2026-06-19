@@ -23,14 +23,10 @@ async function fetchGAS(payload) {
     var url = process.env.API_URL;
     if (!url) throw new Error('API_URL não configurada');
 
-    var body = JSON.stringify(payload);
-
-    console.log('[GAS] Enviando payload:', JSON.stringify(payload).substring(0, 200));
-
     var response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: body,
+        body: JSON.stringify(payload),
         redirect: 'follow'
     });
 
@@ -48,7 +44,7 @@ async function fetchGAS(payload) {
         return JSON.parse(text);
     } catch (e) {
         if (text.indexOf('<!DOCTYPE') !== -1 || text.indexOf('<html') !== -1) {
-            throw new Error('GAS retornou HTML ao invés de JSON. Verifique se o script está publicado como Web App.');
+            throw new Error('GAS retornou HTML. Verifique se o script está publicado como Web App.');
         }
         throw new Error('JSON inválido do GAS: ' + text.substring(0, 300));
     }
@@ -76,7 +72,7 @@ async function buscarUsuarioGAS(username) {
 
         console.log('[DEBUG] Usuário "' + username + '" não encontrado na lista');
     } catch (err) {
-        console.error('[LOGIN] Erro ao buscar avatar no GAS:', err.message);
+        console.error('[LOGIN] Erro ao buscar usuário no GAS:', err.message);
     }
     return null;
 }
@@ -90,10 +86,7 @@ app.post('/api/proxy', async function (req, res) {
         console.log('[PROXY] Body keys:', Object.keys(body).join(', '));
 
         if (!action) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Nenhuma ação informada'
-            });
+            return res.status(400).json({ status: 'error', message: 'Nenhuma ação informada' });
         }
 
         if (action === 'login') {
@@ -103,7 +96,7 @@ app.post('/api/proxy', async function (req, res) {
             console.log('[LOGIN] Tentativa: "' + username + '"');
 
             var masterLogin = process.env.MASTER_LOGIN;
-            var masterHash = process.env.MASTER_PASS_HASH;
+            var masterHash  = process.env.MASTER_PASS_HASH;
             var masterPlain = process.env.MASTER_PASS;
 
             if (masterLogin && username === masterLogin) {
@@ -111,11 +104,7 @@ app.post('/api/proxy', async function (req, res) {
 
                 if (masterHash) {
                     var cleanHash = masterHash.replace(/\$\$/g, '$');
-                    try {
-                        senhaOk = await bcrypt.compare(password, cleanHash);
-                    } catch (e) {
-                        senhaOk = false;
-                    }
+                    try { senhaOk = await bcrypt.compare(password, cleanHash); } catch (e) { senhaOk = false; }
                 }
 
                 if (!senhaOk && masterPlain) {
@@ -124,43 +113,29 @@ app.post('/api/proxy', async function (req, res) {
 
                 if (senhaOk) {
                     console.log('[LOGIN] Master autenticado');
-
                     var gasUser = await buscarUsuarioGAS(masterLogin);
-
-                    var imagem = '';
-                    var tipo = process.env.MASTER_CARGO || 'Admin';
+                    var imagem  = '';
+                    var tipo    = process.env.MASTER_CARGO || 'Admin';
 
                     if (gasUser) {
                         imagem = gasUser.imagem || gasUser.foto || gasUser.avatar || gasUser.image || '';
-                        tipo = gasUser.tipo || gasUser.role || gasUser.cargo || tipo;
+                        tipo   = gasUser.tipo   || gasUser.role || gasUser.cargo  || tipo;
                     }
 
                     return res.json({
                         status: 'success',
-                        user: {
-                            username: masterLogin,
-                            tipo: tipo,
-                            imagem: imagem
-                        }
+                        user: { username: masterLogin, tipo: tipo, imagem: imagem }
                     });
                 }
 
                 console.log('[LOGIN] Senha Master incorreta');
-                return res.status(401).json({
-                    status: 'error',
-                    message: 'Usuário ou senha incorretos.'
-                });
+                return res.status(401).json({ status: 'error', message: 'Usuário ou senha incorretos.' });
             }
 
             console.log('[LOGIN] Encaminhando para GAS...');
 
             try {
-                var gasResult = await fetchGAS({
-                    action: 'login',
-                    username: username,
-                    password: password
-                });
-
+                var gasResult = await fetchGAS({ action: 'login', username: username, password: password });
                 console.log('[LOGIN] Resposta GAS:', JSON.stringify(gasResult).substring(0, 200));
 
                 if (gasResult && gasResult.status === 'success' && gasResult.user) {
@@ -173,27 +148,18 @@ app.post('/api/proxy', async function (req, res) {
                 });
             } catch (gasErr) {
                 console.error('[LOGIN] Erro GAS:', gasErr.message);
-                return res.status(502).json({
-                    status: 'error',
-                    message: 'Falha ao comunicar com o servidor de dados.'
-                });
+                return res.status(502).json({ status: 'error', message: 'Falha ao comunicar com o servidor de dados.' });
             }
         }
 
         if (!process.env.API_URL) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'API_URL não configurada no servidor'
-            });
+            return res.status(500).json({ status: 'error', message: 'API_URL não configurada no servidor' });
         }
 
         var payload = {};
-        var bodyKeys = Object.keys(body);
-        for (var k = 0; k < bodyKeys.length; k++) {
-            if (bodyKeys[k] !== 'apiKey') {
-                payload[bodyKeys[k]] = body[bodyKeys[k]];
-            }
-        }
+        Object.keys(body).forEach(function (k) {
+            if (k !== 'apiKey') payload[k] = body[k];
+        });
         payload.apiKey = process.env.SECRET_KEY;
 
         console.log('[PROXY] Encaminhando action:', payload.action);
@@ -227,9 +193,9 @@ var PORT = process.env.PORT || 3000;
 app.listen(PORT, function () {
     console.log('=========================================');
     console.log('  Servidor rodando em http://localhost:' + PORT);
-    console.log('  API_URL: ' + (process.env.API_URL ? 'OK' : 'NAO CONFIGURADA!'));
-    console.log('  SECRET_KEY: ' + (process.env.SECRET_KEY ? 'OK' : 'NAO CONFIGURADA!'));
+    console.log('  API_URL: '      + (process.env.API_URL      ? 'OK' : 'NAO CONFIGURADA!'));
+    console.log('  SECRET_KEY: '   + (process.env.SECRET_KEY   ? 'OK' : 'NAO CONFIGURADA!'));
     console.log('  MASTER_LOGIN: ' + (process.env.MASTER_LOGIN || 'N/A'));
-    console.log('  Static path: ' + PUBLIC_PATH);
+    console.log('  Static path: '  + PUBLIC_PATH);
     console.log('=========================================');
 });

@@ -144,16 +144,44 @@ function carregarModaisDaPagina(page) {
                     });
                 });
 
+                // ✅ FIX: scripts inline agora fazem parte da cadeia de Promises,
+                // garantindo que sejam executados ANTES de initFinanceiro() ser chamado.
                 return chain.then(function () {
-                    scriptsInline.forEach(function (code) {
-                        try {
-                            var s = document.createElement('script');
-                            s.textContent = code;
-                            document.body.appendChild(s);
-                            setTimeout(function () {
-                                if (s.parentNode) s.parentNode.removeChild(s);
-                            }, 100);
-                        } catch (e) { }
+                    return new Promise(function (resolve) {
+                        var pendentes = scriptsInline.length;
+
+                        if (pendentes === 0) {
+                            resolve();
+                            return;
+                        }
+
+                        scriptsInline.forEach(function (code) {
+                            try {
+                                var s = document.createElement('script');
+                                s.textContent = code;
+
+                                // Resolve após cada script ser "commitado" ao DOM
+                                s.onload = function () {
+                                    pendentes--;
+                                    if (pendentes === 0) resolve();
+                                };
+
+                                document.body.appendChild(s);
+
+                                // Scripts inline não disparam onload — resolvemos via microtask
+                                Promise.resolve().then(function () {
+                                    pendentes--;
+                                    if (pendentes === 0) resolve();
+                                });
+
+                                setTimeout(function () {
+                                    if (s.parentNode) s.parentNode.removeChild(s);
+                                }, 200);
+                            } catch (e) {
+                                pendentes--;
+                                if (pendentes === 0) resolve();
+                            }
+                        });
                     });
                 });
             })
