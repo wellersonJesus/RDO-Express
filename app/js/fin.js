@@ -514,6 +514,13 @@
                 aplicarMascaraValores();
             });
         }
+
+        var modalExtratoCaixa = document.getElementById('modalExtratoCaixa');
+        if (modalExtratoCaixa) {
+            modalExtratoCaixa.addEventListener('show.bs.modal', function () {
+                renderListaExtratosCaixaModal();
+            });
+        }
     }
 
     function dadosFiltradosTodos() {
@@ -1446,23 +1453,62 @@
 
     function renderListaExtratosCaixaModal() {
         var container = document.getElementById('extrato-lista-caixa');
+        if (!container) return;
+
         var extratos = carregarExtratosStorage();
 
         if (!extratos.length) {
-            container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i><div>Nenhum extrato gerado ainda.</div><small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar seus relatórios</small></div>';
+            container.innerHTML =
+                '<div class="text-center text-muted py-5">' +
+                '<i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i>' +
+                '<div>Nenhum extrato gerado ainda.</div>' +
+                '<small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar seus relat\u00f3rios</small>' +
+                '</div>';
             return;
         }
 
         var html = extratos.map(function (ex) {
             var totalRegs = (ex.registros || []).length;
-            var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
-            return '<div class="extrato-item-card-modal" data-extrato-id="' + escapeHtml(ex.id) + '">' +
+            var criadoLabel = ex.criadoEm
+                ? new Date(ex.criadoEm).toLocaleString('pt-BR')
+                : '-';
+
+            var totalEnt = 0, totalSai = 0;
+            (ex.registros || []).forEach(function (r) {
+                var val = parseFloat(r.valor) || 0;
+                if (r.tipo === 'entrada') totalEnt += val;
+                else totalSai += val;
+            });
+            var saldo = totalEnt - totalSai;
+            var saldoColor = saldo >= 0 ? '#198754' : '#dc3545';
+
+            return (
+                '<div class="extrato-item-card-modal" data-extrato-id="' + escapeHtml(ex.id) + '" ' +
+                'title="Clique para visualizar o extrato" style="cursor:pointer;">' +
+
                 '<div class="extrato-item-left">' +
                 '<div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
-                '<div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
-                '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
-                '<div class="extrato-item-sub small">' + criadoLabel + '</div></div></div>' +
-                '<div class="extrato-item-actions"><button class="extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-eye"></i></button></div></div>';
+                '<div>' +
+                '<div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
+                '<div class="extrato-item-sub">' +
+                escapeHtml(ex.periodoLabel || '-') +
+                ' \u00b7 ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') +
+                '</div>' +
+                '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div>' +
+                '</div></div>' +
+
+                '<div class="extrato-item-actions" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+                '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' +
+                formatarMoeda(saldo) +
+                '</span>' +
+                '<button class="extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" ' +
+                'title="Visualizar extrato completo" style="pointer-events:auto;">' +
+                '<i class="bi bi-eye"></i>' +
+                '</button>' +
+                '</div>' +
+
+                '</div>'
+            );
         }).join('');
 
         container.innerHTML = html;
@@ -1471,6 +1517,14 @@
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var id = this.getAttribute('data-id');
+                var ext = buscarExtratoStoragePorId(id);
+                if (ext) abrirExtratoModal(ext);
+            });
+        });
+
+        container.querySelectorAll('.extrato-item-card-modal').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var id = this.getAttribute('data-extrato-id');
                 var ext = buscarExtratoStoragePorId(id);
                 if (ext) abrirExtratoModal(ext);
             });
