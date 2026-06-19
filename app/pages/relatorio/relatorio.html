@@ -1,43 +1,177 @@
-<!-- ═══════════════════════════════════════════════════════════════
-     RDO EXPRESS — RELATORIO.HTML
-     ═══════════════════════════════════════════════════════════════ -->
+<div class="rel-page-wrapper">
+  <div class="rel-content-area">
 
-<div class="row g-3">
-
-    <!-- ═══ HEADER ═══ -->
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-file-earmark-bar-graph fs-3 text-danger"></i>
-                    <div>
-                        <h5 class="fw-bold mb-0 text-dark">
-                            <span class="text-danger">RDO</span> Express - Relatórios
-                        </h5>
-                        <small class="text-muted" id="relatorio-subtitle">
-                            Análise e exportação de dados operacionais
-                        </small>
-                    </div>
-                </div>
-                <button class="btn-sync-fin" id="btn-sync-relatorio"
-                    onclick="window.initRelatorios()" title="Atualizar relatórios">
-                    <i id="sync-icon-relatorio" class="bi bi-arrow-repeat"></i>
-                </button>
-            </div>
-        </div>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <div class="fw-bold" style="font-size:.88rem;color:#1a1a2e;">Relatórios</div>
+        <div class="rel-subtitle">Análise e exportação de dados operacionais</div>
+      </div>
+      <button class="btn-sync-rel" id="btn-sync-relatorio" title="Atualizar">
+        <i class="bi bi-arrow-repeat" id="sync-icon-relatorio"></i>
+      </button>
     </div>
 
-    <!-- ═══ CONTEÚDO PRINCIPAL ═══ -->
-    <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4 bg-white">
-            <div class="card-body p-5 text-center">
-                <i class="bi bi-tools fs-1 text-secondary opacity-50"></i>
-                <h5 class="mt-3 text-secondary">Funcionalidade em desenvolvimento</h5>
-                <p class="text-muted small mb-0">
-                    Estamos trabalhando para trazer os melhores dados para você.
-                </p>
-            </div>
-        </div>
-    </div>
+    <ul class="nav nav-tabs mb-3" id="rel-tabs-nav">
+      <li class="nav-item"><a class="nav-link active" href="#rel-tab-motoboys" data-bs-toggle="tab">Motoboys</a></li>
+      <li class="nav-item"><a class="nav-link" href="#rel-tab-clientes" data-bs-toggle="tab">Clientes</a></li>
+      <li class="nav-item"><a class="nav-link" href="#rel-tab-financeiro" data-bs-toggle="tab">Financeiro</a></li>
+      <li class="nav-item"><a class="nav-link" href="#rel-tab-global" data-bs-toggle="tab">Global</a></li>
+    </ul>
 
+    <div class="tab-content">
+
+      <div class="tab-pane fade show active" id="rel-tab-motoboys" role="tabpanel">
+        <div class="rel-section-title">
+          <i class="bi bi-bicycle"></i> Relatórios de Motoboys
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — De</label>
+            <input type="date" id="rel-mb-data-inicio" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — Até</label>
+            <input type="date" id="rel-mb-data-fim" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Motoboy</label>
+            <select id="rel-mb-select" class="form-select ctrl-clean">
+              <option value="__todos__">Todos os motoboys</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <button class="btn-rel-action" id="btn-gerar-rel-motoboy">
+            <i class="bi bi-file-earmark-bar-graph"></i> Gerar Relatório
+          </button>
+        </div>
+        <div id="rel-motoboy-resultado" class="rel-resultado-area">
+          <div class="rel-placeholder">
+            <i class="bi bi-bicycle"></i>
+            <span>Selecione o período e clique em <strong>Gerar Relatório</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="rel-tab-clientes" role="tabpanel">
+        <div class="rel-section-title">
+          <i class="bi bi-people"></i> Relatórios de Clientes
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — De</label>
+            <input type="date" id="rel-cli-data-inicio" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — Até</label>
+            <input type="date" id="rel-cli-data-fim" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Cliente</label>
+            <select id="rel-cli-select" class="form-select ctrl-clean">
+              <option value="__todos__">Todos os clientes</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <button class="btn-rel-action" id="btn-gerar-rel-cliente">
+            <i class="bi bi-file-earmark-bar-graph"></i> Gerar Relatório
+          </button>
+        </div>
+        <div id="rel-cliente-resultado" class="rel-resultado-area">
+          <div class="rel-placeholder">
+            <i class="bi bi-people"></i>
+            <span>Selecione o período e clique em <strong>Gerar Relatório</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="rel-tab-financeiro" role="tabpanel">
+        <div class="rel-section-title">
+          <i class="bi bi-wallet2"></i> Relatórios Financeiros
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — De</label>
+            <input type="date" id="rel-fin-data-inicio" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Período — Até</label>
+            <input type="date" id="rel-fin-data-fim" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="lbl-clean">Tipo</label>
+            <select id="rel-fin-tipo" class="form-select ctrl-clean">
+              <option value="__todos__">Todos</option>
+              <option value="entrada">Receitas</option>
+              <option value="saida">Despesas</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <button class="btn-rel-action" id="btn-gerar-rel-financeiro">
+            <i class="bi bi-file-earmark-bar-graph"></i> Gerar Relatório
+          </button>
+        </div>
+        <div id="rel-financeiro-resultado" class="rel-resultado-area">
+          <div class="rel-placeholder">
+            <i class="bi bi-wallet2"></i>
+            <span>Selecione o período e clique em <strong>Gerar Relatório</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="rel-tab-global" role="tabpanel">
+        <div class="rel-section-title">
+          <i class="bi bi-globe2"></i> Relatório Global
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-12 col-md-5">
+            <label class="lbl-clean">Período — De</label>
+            <input type="date" id="rel-glob-data-inicio" class="form-control ctrl-clean" />
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="lbl-clean">Período — Até</label>
+            <input type="date" id="rel-glob-data-fim" class="form-control ctrl-clean" />
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <button class="btn-rel-action" id="btn-gerar-rel-global">
+            <i class="bi bi-file-earmark-bar-graph"></i> Gerar Relatório Global
+          </button>
+        </div>
+        <div id="rel-global-resultado" class="rel-resultado-area">
+          <div class="rel-placeholder">
+            <i class="bi bi-globe2"></i>
+            <span>Selecione o período e clique em <strong>Gerar Relatório Global</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="rel-modal-overlay" id="rel-modal-overlay" style="display:none;">
+  <div class="rel-modal-box">
+    <div class="rel-modal-header">
+      <span class="rel-modal-titulo" id="rel-modal-titulo">Relatório</span>
+      <button class="rel-modal-fechar" id="rel-modal-fechar" title="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="rel-modal-body" id="rel-modal-body"></div>
+    <div class="rel-modal-footer">
+      <button class="btn-rel-footer btn-rel-copiar" id="rel-btn-copiar" title="Copiar relatório">
+        <i class="bi bi-clipboard"></i> Copiar
+      </button>
+      <button class="btn-rel-footer btn-rel-whatsapp" id="rel-btn-whatsapp" title="Enviar via WhatsApp">
+        <i class="bi bi-whatsapp"></i> WhatsApp
+      </button>
+      <button class="btn-rel-footer btn-rel-email" id="rel-btn-email" title="Enviar por e-mail">
+        <i class="bi bi-envelope"></i> E-mail
+      </button>
+      <button class="btn-rel-footer btn-rel-fechar" id="rel-btn-fechar-modal">
+        <i class="bi bi-x"></i> Fechar
+      </button>
+    </div>
+  </div>
 </div>
