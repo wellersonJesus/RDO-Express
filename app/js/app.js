@@ -50,7 +50,7 @@ function fecharModaisAbertos() {
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
         if (inst) {
-            try { inst.hide(); } catch (e) {}
+            try { inst.hide(); } catch (e) { }
         }
     });
 
@@ -69,7 +69,7 @@ function limparModalContainer() {
     container.querySelectorAll('.modal').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
         if (inst) {
-            try { inst.dispose(); } catch (e) {}
+            try { inst.dispose(); } catch (e) { }
         }
     });
     container.innerHTML = '';
@@ -97,6 +97,9 @@ var MODULE_MAP = {
     },
     fin: function () {
         if (typeof window.initFinanceiro === 'function') window.initFinanceiro();
+    },
+    relatorio: function () {
+        if (typeof window.initRelatorios === 'function') window.initRelatorios();
     }
 };
 
@@ -150,7 +153,7 @@ function carregarModaisDaPagina(page) {
                             setTimeout(function () {
                                 if (s.parentNode) s.parentNode.removeChild(s);
                             }, 100);
-                        } catch (e) {}
+                        } catch (e) { }
                     });
                 });
             })
@@ -277,7 +280,7 @@ window.loadModal = function (arquivo) {
                         setTimeout(function () {
                             if (s.parentNode) s.parentNode.removeChild(s);
                         }, 100);
-                    } catch (e) {}
+                    } catch (e) { }
                 });
                 return true;
             });
