@@ -1,6 +1,3 @@
-/* ==========================================================================
-   1. VARIÁVEIS GLOBAIS
-   ========================================================================== */
 :root {
     --vermelho-rdo: #dc3545;
     --bg-chat: #efeae2;
@@ -22,9 +19,6 @@
     --loop-label-color: #adb5bd;
 }
 
-/* ==========================================================================
-   2. LAYOUT — CARDS PRINCIPAIS
-   ========================================================================== */
 .card-contatos {
     height: 600px;
 }
@@ -41,9 +35,6 @@
     resize: none;
 }
 
-/* ==========================================================================
-   2.1 BOTÃO SYNC HEADER CHAT — ÍCONE LIMPO SEM BACKGROUND
-   ========================================================================== */
 .btn-sync-chat {
     background: none;
     border: none;
@@ -54,7 +45,11 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.2s ease, color 0.2s ease;
-    color: #6c757d;
+    color: #adb5bd;
+}
+
+.btn-sync-chat.syncing {
+    color: var(--vermelho-rdo);
 }
 
 .btn-sync-chat:hover {
@@ -66,14 +61,29 @@
     font-size: 1.1rem;
 }
 
-.btn-sync-chat .spinner-rotate {
-    animation: rotate 1s linear infinite;
-    color: var(--vermelho-rdo);
+.btn-sync-chat:disabled {
+    cursor: not-allowed;
 }
 
-/* ==========================================================================
-   3. ESTRUTURA DE CONTATOS
-   ========================================================================== */
+.chat-loading-text {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #999;
+}
+
+.chat-dots::after {
+    content: '';
+    animation: chatDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes chatDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}
+
 #lista-contatos-chat .contact-item-clean {
     cursor: pointer;
     transition: background 0.3s ease;
@@ -113,9 +123,6 @@
     height: 8px;
 }
 
-/* ==========================================================================
-   4. SEPARADOR DE DATA — ESTILO CLEAN
-   ========================================================================== */
 .chat-date-separator {
     display: flex;
     align-items: center;
@@ -137,9 +144,6 @@
     text-transform: uppercase;
 }
 
-/* ==========================================================================
-   5. MENSAGENS — FUNDO BRANCO, LAYOUT LIMPO
-   ========================================================================== */
 .message-wrapper {
     position: relative;
     margin-bottom: 36px;
@@ -196,9 +200,6 @@
     white-space: nowrap;
 }
 
-/* ==========================================================================
-   6. ÍCONE DE STATUS — PÉ ESQUERDO, SEM BACKGROUND
-   ========================================================================== */
 .status-icon {
     position: absolute !important;
     bottom: -18px !important;
@@ -238,9 +239,6 @@
     animation: none !important;
 }
 
-/* ==========================================================================
-   7. TOOLTIP NO ÍCONE — NOME DO MOTOBOY + STATUS
-   ========================================================================== */
 .status-icon[data-tooltip]:hover::after {
     content: attr(data-tooltip);
     position: absolute;
@@ -272,9 +270,6 @@
     z-index: 999;
 }
 
-/* ==========================================================================
-   8. BOTÕES DE LOOP SVG — ESTILO WHATSAPP
-   ========================================================================== */
 .chat-empty-state {
     display: flex;
     flex-direction: column;
@@ -294,44 +289,6 @@
     user-select: none;
 }
 
-.chat-loop-btn {
-    cursor: pointer;
-    transition: transform 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.chat-loop-btn:hover {
-    transform: scale(1.12);
-}
-
-.chat-loop-btn svg {
-    stroke: var(--loop-stroke);
-    transition: stroke 0.2s ease;
-}
-
-.chat-loop-btn:hover svg {
-    stroke: var(--loop-stroke-hover);
-}
-
-.chat-loop-btn.spinning svg {
-    animation: spin-loop-svg 0.8s linear infinite;
-    stroke: var(--loop-stroke-hover);
-}
-
-@keyframes spin-loop-svg {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* ==========================================================================
-   9. LOADING E SPINNER GENÉRICO
-   ========================================================================== */
 .chat-status-container {
     display: flex;
     flex-direction: column;
@@ -354,12 +311,8 @@
 }
 
 @keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .status-label-gray {
@@ -369,17 +322,11 @@
     font-weight: 500;
 }
 
-/* ==========================================================================
-   10. FUNDO DO CHAT — ESTILO WHATSAPP
-   ========================================================================== */
 .whatsapp-bg {
     background-color: var(--bg-chat) !important;
     background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6cfc4' fill-opacity='0.15'%3E%3Cpath d='M20 0L0 20h10L20 10V0zm0 80L0 60h10l10-10v10h10L20 80zm60-80L60 20h10l10-10V0zM80 80L60 60h10l10-10v10H80z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* ==========================================================================
-   11. MODAL STATUS — ESTILOS
-   ========================================================================== */
 .modal-status-content {
     border-radius: 14px;
     overflow: hidden;
@@ -478,16 +425,10 @@
     color: #fff;
 }
 
-/* ==========================================================================
-   12. MODAL MENSAGEM PADRÃO
-   ========================================================================== */
 .textarea-modelo {
     font-size: 0.85rem;
 }
 
-/* ==========================================================================
-   13. BOTÕES DE STATUS (OPÇÕES)
-   ========================================================================== */
 .btn-status-option {
     display: flex;
     align-items: center;
@@ -523,9 +464,6 @@
     flex-shrink: 0;
 }
 
-/* ==========================================================================
-   14. BOTÕES GERAIS — UTILITÁRIOS
-   ========================================================================== */
 .btn-danger {
     background-color: var(--vermelho-rdo) !important;
     border-color: var(--vermelho-rdo) !important;
@@ -547,9 +485,6 @@
     border: 1px solid #f5c2c7 !important;
 }
 
-/* ==========================================================================
-   15. SCROLLBAR — ESTILO WHATSAPP
-   ========================================================================== */
 #chat-messages-container::-webkit-scrollbar {
     width: 6px;
 }
@@ -584,11 +519,7 @@
     background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* ==========================================================================
-   16. RESPONSIVIDADE
-   ========================================================================== */
 @media (max-width: 768px) {
-
     .card-contatos,
     .card-chat {
         height: 500px;
@@ -614,19 +545,11 @@
         padding: 4px 12px;
     }
 
-    .chat-loop-btn svg {
-        width: 32px;
-        height: 32px;
-    }
-
     .chat-empty-label {
         font-size: 0.72rem;
     }
 }
 
-/* ==========================================================================
-   17. VALIDAÇÃO — CAMPO INVÁLIDO
-   ========================================================================== */
 .msg-input-invalido {
     border: 2px solid #dc3545 !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;

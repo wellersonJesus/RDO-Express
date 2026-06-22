@@ -310,32 +310,31 @@ window.filtrarContatos = function () {
     }, 300);
 };
 
-function _setLoopBtnSpinning(containerId, spinning) {
-    var container = document.getElementById(containerId);
-    if (!container) return;
-    var btn = container.querySelector('.chat-loop-btn');
-    if (!btn) return;
-    spinning ? btn.classList.add('spinning') : btn.classList.remove('spinning');
+function _mostrarLoadingContatos() {
+    var listEl = document.getElementById('lista-contatos-chat');
+    if (!listEl) return;
+    listEl.innerHTML =
+        '<div class="text-center text-muted py-4">' +
+        '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
+        '<div class="mt-2 chat-loading-text">Buscando clientes<span class="chat-dots"></span></div>' +
+        '</div>';
 }
 
-function _criarLoopSVG() {
-    return '<svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#adb5bd" ' +
-        'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M23 4v6h-6"></path>' +
-        '<path d="M1 20v-6h6"></path>' +
-        '<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>' +
-        '<path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>' +
-        '</svg>';
+function _mostrarLoadingMensagens() {
+    var container = document.getElementById('chat-messages-container');
+    if (!container) return;
+    container.innerHTML =
+        '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">' +
+        '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
+        '<div class="mt-2 chat-loading-text">Buscando mensagens<span class="chat-dots"></span></div>' +
+        '</div>';
 }
 
 function _mostrarChatEmptyState(texto) {
     var container = document.getElementById('chat-messages-container');
     if (!container) return;
     container.innerHTML =
-        '<div id="chat-empty-state" class="chat-empty-state">' +
-        '<div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar mensagens">' +
-        _criarLoopSVG() +
-        '</div>' +
+        '<div class="chat-empty-state">' +
         '<div class="chat-empty-label">' + texto + '</div>' +
         '</div>';
 }
@@ -344,24 +343,33 @@ function _mostrarContatosEmptyState(texto) {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
     listEl.innerHTML =
-        '<div id="contatos-empty-state" class="chat-empty-state">' +
-        '<div class="chat-loop-btn" onclick="window.carregarDados()" title="Carregar contatos">' +
-        _criarLoopSVG() +
-        '</div>' +
+        '<div class="chat-empty-state">' +
         '<div class="chat-empty-label">' + texto + '</div>' +
         '</div>';
 }
 
+function _spinChatOn() {
+    var btn = document.getElementById('btn-sync-chat');
+    var icon = document.getElementById('sync-icon-header');
+    if (btn) { btn.classList.add('syncing'); btn.disabled = true; }
+    if (icon) icon.classList.add('spinner-rotate');
+}
+
+function _spinChatOff() {
+    var btn = document.getElementById('btn-sync-chat');
+    var icon = document.getElementById('sync-icon-header');
+    if (btn) { btn.classList.remove('syncing'); btn.disabled = false; }
+    if (icon) icon.classList.remove('spinner-rotate');
+}
+
 window.carregarDados = async function () {
     var listEl = document.getElementById('lista-contatos-chat');
-    var iconHeader = document.getElementById('sync-icon-header');
     var searchInput = document.getElementById('chat-search');
     if (!listEl || window.AppRDO.isFetching) return;
     window.AppRDO.isFetching = true;
-    if (iconHeader) iconHeader.classList.add('spinner-rotate');
+    _spinChatOn();
+    _mostrarLoadingContatos();
     if (searchInput) searchInput.placeholder = 'Sincronizando...';
-    _setLoopBtnSpinning('contatos-empty-state', true);
-    _setLoopBtnSpinning('chat-empty-state', true);
     try {
         var results = await Promise.all([
             API.call('getclientes'),
@@ -399,11 +407,10 @@ window.carregarDados = async function () {
         if (searchInput) searchInput.placeholder = 'Buscar cliente...';
     } catch (e) {
         _mostrarContatosEmptyState('Erro ao carregar dados');
+        _mostrarChatEmptyState('Erro ao carregar mensagens');
     } finally {
         window.AppRDO.isFetching = false;
-        if (iconHeader) iconHeader.classList.remove('spinner-rotate');
-        _setLoopBtnSpinning('contatos-empty-state', false);
-        _setLoopBtnSpinning('chat-empty-state', false);
+        _spinChatOff();
     }
 };
 
@@ -467,11 +474,7 @@ window.abrirConversa = async function (id, nome, urlImagem, isOnline) {
         nameEl.innerText = nome;
         nameEl.className = 'text-dark fw-bold';
     }
-    container.innerHTML =
-        '<div class="chat-empty-state">' +
-        '<div class="chat-loop-btn spinning">' + _criarLoopSVG() + '</div>' +
-        '<div class="chat-empty-label">Buscando mensagens...</div>' +
-        '</div>';
+    _mostrarLoadingMensagens();
     try {
         var todasMensagens = window.AppRDO.mensagensCache;
         var todosPedidos = window.AppRDO.pedidosCache;
@@ -1603,3 +1606,30 @@ window.salvarPedidoAPI = async function () {
         }
     }
 };
+
+(function () {
+    function _handleSyncClick(e) {
+        var btn = e.target.closest('#btn-sync-chat');
+        if (!btn) return;
+        if (window.AppRDO && window.AppRDO.isFetching) return;
+        if (typeof window.carregarDados === 'function') {
+            window.carregarDados();
+        }
+    }
+
+    document.removeEventListener('click', _handleSyncClick);
+    document.addEventListener('click', _handleSyncClick);
+
+    function _tentarInit() {
+        var btn = document.getElementById('btn-sync-chat');
+        if (btn && window.AppRDO && !window.AppRDO.listaCarregada && !window.AppRDO.isFetching) {
+            window.carregarDados();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _tentarInit);
+    } else {
+        _tentarInit();
+    }
+})();
