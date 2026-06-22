@@ -31,6 +31,10 @@ function doPost(e) {
       return responder(processarGetFinanceiroCompleto());
     }
 
+    if (action === "validarsenhamaster") {
+      return responder(processarValidarSenhaMaster(data.senha));
+    }
+
     var entidade = extrairEntidade(action);
     var nomeAba = mapearEntidade(entidade);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -67,6 +71,52 @@ function doPost(e) {
   } catch (err) {
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
   }
+}
+
+function processarValidarSenhaMaster(senha) {
+  if (!senha || String(senha).trim() === "") {
+    return { status: "error", valido: false, message: "Senha não informada." };
+  }
+
+  var sheet = buscarAba(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
+
+  if (!sheet) {
+    return { status: "error", valido: false, message: "Tabela 'usuarios' não encontrada." };
+  }
+
+  var rows = sheet.getDataRange().getValues();
+
+  if (rows.length <= 1) {
+    return { status: "error", valido: false, message: "Nenhum usuário cadastrado." };
+  }
+
+  var headers = rows[0].map(function (h) {
+    return String(h).toLowerCase().trim();
+  });
+
+  var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+  var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
+  var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+
+  if (colUser === -1 || colPass === -1) {
+    return { status: "error", valido: false, message: "Colunas obrigatórias não encontradas." };
+  }
+
+  var senhaTrim = String(senha).trim();
+
+  for (var i = 1; i < rows.length; i++) {
+    var tipo = colTipo !== -1 ? String(rows[i][colTipo]).trim().toLowerCase() : "";
+    var isMaster = tipo === "master" || tipo === "admin";
+
+    if (isMaster) {
+      var senhaArmazenada = String(rows[i][colPass]).trim();
+      if (senhaArmazenada === senhaTrim) {
+        return { status: "success", valido: true };
+      }
+    }
+  }
+
+  return { status: "success", valido: false };
 }
 
 function extrairEntidade(action) {
@@ -421,13 +471,10 @@ function processarLogin(user, pass) {
   var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
   var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
   var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
-  var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+  var colImg  = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
 
   if (colUser === -1 || colPass === -1) {
-    return {
-      status: "error",
-      message: "Colunas 'username' ou 'password' não encontradas"
-    };
+    return { status: "error", message: "Colunas 'username' ou 'password' não encontradas" };
   }
 
   var userTrim = String(user).trim();

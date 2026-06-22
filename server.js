@@ -77,6 +77,31 @@ async function buscarUsuarioGAS(username) {
     return null;
 }
 
+async function buscarHashMasterGAS() {
+    try {
+        var masterLogin = process.env.MASTER_LOGIN;
+        if (!masterLogin) return null;
+
+        var result = await fetchGAS({
+            action: 'getusuarios',
+            apiKey: process.env.SECRET_KEY
+        });
+
+        if (!Array.isArray(result)) return null;
+
+        for (var i = 0; i < result.length; i++) {
+            var u = result[i];
+            var uName = String(u.username || u.user || u.login || '').trim();
+            if (uName === masterLogin) {
+                return u.password || null;
+            }
+        }
+    } catch (err) {
+        console.error('[MASTER AUTH] Erro ao buscar hash no GAS:', err.message);
+    }
+    return null;
+}
+
 app.post('/api/proxy', async function (req, res) {
     try {
         var body = req.body || {};
@@ -150,6 +175,36 @@ app.post('/api/proxy', async function (req, res) {
                 console.error('[LOGIN] Erro GAS:', gasErr.message);
                 return res.status(502).json({ status: 'error', message: 'Falha ao comunicar com o servidor de dados.' });
             }
+        }
+
+        if (action === 'validarsenhamaster') {
+            var senhaMaster = String(body.senha || '').trim();
+
+            console.log('[MASTER AUTH] Validação de senha master solicitada');
+
+            if (!senhaMaster) {
+                return res.status(400).json({ status: 'error', valido: false, message: 'Senha não informada.' });
+            }
+
+            var hashDoBanco = await buscarHashMasterGAS();
+
+            if (!hashDoBanco) {
+                console.error('[MASTER AUTH] Hash master não encontrado no banco');
+                return res.status(500).json({ status: 'error', valido: false, message: 'Usuário master não localizado.' });
+            }
+
+            var senhaValida = false;
+
+            try {
+                senhaValida = await bcrypt.compare(senhaMaster, hashDoBanco);
+            } catch (bcryptErr) {
+                console.error('[MASTER AUTH] Erro no bcrypt.compare:', bcryptErr.message);
+                return res.status(500).json({ status: 'error', valido: false, message: 'Erro interno na validação.' });
+            }
+
+            console.log('[MASTER AUTH] Resultado:', senhaValida ? 'AUTORIZADO' : 'NEGADO');
+
+            return res.json({ status: 'success', valido: senhaValida });
         }
 
         if (!process.env.API_URL) {
