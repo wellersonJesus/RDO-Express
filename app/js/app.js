@@ -1,6 +1,6 @@
 window.checkMaster = function () {
     var val = localStorage.getItem('bot_master_active');
-    if (val === null || val === undefined) return true;
+    if (val === null || val === undefined) return false;
     return val === 'true';
 };
 
@@ -15,8 +15,17 @@ window.AppRDO.pedidosCache = [];
 window.AppRDO.motoboyCache = [];
 window.AppRDO.financeiroCache = [];
 window.AppRDO.relatoriosCache = [];
-window.AppRDO.isMasterOn = false;
 window.AppRDO.paginaAtual = null;
+
+(function () {
+    var raw = localStorage.getItem('bot_master_active');
+    if (raw === null) {
+        localStorage.setItem('bot_master_active', 'false');
+        window.AppRDO.isMasterOn = false;
+    } else {
+        window.AppRDO.isMasterOn = raw === 'true';
+    }
+})();
 
 window.AppRDO.resetState = function () {
     window.AppRDO.isFetching = false;
@@ -144,8 +153,6 @@ function carregarModaisDaPagina(page) {
                     });
                 });
 
-                // ✅ FIX: scripts inline agora fazem parte da cadeia de Promises,
-                // garantindo que sejam executados ANTES de initFinanceiro() ser chamado.
                 return chain.then(function () {
                     return new Promise(function (resolve) {
                         var pendentes = scriptsInline.length;
@@ -160,15 +167,8 @@ function carregarModaisDaPagina(page) {
                                 var s = document.createElement('script');
                                 s.textContent = code;
 
-                                // Resolve após cada script ser "commitado" ao DOM
-                                s.onload = function () {
-                                    pendentes--;
-                                    if (pendentes === 0) resolve();
-                                };
-
                                 document.body.appendChild(s);
 
-                                // Scripts inline não disparam onload — resolvemos via microtask
                                 Promise.resolve().then(function () {
                                     pendentes--;
                                     if (pendentes === 0) resolve();
@@ -356,20 +356,17 @@ function urlAvatarConfiavel(url) {
     if (!url || typeof url !== 'string') return false;
     var s = url.trim();
     if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
-    if (s.indexOf('cdn.whatsapp.net') !== -1) return false;
-    if (s.indexOf('whatsapp') !== -1) return false;
-    if (s.indexOf('fbcdn.net') !== -1) return false;
     if (s.indexOf('data:image/') === 0) return true;
     if (s.indexOf('/') === 0) return true;
-    if (s.indexOf('http') === 0 && s.indexOf('cdn.whatsapp') === -1) return true;
+    if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0) return true;
     return false;
 }
 
 window.atualizarAvatar = function () {
     var username = localStorage.getItem('username') || 'Usuário';
     var iniciais = obterIniciaisGlobal(username) || username.charAt(0).toUpperCase();
-    var imagem = localStorage.getItem('imagem');
-    var svg = gerarAvatarSVG(iniciais);
+    var imagem   = localStorage.getItem('imagem');
+    var svg      = gerarAvatarSVG(iniciais);
     var srcFinal = urlAvatarConfiavel(imagem) ? imagem : svg;
 
     var img1 = document.getElementById('user-avatar-img');

@@ -36,6 +36,25 @@ window.AppRDO = window.AppRDO || {
     isMasterOn: false
 };
 
+window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+
+window.addEventListener('masterStatusChanged', function (e) {
+    var isOn = !!(e.detail && e.detail.isOn);
+    window.AppRDO.isMasterOn = isOn;
+    var clientes = window.AppRDO.clientesCache || [];
+    window.renderizarLista(clientes, isOn);
+    if (window.AppRDO.clienteId) {
+        var cliente = clientes.find(function (c) {
+            return String(c.id) === String(window.AppRDO.clienteId);
+        });
+        if (cliente) {
+            var nome = cliente.username || 'Sem nome';
+            var online = isOn && String(cliente.status || '').toUpperCase() === 'TRUE';
+            window.abrirConversa(window.AppRDO.clienteId, nome, null, online);
+        }
+    }
+});
+
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 function _getOrCreateModal(el, options) {
@@ -304,16 +323,9 @@ window.MasterAuth = (function () {
         var erroEl = _el('msg-erro-senha');
         var btnConfirmar = _el('btn-confirmar-exclusao');
         _senhaVisivel = false;
-        if (input) {
-            input.value = '';
-            input.type = 'password';
-            input.classList.remove('is-invalid');
-        }
+        if (input) { input.value = ''; input.type = 'password'; input.classList.remove('is-invalid'); }
         if (erroEl) erroEl.classList.remove('visivel');
-        if (btnConfirmar) {
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão';
-        }
+        if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão'; }
         var iconToggle = _el('icon-toggle-senha');
         if (iconToggle) iconToggle.className = 'bi bi-eye-slash';
     }
@@ -328,27 +340,18 @@ window.MasterAuth = (function () {
             input.classList.add('is-invalid');
             input.focus();
             input.select();
-            setTimeout(function () {
-                if (input) input.classList.remove('is-invalid');
-            }, 800);
+            setTimeout(function () { if (input) input.classList.remove('is-invalid'); }, 800);
         }
     }
 
     function _setBtnCarregando() {
         var btn = _el('btn-confirmar-exclusao');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
-        }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...'; }
     }
 
     function _setBtnPadrao() {
         var btn = _el('btn-confirmar-exclusao');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão';
-        }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão'; }
     }
 
     function abrir(pedidoId) {
@@ -387,39 +390,20 @@ window.MasterAuth = (function () {
     async function confirmar() {
         var input = _el('input-senha-master');
         var senha = input ? input.value : '';
-
-        if (!senha || !senha.trim()) {
-            _mostrarErro('Informe a senha master para continuar.');
-            return;
-        }
-
+        if (!senha || !senha.trim()) { _mostrarErro('Informe a senha master para continuar.'); return; }
         _setBtnCarregando();
-
         try {
-            /*
-             * O backend recebe a senha em texto plano,
-             * busca o usuário Master no banco e executa:
-             *   bcrypt.compare(senha_recebida, hash_do_banco)
-             * Nunca expõe nem compara com o .env diretamente no frontend.
-             * Se a senha no .env mudar e o banco for atualizado com o novo hash,
-             * a comparação continua funcionando automaticamente.
-             */
             var resposta = await API.call('validarsenhamaster', { senha: senha.trim() });
-
             if (!resposta || resposta.status !== 'success' || !resposta.valido) {
                 _mostrarErro('Senha incorreta. Acesso negado.');
                 _setBtnPadrao();
                 return;
             }
-
             var idParaExcluir = _pedidoId;
             _pedidoId = null;
-
             try { if (_modalBS) _modalBS.hide(); } catch (_) {}
             _resetar();
-
             await _executarExclusao(idParaExcluir);
-
         } catch (err) {
             _mostrarErro('Erro de comunicação. Tente novamente.');
             _setBtnPadrao();
@@ -429,22 +413,17 @@ window.MasterAuth = (function () {
     async function _executarExclusao(msgId) {
         try {
             var resposta = await API.call('deletepedido', { id: msgId });
-
             if (!resposta || resposta.status !== 'success') {
                 throw new Error((resposta && resposta.message) || 'Falha ao excluir no servidor.');
             }
-
             var msgEl = document.querySelector('[data-pedido-id="' + msgId + '"]');
             var wrapper = msgEl ? msgEl.closest('.message-wrapper') : null;
             if (wrapper) {
                 wrapper.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 wrapper.style.opacity = '0';
                 wrapper.style.transform = 'translateX(30px)';
-                setTimeout(function () {
-                    try { wrapper.remove(); } catch (_) {}
-                }, 300);
+                setTimeout(function () { try { wrapper.remove(); } catch (_) {} }, 300);
             }
-
             if (window.AppRDO) {
                 if (Array.isArray(window.AppRDO.pedidosCache)) {
                     window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
@@ -457,41 +436,25 @@ window.MasterAuth = (function () {
                     });
                 }
             }
-
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Excluído!',
-                    text: 'A mensagem foi removida com sucesso.',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2500,
-                    timerProgressBar: true,
-                    customClass: { popup: 'rounded-4 shadow' }
+                    icon: 'success', title: 'Excluído!', text: 'A mensagem foi removida com sucesso.',
+                    toast: true, position: 'top-end', showConfirmButton: false,
+                    timer: 2500, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
                 });
             }
-
         } catch (err) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Erro ao excluir',
+                    icon: 'error', title: 'Erro ao excluir',
                     text: err.message || 'Não foi possível remover a mensagem.',
-                    confirmButtonColor: '#dc3545',
-                    customClass: { popup: 'rounded-4' }
+                    confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' }
                 });
             }
         }
     }
 
-    return {
-        abrir: abrir,
-        cancelar: cancelar,
-        confirmar: confirmar,
-        toggleSenha: toggleSenha,
-        onKeydown: onKeydown
-    };
+    return { abrir: abrir, cancelar: cancelar, confirmar: confirmar, toggleSenha: toggleSenha, onKeydown: onKeydown };
 })();
 
 window.carregarDados = async function () {
@@ -549,7 +512,7 @@ window.carregarDados = async function () {
 window.renderizarLista = function (lista, isMasterOn) {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
-    if (lista.length === 0) { _mostrarContatosEmptyState('Nenhum contato disponível'); return; }
+    if (!lista || lista.length === 0) { _mostrarContatosEmptyState('Nenhum contato disponível'); return; }
     var clienteAtivo = window.AppRDO.clienteId;
     listEl.innerHTML = lista.map(function (cliente) {
         var id = String(cliente.id || '');
@@ -631,10 +594,7 @@ window.renderizarMensagens = function (mensagens, pedidos) {
     if (!container) return;
     container.innerHTML = '';
     window.AppRDO.pedidosCache = pedidos;
-    if (!mensagens || mensagens.length === 0) {
-        _mostrarChatEmptyState('Nenhum histórico encontrado');
-        return;
-    }
+    if (!mensagens || mensagens.length === 0) { _mostrarChatEmptyState('Nenhum histórico encontrado'); return; }
     var ultimaData = null;
     mensagens.forEach(function (msg) {
         var labelData = window.formatarDataSeparador(msg.data || null);
@@ -670,11 +630,9 @@ window.renderizarMensagens = function (mensagens, pedidos) {
 function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
     var div = document.createElement('div');
     div.className = 'message-wrapper';
-
     var iconHTML = temStatus
         ? window.getIconePorStatus(statusPuro)
         : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
-
     div.innerHTML =
         '<button class="btn-excluir-msg" title="Excluir mensagem" ' +
         'onclick="event.stopPropagation(); window.MasterAuth.abrir(\'' + pedidoId + '\')">' +
@@ -690,11 +648,8 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
         '</div>' +
         '<span class="message-time">' + hora + '</span>' +
         '</div>';
-
-    // Hover via JS para suporte touch
     div.addEventListener('mouseenter', function () { div.classList.add('msg-hover-active'); });
     div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
-
     return div;
 }
 
@@ -1069,16 +1024,20 @@ window.enviarMensagemGeral = async function () {
         return;
     }
     if (!input || !input.value.trim()) { window.marcarCampoInvalido(); return; }
-    if (window.AppRDO.isMasterOn) {
-        var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
-            return String(c.id) === String(window.AppRDO.clienteId);
-        });
-        if (clienteAtual && String(clienteAtual.status || '').toUpperCase() !== 'TRUE') {
-            window.exibirModalValidacao(
-                'Por favor, entre em contato com o seu administrador.<br><strong>O cliente está offline.</strong>'
-            );
-            return;
-        }
+    if (!window.AppRDO.isMasterOn) {
+        window.exibirModalValidacao(
+            'O sistema está desligado.<br><strong>Contate o administrador.</strong>'
+        );
+        return;
+    }
+    var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
+        return String(c.id) === String(window.AppRDO.clienteId);
+    });
+    if (clienteAtual && String(clienteAtual.status || '').toUpperCase() !== 'TRUE') {
+        window.exibirModalValidacao(
+            'Por favor, entre em contato com o seu administrador.<br><strong>O cliente está offline.</strong>'
+        );
+        return;
     }
     await window.iniciarFluxoCheckout();
 };
