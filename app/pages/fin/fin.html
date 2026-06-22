@@ -1,666 +1,416 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Financeiro</title>
 </head>
-
 <body>
 
-  <div class="fin-page-wrapper">
-    <div class="fin-content-area">
+<div class="fin-page-wrapper">
+  <div class="fin-content-area">
 
-      <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-        <div class="card-body p-3 d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center gap-3">
-            <i class="bi bi-cash-stack fs-3 text-danger"></i>
-            <div>
-              <h5 class="fw-bold mb-0 text-dark">
-                <span class="text-danger">RDO</span> Express - Financeiro
-              </h5>
-              <small class="text-muted fin-subtitle">Gestao e Logistica</small>
-            </div>
-          </div>
-          <button id="btn-refresh-fin" class="btn-sync-fin" title="Atualizar dados">
-            <i id="sync-icon-fin" class="bi bi-arrow-repeat"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="fin-tabs-nav">
-        <a href="#" class="fin-tab active" data-tab="todos">Todos</a>
-        <a href="#" class="fin-tab" data-tab="caixa">Caixa</a>
-        <a href="#" class="fin-tab" data-tab="extrato">Extrato</a>
-      </div>
-
-      <div id="fin-tab-content-todos" class="fin-tab-content active">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-          <div class="d-flex align-items-center gap-2 flex-wrap">
-            <input type="search" id="filtro-busca-fin" class="form-control rounded-pill input-filtro-fin"
-              placeholder="Buscar..." autocomplete="off">
-            <div class="dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-fin">
-              <button class="btn-filtro-inteligente" id="btn-filtro-fin">
-                <i class="bi bi-funnel-fill"></i>
-                <span id="label-filtro-fin">Todos</span>
-                <i class="bi bi-chevron-down chevron-filtro"></i>
-              </button>
-              <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-fin">
-                <div class="dropdown-filtro-item" data-filtro-tipo="todos">
-                  <i class="bi bi-grid-3x3-gap"></i> Todos
-                </div>
-                <div class="dropdown-filtro-item" data-filtro-tipo="entrada">
-                  <i class="bi bi-arrow-down-circle text-success"></i> Receitas
-                </div>
-                <div class="dropdown-filtro-item" data-filtro-tipo="saida">
-                  <i class="bi bi-arrow-up-circle text-danger"></i> Despesas
-                </div>
-                <div class="dropdown-filtro-item-has-sub" id="dropdown-item-situacao-fin">
-                  <div class="dropdown-filtro-item-label" id="btn-sub-situacao-fin">
-                    <i class="bi bi-circle-half"></i> Situação
-                    <i class="bi bi-chevron-right chevron-sub"></i>
-                  </div>
-                  <div class="dropdown-filtro-submenu" id="submenu-situacao-fin">
-                    <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos">
-                      <i class="bi bi-dash-circle"></i> Todas
-                    </div>
-                    <div class="dropdown-filtro-subitem" data-filtro-situacao="pago">
-                      <i class="bi bi-check-circle text-success"></i> Pago
-                    </div>
-                    <div class="dropdown-filtro-subitem" data-filtro-situacao="recebido">
-                      <i class="bi bi-check-circle text-primary"></i> Recebido
-                    </div>
-                    <div class="dropdown-filtro-subitem" data-filtro-situacao="pendente">
-                      <i class="bi bi-clock text-warning"></i> Pendente
-                    </div>
-                    <div class="dropdown-filtro-subitem" data-filtro-situacao="cancelado">
-                      <i class="bi bi-x-circle text-secondary"></i> Cancelado
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
-              <i class="bi bi-plus-lg"></i> Novo
-            </button>
+    <!-- ===== HEADER CARD ===== -->
+    <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
+      <div class="card-body p-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-cash-stack fs-3 text-danger"></i>
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">
+              <span class="text-danger">RDO</span> Express - Financeiro
+            </h5>
+            <small class="text-muted fin-subtitle">Gestão e Logística</small>
           </div>
         </div>
+        <button id="btn-refresh-fin" class="btn-sync-fin" title="Atualizar dados">
+          <i id="sync-icon-fin" class="bi bi-arrow-repeat"></i>
+        </button>
+      </div>
+    </div>
 
-        <div class="table-responsive">
-          <table class="table table-borderless mb-0 fin-table-todos" id="tabela-fin-todos">
-            <thead class="tabela-fin-head">
-              <tr>
-                <th class="ps-3">
-                  Data
-                  <button class="btn-sort-data" id="btn-sort-data-todos" title="Ordenar por data">
-                    <i class="bi bi-arrow-down" id="icon-sort-data-todos"></i>
+    <!-- ===== TABS NAV ===== -->
+    <div class="fin-tabs-nav">
+      <a href="#" class="fin-tab active" data-tab="todos">Todos</a>
+      <a href="#" class="fin-tab" data-tab="caixa">Caixa</a>
+      <a href="#" class="fin-tab" data-tab="extrato">Extrato</a>
+    </div>
+
+    <!-- ===== TAB: TODOS ===== -->
+    <div id="fin-tab-content-todos" class="fin-tab-content active">
+      <div class="row g-3 mt-0">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm rounded-4">
+
+            <!-- Toolbar -->
+            <div class="card-body pb-0">
+              <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+
+                <!-- Busca -->
+                <input type="search" id="filtro-busca-fin"
+                  class="form-control form-control-sm rounded-pill input-filtro-fin"
+                  placeholder="Buscar..." autocomplete="off">
+
+                <!-- Dropdown Filtro -->
+                <div class="dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-fin">
+                  <button class="btn-filtro-inteligente" id="btn-filtro-fin">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span id="label-filtro-fin">Todos</span>
+                    <i class="bi bi-chevron-down chevron-filtro"></i>
                   </button>
-                </th>
-                <th>N.Serviço</th>
-                <th>Cliente</th>
-                <th>Motoboy</th>
-                <th>Tipo</th>
-                <th class="text-end pe-3">Ação</th>
-              </tr>
-            </thead>
-            <tbody id="tabela-fin-body-todos">
-              <tr>
-                <td colspan="6" class="text-center text-muted py-4" style="font-size:.8rem;">
-                  <i class="bi bi-arrow-repeat loading-spin"
-                    style="font-size:1.2rem;display:block;opacity:.3;margin-bottom:6px;"></i>
-                  Carregando...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-fin">
+                    <div class="dropdown-filtro-item active" data-filtro-tipo="todos">
+                      <i class="bi bi-grid-3x3-gap"></i> Todos
+                    </div>
+                    <div class="dropdown-filtro-item" data-filtro-tipo="entrada">
+                      <i class="bi bi-arrow-down-circle text-success"></i> Receitas
+                    </div>
+                    <div class="dropdown-filtro-item" data-filtro-tipo="saida">
+                      <i class="bi bi-arrow-up-circle text-danger"></i> Despesas
+                    </div>
+                    <div class="dropdown-filtro-item-has-sub" id="dropdown-item-situacao-fin">
+                      <div class="dropdown-filtro-item-label" id="btn-sub-situacao-fin">
+                        <i class="bi bi-circle-half"></i> Situação
+                        <i class="bi bi-chevron-right chevron-sub"></i>
+                      </div>
+                      <div class="dropdown-filtro-submenu" id="submenu-situacao-fin">
+                        <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos">
+                          <i class="bi bi-dash-circle"></i> Todas
+                        </div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pago">
+                          <i class="bi bi-check-circle text-success"></i> Pago
+                        </div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="recebido">
+                          <i class="bi bi-check-circle text-primary"></i> Recebido
+                        </div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pendente">
+                          <i class="bi bi-clock text-warning"></i> Pendente
+                        </div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="cancelado">
+                          <i class="bi bi-x-circle text-secondary"></i> Cancelado
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        <div class="d-flex align-items-center justify-content-between mt-2 px-1 flex-wrap gap-2">
-          <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-todos">0 registros</span>
-          <div class="d-flex align-items-center gap-2">
-            <span class="text-muted" style="font-size:.68rem;" id="fin-pag-label-todos">Pág 1 de 1</span>
-            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" style="font-size:.65rem;"
-              id="fin-pag-prev-todos" disabled>
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" style="font-size:.65rem;"
-              id="fin-pag-next-todos" disabled>
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
+                <!-- Botão Novo -->
+                <button class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
+                  <i class="bi bi-plus-lg"></i> Novo
+                </button>
 
-      <div id="fin-tab-content-caixa" class="fin-tab-content">
-
-        <div class="rdo-pay-header mb-3">
-          <div class="d-flex align-items-center justify-content-between rdo-pay-top">
-            <div class="d-flex align-items-center gap-2">
-              <div class="rdo-pay-logo"><i class="bi bi-wallet2"></i></div>
-              <div>
-                <div class="rdo-pay-title">RDO Pay</div>
-                <div style="font-size:.58rem;color:rgba(255,255,255,.5);">Gestão de caixa</div>
               </div>
             </div>
-            <button class="btn-olhinho-clean" id="btn-toggle-caixa-valores" title="Mostrar valores">
-              <i class="bi bi-eye-slash" id="icon-toggle-caixa-val"></i>
-            </button>
-          </div>
-          <div class="rdo-pay-saldo-wrap">
-            <div class="rdo-pay-saldo-label">Saldo disponível (empresa)</div>
-            <div class="rdo-pay-saldo-valor fin-valor-caixa" id="rdo-pay-saldo" data-valor-real="R$ 0,00">R$ ****</div>
-            <div style="font-size:.58rem;color:rgba(255,255,255,.45);margin-top:2px;">
-              Colaboradores: <span class="fin-valor-caixa fw-bold" id="rdo-pay-saldo-colaboradores"
-                data-valor-real="R$ 0,00">R$ ****</span>
-            </div>
-          </div>
-          <div class="rdo-pay-actions">
-            <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalAdicionarDinheiro">
-              <div class="rdo-pay-action-icon rdo-pay-icon-add"><i class="bi bi-plus-circle"></i></div>
-              <span class="rdo-pay-action-label">Adicionar</span>
-            </div>
-            <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalTransferir">
-              <div class="rdo-pay-action-icon rdo-pay-icon-transfer"><i class="bi bi-arrow-left-right"></i></div>
-              <span class="rdo-pay-action-label">Transferir</span>
-            </div>
-            <div class="rdo-pay-action-item" id="btn-ver-repasses">
-              <div class="rdo-pay-action-icon rdo-pay-icon-pix"><i class="bi bi-people"></i></div>
-              <span class="rdo-pay-action-label">Repasses</span>
-            </div>
-            <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalExtratoCaixa">
-              <div class="rdo-pay-action-icon rdo-pay-icon-extrato"><i class="bi bi-file-earmark-bar-graph"></i></div>
-              <span class="rdo-pay-action-label">Extratos</span>
-            </div>
-          </div>
-        </div>
 
-        <div class="row g-2 mb-3">
-          <div class="col-6 col-sm-4 col-md">
-            <div class="caixa-mini-card caixa-mini-entrada">
-              <div class="caixa-mini-label">Receitas</div>
-              <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****
-              </div>
+            <!-- Tabela -->
+            <div class="table-responsive p-3">
+              <table class="table table-hover align-middle border-0 mb-0 fin-table-todos" id="tabela-fin-todos">
+                <thead class="tabela-fin-head text-uppercase">
+                  <tr>
+                    <th class="ps-3 border-0 fw-normal">
+                      Data
+                      <button class="btn-sort-data" id="btn-sort-data-todos" title="Ordenar por data">
+                        <i class="bi bi-arrow-down" id="icon-sort-data-todos"></i>
+                      </button>
+                    </th>
+                    <th class="border-0 fw-normal">N. Serviço</th>
+                    <th class="border-0 fw-normal">Cliente</th>
+                    <th class="border-0 fw-normal">Motoboy</th>
+                    <th class="border-0 fw-normal">Tipo</th>
+                    <th class="text-end pe-3 border-0 fw-normal">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-fin-body-todos">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                      <i class="bi bi-inbox d-block mb-1" style="font-size:1.4rem;opacity:.4;"></i>
+                      Nenhum lançamento encontrado.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </div>
-          <div class="col-6 col-sm-4 col-md">
-            <div class="caixa-mini-card caixa-mini-saida">
-              <div class="caixa-mini-label">Despesas</div>
-              <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****
-              </div>
-            </div>
-          </div>
-          <div class="col-6 col-sm-4 col-md">
-            <div class="caixa-mini-card caixa-mini-saldo"
-              style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
-              <div class="caixa-mini-label">Empresa (20%)</div>
-              <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
-                style="color:#6f42c1;">R$ ****</div>
-            </div>
-          </div>
-          <div class="col-6 col-sm-4 col-md">
-            <div class="caixa-mini-card caixa-mini-saldo">
-              <div class="caixa-mini-label">Colaborador (80%)</div>
-              <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
-                style="color:#0d6efd;">R$ ****</div>
-            </div>
-          </div>
-          <div class="col-6 col-sm-4 col-md">
-            <div class="caixa-mini-card"
-              style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);">
-              <div class="caixa-mini-label">Registros</div>
-              <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
-            </div>
-          </div>
-        </div>
 
-        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-          <div style="flex:1;min-width:120px;">
-            <label
-              style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">De</label>
-            <input type="date" id="caixa-data-inicio" class="form-control form-control-sm rounded-pill"
-              style="font-size:.72rem;height:32px;">
-          </div>
-          <div style="flex:1;min-width:120px;">
-            <label
-              style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Até</label>
-            <input type="date" id="caixa-data-fim" class="form-control form-control-sm rounded-pill"
-              style="font-size:.72rem;height:32px;">
-          </div>
-          <div style="padding-top:16px;">
-            <button class="btn btn-danger btn-sm rounded-pill px-3" id="btn-filtrar-caixa"
-              style="font-size:.7rem;height:32px;white-space:nowrap;">
-              <i class="bi bi-search me-1"></i> Filtrar
-            </button>
-          </div>
-        </div>
-
-        <div class="caixa-lista-diaria-wrapper">
-          <div id="caixa-lista-diaria">
-            <div class="text-center text-muted py-4" style="font-size:.8rem;">
-              <i class="bi bi-inbox" style="font-size:1.2rem;display:block;opacity:.4;margin-bottom:4px;"></i>
-              Selecione o período e clique em Filtrar.
-            </div>
-          </div>
-        </div>
-
-        <div class="d-flex align-items-center justify-content-between mt-2 px-1 flex-wrap gap-2">
-          <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
-          <div class="d-flex align-items-center gap-2">
-            <span class="text-muted" style="font-size:.68rem;" id="fin-pag-label-caixa">Pág 1 de 1</span>
-            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" style="font-size:.65rem;"
-              id="fin-pag-prev-caixa" disabled>
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" style="font-size:.65rem;"
-              id="fin-pag-next-caixa" disabled>
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div id="fin-tab-content-extrato" class="fin-tab-content">
-        <div class="extrato-toolbar">
-          <div class="extrato-toolbar-row w-100">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-              <button class="extrato-periodo-btn active" data-periodo="diario">Hoje</button>
-              <button class="extrato-periodo-btn" data-periodo="semanal">7 dias</button>
-              <button class="extrato-periodo-btn" data-periodo="quinzenal">15 dias</button>
-              <button class="extrato-periodo-btn" data-periodo="mensal">30 dias</button>
-            </div>
-          </div>
-          <div class="extrato-toolbar-row w-100">
-            <div class="d-flex align-items-center gap-2 flex-wrap w-100">
-              <div class="extrato-field">
-                <label>De</label>
-                <input type="date" id="extrato-data-inicio" class="extrato-input-date">
-              </div>
-              <div class="extrato-field">
-                <label>Até</label>
-                <input type="date" id="extrato-data-fim" class="extrato-input-date">
-              </div>
-              <div class="extrato-field" style="min-width:160px;flex:1;">
-                <label>Origem</label>
-                <select id="extrato-origem" class="extrato-select">
-                  <option value="__caixa__">📊 Caixa Geral</option>
-                  <optgroup label="Motoboys" id="extrato-opt-motoboys"></optgroup>
-                  <optgroup label="Grupos / Categorias" id="extrato-opt-grupos"></optgroup>
-                </select>
-              </div>
-              <div style="padding-top:16px;">
-                <button class="extrato-btn-gerar" id="btn-gerar-extrato">
-                  <i class="bi bi-file-earmark-bar-graph"></i> Gerar
+            <!-- Paginador padrão -->
+            <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
+              <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-todos">0 registros</span>
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="fin-pag-prev-todos" disabled>
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="fin-pag-label-todos" disabled>Pág 1</button>
+                <button class="btn btn-light" id="fin-pag-next-todos" disabled>
+                  <i class="bi bi-chevron-right"></i>
                 </button>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="extrato-lista" id="extrato-lista">
-          <div class="extrato-placeholder" id="extrato-placeholder">
-            <i class="bi bi-file-earmark-text"></i>
-            <span>Nenhum extrato gerado ainda.<br>
-              Selecione o período, a origem e clique em <strong>Gerar</strong>.
-            </span>
           </div>
         </div>
       </div>
-
     </div>
-  </div>
 
-  <div class="modal fade" id="modalNovoFinanceiro" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-plus-circle"></i></div>
+    <!-- ===== TAB: CAIXA ===== -->
+    <div id="fin-tab-content-caixa" class="fin-tab-content">
+
+      <!-- RDO Pay Header -->
+      <div class="rdo-pay-header mb-3">
+        <div class="d-flex align-items-center justify-content-between rdo-pay-top">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rdo-pay-logo"><i class="bi bi-wallet2"></i></div>
             <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Novo Lançamento</h6>
-              <small class="fin-form-subtitle">Preencha os dados abaixo</small>
+              <div class="rdo-pay-title">RDO Pay</div>
+              <div style="font-size:.58rem;color:rgba(255,255,255,.5);">Gestão de caixa</div>
             </div>
           </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body px-4 py-3">
-          <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3"
-            style="font-size:.74rem;border-radius:10px;"></div>
-          <input type="hidden" id="fin-edit-id">
-          <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
-            <div class="fin-form-section">
-              <div class="fin-form-section-label">Dados principais</div>
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="fin-field-label">Tipo</label>
-                  <select id="fin-tipo" class="form-select form-select-sm rounded-pill fin-field-input">
-                    <option value="">Selecione...</option>
-                    <option value="entrada">Receita</option>
-                    <option value="saida">Despesa</option>
-                  </select>
-                </div>
-                <div class="col-6">
-                  <label class="fin-field-label">Data</label>
-                  <input type="date" id="fin-data" class="form-control form-control-sm rounded-pill fin-field-input">
-                </div>
-              </div>
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="fin-field-label">N. Serviço / Pedido</label>
-                  <input type="text" id="fin-id-pedido"
-                    class="form-control form-control-sm rounded-pill fin-field-input" placeholder="#0000">
-                </div>
-                <div class="col-6">
-                  <label class="fin-field-label">Situação</label>
-                  <select id="fin-situacao" class="form-select form-select-sm rounded-pill fin-field-input">
-                    <option value="pendente">Pendente</option>
-                    <option value="pago">Pago</option>
-                    <option value="recebido">Recebido</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-              <div class="mb-2">
-                <label class="fin-field-label">Descrição</label>
-                <input type="text" id="fin-descricao" class="form-control form-control-sm rounded-pill fin-field-input"
-                  placeholder="Ex: Entrega #123">
-              </div>
-            </div>
-            <div class="fin-form-section">
-              <div class="fin-form-section-label">Valor e Colaborador</div>
-              <div class="row g-2 mb-2">
-                <div class="col-6">
-                  <label class="fin-field-label">Valor (R$)</label>
-                  <input type="text" id="fin-valor" class="form-control form-control-sm rounded-pill fin-field-input"
-                    placeholder="0,00" inputmode="decimal">
-                </div>
-                <div class="col-6">
-                  <label class="fin-field-label">Colaborador</label>
-                  <select id="fin-colaborador-id" class="form-select form-select-sm rounded-pill fin-field-input">
-                    <option value="">— Nenhum —</option>
-                  </select>
-                </div>
-              </div>
-              <div id="fin-preview-comissao" class="d-none rounded-3 p-2 mb-2"
-                style="background:#f8f9fa;border:1px solid #e9ecef;font-size:.7rem;">
-                <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Total</span>
-                  <span class="fw-bold" id="preview-valor-total">R$ 0,00</span>
-                </div>
-                <div class="d-flex justify-content-between mb-1">
-                  <span style="color:#6f42c1;">Colaborador (<span id="preview-pct-colab">80</span>%)</span>
-                  <span class="fw-bold" style="color:#6f42c1;" id="preview-valor-colab">R$ 0,00</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                  <span style="color:#0d6efd;">Empresa (<span id="preview-pct-empresa">20</span>%)</span>
-                  <span class="fw-bold" style="color:#0d6efd;" id="preview-valor-empresa">R$ 0,00</span>
-                </div>
-              </div>
-            </div>
-            <div class="fin-form-section">
-              <div class="fin-form-section-label">Observação</div>
-              <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2"
-                style="border-radius:12px;" placeholder="Opcional..."></textarea>
-            </div>
-          </form>
-        </div>
-        <div class="fin-form-footer">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Cancelar</button>
-          <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-novo-fin"
-            style="font-size:.72rem;">
-            <i class="bi bi-check-lg me-1"></i>Salvar
+          <button class="btn-olhinho-clean" id="btn-toggle-caixa-valores" title="Mostrar valores">
+            <i class="bi bi-eye-slash" id="icon-toggle-caixa-val"></i>
           </button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade" id="modalConfirmDeleteFin" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-trash"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Confirmar Exclusão</h6>
-              <small class="fin-form-subtitle">Esta ação não pode ser desfeita</small>
-            </div>
+        <div class="rdo-pay-saldo-wrap">
+          <div class="rdo-pay-saldo-label">Saldo disponível (empresa)</div>
+          <div class="rdo-pay-saldo-valor fin-valor-caixa" id="rdo-pay-saldo" data-valor-real="R$ 0,00">R$ ****</div>
+          <div style="font-size:.58rem;color:rgba(255,255,255,.45);margin-top:2px;">
+            Colaboradores:
+            <span class="fin-valor-caixa fw-bold" id="rdo-pay-saldo-colaboradores" data-valor-real="R$ 0,00">R$ ****</span>
           </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body px-4 py-3 text-center">
-          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2rem;"></i>
-          <p class="mt-2 mb-0" style="font-size:.78rem;color:#555;">
-            Tem certeza que deseja excluir este lançamento?
-          </p>
-        </div>
-        <div class="fin-form-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Cancelar</button>
-          <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" id="btn-confirmar-delete-fin"
-            style="font-size:.72rem;">
-            <i class="bi bi-trash me-1"></i>Excluir
-          </button>
+        <div class="rdo-pay-actions">
+          <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalAdicionarDinheiro">
+            <div class="rdo-pay-action-icon rdo-pay-icon-add"><i class="bi bi-plus-circle"></i></div>
+            <span class="rdo-pay-action-label">Adicionar</span>
+          </div>
+          <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalTransferir">
+            <div class="rdo-pay-action-icon rdo-pay-icon-transfer"><i class="bi bi-arrow-left-right"></i></div>
+            <span class="rdo-pay-action-label">Transferir</span>
+          </div>
+          <div class="rdo-pay-action-item" id="btn-ver-repasses">
+            <div class="rdo-pay-action-icon rdo-pay-icon-pix"><i class="bi bi-people"></i></div>
+            <span class="rdo-pay-action-label">Repasses</span>
+          </div>
+          <div class="rdo-pay-action-item" data-bs-toggle="modal" data-bs-target="#modalExtratoCaixa">
+            <div class="rdo-pay-action-icon rdo-pay-icon-extrato"><i class="bi bi-file-earmark-bar-graph"></i></div>
+            <span class="rdo-pay-action-label">Extratos</span>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="modal fade" id="modalDetalheDia" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-calendar3"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;" id="modal-detalhe-dia-titulo">Detalhes do
-                Dia</h6>
-              <small class="fin-form-subtitle">Lançamentos do período</small>
+      <!-- Mini Cards -->
+      <div class="row g-2 mb-3">
+        <div class="col-6 col-sm-4 col-md">
+          <div class="caixa-mini-card caixa-mini-entrada">
+            <div class="caixa-mini-label">Receitas</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md">
+          <div class="caixa-mini-card caixa-mini-saida">
+            <div class="caixa-mini-label">Despesas</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md">
+          <div class="caixa-mini-card caixa-mini-saldo" style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
+            <div class="caixa-mini-label">Empresa (20%)</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00" style="color:#6f42c1;">R$ ****</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md">
+          <div class="caixa-mini-card caixa-mini-saldo">
+            <div class="caixa-mini-label">Colaborador (80%)</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md">
+          <div class="caixa-mini-card" style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);">
+            <div class="caixa-mini-label">Registros</div>
+            <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista diária dentro de card -->
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm rounded-4">
+
+            <!-- Filtro de período -->
+            <div class="card-body pb-0">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div style="flex:1;min-width:120px;">
+                  <label style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">De</label>
+                  <input type="date" id="caixa-data-inicio" class="form-control form-control-sm rounded-pill" style="font-size:.72rem;height:32px;">
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <label style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Até</label>
+                  <input type="date" id="caixa-data-fim" class="form-control form-control-sm rounded-pill" style="font-size:.72rem;height:32px;">
+                </div>
+                <div style="padding-top:16px;">
+                  <button class="btn btn-danger btn-sm rounded-pill px-3" id="btn-filtrar-caixa" style="font-size:.7rem;height:32px;white-space:nowrap;">
+                    <i class="bi bi-search me-1"></i> Filtrar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista -->
+            <div class="caixa-lista-diaria-wrapper p-3">
+              <div id="caixa-lista-diaria">
+                <div class="text-center text-muted py-4" style="font-size:.8rem;">
+                  <i class="bi bi-inbox" style="font-size:1.2rem;display:block;opacity:.4;margin-bottom:4px;"></i>
+                  Selecione o período e clique em Filtrar.
+                </div>
+              </div>
+            </div>
+
+            <!-- Paginador padrão -->
+            <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
+              <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="fin-pag-prev-caixa" disabled>
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="fin-pag-label-caixa" disabled>Pág 1</button>
+                <button class="btn btn-light" id="fin-pag-next-caixa" disabled>
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== TAB: EXTRATO ===== -->
+    <div id="fin-tab-content-extrato" class="fin-tab-content">
+
+      <div class="extrato-toolbar">
+        <div class="extrato-toolbar-row w-100">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="extrato-periodo-btn active" data-periodo="diario">Hoje</button>
+            <button class="extrato-periodo-btn" data-periodo="semanal">7 dias</button>
+            <button class="extrato-periodo-btn" data-periodo="quinzenal">15 dias</button>
+            <button class="extrato-periodo-btn" data-periodo="mensal">30 dias</button>
+          </div>
+        </div>
+        <div class="extrato-toolbar-row w-100">
+          <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+            <div class="extrato-field">
+              <label>De</label>
+              <input type="date" id="extrato-data-inicio" class="extrato-input-date">
+            </div>
+            <div class="extrato-field">
+              <label>Até</label>
+              <input type="date" id="extrato-data-fim" class="extrato-input-date">
+            </div>
+            <div class="extrato-field" style="min-width:160px;flex:1;">
+              <label>Origem</label>
+              <select id="extrato-origem" class="extrato-select">
+                <option value="__caixa__">📊 Caixa Geral</option>
+                <optgroup label="Motoboys" id="extrato-opt-motoboys"></optgroup>
+                <optgroup label="Grupos / Categorias" id="extrato-opt-grupos"></optgroup>
+              </select>
+            </div>
+            <div style="padding-top:16px;">
+              <button class="extrato-btn-gerar" id="btn-gerar-extrato">
+                <i class="bi bi-file-earmark-bar-graph"></i> Gerar
+              </button>
             </div>
           </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body p-0">
-          <div class="row g-0" style="border-bottom:1px solid #f0f0f0;">
-            <div class="col-6 text-center py-2" style="border-right:1px solid #f0f0f0;">
-              <div style="font-size:.52rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.04em;">
-                Receitas</div>
-              <div style="font-size:.82rem;font-weight:700;color:#198754;" id="modal-detalhe-dia-entradas">R$ 0,00</div>
+      </div>
+
+      <div class="extrato-lista" id="extrato-lista">
+        <div class="extrato-placeholder" id="extrato-placeholder">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Nenhum extrato gerado ainda.<br>Selecione o período, a origem e clique em <strong>Gerar</strong>.</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ===== MODAL: NOVO / EDITAR LANÇAMENTO ===== -->
+<div class="modal fade" id="modalNovoFinanceiro" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
+      <div class="fin-form-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="fin-form-header-icon"><i class="bi bi-plus-circle"></i></div>
+          <div>
+            <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Novo Lançamento</h6>
+            <small class="fin-form-subtitle">Preencha os dados abaixo</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>
+        <input type="hidden" id="fin-edit-id">
+        <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
+
+          <div class="fin-form-section">
+            <div class="fin-form-section-label">Dados principais</div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="fin-field-label">Tipo</label>
+                <select id="fin-tipo" class="form-select form-select-sm rounded-pill fin-field-input">
+                  <option value="">Selecione...</option>
+                  <option value="entrada">Receita</option>
+                  <option value="saida">Despesa</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="fin-field-label">Data</label>
+                <input type="date" id="fin-data" class="form-control form-control-sm rounded-pill fin-field-input">
+              </div>
             </div>
-            <div class="col-6 text-center py-2">
-              <div style="font-size:.52rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.04em;">
-                Despesas</div>
-              <div style="font-size:.82rem;font-weight:700;color:#dc3545;" id="modal-detalhe-dia-saidas">R$ 0,00</div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="fin-field-label">N. Serviço / Pedido</label>
+                <input type="text" id="fin-id-pedido" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="#0000">
+              </div>
+              <div class="col-6">
+                <label class="fin-field-label">Situação</label>
+                <select id="fin-situacao" class="form-select form-select-sm rounded-pill fin-field-input">
+                  <option value="pendente">Pendente</option>
+                  <option value="pago">Pago</option>
+                  <option value="recebido">Recebido</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
             </div>
-            <div class="col-6 text-center py-2" style="border-right:1px solid #f0f0f0;border-top:1px solid #f0f0f0;">
-              <div style="font-size:.52rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.04em;">
-                Empresa (20%)</div>
-              <div style="font-size:.82rem;font-weight:700;color:#0d6efd;" id="modal-detalhe-dia-empresa">R$ 0,00</div>
+            <div class="mb-2">
+              <label class="fin-field-label">Descrição</label>
+              <input type="text" id="fin-descricao" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Entrega #123">
             </div>
-            <div class="col-6 text-center py-2" style="border-top:1px solid #f0f0f0;">
-              <div style="font-size:.52rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.04em;">
-                Colaboradores (80%)</div>
-              <div style="font-size:.82rem;font-weight:700;color:#6f42c1;" id="modal-detalhe-dia-colaboradores">R$ 0,00
+          </div>
+
+          <div class="fin-form-section">
+            <div class="fin-form-section-label">Valor e Colaborador</div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="fin-field-label">Valor (R$)</label>
+                <input type="text" id="fin-valor" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="0,00" inputmode="decimal">
+              </div>
+              <div class="col-6">
+                <label class="fin-field-label">Colaborador</label>
+                <select id="fin-colaborador-id" class="form-select form-select-sm rounded-pill fin-field-input">
+                  <!-- preenchido via JS -->
+                </select>
               </div>
             </div>
           </div>
-          <div class="detalhe-dia-table-wrapper">
-            <table class="detalhe-dia-table">
-              <thead>
-                <tr>
-                  <th>N.Serviço</th>
-                  <th class="text-end">Total</th>
-                  <th class="text-end">Colab.</th>
-                  <th class="text-end">Empresa</th>
-                  <th class="text-center">Situação</th>
-                </tr>
-              </thead>
-              <tbody id="modal-detalhe-dia-body">
-                <tr>
-                  <td colspan="5" class="text-center text-muted py-3">Nenhum lançamento.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="fin-form-footer justify-content-between">
-          <div style="font-size:.68rem;color:#999;">
-            Saldo do dia: <span class="fw-bold" id="modal-detalhe-dia-saldo">R$ 0,00</span>
-          </div>
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="modal fade" id="modalRepasses" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-people"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Repasses</h6>
-              <small class="fin-form-subtitle">Valores por colaborador (80%)</small>
-            </div>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-0">
-          <div id="repasses-lista" style="min-height:120px;"></div>
-        </div>
-        <div class="fin-form-footer">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Fechar</button>
-        </div>
+        </form>
       </div>
     </div>
   </div>
-
-  <div class="modal fade" id="modalAdicionarDinheiro" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-plus-circle"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Adicionar Dinheiro</h6>
-              <small class="fin-form-subtitle">Registrar entrada manual</small>
-            </div>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body px-4 py-3">
-          <div class="mb-2">
-            <label class="fin-field-label">Valor (R$)</label>
-            <input type="text" id="add-dinheiro-valor" class="form-control form-control-sm rounded-pill fin-field-input"
-              placeholder="0,00" inputmode="decimal">
-          </div>
-          <div class="mb-2">
-            <label class="fin-field-label">Descrição</label>
-            <input type="text" id="add-dinheiro-descricao"
-              class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Entrada manual">
-          </div>
-        </div>
-        <div class="fin-form-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Cancelar</button>
-          <button type="button" class="btn btn-success btn-sm rounded-pill px-3" id="btn-confirmar-add-dinheiro"
-            style="font-size:.72rem;">
-            <i class="bi bi-check-lg me-1"></i>Confirmar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade" id="modalTransferir" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-arrow-left-right"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Transferir</h6>
-              <small class="fin-form-subtitle">Registrar saída / transferência</small>
-            </div>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body px-4 py-3">
-          <div class="mb-2">
-            <label class="fin-field-label">Valor (R$)</label>
-            <input type="text" id="transferir-valor" class="form-control form-control-sm rounded-pill fin-field-input"
-              placeholder="0,00" inputmode="decimal">
-          </div>
-          <div class="mb-2">
-            <label class="fin-field-label">Destino</label>
-            <input type="text" id="transferir-destino" class="form-control form-control-sm rounded-pill fin-field-input"
-              placeholder="Ex: Conta bancária">
-          </div>
-          <div class="mb-2">
-            <label class="fin-field-label">Descrição</label>
-            <input type="text" id="transferir-descricao"
-              class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Pagamento fornecedor">
-          </div>
-        </div>
-        <div class="fin-form-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Cancelar</button>
-          <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" id="btn-confirmar-transferir"
-            style="font-size:.72rem;">
-            <i class="bi bi-arrow-left-right me-1"></i>Transferir
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade" id="modalExtratoCaixa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
-        <div class="fin-form-header">
-          <div class="d-flex align-items-center gap-3">
-            <div class="fin-form-header-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Extratos Gerados</h6>
-              <small class="fin-form-subtitle">Histórico de extratos salvos</small>
-            </div>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-3">
-          <div id="extrato-lista-caixa"></div>
-        </div>
-        <div class="fin-form-footer">
-          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
-            style="font-size:.72rem;">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="extrato-modal-overlay" id="extrato-modal-overlay" style="display:none;">
-    <div class="extrato-modal-bank">
-      <div class="extrato-modal-header-bank">
-        <span id="extrato-modal-titulo">EXTRATO</span>
-        <button class="extrato-modal-close" id="extrato-modal-fechar">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-      <div class="extrato-modal-body-bank" id="extrato-modal-body"></div>
-      <div class="extrato-modal-footer-bank">
-        <button class="extrato-btn-copiar-bank" id="extrato-modal-copiar">
-          <i class="bi bi-clipboard me-1"></i> COPIAR
-        </button>
-      </div>
-    </div>
-  </div>
+</div>
 
 </body>
-
 </html>
