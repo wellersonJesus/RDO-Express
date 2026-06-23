@@ -111,7 +111,7 @@ window.alternarTodosStatus = async function (ativar) {
         if (!itemId) continue;
         item.status = novoStatus;
         promessas.push(
-            window.API.call('update' + item.origem, { id: itemId, status: novoStatus }).catch(function () {})
+            window.API.call('update' + item.origem, { id: itemId, status: novoStatus }).catch(function () { })
         );
     }
     await Promise.all(promessas);
@@ -148,7 +148,7 @@ window.initBot = async function () {
     // ✅ Registra listeners de busca/filtro apenas UMA vez por ciclo de vida
     if (!window.botState._listenersRegistrados) {
         var filtroSelect = document.getElementById('filtro-tipo');
-        var buscaInput   = document.getElementById('busca-nome');
+        var buscaInput = document.getElementById('busca-nome');
 
         if (filtroSelect) {
             filtroSelect.addEventListener('change', function () {
@@ -183,9 +183,9 @@ window.reloadBot = async function () {
             window.API.call('getclientes').catch(function () { return []; }),
             window.API.call('getcolaboradores').catch(function () { return []; })
         ]);
-        var users   = Array.isArray(results[0]) ? results[0] : (results[0]?.data || []);
+        var users = Array.isArray(results[0]) ? results[0] : (results[0]?.data || []);
         var clients = Array.isArray(results[1]) ? results[1] : (results[1]?.data || []);
-        var cols    = Array.isArray(results[2]) ? results[2] : (results[2]?.data || []);
+        var cols = Array.isArray(results[2]) ? results[2] : (results[2]?.data || []);
 
         var todosDados = [];
 
@@ -236,10 +236,10 @@ window.reloadBot = async function () {
 };
 
 window.filtrarBot = function () {
-    var filtroSelect    = document.getElementById('filtro-tipo');
-    var buscaInput      = document.getElementById('busca-nome');
+    var filtroSelect = document.getElementById('filtro-tipo');
+    var buscaInput = document.getElementById('busca-nome');
     var tipoSelecionado = filtroSelect ? filtroSelect.value : 'TODOS';
-    var termoBusca      = buscaInput  ? buscaInput.value.trim().toLowerCase() : '';
+    var termoBusca = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
     var dados = window.botState.cacheCompleto.slice();
 
     if (tipoSelecionado !== 'TODOS') {
@@ -249,15 +249,15 @@ window.filtrarBot = function () {
     if (termoBusca.length > 0) {
         dados = dados.filter(function (item) {
             // ✅ busca ampla: nome, id, contato/telefone, tipo/cargo
-            var nome    = (item.username || item.nome || item.responsavel || item.colaborador || '').toLowerCase();
-            var id      = String(item.id || '').toLowerCase();
+            var nome = (item.username || item.nome || item.responsavel || item.colaborador || '').toLowerCase();
+            var id = String(item.id || '').toLowerCase();
             var contato = (item.contato || item.telefone || '').toLowerCase();
-            var tipo    = (item.tipo || item.cargo || item.perfil || '').toLowerCase();
+            var tipo = (item.tipo || item.cargo || item.perfil || '').toLowerCase();
             return (
-                nome.indexOf(termoBusca)    !== -1 ||
-                id.indexOf(termoBusca)      !== -1 ||
+                nome.indexOf(termoBusca) !== -1 ||
+                id.indexOf(termoBusca) !== -1 ||
                 contato.indexOf(termoBusca) !== -1 ||
-                tipo.indexOf(termoBusca)    !== -1
+                tipo.indexOf(termoBusca) !== -1
             );
         });
     }
@@ -294,19 +294,19 @@ function _resolverAvatar(item) {
 }
 
 function renderizarTabela() {
-    var tbody      = document.getElementById('bot-list');
-    var infoPag    = document.getElementById('info-paginacao');
-    var infoTotal  = document.getElementById('info-total');
+    var tbody = document.getElementById('bot-list');
+    var infoPag = document.getElementById('info-paginacao');
+    var infoTotal = document.getElementById('info-total');
     var isMasterOn = window.checkMaster();
-    var dados      = window.botState.cache;
+    var dados = window.botState.cache;
     if (!tbody) return;
 
     var totalPag = Math.max(1, Math.ceil(dados.length / window.botState.itensPorPagina));
     if (window.botState.paginaAtual > totalPag) window.botState.paginaAtual = totalPag;
-    var start    = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
+    var start = (window.botState.paginaAtual - 1) * window.botState.itensPorPagina;
     var pageData = dados.slice(start, start + window.botState.itensPorPagina);
 
-    if (infoPag)   infoPag.innerText   = 'Pág ' + window.botState.paginaAtual + ' / ' + totalPag;
+    if (infoPag) infoPag.innerText = 'Pág ' + window.botState.paginaAtual + ' / ' + totalPag;
     if (infoTotal) infoTotal.innerText = dados.length + ' registro' + (dados.length !== 1 ? 's' : '');
 
     if (dados.length === 0) {
@@ -320,27 +320,27 @@ function renderizarTabela() {
     tbody.innerHTML = '';
 
     for (var idx = 0; idx < pageData.length; idx++) {
-        var i          = pageData[idx];
-        var nome       = i.username || i.nome || i.responsavel || i.colaborador || 'N/A';
-        var iniciais   = _getIniciais(nome);
-        var srcImg     = _resolverAvatar(i);
-        var itemId     = String(i.id).trim();
+        var i = pageData[idx];
+        var nome = i.username || i.nome || i.responsavel || i.colaborador || 'N/A';
+        var iniciais = _getIniciais(nome);
+        var srcImg = _resolverAvatar(i);
+        var itemId = String(i.id).trim();
         var itemOrigem = String(i.origem).trim();
 
         var tr = document.createElement('tr');
         if (!isMasterOn) tr.classList.add('text-muted');
 
         // ── Switch de status ──────────────────────────────────────────
-        var tdSwitch  = document.createElement('td');
+        var tdSwitch = document.createElement('td');
         tdSwitch.className = 'ps-3';
         var divSwitch = document.createElement('div');
         divSwitch.className = 'form-check form-switch';
         var chk = document.createElement('input');
         chk.className = 'form-check-input';
-        chk.type      = 'checkbox';
-        chk.checked   = i.status === 'TRUE';
+        chk.type = 'checkbox';
+        chk.checked = i.status === 'TRUE';
         // ✅ habilitado para TODOS quando master está on (removida restrição de usuário)
-        chk.disabled  = !isMasterOn;
+        chk.disabled = !isMasterOn;
         (function (cId, cOrigem) {
             chk.addEventListener('change', function () {
                 window.alterarStatusDireto(cId, this.checked, cOrigem);
@@ -353,36 +353,36 @@ function renderizarTabela() {
         var tdAvatar = document.createElement('td');
         if (srcImg) {
             var imgEl = document.createElement('img');
-            imgEl.src       = srcImg;
+            imgEl.src = srcImg;
             imgEl.className = 'bot-avatar';
             (function (ini, parent) {
                 imgEl.addEventListener('error', function () {
                     this.style.display = 'none';
                     var fb = document.createElement('div');
-                    fb.className     = 'bot-avatar-fallback';
+                    fb.className = 'bot-avatar-fallback';
                     fb.style.display = 'flex';
-                    fb.textContent   = ini;
+                    fb.textContent = ini;
                     parent.appendChild(fb);
                 });
             })(iniciais, tdAvatar);
             tdAvatar.appendChild(imgEl);
         } else {
             var fallback = document.createElement('div');
-            fallback.className     = 'bot-avatar-fallback';
+            fallback.className = 'bot-avatar-fallback';
             fallback.style.display = 'flex';
-            fallback.textContent   = iniciais;
+            fallback.textContent = iniciais;
             tdAvatar.appendChild(fallback);
         }
 
         // ── Nome ──────────────────────────────────────────────────────
         var tdNome = document.createElement('td');
-        tdNome.className   = 'fw-semibold';
+        tdNome.className = 'fw-semibold';
         tdNome.textContent = nome;
 
         // ── Badge tipo ────────────────────────────────────────────────
         var tdTipo = document.createElement('td');
-        var badge  = document.createElement('span');
-        badge.className   = 'badge-tipo badge-' + i.origem + (!isMasterOn ? ' opacity-50' : '');
+        var badge = document.createElement('span');
+        badge.className = 'badge-tipo badge-' + i.origem + (!isMasterOn ? ' opacity-50' : '');
         badge.textContent = _labelOrigem(i.origem);
         tdTipo.appendChild(badge);
 
@@ -392,8 +392,8 @@ function renderizarTabela() {
 
         var btnEditar = document.createElement('button');
         btnEditar.className = 'btn btn-light btn-action-bot shadow-sm';
-        btnEditar.title     = 'Editar';
-        btnEditar.disabled  = !isMasterOn;
+        btnEditar.title = 'Editar';
+        btnEditar.disabled = !isMasterOn;
         btnEditar.innerHTML = '<i class="bi bi-pencil-square"></i>';
         (function (eId, eOrigem) {
             btnEditar.addEventListener('click', function () {
@@ -405,7 +405,7 @@ function renderizarTabela() {
         if (isMasterOn) {
             var btnRemover = document.createElement('button');
             btnRemover.className = 'btn btn-light btn-action-bot shadow-sm text-danger ms-1';
-            btnRemover.title     = 'Excluir';
+            btnRemover.title = 'Excluir';
             btnRemover.innerHTML = '<i class="bi bi-trash"></i>';
             (function (rId, rOrigem, rNome) {
                 btnRemover.addEventListener('click', function () {
@@ -431,7 +431,7 @@ window.abrirModalCadastro = function () {
         Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado.', confirmButtonColor: '#dc3545' });
         return;
     }
-    window.botState.idEmEdicao     = null;
+    window.botState.idEmEdicao = null;
     window.botState.origemEmEdicao = 'usuarios';
     _abrirModalUsuario(null);
 };
@@ -441,14 +441,14 @@ window.editarBot = async function (id, origem) {
         Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado. Edição bloqueada.', confirmButtonColor: '#dc3545' });
         return;
     }
-    var idStr     = String(id || '').trim();
+    var idStr = String(id || '').trim();
     var origemStr = String(origem || '').trim();
-    var item      = _buscarItemCompleto(idStr, origemStr);
+    var item = _buscarItemCompleto(idStr, origemStr);
     if (!item) {
         Swal.fire({ icon: 'error', title: 'Erro', text: 'Registro não encontrado.', confirmButtonColor: '#dc3545' });
         return;
     }
-    window.botState.idEmEdicao     = idStr;
+    window.botState.idEmEdicao = idStr;
     window.botState.origemEmEdicao = origemStr;
     if (origemStr === 'usuarios') {
         _abrirModalUsuario(item);
@@ -460,57 +460,83 @@ window.editarBot = async function (id, origem) {
 function _abrirModalUsuario(data) {
     var modalEl = document.getElementById('modalUsuarioBot');
     if (!modalEl) return;
-    document.getElementById('usuario-bot-id').value       = data ? String(data.id || '') : '';
+
+    document.getElementById('usuario-bot-id').value = data ? String(data.id || '') : '';
     document.getElementById('usuario-bot-username').value = data ? (data.username || '') : '';
-    document.getElementById('usuario-bot-contato').value  = data ? (data.contato  || '') : '';
+    document.getElementById('usuario-bot-contato').value = data ? (data.contato || '') : '';
     document.getElementById('usuario-bot-password').value = data ? (data.password || '') : '';
-    document.getElementById('usuario-bot-imagem').value   = data ? (data.imagem   || '') : '';
+    document.getElementById('usuario-bot-imagem').value = data ? (data.imagem || '') : '';
+
+    var inputSenha = document.getElementById('usuario-bot-password');
+    var btnOlhinho = document.getElementById('btn-toggle-senha-bot');
+    var iconOlhinho = document.getElementById('icon-toggle-senha-bot');
+
+    if (inputSenha && btnOlhinho && iconOlhinho) {
+        inputSenha.type = 'password';
+        iconOlhinho.className = 'bi bi-eye-slash';
+        btnOlhinho.classList.add('oculto');
+
+        var novoBtn = btnOlhinho.cloneNode(true);
+        btnOlhinho.parentNode.replaceChild(novoBtn, btnOlhinho);
+
+        var novoIcon = novoBtn.querySelector('i');
+
+        novoBtn.addEventListener('click', function () {
+            var visivel = inputSenha.type === 'text';
+            inputSenha.type = visivel ? 'password' : 'text';
+            novoIcon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
+            novoBtn.classList.toggle('oculto', visivel);
+        });
+    }
+
     var selectCargo = document.getElementById('usuario-bot-tipo');
     selectCargo.innerHTML = '';
     CARGOS_DISPONIVEIS.forEach(function (cargo) {
         var opt = document.createElement('option');
-        opt.value       = cargo;
+        opt.value = cargo;
         opt.textContent = cargo;
         if (data && data.tipo === cargo) opt.selected = true;
         selectCargo.appendChild(opt);
     });
+
     var tituloEl = document.getElementById('modal-usuario-bot-titulo');
     if (tituloEl) tituloEl.textContent = data ? 'Editar Usuário' : 'Novo Usuário';
+
     var existingInstance = bootstrap.Modal.getInstance(modalEl);
     if (existingInstance) existingInstance.dispose();
     new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true }).show();
 }
 
 window.salvarUsuarioBot = async function () {
-    var idField  = document.getElementById('usuario-bot-id');
-    var id       = idField ? idField.value.trim() : '';
+    var idField = document.getElementById('usuario-bot-id');
+    var id = idField ? idField.value.trim() : '';
     var username = document.getElementById('usuario-bot-username').value.trim();
-    var contato  = document.getElementById('usuario-bot-contato').value.trim();
-    var tipo     = document.getElementById('usuario-bot-tipo').value.trim();
+    var contato = document.getElementById('usuario-bot-contato').value.trim();
+    var tipo = document.getElementById('usuario-bot-tipo').value.trim();
     var password = document.getElementById('usuario-bot-password').value.trim();
-    var imagem   = document.getElementById('usuario-bot-imagem').value.trim();
+    var imagem = document.getElementById('usuario-bot-imagem').value.trim();
     if (!username || !contato || !tipo || !password) {
         Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: 'Preencha nome, contato, cargo e senha.', confirmButtonColor: '#dc3545' });
         return;
     }
-    var btn          = document.getElementById('btn-salvar-usuario-bot');
+    var btn = document.getElementById('btn-salvar-usuario-bot');
     var originalText = btn ? btn.innerHTML : '';
     if (btn) btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
     try {
         var resolvedId = window.botState.idEmEdicao || id;
-        var isEdicao   = !!resolvedId;
+        var isEdicao = !!resolvedId;
         var dados = {
-            id      : isEdicao ? String(resolvedId) : String(Date.now()),
+            id: isEdicao ? String(resolvedId) : String(Date.now()),
             username: username,
-            contato : contato,
-            tipo    : tipo,
+            contato: contato,
+            tipo: tipo,
             password: password,
-            imagem  : imagem,
-            status  : 'TRUE'
+            imagem: imagem,
+            status: 'TRUE'
         };
         await window.API.call(isEdicao ? 'updateusuarios' : 'addusuarios', dados);
         var modalEl = document.getElementById('modalUsuarioBot');
-        var inst    = bootstrap.Modal.getInstance(modalEl);
+        var inst = bootstrap.Modal.getInstance(modalEl);
         if (inst) inst.hide();
         window.botState.idEmEdicao = null;
         await window.reloadBot();
@@ -524,8 +550,8 @@ window.salvarUsuarioBot = async function () {
 
 window.abrirModalEspecifico = async function (origem, data) {
     var mapModal = { clientes: 'modalCliente', colaboradores: 'modalColaborador' };
-    var paths    = { clientes: 'pages/clientes/modal-cliente.html', colaboradores: 'pages/colaborador/modal-colaborador.html' };
-    var modalId  = mapModal[origem];
+    var paths = { clientes: 'pages/clientes/modal-cliente.html', colaboradores: 'pages/colaborador/modal-colaborador.html' };
+    var modalId = mapModal[origem];
     if (!modalId) return;
     var modalEl = document.getElementById(modalId);
     if (!modalEl) {
@@ -540,7 +566,7 @@ window.abrirModalEspecifico = async function (origem, data) {
     var inputs = modalEl.querySelectorAll('input, select');
     for (var j = 0; j < inputs.length; j++) {
         var input = inputs[j];
-        var key   = input.id ? input.id.split('-').pop() : '';
+        var key = input.id ? input.id.split('-').pop() : '';
         if (data && Object.prototype.hasOwnProperty.call(data, key)) input.value = data[key];
         else if (!data) input.value = '';
         input.disabled = false;
@@ -552,8 +578,8 @@ window.abrirModalEspecifico = async function (origem, data) {
 };
 
 window.alterarStatusDireto = async function (id, status, origem) {
-    var idStr      = String(id || '').trim();
-    var origemStr  = String(origem || '').trim();
+    var idStr = String(id || '').trim();
+    var origemStr = String(origem || '').trim();
     var novoStatus = status ? 'TRUE' : 'FALSE';
 
     // ✅ aborta silenciosamente se id ou origem inválidos
@@ -594,15 +620,15 @@ window.alterarStatusDireto = async function (id, status, origem) {
 };
 
 window.confirmarExclusao = function (id, origem, nome) {
-    var idStr     = String(id || '').trim();
+    var idStr = String(id || '').trim();
     var origemStr = String(origem || '').trim();
     if (!idStr || !origemStr) {
         Swal.fire({ icon: 'error', title: 'Erro', text: 'ID ou origem inválidos para exclusão.', confirmButtonColor: '#dc3545' });
         return;
     }
-    var textoEl      = document.getElementById('texto-exclusao');
+    var textoEl = document.getElementById('texto-exclusao');
     var btnConfirmar = document.getElementById('btn-confirmar-exclusao');
-    var modalEl      = document.getElementById('modalConfirmarExclusao');
+    var modalEl = document.getElementById('modalConfirmarExclusao');
     if (!modalEl || !btnConfirmar) {
         Swal.fire({
             icon: 'warning',
@@ -627,12 +653,12 @@ window.confirmarExclusao = function (id, origem, nome) {
     btnConfirmar.parentNode.replaceChild(novoBtn, btnConfirmar);
     novoBtn.addEventListener('click', async function () {
         novoBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Excluindo...';
-        novoBtn.disabled  = true;
+        novoBtn.disabled = true;
         await window.executarExclusao(idStr, origemStr);
         var modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (modalInstance) modalInstance.hide();
         novoBtn.innerHTML = '<i class="bi bi-trash me-1"></i> Excluir';
-        novoBtn.disabled  = false;
+        novoBtn.disabled = false;
     });
     var existingInstance = bootstrap.Modal.getInstance(modalEl);
     if (existingInstance) existingInstance.dispose();
@@ -640,7 +666,7 @@ window.confirmarExclusao = function (id, origem, nome) {
 };
 
 window.executarExclusao = async function (id, origem) {
-    var idStr     = String(id || '').trim();
+    var idStr = String(id || '').trim();
     var origemStr = String(origem || '').trim();
     if (!idStr || !origemStr) {
         Swal.fire({ icon: 'error', title: 'Erro', text: 'ID não informado para exclusão.', confirmButtonColor: '#dc3545' });
