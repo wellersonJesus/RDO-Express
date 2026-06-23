@@ -5,10 +5,10 @@
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center gap-3">
-                    <img src="app/assets/img/logo.png" alt="RDO" width="36" height="36" class="rounded-circle"
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <i class="bi bi-gear-wide-connected d-none justify-content-center align-items-center"
-                        style="font-size:1.5rem; color:#FF0000; width:36px; height:36px;"></i>
+                    <div id="bot-logo-container" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-gear-wide-connected"
+                            style="font-size:1.5rem; color:#FF0000;"></i>
+                    </div>
                     <div>
                         <h5 class="fw-bold mb-0"><span style="color:#FF0000;">RDO</span> Express</h5>
                         <small class="text-muted" style="font-size:0.72rem;">Painel de Gestão e Automatização</small>
@@ -108,6 +108,53 @@
                 </button>
                 <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-confirmar-exclusao">
                     <i class="bi bi-trash me-1"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUsuarioBot" tabindex="-1" data-bs-backdrop="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h6 class="modal-title fw-bold" id="modal-usuario-bot-titulo">Novo Usuário</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <input type="hidden" id="usuario-bot-id">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.78rem;">Nome</label>
+                    <input type="text" id="usuario-bot-username" class="form-control form-control-sm rounded-pill"
+                        placeholder="Nome do usuário">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.78rem;">Contato</label>
+                    <input type="text" id="usuario-bot-contato" class="form-control form-control-sm rounded-pill"
+                        placeholder="+55 11 99999-9999">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.78rem;">Cargo</label>
+                    <select id="usuario-bot-tipo" class="form-select form-select-sm rounded-pill"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.78rem;">Senha</label>
+                    <input type="password" id="usuario-bot-password" class="form-control form-control-sm rounded-pill"
+                        placeholder="Senha">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" style="font-size:0.78rem;">URL da Imagem (opcional)</label>
+                    <input type="text" id="usuario-bot-imagem" class="form-control form-control-sm rounded-pill"
+                        placeholder="https://...">
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                <button type="button" class="btn btn-light btn-sm rounded-pill px-4" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-usuario-bot"
+                    onclick="window.salvarUsuarioBot()">
+                    <i class="bi bi-check-lg me-1"></i> Salvar
                 </button>
             </div>
         </div>

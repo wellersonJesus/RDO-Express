@@ -1,15 +1,15 @@
 (function () {
 
     var state = {
-        origem: 'clientes',
-        cache: [],
-        pagina: 1,
-        porPagina: 15,
-        filtro: '',
-        tipoFiltro: 'todos',
-        statusFiltro: null,
-        fetching: false,
-        idEdicao: null,
+        origem:        'clientes',
+        cache:         [],
+        pagina:        1,
+        porPagina:     15,
+        filtro:        '',
+        tipoFiltro:    'todos',
+        statusFiltro:  null,
+        fetching:      false,
+        idEdicao:      null,
         modoVisualizar: false,
         formCarregado: false
     };
@@ -19,14 +19,14 @@
     var els = {};
 
     function bind() {
-        els.tbody = document.getElementById('admin-list');
-        els.filtro = document.getElementById('filtro-admin');
-        els.syncIcon = document.getElementById('sync-icon-admin');
-        els.btnSync = document.getElementById('btn-sync-admin');
-        els.btnNovo = document.getElementById('btn-novo-admin');
-        els.infoPag = document.getElementById('info-paginacao-admin');
-        els.btnPrev = document.getElementById('btn-pag-prev-admin');
-        els.btnNext = document.getElementById('btn-pag-next-admin');
+        els.tbody          = document.getElementById('admin-list');
+        els.filtro         = document.getElementById('filtro-admin');
+        els.syncIcon       = document.getElementById('sync-icon-admin');
+        els.btnSync        = document.getElementById('btn-sync-admin');
+        els.btnNovo        = document.getElementById('btn-novo-admin');
+        els.infoPag        = document.getElementById('info-paginacao-admin');
+        els.btnPrev        = document.getElementById('btn-pag-prev-admin');
+        els.btnNext        = document.getElementById('btn-pag-next-admin');
         els.modalContainer = document.getElementById('admin-modal-container');
     }
 
@@ -37,8 +37,8 @@
     }
 
     function onInputFiltro() {
-        state.filtro = (els.filtro.value || '').trim().toLowerCase();
-        state.pagina = 1;
+        state.filtro  = (els.filtro.value || '').trim().toLowerCase();
+        state.pagina  = 1;
         renderTabela();
     }
 
@@ -53,30 +53,19 @@
             els.filtro.addEventListener('input', onInputFiltro);
         }
 
-        if (els.btnSync) {
-            els.btnSync.onclick = function () { fetchDados(state.origem); };
-        }
-
-        if (els.btnNovo) {
-            els.btnNovo.onclick = function () { abrirForm(null, false); };
-        }
-
-        if (els.btnPrev) {
-            els.btnPrev.onclick = function () { mudarPagina(-1); };
-        }
-
-        if (els.btnNext) {
-            els.btnNext.onclick = function () { mudarPagina(1); };
-        }
+        if (els.btnSync)  els.btnSync.onclick  = function () { fetchDados(state.origem); };
+        if (els.btnNovo)  els.btnNovo.onclick  = function () { abrirForm(null, false); };
+        if (els.btnPrev)  els.btnPrev.onclick  = function () { mudarPagina(-1); };
+        if (els.btnNext)  els.btnNext.onclick  = function () { mudarPagina(1); };
     }
 
     function spinOn() {
-        if (els.btnSync) els.btnSync.classList.add('syncing');
+        if (els.btnSync)  els.btnSync.classList.add('syncing');
         if (els.syncIcon) els.syncIcon.classList.add('spinner-rotate');
     }
 
     function spinOff() {
-        if (els.btnSync) els.btnSync.classList.remove('syncing');
+        if (els.btnSync)  els.btnSync.classList.remove('syncing');
         if (els.syncIcon) els.syncIcon.classList.remove('spinner-rotate');
     }
 
@@ -91,17 +80,16 @@
 
     function atualizarTabsAtivas() {
         document.querySelectorAll('.admin-tab').forEach(function (btn) {
-            var isAtivo = btn.getAttribute('data-origem') === state.origem;
-            btn.classList.toggle('active', isAtivo);
+            btn.classList.toggle('active', btn.getAttribute('data-origem') === state.origem);
         });
     }
 
     function fetchDados(origem) {
         if (state.fetching) return;
 
-        state.origem = origem || state.origem;
-        state.pagina = 1;
-        state.filtro = '';
+        state.origem   = origem || state.origem;
+        state.pagina   = 1;
+        state.filtro   = '';
         state.fetching = true;
 
         if (els.filtro) els.filtro.value = '';
@@ -129,9 +117,9 @@
 
         if (state.statusFiltro && state.statusFiltro !== 'todos') {
             dados = dados.filter(function (item) {
-                var statusItem = String(item.status || '').toUpperCase();
-                if (state.statusFiltro === 'ativo') return statusItem === 'TRUE';
-                if (state.statusFiltro === 'inativo') return statusItem !== 'TRUE';
+                var s = String(item.status || '').toUpperCase();
+                if (state.statusFiltro === 'ativo')   return s === 'TRUE';
+                if (state.statusFiltro === 'inativo') return s !== 'TRUE';
                 return true;
             });
         }
@@ -139,17 +127,15 @@
         if (!state.filtro) return dados;
 
         return dados.filter(function (item) {
-            var texto = '';
-
-            if (state.tipoFiltro === 'nome') {
-                texto = (item.nome || item.username || '').toLowerCase();
-            } else {
-                texto = (item.nome || item.username || '').toLowerCase() +
-                    ' ' + (item.responsavel || '').toLowerCase() +
-                    ' ' + (item.contato || '').toLowerCase() +
-                    ' ' + (item.email || '').toLowerCase() +
-                    ' ' + (item.cpf_cnpj || '').toLowerCase();
-            }
+            var texto = state.tipoFiltro === 'nome'
+                ? (item.nome || item.username || '').toLowerCase()
+                : [
+                    item.nome       || item.username || '',
+                    item.responsavel || '',
+                    item.contato     || '',
+                    item.email       || '',
+                    item.cpf_cnpj    || ''
+                  ].join(' ').toLowerCase();
 
             return texto.indexOf(state.filtro) !== -1;
         });
@@ -159,14 +145,76 @@
         return Math.max(1, Math.ceil(total / state.porPagina));
     }
 
+    function abrirModalConfirmacao(nome, onConfirm) {
+        var existente = document.getElementById('modalConfirmDelete');
+        if (existente) existente.remove();
+
+        var div = document.createElement('div');
+        div.innerHTML =
+            '<div class="modal fade" id="modalConfirmDelete" tabindex="-1">' +
+            '  <div class="modal-dialog modal-sm modal-dialog-centered">' +
+            '    <div class="modal-content">' +
+            '      <div class="modal-body text-center py-4">' +
+            '        <i class="bi bi-exclamation-triangle text-danger fs-2"></i>' +
+            '        <p class="mt-2 mb-1 fw-bold">Excluir registro?</p>' +
+            '        <p class="text-muted small mb-0">' + nome + '</p>' +
+            '      </div>' +
+            '      <div class="modal-footer justify-content-center border-0 pt-0">' +
+            '        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>' +
+            '        <button class="btn btn-sm btn-danger" id="btn-confirm-delete">Excluir</button>' +
+            '      </div>' +
+            '    </div>' +
+            '  </div>' +
+            '</div>';
+
+        document.body.appendChild(div.firstElementChild);
+
+        var modalEl = document.getElementById('modalConfirmDelete');
+        var modal   = new bootstrap.Modal(modalEl);
+
+        document.getElementById('btn-confirm-delete').addEventListener('click', function () {
+            modal.hide();
+            onConfirm();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () { modalEl.remove(); });
+
+        modal.show();
+    }
+
+    function confirmarExclusao(id, nome) {
+        if (!id) {
+            console.error('[DELETE] ID não encontrado');
+            return;
+        }
+
+        abrirModalConfirmacao(nome, function () {
+            var action = 'delete' + state.origem;
+            console.log('[DELETE] action:', action, '| id:', id);
+
+            window.API.call(action, { id: id })
+                .then(function (res) {
+                    console.log('[DELETE] Sucesso:', res);
+                    state.cache = state.cache.filter(function (x) {
+                        return String(x.id) !== String(id);
+                    });
+                    renderTabela();
+                })
+                .catch(function (err) {
+                    console.error('[DELETE] Erro:', err.message);
+                    alert('Erro ao excluir: ' + err.message);
+                });
+        });
+    }
+
     function renderTabela() {
         if (!els.tbody) return;
 
-        var dados = aplicarFiltro();
+        var dados    = aplicarFiltro();
         var totalPag = calcTotalPag(dados.length);
 
         if (state.pagina > totalPag) state.pagina = totalPag;
-        if (state.pagina < 1) state.pagina = 1;
+        if (state.pagina < 1)        state.pagina = 1;
 
         var inicio = (state.pagina - 1) * state.porPagina;
         var pagina = dados.slice(inicio, inicio + state.porPagina);
@@ -183,9 +231,10 @@
     }
 
     function renderLinha(item) {
-        var ativo = String(item.status || '').toUpperCase() === 'TRUE';
+        var ativo  = String(item.status || '').toUpperCase() === 'TRUE';
         var avatar = item.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-        var nome = item.nome || item.username || 'N/A';
+        var nome   = item.nome || item.username || 'N/A';
+        var nomeSafe = nome.replace(/"/g, '&quot;');
 
         return (
             '<tr>' +
@@ -203,8 +252,11 @@
             '<button class="btn btn-light btn-sm me-1 btn-admin-edit" data-id="' + item.id + '">' +
             '<i class="bi bi-pencil-square"></i>' +
             '</button>' +
-            '<button class="btn btn-light btn-sm btn-admin-view" data-id="' + item.id + '">' +
+            '<button class="btn btn-light btn-sm me-1 btn-admin-view" data-id="' + item.id + '">' +
             '<i class="bi bi-eye"></i>' +
+            '</button>' +
+            '<button class="btn btn-light btn-sm btn-admin-delete" data-id="' + item.id + '" data-nome="' + nomeSafe + '">' +
+            '<i class="bi bi-trash text-danger"></i>' +
             '</button>' +
             '</td>' +
             '</tr>'
@@ -227,6 +279,12 @@
                 if (item) abrirForm(item, true);
             });
         });
+
+        els.tbody.querySelectorAll('.btn-admin-delete').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                confirmarExclusao(btn.getAttribute('data-id'), btn.getAttribute('data-nome'));
+            });
+        });
     }
 
     function buscarPorId(id) {
@@ -242,9 +300,8 @@
     }
 
     function mudarPagina(dir) {
-        var dados = aplicarFiltro();
-        var totalPag = calcTotalPag(dados.length);
-        var nova = state.pagina + dir;
+        var totalPag = calcTotalPag(aplicarFiltro().length);
+        var nova     = state.pagina + dir;
         if (nova >= 1 && nova <= totalPag) {
             state.pagina = nova;
             renderTabela();
@@ -256,10 +313,7 @@
         if (!els.modalContainer) return Promise.resolve(false);
 
         return fetch('pages/admin/form_admin.html')
-            .then(function (res) {
-                if (!res.ok) return false;
-                return res.text();
-            })
+            .then(function (res) { return res.ok ? res.text() : false; })
             .then(function (html) {
                 if (!html) return false;
                 els.modalContainer.innerHTML = html;
@@ -267,16 +321,12 @@
                 registrarEventosForm();
                 return true;
             })
-            .catch(function () {
-                return false;
-            });
+            .catch(function () { return false; });
     }
 
     function registrarEventosForm() {
         var btnSalvar = document.getElementById('btn-salvar-form-admin');
-        if (btnSalvar) {
-            btnSalvar.onclick = function () { salvar(); };
-        }
+        if (btnSalvar) btnSalvar.onclick = function () { salvar(); };
 
         var fnMotoboy = document.getElementById('fn-motoboy');
         if (fnMotoboy) {
@@ -287,13 +337,11 @@
         }
 
         var modalEl = document.getElementById('modalFormAdmin');
-        if (modalEl) {
-            modalEl.addEventListener('hidden.bs.modal', limparForm);
-        }
+        if (modalEl) modalEl.addEventListener('hidden.bs.modal', limparForm);
     }
 
     function limparForm() {
-        state.idEdicao = null;
+        state.idEdicao      = null;
         state.modoVisualizar = false;
 
         var modalEl = document.getElementById('modalFormAdmin');
@@ -311,7 +359,7 @@
         });
 
         modalEl.querySelectorAll('.col-funcao').forEach(function (c) {
-            c.checked = false;
+            c.checked  = false;
             c.disabled = false;
         });
 
@@ -327,29 +375,23 @@
 
             limparForm();
 
-            var titulo = document.getElementById('form-admin-titulo');
+            var titulo        = document.getElementById('form-admin-titulo');
             var camposCliente = document.getElementById('campos-cliente');
-            var camposColab = document.getElementById('campos-colaborador');
-            var btnSalvar = document.getElementById('btn-salvar-form-admin');
-            var isCliente = state.origem === 'clientes';
+            var camposColab   = document.getElementById('campos-colaborador');
+            var btnSalvar     = document.getElementById('btn-salvar-form-admin');
+            var isCliente     = state.origem === 'clientes';
 
             if (camposCliente) camposCliente.classList.toggle('d-none', !isCliente);
-            if (camposColab) camposColab.classList.toggle('d-none', isCliente);
+            if (camposColab)   camposColab.classList.toggle('d-none', isCliente);
 
             if (item) {
-                state.idEdicao = item.id;
+                state.idEdicao      = item.id;
                 state.modoVisualizar = readOnly;
                 if (titulo) titulo.textContent = readOnly ? 'Visualizar Registro' : 'Editar Registro';
-
-                if (isCliente) {
-                    preencherCliente(item);
-                } else {
-                    preencherColaborador(item);
-                }
-
+                if (isCliente) preencherCliente(item); else preencherColaborador(item);
                 if (readOnly) desabilitarCampos();
             } else {
-                state.idEdicao = null;
+                state.idEdicao      = null;
                 state.modoVisualizar = false;
                 if (titulo) titulo.textContent = 'Novo ' + (isCliente ? 'Cliente' : 'Colaborador');
             }
@@ -357,28 +399,26 @@
             if (btnSalvar) btnSalvar.style.display = readOnly ? 'none' : '';
 
             var modalEl = document.getElementById('modalFormAdmin');
-            if (modalEl) {
-                new bootstrap.Modal(modalEl).show();
-            }
+            if (modalEl) new bootstrap.Modal(modalEl).show();
         });
     }
 
     function preencherCliente(item) {
-        setVal('c-username', item.username || item.nome || '');
+        setVal('c-username',  item.username   || item.nome || '');
         setVal('c-responsavel', item.responsavel || '');
-        setVal('c-contato', item.contato || '');
-        setVal('c-email', item.email || '');
-        setVal('c-cpf_cnpj', item.cpf_cnpj || '');
-        setVal('c-endereco', item.endereco || '');
-        setVal('c-imagem', item.imagem || '');
+        setVal('c-contato',   item.contato    || '');
+        setVal('c-email',     item.email      || '');
+        setVal('c-cpf_cnpj',  item.cpf_cnpj   || '');
+        setVal('c-endereco',  item.endereco   || '');
+        setVal('c-imagem',    item.imagem     || '');
     }
 
     function preencherColaborador(item) {
         setVal('col-username', item.username || item.nome || '');
         setVal('col-cpf_cnpj', item.cpf_cnpj || '');
-        setVal('col-contato', item.contato || '');
-        setVal('col-email', item.email || '');
-        setVal('col-imagem', item.imagem || '');
+        setVal('col-contato',  item.contato  || '');
+        setVal('col-email',    item.email    || '');
+        setVal('col-imagem',   item.imagem   || '');
         setVal('col-comissao', item.comissao || '');
         setSelect('col-status', item.status);
 
@@ -387,7 +427,7 @@
             c.checked = funcoes.indexOf(c.value) !== -1;
         });
 
-        var temMotoboy = funcoes.indexOf('Motoboy') !== -1;
+        var temMotoboy  = funcoes.indexOf('Motoboy') !== -1;
         var divComissao = document.getElementById('div-comissao');
         if (divComissao) divComissao.classList.toggle('d-none', !temMotoboy);
     }
@@ -420,14 +460,14 @@
 
     function coletarCliente() {
         return {
-            username: getVal('c-username'),
+            username:    getVal('c-username'),
             responsavel: getVal('c-responsavel'),
-            contato: getVal('c-contato'),
-            email: getVal('c-email'),
-            cpf_cnpj: getVal('c-cpf_cnpj'),
-            endereco: getVal('c-endereco'),
-            imagem: getVal('c-imagem'),
-            status: 'TRUE'
+            contato:     getVal('c-contato'),
+            email:       getVal('c-email'),
+            cpf_cnpj:    getVal('c-cpf_cnpj'),
+            endereco:    getVal('c-endereco'),
+            imagem:      getVal('c-imagem'),
+            status:      'TRUE'
         };
     }
 
@@ -435,15 +475,15 @@
         var funcoes = [];
         document.querySelectorAll('.col-funcao:checked').forEach(function (c) { funcoes.push(c.value); });
         return {
-            username: getVal('col-username'),
-            cpf_cnpj: getVal('col-cpf_cnpj'),
-            contato: getVal('col-contato'),
-            email: getVal('col-email'),
-            imagem: getVal('col-imagem'),
-            comissao: getVal('col-comissao'),
-            status: getVal('col-status') || 'TRUE',
+            username:    getVal('col-username'),
+            cpf_cnpj:    getVal('col-cpf_cnpj'),
+            contato:     getVal('col-contato'),
+            email:       getVal('col-email'),
+            imagem:      getVal('col-imagem'),
+            comissao:    getVal('col-comissao'),
+            status:      getVal('col-status') || 'TRUE',
             colaborador: funcoes.join('/'),
-            funcoes: funcoes
+            funcoes:     funcoes
         };
     }
 
@@ -471,7 +511,11 @@
 
     function validarCliente(dados) {
         var ok = true;
-        [{ id: 'c-username', v: dados.username }, { id: 'c-responsavel', v: dados.responsavel }, { id: 'c-contato', v: dados.contato }].forEach(function (c) {
+        [
+            { id: 'c-username',    v: dados.username    },
+            { id: 'c-responsavel', v: dados.responsavel },
+            { id: 'c-contato',     v: dados.contato     }
+        ].forEach(function (c) {
             if (!c.v.trim()) { marcarErro(c.id); ok = false; } else { limparErro(c.id); }
         });
         return ok;
@@ -479,7 +523,11 @@
 
     function validarColaborador(dados) {
         var erros = [];
-        [{ id: 'col-username', v: dados.username }, { id: 'col-cpf_cnpj', v: dados.cpf_cnpj }].forEach(function (c) {
+
+        [
+            { id: 'col-username', v: dados.username },
+            { id: 'col-cpf_cnpj', v: dados.cpf_cnpj }
+        ].forEach(function (c) {
             if (!c.v.trim()) { marcarErro(c.id); erros.push(c.id); } else { limparErro(c.id); }
         });
 
@@ -496,11 +544,11 @@
     }
 
     function toggleSalvarLoading(ativo) {
-        var btn = document.getElementById('btn-salvar-form-admin');
+        var btn     = document.getElementById('btn-salvar-form-admin');
         var spinner = document.getElementById('spinner-salvar-admin');
-        var txt = document.getElementById('txt-salvar-admin');
+        var txt     = document.getElementById('txt-salvar-admin');
 
-        if (btn) btn.disabled = ativo;
+        if (btn)     btn.disabled = ativo;
         if (spinner) {
             spinner.classList.toggle('d-none', !ativo);
             spinner.classList.toggle('spinner-rotate', ativo);
@@ -525,7 +573,7 @@
             var resultado = validarColaborador(dados);
             if (!resultado.valido) {
                 var msg = 'Preencha os campos obrigatórios.';
-                if (resultado.erros.indexOf('funcoes') !== -1) msg = 'Selecione pelo menos uma função.';
+                if (resultado.erros.indexOf('funcoes')       !== -1) msg = 'Selecione pelo menos uma função.';
                 if (resultado.erros.indexOf('cpf_duplicado') !== -1) msg = 'CPF/CNPJ já cadastrado.';
                 mostrarErroForm(msg);
                 return;
@@ -562,28 +610,25 @@
     };
 
     window.selecionarFiltroAdmin = function (tipo, label, el) {
-        state.tipoFiltro = tipo;
+        state.tipoFiltro  = tipo;
         state.statusFiltro = null;
-        state.pagina = 1;
+        state.pagina      = 1;
 
         var labelEl = document.getElementById('label-filtro-admin');
         if (labelEl) labelEl.textContent = label;
 
-        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (item) {
-            item.classList.remove('active');
+        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (i) {
+            i.classList.remove('active');
         });
-        document.querySelectorAll('#dropdown-filtro-menu-admin .dropdown-filtro-item-has-sub').forEach(function (item) {
-            item.classList.remove('active');
+        document.querySelectorAll('#dropdown-filtro-menu-admin .dropdown-filtro-item-has-sub').forEach(function (i) {
+            i.classList.remove('active');
         });
         if (el) el.classList.add('active');
 
         var wrapper = document.querySelector('#btn-filtro-admin').closest('.dropdown-filtro-wrapper');
         if (wrapper) wrapper.classList.remove('open');
 
-        if (els.filtro) {
-            els.filtro.value = '';
-            state.filtro = '';
-        }
+        if (els.filtro) { els.filtro.value = ''; state.filtro = ''; }
 
         renderTabela();
     };
@@ -595,52 +640,47 @@
     };
 
     window.selecionarFiltroStatusAdmin = function (status, label, el) {
-        state.tipoFiltro = 'status';
+        state.tipoFiltro   = 'status';
         state.statusFiltro = status;
-        state.pagina = 1;
+        state.pagina       = 1;
 
         var labelEl = document.getElementById('label-filtro-admin');
         if (labelEl) labelEl.textContent = status === 'todos' ? 'Status' : label;
 
-        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (item) {
-            item.classList.remove('active');
+        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (i) {
+            i.classList.remove('active');
         });
 
         var parentSub = document.querySelector('#dropdown-filtro-menu-admin .dropdown-filtro-item-has-sub');
         if (parentSub) parentSub.classList.add('active');
 
-        document.querySelectorAll('#submenu-status-admin .dropdown-filtro-subitem').forEach(function (item) {
-            item.classList.remove('active');
+        document.querySelectorAll('#submenu-status-admin .dropdown-filtro-subitem').forEach(function (i) {
+            i.classList.remove('active');
         });
         if (el) el.classList.add('active');
 
         var wrapper = document.querySelector('#btn-filtro-admin').closest('.dropdown-filtro-wrapper');
         if (wrapper) wrapper.classList.remove('open');
 
-        if (els.filtro) {
-            els.filtro.value = '';
-            state.filtro = '';
-        }
+        if (els.filtro) { els.filtro.value = ''; state.filtro = ''; }
 
         renderTabela();
     };
 
     document.addEventListener('click', function (e) {
         var wrapper = document.querySelector('#btn-filtro-admin')?.closest('.dropdown-filtro-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) {
-            wrapper.classList.remove('open');
-        }
+        if (wrapper && !wrapper.contains(e.target)) wrapper.classList.remove('open');
     });
 
     window.initAdmin = function () {
-        state.formCarregado = false;
-        state.fetching = false;
-        state.cache = [];
-        state.pagina = 1;
-        state.filtro = '';
-        state.tipoFiltro = 'todos';
-        state.statusFiltro = null;
-        state.idEdicao = null;
+        state.formCarregado  = false;
+        state.fetching       = false;
+        state.cache          = [];
+        state.pagina         = 1;
+        state.filtro         = '';
+        state.tipoFiltro     = 'todos';
+        state.statusFiltro   = null;
+        state.idEdicao       = null;
         state.modoVisualizar = false;
 
         bind();

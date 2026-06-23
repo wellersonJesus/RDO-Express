@@ -1,256 +1,259 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
+import express       from 'express';
+import cors          from 'cors';
+import dotenv        from 'dotenv';
+import path          from 'path';
 import { fileURLToPath } from 'url';
-import bcrypt from 'bcryptjs';
+import bcrypt        from 'bcryptjs';
+import { rateLimit } from 'express-rate-limit';
 
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = express();
+const __dirname   = path.dirname(fileURLToPath(import.meta.url));
+const app         = express();
 const PUBLIC_PATH = path.join(__dirname, 'app');
+const GAS_TIMEOUT = 30_000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-app.use(function (req, res, next) {
-    console.log('[' + new Date().toLocaleTimeString() + '] ' + req.method + ' ' + req.url);
+app.use((req, _res, next) => {
+    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     next();
 });
 
+const limiterGeral = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Muitas requisições. Aguarde um momento.' }
+});
+
+const limiterLogin = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Muitas tentativas de login. Tente novamente em 15 minutos.' }
+});
+
 async function fetchGAS(payload) {
-    var url = process.env.API_URL;
-    if (!url) throw new Error('API_URL não configurada');
+    const url = process.env.API_URL;
+    if (!url) throw new Error('API_URL não configurada no .env');
 
-    var response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        redirect: 'follow'
-    });
+    const controller = new AbortController();
+    const timer      = setTimeout(() => controller.abort(), GAS_TIMEOUT);
 
-    console.log('[GAS] Status:', response.status, '| URL final:', response.url);
+    let response;
+    try {
+        response = await fetch(url, {
+            method:   'POST',
+            headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+            body:     JSON.stringify(payload),
+            redirect: 'follow',
+            signal:   controller.signal
+        });
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            throw new Error('Timeout: GAS não respondeu em 30s');
+        }
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
 
-    var text = await response.text();
+    console.log(`[GAS] Status: ${response.status} | URL final: ${response.url}`);
 
-    console.log('[GAS] Resposta bruta (200 chars):', text.substring(0, 200));
+    const text = await response.text();
+    console.log(`[GAS] Resposta bruta (200 chars): ${text.substring(0, 200)}`);
 
     if (!text || text.trim().length === 0) {
-        throw new Error('GAS retornou resposta vazia (status ' + response.status + ')');
+        throw new Error(`GAS retornou resposta vazia (status ${response.status})`);
     }
 
     try {
         return JSON.parse(text);
-    } catch (e) {
-        if (text.indexOf('<!DOCTYPE') !== -1 || text.indexOf('<html') !== -1) {
-            throw new Error('GAS retornou HTML. Verifique se o script está publicado como Web App.');
+    } catch {
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+            throw new Error('GAS retornou HTML — verifique se o script está publicado como Web App com acesso "Qualquer pessoa".');
         }
-        throw new Error('JSON inválido do GAS: ' + text.substring(0, 300));
+        throw new Error(`JSON inválido recebido do GAS: ${text.substring(0, 300)}`);
     }
 }
 
-async function buscarUsuarioGAS(username) {
+async function autenticarMasterLocal(username, password) {
+    const masterLogin = process.env.MASTER_LOGIN;
+    if (!masterLogin || username !== masterLogin) return null;
+
+    const masterHash  = process.env.MASTER_PASS_HASH;
+    const masterPlain = process.env.MASTER_PASS;
+
+    let senhaOk = false;
+
+    if (masterHash) {
+        try {
+            senhaOk = await bcrypt.compare(password, masterHash.replace(/\$\$/g, '$'));
+        } catch {
+            senhaOk = false;
+        }
+    }
+
+    if (!senhaOk && masterPlain) {
+        senhaOk = (password === masterPlain);
+    }
+
+    if (!senhaOk) return null;
+
     try {
-        var result = await fetchGAS({
-            action: 'getusuarios',
-            apiKey: process.env.SECRET_KEY
+        const usuarios = await fetchGAS({ action: 'getusuarios', apiKey: process.env.SECRET_KEY });
+        const gasUser  = Array.isArray(usuarios)
+            ? usuarios.find(u => String(u.username || u.user || u.login || '').trim() === masterLogin)
+            : null;
+
+        return {
+            username: masterLogin,
+            tipo:     gasUser?.tipo   || gasUser?.role  || gasUser?.cargo  || process.env.MASTER_CARGO || 'Admin',
+            imagem:   gasUser?.imagem || gasUser?.foto  || gasUser?.avatar || gasUser?.image || ''
+        };
+    } catch {
+        return {
+            username: masterLogin,
+            tipo:     process.env.MASTER_CARGO || 'Admin',
+            imagem:   ''
+        };
+    }
+}
+
+async function handleLogin(req, res) {
+    const username = String(req.body?.username || '').trim();
+    const password = String(req.body?.password || '');
+
+    console.log(`[LOGIN] Tentativa: "${username}"`);
+
+    if (!username || !password) {
+        return res.status(400).json({ status: 'error', message: 'Usuário e senha são obrigatórios.' });
+    }
+
+    const masterUser = await autenticarMasterLocal(username, password);
+    if (masterUser) {
+        console.log('[LOGIN] Master autenticado via Node');
+        return res.json({ status: 'success', user: masterUser });
+    }
+
+    if (username === process.env.MASTER_LOGIN) {
+        console.log('[LOGIN] Senha master incorreta');
+        return res.status(401).json({ status: 'error', message: 'Usuário ou senha incorretos.' });
+    }
+
+    console.log('[LOGIN] Encaminhando para GAS...');
+    try {
+        const gasResult = await fetchGAS({ action: 'login', username, password });
+        console.log(`[LOGIN] GAS respondeu: ${JSON.stringify(gasResult).substring(0, 200)}`);
+
+        if (gasResult?.status === 'success' && gasResult?.user) {
+            return res.json(gasResult);
+        }
+
+        return res.status(401).json({
+            status:  'error',
+            message: gasResult?.message || 'Usuário ou senha incorretos.'
+        });
+    } catch (err) {
+        console.error('[LOGIN] Erro GAS:', err.message);
+        return res.status(502).json({ status: 'error', message: 'Falha ao comunicar com o servidor de dados.', debug: err.message });
+    }
+}
+
+async function handleValidarSenhaMaster(req, res) {
+    const senha = String(req.body?.senha || '').trim();
+
+    console.log('[MASTER AUTH] Validação solicitada');
+
+    if (!senha) {
+        return res.status(400).json({ status: 'error', valido: false, message: 'Senha não informada.' });
+    }
+
+    try {
+        const result = await fetchGAS({
+            action: 'validarsenhamaster',
+            apiKey: process.env.SECRET_KEY,
+            senha
         });
 
-        console.log('[DEBUG] getUsuarios retornou:', Array.isArray(result) ? result.length + ' usuários' : typeof result);
-
-        if (!Array.isArray(result)) return null;
-
-        for (var i = 0; i < result.length; i++) {
-            var u = result[i];
-            var uName = String(u.username || u.user || u.login || '').trim();
-            if (uName === username) {
-                console.log('[DEBUG] Usuário encontrado:', uName);
-                return u;
-            }
-        }
-
-        console.log('[DEBUG] Usuário "' + username + '" não encontrado na lista');
+        console.log(`[MASTER AUTH] GAS respondeu: ${JSON.stringify(result)}`);
+        return res.json(result);
     } catch (err) {
-        console.error('[LOGIN] Erro ao buscar usuário no GAS:', err.message);
+        console.error('[MASTER AUTH] Erro GAS:', err.message);
+        return res.status(502).json({ status: 'error', valido: false, message: 'Falha ao comunicar com o servidor.', debug: err.message });
     }
-    return null;
 }
 
-async function buscarHashMasterGAS() {
-    try {
-        var masterLogin = process.env.MASTER_LOGIN;
-        if (!masterLogin) return null;
-
-        var result = await fetchGAS({
-            action: 'getusuarios',
-            apiKey: process.env.SECRET_KEY
-        });
-
-        if (!Array.isArray(result)) return null;
-
-        for (var i = 0; i < result.length; i++) {
-            var u = result[i];
-            var uName = String(u.username || u.user || u.login || '').trim();
-            if (uName === masterLogin) {
-                return u.password || null;
-            }
-        }
-    } catch (err) {
-        console.error('[MASTER AUTH] Erro ao buscar hash no GAS:', err.message);
+async function handleProxy(req, res) {
+    if (!process.env.API_URL) {
+        return res.status(500).json({ status: 'error', message: 'API_URL não configurada no servidor.' });
     }
-    return null;
+
+    const body    = req.body || {};
+    const payload = Object.fromEntries(
+        Object.entries(body).filter(([k]) => k !== 'apiKey')
+    );
+    payload.apiKey = process.env.SECRET_KEY;
+
+    console.log(`[PROXY] Encaminhando action: "${payload.action}"`);
+
+    const data = await fetchGAS(payload);
+    console.log(`[PROXY] Resposta — tipo: ${typeof data} | Array: ${Array.isArray(data)}`);
+
+    return res.json(data);
 }
 
-app.post('/api/proxy', async function (req, res) {
+app.post('/api/proxy', limiterGeral, async (req, res) => {
     try {
-        var body = req.body || {};
-        var action = String(body.action || '').toLowerCase().trim();
+        const action = String(req.body?.action || '').toLowerCase().trim();
 
-        console.log('[PROXY] Action recebida:', action);
-        console.log('[PROXY] Body keys:', Object.keys(body).join(', '));
+        console.log(`[PROXY] Action: "${action}" | Body keys: ${Object.keys(req.body || {}).join(', ')}`);
 
         if (!action) {
-            return res.status(400).json({ status: 'error', message: 'Nenhuma ação informada' });
+            return res.status(400).json({ status: 'error', message: 'Nenhuma ação informada.' });
         }
 
         if (action === 'login') {
-            var username = String(body.username || '').trim();
-            var password = String(body.password || '');
-
-            console.log('[LOGIN] Tentativa: "' + username + '"');
-
-            var masterLogin = process.env.MASTER_LOGIN;
-            var masterHash  = process.env.MASTER_PASS_HASH;
-            var masterPlain = process.env.MASTER_PASS;
-
-            if (masterLogin && username === masterLogin) {
-                var senhaOk = false;
-
-                if (masterHash) {
-                    var cleanHash = masterHash.replace(/\$\$/g, '$');
-                    try { senhaOk = await bcrypt.compare(password, cleanHash); } catch (e) { senhaOk = false; }
-                }
-
-                if (!senhaOk && masterPlain) {
-                    senhaOk = password === masterPlain;
-                }
-
-                if (senhaOk) {
-                    console.log('[LOGIN] Master autenticado');
-                    var gasUser = await buscarUsuarioGAS(masterLogin);
-                    var imagem  = '';
-                    var tipo    = process.env.MASTER_CARGO || 'Admin';
-
-                    if (gasUser) {
-                        imagem = gasUser.imagem || gasUser.foto || gasUser.avatar || gasUser.image || '';
-                        tipo   = gasUser.tipo   || gasUser.role || gasUser.cargo  || tipo;
-                    }
-
-                    return res.json({
-                        status: 'success',
-                        user: { username: masterLogin, tipo: tipo, imagem: imagem }
-                    });
-                }
-
-                console.log('[LOGIN] Senha Master incorreta');
-                return res.status(401).json({ status: 'error', message: 'Usuário ou senha incorretos.' });
-            }
-
-            console.log('[LOGIN] Encaminhando para GAS...');
-
-            try {
-                var gasResult = await fetchGAS({ action: 'login', username: username, password: password });
-                console.log('[LOGIN] Resposta GAS:', JSON.stringify(gasResult).substring(0, 200));
-
-                if (gasResult && gasResult.status === 'success' && gasResult.user) {
-                    return res.json(gasResult);
-                }
-
-                return res.status(401).json({
-                    status: 'error',
-                    message: (gasResult && gasResult.message) ? gasResult.message : 'Usuário ou senha incorretos.'
-                });
-            } catch (gasErr) {
-                console.error('[LOGIN] Erro GAS:', gasErr.message);
-                return res.status(502).json({ status: 'error', message: 'Falha ao comunicar com o servidor de dados.' });
-            }
+            return limiterLogin(req, res, () => handleLogin(req, res));
         }
 
         if (action === 'validarsenhamaster') {
-            var senhaMaster = String(body.senha || '').trim();
-
-            console.log('[MASTER AUTH] Validação de senha master solicitada');
-
-            if (!senhaMaster) {
-                return res.status(400).json({ status: 'error', valido: false, message: 'Senha não informada.' });
-            }
-
-            var hashDoBanco = await buscarHashMasterGAS();
-
-            if (!hashDoBanco) {
-                console.error('[MASTER AUTH] Hash master não encontrado no banco');
-                return res.status(500).json({ status: 'error', valido: false, message: 'Usuário master não localizado.' });
-            }
-
-            var senhaValida = false;
-
-            try {
-                senhaValida = await bcrypt.compare(senhaMaster, hashDoBanco);
-            } catch (bcryptErr) {
-                console.error('[MASTER AUTH] Erro no bcrypt.compare:', bcryptErr.message);
-                return res.status(500).json({ status: 'error', valido: false, message: 'Erro interno na validação.' });
-            }
-
-            console.log('[MASTER AUTH] Resultado:', senhaValida ? 'AUTORIZADO' : 'NEGADO');
-
-            return res.json({ status: 'success', valido: senhaValida });
+            return await handleValidarSenhaMaster(req, res);
         }
 
-        if (!process.env.API_URL) {
-            return res.status(500).json({ status: 'error', message: 'API_URL não configurada no servidor' });
-        }
+        return await handleProxy(req, res);
 
-        var payload = {};
-        Object.keys(body).forEach(function (k) {
-            if (k !== 'apiKey') payload[k] = body[k];
-        });
-        payload.apiKey = process.env.SECRET_KEY;
-
-        console.log('[PROXY] Encaminhando action:', payload.action);
-
-        var data = await fetchGAS(payload);
-
-        console.log('[PROXY] Resposta tipo:', typeof data, '| Array?', Array.isArray(data));
-
-        return res.json(data);
-
-    } catch (error) {
-        console.error('[PROXY] ERRO:', error.message);
+    } catch (err) {
+        console.error('[PROXY] ERRO não tratado:', err.message);
         return res.status(502).json({
-            status: 'error',
-            message: 'Falha na comunicação com o servidor de dados',
-            debug: error.message
+            status:  'error',
+            message: 'Falha na comunicação com o servidor de dados.',
+            debug:   err.message
         });
     }
 });
 
 app.use(express.static(PUBLIC_PATH));
 
-app.get('*', function (req, res) {
+app.get('*', (req, res) => {
     if (/\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff2?|ttf)$/.test(req.path)) {
         return res.status(404).send('Not Found');
     }
     res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
 });
 
-var PORT = process.env.PORT || 3000;
-app.listen(PORT, function () {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
     console.log('=========================================');
-    console.log('  Servidor rodando em http://localhost:' + PORT);
-    console.log('  API_URL: '      + (process.env.API_URL      ? 'OK' : 'NAO CONFIGURADA!'));
-    console.log('  SECRET_KEY: '   + (process.env.SECRET_KEY   ? 'OK' : 'NAO CONFIGURADA!'));
-    console.log('  MASTER_LOGIN: ' + (process.env.MASTER_LOGIN || 'N/A'));
-    console.log('  Static path: '  + PUBLIC_PATH);
+    console.log(`  Servidor: http://localhost:${PORT}`);
+    console.log(`  API_URL:      ${process.env.API_URL      ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
+    console.log(`  SECRET_KEY:   ${process.env.SECRET_KEY   ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
+    console.log(`  MASTER_LOGIN: ${process.env.MASTER_LOGIN || 'N/A'}`);
+    console.log(`  MASTER_HASH:  ${process.env.MASTER_PASS_HASH ? 'OK' : 'N/A (usando MASTER_PASS)'}`);
+    console.log(`  Static path:  ${PUBLIC_PATH}`);
     console.log('=========================================');
 });

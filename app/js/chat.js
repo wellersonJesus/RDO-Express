@@ -21,21 +21,18 @@ window.marcarCampoFormInvalido = function (campo) {
     }, 3000);
 };
 
-window.AppRDO = window.AppRDO || {
-    debounceTimer: null,
-    listaCarregada: false,
-    isFetching: false,
-    isProcessingCheckout: false,
-    pedidosCache: [],
-    motoboyCache: [],
-    pedidoEmEdicao: null,
-    clienteId: null,
-    clienteSelecionado: null,
-    clientesCache: [],
-    mensagensCache: [],
-    isMasterOn: false
-};
-
+window.AppRDO = window.AppRDO || {};
+window.AppRDO.debounceTimer = window.AppRDO.debounceTimer || null;
+window.AppRDO.listaCarregada = false;
+window.AppRDO.isFetching = window.AppRDO.isFetching || false;
+window.AppRDO.isProcessingCheckout = false;
+window.AppRDO.pedidosCache = window.AppRDO.pedidosCache || [];
+window.AppRDO.motoboyCache = window.AppRDO.motoboyCache || [];
+window.AppRDO.pedidoEmEdicao = null;
+window.AppRDO.clienteId = window.AppRDO.clienteId || null;
+window.AppRDO.clienteSelecionado = window.AppRDO.clienteSelecionado || null;
+window.AppRDO.clientesCache = window.AppRDO.clientesCache || [];
+window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
 window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
 window.addEventListener('masterStatusChanged', function (e) {
@@ -48,12 +45,34 @@ window.addEventListener('masterStatusChanged', function (e) {
             return String(c.id) === String(window.AppRDO.clienteId);
         });
         if (cliente) {
-            var nome = cliente.username || 'Sem nome';
             var online = isOn && String(cliente.status || '').toUpperCase() === 'TRUE';
-            window.abrirConversa(window.AppRDO.clienteId, nome, null, online);
+            _atualizarHeaderCliente(cliente.username || 'Sem nome', online);
         }
     }
 });
+
+window.addEventListener('clienteStatusChanged', function (e) {
+    if (!e.detail) return;
+    var clientes = e.detail.clientes || window.AppRDO.clientesCache || [];
+    var isMasterOn = e.detail.isMasterOn;
+    window.AppRDO.clientesCache = clientes;
+    window.AppRDO.isMasterOn = isMasterOn;
+    window.renderizarLista(clientes, isMasterOn);
+});
+
+function _atualizarHeaderCliente(nome, isOnline) {
+    var nameEl = document.getElementById('chat-header-name');
+    if (nameEl) nameEl.innerText = nome;
+    if (window.AppRDO && window.AppRDO.clienteId) {
+        var itemAtivo = document.getElementById('item-contato-' + window.AppRDO.clienteId);
+        if (itemAtivo) {
+            var dot = itemAtivo.querySelector('.contact-status-dot');
+            var statusLabel = itemAtivo.querySelector('.contact-status');
+            if (dot) dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
+            if (statusLabel) statusLabel.textContent = isOnline ? 'Online' : 'Offline';
+        }
+    }
+}
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
@@ -461,6 +480,7 @@ window.carregarDados = async function () {
     var listEl = document.getElementById('lista-contatos-chat');
     var searchInput = document.getElementById('chat-search');
     if (!listEl || window.AppRDO.isFetching) return;
+    window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
     window.AppRDO.isFetching = true;
     _spinChatOn();
     _mostrarLoadingContatos();
@@ -474,11 +494,10 @@ window.carregarDados = async function () {
         var listaClientes = Array.isArray(results[0]) ? results[0] : [];
         var listaMensagens = Array.isArray(results[1]) ? results[1] : [];
         var listaPedidos = Array.isArray(results[2]) ? results[2] : [];
-        var isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+        var isMasterOn = window.AppRDO.isMasterOn;
         window.AppRDO.clientesCache = listaClientes;
         window.AppRDO.mensagensCache = listaMensagens;
         window.AppRDO.pedidosCache = listaPedidos;
-        window.AppRDO.isMasterOn = isMasterOn;
         window.renderizarLista(listaClientes, isMasterOn);
         if (!window.AppRDO.clienteId && listaClientes.length > 0) {
             var primeiro = listaClientes[0];
@@ -1420,9 +1439,17 @@ window.salvarPedidoAPI = async function () {
     }
     document.removeEventListener('click', _handleSyncClick);
     document.addEventListener('click', _handleSyncClick);
+
     function _tentarInit() {
-        if (window.AppRDO && !window.AppRDO.listaCarregada && !window.AppRDO.isFetching) window.carregarDados();
+        if (window.AppRDO) {
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.listaCarregada = false;
+        }
+        if (window.AppRDO && !window.AppRDO.isFetching) {
+            window.carregarDados();
+        }
     }
+
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _tentarInit);
     else _tentarInit();
 })();

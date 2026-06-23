@@ -132,23 +132,21 @@ function extrairEntidade(action) {
 }
 
 function mapearEntidade(entity) {
-  var mapa = {
-    "usuario": "usuarios",
-    "usuarios": "usuarios",
-    "cliente": "clientes",
-    "clientes": "clientes",
-    "contato": "clientes",
-    "contatos": "clientes",
-    "colaborador": "colaboradores",
-    "colaboradores": "colaboradores",
-    "bot": "botconfig",
-    "botconfig": "botconfig",
-    "chat": "chat",
-    "pedido": "pedidos",
-    "pedidos": "pedidos",
-    "financeiro": "financeiro"
-  };
-  return mapa[entity] || entity;
+    var mapa = {
+        "usuario": "usuarios",
+        "usuarios": "usuarios",
+        "cliente": "clientes",
+        "clientes": "clientes",
+        "contato": "clientes",
+        "contatos": "clientes",
+        "colaborador": "colaboradores",
+        "colaboradores": "colaboradores",
+        "chat": "chat",
+        "pedido": "pedidos",
+        "pedidos": "pedidos",
+        "financeiro": "financeiro"
+    };
+    return mapa[entity] || entity;
 }
 
 function buscarAba(ss, nome) {
@@ -536,7 +534,13 @@ function gerarId(sheet, entity) {
     return "FIN" + padded;
   }
 
-  return Math.random().toString(36).substring(2, 13).toUpperCase();
+  // usuarios, clientes, colaboradores, chat → 11 chars aleatórios
+  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  var id = "";
+  for (var k = 0; k < 11; k++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
 }
 
 function responder(obj) {
