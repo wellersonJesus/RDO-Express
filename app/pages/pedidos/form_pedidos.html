@@ -1,215 +1,460 @@
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Editar Pedido
+════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+            <div class="modal-pedido-header d-flex align-items-center gap-3">
+                <div class="modal-pedido-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div>
+                    <div class="modal-pedido-title">Editar Pedido</div>
+                    <div class="modal-pedido-subtitle" id="editar-titulo">RDO000</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto"
+                    data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <div class="modal-pedido-body">
+
+                <input type="hidden" id="edit-pedido-id">
+
+                <div id="edit-error-msg"
+                    class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
+                    style="font-size:0.8rem;"></div>
+
+                <div class="modal-pedido-section-label">
+                    <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Cliente / Solicitante</label>
+                        <input type="text" id="edit-solicitante"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Nome do solicitante">
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Contato</label>
+                        <input type="text" id="edit-contato"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Mercadoria</label>
+                        <select id="edit-mercadoria"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="">Selecione...</option>
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Horário de Coleta</label>
+                        <input type="text" id="edit-horario"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Ex: 14:30">
+                    </div>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-signpost-split-fill me-1 text-danger"></i>Rota
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Origem (De)</label>
+                        <input type="text" id="edit-de"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Endereço de origem">
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Destino (Para)</label>
+                        <input type="text" id="edit-para"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Endereço de destino">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Retorno</label>
+                        <select id="edit-retorno"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Prioridade</label>
+                        <select id="edit-prioridade"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="0">Normal</option>
+                            <option value="5">Agendado</option>
+                            <option value="10">Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="modal-pedido-field-label">Observação</label>
+                    <textarea id="edit-obs" rows="2"
+                        class="form-control form-control-sm modal-pedido-input"
+                        placeholder="Observações adicionais..."></textarea>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-clock-history me-1 text-danger"></i>Tempo de Espera
+                </div>
+
+                <div class="modal-pedido-espera-box">
+
+                    <div class="mb-2">
+                        <label class="modal-pedido-field-label">Tipo de Espera</label>
+                        <select id="edit-tempo-espera-tipo"
+                            class="form-select form-select-sm modal-pedido-input"
+                            onchange="window.RDO_PEDIDOS.calcularEspera()">
+                            <option value="sem_espera">Sem espera</option>
+                            <option value="coleta">Espera na Coleta</option>
+                            <option value="entrega">Espera na Entrega</option>
+                            <option value="ambos">Espera na Coleta + Entrega</option>
+                        </select>
+                        <div class="modal-pedido-espera-hint mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Franquia de <strong>10 min</strong> em cada ponto.
+                            Excedente cobrado a <strong>R$ 0,60/min</strong>.
+                        </div>
+                    </div>
+
+                    <div id="box-minutos-espera" style="display:none;" class="mb-2">
+                        <label class="modal-pedido-field-label">Minutos reais de espera</label>
+                        <input type="number" id="edit-minutos-espera" min="0" step="1"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Ex: 25"
+                            oninput="window.RDO_PEDIDOS.calcularEspera()">
+                    </div>
+
+                    <div id="box-resultado-espera"
+                        style="display:none;"
+                        class="modal-pedido-espera-resultado align-items-center gap-3 flex-wrap">
+                        <div class="modal-pedido-espera-col">
+                            <span class="modal-pedido-espera-col-label">Valor Original</span>
+                            <input type="text" id="edit-valor-original"
+                                class="form-control form-control-sm modal-pedido-input text-center"
+                                readonly>
+                        </div>
+                        <div class="modal-pedido-espera-arrow">
+                            <i class="bi bi-arrow-right-circle-fill text-danger"></i>
+                        </div>
+                        <div class="modal-pedido-espera-col">
+                            <span class="modal-pedido-espera-col-label">Valor Ajustado</span>
+                            <div id="edit-valor-ajustado"
+                                class="modal-pedido-espera-valor-ajustado">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-3">
+                    <button type="button" id="btn-salvar-edicao"
+                        class="btn btn-salvar-pedido w-100"
+                        onclick="window.RDO_PEDIDOS.salvarEdicao()">
+                        SALVAR
+                    </button>
+                    <button type="button"
+                        class="btn btn-cancelar-pedido w-100"
+                        data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancelar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Detalhes do Pedido
+════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalPedidoDetalhes" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Detalhes</h5>
-                <div class="mt-1 text-muted small">
-                    Serviço: <span id="detalhe-titulo" class="fw-bold text-dark">—</span>
+
+            <div class="modal-pedido-header d-flex align-items-center gap-3">
+                <div class="modal-pedido-icon">
+                    <i class="bi bi-eye"></i>
                 </div>
+                <div>
+                    <div class="modal-pedido-title">Detalhes do Pedido</div>
+                    <div class="modal-pedido-subtitle" id="detalhe-titulo">RDO000</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto"
+                    data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <label class="text-muted small">N.SERVIÇO</label>
-                        <input type="text" id="det-pedido-id" class="form-control form-control-sm border-0 bg-light" readonly>
+
+            <div class="modal-pedido-body">
+
+                <div class="modal-pedido-section-label">
+                    <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">N.Serviço</label>
+                        <input type="text" id="det-pedido-id"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-5">
-                        <label class="text-muted small">CLIENTE</label>
-                        <input type="text" id="det-cliente" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Data</label>
+                        <input type="text" id="det-data"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">CONTATO</label>
-                        <input type="text" id="det-contato" class="form-control form-control-sm border-0 bg-light" readonly>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Cliente</label>
+                        <input type="text" id="det-cliente"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">SOLICITANTE</label>
-                        <input type="text" id="det-solicitante" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Solicitante</label>
+                        <input type="text" id="det-solicitante"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">MOTOBOY</label>
-                        <input type="text" id="det-motoboy" class="form-control form-control-sm border-0 bg-light" readonly>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Contato</label>
+                        <input type="text" id="det-contato"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">STATUS</label>
-                        <input type="text" id="det-status" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Horário</label>
+                        <input type="text" id="det-horario"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">MERCADORIA</label>
-                        <input type="text" id="det-mercadoria" class="form-control form-control-sm border-0 bg-light" readonly>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-signpost-split-fill me-1 text-danger"></i>Rota & Entrega
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">De</label>
+                        <input type="text" id="det-de"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">ROTA (DE)</label>
-                        <textarea id="det-de" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Para</label>
+                        <input type="text" id="det-para"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">ROTA (PARA)</label>
-                        <textarea id="det-para" class="form-control form-control-sm border-0 bg-light" rows="2" readonly></textarea>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Mercadoria</label>
+                        <input type="text" id="det-mercadoria"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="text-muted small">RETORNO</label>
-                        <input type="text" id="det-retorno" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Retorno</label>
+                        <input type="text" id="det-retorno"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small">HORÁRIO</label>
-                        <input type="text" id="det-horario" class="form-control form-control-sm border-0 bg-light" readonly>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Motoboy</label>
+                        <input type="text" id="det-motoboy"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small">PRIORIDADE</label>
-                        <input type="text" id="det-prioridade" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Status</label>
+                        <input type="text" id="det-status"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small">VALOR</label>
-                        <input type="text" id="det-valor" class="form-control form-control-sm border-0 bg-light" readonly>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Prioridade</label>
+                        <input type="text" id="det-prioridade"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
-                    <div class="col-md-3">
-                        <label class="text-muted small">ID CHAT</label>
-                        <input type="text" id="det-id-chat" class="form-control form-control-sm border-0 bg-light" readonly>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Valor da Corrida</label>
+                        <input type="text" id="det-valor"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
+                </div>
+
+                <div class="row g-2 mb-2">
                     <div class="col-12">
-                        <label class="text-muted small">OBSERVAÇÃO</label>
-                        <input type="text" id="det-obs" class="form-control form-control-sm border-0 bg-light" readonly>
+                        <label class="modal-pedido-field-label">ID Chat</label>
+                        <input type="text" id="det-id-chat"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+
+                <div class="mb-2">
+                    <label class="modal-pedido-field-label">Observação</label>
+                    <textarea id="det-obs" rows="2"
+                        class="form-control form-control-sm modal-pedido-input" readonly></textarea>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-3">
+                    <button type="button"
+                        class="btn btn-cancelar-pedido w-100"
+                        data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Fechar
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Novo Pedido
+════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Editar Pedido</h5>
-                <div id="edit-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
-                <div class="mt-1 text-muted small">
-                    Serviço: <span id="editar-titulo" class="fw-bold text-dark">—</span>
-                </div>
-            </div>
-            <div class="modal-body p-4">
-                <form id="form-editar-pedido" novalidate>
-                    <input type="hidden" id="edit-pedido-id">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="text-muted small">CLIENTE</label>
-                            <input type="text" id="edit-solicitante" class="form-control form-control-sm bg-light border-0">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">CONTATO</label>
-                            <input type="text" id="edit-contato" class="form-control form-control-sm bg-light border-0">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">MERCADORIA</label>
-                            <select id="edit-mercadoria" class="form-select form-select-sm bg-light border-0">
-                                <option value="">Selecione...</option>
-                                <option value="Sacola">Sacola</option>
-                                <option value="Coleta">Coleta</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Envelope">Envelope</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">HORÁRIO</label>
-                            <input type="text" id="edit-horario" class="form-control form-control-sm bg-light border-0">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">RETORNO</label>
-                            <select id="edit-retorno" class="form-select form-select-sm bg-light border-0">
-                                <option value="Não">Não</option>
-                                <option value="Sim">Sim</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">PRIORIDADE</label>
-                            <select id="edit-prioridade" class="form-select form-select-sm bg-light border-0">
-                                <option value="0">Normal</option>
-                                <option value="5">Agendado</option>
-                                <option value="7">Urgente</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">ROTA (DE / PARA)</label>
-                            <textarea id="edit-rotas" class="form-control form-control-sm bg-light border-0" rows="2"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">OBSERVAÇÃO</label>
-                            <input type="text" id="edit-obs" class="form-control form-control-sm bg-light border-0">
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                <button id="btn-salvar-edicao" class="btn btn-danger px-4" onclick="window.RDO_PEDIDOS.salvarEdicao()">SALVAR</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Novo Pedido</h5>
-                <div id="novo-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
+            <div class="modal-pedido-header d-flex align-items-center gap-3">
+                <div class="modal-pedido-icon">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <div>
+                    <div class="modal-pedido-title">Novo Pedido</div>
+                    <div class="modal-pedido-subtitle">Preencha os dados abaixo</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto"
+                    data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <div class="modal-body p-4">
-                <form id="form-novo-pedido" novalidate>
-                    <input type="hidden" id="novo-id-chat">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="text-muted small">SOLICITANTE</label>
-                            <input type="text" id="novo-solicitante" class="form-control form-control-sm bg-light border-0" readonly placeholder="Definido pelo chat ativo">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">CONTATO</label>
-                            <input type="text" id="novo-contato" class="form-control form-control-sm bg-light border-0" placeholder="Telefone...">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">MERCADORIA</label>
-                            <select id="novo-mercadoria" class="form-select form-select-sm bg-light border-0">
-                                <option value="">Selecione...</option>
-                                <option value="Sacola">Sacola</option>
-                                <option value="Coleta">Coleta</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Envelope">Envelope</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">HORÁRIO</label>
-                            <input type="text" id="novo-horario" class="form-control form-control-sm bg-light border-0" placeholder="Ex: 14:30">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">RETORNO</label>
-                            <select id="novo-retorno" class="form-select form-select-sm bg-light border-0">
-                                <option value="Não">Não</option>
-                                <option value="Sim">Sim</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">PRIORIDADE</label>
-                            <select id="novo-prioridade" class="form-select form-select-sm bg-light border-0">
-                                <option value="0">Normal</option>
-                                <option value="5">Agendado</option>
-                                <option value="7">Urgente</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">ROTAS (DE / PARA)</label>
-                            <textarea id="novo-rotas" class="form-control form-control-sm bg-light border-0" rows="2" placeholder="Ex: Rua A, 123 | Rua B, 456"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">OBSERVAÇÃO</label>
-                            <input type="text" id="novo-obs" class="form-control form-control-sm bg-light border-0" placeholder="Observações adicionais...">
-                        </div>
+
+            <div class="modal-pedido-body">
+
+                <input type="hidden" id="novo-id-chat">
+
+                <div id="novo-error-msg"
+                    class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
+                    style="font-size:0.8rem;"></div>
+
+                <div class="modal-pedido-section-label">
+                    <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Cliente / Solicitante</label>
+                        <input type="text" id="novo-solicitante"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Nome do solicitante">
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                <button id="btn-salvar-novo" class="btn btn-danger px-4" onclick="window.RDO_PEDIDOS.salvarNovo()">CRIAR PEDIDO</button>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Contato</label>
+                        <input type="text" id="novo-contato"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Mercadoria</label>
+                        <select id="novo-mercadoria"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="">Selecione...</option>
+                            <option value="Sacola">Sacola</option>
+                            <option value="Coleta">Coleta</option>
+                            <option value="Bolsa">Bolsa</option>
+                            <option value="Envelope">Envelope</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Horário de Coleta</label>
+                        <input type="text" id="novo-horario"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Ex: 14:30">
+                    </div>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-signpost-split-fill me-1 text-danger"></i>Rota
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Origem (De)</label>
+                        <input type="text" id="novo-de"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Endereço de origem">
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Destino (Para)</label>
+                        <input type="text" id="novo-para"
+                            class="form-control form-control-sm modal-pedido-input"
+                            placeholder="Endereço de destino">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Retorno</label>
+                        <select id="novo-retorno"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Prioridade</label>
+                        <select id="novo-prioridade"
+                            class="form-select form-select-sm modal-pedido-input">
+                            <option value="0">Normal</option>
+                            <option value="5">Agendado</option>
+                            <option value="10">Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="modal-pedido-field-label">Observação</label>
+                    <textarea id="novo-obs" rows="2"
+                        class="form-control form-control-sm modal-pedido-input"
+                        placeholder="Observações adicionais..."></textarea>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-3">
+                    <button type="button" id="btn-salvar-novo"
+                        class="btn btn-salvar-pedido w-100"
+                        onclick="window.RDO_PEDIDOS.salvarNovo()">
+                        CRIAR PEDIDO
+                    </button>
+                    <button type="button"
+                        class="btn btn-cancelar-pedido w-100"
+                        data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancelar
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
