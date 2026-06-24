@@ -1,31 +1,37 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-<div class="modal fade" id="modalMapa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-map-fill text-danger me-2"></i>
-                    <span class="text-danger">RDO</span> Express — Rota(s)
-                </h5>
-                <div class="mt-1 text-muted small">
-                    <i class="bi bi-person-fill me-1"></i>
-                    Solicitante:
-                    <span id="header-nome-solicitante" class="fw-bold text-dark">Carregando...</span>
-                </div>
-            </div>
-            <div class="modal-body p-3">
-                <div id="container-mapa-visual" style="height: 350px; width: 100%; border-radius: 10px;" class="border shadow-sm mb-3"></div>
-                <div id="lista-rotas-editavel" class="mb-3 p-0 bg-light rounded overflow-hidden" style="max-height: 200px; overflow-y: auto; font-size: 0.88rem;"></div>
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div id="resumo-total" class="text-primary"></div>
-                    <button class="btn btn-danger px-4 rounded-3 d-flex align-items-center gap-2" onclick="window.prosseguirParaFormulario()">
-                        <i class="bi bi-cart-check-fill"></i>
-                        Avançar para Checkout
-                        <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
+<div class="modal fade" id="modalMapa" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
+      <div class="fin-form-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="fin-form-header-icon"><i class="bi bi-map-fill"></i></div>
+          <div>
+            <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;"><span style="color:rgba(255,255,255,.7);">RDO</span> Express — Rota(s)</h6>
+            <small class="fin-form-subtitle">
+              <i class="bi bi-person-fill me-1"></i>Solicitante:
+              <span id="header-nome-solicitante" class="fw-bold text-white">Carregando...</span>
+            </small>
+          </div>
         </div>
+      </div>
+      <div class="modal-body px-3 pb-3 pt-3">
+        <div id="mapa-loader" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
+          <div class="mt-2 fin-loading-text">Calculando rotas<span class="fin-dots"></span></div>
+        </div>
+        <div id="container-mapa-visual" class="rounded-3 shadow-sm mb-3"
+          style="height:340px;width:100%;display:none;border:1px solid #f0f0f0;"></div>
+        <div id="lista-rotas-editavel" class="mb-3 rounded-3 overflow-hidden"
+          style="max-height:190px;overflow-y:auto;border:1px solid #f0f0f0;background:#fff;scrollbar-width:thin;scrollbar-color:#ddd transparent;"></div>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 px-1">
+          <div id="footer-resumo-dados" style="font-size:.78rem;color:#6c757d;font-weight:500;">
+            <span class="text-muted small">Calculando...</span>
+          </div>
+          <button class="btn btn-danger btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+            style="font-size:.72rem;" onclick="window.prosseguirParaFormulario()">
+            <i class="bi bi-cart-check-fill"></i>Avançar para Checkout<i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
 </div>

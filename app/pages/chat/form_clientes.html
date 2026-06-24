@@ -1,107 +1,189 @@
 <div class="modal fade" id="modalFormulario" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
 
-            <div class="modal-header border-0 pb-0 px-4 pt-4 flex-column align-items-start">
-                <h5 class="modal-title fw-bold"><span class="text-danger">RDO</span> Express - Checkout</h5>
-                <div id="form-error-msg" class="text-danger small mt-2 d-none fw-bold"></div>
-                <div class="mt-1 text-muted small">
-                    <i class="bi bi-person-fill me-1"></i>
-                    Cliente: <span id="header-nome-cliente" class="fw-bold text-dark">Carregando...</span>
-                </div>
-            </div>
-
-            <div class="modal-body p-4">
-                <form id="form-checkout" novalidate>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="text-muted small">SOLICITANTE*</label>
-                            <input type="text" id="p-solicitante" class="form-control form-control-sm border-0 bg-light" readonly required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">CONTATO</label>
-                            <input type="text" id="p-contato" class="form-control form-control-sm border-0 bg-light">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">MERCADORIA*</label>
-                            <select id="p-mercadoria" class="form-select form-select-sm border-0 bg-light" required>
-                                <option value="">Selecione...</option>
-                                <option value="Sacola">Sacola</option>
-                                <option value="Coleta">Coleta</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Envelope">Envelope</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">HORÁRIO</label>
-                            <input type="text" id="p-horario" class="form-control form-control-sm border-0 bg-light">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">DISTÂNCIA (KM)*</label>
-                            <input type="number" id="p-distancia" class="form-control form-control-sm border-0 bg-light" oninput="window.calcularTudo()" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">TEMPO</label>
-                            <input type="text" id="p-tempo" class="form-control form-control-sm border-0 bg-light">
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">ROTA (DE/PARA)*</label>
-                            <textarea id="p-rotas" class="form-control form-control-sm border-0 bg-light" rows="2" required></textarea>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">VALOR KM*</label>
-                            <select id="p-valor-km" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()" required>
-                                <option value="">Selecione...</option>
-                                <option value="2.02">2,02</option>
-                                <option value="2.20" selected>2,20</option>
-                                <option value="3.00">3,00</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">RETORNO</label>
-                            <select id="p-retorno" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
-                                <option value="0">Não</option>
-                                <option value="0.6">Sim (60%)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">DINÂMICA</label>
-                            <select id="p-dinamica" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
-                                <option value="0">R$ 0.00</option>
-                                <option value="5">R$ 5.00</option>
-                                <option value="7">R$ 7.00</option>
-                                <option value="10">R$ 10.00</option>
-                                <option value="15">R$ 15.00</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">PRIORIDADE</label>
-                            <select id="p-prioridade" class="form-select form-select-sm border-0 bg-light" onchange="window.calcularTudo()">
-                                <option value="0">Normal</option>
-                                <option value="5">Agendado</option>
-                                <option value="7">Urgente</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="text-muted small">OBSERVAÇÃO</label>
-                            <input type="text" id="p-obs" class="form-control form-control-sm border-0 bg-light">
-                        </div>
-                    </div>
-                </form>
-                <div class="mt-4 d-flex align-items-center justify-content-between p-3 bg-light rounded-3">
-                    <span class="text-muted small">TOTAL ESTIMADO</span>
-                    <span id="view-valor-final" class="fs-4 fw-bold text-dark">R$ 0,00</span>
-                </div>
-            </div>
-
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button class="btn btn-light" onclick="window.voltarParaMapa()">
-                    <i class="bi bi-arrow-left me-1"></i>Voltar
-                </button>
-                <button id="btn-emitir-pedido" class="btn btn-danger px-4" onclick="window.salvarPedidoAPI()">
-                    <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
-                </button>
-            </div>
+      <div class="fin-form-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="fin-form-header-icon"><i class="bi bi-send-fill"></i></div>
+          <div>
+            <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;"><span style="color:rgba(255,255,255,.7);">RDO</span> Express — Checkout</h6>
+            <small class="fin-form-subtitle">
+              <i class="bi bi-person-fill me-1"></i>Cliente:
+              <span id="header-nome-cliente" class="fw-bold text-white">Carregando...</span>
+            </small>
+          </div>
         </div>
+      </div>
+
+      <div class="modal-body px-4 py-3">
+        <form id="form-checkout" novalidate autocomplete="off" onsubmit="return false;">
+
+          <div class="fin-form-section">
+            <div class="fin-form-section-label">Dados principais</div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-md-6">
+                <label class="fin-field-label">Solicitante</label>
+                <input type="text" id="p-solicitante"
+                  class="form-control form-control-sm fin-field-input"
+                  placeholder="Solicitante"
+                  readonly>
+                <div class="invalid-feedback">Campo obrigatório</div>
+              </div>
+              <div class="col-md-6">
+                <label class="fin-field-label">Contato</label>
+                <input type="text" id="p-contato"
+                  class="form-control form-control-sm fin-field-input"
+                  placeholder="Telefone ou WhatsApp">
+                <div class="invalid-feedback">Campo obrigatório</div>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-md-3">
+                <label class="fin-field-label">Mercadoria</label>
+                <select id="p-mercadoria" class="form-select form-select-sm fin-field-input">
+                  <option value="">Selecione...</option>
+                  <option value="Sacola">Sacola</option>
+                  <option value="Coleta">Coleta</option>
+                  <option value="Bolsa">Bolsa</option>
+                  <option value="Envelope">Envelope</option>
+                </select>
+                <div class="invalid-feedback">Campo obrigatório</div>
+              </div>
+              <div class="col-md-3">
+                <label class="fin-field-label">Horário</label>
+                <input type="text" id="p-horario"
+                  class="form-control form-control-sm fin-field-input"
+                  placeholder="HH:MM">
+              </div>
+              <div class="col-md-3">
+                <label class="fin-field-label">Distância (KM)</label>
+                <input type="number" id="p-distancia"
+                  class="form-control form-control-sm fin-field-input"
+                  oninput="window.calcularTudo()"
+                  readonly>
+              </div>
+              <div class="col-md-3">
+                <label class="fin-field-label">Tempo</label>
+                <input type="text" id="p-tempo"
+                  class="form-control form-control-sm fin-field-input"
+                  readonly>
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <label class="fin-field-label">Rota (De / Para)</label>
+              <textarea id="p-rotas"
+                class="form-control form-control-sm fin-field-input"
+                rows="2"
+                style="border-radius:10px!important;resize:none;"
+                readonly></textarea>
+              <div class="invalid-feedback">Campo obrigatório</div>
+            </div>
+
+          </div>
+
+          <div class="fin-form-section">
+            <div class="fin-form-section-label">Tarifação</div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-md-4">
+                <label class="fin-field-label">Valor KM</label>
+                <select id="p-valor-km"
+                  class="form-select form-select-sm fin-field-input"
+                  onchange="window.calcularTudo()">
+                  <option value="">Selecione...</option>
+                  <option value="2.02">2,02</option>
+                  <option value="2.20" selected>2,20</option>
+                  <option value="3.00">3,00</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="fin-field-label">Retorno</label>
+                <select id="p-retorno"
+                  class="form-select form-select-sm fin-field-input"
+                  onchange="window.calcularTudo()">
+                  <option value="0">Não</option>
+                  <option value="0.6">Sim (60%)</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="fin-field-label">Dinâmica</label>
+                <select id="p-dinamica"
+                  class="form-select form-select-sm fin-field-input"
+                  onchange="window.calcularTudo()">
+                  <option value="0">R$ 0,00</option>
+                  <option value="5">R$ 5,00</option>
+                  <option value="7">R$ 7,00</option>
+                  <option value="10">R$ 10,00</option>
+                  <option value="15">R$ 15,00</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-md-4">
+                <label class="fin-field-label">Prioridade</label>
+                <select id="p-prioridade"
+                  class="form-select form-select-sm fin-field-input"
+                  onchange="window.calcularTudo()">
+                  <option value="0">Normal</option>
+                  <option value="5">Agendado</option>
+                  <option value="7">Urgente</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="fin-field-label">Observação</label>
+                <input type="text" id="p-obs" class="form-control form-control-sm fin-field-input">
+              </div>
+            </div>
+
+          </div>
+
+          <div class="fin-form-section mb-0">
+            <div class="fin-form-section-label">Resumo financeiro</div>
+
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-3 mb-2"
+              style="background:#f8f9fa;border:1px solid #f0f0f0;">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-cash-stack text-success" style="font-size:.9rem;"></i>
+                <span style="font-size:.65rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;">Total estimado</span>
+              </div>
+              <span id="view-valor-final" style="font-size:1.1rem;font-weight:700;color:#1a1a2e;">R$ 0,00</span>
+            </div>
+
+            <div id="box-valor-espera" style="display:none;">
+              <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-3"
+                style="background:rgba(220,53,69,.05);border:1px solid rgba(220,53,69,.15);">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-clock-fill text-danger" style="font-size:.9rem;"></i>
+                  <span style="font-size:.65rem;font-weight:600;color:#dc3545;text-transform:uppercase;letter-spacing:.04em;">Espera excedente</span>
+                </div>
+                <span id="p-valor-espera" style="font-size:.95rem;font-weight:700;color:#dc3545;">R$ 0,00</span>
+              </div>
+            </div>
+
+          </div>
+
+        </form>
+      </div>
+
+      <div class="fin-form-footer">
+        <button type="button"
+          class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+          style="font-size:.72rem;"
+          onclick="window.voltarParaMapa()">
+          <i class="bi bi-arrow-left me-1"></i>Voltar
+        </button>
+        <button type="button" id="btn-emitir-pedido"
+          class="btn btn-danger btn-sm rounded-pill px-4"
+          style="font-size:.72rem;"
+          onclick="window.salvarPedidoAPI()">
+          <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
+        </button>
+      </div>
+
     </div>
+  </div>
 </div>

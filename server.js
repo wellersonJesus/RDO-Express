@@ -1,10 +1,10 @@
-import express       from 'express';
-import cors          from 'cors';
-import dotenv        from 'dotenv';
-import path          from 'path';
+import express           from 'express';
+import cors              from 'cors';
+import dotenv            from 'dotenv';
+import path              from 'path';
 import { fileURLToPath } from 'url';
-import bcrypt        from 'bcryptjs';
-import { rateLimit } from 'express-rate-limit';
+import bcrypt            from 'bcryptjs';
+import { rateLimit }     from 'express-rate-limit';
 
 dotenv.config();
 
@@ -22,19 +22,19 @@ app.use((req, _res, next) => {
 });
 
 const limiterGeral = rateLimit({
-    windowMs: 60 * 1000,
-    limit: 60,
+    windowMs:       60 * 1000,
+    limit:          60,
     standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    message: { status: 'error', message: 'Muitas requisições. Aguarde um momento.' }
+    legacyHeaders:  false,
+    message:        { status: 'error', message: 'Muitas requisições. Aguarde um momento.' }
 });
 
 const limiterLogin = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 10,
+    windowMs:       15 * 60 * 1000,
+    limit:          10,
     standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    message: { status: 'error', message: 'Muitas tentativas de login. Tente novamente em 15 minutos.' }
+    legacyHeaders:  false,
+    message:        { status: 'error', message: 'Muitas tentativas de login. Tente novamente em 15 minutos.' }
 });
 
 async function fetchGAS(payload) {
@@ -54,9 +54,7 @@ async function fetchGAS(payload) {
             signal:   controller.signal
         });
     } catch (err) {
-        if (err.name === 'AbortError') {
-            throw new Error('Timeout: GAS não respondeu em 30s');
-        }
+        if (err.name === 'AbortError') throw new Error('Timeout: GAS não respondeu em 30s');
         throw err;
     } finally {
         clearTimeout(timer);
@@ -112,8 +110,8 @@ async function autenticarMasterLocal(username, password) {
 
         return {
             username: masterLogin,
-            tipo:     gasUser?.tipo   || gasUser?.role  || gasUser?.cargo  || process.env.MASTER_CARGO || 'Admin',
-            imagem:   gasUser?.imagem || gasUser?.foto  || gasUser?.avatar || gasUser?.image || ''
+            tipo:     gasUser?.tipo   || gasUser?.role   || gasUser?.cargo  || process.env.MASTER_CARGO || 'Admin',
+            imagem:   gasUser?.imagem || gasUser?.foto   || gasUser?.avatar || gasUser?.image || ''
         };
     } catch {
         return {
@@ -249,11 +247,11 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('=========================================');
-    console.log(`  Servidor: http://localhost:${PORT}`);
-    console.log(`  API_URL:      ${process.env.API_URL      ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
-    console.log(`  SECRET_KEY:   ${process.env.SECRET_KEY   ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
-    console.log(`  MASTER_LOGIN: ${process.env.MASTER_LOGIN || 'N/A'}`);
-    console.log(`  MASTER_HASH:  ${process.env.MASTER_PASS_HASH ? 'OK' : 'N/A (usando MASTER_PASS)'}`);
-    console.log(`  Static path:  ${PUBLIC_PATH}`);
+    console.log(`  Servidor:    http://localhost:${PORT}`);
+    console.log(`  API_URL:     ${process.env.API_URL      ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
+    console.log(`  SECRET_KEY:  ${process.env.SECRET_KEY   ? 'OK' : '⚠ NAO CONFIGURADA!'}`);
+    console.log(`  MASTER_LOGIN:${process.env.MASTER_LOGIN || 'N/A'}`);
+    console.log(`  MASTER_HASH: ${process.env.MASTER_PASS_HASH ? 'OK' : 'N/A (usando MASTER_PASS)'}`);
+    console.log(`  Static path: ${PUBLIC_PATH}`);
     console.log('=========================================');
 });
