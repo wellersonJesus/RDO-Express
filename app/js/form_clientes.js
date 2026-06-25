@@ -140,7 +140,18 @@
             var modalEl = document.getElementById('modalFormulario');
             if (modalEl) {
                 var inst = bootstrap.Modal.getInstance(modalEl);
-                if (inst) inst.hide();
+                if (inst) {
+                    modalEl.addEventListener('hidden.bs.modal', function () {
+                        var msgInput = document.getElementById('msg-input');
+                        if (msgInput) {
+                            msgInput.value = '';
+                            msgInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        var btnEnviar = document.getElementById('btn-enviar');
+                        if (btnEnviar) btnEnviar.disabled = false;
+                    }, { once: true });
+                    inst.hide();
+                }
             }
 
             window.dadosPedidoAtual = null;

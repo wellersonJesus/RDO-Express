@@ -3,15 +3,29 @@
     <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
 
       <div class="fin-form-header">
-        <div class="d-flex align-items-center gap-3">
-          <div class="fin-form-header-icon"><i class="bi bi-send-fill"></i></div>
-          <div>
-            <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;"><span style="color:rgba(255,255,255,.7);">RDO</span> Express — Checkout</h6>
-            <small class="fin-form-subtitle">
-              <i class="bi bi-person-fill me-1"></i>Cliente:
-              <span id="header-nome-cliente" class="fw-bold text-white">Carregando...</span>
-            </small>
+        <div class="d-flex align-items-center justify-content-between w-100">
+          <div class="d-flex align-items-center gap-3">
+            <div class="fin-form-header-icon"><i class="bi bi-send-fill"></i></div>
+            <div>
+              <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">
+                <span style="color:rgba(255,255,255,.7);">RDO</span> Express — Checkout
+              </h6>
+              <small class="fin-form-subtitle">
+                <i class="bi bi-person-fill me-1"></i>Cliente:
+                <span id="header-nome-cliente" class="fw-bold text-white">Carregando...</span>
+              </small>
+            </div>
           </div>
+          <button
+            type="button"
+            class="d-flex align-items-center justify-content-center rounded-circle border-0"
+            style="width:28px;height:28px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;transition:background .2s;flex-shrink:0;"
+            onmouseover="this.style.background='rgba(255,255,255,.28)'"
+            onmouseout="this.style.background='rgba(255,255,255,.15)'"
+            onclick="window.fecharParaChat('modalFormulario')"
+            title="Cancelar e voltar ao chat">
+            <i class="bi bi-x-lg" style="font-size:.8rem;"></i>
+          </button>
         </div>
       </div>
 
@@ -24,16 +38,13 @@
             <div class="row g-2 mb-2">
               <div class="col-md-6">
                 <label class="fin-field-label">Solicitante</label>
-                <input type="text" id="p-solicitante"
-                  class="form-control form-control-sm fin-field-input"
-                  placeholder="Solicitante"
-                  readonly>
+                <input type="text" id="p-solicitante" class="form-control form-control-sm fin-field-input"
+                  placeholder="Solicitante" readonly>
                 <div class="invalid-feedback">Campo obrigatório</div>
               </div>
               <div class="col-md-6">
                 <label class="fin-field-label">Contato</label>
-                <input type="text" id="p-contato"
-                  class="form-control form-control-sm fin-field-input"
+                <input type="text" id="p-contato" class="form-control form-control-sm fin-field-input"
                   placeholder="Telefone ou WhatsApp">
                 <div class="invalid-feedback">Campo obrigatório</div>
               </div>
@@ -53,45 +64,35 @@
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Horário</label>
-                <input type="text" id="p-horario"
-                  class="form-control form-control-sm fin-field-input"
+                <input type="text" id="p-horario" class="form-control form-control-sm fin-field-input"
                   placeholder="HH:MM">
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Distância (KM)</label>
-                <input type="number" id="p-distancia"
-                  class="form-control form-control-sm fin-field-input"
-                  oninput="window.calcularTudo()"
-                  readonly>
+                <input type="number" id="p-distancia" class="form-control form-control-sm fin-field-input"
+                  oninput="window.calcularTudo()" readonly>
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Tempo</label>
-                <input type="text" id="p-tempo"
-                  class="form-control form-control-sm fin-field-input"
-                  readonly>
+                <input type="text" id="p-tempo" class="form-control form-control-sm fin-field-input" readonly>
               </div>
             </div>
 
             <div class="mb-2">
               <label class="fin-field-label">Rota (De / Para)</label>
-              <textarea id="p-rotas"
-                class="form-control form-control-sm fin-field-input"
-                rows="2"
-                style="border-radius:10px!important;resize:none;"
-                readonly></textarea>
+              <textarea id="p-rotas" class="form-control form-control-sm fin-field-input" rows="2"
+                style="border-radius:10px!important;resize:none;" readonly></textarea>
               <div class="invalid-feedback">Campo obrigatório</div>
             </div>
-
           </div>
 
           <div class="fin-form-section">
             <div class="fin-form-section-label">Tarifação</div>
 
             <div class="row g-2 mb-2">
-              <div class="col-md-4">
+              <div class="col-6 col-md-3">
                 <label class="fin-field-label">Valor KM</label>
-                <select id="p-valor-km"
-                  class="form-select form-select-sm fin-field-input"
+                <select id="p-valor-km" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
                   <option value="">Selecione...</option>
                   <option value="2.02">2,02</option>
@@ -99,19 +100,17 @@
                   <option value="3.00">3,00</option>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-6 col-md-3">
                 <label class="fin-field-label">Retorno</label>
-                <select id="p-retorno"
-                  class="form-select form-select-sm fin-field-input"
+                <select id="p-retorno" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
                   <option value="0">Não</option>
                   <option value="0.6">Sim (60%)</option>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-6 col-md-3">
                 <label class="fin-field-label">Dinâmica</label>
-                <select id="p-dinamica"
-                  class="form-select form-select-sm fin-field-input"
+                <select id="p-dinamica" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
                   <option value="0">R$ 0,00</option>
                   <option value="5">R$ 5,00</option>
@@ -120,25 +119,24 @@
                   <option value="15">R$ 15,00</option>
                 </select>
               </div>
-            </div>
-
-            <div class="row g-2 mb-2">
-              <div class="col-md-4">
+              <div class="col-6 col-md-3">
                 <label class="fin-field-label">Prioridade</label>
-                <select id="p-prioridade"
-                  class="form-select form-select-sm fin-field-input"
+                <select id="p-prioridade" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
                   <option value="0">Normal</option>
                   <option value="5">Agendado</option>
                   <option value="7">Urgente</option>
                 </select>
               </div>
-              <div class="col-md-8">
-                <label class="fin-field-label">Observação</label>
-                <input type="text" id="p-obs" class="form-control form-control-sm fin-field-input">
-              </div>
             </div>
 
+            <div class="row g-2">
+              <div class="col-12">
+                <label class="fin-field-label">Observação</label>
+                <input type="text" id="p-obs" class="form-control form-control-sm fin-field-input"
+                  placeholder="Observações adicionais...">
+              </div>
+            </div>
           </div>
 
           <div class="fin-form-section mb-0">
@@ -148,7 +146,9 @@
               style="background:#f8f9fa;border:1px solid #f0f0f0;">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-cash-stack text-success" style="font-size:.9rem;"></i>
-                <span style="font-size:.65rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;">Total estimado</span>
+                <span style="font-size:.65rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;">
+                  Total estimado
+                </span>
               </div>
               <span id="view-valor-final" style="font-size:1.1rem;font-weight:700;color:#1a1a2e;">R$ 0,00</span>
             </div>
@@ -158,28 +158,25 @@
                 style="background:rgba(220,53,69,.05);border:1px solid rgba(220,53,69,.15);">
                 <div class="d-flex align-items-center gap-2">
                   <i class="bi bi-clock-fill text-danger" style="font-size:.9rem;"></i>
-                  <span style="font-size:.65rem;font-weight:600;color:#dc3545;text-transform:uppercase;letter-spacing:.04em;">Espera excedente</span>
+                  <span style="font-size:.65rem;font-weight:600;color:#dc3545;text-transform:uppercase;letter-spacing:.04em;">
+                    Espera excedente
+                  </span>
                 </div>
                 <span id="p-valor-espera" style="font-size:.95rem;font-weight:700;color:#dc3545;">R$ 0,00</span>
               </div>
             </div>
-
           </div>
 
         </form>
       </div>
 
       <div class="fin-form-footer">
-        <button type="button"
-          class="btn btn-outline-secondary btn-sm rounded-pill px-3"
-          style="font-size:.72rem;"
-          onclick="window.voltarParaMapa()">
+        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+          style="font-size:.72rem;" onclick="window.voltarParaMapa()">
           <i class="bi bi-arrow-left me-1"></i>Voltar
         </button>
-        <button type="button" id="btn-emitir-pedido"
-          class="btn btn-danger btn-sm rounded-pill px-4"
-          style="font-size:.72rem;"
-          onclick="window.salvarPedidoAPI()">
+        <button type="button" id="btn-emitir-pedido" class="btn btn-danger btn-sm rounded-pill px-4"
+          style="font-size:.72rem;" onclick="window.salvarPedidoAPI()">
           <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
         </button>
       </div>
