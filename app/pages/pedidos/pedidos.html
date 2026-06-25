@@ -26,50 +26,96 @@
                 <div class="card border-0 shadow-sm rounded-4">
 
                     <div class="card-body pb-0">
-                        <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                            <div class="dropdown-filtro-wrapper">
-                                <button class="btn-filtro-inteligente" id="btn-filtro-tipo">
-                                    <i class="bi bi-funnel-fill"></i>
-                                    <span id="label-filtro-tipo">Todos</span>
-                                    <i class="bi bi-chevron-down chevron-filtro"></i>
-                                </button>
-                                <div class="dropdown-filtro-menu" id="dropdown-filtro-menu">
-                                    <div class="dropdown-filtro-item active" data-filtro="todos">
-                                        <i class="bi bi-grid-3x3-gap"></i> Todos
-                                    </div>
-                                    <div class="dropdown-filtro-item" data-filtro="servico">
-                                        <i class="bi bi-hash"></i> N.Serviço
-                                    </div>
-                                    <div class="dropdown-filtro-item" data-filtro="cliente">
-                                        <i class="bi bi-person"></i> Cliente
-                                    </div>
-                                    <div class="dropdown-filtro-item dropdown-filtro-item-has-sub" data-filtro="status">
-                                        <div class="dropdown-filtro-item-label">
-                                            <i class="bi bi-flag"></i> Status
-                                            <i class="bi bi-chevron-right chevron-sub"></i>
+                        <div class="d-flex flex-column gap-2">
+
+                            <div class="ped-status-card">
+                                <div class="ped-status-card-inner">
+
+                                    <div class="ped-status-action-item active" data-ped-status="todos" id="ped-filter-todos">
+                                        <div class="ped-status-action-icon ped-icon-todos">
+                                            <i class="bi bi-grid-3x3-gap"></i>
                                         </div>
-                                        <div class="dropdown-filtro-submenu" id="submenu-status">
-                                            <div class="dropdown-filtro-subitem" data-status="todos">
-                                                <i class="bi bi-grid-3x3-gap"></i> Todos
-                                            </div>
-                                            <div class="dropdown-filtro-subitem" data-status="PENDENTE">
-                                                <i class="bi bi-clock"></i> Pendente
-                                            </div>
-                                            <div class="dropdown-filtro-subitem" data-status="EM ROTA">
-                                                <i class="bi bi-bicycle"></i> Em Rota
-                                            </div>
-                                            <div class="dropdown-filtro-subitem" data-status="CONCLUIDO">
-                                                <i class="bi bi-check-circle"></i> Concluído
-                                            </div>
-                                            <div class="dropdown-filtro-subitem" data-status="CANCELADO">
-                                                <i class="bi bi-x-circle"></i> Cancelado
-                                            </div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">Todos</span>
+                                            <span class="ped-status-action-count" id="ped-count-todos">0</span>
+                                            <span class="ped-status-action-pct" id="ped-pct-todos">de 0</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ped-status-action-item" data-ped-status="pendente" id="ped-filter-pendente">
+                                        <div class="ped-status-action-icon ped-icon-pendente">
+                                            <i class="bi bi-clock"></i>
+                                        </div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">Pendentes</span>
+                                            <span class="ped-status-action-count" id="ped-count-pendente">0</span>
+                                            <span class="ped-status-action-pct" id="ped-pct-pendente">0%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ped-status-action-item" data-ped-status="em_rota" id="ped-filter-em_rota">
+                                        <div class="ped-status-action-icon ped-icon-em-rota">
+                                            <i class="bi bi-bicycle"></i>
+                                        </div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">Em Rota</span>
+                                            <span class="ped-status-action-count" id="ped-count-em_rota">0</span>
+                                            <span class="ped-status-action-pct" id="ped-pct-em_rota">0%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ped-status-action-item" data-ped-status="concluido" id="ped-filter-concluido">
+                                        <div class="ped-status-action-icon ped-icon-concluido">
+                                            <i class="bi bi-check-circle"></i>
+                                        </div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">Concluído</span>
+                                            <span class="ped-status-action-count" id="ped-count-concluido">0</span>
+                                            <span class="ped-status-action-pct" id="ped-pct-concluido">0%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ped-status-action-item" data-ped-status="cancelado" id="ped-filter-cancelado">
+                                        <div class="ped-status-action-icon ped-icon-cancelado">
+                                            <i class="bi bi-x-circle"></i>
+                                        </div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">Cancelado</span>
+                                            <span class="ped-status-action-count" id="ped-count-cancelado">0</span>
+                                            <span class="ped-status-action-pct" id="ped-pct-cancelado">0%</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                                <div class="dropdown-filtro-wrapper">
+                                    <button class="btn-filtro-inteligente" id="btn-filtro-tipo">
+                                        <i class="bi bi-funnel-fill"></i>
+                                        <span id="label-filtro-tipo">Todos</span>
+                                        <i class="bi bi-chevron-down chevron-filtro"></i>
+                                    </button>
+                                    <div class="dropdown-filtro-menu" id="dropdown-filtro-menu">
+                                        <div class="dropdown-filtro-item active" data-filtro="todos">
+                                            <i class="bi bi-grid-3x3-gap"></i> Todos
+                                        </div>
+                                        <div class="dropdown-filtro-item" data-filtro="servico">
+                                            <i class="bi bi-hash"></i> N.Serviço
+                                        </div>
+                                        <div class="dropdown-filtro-item" data-filtro="cliente">
+                                            <i class="bi bi-person"></i> Cliente
                                         </div>
                                     </div>
                                 </div>
+                                <input type="text" id="filtro-pedidos"
+                                    class="form-control form-control-sm rounded-pill input-filtro-pedidos"
+                                    placeholder="Buscar..." autocomplete="off">
+                                <input type="date" id="filtro-data-pedidos"
+                                    class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
+                                    title="Filtrar por data">
                             </div>
-                            <input type="text" id="filtro-pedidos" class="form-control form-control-sm rounded-pill input-filtro-pedidos" placeholder="Buscar..." autocomplete="off">
-                            <input type="date" id="filtro-data-pedidos" class="form-control form-control-sm rounded-pill input-filtro-data-pedidos" title="Filtrar por data">
+
                         </div>
                     </div>
 

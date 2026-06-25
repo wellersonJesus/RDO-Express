@@ -92,8 +92,8 @@
         for (var i = 0; i < candidatos.length; i++) {
             var v = _parseCurrency(candidatos[i]);
             if (v > 0) {
-                if (candidatos[i] === pedido.valor_corrida) {
-                    var taxa = _parseCurrency(pedido.taxa_espera || '0');
+                if (candidatos[i] === pedido.valor_corrida && pedido.taxa_espera) {
+                    var taxa = _parseCurrency(pedido.taxa_espera);
                     var base = v - taxa;
                     return base > 0 ? base : v;
                 }
@@ -101,17 +101,6 @@
             }
         }
         return 0;
-    }
-
-    function _calcularTaxaEspera(tipo, minutos) {
-        var franquia = 10;
-        var tarifaMin = 0.60;
-        var min = parseFloat(minutos) || 0;
-        if (!tipo || tipo === 'sem_espera') return 0;
-        if (tipo === 'ambos') {
-            return parseFloat((Math.max(0, min - franquia) * 2 * tarifaMin).toFixed(2));
-        }
-        return parseFloat((Math.max(0, min - franquia) * tarifaMin).toFixed(2));
     }
 
     function _buscarDataNoChatCache(pedidoId) {
@@ -204,12 +193,12 @@
 
     function _badgeStatus(status) {
         var mapa = {
-            'PENDENTE': { classe: 'bg-status-pending', icon: 'bi-clock' },
-            'EM_ROTA': { classe: 'bg-status-route', icon: 'bi-bicycle' },
-            'EM ROTA': { classe: 'bg-status-route', icon: 'bi-bicycle' },
-            'CONCLUIDO': { classe: 'bg-status-done', icon: 'bi-check-circle' },
-            'CONCLUÍDO': { classe: 'bg-status-done', icon: 'bi-check-circle' },
-            'CANCELADO': { classe: 'bg-status-cancel', icon: 'bi-x-circle' }
+            'PENDENTE':  { classe: 'bg-status-pending', icon: 'bi-clock' },
+            'EM_ROTA':   { classe: 'bg-status-route',   icon: 'bi-bicycle' },
+            'EM ROTA':   { classe: 'bg-status-route',   icon: 'bi-bicycle' },
+            'CONCLUIDO': { classe: 'bg-status-done',    icon: 'bi-check-circle' },
+            'CONCLUÍDO': { classe: 'bg-status-done',    icon: 'bi-check-circle' },
+            'CANCELADO': { classe: 'bg-status-cancel',  icon: 'bi-x-circle' }
         };
         var cfg = mapa[status] || { classe: 'bg-status-default', icon: 'bi-question-circle' };
         return '<span class="status-badge ' + cfg.classe + '"><i class="bi ' + cfg.icon + '"></i> ' + status + '</span>';
@@ -234,6 +223,45 @@
             '</td></tr>';
     }
 
+    function _atualizarContadoresStatus(lista) {
+        var total = lista.length;
+        var contadores = { pendente: 0, em_rota: 0, concluido: 0, cancelado: 0 };
+
+        for (var i = 0; i < lista.length; i++) {
+            var s = _statusPuro(lista[i]);
+            if (s === 'PENDENTE') contadores.pendente++;
+            else if (s === 'EM ROTA' || s === 'EM_ROTA') contadores.em_rota++;
+            else if (s === 'CONCLUIDO' || s === 'CONCLUÍDO') contadores.concluido++;
+            else if (s === 'CANCELADO') contadores.cancelado++;
+        }
+
+        function _pct(n) {
+            if (total === 0) return '0%';
+            return Math.round((n / total) * 100) + '%';
+        }
+
+        var elTodosCount = document.getElementById('ped-count-todos');
+        var elTodosPct   = document.getElementById('ped-pct-todos');
+        if (elTodosCount) elTodosCount.textContent = total;
+        if (elTodosPct)   elTodosPct.textContent   = 'de ' + total;
+
+        var map = [
+            { key: 'pendente',  countId: 'ped-count-pendente',  pctId: 'ped-pct-pendente'  },
+            { key: 'em_rota',   countId: 'ped-count-em_rota',   pctId: 'ped-pct-em_rota'   },
+            { key: 'concluido', countId: 'ped-count-concluido', pctId: 'ped-pct-concluido' },
+            { key: 'cancelado', countId: 'ped-count-cancelado', pctId: 'ped-pct-cancelado' }
+        ];
+
+        for (var j = 0; j < map.length; j++) {
+            var m = map[j];
+            var n = contadores[m.key];
+            var elCount = document.getElementById(m.countId);
+            var elPct   = document.getElementById(m.pctId);
+            if (elCount) elCount.textContent = n;
+            if (elPct)   elPct.textContent   = _pct(n);
+        }
+    }
+
     function _atualizarPaginador(totalFiltrado) {
         var totalPag = Math.max(1, Math.ceil(totalFiltrado / window.pedidosState.itensPorPagina));
         if (els.infoPag) els.infoPag.innerText = 'Pág ' + window.pedidosState.paginaAtual + ' de ' + totalPag;
@@ -244,9 +272,12 @@
     function _matchFiltroStatus(pedido, sf) {
         if (!sf || sf === 'todos') return true;
         var s = _statusPuro(pedido);
-        if (sf === 'CONCLUIDO') return s === 'CONCLUIDO' || s === 'CONCLUÍDO';
-        if (sf === 'EM ROTA') return s === 'EM ROTA' || s === 'EM_ROTA';
-        return s === sf;
+        var sfUp = sf.toUpperCase();
+        if (sfUp === 'CONCLUIDO') return s === 'CONCLUIDO' || s === 'CONCLUÍDO';
+        if (sfUp === 'EM ROTA' || sfUp === 'EM_ROTA') return s === 'EM ROTA' || s === 'EM_ROTA';
+        if (sfUp === 'PENDENTE') return s === 'PENDENTE';
+        if (sfUp === 'CANCELADO') return s === 'CANCELADO';
+        return s === sfUp;
     }
 
     function _matchFiltroPorCategoria(p, termo, categoria) {
@@ -301,6 +332,7 @@
 
     function _renderizarTabela(lista) {
         if (!els.corpo) return;
+        _atualizarContadoresStatus(lista);
         var filtrada = _aplicarFiltros(lista);
         var total = filtrada.length;
         var totalPag = Math.max(1, Math.ceil(total / window.pedidosState.itensPorPagina));
@@ -331,8 +363,8 @@
             var acoes = final
                 ? '<button class="btn btn-light btn-sm btn-pedido-view" data-id="' + idSafe + '" title="Visualizar"><i class="bi bi-eye"></i></button>'
                 : '<button class="btn btn-light btn-sm me-1 btn-pedido-edit" data-id="' + idSafe + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
-                '<button class="btn btn-light btn-sm me-1 btn-pedido-view" data-id="' + idSafe + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
-                '<button class="btn btn-light btn-sm btn-pedido-delete" data-id="' + idSafe + '" title="Excluir"><i class="bi bi-trash"></i></button>';
+                  '<button class="btn btn-light btn-sm me-1 btn-pedido-view" data-id="' + idSafe + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
+                  '<button class="btn btn-light btn-sm btn-pedido-delete" data-id="' + idSafe + '" title="Excluir"><i class="bi bi-trash"></i></button>';
             return '<tr style="font-weight:300;">' +
                 '<td class="ps-3 py-2" style="color:#000;">' + idFmt + '</td>' +
                 '<td class="py-2">' + _esc(data) + '</td>' +
@@ -436,20 +468,16 @@
         var w = els.btnFiltro ? els.btnFiltro.closest('.dropdown-filtro-wrapper') : null;
         if (!w) return;
         w.classList.remove('open');
-        var sub = w.querySelector('.dropdown-filtro-item-has-sub');
-        if (sub) sub.classList.remove('sub-open');
     }
 
     function _selecionarFiltroTipo(tipo, label, el) {
         window.pedidosState.filtroCategoria = tipo;
-        window.pedidosState.filtroStatus = 'todos';
         window.pedidosState.paginaAtual = 1;
         var lEl = document.getElementById('label-filtro-tipo');
         if (lEl) lEl.textContent = label;
-        document.querySelectorAll('#dropdown-filtro-menu > .dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)').forEach(function (i) { i.classList.remove('active'); });
-        var sp = document.querySelector('#dropdown-filtro-menu .dropdown-filtro-item-has-sub');
-        if (sp) sp.classList.remove('active', 'sub-open');
-        document.querySelectorAll('#dropdown-filtro-menu .dropdown-filtro-subitem').forEach(function (i) { i.classList.remove('active'); });
+        document.querySelectorAll('#dropdown-filtro-menu .dropdown-filtro-item').forEach(function (i) {
+            i.classList.remove('active');
+        });
         if (el) el.classList.add('active');
         _fecharDropdown();
         if (els.filtro) {
@@ -460,44 +488,64 @@
         _renderizarTabela(Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : []);
     }
 
-    function _selecionarFiltroStatus(status, label, el) {
-        window.pedidosState.filtroCategoria = 'todos';
+    function _selecionarFiltroStatus(status) {
         window.pedidosState.filtroStatus = status;
         window.pedidosState.paginaAtual = 1;
-        var lEl = document.getElementById('label-filtro-tipo');
-        if (lEl) lEl.textContent = status === 'todos' ? 'Status' : label;
-        document.querySelectorAll('#dropdown-filtro-menu > .dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)').forEach(function (i) { i.classList.remove('active'); });
-        var sp = document.querySelector('#dropdown-filtro-menu .dropdown-filtro-item-has-sub');
-        if (sp) { sp.classList.add('active'); sp.classList.remove('sub-open'); }
-        document.querySelectorAll('#submenu-status .dropdown-filtro-subitem').forEach(function (i) { i.classList.remove('active'); });
-        if (el) el.classList.add('active');
-        _fecharDropdown();
-        if (els.filtro) els.filtro.placeholder = 'Buscar...';
+
+        document.querySelectorAll('.ped-status-action-item').forEach(function (item) {
+            var itemStatus = item.getAttribute('data-ped-status');
+            var matched = false;
+            if (status === 'todos' && itemStatus === 'todos') matched = true;
+            else if (status === 'PENDENTE' && itemStatus === 'pendente') matched = true;
+            else if ((status === 'EM ROTA' || status === 'EM_ROTA') && itemStatus === 'em_rota') matched = true;
+            else if ((status === 'CONCLUIDO' || status === 'CONCLUÍDO') && itemStatus === 'concluido') matched = true;
+            else if (status === 'CANCELADO' && itemStatus === 'cancelado') matched = true;
+            item.classList.toggle('active', matched);
+        });
+
         _renderizarTabela(Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : []);
     }
 
-    function _toggleSubMenuStatus(e) {
-        e.stopPropagation();
-        var parent = e.currentTarget.closest('.dropdown-filtro-item-has-sub');
-        if (parent) parent.classList.toggle('sub-open');
+    function _registrarEventosStatusCard() {
+        document.querySelectorAll('.ped-status-action-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                var pedStatus = item.getAttribute('data-ped-status');
+                var statusMap = {
+                    'todos':     'todos',
+                    'pendente':  'PENDENTE',
+                    'em_rota':   'EM ROTA',
+                    'concluido': 'CONCLUIDO',
+                    'cancelado': 'CANCELADO'
+                };
+                _selecionarFiltroStatus(statusMap[pedStatus] || 'todos');
+            });
+        });
     }
 
     function _registrarEventosDropdown() {
         if (els.btnFiltro) {
             els.btnFiltro.addEventListener('click', function (e) { e.stopPropagation(); _toggleDropdown(); });
         }
-        document.querySelectorAll('#dropdown-filtro-menu > .dropdown-filtro-item:not(.dropdown-filtro-item-has-sub)').forEach(function (item) {
-            item.addEventListener('click', function () { _selecionarFiltroTipo(item.getAttribute('data-filtro'), item.textContent.trim(), item); });
-        });
-        var sLabel = document.querySelector('#dropdown-filtro-menu .dropdown-filtro-item-has-sub .dropdown-filtro-item-label');
-        if (sLabel) sLabel.addEventListener('click', function (e) { _toggleSubMenuStatus(e); });
-        document.querySelectorAll('#submenu-status .dropdown-filtro-subitem').forEach(function (item) {
-            item.addEventListener('click', function () { _selecionarFiltroStatus(item.getAttribute('data-status'), item.textContent.trim(), item); });
+        document.querySelectorAll('#dropdown-filtro-menu .dropdown-filtro-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                _selecionarFiltroTipo(item.getAttribute('data-filtro'), item.textContent.trim(), item);
+            });
         });
         document.addEventListener('click', function (e) {
             var w = els.btnFiltro ? els.btnFiltro.closest('.dropdown-filtro-wrapper') : null;
             if (w && !w.contains(e.target)) _fecharDropdown();
         });
+    }
+
+    function _mudarPagina(dir) {
+        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+        var filtrada = _aplicarFiltros(cache);
+        var totalPag = Math.max(1, Math.ceil(filtrada.length / window.pedidosState.itensPorPagina));
+        var nova = window.pedidosState.paginaAtual + dir;
+        if (nova >= 1 && nova <= totalPag) {
+            window.pedidosState.paginaAtual = nova;
+            _renderizarTabela(cache);
+        }
     }
 
     function _registrarEventos() {
@@ -522,55 +570,45 @@
             });
         }
         _registrarEventosDropdown();
-    }
-
-    function _mudarPagina(dir) {
-        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-        var filtrada = _aplicarFiltros(cache);
-        var totalPag = Math.max(1, Math.ceil(filtrada.length / window.pedidosState.itensPorPagina));
-        var nova = window.pedidosState.paginaAtual + dir;
-        if (nova >= 1 && nova <= totalPag) {
-            window.pedidosState.paginaAtual = nova;
-            _renderizarTabela(cache);
-        }
+        _registrarEventosStatusCard();
     }
 
     window.toggleLoopPedidos = function () { if (!window.pedidosState.isFetching) _fetchPedidos(); };
     window.mudarPaginaPedidos = function (dir) { _mudarPagina(dir); };
     window.toggleDropdownFiltro = function () { _toggleDropdown(); };
-    window.toggleSubMenuStatus = function (e) { _toggleSubMenuStatus(e); };
     window.selecionarFiltroTipo = function (tipo, label, el) { _selecionarFiltroTipo(tipo, label, el); };
-    window.selecionarFiltroStatus = function (status, label, el) { _selecionarFiltroStatus(status, label, el); };
+    window.selecionarFiltroStatus = function (status) { _selecionarFiltroStatus(status); };
 
     window.RDO_PEDIDOS.calcularEspera = function () {
-        var tipoEl     = document.getElementById('edit-espera-tipo');
-        var minutosEl  = document.getElementById('edit-espera-minutos');
-        var baseEl     = document.getElementById('edit-valor-base');
-        var finalEl    = document.getElementById('edit-espera-valor-final');
-        var boxResumo  = document.getElementById('box-espera-resumo');
+        var tipoEl = document.getElementById('edit-espera-tipo');
+        var minutosEl = document.getElementById('edit-espera-minutos');
+        var baseEl = document.getElementById('edit-valor-base');
+        var finalEl = document.getElementById('edit-espera-valor-final');
+        var boxResumo = document.getElementById('box-espera-resumo');
         var boxMinutos = document.getElementById('box-espera-minutos');
-        var boxFinal   = document.getElementById('box-espera-valor-final');
+        var boxFinal = document.getElementById('box-espera-valor-final');
 
         if (!tipoEl || !minutosEl || !baseEl || !finalEl || !boxResumo) return;
 
-        var tipo      = tipoEl.value;
+        var tipo = tipoEl.value;
         var semEspera = tipo === 'sem_espera';
 
         if (boxMinutos) boxMinutos.style.display = semEspera ? 'none' : '';
-        if (boxFinal)   boxFinal.style.display   = semEspera ? 'none' : 'block';
+        if (boxFinal) boxFinal.style.display = 'block';
 
         if (semEspera) {
             boxResumo.style.display = 'none';
-            finalEl.innerText = '—';
+            var valorBaseAtual = parseFloat(baseEl.value) || 0;
+            finalEl.innerText = valorBaseAtual > 0 ? _formatCurrency(valorBaseAtual) : '—';
             return;
         }
 
-        var valorBase  = parseFloat(baseEl.value) || 0;
-        var minutos    = parseFloat(minutosEl.value) || 0;
-        var tarifaMin  = 0.60;
-        var franquia   = tipo === 'ambos' ? 20 : 10;
-        var excedente  = Math.max(0, minutos - franquia);
-        var taxa       = parseFloat((excedente * tarifaMin).toFixed(2));
+        var valorBase = parseFloat(baseEl.value) || 0;
+        var minutos = parseFloat(minutosEl.value) || 0;
+        var tarifaMin = 0.60;
+        var franquia = tipo === 'ambos' ? 20 : 10;
+        var excedente = Math.max(0, minutos - franquia);
+        var taxa = parseFloat((excedente * tarifaMin).toFixed(2));
         var valorFinal = parseFloat((valorBase + taxa).toFixed(2));
 
         finalEl.innerText = _formatCurrency(valorFinal);
@@ -581,9 +619,7 @@
         var elTotal = document.getElementById('resumo-total');
 
         if (elOri)   elOri.textContent   = _formatCurrency(valorBase);
-        if (elMin)   elMin.textContent   = excedente > 0
-            ? excedente + ' min excedente'
-            : minutos + ' min (dentro da franquia)';
+        if (elMin)   elMin.textContent   = excedente > 0 ? excedente + ' min excedente' : minutos + ' min (dentro da franquia)';
         if (elTax)   elTax.textContent   = _formatCurrency(taxa);
         if (elTotal) elTotal.textContent = _formatCurrency(valorFinal);
 
@@ -596,7 +632,6 @@
             Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar o formulário de edição.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
             return;
         }
-
         var pedido = _buscarPedidoNoCache(pedidoId);
         if (!pedido) {
             Swal.fire({ icon: 'warning', title: 'Não encontrado', text: 'Pedido não localizado.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
@@ -606,70 +641,48 @@
             Swal.fire({ icon: 'info', title: 'Pedido finalizado', html: '<div style="font-size:0.9rem;">Pedidos concluídos ou cancelados não podem ser editados.</div>', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
             return;
         }
-
         var errDiv = document.getElementById('edit-error-msg');
         if (errDiv) errDiv.classList.add('d-none');
-
         var tituloEl = document.getElementById('editar-titulo');
         if (tituloEl) tituloEl.textContent = window.formatarIdServico(pedido.id);
-
         var idInput = document.getElementById('edit-pedido-id');
         if (idInput) idInput.value = pedido.id || '';
-
         var valorBase = _resolverValorBase(pedido);
-
         var valorBaseInput = document.getElementById('edit-valor-base');
         if (valorBaseInput) valorBaseInput.value = valorBase.toFixed(2);
-
         var elValorDisplay = document.getElementById('edit-valor-pedido-display');
-        if (elValorDisplay) elValorDisplay.value = valorBase > 0 ? _formatCurrency(valorBase) : 'R$ 0,00';
-
+        if (elValorDisplay) elValorDisplay.value = _formatCurrency(valorBase);
         var solicitante = _resolverSolicitantePorIdChat(pedido.id_chat || pedido.id_cliente) || String(pedido.solicitante || '');
-
-        var setVal = function (id, val) {
-            var e = document.getElementById(id);
-            if (e) e.value = val || '';
-        };
-
+        var setVal = function (id, val) { var e = document.getElementById(id); if (e) e.value = val || ''; };
         setVal('edit-solicitante', solicitante);
         setVal('edit-contato', pedido.contato);
         setVal('edit-horario', _formatarHorario(pedido.horario));
         setVal('edit-obs', pedido.observacao);
-
+        var tipoEsperaSalvo = pedido.tempo_espera_tipo || 'sem_espera';
+        var minutosEsperaSalvo = pedido.tempo_espera_minutos || '';
         var tipoEl = document.getElementById('edit-espera-tipo');
-        if (tipoEl) tipoEl.value = 'sem_espera';
-
+        if (tipoEl) tipoEl.value = tipoEsperaSalvo;
         var minEl = document.getElementById('edit-espera-minutos');
-        if (minEl) minEl.value = '';
-
-        var elFinal = document.getElementById('edit-espera-valor-final');
-        if (elFinal) elFinal.innerText = '—';
-
-        var boxResumo = document.getElementById('box-espera-resumo');
-        if (boxResumo) boxResumo.style.display = 'none';
-
+        if (minEl) minEl.value = tipoEsperaSalvo !== 'sem_espera' ? minutosEsperaSalvo : '';
         var boxMin = document.getElementById('box-espera-minutos');
         var boxFin = document.getElementById('box-espera-valor-final');
-        if (boxMin) boxMin.style.display = 'none';
+        var boxRes = document.getElementById('box-espera-resumo');
+        if (boxMin) boxMin.style.display = tipoEsperaSalvo !== 'sem_espera' ? '' : 'none';
         if (boxFin) boxFin.style.display = 'block';
-
+        if (boxRes) boxRes.style.display = 'none';
+        window.RDO_PEDIDOS.calcularEspera();
         var modalEl = document.getElementById('modalEditarPedido');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
 
     window.RDO_PEDIDOS.salvarEdicao = async function () {
-        var btn    = document.getElementById('btn-salvar-edicao');
+        var btn = document.getElementById('btn-salvar-edicao');
         var errDiv = document.getElementById('edit-error-msg');
         try {
             var idEl = document.getElementById('edit-pedido-id');
-            var id   = idEl ? idEl.value.trim() : '';
+            var id = idEl ? idEl.value.trim() : '';
             if (!id) return;
-
-            var getVal = function (elId) {
-                var e = document.getElementById(elId);
-                return e ? e.value.trim() : '';
-            };
-
+            var getVal = function (elId) { var e = document.getElementById(elId); return e ? e.value.trim() : ''; };
             var solicitante = getVal('edit-solicitante');
             if (!solicitante) {
                 if (errDiv) { errDiv.textContent = 'O campo CLIENTE é obrigatório.'; errDiv.classList.remove('d-none'); }
@@ -677,44 +690,40 @@
                 if (solEl) solEl.focus();
                 return;
             }
-
-            var valorBaseEl  = document.getElementById('edit-valor-base');
-            var valorBase    = parseFloat(valorBaseEl ? valorBaseEl.value : '0') || 0;
-            var tipoEspera   = getVal('edit-espera-tipo');
+            var valorBaseEl = document.getElementById('edit-valor-base');
+            var valorBase = parseFloat(valorBaseEl ? valorBaseEl.value : '0') || 0;
+            var tipoEspera = getVal('edit-espera-tipo');
             var minutosReais = parseFloat(getVal('edit-espera-minutos')) || 0;
-            var franquia     = tipoEspera === 'ambos' ? 20 : 10;
-            var excedente    = tipoEspera === 'sem_espera' ? 0 : Math.max(0, minutosReais - franquia);
-            var taxa         = parseFloat((excedente * 0.60).toFixed(2));
-            var valorFinal   = parseFloat((valorBase + taxa).toFixed(2));
-
+            var franquia = tipoEspera === 'ambos' ? 20 : 10;
+            var excedente = tipoEspera === 'sem_espera' ? 0 : Math.max(0, minutosReais - franquia);
+            var taxa = parseFloat((excedente * 0.60).toFixed(2));
+            var valorFinal = parseFloat((valorBase + taxa).toFixed(2));
             if (errDiv) errDiv.classList.add('d-none');
             if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...'; }
-
             var payload = {
-                id:                   id,
-                solicitante:          solicitante,
-                contato:              getVal('edit-contato'),
-                horario:              getVal('edit-horario'),
-                observacao:           getVal('edit-obs'),
-                valor_base:           _formatCurrency(valorBase),
-                valor_corrida:        _formatCurrency(valorFinal),
-                taxa_espera:          _formatCurrency(taxa),
-                tempo_espera_tipo:    tipoEspera,
+                id: id,
+                solicitante: solicitante,
+                contato: getVal('edit-contato'),
+                horario: getVal('edit-horario'),
+                observacao: getVal('edit-obs'),
+                valor_base: _formatCurrency(valorBase),
+                valor_corrida: _formatCurrency(valorFinal),
+                taxa_espera: _formatCurrency(taxa),
+                tempo_espera_tipo: tipoEspera,
                 tempo_espera_minutos: String(minutosReais)
             };
-
             var resp = await API.call('updatepedido', payload);
             if (resp && resp.status === 'success') {
                 var pedido = _buscarPedidoNoCache(id);
                 if (pedido) {
-                    pedido.solicitante          = payload.solicitante;
-                    pedido.contato              = payload.contato;
-                    pedido.horario              = payload.horario;
-                    pedido.observacao           = payload.observacao;
-                    pedido.valor_base           = payload.valor_base;
-                    pedido.valor_corrida        = payload.valor_corrida;
-                    pedido.taxa_espera          = payload.taxa_espera;
-                    pedido.tempo_espera_tipo    = payload.tempo_espera_tipo;
+                    pedido.solicitante = payload.solicitante;
+                    pedido.contato = payload.contato;
+                    pedido.horario = payload.horario;
+                    pedido.observacao = payload.observacao;
+                    pedido.valor_base = payload.valor_base;
+                    pedido.valor_corrida = payload.valor_corrida;
+                    pedido.taxa_espera = payload.taxa_espera;
+                    pedido.tempo_espera_tipo = payload.tempo_espera_tipo;
                     pedido.tempo_espera_minutos = payload.tempo_espera_minutos;
                 }
                 _renderizarTabela(Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : []);
@@ -737,29 +746,23 @@
             Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar os detalhes.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
             return;
         }
-
         var pedido = _buscarPedidoNoCache(pedidoId);
         if (!pedido) {
             Swal.fire({ icon: 'warning', title: 'Não encontrado', text: 'Pedido não localizado.', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' } });
             return;
         }
-
-        var el       = function (id) { return document.getElementById(id); };
+        var el = function (id) { return document.getElementById(id); };
         var setInput = function (id, val) { var e = el(id); if (e) e.value = val || '—'; };
-
         var mapaEspera = {
             'sem_espera': 'Sem espera',
             'coleta':     'Espera na Coleta',
             'entrega':    'Espera na Entrega',
             'ambos':      'Coleta + Entrega'
         };
-
-        var valorBase  = _resolverValorBase(pedido);
-        var taxa       = _parseCurrency(pedido.taxa_espera || '0');
+        var valorBase = _resolverValorBase(pedido);
+        var taxa = _parseCurrency(pedido.taxa_espera || '0');
         var valorFinal = _parseCurrency(pedido.valor_corrida || pedido.valor || pedido.valor_base || '0');
-
         if (el('detalhe-titulo')) el('detalhe-titulo').textContent = window.formatarIdServico(pedido.id);
-
         setInput('det-pedido-id',      window.formatarIdServico(pedido.id));
         setInput('det-data',           _formatarDataExibicao(_extrairDataPedido(pedido)));
         setInput('det-contato',        pedido.contato);
@@ -778,10 +781,8 @@
         setInput('det-valor-original', valorBase > 0 ? _formatCurrency(valorBase) : '—');
         setInput('det-taxa-espera',    taxa > 0 ? _formatCurrency(taxa) : '—');
         setInput('det-valor-final',    valorFinal > 0 ? _formatCurrency(valorFinal) : '—');
-
         var elValFinal = el('det-valor-final');
         if (elValFinal) elValFinal.style.color = '#dc3545';
-
         var modalEl = document.getElementById('modalPedidoDetalhes');
         if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
@@ -863,7 +864,7 @@
         }
         var el = function (id) { return document.getElementById(id); };
         if (el('novo-id-chat'))     el('novo-id-chat').value     = idChat;
-        if (el('novo-solicitante')) el('novo-solicitante').value  = nomeSolicitante;
+        if (el('novo-solicitante')) el('novo-solicitante').value = nomeSolicitante;
         if (el('novo-contato'))     el('novo-contato').value     = '';
         if (el('novo-obs'))         el('novo-obs').value         = '';
         if (el('novo-de'))          el('novo-de').value          = '';
@@ -877,31 +878,31 @@
     };
 
     window.RDO_PEDIDOS.salvarNovo = async function () {
-        var btn    = document.getElementById('btn-salvar-novo');
+        var btn = document.getElementById('btn-salvar-novo');
         var errDiv = document.getElementById('novo-error-msg');
         try {
             var getVal = function (elId) { var e = document.getElementById(elId); return e ? e.value.trim() : ''; };
             var solicitante = getVal('novo-solicitante');
-            var idCliente   = getVal('novo-id-chat');
+            var idCliente = getVal('novo-id-chat');
             if (!solicitante) {
                 if (errDiv) { errDiv.textContent = 'Selecione um chat para definir o solicitante.'; errDiv.classList.remove('d-none'); }
                 return;
             }
             if (errDiv) errDiv.classList.add('d-none');
             if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...'; }
-            var deVal   = getVal('novo-de');
+            var deVal = getVal('novo-de');
             var paraVal = getVal('novo-para');
             var payload = {
-                id_cliente:  idCliente,
+                id_cliente: idCliente,
                 solicitante: solicitante,
-                contato:     getVal('novo-contato'),
-                mercadoria:  getVal('novo-mercadoria'),
-                horario:     getVal('novo-horario'),
-                retorno:     getVal('novo-retorno'),
-                prioridade:  getVal('novo-prioridade'),
+                contato: getVal('novo-contato'),
+                mercadoria: getVal('novo-mercadoria'),
+                horario: getVal('novo-horario'),
+                retorno: getVal('novo-retorno'),
+                prioridade: getVal('novo-prioridade'),
                 rotas_texto: (deVal || paraVal) ? 'De: ' + (deVal || '') + ' | Para: ' + (paraVal || '') : '',
-                observacao:  getVal('novo-obs'),
-                mensagem:    'Pedido [ID_GERADO] criado via painel.'
+                observacao: getVal('novo-obs'),
+                mensagem: 'Pedido [ID_GERADO] criado via painel.'
             };
             var resp = await API.call('finalizarpedido', payload);
             if (resp && resp.status === 'success') {
@@ -927,15 +928,15 @@
     };
 
     window.initPedidos = async function () {
-        window.pedidosState.isFetching       = false;
-        window.pedidosState.filtroCategoria  = 'todos';
-        window.pedidosState.filtroStatus     = 'todos';
-        window.pedidosState.filtroData       = '';
-        window.pedidosState.paginaAtual      = 1;
+        window.pedidosState.isFetching = false;
+        window.pedidosState.filtroCategoria = 'todos';
+        window.pedidosState.filtroStatus = 'todos';
+        window.pedidosState.filtroData = '';
+        window.pedidosState.paginaAtual = 1;
         window.pedidosState.modaisCarregados = false;
         bind();
         if (els.filtroData) els.filtroData.value = '';
-        if (els.filtro)     els.filtro.value     = '';
+        if (els.filtro) els.filtro.value = '';
         _populateHeader();
         await _carregarModaisPedidos();
         _registrarEventos();
