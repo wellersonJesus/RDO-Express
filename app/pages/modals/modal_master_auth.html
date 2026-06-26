@@ -1,0 +1,41 @@
+<div class="modal fade" id="modalMasterAuth" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-shield-lock-fill me-2"></i>Autenticação Master
+                </h5>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-3">Para excluir você precisa da autorização<br>Digite a senha para confirmar a exclusão do pedido.</p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Senha Master</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="input-senha-master" 
+                               placeholder="Digite a senha..." 
+                               onkeydown="window.MasterAuth.onKeydown(event)">
+                        <button class="btn btn-outline-secondary" type="button" 
+                                onclick="window.MasterAuth.toggleSenha()">
+                            <i class="bi bi-eye-slash" id="icon-toggle-senha"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="msg-erro-senha" class="alert alert-danger d-none" style="display:none;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="msg-erro-senha-texto">Senha incorreta</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill" 
+                        onclick="window.MasterAuth.cancelar()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger rounded-pill" 
+                        id="btn-confirmar-exclusao" 
+                        onclick="window.MasterAuth.confirmar()">
+                    <i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

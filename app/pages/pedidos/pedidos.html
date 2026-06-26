@@ -1,7 +1,5 @@
 <div class="pedidos-page-wrapper">
-
     <div class="pedidos-content-area">
-
         <div class="col-12">
             <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
                 <div class="card-body p-3 d-flex justify-content-between align-items-center">
@@ -24,13 +22,10 @@
         <div class="row g-3 mt-0">
             <div class="col-12">
                 <div class="card border-0 shadow-sm rounded-4">
-
                     <div class="card-body pb-0">
                         <div class="d-flex flex-column gap-2">
-
                             <div class="ped-status-card">
                                 <div class="ped-status-card-inner">
-
                                     <div class="ped-status-action-item active" data-ped-status="todos" id="ped-filter-todos">
                                         <div class="ped-status-action-icon ped-icon-todos">
                                             <i class="bi bi-grid-3x3-gap"></i>
@@ -85,7 +80,6 @@
                                             <span class="ped-status-action-pct" id="ped-pct-cancelado">0%</span>
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
 
@@ -108,14 +102,18 @@
                                         </div>
                                     </div>
                                 </div>
-                                <input type="text" id="filtro-pedidos"
-                                    class="form-control form-control-sm rounded-pill input-filtro-pedidos"
-                                    placeholder="Buscar..." autocomplete="off">
-                                <input type="date" id="filtro-data-pedidos"
-                                    class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
-                                    title="Filtrar por data">
-                            </div>
 
+                                <input type="text" 
+                                       id="filtro-pedidos"
+                                       class="form-control form-control-sm rounded-pill input-filtro-pedidos"
+                                       placeholder="Buscar..." 
+                                       autocomplete="off">
+
+                                <input type="date" 
+                                       id="filtro-data-pedidos"
+                                       class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
+                                       title="Filtrar por data">
+                            </div>
                         </div>
                     </div>
 
@@ -146,19 +144,51 @@
                             <button class="btn btn-light" id="btn-pag-prev-pedidos">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
-                            <button class="btn btn-light" id="info-paginacao-pedidos" disabled>Pág 1</button>
+                            <button class="btn btn-light" id="info-paginacao-pedidos" disabled>
+                                Pág 1
+                            </button>
                             <button class="btn btn-light" id="btn-pag-next-pedidos">
                                 <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
 
+        <div id="pedidos-pendentes" style="display:none;"></div>
+        <div id="pedidos-andamento" style="display:none;"></div>
+        <div id="pedidos-finalizados" style="display:none;"></div>
     </div>
 
     <div id="modal-pedidos-container"></div>
-
 </div>
+
+<script>
+(function() {
+    'use strict';
+    
+    console.log('[pedidos.html] 📄 Inicializando...');
+    
+    function _aguardarPedidosJs() {
+        if (typeof window.initPedidos === 'function') {
+            console.log('[pedidos.html] ✅ initPedidos encontrado, executando...');
+            window.initPedidos();
+        } else {
+            console.warn('[pedidos.html] ⏳ initPedidos não disponível, aguardando...');
+            setTimeout(_aguardarPedidosJs, 100);
+        }
+    }
+    
+    function _inicializar() {
+        _aguardarPedidosJs();
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _inicializar);
+    } else {
+        _inicializar();
+    }
+})();
+</script>
+

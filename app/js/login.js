@@ -1,21 +1,17 @@
 (function () {
     'use strict';
 
-    var form      = document.getElementById('loginForm');
-    var btn       = document.getElementById('btnSubmit');
-    var msg       = document.getElementById('login-msg');
-    var inputUser = document.getElementById('user');
-    var inputPass = document.getElementById('pass');
+    var form       = document.getElementById('loginForm');
+    var btn        = document.getElementById('btnSubmit');
+    var msg        = document.getElementById('login-msg');
+    var inputUser  = document.getElementById('user');
+    var inputPass  = document.getElementById('pass');
     var toggleIcon = document.getElementById('togglePassIcon');
 
-    if (!form || !btn || !msg || !inputUser || !inputPass) {
-        console.error('[Login] Elementos do formulário não encontrados.');
-        return;
-    }
+    if (!form || !btn || !msg || !inputUser || !inputPass) return;
 
     var originalBtnHTML = btn.innerHTML;
 
-    // ── Toggle senha ──────────────────────────────────────────────
     window.togglePasswordVisibility = function () {
         var isPassword = inputPass.type === 'password';
         inputPass.type = isPassword ? 'text' : 'password';
@@ -36,33 +32,43 @@
         });
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
     function setLoading(active) {
-        btn.disabled = active;
+        btn.disabled  = active;
         btn.innerHTML = active
             ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Autenticando...'
             : originalBtnHTML;
     }
 
     function showMsg(text, type) {
-        msg.className = 'text-center mt-3 small fw-bold text-' + (type || 'danger');
+        msg.className   = 'text-center mt-3 small fw-bold text-' + (type || 'danger');
         msg.textContent = text;
     }
 
     function clearMsg() {
-        msg.className = 'text-center mt-3 small fw-bold';
+        msg.className   = 'text-center mt-3 small fw-bold';
         msg.textContent = '';
     }
 
-    function salvarSessao(userData, token) {
+    function salvarSessao(userData) {
+        var username = String(userData.username || userData.user  || '').trim();
+        var tipo     = String(userData.tipo     || userData.role  || '').trim();
+        var imagem   = String(userData.imagem   || userData.foto  || userData.avatar || userData.image || '').trim();
+
         localStorage.setItem('rdo_auth', 'true');
-        localStorage.setItem('username', userData.username || userData.user || '');
-        localStorage.setItem('tipo',     userData.tipo     || userData.role  || '');
-        localStorage.setItem('imagem',   userData.imagem   || userData.foto  || userData.avatar || '');
-        if (token) localStorage.setItem('rdo_token', token);
+        localStorage.setItem('username', username);
+        localStorage.setItem('tipo',     tipo);
+
+        if (imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.length >= 10) {
+            localStorage.setItem('imagem', imagem);
+        } else {
+            localStorage.removeItem('imagem');
+        }
+
+        if (typeof window.salvarSessaoLogin === 'function') {
+            window.salvarSessaoLogin(userData);
+        }
     }
 
-    // ── Submit ────────────────────────────────────────────────────
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         clearMsg();
@@ -78,23 +84,21 @@
         setLoading(true);
 
         fetch('/api/proxy', {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', username: user, password: pass })
+            body:    JSON.stringify({ action: 'login', username: user, password: pass })
         })
         .then(function (response) {
             return response.json().then(function (data) {
-                return { status: response.status, ok: response.ok, data: data };
+                return { ok: response.ok, data: data };
             });
         })
         .then(function (result) {
-            console.log('[Login] Resposta do servidor:', result);
-
             if (!result.ok || result.data.status !== 'success' || !result.data.user) {
                 throw new Error(result.data.message || 'Usuário ou senha incorretos.');
             }
 
-            salvarSessao(result.data.user, result.data.token || null);
+            salvarSessao(result.data.user);
             showMsg('Autenticado! Redirecionando...', 'success');
 
             setTimeout(function () {
@@ -102,8 +106,6 @@
             }, 800);
         })
         .catch(function (err) {
-            console.error('[Login] Erro:', err);
-
             var isOffline = err instanceof TypeError && err.message === 'Failed to fetch';
             showMsg(isOffline
                 ? 'Sem conexão com o servidor. Tente novamente.'
@@ -113,7 +115,6 @@
         });
     });
 
-    // ── Enter no campo usuário avança para senha ──────────────────
     inputUser.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();

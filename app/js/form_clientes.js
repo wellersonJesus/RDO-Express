@@ -1,187 +1,242 @@
-(function () {
-    'use strict';
+console.log('[form_clientes.js] ========== SCRIPT CARREGADO ==========');
 
-    var CAMPOS_OBRIGATORIOS = ['p-solicitante', 'p-mercadoria', 'p-contato', 'p-rotas'];
+window.AppRDO = window.AppRDO || {};
+window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
-    function _limparValidacao() {
-        CAMPOS_OBRIGATORIOS.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            el.classList.remove('is-invalid', 'is-valid');
-        });
+window._preencherFormulario = function (dados) {
+    console.log('[form_clientes.js] 📝 Preenchendo formulário automaticamente');
+
+    if (!dados) {
+        console.error('[form_clientes.js] ❌ Dados não fornecidos');
+        return;
     }
 
-    function _validarCampos() {
-        var valido = true;
-        CAMPOS_OBRIGATORIOS.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            var vazio = !el.value || el.value.trim() === '';
-            el.classList.toggle('is-invalid', vazio);
-            el.classList.toggle('is-valid', !vazio);
-            if (vazio) valido = false;
-        });
-        return valido;
-    }
+    var texto = dados.texto || dados.rawInput || '';
+    var linhas = texto.split('\n');
 
-    function _val(id) {
-        var el = document.getElementById(id);
-        return el ? el.value : '';
-    }
+    var solicitante = dados.cliente_nome || dados.solicitante || '';
+    var contato = dados.cliente_telefone || dados.contato || '';
+    var horario = dados.horario || '';
+    var mercadoria = 'ENTREGA';
+    var retorno = '0';
+    var prioridade = '0';
+    var observacao = '';
 
-    function _fnum(id) {
-        return parseFloat(_val(id)) || 0;
-    }
+    linhas.forEach(function (linha) {
+        linha = linha.trim();
 
-    window.preencherDadosFormulario = function () {
-        var d = window.dadosPedidoAtual || {};
-
-        var elHeaderNome = document.getElementById('header-nome-cliente');
-        if (elHeaderNome) {
-            elHeaderNome.textContent = d.cliente
-                || (window.AppRDO ? window.AppRDO.clienteSelecionado : null)
-                || localStorage.getItem('clienteSelecionadoNome')
-                || 'Cliente';
+        var matchMerc = linha.match(/(?:MERCADORIA)\s*:\s*(.+)/i);
+        if (matchMerc) {
+            var val = matchMerc[1].trim().toUpperCase();
+            if (val.includes('ENTREGA')) mercadoria = 'ENTREGA';
+            else if (val.includes('BUSCA')) mercadoria = 'BUSCA';
+            else if (val.includes('COMPRA')) mercadoria = 'COMPRA';
+            else if (val.includes('PAGAMENTO')) mercadoria = 'PAGAMENTO';
         }
 
-        var elSolicitante = document.getElementById('p-solicitante');
-        if (elSolicitante) elSolicitante.value = d.solicitante || '';
-
-        var elContato = document.getElementById('p-contato');
-        if (elContato) elContato.value = d.contato || '';
-
-        var elDist = document.getElementById('p-distancia');
-        if (elDist) elDist.value = d.distancia || '';
-
-        var elTempo = document.getElementById('p-tempo');
-        if (elTempo) elTempo.value = d.tempo || '';
-
-        var elRotas = document.getElementById('p-rotas');
-        if (elRotas) {
-            if (d.rotas && d.rotas.length) {
-                elRotas.value = d.rotas.map(function (r) {
-                    var origem  = r.origem  || r.de  || '';
-                    var destino = r.destino || r.para || '';
-                    return (r.numero || '') + '. De: ' + origem + ' | Para: ' + destino;
-                }).join('\n');
-            } else if (d.rawInput && typeof window.extrairRotasDaMensagem === 'function') {
-                var rotasExtraidas = window.extrairRotasDaMensagem(d.rawInput);
-                elRotas.value = rotasExtraidas.map(function (r, i) {
-                    return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
-                }).join('\n');
-            }
+        var matchRet = linha.match(/(?:RETORNO)\s*:\s*(.+)/i);
+        if (matchRet) {
+            var valRet = matchRet[1].trim().toUpperCase();
+            retorno = (valRet.includes('SIM') || valRet.includes('60')) ? '0.6' : '0';
         }
 
-        var elHorario = document.getElementById('p-horario');
-        if (elHorario && !elHorario.value) {
-            var agora = new Date();
-            var hh    = String(agora.getHours()).padStart(2, '0');
-            var mm    = String(agora.getMinutes()).padStart(2, '0');
-            elHorario.value = hh + ':' + mm;
+        var matchPrio = linha.match(/(?:PRIORIDADE)\s*:\s*(.+)/i);
+        if (matchPrio) {
+            var valPrio = matchPrio[1].trim().toUpperCase();
+            if (valPrio.includes('AGENDADO')) prioridade = '5';
+            else if (valPrio.includes('URGENTE')) prioridade = '7';
         }
 
-        _limparValidacao();
+        var matchObs = linha.match(/(?:OBSERVAÇÃO|OBSERVACAO|OBS)\s*:\s*(.+)/i);
+        if (matchObs) observacao = matchObs[1].trim();
+    });
+
+    var rotasTexto = '';
+    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
+        rotasTexto = dados.rotasProcessadas.map(function (r, idx) {
+            return (idx + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+        }).join('\n');
+    }
+
+    var headerNome = document.getElementById('header-nome-cliente');
+    if (headerNome) headerNome.textContent = solicitante;
+
+    var campos = [
+        { id: 'p-solicitante', valor: solicitante },
+        { id: 'p-contato', valor: contato },
+        { id: 'p-horario', valor: horario },
+        { id: 'p-mercadoria', valor: mercadoria },
+        { id: 'p-distancia', valor: (dados.distanciaTotal || 0).toFixed(2) },
+        { id: 'p-tempo', valor: dados.tempo || '0 min' },
+        { id: 'p-rotas', valor: rotasTexto },
+        { id: 'p-retorno', valor: retorno },
+        { id: 'p-prioridade', valor: prioridade },
+        { id: 'p-obs', valor: observacao }
+    ];
+
+    campos.forEach(function (c) {
+        var el = document.getElementById(c.id);
+        if (el) {
+            el.value = c.valor;
+            el.classList.remove('is-invalid');
+        }
+    });
+
+    if (typeof window.calcularTudo === 'function') {
         window.calcularTudo();
-    };
+    }
 
-    window.calcularTudo = function () {
-        var baseKm = _fnum('p-distancia') * _fnum('p-valor-km');
-        var total  = baseKm + (baseKm * _fnum('p-retorno')) + _fnum('p-dinamica') + _fnum('p-prioridade');
-        if (total > 0 && total < 10) total = 10;
-        var elFinal = document.getElementById('view-valor-final');
-        if (elFinal) elFinal.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        if (window.dadosPedidoAtual) window.dadosPedidoAtual.valorFinal = total;
-        return total;
-    };
+    console.log('[form_clientes.js] ✅ Formulário preenchido');
+};
 
-    window.salvarPedidoAPI = async function () {
-        if (!_validarCampos()) return;
+window.calcularTudo = function () {
+    var distancia = parseFloat(document.getElementById('p-distancia')?.value || 0);
+    var valorKm = parseFloat(document.getElementById('p-valor-km')?.value || 3.00);
+    var retorno = parseFloat(document.getElementById('p-retorno')?.value || 0);
+    var dinamica = parseFloat(document.getElementById('p-dinamica')?.value || 0);
+    var prioridade = parseFloat(document.getElementById('p-prioridade')?.value || 0);
 
-        var btn = document.getElementById('btn-emitir-pedido');
-        if (btn) {
-            btn.disabled  = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
+    var valorBase = distancia * valorKm;
+    var valorRetorno = valorBase * retorno;
+    var valorFinal = valorBase + valorRetorno + dinamica + prioridade;
+
+    var viewValorFinal = document.getElementById('view-valor-final');
+    if (viewValorFinal) viewValorFinal.textContent = 'R$ ' + valorFinal.toFixed(2);
+
+    console.log('[form_clientes.js] 💰 Valor: R$', valorFinal.toFixed(2));
+};
+
+window._validarCamposObrigatorios = function () {
+    console.log('[form_clientes.js] 🔍 Validando...');
+
+    var camposObrigatorios = [
+        { id: 'p-solicitante', nome: 'Solicitante' },
+        { id: 'p-contato', nome: 'Contato' },
+        { id: 'p-mercadoria', nome: 'Mercadoria' },
+        { id: 'p-rotas', nome: 'Rotas' }
+    ];
+
+    var invalidos = [];
+
+    camposObrigatorios.forEach(function (campo) {
+        var el = document.getElementById(campo.id);
+        if (el) {
+            var val = (el.value || '').trim();
+            if (!val || val === 'SELECIONE') {
+                el.classList.add('is-invalid');
+                invalidos.push(campo.nome);
+            } else {
+                el.classList.remove('is-invalid');
+            }
         }
+    });
 
-        var d      = window.dadosPedidoAtual || {};
-        var pedido = d;
-
-        var payload = {
-            solicitante:  _val('p-solicitante'),
-            mercadoria:   _val('p-mercadoria'),
-            contato:      _val('p-contato'),
-            horario:      _val('p-horario'),
-            distancia_km: _fnum('p-distancia'),
-            tempo:        _val('p-tempo'),
-            rotas:        _val('p-rotas'),
-            valor_km:     _fnum('p-valor-km'),
-            retorno:      _fnum('p-retorno'),
-            dinamica:     _fnum('p-dinamica'),
-            prioridade:   _fnum('p-prioridade'),
-            observacao:   _val('p-obs'),
-            valor_total:  window.calcularTudo(),
-            cliente_id:   pedido.clienteId || (window.AppRDO && window.AppRDO.clienteId) || null,
-            chat_id:      pedido.chatId    || null
-        };
-
-        try {
-            var resp = await fetch('/api/pedidos', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify(payload)
+    if (invalidos.length > 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campos Obrigatórios',
+                html: 'Preencha: <b>' + invalidos.join(', ') + '</b>',
+                confirmButtonColor: '#dc3545'
             });
-
-            if (!resp.ok) {
-                var msg = 'Erro ao salvar pedido (HTTP ' + resp.status + ').';
-                try { var json = await resp.json(); msg = json.erro || json.message || msg; } catch (e) {}
-                throw new Error(msg);
-            }
-
-            var modalEl = document.getElementById('modalFormulario');
-            if (modalEl) {
-                var inst = bootstrap.Modal.getInstance(modalEl);
-                if (inst) {
-                    modalEl.addEventListener('hidden.bs.modal', function () {
-                        var msgInput = document.getElementById('msg-input');
-                        if (msgInput) {
-                            msgInput.value = '';
-                            msgInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        }
-                        var btnEnviar = document.getElementById('btn-enviar');
-                        if (btnEnviar) btnEnviar.disabled = false;
-                    }, { once: true });
-                    inst.hide();
-                }
-            }
-
-            window.dadosPedidoAtual = null;
-
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon:               'success',
-                    title:              'Pedido emitido!',
-                    text:               'O pedido foi registrado com sucesso.',
-                    confirmButtonColor: '#dc3545',
-                    timer:              3000,
-                    timerProgressBar:   true
-                });
-            }
-
-        } catch (err) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon:               'error',
-                    title:              'Erro ao emitir',
-                    text:               err.message || 'Falha ao enviar o pedido.',
-                    confirmButtonColor: '#dc3545'
-                });
-            }
-        } finally {
-            if (btn) {
-                btn.disabled  = false;
-                btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
-            }
         }
-    };
+        return false;
+    }
 
-})();
+    return true;
+};
+
+window.salvarPedidoAPI = async function () {
+    console.log('[form_clientes.js] 💾 salvarPedidoAPI()');
+
+    if (!window._validarCamposObrigatorios()) return;
+
+    var btn = document.getElementById('btn-emitir-pedido');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+    }
+
+    var dados = window.dadosPedidoAtual;
+    var solicitante = document.getElementById('p-solicitante')?.value.trim();
+    var contato = document.getElementById('p-contato')?.value.trim();
+    var horario = document.getElementById('p-horario')?.value.trim() || '';
+    var mercadoria = document.getElementById('p-mercadoria')?.value || 'ENTREGA';
+    var observacao = document.getElementById('p-obs')?.value.trim() || '';
+    var retornoVal = document.getElementById('p-retorno')?.value || '0';
+    var retornoTexto = retornoVal === '0.6' ? 'SIM' : 'NÃO';
+    var valorFinal = document.getElementById('view-valor-final')?.textContent || 'R$ 0,00';
+
+    var rotasFormatadas = '';
+    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
+        rotasFormatadas = dados.rotasProcessadas.map(function (r, idx) {
+            return '📍 ' + (idx + 1) + '. De: ' + r.de + ' |\n         Para: ' + r.para;
+        }).join('\n');
+    }
+
+    var contatoCompleto = contato;
+    if (horario) contatoCompleto += ' | HR: ' + horario;
+
+    var mensagemFinal =
+        'N.SERVIÇO: RDO' + String(Date.now()).slice(-3) + '\n' +
+        'SOLICITANTE: ' + solicitante + '\n' +
+        'CONTATO: ' + contatoCompleto + '\n' +
+        '-\n' +
+        'MERCADORIA: ' + mercadoria + '\n' +
+        'RETORNO: ' + retornoTexto + '\n' +
+        '-\n' +
+        'ROTA(s):\n' + rotasFormatadas + '\n' +
+        '-\n' +
+        'OBSERVAÇÃO: ' + observacao + '\n' +
+        valorFinal;
+
+    console.log('[form_clientes.js] 📤 Mensagem:\n', mensagemFinal);
+
+    try {
+        if (typeof API === 'undefined' || typeof API.sendMessage !== 'function') {
+            throw new Error('API indisponível');
+        }
+
+        var clienteId = dados.clienteId;
+        if (!clienteId) throw new Error('ID do cliente não encontrado');
+
+        var resposta = await API.sendMessage(clienteId, mensagemFinal);
+
+        if (resposta && resposta.success) {
+            console.log('[form_clientes.js] ✅ Enviado!');
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Enviado!',
+                    text: 'Pedido enviado com sucesso',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(function () {
+                    window.fecharParaChat('modalFormulario');
+                    if (typeof window.carregarDados === 'function') window.carregarDados();
+                });
+            }
+        } else {
+            throw new Error('Erro ao enviar');
+        }
+    } catch (erro) {
+        console.error('[form_clientes.js] ❌ Erro:', erro);
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: 'Não foi possível enviar o pedido',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
+        }
+    }
+};
+
+console.log('[form_clientes.js] ✅ Pronto');

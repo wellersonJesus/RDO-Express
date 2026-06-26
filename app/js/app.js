@@ -69,9 +69,12 @@ window.AppRDO.resetState = function () {
 var PAGES_SEM_HEADER = [];
 
 var PAGE_MODALS = {
+    pedidos: [
+        '/pages/pedidos/form_pedidos.html'
+    ],
     fin: [
-        'pages/fin/form_fin.html',
-        'pages/fin/view_fin.html'
+        '/pages/fin/form_fin.html',
+        '/pages/fin/view_fin.html'
     ]
 };
 
@@ -85,6 +88,7 @@ var MODULE_SCRIPTS = {
 };
 
 var GLOBAL_SCRIPTS_PRELOAD = [
+    '/js/master_auth.js',     
     '/js/mapa_clientes.js',
     '/js/form_clientes.js'
 ];
@@ -115,9 +119,7 @@ var MODULE_INITS = {
 function _fecharModaisAbertos() {
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) {
-            try { inst.hide(); } catch (e) {}
-        }
+        if (inst) { try { inst.hide(); } catch (e) {} }
     });
     document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
     document.body.classList.remove('modal-open');
@@ -130,9 +132,7 @@ function _fecharModaisAbortando() {
         m.classList.remove('show', 'fade');
         m.style.display = 'none';
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) {
-            try { inst.dispose(); } catch (e) {}
-        }
+        if (inst) { try { inst.dispose(); } catch (e) {} }
     });
     document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
     document.body.classList.remove('modal-open');
@@ -284,7 +284,7 @@ window.loadPage = function (page, title, subtitle) {
         if (link.getAttribute('data-page') === page) link.classList.add('active');
     });
 
-    return fetch('pages/' + page + '/' + page + '.html')
+    return fetch('/pages/' + page + '/' + page + '.html')
         .then(function (res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.text();
@@ -409,6 +409,15 @@ window.atualizarAvatar = function () {
     }
 };
 
+window.salvarDadosUsuarioLocal = function (dados) {
+    if (!dados) return;
+    if (dados.username) localStorage.setItem('username', dados.username);
+    if (dados.tipo)     localStorage.setItem('tipo',     dados.tipo);
+    if (dados.imagem)   localStorage.setItem('imagem',   dados.imagem);
+    if (typeof window.atualizarAvatar === 'function') window.atualizarAvatar();
+};
+
 document.addEventListener('DOMContentLoaded', function () {
     _precarregarScriptsGlobais();
+    if (typeof window.atualizarAvatar === 'function') window.atualizarAvatar();
 });

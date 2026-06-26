@@ -1,10 +1,7 @@
 (function () {
     'use strict';
 
-    var CORES = [
-        '#E74C3C', '#2980B9', '#27AE60', '#F39C12', '#8E44AD',
-        '#1ABC9C', '#D35400', '#2C3E50', '#C0392B', '#16A085'
-    ];
+    var CORES = ['#4285F4', '#EA4335', '#34A853', '#FBBC04', '#9C27B0', '#FF6D00'];
 
     function parsearRotas(texto) {
         if (!texto || typeof texto !== 'string') return [];
@@ -20,6 +17,7 @@
             });
         }
         if (rotas.length > 0) return rotas;
+
         var idx = 0;
         texto.split('\n').forEach(function (linha) {
             linha = linha.trim();
@@ -47,9 +45,7 @@
         var busca = endereco;
         if (!/MG|Minas Gerais/i.test(busca)) busca += ', MG';
         if (!/Brasil|Brazil/i.test(busca)) busca += ', Brasil';
-        var url = 'https://nominatim.openstreetmap.org/search'
-            + '?format=json&limit=1&countrycodes=br&q='
-            + encodeURIComponent(busca);
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(busca);
         return fetch(url, { headers: { 'Accept-Language': 'pt-BR' } })
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -60,10 +56,9 @@
     }
 
     function rotaOSRM(orig, dest) {
-        var url = 'https://router.project-osrm.org/route/v1/driving/'
-            + orig.lng + ',' + orig.lat + ';'
-            + dest.lng + ',' + dest.lat
-            + '?overview=full&geometries=geojson&steps=false';
+        var url = 'https://router.project-osrm.org/route/v1/driving/' +
+            orig.lng + ',' + orig.lat + ';' + dest.lng + ',' + dest.lat +
+            '?overview=full&geometries=geojson&steps=false';
         return fetch(url)
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -72,7 +67,6 @@
                     return {
                         km: (rt.distance / 1000).toFixed(1),
                         min: Math.round(rt.duration / 60),
-                        geo: rt.geometry,
                         caminho: rt.geometry.coordinates.map(function (c) { return [c[1], c[0]]; })
                     };
                 }
@@ -96,119 +90,6 @@
         var h = Math.floor(min / 60);
         var mn = min % 60;
         return h + 'h' + (mn > 0 ? ' ' + mn + 'min' : '');
-    }
-
-    function _limparInput() {
-        var msgInput = document.getElementById('msg-input');
-        if (msgInput) {
-            msgInput.value = '';
-            msgInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        var btnEnviar = document.getElementById('btn-enviar');
-        if (btnEnviar) btnEnviar.disabled = false;
-    }
-
-    function _resolverTempoExibido(totalMin, tempoFormatado) {
-        var min = parseInt(totalMin, 10);
-        if (min && min > 0) return formatarTempo(min);
-        if (tempoFormatado && typeof tempoFormatado === 'string' && tempoFormatado.trim() !== '') return tempoFormatado.trim();
-        return '0 min';
-    }
-
-    function _renderizarFooterFinal(footerEl, km, min, valorFormatado, tempoFormatado) {
-        if (!footerEl) return;
-        var tempoExibido = _resolverTempoExibido(min, tempoFormatado);
-        footerEl.innerHTML =
-            '<div class="d-flex align-items-center gap-3 flex-wrap">'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-signpost-split-fill text-danger fs-6"></i>'
-            + '<span class="fw-bold text-dark">' + km + ' km</span></div>'
-            + '<div class="vr" style="height:20px;"></div>'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-clock-fill text-primary fs-6"></i>'
-            + '<span class="fw-bold text-dark">' + tempoExibido + '</span></div>'
-            + '<div class="vr" style="height:20px;"></div>'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-cash-stack text-success fs-6"></i>'
-            + '<span class="fw-bold text-dark">' + valorFormatado + '</span></div>'
-            + '</div>';
-    }
-
-    function _renderizarFooterLive(footerEl) {
-        if (!footerEl) return;
-        footerEl.innerHTML =
-            '<div class="d-flex align-items-center gap-3 flex-wrap">'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-signpost-split-fill text-danger fs-6"></i>'
-            + '<span class="fw-bold text-dark" id="footer-km-live">0 km</span></div>'
-            + '<div class="vr" style="height:20px;"></div>'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-clock-fill text-primary fs-6"></i>'
-            + '<span class="fw-bold text-dark" id="footer-min-live">0 min</span></div>'
-            + '<div class="vr" style="height:20px;"></div>'
-            + '<div class="d-flex align-items-center gap-1">'
-            + '<i class="bi bi-cash-stack text-success fs-6"></i>'
-            + '<span class="fw-bold text-dark" id="footer-valor-live">' + moeda(0) + '</span></div>'
-            + '</div>';
-    }
-
-    function _itemOk(r, res) {
-        return '<div class="d-flex align-items-start gap-2 p-2 border-bottom"'
-            + ' style="border-left:4px solid ' + r.cor + ' !important;">'
-            + '<div class="flex-grow-1">'
-            + '<div class="fw-semibold small text-dark">'
-            + '<i class="bi bi-geo-alt-fill me-1" style="color:' + r.cor + '"></i>Rota ' + r.numero + '</div>'
-            + '<div class="text-muted" style="font-size:.78rem;">'
-            + '<b>De:</b> ' + r.origem + '<br><b>Para:</b> ' + r.destino + '</div>'
-            + '</div>'
-            + '<div class="text-end flex-shrink-0" style="min-width:80px;">'
-            + '<span class="badge rounded-pill" style="background:' + r.cor + ';font-size:.72rem;">'
-            + res.km + ' km</span><br>'
-            + '<small class="text-muted"><i class="bi bi-clock me-1"></i>' + res.min + ' min</small>'
-            + '</div></div>';
-    }
-
-    function _itemPendente(r) {
-        return '<div class="d-flex align-items-start gap-2 p-2 border-bottom" id="rota-item-' + r.numero + '"'
-            + ' style="border-left:4px solid ' + r.cor + ' !important;">'
-            + '<div class="flex-grow-1">'
-            + '<div class="fw-semibold small text-dark">'
-            + '<i class="bi bi-geo-alt-fill me-1" style="color:' + r.cor + '"></i>Rota ' + r.numero + '</div>'
-            + '<div class="text-muted" style="font-size:.78rem;">'
-            + '<b>De:</b> ' + r.origem + '<br><b>Para:</b> ' + r.destino + '</div>'
-            + '</div>'
-            + '<div class="text-end flex-shrink-0" style="min-width:80px;">'
-            + '<span class="spinner-border spinner-border-sm text-secondary opacity-50"></span>'
-            + '</div></div>';
-    }
-
-    function _itemErro(r) {
-        return '<div class="d-flex align-items-start gap-2 p-2 border-bottom bg-warning-subtle"'
-            + ' id="rota-item-' + r.numero + '">'
-            + '<div class="flex-grow-1">'
-            + '<div class="fw-semibold small text-dark">'
-            + '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>'
-            + 'Rota ' + r.numero + ' — Não calculada</div>'
-            + '<div class="text-muted" style="font-size:.78rem;">'
-            + '<b>De:</b> ' + r.origem + '<br><b>Para:</b> ' + r.destino + '</div>'
-            + '</div></div>';
-    }
-
-    function _itemSalvo(r) {
-        var cor = r.cor || CORES[(r.numero - 1) % CORES.length];
-        return '<div class="d-flex align-items-start gap-2 p-2 border-bottom"'
-            + ' style="border-left:4px solid ' + cor + ' !important;">'
-            + '<div class="flex-grow-1">'
-            + '<div class="fw-semibold small text-dark">'
-            + '<i class="bi bi-geo-alt-fill me-1" style="color:' + cor + '"></i>Rota ' + r.numero + '</div>'
-            + '<div class="text-muted" style="font-size:.78rem;">'
-            + '<b>De:</b> ' + (r.origem || r.de || '') + '<br><b>Para:</b> ' + (r.destino || r.para || '') + '</div>'
-            + '</div>'
-            + '<div class="text-end flex-shrink-0" style="min-width:80px;">'
-            + '<span class="badge rounded-pill" style="background:' + cor + ';font-size:.72rem;">'
-            + (r.km || '--') + ' km</span><br>'
-            + '<small class="text-muted"><i class="bi bi-clock me-1"></i>' + (r.min || '--') + ' min</small>'
-            + '</div></div>';
     }
 
     function carregarLeaflet() {
@@ -235,23 +116,22 @@
         });
     }
 
-    function _renderizarMapaSalvo() {
+    function _renderizarMapa(coordenadas) {
         var container = document.getElementById('container-mapa-visual');
         if (!container) return;
 
         if (window._leafletMapInstance) {
-            try { window._leafletMapInstance.remove(); } catch (_) { }
+            try { window._leafletMapInstance.remove(); } catch (_) {}
             window._leafletMapInstance = null;
         }
 
         container.innerHTML = '';
         container.style.display = 'block';
         if (!container.style.height || container.style.height === '0px') {
-            container.style.height = '350px';
+            container.style.height = '400px';
         }
 
-        var dados = window.dadosPedidoAtual;
-        if (!dados || !dados.coordenadas || dados.coordenadas.length === 0) return;
+        if (!coordenadas || coordenadas.length === 0) return;
         if (typeof L === 'undefined') return;
 
         var mapa = L.map(container, { zoomControl: true, scrollWheelZoom: true })
@@ -263,26 +143,36 @@
             maxZoom: 19
         }).addTo(mapa);
 
-        var criarIconeEmoji = function (emoji) {
+        var criarIcone = function (emoji) {
             return L.divIcon({
-                html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
+                html: '<div style="font-size:24px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));">' + emoji + '</div>',
                 className: 'custom-div-icon',
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
             });
         };
 
         var todosOsPontos = [];
-        dados.coordenadas.forEach(function (caminho, i) {
+        coordenadas.forEach(function (caminho, i) {
             if (!caminho || caminho.length === 0) return;
-            L.polyline(caminho, { color: CORES[i % CORES.length], weight: 5, opacity: 0.85 }).addTo(mapa);
+
+            L.polyline(caminho, {
+                color: CORES[i % CORES.length],
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 8',
+                lineCap: 'round',
+                lineJoin: 'round',
+                smoothFactor: 2
+            }).addTo(mapa);
+
             if (i === 0) {
-                L.marker(caminho[0], { icon: criarIconeEmoji('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
+                L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
             }
-            if (i === dados.coordenadas.length - 1) {
-                L.marker(caminho[caminho.length - 1], { icon: criarIconeEmoji('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
+            if (i === coordenadas.length - 1) {
+                L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
             } else {
-                L.marker(caminho[caminho.length - 1], { icon: criarIconeEmoji('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
+                L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
             }
             caminho.forEach(function (p) { todosOsPontos.push(p); });
         });
@@ -293,87 +183,66 @@
         setTimeout(function () { mapa.invalidateSize(); }, 400);
     }
 
-    function _abrirModalMapaRestaurado() {
-        window.loadModal('mapa_clientes.html').then(function (carregou) {
-            if (!carregou) return;
-            var modalEl = document.getElementById('modalMapa');
-            if (!modalEl) return;
+    function _renderizarResumo(km, min, valor) {
+        var footerEl = document.getElementById('footer-resumo-dados');
+        if (!footerEl) return;
 
-            var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) { try { inst.dispose(); } catch (e) { } }
-
-            var modalMapa = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-
-            modalEl.addEventListener('shown.bs.modal', function () {
-                var dados = window.dadosPedidoAtual || {};
-                var elHeader = document.getElementById('header-nome-solicitante');
-                var footerEl = document.getElementById('footer-resumo-dados');
-                var listaEl = document.getElementById('lista-rotas-editavel');
-                var loaderEl = document.getElementById('mapa-loader');
-                var containerMapa = document.getElementById('container-mapa-visual');
-
-                if (loaderEl) loaderEl.style.display = 'none';
-                if (containerMapa) containerMapa.style.display = 'block';
-
-                if (elHeader) elHeader.innerText = dados.solicitante || 'Cliente';
-
-                if (footerEl) {
-                    _renderizarFooterFinal(
-                        footerEl,
-                        dados.distancia || '0',
-                        dados.totalMin  || 0,
-                        dados.valor     || moeda(0),
-                        dados.tempo     || ''
-                    );
-                }
-
-                if (listaEl && dados.rotas && dados.rotas.length) {
-                    listaEl.innerHTML = dados.rotas.map(function (r) {
-                        return _itemSalvo(r);
-                    }).join('');
-                }
-
-                carregarLeaflet().then(function () {
-                    _renderizarMapaSalvo();
-                });
-
-            }, { once: true });
-
-            modalMapa.show();
-        });
+        footerEl.innerHTML =
+            '<div class="d-flex align-items-center justify-content-center gap-4 py-3">' +
+            '<div class="d-flex align-items-center gap-2">' +
+            '<i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>' +
+            '<div><div class="small text-muted mb-1">Distância</div>' +
+            '<div class="fw-bold text-dark fs-5">' + km + ' km</div></div></div>' +
+            '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+            '<div class="d-flex align-items-center gap-2">' +
+            '<i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>' +
+            '<div><div class="small text-muted mb-1">Tempo</div>' +
+            '<div class="fw-bold text-dark fs-5">' + formatarTempo(min) + '</div></div></div>' +
+            '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+            '<div class="d-flex align-items-center gap-2">' +
+            '<i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>' +
+            '<div><div class="small text-muted mb-1">Valor</div>' +
+            '<div class="fw-bold text-success" style="font-size:1.8rem;">' + moeda(valor) + '</div></div></div>' +
+            '</div>';
     }
-
-    function _abrirModalForm() {
-        window.loadModal('form_clientes.html').then(function (carregou) {
-            if (!carregou) return;
-            var modalEl = document.getElementById('modalFormulario');
-            if (!modalEl) return;
-            var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) { try { inst.dispose(); } catch (e) { } }
-            var modalForm = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-            modalEl.addEventListener('shown.bs.modal', function () {
-                if (typeof window.preencherDadosFormulario === 'function') window.preencherDadosFormulario();
-                if (typeof window.calcularTudo === 'function') window.calcularTudo();
-            }, { once: true });
-            modalForm.show();
-        });
-    }
-
-    window.preencherDadosMapa = function (nome) {
-        var el = document.getElementById('header-nome-solicitante');
-        if (el) el.textContent = nome || 'Não identificado';
-    };
 
     window.iniciarFluxoCheckout = function () {
+        console.log('[mapa_clientes.js] 🚀 iniciarFluxoCheckout()');
+
         var msgInput = document.getElementById('msg-input');
         var texto = msgInput ? (msgInput.value || '').trim() : '';
+        
         if (!texto) {
             if (typeof window.marcarCampoInvalido === 'function') window.marcarCampoInvalido();
             return;
         }
 
         var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE)\s*:\s*(.*)/i) || [])[1] || 'Não informado').trim();
-        var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+        
+        var contatoMatch = texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*([^\n]+)/i);
+        var contatoCompleto = contatoMatch ? contatoMatch[1].trim() : '';
+        
+        var contato = contatoCompleto.split('|')[0].trim();
+        var horario = '';
+        
+        if (contatoCompleto.includes('|')) {
+            var partes = contatoCompleto.split('|');
+            for (var i = 1; i < partes.length; i++) {
+                var hrMatch = partes[i].match(/(?:HR|HORÁRIO|HORARIO)\s*:\s*(.+)/i);
+                if (hrMatch) {
+                    horario = hrMatch[1].trim();
+                    break;
+                }
+            }
+        }
+
+        if (!horario) {
+            var hrLinhaMatch = texto.match(/(?:HORÁRIO ESTIMADO|HORARIO ESTIMADO|HR)\s*:\s*([^\n]+)/i);
+            if (hrLinhaMatch) horario = hrLinhaMatch[1].trim();
+        }
+
+        console.log('[mapa_clientes.js] 📞 Contato:', contato, '| ⏰ Horário:', horario);
+
         var rotas = parsearRotas(texto);
 
         if (rotas.length === 0) {
@@ -385,30 +254,24 @@
 
         window.loadModal('mapa_clientes.html').then(function (carregou) {
             if (!carregou) return;
+            
             var modalEl = document.getElementById('modalMapa');
             if (!modalEl) return;
 
             var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) { try { inst.dispose(); } catch (e) { } }
+            if (inst) { try { inst.dispose(); } catch (_) {} }
 
             var modalMapa = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
 
             modalEl.addEventListener('shown.bs.modal', function () {
                 var elHeader = document.getElementById('header-nome-solicitante');
                 var footerEl = document.getElementById('footer-resumo-dados');
-                var listaEl = document.getElementById('lista-rotas-editavel');
                 var loaderEl = document.getElementById('mapa-loader');
                 var containerMapa = document.getElementById('container-mapa-visual');
 
                 if (elHeader) elHeader.innerText = solicitante;
-
-                if (listaEl) {
-                    listaEl.innerHTML = rotas.map(function (r) { return _itemPendente(r); }).join('');
-                }
-
-                if (footerEl) _renderizarFooterLive(footerEl);
-
-                if (loaderEl) loaderEl.style.display = '';
+                if (footerEl) footerEl.innerHTML = '<div class="text-center py-3 text-muted"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Calculando rotas...</div>';
+                if (loaderEl) loaderEl.style.display = 'flex';
                 if (containerMapa) containerMapa.style.display = 'none';
 
                 carregarLeaflet().then(async function () {
@@ -417,9 +280,7 @@
                     var totalKm = 0;
                     var totalMin = 0;
                     var coordenadas = [];
-                    var rotasResult = [];
-                    var mapa = null;
-                    var bounds = null;
+                    var rotasProcessadas = [];
 
                     for (var i = 0; i < rotas.length; i++) {
                         var r = rotas[i];
@@ -430,111 +291,59 @@
                         var destGeo = await geocodificar(r.destino);
 
                         if (!origGeo || !destGeo) {
-                            var itemEl = document.getElementById('rota-item-' + r.numero);
-                            if (itemEl) itemEl.outerHTML = _itemErro(r);
+                            console.warn('[mapa_clientes.js] ⚠️ Rota', r.numero, 'sem coordenadas');
                             continue;
                         }
 
                         var res = await rotaOSRM(origGeo, destGeo);
                         if (!res) {
-                            var itemEl2 = document.getElementById('rota-item-' + r.numero);
-                            if (itemEl2) itemEl2.outerHTML = _itemErro(r);
+                            console.warn('[mapa_clientes.js] ⚠️ Rota', r.numero, 'sem resultado OSRM');
                             continue;
                         }
 
                         totalKm += parseFloat(res.km);
                         totalMin += parseInt(res.min, 10);
                         coordenadas.push(res.caminho);
-                        rotasResult.push({
+                        
+                        rotasProcessadas.push({
                             numero: r.numero,
-                            origem: r.origem,
-                            destino: r.destino,
-                            cor: r.cor,
+                            de: r.origem,
+                            para: r.destino,
                             km: res.km,
                             min: res.min
                         });
 
-                        var itemElOk = document.getElementById('rota-item-' + r.numero);
-                        if (itemElOk) itemElOk.outerHTML = _itemOk(r, res);
-
-                        var elKm = document.getElementById('footer-km-live');
-                        var elMin = document.getElementById('footer-min-live');
-                        var elValor = document.getElementById('footer-valor-live');
-                        if (elKm) elKm.textContent = totalKm.toFixed(1) + ' km';
-                        if (elMin) elMin.textContent = formatarTempo(totalMin);
-                        if (elValor) elValor.textContent = moeda(totalKm * 2.20);
-
-                        if (!mapa && containerMapa) {
-                            if (loaderEl) loaderEl.style.display = 'none';
-                            if (window._leafletMapInstance) {
-                                try { window._leafletMapInstance.remove(); } catch (_) { }
-                                window._leafletMapInstance = null;
-                            }
-                            containerMapa.innerHTML = '';
-                            containerMapa.style.display = 'block';
-                            if (!containerMapa.style.height || containerMapa.style.height === '0px') {
-                                containerMapa.style.height = '350px';
-                            }
-                            mapa = L.map(containerMapa, { zoomControl: true, scrollWheelZoom: true })
-                                .setView([-19.9191, -43.9386], 12);
-                            window._leafletMapInstance = mapa;
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-                                maxZoom: 19
-                            }).addTo(mapa);
-                            bounds = L.latLngBounds([]);
-                            setTimeout(function () { if (mapa) mapa.invalidateSize(); }, 300);
-                        }
-
-                        if (mapa && bounds) {
-                            var criarIconeEmoji = function (emoji) {
-                                return L.divIcon({
-                                    html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>',
-                                    className: 'custom-div-icon',
-                                    iconSize: [28, 28],
-                                    iconAnchor: [14, 14]
-                                });
-                            };
-                            L.polyline(res.caminho, { color: r.cor, weight: 5, opacity: 0.85 }).addTo(mapa);
-                            if (i === 0) {
-                                L.marker(res.caminho[0], { icon: criarIconeEmoji('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
-                            }
-                            if (i === rotas.length - 1) {
-                                L.marker(res.caminho[res.caminho.length - 1], { icon: criarIconeEmoji('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
-                            } else {
-                                L.marker(res.caminho[res.caminho.length - 1], { icon: criarIconeEmoji('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
-                            }
-                            res.caminho.forEach(function (p) { bounds.extend(p); });
-                            if (bounds.isValid()) mapa.fitBounds(bounds, { padding: [40, 40] });
-                            mapa.invalidateSize();
-                        }
+                        console.log('[mapa_clientes.js] ✅ Rota', r.numero, ':', res.km, 'km |', res.min, 'min');
                     }
 
+                    var valorTotal = totalKm * 3.00;
+
                     window.dadosPedidoAtual = {
+                        cliente_nome: solicitante,
+                        cliente_telefone: contato,
                         solicitante: solicitante,
                         contato: contato,
-                        cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null)
-                            || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                        distancia: totalKm.toFixed(1),
-                        totalMin: totalMin,
+                        horario: horario,
+                        distanciaTotal: totalKm,
+                        tempoTotal: totalMin,
                         tempo: formatarTempo(totalMin),
                         coordenadas: coordenadas,
-                        rotas: rotasResult,
-                        valor: moeda(totalKm * 2.20),
+                        rotasProcessadas: rotasProcessadas,
+                        valor: moeda(valorTotal),
+                        valorNumerico: valorTotal,
+                        texto: texto,
                         rawInput: texto,
-                        chatId: (window.AppRDO ? window.AppRDO.clienteId : null) || null,
                         clienteId: (window.AppRDO ? window.AppRDO.clienteId : null) || null
                     };
 
-                    if (footerEl) {
-                        _renderizarFooterFinal(
-                            footerEl,
-                            window.dadosPedidoAtual.distancia,
-                            window.dadosPedidoAtual.totalMin,
-                            window.dadosPedidoAtual.valor,
-                            window.dadosPedidoAtual.tempo
-                        );
-                    }
+                    console.log('[mapa_clientes.js] 📊 Total:', totalKm.toFixed(1), 'km |', totalMin, 'min |', moeda(valorTotal));
+                    console.log('[mapa_clientes.js] 💾 dadosPedidoAtual salvo:', window.dadosPedidoAtual);
+
+                    if (loaderEl) loaderEl.style.display = 'none';
+                    if (containerMapa) containerMapa.style.display = 'block';
+
+                    _renderizarMapa(coordenadas);
+                    _renderizarResumo(totalKm.toFixed(1), totalMin, valorTotal);
                 });
 
             }, { once: true });
@@ -544,6 +353,8 @@
     };
 
     window.prosseguirParaFormulario = function () {
+        console.log('[mapa_clientes.js] ➡️ prosseguirParaFormulario()');
+
         var modalMapaEl = document.getElementById('modalMapa');
         if (modalMapaEl) {
             var inst = bootstrap.Modal.getInstance(modalMapaEl);
@@ -558,35 +369,65 @@
         _abrirModalForm();
     };
 
+    function _abrirModalForm() {
+        console.log('[mapa_clientes.js] 📝 _abrirModalForm()');
+
+        window.loadModal('form_clientes.html').then(function (carregou) {
+            if (!carregou) {
+                console.error('[mapa_clientes.js] ❌ Erro ao carregar formulário');
+                return;
+            }
+
+            var modalEl = document.getElementById('modalFormulario');
+            if (!modalEl) {
+                console.error('[mapa_clientes.js] ❌ Modal formulário não encontrado');
+                return;
+            }
+            
+            var inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) { try { inst.dispose(); } catch (_) {} }
+            
+            var modalForm = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            
+            modalEl.addEventListener('shown.bs.modal', function () {
+                console.log('[mapa_clientes.js] 📝 Modal formulário aberto');
+                
+                if (typeof window._preencherFormulario === 'function') {
+                    window._preencherFormulario(window.dadosPedidoAtual);
+                } else {
+                    console.error('[mapa_clientes.js] ❌ _preencherFormulario não definido');
+                }
+            }, { once: true });
+            
+            modalForm.show();
+        });
+    }
+
     window.voltarParaMapa = function () {
+        console.log('[mapa_clientes.js] ⬅️ voltarParaMapa()');
+        
         var modalFormEl = document.getElementById('modalFormulario');
         if (modalFormEl) {
             var inst = bootstrap.Modal.getInstance(modalFormEl);
-            if (inst) {
-                modalFormEl.addEventListener('hidden.bs.modal', function () {
-                    _abrirModalMapaRestaurado();
-                }, { once: true });
-                inst.hide();
-                return;
-            }
+            if (inst) inst.hide();
         }
-        _abrirModalMapaRestaurado();
     };
-
-    window.abrirModalMapa = _abrirModalMapaRestaurado;
 
 })();
 
 window.fecharParaChat = function (modalId) {
+    console.log('[fecharParaChat] Fechando modal:', modalId);
+    
     var modalEl = document.getElementById(modalId);
     if (!modalEl) return;
+    
     var inst = bootstrap.Modal.getInstance(modalEl);
     if (inst) {
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.dadosPedidoAtual = null;
 
             if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (_) { }
+                try { window._leafletMapInstance.remove(); } catch (_) {}
                 window._leafletMapInstance = null;
             }
 
@@ -603,3 +444,5 @@ window.fecharParaChat = function (modalId) {
         inst.hide();
     }
 };
+
+console.log('[mapa_clientes.js] ✅ Script carregado');

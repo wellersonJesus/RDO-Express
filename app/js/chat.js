@@ -94,7 +94,7 @@ function _limparModalContainer() {
         try {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (inst) inst.dispose();
-        } catch (_) {}
+        } catch (_) { }
     });
     container.innerHTML = '';
 }
@@ -139,13 +139,13 @@ window.loadModal = function (arquivo) {
         abertos.forEach(function (modalEl) {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (!inst) {
-                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) {}
+                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
                 return;
             }
             modalEl.addEventListener('hidden.bs.modal', function () {
-                try { inst.dispose(); } catch (_) {}
+                try { inst.dispose(); } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
             }, { once: true });
@@ -266,11 +266,11 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     var modaisAbertos = document.querySelectorAll('#modal-container .modal.show');
     modaisAbertos.forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.hide(); } catch (_) {} }
+        if (inst) { try { inst.hide(); } catch (_) { } }
     });
     try {
         var instExist = bootstrap.Modal.getInstance(modalEl);
-        if (instExist) { try { instExist.dispose(); } catch (_) {} }
+        if (instExist) { try { instExist.dispose(); } catch (_) { } }
         setTimeout(function () {
             _limparBackdrop();
             new bootstrap.Modal(modalEl).show();
@@ -424,7 +424,7 @@ window.MasterAuth = (function () {
     }
 
     function cancelar() {
-        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
         _pedidoId = null;
         _resetar();
     }
@@ -456,7 +456,7 @@ window.MasterAuth = (function () {
             }
             var idParaExcluir = _pedidoId;
             _pedidoId = null;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             _resetar();
             await _executarExclusao(idParaExcluir);
         } catch (_) {
@@ -477,7 +477,7 @@ window.MasterAuth = (function () {
                 wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
                 wrapper.style.opacity = '0';
                 wrapper.style.transform = 'translateX(30px)';
-                setTimeout(function () { try { wrapper.remove(); } catch (_) {} }, 300);
+                setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
             }
             if (window.AppRDO) {
                 if (Array.isArray(window.AppRDO.pedidosCache)) {
@@ -766,7 +766,7 @@ window.StatusModal = (function () {
             _safeClass(boxBotoes, 'remove', 'd-none');
             _safeClass(boxMotoboy, 'add', 'd-none');
             if (select) { select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>'; select.style.borderColor = '#ddd'; }
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function _carregarMotoboys() {
@@ -801,7 +801,7 @@ window.StatusModal = (function () {
             iconEl.classList.remove('status-updated');
             iconEl.classList.add('status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _setIconeFinal(pedidoId, status, motoboyNome) {
@@ -817,7 +817,7 @@ window.StatusModal = (function () {
             var tooltip = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
@@ -828,7 +828,7 @@ window.StatusModal = (function () {
             if (!pedido) return;
             pedido.status = statusFormatado;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function _executarAlteracao(status, motoboyId) {
@@ -844,7 +844,7 @@ window.StatusModal = (function () {
         }
         if (motoboyNome) statusFormatado = motoboyNome + '/' + status;
         _setSpinnerNoBotao(_pedidoId);
-        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
         try {
             var resposta = await API.call('updatepedido', {
                 id: String(_pedidoId || ''), status: statusFormatado, motoboy: motoboyNome
@@ -856,7 +856,7 @@ window.StatusModal = (function () {
                     if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
                         window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
                     }
-                } catch (_) {}
+                } catch (_) { }
             } else {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
@@ -898,7 +898,7 @@ window.StatusModal = (function () {
             if (!modalEl) return;
             _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static' });
             _modalBS.show();
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function processar(status) {
@@ -918,7 +918,7 @@ window.StatusModal = (function () {
             };
             var cfg = opcoes[status];
             if (!cfg) return;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             Swal.fire({
                 icon: cfg.icone, title: cfg.titulo,
                 html: '<div style="font-size:.9rem;color:#555;">' + cfg.html + '</div>',
@@ -928,8 +928,8 @@ window.StatusModal = (function () {
                 customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
             }).then(async function (result) {
                 if (result.isConfirmed) await _executarAlteracao(status);
-            }).catch(function () {});
-        } catch (_) {}
+            }).catch(function () { });
+        } catch (_) { }
     }
 
     async function confirmarMotoboy() {
@@ -945,7 +945,7 @@ window.StatusModal = (function () {
                 return;
             }
             await _executarAlteracao('EM_ROTA', motoboyId);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function voltar() { _resetar(); }
@@ -978,7 +978,7 @@ window.abrirModalMensagemPadrao = function () {
     var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
     var existing = bootstrap.Modal.getInstance(modalEl);
-    if (existing) { try { existing.dispose(); } catch (_) {} }
+    if (existing) { try { existing.dispose(); } catch (_) { } }
     new bootstrap.Modal(modalEl).show();
 };
 
@@ -1087,7 +1087,7 @@ window.renderizarMapaUnificado = function () {
     if (!containerEl) return;
 
     if (window._leafletMapInstance) {
-        try { window._leafletMapInstance.remove(); } catch (_) {}
+        try { window._leafletMapInstance.remove(); } catch (_) { }
         window._leafletMapInstance = null;
     }
     containerEl.innerHTML = '';
@@ -1150,12 +1150,45 @@ window.renderizarMapaUnificado = function () {
     });
 
     if (todosOsPontos.length > 0) {
-        try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) {}
+        try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) { }
     }
 
     setTimeout(function () {
-        try { mapa.invalidateSize(true); } catch (_) {}
+        try { mapa.invalidateSize(true); } catch (_) { }
     }, 300);
+};
+
+window._renderizarResumo = function (km, min, valor) {
+    var footer = document.getElementById('footer-resumo-dados');
+    if (!footer) return;
+
+    footer.innerHTML = `
+        <div class="d-flex align-items-center justify-content-center gap-4 py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>
+                <div>
+                    <div class="small text-muted mb-1">Distância</div>
+                    <div class="fw-bold text-dark fs-5">${km} km</div>
+                </div>
+            </div>
+            <div class="vr" style="height:50px;opacity:0.3;"></div>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>
+                <div>
+                    <div class="small text-muted mb-1">Tempo</div>
+                    <div class="fw-bold text-dark fs-5">${window.formatarTempoHumano(min)}</div>
+                </div>
+            </div>
+            <div class="vr" style="height:50px;opacity:0.3;"></div>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>
+                <div>
+                    <div class="small text-muted mb-1">Valor</div>
+                    <div class="fw-bold text-success fs-5">${valor}</div>
+                </div>
+            </div>
+        </div>
+    `;
 };
 
 window.enviarMensagemGeral = function () {
@@ -1190,6 +1223,9 @@ window.iniciarFluxoCheckout = function () {
 
     var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
     var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1213,7 +1249,7 @@ window.iniciarFluxoCheckout = function () {
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.AppRDO._mapaModalAberto = false;
             if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (_) {}
+                try { window._leafletMapInstance.remove(); } catch (_) { }
                 window._leafletMapInstance = null;
             }
         }, { once: true });
@@ -1222,20 +1258,10 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var resumoEl = document.getElementById('resumo-total');
-            var listaRotasEl = document.getElementById('lista-rotas-editavel');
+            var loaderEl = document.getElementById('mapa-loader');
 
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (resumoEl) resumoEl.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Calculando rotas...';
-            if (listaRotasEl) {
-                listaRotasEl.innerHTML = rotasExtraidas.map(function (r, i) {
-                    return '<div class="d-flex align-items-center px-3 py-2 ' + (i > 0 ? 'border-top' : '') + '">' +
-                        '<span class="badge bg-danger me-2">' + (i + 1) + '</span>' +
-                        '<span class="text-dark"><strong>De:</strong> ' + r.de +
-                        ' <i class="bi bi-arrow-right mx-1 text-muted"></i>' +
-                        '<strong>Para:</strong> ' + r.para + '</span></div>';
-                }).join('');
-            }
+            if (loaderEl) loaderEl.style.display = '';
 
             var kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
@@ -1260,25 +1286,147 @@ window.iniciarFluxoCheckout = function () {
                 });
             })).then(function () {
                 var kmArredondado = Math.round(kmTotal);
+                var valorCalculado = kmArredondado * 3.00;
+
                 window.dadosPedidoAtual = {
                     solicitante: solicitante,
                     contato: contato,
+                    horario: horario,
+                    mercadoria: mercadoria,
+                    obs: obs,
                     cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distancia: kmArredondado.toString(),
-                    tempo: window.formatarTempoHumano(minTotal),
+                    distanciaTotal: kmArredondado,
+                    tempoTotal: Math.round(minTotal),
                     coordenadas: listaCaminhos,
-                    valor: (kmArredondado * 3.00).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                    valorEstimado: valorCalculado,
+                    rotasProcessadas: rotasExtraidas,
                     rawInput: texto
                 };
-                if (resumoEl) window.renderizarFooterResumo(resumoEl);
+
+                // ✅ EXIBIR KM, TEMPO E VALOR
+                window._renderizarResumo(
+                    kmArredondado,
+                    minTotal,
+                    valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                );
+
                 window.renderizarMapaUnificado();
             }).catch(function () {
-                if (resumoEl) resumoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
+                var footer = document.getElementById('footer-resumo-dados');
+                if (footer) footer.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
             });
         }, { once: true });
 
         modal.show();
     });
+};
+
+window.prosseguirParaFormulario = function () {
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.distanciaTotal) {
+        alert('Dados do pedido não foram calculados corretamente.');
+        return;
+    }
+
+    var modalMapa = document.getElementById('modalMapa');
+    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+
+    if (instMapa) {
+        try { instMapa.hide(); } catch (_) { }
+    }
+
+    setTimeout(function () {
+        window.loadModal('form_clientes.html').then(function (ok) {
+            if (!ok) return;
+
+            var modalForm = document.getElementById('modalFormulario');
+            if (!modalForm) return;
+
+            var bsModalForm = new bootstrap.Modal(modalForm, { backdrop: 'static', keyboard: false });
+
+            modalForm.addEventListener('shown.bs.modal', function () {
+                // ✅ PREENCHER AUTOMATICAMENTE
+                window._preencherFormulario(window.dadosPedidoAtual);
+            }, { once: true });
+
+            bsModalForm.show();
+        });
+    }, 400);
+};
+
+window._preencherFormulario = function (dados) {
+    if (!dados) return;
+
+    // CAMPOS PRINCIPAIS
+    var elSolicitante = document.getElementById('p-solicitante');
+    var elContato = document.getElementById('p-contato');
+    var elHorario = document.getElementById('p-horario');
+    var elMercadoria = document.getElementById('p-mercadoria');
+    var elDistancia = document.getElementById('p-distancia');
+    var elTempo = document.getElementById('p-tempo');
+    var elRotas = document.getElementById('p-rotas');
+    var elObs = document.getElementById('p-obs');
+    var elHeaderCliente = document.getElementById('header-nome-cliente');
+
+    if (elSolicitante) elSolicitante.value = dados.solicitante || '';
+    if (elContato) elContato.value = dados.contato || '';
+    if (elHorario) elHorario.value = dados.horario || '';
+    if (elMercadoria) elMercadoria.value = dados.mercadoria || 'ENTREGA';
+    if (elDistancia) elDistancia.value = (dados.distanciaTotal || 0).toFixed(2);
+    if (elTempo) elTempo.value = dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '';
+    if (elObs) elObs.value = dados.obs || '';
+    if (elHeaderCliente) elHeaderCliente.innerText = dados.cliente || 'N/A';
+
+    // ✅ PREENCHER ROTAS (textarea)
+    if (elRotas && dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
+        elRotas.value = dados.rotasProcessadas.map(function (r, i) {
+            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+        }).join('\n');
+    }
+
+    // ✅ CALCULAR VALOR INICIAL
+    if (typeof window.calcularTudo === 'function') {
+        setTimeout(function () { window.calcularTudo(); }, 200);
+    }
+};
+
+window.voltarParaMapa = function () {
+    var modalForm = document.getElementById('modalFormulario');
+    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+
+    if (instForm) {
+        try { instForm.hide(); } catch (_) { }
+    }
+
+    setTimeout(function () {
+        window.loadModal('mapa_clientes.html').then(function (ok) {
+            if (!ok) return;
+
+            var modalMapa = document.getElementById('modalMapa');
+            if (!modalMapa) return;
+
+            var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
+
+            modalMapa.addEventListener('shown.bs.modal', function () {
+                var elSolicitante = document.getElementById('header-nome-solicitante');
+                if (elSolicitante && window.dadosPedidoAtual) {
+                    elSolicitante.innerText = window.dadosPedidoAtual.solicitante || 'N/A';
+                }
+
+                // ✅ REEXIBIR RESUMO
+                if (window.dadosPedidoAtual && window.dadosPedidoAtual.distanciaTotal) {
+                    window._renderizarResumo(
+                        window.dadosPedidoAtual.distanciaTotal,
+                        window.dadosPedidoAtual.tempoTotal || 0,
+                        (window.dadosPedidoAtual.valorEstimado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    );
+                }
+
+                window.renderizarMapaUnificado();
+            }, { once: true });
+
+            bsModalMapa.show();
+        });
+    }, 400);
 };
 
 (function () {
@@ -1301,4 +1449,24 @@ window.iniciarFluxoCheckout = function () {
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _tentarInit);
     else _tentarInit();
-})();
+}
+);
+
+window.fecharParaChat = function (modalId) {
+    var modalEl = document.getElementById(modalId);
+    if (!modalEl) return;
+
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (inst) {
+        try { inst.hide(); } catch (_) { }
+    }
+
+    window.AppRDO._mapaModalAberto = false;
+
+    if (window._leafletMapInstance) {
+        try { window._leafletMapInstance.remove(); } catch (_) { }
+        window._leafletMapInstance = null;
+    }
+
+    window.dadosPedidoAtual = {};
+}();

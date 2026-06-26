@@ -1,9 +1,7 @@
 <div class="row g-3 h-100">
 
     <div class="col-12">
-        <div id="global-error-container"
-             class="alert alert-danger d-none rounded-4 shadow-sm"
-             role="alert">
+        <div id="global-error-container" class="alert alert-danger d-none rounded-4 shadow-sm" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <span id="global-error-message"></span>
         </div>
@@ -18,13 +16,10 @@
                         <h5 class="fw-bold mb-0 text-dark">
                             <span class="text-danger">RDO</span> Express - Chat
                         </h5>
-                        <small class="text-muted chat-subtitle">Central de Pedidos ...</small>
+                        <small class="text-muted chat-subtitle">Central de Pedidos</small>
                     </div>
                 </div>
-                <button type="button"
-                        id="btn-sync-chat"
-                        class="btn-sync-chat"
-                        title="Atualizar tudo">
+                <button type="button" id="btn-sync-chat" class="btn-sync-chat" title="Atualizar tudo">
                     <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
                 </button>
             </div>
@@ -38,75 +33,43 @@
                     <span class="input-group-text bg-transparent border-0">
                         <i class="bi bi-search text-secondary"></i>
                     </span>
-                    <input type="text"
-                           id="chat-search"
-                           class="form-control border-0 bg-transparent shadow-none"
-                           placeholder="Buscar cliente..."
-                           autocomplete="off">
+                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar cliente..." autocomplete="off">
                 </div>
             </div>
-            <div id="lista-contatos-chat"
-                 class="list-group list-group-flush overflow-auto flex-grow-1">
+            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
                 <div class="text-center text-muted py-4">
                     <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                    <div class="mt-2 chat-loading-text">
-                        Buscando clientes<span class="chat-dots"></span>
-                    </div>
+                    <div class="mt-2 chat-loading-text">Buscando clientes<span class="chat-dots"></span></div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-8">
-        <div id="dynamic-content-area"
-             class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column card-chat">
+        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column card-chat">
 
             <div id="step-chat" class="d-flex flex-column h-100">
 
-                <div id="chat-header"
-                     class="p-3 border-bottom bg-white d-flex align-items-center gap-2">
-                    <div class="position-relative flex-shrink-0"
-                         id="chat-header-avatar-wrapper"
-                         style="display:none!important;">
-                        <img id="chat-header-avatar"
-                             src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                             class="rounded-circle"
-                             width="36"
-                             height="36"
-                             alt="Avatar">
-                        <span id="chat-header-status-dot"
-                              class="position-absolute bottom-0 end-0 rounded-circle border border-white"
-                              style="width:10px;height:10px;background-color:#adb5bd;"></span>
+                <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center gap-2">
+                    <div class="position-relative flex-shrink-0" id="chat-header-avatar-wrapper" style="display:none!important;">
+                        <img id="chat-header-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle" width="36" height="36" alt="Avatar">
+                        <span id="chat-header-status-dot" class="position-absolute bottom-0 end-0 rounded-circle border border-white" style="width:10px;height:10px;background-color:#adb5bd;"></span>
                     </div>
                     <div class="ms-1">
-                        <h6 id="chat-header-name" class="fw-bold mb-0 text-dark">
-                            Selecione um contato
-                        </h6>
+                        <h6 id="chat-header-name" class="fw-bold mb-0 text-dark">Selecione um contato</h6>
                     </div>
                 </div>
 
-                <div id="chat-messages-container"
-                     class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
+                <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
                     <div class="chat-empty-state">
-                        <div class="chat-empty-label">
-                            Selecione um contato para ver as mensagens
-                        </div>
+                        <div class="chat-empty-label">Selecione um contato para ver as mensagens</div>
                     </div>
                 </div>
 
                 <div class="p-3 bg-white border-top">
                     <div class="input-group bg-light rounded-pill p-1 align-items-end">
-                        <textarea id="msg-input"
-                                  class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea"
-                                  rows="1"
-                                  placeholder="Digite o pedido..."
-                                  autocomplete="off"
-                                  style="resize:none;overflow-y:auto;max-height:120px;"></textarea>
-                        <button type="button"
-                                id="btn-enviar-mensagem"
-                                class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0"
-                                title="Enviar pedido"
-                                onclick="window.enviarMensagemGeral()">
+                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea" rows="1" placeholder="Digite o pedido..." autocomplete="off" style="resize:none;overflow-y:auto;max-height:120px;"></textarea>
+                        <button type="button" id="btn-enviar-mensagem" class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0" title="Enviar pedido" onclick="window.enviarMensagemGeral()">
                             <i class="bi bi-send-fill"></i>
                         </button>
                     </div>
@@ -119,134 +82,42 @@
 
 </div>
 
-<div class="modal fade"
-     id="modalMasterAuth"
-     tabindex="-1"
-     aria-labelledby="modalMasterAuthLabel"
-     aria-hidden="true"
-     data-bs-backdrop="static"
-     data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-master-header d-flex align-items-center gap-3">
-                <div class="modal-master-icon">
-                    <i class="bi bi-shield-lock-fill"></i>
-                </div>
-                <div>
-                    <div class="modal-master-title" id="modalMasterAuthLabel">
-                        Autenticação Requerida
-                    </div>
-                    <div class="modal-master-subtitle">
-                        Digite a senha master para excluir a mensagem
-                    </div>
-                </div>
-                <button type="button"
-                        class="btn-close btn-close-white ms-auto"
-                        aria-label="Fechar"
-                        onclick="window.MasterAuth.cancelar()"></button>
-            </div>
-            <div class="modal-master-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary"
-                           style="font-size:.8rem;"
-                           for="input-senha-master">
-                        <i class="bi bi-key-fill me-1 text-danger"></i>Senha Master
-                    </label>
-                    <div class="position-relative">
-                        <input type="password"
-                               id="input-senha-master"
-                               class="form-control input-senha-master"
-                               placeholder="••••••••"
-                               autocomplete="new-password"
-                               onkeydown="window.MasterAuth.onKeydown(event)">
-                        <button type="button"
-                                class="btn-toggle-senha"
-                                onclick="window.MasterAuth.toggleSenha()"
-                                tabindex="-1"
-                                aria-label="Mostrar/ocultar senha">
-                            <i id="icon-toggle-senha" class="bi bi-eye-slash"></i>
-                        </button>
-                    </div>
-                    <div id="msg-erro-senha" class="msg-erro-senha">
-                        <i class="bi bi-x-circle me-1"></i>
-                        <span id="msg-erro-senha-texto">Senha incorreta. Tente novamente.</span>
-                    </div>
-                </div>
-                <div class="d-flex flex-column gap-2">
-                    <button type="button"
-                            id="btn-confirmar-exclusao"
-                            class="btn btn-confirmar-exclusao w-100"
-                            onclick="window.MasterAuth.confirmar()">
-                        <i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão
-                    </button>
-                    <button type="button"
-                            class="btn btn-cancelar-exclusao w-100"
-                            onclick="window.MasterAuth.cancelar()">
-                        <i class="bi bi-x-lg me-2"></i>Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade"
-     id="modalStatus"
-     tabindex="-1"
-     aria-labelledby="modalStatusLabel"
-     aria-hidden="true">
+<div class="modal fade" id="modalStatus" tabindex="-1" aria-labelledby="modalStatusLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow modal-status-content">
             <div class="modal-header modal-status-header">
-                <h6 id="modalStatusLabel"
-                    class="modal-title fw-semibold mb-0 d-flex align-items-center gap-2 modal-status-title">
+                <h6 id="modalStatusLabel" class="modal-title fw-semibold mb-0 d-flex align-items-center gap-2 modal-status-title">
                     <i id="modal-status-icone" class="bi bi-arrow-repeat"></i>
                     <span id="modal-status-texto">Alterar Status</span>
                 </h6>
-                <button type="button"
-                        class="btn-close btn-close-sm"
-                        data-bs-dismiss="modal"
-                        aria-label="Fechar"></button>
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body p-3">
                 <div id="box-botoes-status">
                     <div class="d-flex flex-column gap-2">
-                        <button type="button"
-                                class="btn btn-sm w-100 btn-status-emrota"
-                                onclick="window.StatusModal.processar('EM_ROTA')">
+                        <button type="button" class="btn btn-sm w-100 btn-status-emrota" onclick="window.StatusModal.processar('EM_ROTA')">
                             <i class="bi bi-bicycle me-2"></i>Em Rota
                         </button>
-                        <button type="button"
-                                class="btn btn-sm w-100 btn-status-concluido"
-                                onclick="window.StatusModal.processar('CONCLUIDO')">
+                        <button type="button" class="btn btn-sm w-100 btn-status-concluido" onclick="window.StatusModal.processar('CONCLUIDO')">
                             <i class="bi bi-check-circle-fill me-2"></i>Concluído
                         </button>
-                        <button type="button"
-                                class="btn btn-sm w-100 btn-status-cancelado"
-                                onclick="window.StatusModal.processar('CANCELADO')">
+                        <button type="button" class="btn btn-sm w-100 btn-status-cancelado" onclick="window.StatusModal.processar('CANCELADO')">
                             <i class="bi bi-x-circle-fill me-2"></i>Cancelado
                         </button>
                     </div>
                 </div>
                 <div id="box-selecao-motoboy" class="d-none">
-                    <label class="form-label fw-semibold mb-2 label-motoboy"
-                           for="select-motoboy">
+                    <label class="form-label fw-semibold mb-2 label-motoboy" for="select-motoboy">
                         <i class="bi bi-person-badge me-1"></i>Motoboy responsável:
                     </label>
-                    <select id="select-motoboy"
-                            class="form-select form-select-sm mb-3 select-motoboy">
+                    <select id="select-motoboy" class="form-select form-select-sm mb-3 select-motoboy">
                         <option value="" disabled selected>Selecione o motoboy...</option>
                     </select>
                     <div class="d-flex gap-2">
-                        <button type="button"
-                                class="btn btn-sm w-50 btn-motoboy-voltar"
-                                onclick="window.StatusModal.voltar()">
+                        <button type="button" class="btn btn-sm w-50 btn-motoboy-voltar" onclick="window.StatusModal.voltar()">
                             <i class="bi bi-chevron-left me-1"></i>Voltar
                         </button>
-                        <button type="button"
-                                id="btn-confirmar-motoboy"
-                                class="btn btn-sm w-50 btn-motoboy-confirmar"
-                                onclick="window.StatusModal.confirmarMotoboy()">
+                        <button type="button" id="btn-confirmar-motoboy" class="btn btn-sm w-50 btn-motoboy-confirmar" onclick="window.StatusModal.confirmarMotoboy()">
                             <i class="bi bi-check2 me-1"></i>Confirmar
                         </button>
                     </div>
@@ -256,28 +127,15 @@
     </div>
 </div>
 
-<div class="modal fade"
-     id="modalMensagemPadrao"
-     tabindex="-1"
-     aria-labelledby="modalMensagemPadraoLabel"
-     aria-hidden="true">
+<div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-labelledby="modalMensagemPadraoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="modalMensagemPadraoLabel">
-                    MODELO MENSAGENS
-                </h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Fechar"></button>
+                <h5 class="modal-title fw-bold" id="modalMensagemPadraoLabel">MODELO MENSAGENS</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                <textarea id="texto-modelo"
-                          class="form-control bg-light mb-3 textarea-modelo"
-                          rows="12"
-                          readonly
-                          aria-label="Modelo de mensagem">📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
+                <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly aria-label="Modelo de mensagem">📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
 
 SOLICITANTE: 
 CONTATO: 
@@ -293,9 +151,7 @@ OBSERVAÇÃO: Descreva a observação aqui se necessario
 
 Assim que enviar esta mensagem preenchida, 
 calcularemos á sua taxa! 🏁</textarea>
-                <button type="button"
-                        class="btn btn-outline-danger w-100 rounded-pill"
-                        onclick="window.copiarModelo()">
+                <button type="button" class="btn btn-outline-danger w-100 rounded-pill" onclick="window.copiarModelo()">
                     <i class="bi bi-clipboard me-1"></i> Copiar Modelo
                 </button>
             </div>
@@ -303,48 +159,27 @@ calcularemos á sua taxa! 🏁</textarea>
     </div>
 </div>
 
-<div class="modal fade"
-     id="modalValidacao"
-     tabindex="-1"
-     aria-labelledby="modalValidacaoLabel"
-     aria-hidden="true">
+<div class="modal fade" id="modalValidacao" tabindex="-1" aria-labelledby="modalValidacaoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-0">
                 <div class="d-flex align-items-center gap-2">
-                    <i id="modal-validacao-icone"
-                       class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
-                    <h6 class="modal-title fw-bold mb-0" id="modalValidacaoLabel">
-                        Atenção
-                    </h6>
+                    <i id="modal-validacao-icone" class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                    <h6 class="modal-title fw-bold mb-0" id="modalValidacaoLabel">Atenção</h6>
                 </div>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Fechar"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body pt-2">
-                <p id="modal-validacao-mensagem"
-                   class="mb-0 text-muted"
-                   style="font-size:.9rem;"></p>
+                <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size:.9rem;"></p>
                 <div id="modal-validacao-modelo" class="d-none mt-3">
-                    <textarea id="modal-validacao-textarea"
-                              class="form-control bg-light textarea-modelo"
-                              rows="12"
-                              readonly></textarea>
-                    <button type="button"
-                            class="btn btn-outline-danger w-100 rounded-pill mt-2"
-                            onclick="window.copiarModeloValidacao()">
+                    <textarea id="modal-validacao-textarea" class="form-control bg-light textarea-modelo" rows="12" readonly></textarea>
+                    <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2" onclick="window.copiarModeloValidacao()">
                         <i class="bi bi-clipboard me-1"></i> Copiar Modelo
                     </button>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button"
-                        class="btn btn-danger rounded-pill px-4 w-100"
-                        data-bs-dismiss="modal">
-                    Entendi
-                </button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 w-100" data-bs-dismiss="modal">Entendi</button>
             </div>
         </div>
     </div>
@@ -354,15 +189,26 @@ calcularemos á sua taxa! 🏁</textarea>
 
 <script>
 (function () {
+    'use strict';
+    
+    console.log('[chat.html] 📄 Inicializando...');
+    
     function _carregarScript(src, callback) {
         if (document.querySelector('script[src="' + src + '"]')) {
+            console.log('[chat.html] ✅ Script já inserido:', src);
             if (typeof callback === 'function') callback();
             return;
         }
         var s = document.createElement('script');
         s.src = src;
-        s.onload = function () { if (typeof callback === 'function') callback(); };
-        s.onerror = function () { if (typeof callback === 'function') callback(); };
+        s.onload = function () { 
+            console.log('[chat.html] ✅ Script carregado:', src);
+            if (typeof callback === 'function') callback(); 
+        };
+        s.onerror = function () { 
+            console.error('[chat.html] ❌ Erro ao carregar:', src);
+            if (typeof callback === 'function') callback(); 
+        };
         document.head.appendChild(s);
     }
 
@@ -387,6 +233,10 @@ calcularemos á sua taxa! 🏁</textarea>
                 }
             });
         }
+    });
+
+    _carregarScript(base + 'js/status_modal.js', function () {
+        console.log('[chat.html] ✅ status_modal.js carregado');
     });
 })();
 </script>

@@ -2,6 +2,7 @@
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
     <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
 
+      <!-- HEADER -->
       <div class="fin-form-header">
         <div class="d-flex align-items-center justify-content-between w-100">
           <div class="d-flex align-items-center gap-3">
@@ -29,21 +30,25 @@
         </div>
       </div>
 
+      <!-- BODY -->
       <div class="modal-body px-4 py-3">
         <form id="form-checkout" novalidate autocomplete="off" onsubmit="return false;">
 
+          <!-- SEÇÃO 1: Dados Principais -->
           <div class="fin-form-section">
-            <div class="fin-form-section-label">Dados principais</div>
+            <div class="fin-form-section-label">
+              <i class="bi bi-person-badge me-2"></i>Dados principais
+            </div>
 
             <div class="row g-2 mb-2">
               <div class="col-md-6">
-                <label class="fin-field-label">Solicitante</label>
+                <label class="fin-field-label">Solicitante <span class="text-danger">*</span></label>
                 <input type="text" id="p-solicitante" class="form-control form-control-sm fin-field-input"
-                  placeholder="Solicitante" readonly>
+                  placeholder="Nome do solicitante" readonly>
                 <div class="invalid-feedback">Campo obrigatório</div>
               </div>
               <div class="col-md-6">
-                <label class="fin-field-label">Contato</label>
+                <label class="fin-field-label">Contato <span class="text-danger">*</span></label>
                 <input type="text" id="p-contato" class="form-control form-control-sm fin-field-input"
                   placeholder="Telefone ou WhatsApp">
                 <div class="invalid-feedback">Campo obrigatório</div>
@@ -52,52 +57,56 @@
 
             <div class="row g-2 mb-2">
               <div class="col-md-3">
-                <label class="fin-field-label">Mercadoria</label>
+                <label class="fin-field-label">Mercadoria <span class="text-danger">*</span></label>
                 <select id="p-mercadoria" class="form-select form-select-sm fin-field-input">
-                  <option value="">Selecione...</option>
-                  <option value="Sacola">Sacola</option>
-                  <option value="Coleta">Coleta</option>
-                  <option value="Bolsa">Bolsa</option>
-                  <option value="Envelope">Envelope</option>
+                  <option value="">SELECIONE</option>
+                  <option value="ENTREGA">Entrega</option>
+                  <option value="BUSCA">Busca</option>
+                  <option value="COMPRA">Compra</option>
+                  <option value="PAGAMENTO">Pagamento</option>
                 </select>
                 <div class="invalid-feedback">Campo obrigatório</div>
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Horário</label>
                 <input type="text" id="p-horario" class="form-control form-control-sm fin-field-input"
-                  placeholder="HH:MM">
+                  placeholder="Ex: 14:30">
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Distância (KM)</label>
-                <input type="number" id="p-distancia" class="form-control form-control-sm fin-field-input"
-                  oninput="window.calcularTudo()" readonly>
+                <input type="text" id="p-distancia" class="form-control form-control-sm fin-field-input"
+                  readonly style="background:#f8f9fa;cursor:not-allowed;">
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Tempo</label>
-                <input type="text" id="p-tempo" class="form-control form-control-sm fin-field-input" readonly>
+                <input type="text" id="p-tempo" class="form-control form-control-sm fin-field-input"
+                  readonly style="background:#f8f9fa;cursor:not-allowed;">
               </div>
             </div>
 
             <div class="mb-2">
-              <label class="fin-field-label">Rota (De / Para)</label>
-              <textarea id="p-rotas" class="form-control form-control-sm fin-field-input" rows="2"
-                style="border-radius:10px!important;resize:none;" readonly></textarea>
+              <label class="fin-field-label">Rota(s) <span class="text-danger">*</span></label>
+              <textarea id="p-rotas" class="form-control form-control-sm fin-field-input" rows="3"
+                style="border-radius:10px!important;resize:none;background:#f8f9fa;cursor:not-allowed;font-family:monospace;font-size:.75rem;line-height:1.6;" 
+                readonly></textarea>
               <div class="invalid-feedback">Campo obrigatório</div>
             </div>
           </div>
 
+          <!-- SEÇÃO 2: Tarifação -->
           <div class="fin-form-section">
-            <div class="fin-form-section-label">Tarifação</div>
+            <div class="fin-form-section-label">
+              <i class="bi bi-calculator me-2"></i>Tarifação
+            </div>
 
             <div class="row g-2 mb-2">
               <div class="col-6 col-md-3">
-                <label class="fin-field-label">Valor KM</label>
+                <label class="fin-field-label">Valor/KM</label>
                 <select id="p-valor-km" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
-                  <option value="">Selecione...</option>
-                  <option value="2.02">2,02</option>
-                  <option value="2.20" selected>2,20</option>
-                  <option value="3.00">3,00</option>
+                  <option value="2.02">R$ 2,02</option>
+                  <option value="2.20">R$ 2,20</option>
+                  <option value="3.00" selected>R$ 3,00</option>
                 </select>
               </div>
               <div class="col-6 col-md-3">
@@ -124,8 +133,8 @@
                 <select id="p-prioridade" class="form-select form-select-sm fin-field-input"
                   onchange="window.calcularTudo()">
                   <option value="0">Normal</option>
-                  <option value="5">Agendado</option>
-                  <option value="7">Urgente</option>
+                  <option value="5">Agendado (+R$5)</option>
+                  <option value="7">Urgente (+R$7)</option>
                 </select>
               </div>
             </div>
@@ -134,49 +143,42 @@
               <div class="col-12">
                 <label class="fin-field-label">Observação</label>
                 <input type="text" id="p-obs" class="form-control form-control-sm fin-field-input"
-                  placeholder="Observações adicionais...">
+                  placeholder="Informações adicionais...">
               </div>
             </div>
           </div>
 
+          <!-- SEÇÃO 3: Resumo Financeiro -->
           <div class="fin-form-section mb-0">
-            <div class="fin-form-section-label">Resumo financeiro</div>
+            <div class="fin-form-section-label">
+              <i class="bi bi-cash-stack me-2"></i>Resumo financeiro
+            </div>
 
-            <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-3 mb-2"
-              style="background:#f8f9fa;border:1px solid #f0f0f0;">
+            <div class="d-flex align-items-center justify-content-between px-3 py-3 rounded-3 shadow-sm"
+              style="background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);border:2px solid #e9ecef;">
               <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-cash-stack text-success" style="font-size:.9rem;"></i>
-                <span style="font-size:.65rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;">
+                <i class="bi bi-currency-dollar text-success" style="font-size:1.3rem;"></i>
+                <span style="font-size:.7rem;font-weight:600;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">
                   Total estimado
                 </span>
               </div>
-              <span id="view-valor-final" style="font-size:1.1rem;font-weight:700;color:#1a1a2e;">R$ 0,00</span>
+              <span id="view-valor-final" style="font-size:1.5rem;font-weight:700;color:#198754;">R$ 0,00</span>
             </div>
 
-            <div id="box-valor-espera" style="display:none;">
-              <div class="d-flex align-items-center justify-content-between px-3 py-2 rounded-3"
-                style="background:rgba(220,53,69,.05);border:1px solid rgba(220,53,69,.15);">
-                <div class="d-flex align-items-center gap-2">
-                  <i class="bi bi-clock-fill text-danger" style="font-size:.9rem;"></i>
-                  <span style="font-size:.65rem;font-weight:600;color:#dc3545;text-transform:uppercase;letter-spacing:.04em;">
-                    Espera excedente
-                  </span>
-                </div>
-                <span id="p-valor-espera" style="font-size:.95rem;font-weight:700;color:#dc3545;">R$ 0,00</span>
-              </div>
-            </div>
           </div>
 
         </form>
       </div>
 
+      <!-- FOOTER -->
       <div class="fin-form-footer">
         <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
-          style="font-size:.72rem;" onclick="window.voltarParaMapa()">
+          style="font-size:.72rem;font-weight:600;" onclick="window.voltarParaMapa()">
           <i class="bi bi-arrow-left me-1"></i>Voltar
         </button>
-        <button type="button" id="btn-emitir-pedido" class="btn btn-danger btn-sm rounded-pill px-4"
-          style="font-size:.72rem;" onclick="window.salvarPedidoAPI()">
+
+        <button type="button" id="btn-emitir-pedido" class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm"
+          style="font-size:.72rem;font-weight:600;" onclick="window.salvarPedidoAPI()">
           <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
         </button>
       </div>
