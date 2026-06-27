@@ -1469,4 +1469,107 @@ window.fecharParaChat = function (modalId) {
     }
 
     window.dadosPedidoAtual = {};
-}();
+};
+
+// ✅ BOTÕES DE FECHAR MODAIS
+window.fecharParaMapa = function () {
+    var modalForm = document.getElementById('modalFormulario');
+    if (!modalForm) return;
+
+    var inst = bootstrap.Modal.getInstance(modalForm);
+    if (inst) {
+        try { inst.hide(); } catch (_) { }
+    }
+
+    // Voltar para o mapa
+    setTimeout(function () {
+        window.voltarParaMapa();
+    }, 400);
+};
+
+window.fecharParaChat = function (modalId) {
+    var modalEl = document.getElementById(modalId || 'modalMapa');
+    if (!modalEl) return;
+
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (inst) {
+        try { inst.hide(); } catch (_) { }
+    }
+
+    window.AppRDO._mapaModalAberto = false;
+
+    if (window._leafletMapInstance) {
+        try { window._leafletMapInstance.remove(); } catch (_) { }
+        window._leafletMapInstance = null;
+    }
+
+    window.dadosPedidoAtual = {};
+
+    // Limpar backdrop
+    setTimeout(function () {
+        _limparBackdrop();
+    }, 400);
+};
+
+// ✅ INICIALIZAÇÃO AUTOMÁTICA
+(function () {
+    function _handleSyncClick(e) {
+        if (!e.target.closest('#btn-sync-chat')) return;
+        if (window.AppRDO && window.AppRDO.isFetching) return;
+        if (typeof window.carregarDados === 'function') window.carregarDados();
+    }
+
+    document.removeEventListener('click', _handleSyncClick);
+    document.addEventListener('click', _handleSyncClick);
+
+    function _tentarInit() {
+        if (window.AppRDO) {
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.listaCarregada = false;
+            window.AppRDO._mapaModalAberto = false;
+        }
+        if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _tentarInit);
+    } else {
+        _tentarInit();
+    }
+
+    // ✅ ESCUTAR EXCLUSÕES DA LISTA DE PEDIDOS
+    if (typeof window.EventBus !== 'undefined') {
+        window.EventBus.on('pedido:excluido', function (dados) {
+            console.log('[chat.js] 📡 Evento recebido:', dados.id);
+
+            var idStr = String(dados.id).trim();
+
+            // ✅ REMOVER DO CACHE
+            if (Array.isArray(window.AppRDO.mensagensCache)) {
+                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                    return String(m.pedido_id).trim() !== idStr;
+                });
+            }
+
+            if (Array.isArray(window.AppRDO.pedidosCache)) {
+                window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+                    return String(p.id).trim() !== idStr;
+                });
+            }
+
+            // ✅ REMOVER VISUALMENTE DO CHAT
+            var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
+            if (msgEl) {
+                var wrapper = msgEl.closest('.message-wrapper');
+                if (wrapper) {
+                    wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
+                    setTimeout(function () { wrapper.remove(); }, 300);
+                }
+            }
+
+            console.log('[chat.js] ✅ Pedido removido do chat');
+        });
+    }
+})();

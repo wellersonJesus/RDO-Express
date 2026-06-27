@@ -1,4 +1,17 @@
-console.log('[form_clientes.js] ========== SCRIPT CARREGADO ==========');
+if (typeof API === 'undefined') {
+    console.error('[form_clientes.js] ❌ API não está definida. Carregando api.js...');
+
+    // Tentar carregar api.js dinamicamente
+    var script = document.createElement('script');
+    script.src = '../api/api.js'; // Ajuste o caminho se necessário
+    script.onload = function () {
+        console.log('[form_clientes.js] ✅ api.js carregado com sucesso');
+    };
+    script.onerror = function () {
+        console.error('[form_clientes.js] ❌ Falha ao carregar api.js');
+    };
+    document.head.appendChild(script);
+}
 
 window.AppRDO = window.AppRDO || {};
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
@@ -147,95 +160,187 @@ window._validarCamposObrigatorios = function () {
 };
 
 window.salvarPedidoAPI = async function () {
-    console.log('[form_clientes.js] 💾 salvarPedidoAPI()');
+    console.log('[form_clientes.js] 🚀 Salvando pedido...');
 
-    if (!window._validarCamposObrigatorios()) return;
-
-    var btn = document.getElementById('btn-emitir-pedido');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+    if (typeof API === 'undefined' || typeof API.call !== 'function') {
+        console.error('[form_clientes.js] ❌ API não disponível');
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'API não carregada', confirmButtonColor: '#dc3545' });
+        return;
     }
 
-    var dados = window.dadosPedidoAtual;
-    var solicitante = document.getElementById('p-solicitante')?.value.trim();
-    var contato = document.getElementById('p-contato')?.value.trim();
-    var horario = document.getElementById('p-horario')?.value.trim() || '';
-    var mercadoria = document.getElementById('p-mercadoria')?.value || 'ENTREGA';
-    var observacao = document.getElementById('p-obs')?.value.trim() || '';
-    var retornoVal = document.getElementById('p-retorno')?.value || '0';
-    var retornoTexto = retornoVal === '0.6' ? 'SIM' : 'NÃO';
-    var valorFinal = document.getElementById('view-valor-final')?.textContent || 'R$ 0,00';
+    if (window.AppRDO && window.AppRDO.isProcessingCheckout) return;
 
-    var rotasFormatadas = '';
-    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
-        rotasFormatadas = dados.rotasProcessadas.map(function (r, idx) {
-            return '📍 ' + (idx + 1) + '. De: ' + r.de + ' |\n         Para: ' + r.para;
-        }).join('\n');
+    var elSolicitante = document.getElementById('p-solicitante');
+    var elContato = document.getElementById('p-contato');
+    var elMercadoria = document.getElementById('p-mercadoria');
+    var elHorario = document.getElementById('p-horario');
+    var elDistancia = document.getElementById('p-distancia');
+    var elTempo = document.getElementById('p-tempo');
+    var elRotas = document.getElementById('p-rotas');
+    var elObs = document.getElementById('p-obs');
+    var elValorFinal = document.getElementById('view-valor-final');
+
+    var camposObrigatorios = [
+        { el: elContato, nome: 'Contato' },
+        { el: elMercadoria, nome: 'Mercadoria' }
+    ];
+
+    for (var i = 0; i < camposObrigatorios.length; i++) {
+        var campo = camposObrigatorios[i];
+        if (!campo.el || !campo.el.value.trim()) {
+            if (campo.el) {
+                campo.el.style.border = '2px solid #dc3545';
+                campo.el.focus();
+                setTimeout(function (el) { el.style.border = ''; }.bind(null, campo.el), 2500);
+            }
+            Swal.fire({ icon: 'warning', title: 'Campo Obrigatório', text: 'Preencha: ' + campo.nome, confirmButtonColor: '#dc3545' });
+            return;
+        }
     }
 
-    var contatoCompleto = contato;
-    if (horario) contatoCompleto += ' | HR: ' + horario;
+    var solicitante = elSolicitante && elSolicitante.value.trim() ? elSolicitante.value.trim() : 'Não informado';
+    var contato = elContato.value.trim();
+    var mercadoria = elMercadoria.value.trim();
+    var horario = elHorario ? elHorario.value.trim() : '';
+    var distancia = elDistancia ? elDistancia.value.trim() : '0';
+    var tempo = elTempo ? elTempo.value.trim() : '';
+    var rotas = elRotas ? elRotas.value.trim() : '';
+    var obs = elObs ? elObs.value.trim() : '';
+    var valorFinal = elValorFinal ? elValorFinal.textContent.trim() : 'R$ 0,00';
 
-    var mensagemFinal =
-        'N.SERVIÇO: RDO' + String(Date.now()).slice(-3) + '\n' +
-        'SOLICITANTE: ' + solicitante + '\n' +
-        'CONTATO: ' + contatoCompleto + '\n' +
-        '-\n' +
-        'MERCADORIA: ' + mercadoria + '\n' +
-        'RETORNO: ' + retornoTexto + '\n' +
-        '-\n' +
-        'ROTA(s):\n' + rotasFormatadas + '\n' +
-        '-\n' +
-        'OBSERVAÇÃO: ' + observacao + '\n' +
-        valorFinal;
+    var clienteId = window.AppRDO && window.AppRDO.clienteId ? String(window.AppRDO.clienteId).trim() : null;
+    if (!clienteId) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Cliente não selecionado', confirmButtonColor: '#dc3545' });
+        return;
+    }
 
-    console.log('[form_clientes.js] 📤 Mensagem:\n', mensagemFinal);
+    var btnEmitir = document.getElementById('btn-emitir-pedido');
+    if (btnEmitir) {
+        btnEmitir.disabled = true;
+        btnEmitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    }
+
+    window.AppRDO.isProcessingCheckout = true;
 
     try {
-        if (typeof API === 'undefined' || typeof API.sendMessage !== 'function') {
-            throw new Error('API indisponível');
+        console.log('[form_clientes.js] 📡 Chamando API...');
+        
+        var mensagemTemporaria = [
+            '👤 : ' + solicitante + ' |📞 : ' + contato,
+            '📦 : ' + mercadoria,
+            '.',
+            '📍 ROTAS:',
+            rotas,
+            '.',
+            '🛣️ ' + distancia + ' km ⏱️ ' + tempo + ' 💰 ' + valorFinal
+        ].join('\n');
+
+        if (obs) mensagemTemporaria += '\n.\n💬 OBS: ' + obs;
+
+        var resposta = await API.call('addpedido', {
+            id_cliente: clienteId,
+            solicitante: solicitante,
+            telefone: contato,
+            texto: mensagemTemporaria,
+            status: 'PENDENTE',
+            motoboy: ''
+        });
+
+        if (!resposta || resposta.status !== 'success') {
+            throw new Error(resposta && resposta.message ? resposta.message : 'Falha ao salvar');
         }
 
-        var clienteId = dados.clienteId;
-        if (!clienteId) throw new Error('ID do cliente não encontrado');
+        var pedidoId = resposta.id || resposta.pedido_id || Date.now();
+        var pedidoIdFormatado = 'RDO' + String(pedidoId).padStart(4, '0');
+        
+        console.log('[form_clientes.js] ✅ Pedido salvo. ID:', pedidoIdFormatado);
 
-        var resposta = await API.sendMessage(clienteId, mensagemFinal);
+        var agora = new Date();
+        var dataISO = agora.toISOString().split('T')[0];
+        var hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-        if (resposta && resposta.success) {
-            console.log('[form_clientes.js] ✅ Enviado!');
+        var rotasComPonto = rotas.split('\n').filter(function(l) { return l.trim(); }).map(function(r) { return r + '\n.'; }).join('\n');
 
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Enviado!',
-                    text: 'Pedido enviado com sucesso',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(function () {
-                    window.fecharParaChat('modalFormulario');
-                    if (typeof window.carregarDados === 'function') window.carregarDados();
-                });
+        var mensagemFinal = [
+            '📦 N.SERVIÇO: ' + pedidoIdFormatado,
+            '👤 : ' + solicitante + ' |📞 : ' + contato,
+            '📦 : ' + mercadoria,
+            '.',
+            '📍 ROTAS:',
+            rotasComPonto,
+            '🛣️ ' + distancia + ' km ⏱️ ' + tempo + ' 💰 ' + valorFinal
+        ].join('\n');
+
+        if (obs) mensagemFinal += '\n.\n💬 OBS: ' + obs;
+
+        var novoPedido = {
+            id: pedidoId,
+            id_cliente: clienteId,
+            solicitante: solicitante,
+            telefone: contato,
+            texto: mensagemFinal,
+            status: 'PENDENTE',
+            motoboy: '',
+            data: dataISO,
+            hora: hora,
+            contato: contato,
+            mercadoria: mercadoria,
+            horario: horario,
+            observacoes: obs,
+            valor: parseFloat(valorFinal.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+        };
+
+        if (!Array.isArray(window.AppRDO.pedidosCache)) window.AppRDO.pedidosCache = [];
+        window.AppRDO.pedidosCache.push(novoPedido);
+
+        if (!Array.isArray(window.AppRDO.mensagensCache)) window.AppRDO.mensagensCache = [];
+        window.AppRDO.mensagensCache.push({
+            id: Date.now(),
+            pedido_id: pedidoId,
+            id_cliente: clienteId,
+            texto: mensagemFinal,
+            data: dataISO,
+            hora: hora
+        });
+
+        if (typeof window._criarWrapperMensagem === 'function') {
+            var container = document.getElementById('chat-messages-container');
+            if (container) {
+                container.appendChild(window._criarWrapperMensagem(pedidoId, mensagemFinal, hora, false, '', 'Alterar Status'));
+                container.scrollTop = container.scrollHeight;
             }
-        } else {
-            throw new Error('Erro ao enviar');
         }
+
+        if (typeof window.EventBus !== 'undefined') {
+            window.EventBus.emit('pedido:adicionado', novoPedido);
+        }
+
+        var msgInput = document.getElementById('msg-input');
+        if (msgInput) msgInput.value = '';
+
+        var modalForm = document.getElementById('modalFormulario');
+        if (modalForm) {
+            var instForm = bootstrap.Modal.getInstance(modalForm);
+            if (instForm) { try { instForm.hide(); } catch (_) {} }
+        }
+
+        window.dadosPedidoAtual = {};
+        window.AppRDO._mapaModalAberto = false;
+
+        Swal.fire({
+            icon: 'success', title: 'Pedido Enviado!', text: 'O pedido foi registrado.',
+            timer: 2500, timerProgressBar: true, toast: true, position: 'top-end', showConfirmButton: false
+        });
+
     } catch (erro) {
         console.error('[form_clientes.js] ❌ Erro:', erro);
-
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro',
-                text: 'Não foi possível enviar o pedido',
-                confirmButtonColor: '#dc3545'
-            });
-        }
+        Swal.fire({ icon: 'error', title: 'Erro ao Salvar', text: erro.message || 'Erro desconhecido', confirmButtonColor: '#dc3545' });
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
+        if (btnEmitir) {
+            btnEmitir.disabled = false;
+            btnEmitir.innerHTML = '<i class="bi bi-send-fill"></i> EMITIR PEDIDO';
         }
+        window.AppRDO.isProcessingCheckout = false;
     }
 };
 
