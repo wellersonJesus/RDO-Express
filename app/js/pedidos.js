@@ -109,8 +109,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             var idChat = String(pedido.id_chat || pedido.id_cliente || '').trim();
             if (!idChat) return String(pedido.solicitante || '—');
             var clientes = Array.isArray(window.AppRDO.clientesCache) ? window.AppRDO.clientesCache : [];
-            if (window.adminState && Array.isArray(window.adminState.dados))
-                clientes = window.adminState.dados;
+            if (window.adminState && Array.isArray(window.adminState.dados)) clientes = window.adminState.dados;
             for (var c of clientes) {
                 var cId = String(c.id_chat || c.id || '').trim();
                 if (cId === idChat) return String(c.nome || c.name || c.username || c.solicitante || '—');
@@ -140,20 +139,14 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     }
 
     function _spinOn() {
-        if (els.btnSync) {
-            els.btnSync.classList.add('syncing');
-            els.btnSync.disabled = true;
-        }
+        if (els.btnSync) { els.btnSync.classList.add('syncing'); els.btnSync.disabled = true; }
         if (els.iconSync) els.iconSync.classList.add('spinner-rotate');
         console.log('[pedidos.js] 🔄 Spinner ATIVADO');
     }
 
     function _spinOff() {
         setTimeout(function () {
-            if (els.btnSync) {
-                els.btnSync.classList.remove('syncing');
-                els.btnSync.disabled = false;
-            }
+            if (els.btnSync) { els.btnSync.classList.remove('syncing'); els.btnSync.disabled = false; }
             if (els.iconSync) els.iconSync.classList.remove('spinner-rotate');
             console.log('[pedidos.js] ✅ Spinner DESATIVADO');
         }, 500);
@@ -167,13 +160,11 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     function _criarLinhaTabela(pedido) {
         var statusNorm = _normalizarStatus(pedido.status);
         var corStatus = statusNorm === 'PENDENTE' ? 'warning' : statusNorm === 'EM_ROTA' ? 'info' : statusNorm === 'CANCELADO' ? 'danger' : 'success';
-
         var idPedido = pedido.id || pedido._id || 'S/N';
         var idFmt = _formatarIdServico(idPedido);
         var solicitante = _resolverNomeCliente(pedido);
         var dataPedido = _formatarDataExibicao(_extrairDataPedido(pedido));
         var finalizado = ['CONCLUIDO', 'CANCELADO'].includes(statusNorm);
-
         var idSafe = _escAttr(idPedido);
         var statusLabel = (statusNorm === 'EM_ROTA') ? 'Em Rota' : (statusNorm === 'CONCLUIDO') ? 'Concluído' : statusNorm;
 
@@ -198,13 +189,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     function _matchFiltros(p, termo, categoria, statusFiltro, dataFiltro) {
         var s = _normalizarStatus(p.status);
         if (statusFiltro !== 'todos') {
-            if (statusFiltro === 'pendente') if (s !== 'PENDENTE') return false;
-            if (statusFiltro === 'em_rota') if (s !== 'EM_ROTA') return false;
-            if (statusFiltro === 'concluido') if (s !== 'CONCLUIDO') return false;
-            if (statusFiltro === 'cancelado') if (s !== 'CANCELADO') return false;
+            if (statusFiltro === 'pendente' && s !== 'PENDENTE') return false;
+            if (statusFiltro === 'em_rota' && s !== 'EM_ROTA') return false;
+            if (statusFiltro === 'concluido' && s !== 'CONCLUIDO') return false;
+            if (statusFiltro === 'cancelado' && s !== 'CANCELADO') return false;
         }
         if (dataFiltro && _extrairDataPedido(p) !== dataFiltro) return false;
-
         if (termo) {
             var t = termo.toLowerCase();
             var idFmt = _formatarIdServico(p.id);
@@ -275,7 +265,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         els.tbody.innerHTML = paginado.map(_criarLinhaTabela).join('');
         if (els.infoPaginacao) els.infoPaginacao.textContent = 'Pág ' + window.pedidosState.paginaAtual + ' de ' + totalPag;
-
         if (els.btnPrev) els.btnPrev.disabled = window.pedidosState.paginaAtual === 1;
         if (els.btnNext) els.btnNext.disabled = window.pedidosState.paginaAtual >= totalPag;
 
@@ -301,25 +290,18 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             btn.onclick = () => {
                 var id = btn.getAttribute('data-id');
                 console.log('[pedidos.js] 🗑️ Excluir clicado:', id);
-                window.pedidosState.emAcao = true;
-                _spinOn();
-
                 if (typeof window.MasterAuth !== 'undefined' && typeof window.MasterAuth.abrir === 'function') {
-                    window.MasterAuth.abrir(id, 'pedidos');
+                    window.MasterAuth.abrir(id);
                 } else {
                     console.error('[pedidos.js] ❌ MasterAuth não disponível');
                     alert('Erro: Módulo de autenticação não carregado');
-                    _spinOff();
                 }
             };
         });
     }
 
     async function _fetchPedidos() {
-        if (window.pedidosState.isFetching) {
-            console.log('[pedidos.js] fetch já em andamento');
-            return;
-        }
+        if (window.pedidosState.isFetching) { console.log('[pedidos.js] fetch já em andamento'); return; }
         if (window.pedidosState.dadosCarregados && !window.pedidosState.emAcao) {
             console.log('[pedidos.js] ✅ Dados já carregados. Modo estático ativo.');
             return;
@@ -338,17 +320,15 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             var pedidos = [];
             if (Array.isArray(respPedidos)) pedidos = respPedidos;
             else if (typeof respPedidos === 'object') {
-                if (respPedidos.pedidos && Array.isArray(respPedidos.pedidos))
-                    pedidos = respPedidos.pedidos;
-                else if (respPedidos.data && Array.isArray(respPedidos.data))
-                    pedidos = respPedidos.data;
+                if (respPedidos.pedidos && Array.isArray(respPedidos.pedidos)) pedidos = respPedidos.pedidos;
+                else if (respPedidos.data && Array.isArray(respPedidos.data)) pedidos = respPedidos.data;
             }
             window.AppRDO.pedidosCache = pedidos;
             window.pedidosState.dadosCarregados = true;
             _renderizarTabela(pedidos);
         } catch (e) {
             console.error(e);
-            els.tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">'
+            if (els.tbody) els.tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">'
                 + '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>'
                 + 'Erro: ' + _escHtml(e.message) + '</td></tr>';
         } finally {
@@ -442,9 +422,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 return String(p.id || p._id) === String(id);
             });
             if (!pedido) return;
-
             var modal = new bootstrap.Modal(document.getElementById('modalPedidoDetalhes'));
-
             document.getElementById('detalhe-titulo').textContent = _formatarIdServico(id);
             document.getElementById('det-pedido-id').value = _formatarIdServico(id);
             document.getElementById('det-data').value = _formatarDataExibicao(_extrairDataPedido(pedido));
@@ -464,7 +442,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             document.getElementById('det-espera-tipo').value = pedido.espera_tipo || 'sem_espera';
             document.getElementById('det-espera-minutos').value = pedido.espera_minutos || '0';
             document.getElementById('det-obs').value = pedido.observacoes || '';
-
             modal.show();
         });
     };
@@ -477,9 +454,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 return String(p.id || p._id) === String(id);
             });
             if (!pedido) return;
-
             var modal = new bootstrap.Modal(document.getElementById('modalEditarPedido'));
-
             document.getElementById('editar-titulo').textContent = _formatarIdServico(id);
             document.getElementById('edit-pedido-id').value = id;
             document.getElementById('edit-solicitante').value = pedido.solicitante || '';
@@ -493,7 +468,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             document.getElementById('edit-valor-pedido-display').value = 'R$ ' + (pedido.valor || 0).toFixed(2);
             document.getElementById('edit-espera-tipo').value = pedido.espera_tipo || 'sem_espera';
             document.getElementById('edit-espera-minutos').value = pedido.espera_minutos || '';
-
             modal.show();
         });
     };
@@ -502,28 +476,15 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
     window.RDO_PEDIDOS.removerDoCache = function (id) {
         console.log('[pedidos.js] 🗑️ Removendo do cache:', id);
-        if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) {
-            _spinOff();
-            return;
-        }
-
+        if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) { _spinOff(); return; }
         var idStr = String(id || '').trim();
-
         window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
             return String(p.id || '').trim() !== idStr;
         });
-
         window.pedidosState.emAcao = true;
         _renderizarTabela(window.AppRDO.pedidosCache);
         setTimeout(_spinOff, 800);
     };
-
-    if (typeof window.EventBus !== 'undefined') {
-        window.EventBus.on('pedido:excluido', function (dados) {
-            console.log('[pedidos.js] 📡 Recebido evento de exclusão:', dados.id);
-            window.RDO_PEDIDOS.removerDoCache(dados.id);
-        });
-    }
 
     window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
         console.log('[pedidos.js] 🔄 _renderizarTabelaPublico chamado');
@@ -531,18 +492,20 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     };
 
-    if (typeof window.EventBus !== 'undefined') {
+    function _registrarEventosEventBus() {
+        if (typeof window.EventBus === 'undefined') {
+            setTimeout(_registrarEventosEventBus, 300);
+            return;
+        }
+        window.EventBus.on('pedido:excluido', function (dados) {
+            console.log('[pedidos.js] 📡 Recebido evento de exclusão:', dados.id);
+            window.RDO_PEDIDOS.removerDoCache(dados.id);
+        });
         window.EventBus.on('pedido:adicionado', function (novoPedido) {
             console.log('[pedidos.js] 📡 Novo pedido recebido:', novoPedido);
-
             if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
-
-            // ✅ ADICIONAR NO CACHE
             window.AppRDO.pedidosCache.push(novoPedido);
-
-            // ✅ RERRENDERIZAR TABELA
             _renderizarTabela(window.AppRDO.pedidosCache);
-
             console.log('[pedidos.js] ✅ Pedido adicionado na lista');
         });
     }
@@ -558,10 +521,10 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
         _bind();
         _registrarEventos();
+        _registrarEventosEventBus();
         _fetchPedidos();
         console.log('Pronto!');
     };
 
     console.log('[pedidos.js] Script carregado e pronto.');
-
 })();

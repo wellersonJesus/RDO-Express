@@ -384,151 +384,6 @@ function _spinChatOff() {
     if (icon) icon.classList.remove('spinner-rotate');
 }
 
-window.MasterAuth = (function () {
-    var _pedidoId = null;
-    var _modalBS = null;
-    var _senhaVisivel = false;
-
-    function _el(id) { return document.getElementById(id); }
-
-    function _resetar() {
-        var input = _el('input-senha-master');
-        var erroEl = _el('msg-erro-senha');
-        var btnConfirm = _el('btn-confirmar-exclusao');
-        _senhaVisivel = false;
-        if (input) { input.value = ''; input.type = 'password'; input.classList.remove('is-invalid'); }
-        if (erroEl) erroEl.classList.remove('visivel');
-        if (btnConfirm) { btnConfirm.disabled = false; btnConfirm.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão'; }
-        var iconToggle = _el('icon-toggle-senha');
-        if (iconToggle) iconToggle.className = 'bi bi-eye-slash';
-    }
-
-    function _mostrarErro(msg) {
-        var erroEl = _el('msg-erro-senha');
-        var textoEl = _el('msg-erro-senha-texto');
-        var input = _el('input-senha-master');
-        if (textoEl) textoEl.textContent = msg || 'Senha incorreta. Acesso negado.';
-        if (erroEl) erroEl.classList.add('visivel');
-        if (input) {
-            input.classList.add('is-invalid');
-            input.focus(); input.select();
-            setTimeout(function () { if (input) input.classList.remove('is-invalid'); }, 800);
-        }
-    }
-
-    function _setBtnCarregando() {
-        var btn = _el('btn-confirmar-exclusao');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...'; }
-    }
-
-    function _setBtnPadrao() {
-        var btn = _el('btn-confirmar-exclusao');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão'; }
-    }
-
-    function abrir(pedidoId) {
-        if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-        _pedidoId = pedidoId;
-        _resetar();
-        var modalEl = _el('modalMasterAuth');
-        if (!modalEl) return;
-        _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-        _modalBS.show();
-        modalEl.addEventListener('shown.bs.modal', function () {
-            var input = _el('input-senha-master');
-            if (input) input.focus();
-        }, { once: true });
-    }
-
-    function cancelar() {
-        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
-        _pedidoId = null;
-        _resetar();
-    }
-
-    function toggleSenha() {
-        _senhaVisivel = !_senhaVisivel;
-        var input = _el('input-senha-master');
-        var icon = _el('icon-toggle-senha');
-        if (input) input.type = _senhaVisivel ? 'text' : 'password';
-        if (icon) icon.className = _senhaVisivel ? 'bi bi-eye' : 'bi bi-eye-slash';
-    }
-
-    function onKeydown(e) {
-        if (e.key === 'Enter') { e.preventDefault(); confirmar(); }
-        if (e.key === 'Escape') { e.preventDefault(); cancelar(); }
-    }
-
-    async function confirmar() {
-        var input = _el('input-senha-master');
-        var senha = input ? input.value : '';
-        if (!senha || !senha.trim()) { _mostrarErro('Informe a senha master para continuar.'); return; }
-        _setBtnCarregando();
-        try {
-            var resposta = await API.call('validarsenhamaster', { senha: senha.trim() });
-            if (!resposta || resposta.status !== 'success' || !resposta.valido) {
-                _mostrarErro('Senha incorreta. Acesso negado.');
-                _setBtnPadrao();
-                return;
-            }
-            var idParaExcluir = _pedidoId;
-            _pedidoId = null;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
-            _resetar();
-            await _executarExclusao(idParaExcluir);
-        } catch (_) {
-            _mostrarErro('Erro de comunicação. Tente novamente.');
-            _setBtnPadrao();
-        }
-    }
-
-    async function _executarExclusao(msgId) {
-        try {
-            var resposta = await API.call('deletepedido', { id: msgId });
-            if (!resposta || resposta.status !== 'success') {
-                throw new Error((resposta && resposta.message) || 'Falha ao excluir no servidor.');
-            }
-            var msgEl = document.querySelector('[data-pedido-id="' + msgId + '"]');
-            var wrapper = msgEl ? msgEl.closest('.message-wrapper') : null;
-            if (wrapper) {
-                wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                wrapper.style.opacity = '0';
-                wrapper.style.transform = 'translateX(30px)';
-                setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
-            }
-            if (window.AppRDO) {
-                if (Array.isArray(window.AppRDO.pedidosCache)) {
-                    window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                        return String(p.id) !== String(msgId);
-                    });
-                }
-                if (Array.isArray(window.AppRDO.mensagensCache)) {
-                    window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
-                        return String(m.pedido_id) !== String(msgId);
-                    });
-                }
-            }
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success', title: 'Excluído!', text: 'A mensagem foi removida com sucesso.',
-                    toast: true, position: 'top-end', showConfirmButton: false,
-                    timer: 2500, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
-                });
-            }
-        } catch (err) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'error', title: 'Erro ao excluir',
-                    text: err.message || 'Não foi possível remover a mensagem.',
-                    confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' }
-                });
-            }
-        }
-    }
-
-    return { abrir, cancelar, confirmar, toggleSenha, onKeydown };
-})();
-
 window.carregarPedidosDoCliente = async function (clienteId) {
     if (!clienteId) return;
     try {
@@ -1039,9 +894,25 @@ window.copiarModelo = function () {
     });
 };
 
-window.excluirPedido = function (msgId) {
-    if (!msgId) return;
-    window.MasterAuth.abrir(msgId);
+window.excluirPedido = async function (pedidoId) {
+    if (!pedidoId) return;
+    try {
+        var resposta = await API.call('deletepedido', { id: String(pedidoId) });
+        if (!resposta || resposta.status !== 'success') {
+            throw new Error((resposta && resposta.message) || 'Falha na API');
+        }
+        if (typeof window.EventBus !== 'undefined') {
+            window.EventBus.emit('pedido:excluido', { id: String(pedidoId) });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao excluir',
+            text: e.message || 'Não foi possível excluir o pedido.',
+            confirmButtonColor: '#dc3545',
+            customClass: { popup: 'rounded-4' }
+        });
+    }
 };
 
 window.extrairRotasDaMensagem = function (texto) {
@@ -1507,11 +1378,62 @@ window.fecharParaChat = function (modalId) {
 };
 
 (function () {
-    function _handleSyncClick(e) {
-        if (!e.target.closest('#btn-sync-chat')) return;
-        if (window.AppRDO && window.AppRDO.isFetching) return;
-        if (typeof window.carregarDados === 'function') window.carregarDados();
-    }
+    (function () {
+        function _handleSyncClick(e) {
+            if (!e.target.closest('#btn-sync-chat')) return;
+            if (window.AppRDO && window.AppRDO.isFetching) return;
+            if (typeof window.carregarDados === 'function') window.carregarDados();
+        }
+        document.removeEventListener('click', _handleSyncClick);
+        document.addEventListener('click', _handleSyncClick);
+
+        function _tentarInit() {
+            if (window.AppRDO) {
+                window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+                window.AppRDO.listaCarregada = false;
+                window.AppRDO._mapaModalAberto = false;
+            }
+            if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', _tentarInit);
+        } else {
+            _tentarInit();
+        }
+
+        function _registrarEventoPedidoExcluido() {
+            if (typeof window.EventBus === 'undefined') {
+                setTimeout(_registrarEventoPedidoExcluido, 300);
+                return;
+            }
+            window.EventBus.on('pedido:excluido', function (dados) {
+                var idStr = String(dados.id).trim();
+                if (Array.isArray(window.AppRDO.mensagensCache)) {
+                    window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                        return String(m.pedido_id).trim() !== idStr;
+                    });
+                }
+                if (Array.isArray(window.AppRDO.pedidosCache)) {
+                    window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+                        return String(p.id).trim() !== idStr;
+                    });
+                }
+                var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
+                if (msgEl) {
+                    var wrapper = msgEl.closest('.message-wrapper');
+                    if (wrapper) {
+                        wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
+                        wrapper.style.opacity = '0';
+                        wrapper.style.transform = 'translateX(30px)';
+                        setTimeout(function () { wrapper.remove(); }, 300);
+                    }
+                }
+            });
+        }
+
+        _registrarEventoPedidoExcluido();
+    })();
     document.removeEventListener('click', _handleSyncClick);
     document.addEventListener('click', _handleSyncClick);
 
@@ -1530,9 +1452,16 @@ window.fecharParaChat = function (modalId) {
         _tentarInit();
     }
 
-    if (typeof window.EventBus !== 'undefined') {
+    // Registra o listener com retry caso o EventBus ainda não exista
+    function _registrarEventoPedidoExcluido() {
+        if (typeof window.EventBus === 'undefined') {
+            setTimeout(_registrarEventoPedidoExcluido, 300);
+            return;
+        }
         window.EventBus.on('pedido:excluido', function (dados) {
             var idStr = String(dados.id).trim();
+
+            // Atualiza caches
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return String(m.pedido_id).trim() !== idStr;
@@ -1543,6 +1472,8 @@ window.fecharParaChat = function (modalId) {
                     return String(p.id).trim() !== idStr;
                 });
             }
+
+            // Remove visualmente a mensagem no chat
             var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
@@ -1555,4 +1486,7 @@ window.fecharParaChat = function (modalId) {
             }
         });
     }
+
+    _registrarEventoPedidoExcluido();
 })();
+
