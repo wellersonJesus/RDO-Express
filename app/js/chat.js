@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────
-// MARK: Validação visual de campos
-// ─────────────────────────────────────────────
 window.marcarCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
@@ -32,29 +29,23 @@ window.limparCampoInvalido = function () {
     input.setAttribute('placeholder', 'Digite o pedido...');
 };
 
-// ─────────────────────────────────────────────
-// MARK: Estado global
-// ─────────────────────────────────────────────
 window.AppRDO = window.AppRDO || {};
-window.AppRDO.debounceTimer         = window.AppRDO.debounceTimer || null;
-window.AppRDO.listaCarregada        = false;
-window.AppRDO.isFetching            = window.AppRDO.isFetching || false;
-window.AppRDO.isProcessingCheckout  = false;
-window.AppRDO.pedidosCache          = window.AppRDO.pedidosCache || [];
-window.AppRDO.motoboyCache          = window.AppRDO.motoboyCache || [];
-window.AppRDO.pedidoEmEdicao        = null;
-window.AppRDO.clienteId             = window.AppRDO.clienteId || null;
-window.AppRDO.clienteSelecionado    = window.AppRDO.clienteSelecionado || null;
-window.AppRDO.clientesCache         = window.AppRDO.clientesCache || [];
-window.AppRDO.mensagensCache        = window.AppRDO.mensagensCache || [];
-window.AppRDO.isMasterOn            = localStorage.getItem('bot_master_active') === 'true';
-window.AppRDO._mapaModalAberto      = false;
+window.AppRDO.debounceTimer = window.AppRDO.debounceTimer || null;
+window.AppRDO.listaCarregada = false;
+window.AppRDO.isFetching = window.AppRDO.isFetching || false;
+window.AppRDO.isProcessingCheckout = false;
+window.AppRDO.pedidosCache = window.AppRDO.pedidosCache || [];
+window.AppRDO.motoboyCache = window.AppRDO.motoboyCache || [];
+window.AppRDO.pedidoEmEdicao = null;
+window.AppRDO.clienteId = window.AppRDO.clienteId || null;
+window.AppRDO.clienteSelecionado = window.AppRDO.clienteSelecionado || null;
+window.AppRDO.clientesCache = window.AppRDO.clientesCache || [];
+window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
+window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+window.AppRDO._mapaModalAberto = false;
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
-// ─────────────────────────────────────────────
-// MARK: Events – master / cliente status
-// ─────────────────────────────────────────────
 window.addEventListener('masterStatusChanged', function (e) {
     var isOn = !!(e.detail && e.detail.isOn);
     window.AppRDO.isMasterOn = isOn;
@@ -75,26 +66,23 @@ window.addEventListener('masterStatusChanged', function (e) {
 
 window.addEventListener('clienteStatusChanged', function (e) {
     if (!e.detail) return;
-    var clientes   = e.detail.clientes  || window.AppRDO.clientesCache || [];
+    var clientes = e.detail.clientes || window.AppRDO.clientesCache || [];
     var isMasterOn = e.detail.isMasterOn;
     window.AppRDO.clientesCache = clientes;
-    window.AppRDO.isMasterOn    = isMasterOn;
+    window.AppRDO.isMasterOn = isMasterOn;
     window.renderizarLista(clientes, isMasterOn);
 });
 
-// ─────────────────────────────────────────────
-// MARK: Helpers internos
-// ─────────────────────────────────────────────
 function _atualizarHeaderCliente(nome, isOnline) {
     var nameEl = document.getElementById('chat-header-name');
     if (nameEl) nameEl.innerText = nome;
     if (window.AppRDO && window.AppRDO.clienteId) {
         var item = document.getElementById('item-contato-' + window.AppRDO.clienteId);
         if (item) {
-            var dot   = item.querySelector('.contact-status-dot');
+            var dot = item.querySelector('.contact-status-dot');
             var label = item.querySelector('.contact-status');
-            if (dot)   dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
-            if (label) label.textContent          = isOnline ? 'Online'  : 'Offline';
+            if (dot) dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
+            if (label) label.textContent = isOnline ? 'Online' : 'Offline';
         }
     }
 }
@@ -114,22 +102,19 @@ function _limparModalContainer() {
         try {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (inst) inst.dispose();
-        } catch (_) {}
+        } catch (_) { }
     });
     container.innerHTML = '';
 }
 
 window._limparBackdrop = _limparBackdrop;
 
-// ─────────────────────────────────────────────
-// MARK: loadModal
-// ─────────────────────────────────────────────
 window.loadModal = function (arquivo) {
     return new Promise(function (resolve) {
         var container = document.getElementById('modal-container');
         if (!container) { resolve(false); return; }
 
-        var abertos  = Array.prototype.slice.call(document.querySelectorAll('#modal-container .modal.show'));
+        var abertos = Array.prototype.slice.call(document.querySelectorAll('#modal-container .modal.show'));
         var pendentes = abertos.length;
 
         function _carregarHtml() {
@@ -159,13 +144,13 @@ window.loadModal = function (arquivo) {
         abertos.forEach(function (modalEl) {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (!inst) {
-                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) {}
+                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
                 return;
             }
             modalEl.addEventListener('hidden.bs.modal', function () {
-                try { inst.dispose(); } catch (_) {}
+                try { inst.dispose(); } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
             }, { once: true });
@@ -181,9 +166,6 @@ window.loadModal = function (arquivo) {
 
 window.iniciarChat = function () { return window.carregarDados(); };
 
-// ─────────────────────────────────────────────
-// MARK: Listeners globais de input/change
-// ─────────────────────────────────────────────
 document.addEventListener('input', function (e) {
     if (!e.target) return;
     if (e.target.id === 'p-contato') {
@@ -212,9 +194,6 @@ document.addEventListener('change', function (e) {
     }
 });
 
-// ─────────────────────────────────────────────
-// MARK: Enter no msg-input → envia (não pula linha)
-// ─────────────────────────────────────────────
 (function () {
     function _handleMsgKeydown(e) {
         if (!e.target || e.target.id !== 'msg-input') return;
@@ -227,9 +206,6 @@ document.addEventListener('change', function (e) {
     document.addEventListener('keydown', _handleMsgKeydown);
 })();
 
-// ─────────────────────────────────────────────
-// MARK: Modelo padrão
-// ─────────────────────────────────────────────
 window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
     '', 'SOLICITANTE: ', 'CONTATO: ', 'HORÁRIO ESTIMADO P/ COLETA:  ',
@@ -240,9 +216,6 @@ window.MODELO_PADRAO = [
     'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
 ].join('\n');
 
-// ─────────────────────────────────────────────
-// MARK: Validações de cliente / mensagem
-// ─────────────────────────────────────────────
 window.validarClienteOnline = function () {
     if (!window.AppRDO || !window.AppRDO.clienteId) return false;
     var cliente = window.AppRDO.clientesCache.find(function (c) {
@@ -265,10 +238,10 @@ window.validarMensagemModelo = function (texto) {
     texto.split('\n').forEach(function (linha) {
         linha = linha.trim();
         if (!/de\s*:/i.test(linha) || !/para\s*:/i.test(linha)) return;
-        var vDe   = linha.match(/de\s*:\s*([^|]+)/i);
+        var vDe = linha.match(/de\s*:\s*([^|]+)/i);
         var vPara = linha.match(/para\s*:\s*(.+)/i);
-        if (vDe   && vDe[1]   && vDe[1].trim()   !== '...' && vDe[1].trim().length > 0 &&
-            vPara && vPara[1] && vPara[1].trim()  !== '...' && vPara[1].trim().length > 0) {
+        if (vDe && vDe[1] && vDe[1].trim() !== '...' && vDe[1].trim().length > 0 &&
+            vPara && vPara[1] && vPara[1].trim() !== '...' && vPara[1].trim().length > 0) {
             quantRotas++;
         }
     });
@@ -278,14 +251,11 @@ window.validarMensagemModelo = function (texto) {
 
     var faltando = [];
     if (!temSolicitante) faltando.push('SOLICITANTE');
-    if (!temContato)     faltando.push('CONTATO');
-    if (!temRota)        faltando.push('ROTA (De: ... | Para: ...)');
+    if (!temContato) faltando.push('CONTATO');
+    if (!temRota) faltando.push('ROTA (De: ... | Para: ...)');
     return { valido: false, tipo: 'modelo', camposPendentes: faltando };
 };
 
-// ─────────────────────────────────────────────
-// MARK: exibirModalValidacao
-// ─────────────────────────────────────────────
 window.exibirModalValidacao = function (mensagem, opcoes) {
     opcoes = opcoes || {};
     var modalEl = document.getElementById('modalValidacao');
@@ -302,16 +272,16 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
         return;
     }
 
-    var msgEl    = document.getElementById('modal-validacao-mensagem');
-    var iconeEl  = document.getElementById('modal-validacao-icone');
+    var msgEl = document.getElementById('modal-validacao-mensagem');
+    var iconeEl = document.getElementById('modal-validacao-icone');
     var tituloEl = document.getElementById('modal-validacao-titulo');
 
-    if (msgEl)    msgEl.innerHTML    = mensagem;
-    if (iconeEl)  iconeEl.className  = 'bi ' + (opcoes.icone || 'bi-exclamation-triangle-fill') + ' text-warning fs-4';
+    if (msgEl) msgEl.innerHTML = mensagem;
+    if (iconeEl) iconeEl.className = 'bi ' + (opcoes.icone || 'bi-exclamation-triangle-fill') + ' text-warning fs-4';
     if (tituloEl) tituloEl.innerText = opcoes.titulo || 'Atenção';
 
     var modeloContainer = document.getElementById('modal-validacao-modelo');
-    var textareaEl      = document.getElementById('modal-validacao-textarea');
+    var textareaEl = document.getElementById('modal-validacao-textarea');
     if (opcoes.modelo && modeloContainer && textareaEl) {
         textareaEl.value = opcoes.modelo;
         modeloContainer.classList.remove('d-none');
@@ -322,12 +292,12 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     var modaisAbertos = document.querySelectorAll('#modal-container .modal.show');
     modaisAbertos.forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.hide(); } catch (_) {} }
+        if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
     try {
         var instExist = bootstrap.Modal.getInstance(modalEl);
-        if (instExist) { try { instExist.dispose(); } catch (_) {} }
+        if (instExist) { try { instExist.dispose(); } catch (_) { } }
         setTimeout(function () {
             _limparBackdrop();
             new bootstrap.Modal(modalEl).show();
@@ -355,25 +325,19 @@ window.copiarModeloValidacao = function () {
     }, 2000);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Filtro de contatos
-// ─────────────────────────────────────────────
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(function () {
         var searchEl = document.getElementById('chat-search');
-        var termo    = (searchEl ? searchEl.value : '').toLowerCase().trim();
+        var termo = (searchEl ? searchEl.value : '').toLowerCase().trim();
         document.querySelectorAll('.contact-item-clean').forEach(function (item) {
             var nameEl = item.querySelector('.contact-name');
-            var nome   = (nameEl ? nameEl.innerText : '').toLowerCase();
+            var nome = (nameEl ? nameEl.innerText : '').toLowerCase();
             item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
         });
     }, 300);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Loading states
-// ─────────────────────────────────────────────
 function _mostrarLoadingContatos() {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
@@ -407,47 +371,44 @@ function _mostrarContatosEmptyState(texto) {
 }
 
 function _spinChatOn() {
-    var btn  = document.getElementById('btn-sync-chat');
+    var btn = document.getElementById('btn-sync-chat');
     var icon = document.getElementById('sync-icon-header');
-    if (btn)  { btn.classList.add('syncing'); btn.disabled = true; }
+    if (btn) { btn.classList.add('syncing'); btn.disabled = true; }
     if (icon) icon.classList.add('spinner-rotate');
 }
 
 function _spinChatOff() {
-    var btn  = document.getElementById('btn-sync-chat');
+    var btn = document.getElementById('btn-sync-chat');
     var icon = document.getElementById('sync-icon-header');
-    if (btn)  { btn.classList.remove('syncing'); btn.disabled = false; }
+    if (btn) { btn.classList.remove('syncing'); btn.disabled = false; }
     if (icon) icon.classList.remove('spinner-rotate');
 }
 
-// ─────────────────────────────────────────────
-// MARK: MasterAuth
-// ─────────────────────────────────────────────
 window.MasterAuth = (function () {
-    var _pedidoId    = null;
-    var _modalBS     = null;
+    var _pedidoId = null;
+    var _modalBS = null;
     var _senhaVisivel = false;
 
     function _el(id) { return document.getElementById(id); }
 
     function _resetar() {
-        var input      = _el('input-senha-master');
-        var erroEl     = _el('msg-erro-senha');
+        var input = _el('input-senha-master');
+        var erroEl = _el('msg-erro-senha');
         var btnConfirm = _el('btn-confirmar-exclusao');
-        _senhaVisivel  = false;
-        if (input)      { input.value = ''; input.type = 'password'; input.classList.remove('is-invalid'); }
-        if (erroEl)     erroEl.classList.remove('visivel');
+        _senhaVisivel = false;
+        if (input) { input.value = ''; input.type = 'password'; input.classList.remove('is-invalid'); }
+        if (erroEl) erroEl.classList.remove('visivel');
         if (btnConfirm) { btnConfirm.disabled = false; btnConfirm.innerHTML = '<i class="bi bi-trash3-fill me-2"></i>Confirmar Exclusão'; }
         var iconToggle = _el('icon-toggle-senha');
         if (iconToggle) iconToggle.className = 'bi bi-eye-slash';
     }
 
     function _mostrarErro(msg) {
-        var erroEl  = _el('msg-erro-senha');
+        var erroEl = _el('msg-erro-senha');
         var textoEl = _el('msg-erro-senha-texto');
-        var input   = _el('input-senha-master');
+        var input = _el('input-senha-master');
         if (textoEl) textoEl.textContent = msg || 'Senha incorreta. Acesso negado.';
-        if (erroEl)  erroEl.classList.add('visivel');
+        if (erroEl) erroEl.classList.add('visivel');
         if (input) {
             input.classList.add('is-invalid');
             input.focus(); input.select();
@@ -480,7 +441,7 @@ window.MasterAuth = (function () {
     }
 
     function cancelar() {
-        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
         _pedidoId = null;
         _resetar();
     }
@@ -488,14 +449,14 @@ window.MasterAuth = (function () {
     function toggleSenha() {
         _senhaVisivel = !_senhaVisivel;
         var input = _el('input-senha-master');
-        var icon  = _el('icon-toggle-senha');
-        if (input) input.type    = _senhaVisivel ? 'text'       : 'password';
-        if (icon)  icon.className = _senhaVisivel ? 'bi bi-eye' : 'bi bi-eye-slash';
+        var icon = _el('icon-toggle-senha');
+        if (input) input.type = _senhaVisivel ? 'text' : 'password';
+        if (icon) icon.className = _senhaVisivel ? 'bi bi-eye' : 'bi bi-eye-slash';
     }
 
     function onKeydown(e) {
-        if (e.key === 'Enter')  { e.preventDefault(); confirmar(); }
-        if (e.key === 'Escape') { e.preventDefault(); cancelar();  }
+        if (e.key === 'Enter') { e.preventDefault(); confirmar(); }
+        if (e.key === 'Escape') { e.preventDefault(); cancelar(); }
     }
 
     async function confirmar() {
@@ -512,7 +473,7 @@ window.MasterAuth = (function () {
             }
             var idParaExcluir = _pedidoId;
             _pedidoId = null;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             _resetar();
             await _executarExclusao(idParaExcluir);
         } catch (_) {
@@ -527,13 +488,13 @@ window.MasterAuth = (function () {
             if (!resposta || resposta.status !== 'success') {
                 throw new Error((resposta && resposta.message) || 'Falha ao excluir no servidor.');
             }
-            var msgEl   = document.querySelector('[data-pedido-id="' + msgId + '"]');
+            var msgEl = document.querySelector('[data-pedido-id="' + msgId + '"]');
             var wrapper = msgEl ? msgEl.closest('.message-wrapper') : null;
             if (wrapper) {
                 wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                wrapper.style.opacity    = '0';
-                wrapper.style.transform  = 'translateX(30px)';
-                setTimeout(function () { try { wrapper.remove(); } catch (_) {} }, 300);
+                wrapper.style.opacity = '0';
+                wrapper.style.transform = 'translateX(30px)';
+                setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
             }
             if (window.AppRDO) {
                 if (Array.isArray(window.AppRDO.pedidosCache)) {
@@ -568,23 +529,20 @@ window.MasterAuth = (function () {
     return { abrir, cancelar, confirmar, toggleSenha, onKeydown };
 })();
 
-// ─────────────────────────────────────────────
-// MARK: Carregar pedidos do cliente
-// ─────────────────────────────────────────────
 window.carregarPedidosDoCliente = async function (clienteId) {
     if (!clienteId) return;
     try {
-        var todosPedidos   = await API.call('getpedidos');
+        var todosPedidos = await API.call('getpedidos');
         var todasMensagens = await API.call('getchat');
 
-        var pedidosCliente   = todosPedidos.filter(function (p) {
+        var pedidosCliente = todosPedidos.filter(function (p) {
             return String(p.id_cliente).trim() === String(clienteId).trim();
         });
         var mensagensCliente = todasMensagens.filter(function (m) {
             return String(m.id_cliente).trim() === String(clienteId).trim();
         });
 
-        window.AppRDO.pedidosCache   = todosPedidos;
+        window.AppRDO.pedidosCache = todosPedidos;
         window.AppRDO.mensagensCache = todasMensagens;
 
         window.renderizarMensagens(mensagensCliente, pedidosCliente);
@@ -593,11 +551,8 @@ window.carregarPedidosDoCliente = async function (clienteId) {
     }
 };
 
-// ─────────────────────────────────────────────
-// MARK: Carregar dados gerais
-// ─────────────────────────────────────────────
 window.carregarDados = function () {
-    var listEl      = document.getElementById('lista-contatos-chat');
+    var listEl = document.getElementById('lista-contatos-chat');
     var searchInput = document.getElementById('chat-search');
     if (!listEl || window.AppRDO.isFetching) return Promise.resolve();
 
@@ -612,14 +567,14 @@ window.carregarDados = function () {
         API.call('getchat'),
         API.call('getpedidos')
     ]).then(function (results) {
-        var listaClientes  = Array.isArray(results[0]) ? results[0] : [];
+        var listaClientes = Array.isArray(results[0]) ? results[0] : [];
         var listaMensagens = Array.isArray(results[1]) ? results[1] : [];
-        var listaPedidos   = Array.isArray(results[2]) ? results[2] : [];
-        var isMasterOn     = window.AppRDO.isMasterOn;
+        var listaPedidos = Array.isArray(results[2]) ? results[2] : [];
+        var isMasterOn = window.AppRDO.isMasterOn;
 
-        window.AppRDO.clientesCache  = listaClientes;
+        window.AppRDO.clientesCache = listaClientes;
         window.AppRDO.mensagensCache = listaMensagens;
-        window.AppRDO.pedidosCache   = listaPedidos;
+        window.AppRDO.pedidosCache = listaPedidos;
 
         window.renderizarLista(listaClientes, isMasterOn);
 
@@ -657,9 +612,6 @@ window.carregarDados = function () {
     });
 };
 
-// ─────────────────────────────────────────────
-// MARK: Renderizar lista de contatos
-// ─────────────────────────────────────────────
 window.renderizarLista = function (lista, isMasterOn) {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
@@ -667,12 +619,12 @@ window.renderizarLista = function (lista, isMasterOn) {
 
     var clienteAtivo = window.AppRDO.clienteId;
     listEl.innerHTML = lista.map(function (cliente) {
-        var id       = String(cliente.id || '');
-        var nome     = cliente.username || 'Sem nome';
-        var imagem   = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        var id = String(cliente.id || '');
+        var nome = cliente.username || 'Sem nome';
+        var imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         var isActive = id === String(clienteAtivo);
-        var nomeEsc  = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        var nomeEsc = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         return '<div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ' +
             (isActive ? 'active-contact' : '') + '" id="item-contato-' + id + '" ' +
@@ -690,11 +642,8 @@ window.renderizarLista = function (lista, isMasterOn) {
     }).join('');
 };
 
-// ─────────────────────────────────────────────
-// MARK: Selecionar / abrir conversa
-// ─────────────────────────────────────────────
 window.selecionarEAbrir = function (id, nome, isOnline) {
-    window.AppRDO.clienteId         = id;
+    window.AppRDO.clienteId = id;
     window.AppRDO.clienteSelecionado = nome;
     localStorage.setItem('clienteSelecionadoNome', nome);
 
@@ -714,14 +663,15 @@ window.selecionarEAbrir = function (id, nome, isOnline) {
 
 window.abrirConversa = function (id, nome, urlImagem, isOnline) {
     var idCliente = String(id).trim();
-    var nameEl    = document.getElementById('chat-header-name');
+    var nameEl = document.getElementById('chat-header-name');
     if (nameEl) { nameEl.innerText = nome; nameEl.className = 'text-dark fw-bold'; }
 
     _mostrarLoadingMensagens();
 
     var msgInput = document.getElementById('msg-input');
     if (msgInput) {
-        msgInput.value = window.MODELO_PADRAO;
+        msgInput.value = '';
+        msgInput.style.height = 'auto';
         msgInput.style.border = '';
         msgInput.style.boxShadow = '';
         msgInput.setAttribute('placeholder', 'Digite o pedido...');
@@ -730,9 +680,6 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
     return window.carregarPedidosDoCliente(idCliente);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Renderizar mensagens
-// ─────────────────────────────────────────────
 window.renderizarMensagens = function (mensagens, pedidos) {
     var container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -752,14 +699,14 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             container.appendChild(sep);
         }
 
-        var pedido      = pedidos.find(function (p) { return String(p.id).trim() === String(msg.pedido_id).trim(); });
+        var pedido = pedidos.find(function (p) { return String(p.id).trim() === String(msg.pedido_id).trim(); });
         var statusBruto = String(pedido ? pedido.status : '').trim();
         var motoboyNome = String(pedido ? pedido.motoboy : '').trim();
-        var statusPuro  = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
+        var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
         var statusUpper = statusPuro.toUpperCase();
-        var isFinal     = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
-        var isEmRota    = statusUpper === 'EM_ROTA'   || statusUpper === 'EM ROTA'   || statusBruto.includes('/');
-        var temStatus   = isEmRota || isFinal;
+        var isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
+        var isEmRota = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
+        var temStatus = isEmRota || isFinal;
         var statusLabel = statusPuro.replace(/_/g, ' ');
         var tooltipTexto = temStatus
             ? (motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel)
@@ -773,9 +720,6 @@ window.renderizarMensagens = function (mensagens, pedidos) {
     container.scrollTop = container.scrollHeight;
 };
 
-// ─────────────────────────────────────────────
-// MARK: Criar wrapper de mensagem
-// ─────────────────────────────────────────────
 function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
     var div = document.createElement('div');
     div.className = 'message-wrapper';
@@ -808,9 +752,6 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 
 window._criarWrapperMensagem = _criarWrapperMensagem;
 
-// ─────────────────────────────────────────────
-// MARK: Inserir mensagem no chat (pós-criação)
-// ─────────────────────────────────────────────
 window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     var container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -818,8 +759,8 @@ window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     var emptyState = container.querySelector('.chat-empty-state');
     if (emptyState) emptyState.remove();
 
-    var hojeLabel  = 'HOJE';
-    var ultimoSep  = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+    var hojeLabel = 'HOJE';
+    var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
     if (!ultimoSep || ultimoSep.textContent !== hojeLabel) {
         var sep = document.createElement('div');
         sep.className = 'chat-date-separator';
@@ -832,9 +773,6 @@ window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     container.scrollTop = container.scrollHeight;
 };
 
-// ─────────────────────────────────────────────
-// MARK: Ícones por status
-// ─────────────────────────────────────────────
 window.getIconePorStatus = function (status) {
     var s = String(status || '').trim().toUpperCase();
     if (s.includes('EM_ROTA') || s.includes('EM ROTA') || s.includes('/'))
@@ -846,36 +784,33 @@ window.getIconePorStatus = function (status) {
     return '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 };
 
-// ─────────────────────────────────────────────
-// MARK: StatusModal
-// ─────────────────────────────────────────────
 window.StatusModal = (function () {
     var _pedidoId = null;
-    var _modalBS  = null;
+    var _modalBS = null;
 
     function _el(id) { return document.getElementById(id) || null; }
     function _safeText(el, txt) { if (el && typeof txt === 'string') el.textContent = txt; }
     function _safeClass(el, action) {
         if (!el || !el.classList) return;
         Array.prototype.slice.call(arguments, 2).forEach(function (c) {
-            if (action === 'add')    el.classList.add(c);
+            if (action === 'add') el.classList.add(c);
             else if (action === 'remove') el.classList.remove(c);
         });
     }
 
     function _resetar() {
         try {
-            var texto     = _el('modal-status-texto');
-            var icone     = _el('modal-status-icone');
+            var texto = _el('modal-status-texto');
+            var icone = _el('modal-status-icone');
             var boxBotoes = _el('box-botoes-status');
             var boxMotoboy = _el('box-selecao-motoboy');
-            var select    = _el('select-motoboy');
+            var select = _el('select-motoboy');
             _safeText(texto, 'Alterar Status');
             if (icone) icone.className = 'bi bi-arrow-repeat';
-            _safeClass(boxBotoes,  'remove', 'd-none');
-            _safeClass(boxMotoboy, 'add',    'd-none');
+            _safeClass(boxBotoes, 'remove', 'd-none');
+            _safeClass(boxMotoboy, 'add', 'd-none');
             if (select) { select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>'; select.style.borderColor = '#ddd'; }
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function _carregarMotoboys() {
@@ -883,18 +818,18 @@ window.StatusModal = (function () {
         if (!select) return;
         select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
         try {
-            var todos    = await API.call('getcolaboradores');
-            var lista    = Array.isArray(todos) ? todos : [];
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
             var motoboys = lista.filter(function (c) {
                 return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                       String(c.status || '').toUpperCase() === 'TRUE';
+                    String(c.status || '').toUpperCase() === 'TRUE';
             });
             select.innerHTML = motoboys.length > 0
                 ? '<option value="" disabled selected>Selecione o motoboy...</option>' +
-                  motoboys.map(function (m) {
-                      return '<option value="' + String(m.id || '') + '">' +
-                             String(m.username || m.nome || 'Sem nome') + '</option>';
-                  }).join('')
+                motoboys.map(function (m) {
+                    return '<option value="' + String(m.id || '') + '">' +
+                        String(m.username || m.nome || 'Sem nome') + '</option>';
+                }).join('')
                 : '<option value="" disabled selected>Nenhum motoboy disponível</option>';
         } catch (_) {
             select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
@@ -903,19 +838,19 @@ window.StatusModal = (function () {
 
     function _setSpinnerNoBotao(pedidoId) {
         try {
-            var msgEl  = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
             var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
             if (!iconEl) return;
             iconEl.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
             iconEl.classList.remove('status-updated');
             iconEl.classList.add('status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _setIconeFinal(pedidoId, status, motoboyNome) {
         try {
-            var msgEl  = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
             var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
             if (!iconEl) return;
             iconEl.innerHTML = typeof window.getIconePorStatus === 'function'
@@ -923,25 +858,25 @@ window.StatusModal = (function () {
             iconEl.classList.remove('status-pending');
             iconEl.classList.add('status-updated');
             var statusLabel = String(status || '').replace(/_/g, ' ');
-            var tooltip     = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
+            var tooltip = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
         try {
-            var cache  = window.AppRDO ? window.AppRDO.pedidosCache : null;
+            var cache = window.AppRDO ? window.AppRDO.pedidosCache : null;
             if (!Array.isArray(cache)) return;
             var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId || '').trim(); });
             if (!pedido) return;
             pedido.status = statusFormatado;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function _executarAlteracao(status, motoboyId) {
-        var motoboyNome    = '';
+        var motoboyNome = '';
         var statusFormatado = String(status || '');
         if (motoboyId) {
             try {
@@ -954,7 +889,7 @@ window.StatusModal = (function () {
         if (motoboyNome) statusFormatado = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
-        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
 
         try {
             var resposta = await API.call('updatepedido', {
@@ -967,7 +902,7 @@ window.StatusModal = (function () {
                     if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
                         window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
                     }
-                } catch (_) {}
+                } catch (_) { }
             } else {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
@@ -986,18 +921,18 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         try {
             if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-            var cache      = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-            var pedido     = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
             var statusBruto = String(pedido ? pedido.status : '').trim();
-            var statusPuro  = statusBruto.includes('/') ? statusBruto.split('/').pop().trim().toUpperCase() : statusBruto.toUpperCase();
+            var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim().toUpperCase() : statusBruto.toUpperCase();
 
             if (statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO' || statusPuro === 'CANCELADO') {
                 var isConcluido = statusPuro !== 'CANCELADO';
                 Swal.fire({
                     icon: isConcluido ? 'success' : 'error', title: 'Pedido Finalizado',
                     html: '<div style="font-size:.93rem;color:#555;">Este pedido já foi <strong style="color:' +
-                          (isConcluido ? '#28a745' : '#dc3545') + ';">' +
-                          (isConcluido ? 'Concluído' : 'Cancelado') + '</strong> e não pode mais ser alterado.</div>',
+                        (isConcluido ? '#28a745' : '#dc3545') + ';">' +
+                        (isConcluido ? 'Concluído' : 'Cancelado') + '</strong> e não pode mais ser alterado.</div>',
                     confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
                 });
                 return;
@@ -1008,7 +943,7 @@ window.StatusModal = (function () {
             if (!modalEl) return;
             _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static' });
             _modalBS.show();
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function processar(status) {
@@ -1017,18 +952,18 @@ window.StatusModal = (function () {
                 _safeText(_el('modal-status-texto'), 'Selecione o Motoboy');
                 var icone = _el('modal-status-icone');
                 if (icone) icone.className = 'bi bi-bicycle';
-                _safeClass(_el('box-botoes-status'), 'add',    'd-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
                 _carregarMotoboys();
                 return;
             }
             var opcoes = {
                 CONCLUIDO: { titulo: 'Concluir Pedido?', html: 'Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.', icone: 'question', btnTexto: 'Sim, Concluir', btnCor: '#28a745' },
-                CANCELADO: { titulo: 'Cancelar Pedido?', html: 'Ao cancelar, este pedido <strong>não poderá</strong> mais ser reaberto.',  icone: 'warning',  btnTexto: 'Sim, Cancelar', btnCor: '#dc3545' }
+                CANCELADO: { titulo: 'Cancelar Pedido?', html: 'Ao cancelar, este pedido <strong>não poderá</strong> mais ser reaberto.', icone: 'warning', btnTexto: 'Sim, Cancelar', btnCor: '#dc3545' }
             };
             var cfg = opcoes[status];
             if (!cfg) return;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             Swal.fire({
                 icon: cfg.icone, title: cfg.titulo,
                 html: '<div style="font-size:.9rem;color:#555;">' + cfg.html + '</div>',
@@ -1038,13 +973,13 @@ window.StatusModal = (function () {
                 customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
             }).then(async function (result) {
                 if (result.isConfirmed) await _executarAlteracao(status);
-            }).catch(function () {});
-        } catch (_) {}
+            }).catch(function () { });
+        } catch (_) { }
     }
 
     async function confirmarMotoboy() {
         try {
-            var select    = _el('select-motoboy');
+            var select = _el('select-motoboy');
             var motoboyId = select ? select.value : '';
             if (!motoboyId) {
                 if (select) {
@@ -1055,7 +990,7 @@ window.StatusModal = (function () {
                 return;
             }
             await _executarAlteracao('EM_ROTA', motoboyId);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function voltar() { _resetar(); }
@@ -1065,9 +1000,6 @@ window.StatusModal = (function () {
 
 window.abrirModalStatus = function (pedidoId) { window.StatusModal.abrir(pedidoId); };
 
-// ─────────────────────────────────────────────
-// MARK: Modal de edição / mensagem padrão
-// ─────────────────────────────────────────────
 window.abrirModalEdicao = function (msgId) {
     Swal.fire({
         title: 'Gerenciar Pedido #' + (msgId || ''),
@@ -1076,7 +1008,7 @@ window.abrirModalEdicao = function (msgId) {
         denyButtonText: 'Excluir',
         customClass: {
             confirmButton: 'btn btn-outline-secondary btn-lg w-100 mb-3',
-            denyButton:    'btn btn-outline-danger btn-lg w-100',
+            denyButton: 'btn btn-outline-danger btn-lg w-100',
             popup: 'p-4'
         },
         buttonsStyling: false,
@@ -1088,10 +1020,10 @@ window.abrirModalEdicao = function (msgId) {
 };
 
 window.abrirModalMensagemPadrao = function () {
-    var modalEl  = document.getElementById('modalMensagemPadrao');
+    var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
     var existing = bootstrap.Modal.getInstance(modalEl);
-    if (existing) { try { existing.dispose(); } catch (_) {} }
+    if (existing) { try { existing.dispose(); } catch (_) { } }
     new bootstrap.Modal(modalEl).show();
 };
 
@@ -1112,9 +1044,6 @@ window.excluirPedido = function (msgId) {
     window.MasterAuth.abrir(msgId);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Utilitários de rota / geo / formatação
-// ─────────────────────────────────────────────
 window.extrairRotasDaMensagem = function (texto) {
     var rotas = [];
     texto.split('\n').forEach(function (linha) {
@@ -1132,9 +1061,9 @@ window.buscarCoordenadasEndereco = function (endereco) {
     return new Promise(function (resolve) {
         var busca = endereco;
         if (!/MG|Minas Gerais/i.test(busca)) busca += ', MG';
-        if (!/Brasil|Brazil/i.test(busca))   busca += ', Brasil';
+        if (!/Brasil|Brazil/i.test(busca)) busca += ', Brasil';
         fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
-              encodeURIComponent(busca) + '&limit=1&countrycodes=br')
+            encodeURIComponent(busca) + '&limit=1&countrycodes=br')
             .then(function (resp) { return resp.json(); })
             .then(function (data) {
                 resolve(data && data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null);
@@ -1146,7 +1075,7 @@ window.buscarCoordenadasEndereco = function (endereco) {
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8)  return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
@@ -1160,7 +1089,7 @@ window.formatarTempoHumano = function (minutos) {
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
-    var raw  = String(dataStr);
+    var raw = String(dataStr);
     var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
     if (raw.includes('T') || raw.includes('-')) {
@@ -1183,9 +1112,6 @@ window.formatarDataSeparador = function (dataStr) {
     return raw;
 };
 
-// ─────────────────────────────────────────────
-// MARK: exibirErro
-// ─────────────────────────────────────────────
 window.exibirErro = function (erro, contexto) {
     contexto = contexto || 'Erro desconhecido';
     var container = document.getElementById('chat-messages-container');
@@ -1201,16 +1127,13 @@ window.exibirErro = function (erro, contexto) {
     }
 };
 
-// ─────────────────────────────────────────────
-// MARK: Mapa unificado
-// ─────────────────────────────────────────────
 window.renderizarMapaUnificado = function () {
-    var loaderEl    = document.getElementById('mapa-loader');
+    var loaderEl = document.getElementById('mapa-loader');
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
     if (window._leafletMapInstance) {
-        try { window._leafletMapInstance.remove(); } catch (_) {}
+        try { window._leafletMapInstance.remove(); } catch (_) { }
         window._leafletMapInstance = null;
     }
     containerEl.innerHTML = '';
@@ -1270,15 +1193,12 @@ window.renderizarMapaUnificado = function () {
     });
 
     if (todosOsPontos.length > 0) {
-        try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) {}
+        try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) { }
     }
 
-    setTimeout(function () { try { mapa.invalidateSize(true); } catch (_) {} }, 300);
+    setTimeout(function () { try { mapa.invalidateSize(true); } catch (_) { } }, 300);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Resumo rodapé mapa
-// ─────────────────────────────────────────────
 window._renderizarResumo = function (km, min, valor) {
     var footer = document.getElementById('footer-resumo-dados');
     if (!footer) return;
@@ -1297,9 +1217,6 @@ window._renderizarResumo = function (km, min, valor) {
         '<div><div class="small text-muted mb-1">Valor</div><div class="fw-bold text-success fs-5">' + valor + '</div></div></div></div>';
 };
 
-// ─────────────────────────────────────────────
-// MARK: enviarMensagemGeral — versão única e definitiva
-// ─────────────────────────────────────────────
 window.enviarMensagemGeral = function () {
     var input = document.getElementById('msg-input');
 
@@ -1329,13 +1246,9 @@ window.enviarMensagemGeral = function () {
     window.iniciarFluxoCheckout();
 };
 
-// ─────────────────────────────────────────────
-// MARK: gerarMensagemFormatada — exibe RDO + ID real
-// ─────────────────────────────────────────────
 window.gerarMensagemFormatada = function (dados) {
-    // Preserva o ID completo: se já vier com "RDO" não duplica; se vier só o número, adiciona
-    var idBruto      = String(dados.numeroServico || '').trim();
-    var nomeServico  = idBruto.toUpperCase().startsWith('RDO')
+    var idBruto = String(dados.numeroServico || '').trim();
+    var nomeServico = idBruto.toUpperCase().startsWith('RDO')
         ? idBruto
         : (idBruto ? 'RDO' + idBruto : 'N/D');
 
@@ -1363,21 +1276,18 @@ window.gerarMensagemFormatada = function (dados) {
     return linhas.join('\n');
 };
 
-// ─────────────────────────────────────────────
-// MARK: Fluxo de checkout (mapa)
-// ─────────────────────────────────────────────
 window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
 
     var msgInput = document.getElementById('msg-input');
-    var texto    = msgInput ? (msgInput.value || '').trim() : '';
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
     if (!texto) { window.marcarCampoInvalido(); return; }
 
     var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
-    var contato     = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario     = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
-    var mercadoria  = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs         = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1396,7 +1306,7 @@ window.iniciarFluxoCheckout = function () {
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.AppRDO._mapaModalAberto = false;
             if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (_) {}
+                try { window._leafletMapInstance.remove(); } catch (_) { }
                 window._leafletMapInstance = null;
             }
         }, { once: true });
@@ -1405,9 +1315,9 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl      = document.getElementById('mapa-loader');
+            var loaderEl = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (loaderEl)      loaderEl.style.display  = '';
+            if (loaderEl) loaderEl.style.display = '';
 
             var kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
@@ -1424,29 +1334,29 @@ window.iniciarFluxoCheckout = function () {
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
                             if (data.routes && data.routes[0]) {
-                                kmTotal  += data.routes[0].distance / 1000;
+                                kmTotal += data.routes[0].distance / 1000;
                                 minTotal += data.routes[0].duration / 60;
                                 listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
                             }
                         });
                 });
             })).then(function () {
-                var kmArredondado  = Math.round(kmTotal);
+                var kmArredondado = Math.round(kmTotal);
                 var valorCalculado = kmArredondado * 3.00;
 
                 window.dadosPedidoAtual = {
-                    solicitante:      solicitante,
-                    contato:          contato,
-                    horario:          horario,
-                    mercadoria:       mercadoria,
-                    obs:              obs,
-                    cliente:          (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal:   kmArredondado,
-                    tempoTotal:       Math.round(minTotal),
-                    coordenadas:      listaCaminhos,
-                    valorEstimado:    valorCalculado,
+                    solicitante: solicitante,
+                    contato: contato,
+                    horario: horario,
+                    mercadoria: mercadoria,
+                    obs: obs,
+                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                    distanciaTotal: kmArredondado,
+                    tempoTotal: Math.round(minTotal),
+                    coordenadas: listaCaminhos,
+                    valorEstimado: valorCalculado,
                     rotasProcessadas: rotasExtraidas,
-                    rawInput:         texto
+                    rawInput: texto
                 };
 
                 window._renderizarResumo(
@@ -1464,18 +1374,15 @@ window.iniciarFluxoCheckout = function () {
     });
 };
 
-// ─────────────────────────────────────────────
-// MARK: Prosseguir para formulário
-// ─────────────────────────────────────────────
 window.prosseguirParaFormulario = function () {
     if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.distanciaTotal) {
         alert('Dados do pedido não foram calculados corretamente.');
         return;
     }
 
-    var modalMapa  = document.getElementById('modalMapa');
-    var instMapa   = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
-    if (instMapa) { try { instMapa.hide(); } catch (_) {} }
+    var modalMapa = document.getElementById('modalMapa');
+    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+    if (instMapa) { try { instMapa.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
@@ -1491,19 +1398,16 @@ window.prosseguirParaFormulario = function () {
     }, 400);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Voltar para mapa / fechar para chat
-// ─────────────────────────────────────────────
 window._preencherFormulario = function (dados) {
     if (!dados) return;
     var campos = [
         { id: 'p-solicitante', valor: dados.solicitante || '' },
-        { id: 'p-contato',     valor: dados.contato     || '' },
-        { id: 'p-horario',     valor: dados.horario     || '' },
-        { id: 'p-mercadoria',  valor: dados.mercadoria  || 'ENTREGA' },
-        { id: 'p-distancia',   valor: Number(dados.distanciaTotal || 0).toFixed(2) },
-        { id: 'p-tempo',       valor: dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '' },
-        { id: 'p-obs',         valor: dados.obs || '' }
+        { id: 'p-contato', valor: dados.contato || '' },
+        { id: 'p-horario', valor: dados.horario || '' },
+        { id: 'p-mercadoria', valor: dados.mercadoria || 'ENTREGA' },
+        { id: 'p-distancia', valor: Number(dados.distanciaTotal || 0).toFixed(2) },
+        { id: 'p-tempo', valor: dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '' },
+        { id: 'p-obs', valor: dados.obs || '' }
     ];
     campos.forEach(function (c) {
         var el = document.getElementById(c.id);
@@ -1522,13 +1426,13 @@ window._preencherFormulario = function (dados) {
 
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
-    var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-    if (instForm) { try { instForm.hide(); } catch (_) {} }
+    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+    if (instForm) { try { instForm.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalMapa  = document.getElementById('modalMapa');
+            var modalMapa = document.getElementById('modalMapa');
             if (!modalMapa) return;
             var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
             modalMapa.addEventListener('shown.bs.modal', function () {
@@ -1552,20 +1456,24 @@ window.fecharParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
     if (!modalForm) return;
     var inst = bootstrap.Modal.getInstance(modalForm);
-    if (inst) { try { inst.hide(); } catch (_) {} }
+    if (inst) { try { inst.hide(); } catch (_) { } }
     setTimeout(function () { window.voltarParaMapa(); }, 400);
 };
 
 window.fecharParaChat = function (modalId) {
-    var modalEl = document.getElementById(modalId || 'modalMapa');
-    if (!modalEl) return;
-    var inst = bootstrap.Modal.getInstance(modalEl);
-    if (inst) { try { inst.hide(); } catch (_) {} }
+    var ids = modalId ? [modalId] : ['modalFormulario', 'modalMapa'];
+    ids.forEach(function (id) {
+        var modalEl = document.getElementById(id);
+        if (!modalEl) return;
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) { try { inst.hide(); } catch (_) { } }
+    });
 
     window.AppRDO._mapaModalAberto = false;
+    window.AppRDO.isProcessingCheckout = false;
 
     if (window._leafletMapInstance) {
-        try { window._leafletMapInstance.remove(); } catch (_) {}
+        try { window._leafletMapInstance.remove(); } catch (_) { }
         window._leafletMapInstance = null;
     }
 
@@ -1573,18 +1481,31 @@ window.fecharParaChat = function (modalId) {
 
     var input = document.getElementById('msg-input');
     if (input) {
-        input.value = window.MODELO_PADRAO;
+        input.value = '';
+        input.style.height = 'auto';
+        input.disabled = false;
+        input.readOnly = false;
         input.style.border = '';
         input.style.boxShadow = '';
+        input.style.opacity = '';
+        input.style.pointerEvents = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
     }
 
-    setTimeout(function () { _limparBackdrop(); }, 400);
+    var btnEnviar = document.getElementById('btn-enviar-mensagem');
+    if (btnEnviar) {
+        btnEnviar.disabled = false;
+        btnEnviar.style.opacity = '';
+        btnEnviar.style.pointerEvents = '';
+    }
+
+    setTimeout(function () {
+        _limparBackdrop();
+        var inputFocus = document.getElementById('msg-input');
+        if (inputFocus) inputFocus.focus();
+    }, 400);
 };
 
-// ─────────────────────────────────────────────
-// MARK: Init
-// ─────────────────────────────────────────────
 (function () {
     function _handleSyncClick(e) {
         if (!e.target.closest('#btn-sync-chat')) return;
@@ -1596,8 +1517,8 @@ window.fecharParaChat = function (modalId) {
 
     function _tentarInit() {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn       = localStorage.getItem('bot_master_active') === 'true';
-            window.AppRDO.listaCarregada   = false;
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
         if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
@@ -1627,8 +1548,8 @@ window.fecharParaChat = function (modalId) {
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity    = '0';
-                    wrapper.style.transform  = 'translateX(30px)';
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
                     setTimeout(function () { wrapper.remove(); }, 300);
                 }
             }

@@ -126,9 +126,8 @@ window.salvarPedidoAPI = async function () {
     var dinamica    = elDinamica    ? elDinamica.value.trim()    : '0';
     var valorFinal  = elValorFinal  ? elValorFinal.textContent.trim() : 'R$ 0,00';
 
-    // — Validações —
     var temErro = false;
-    if (!contato)    { window.marcarCampoFormInvalido(elContato);   temErro = true; }
+    if (!contato)    { window.marcarCampoFormInvalido(elContato);    temErro = true; }
     if (!mercadoria) { window.marcarCampoFormInvalido(elMercadoria); temErro = true; }
     if (temErro) {
         Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: 'Preencha todos os campos marcados em vermelho.', confirmButtonColor: '#dc3545' });
@@ -141,50 +140,49 @@ window.salvarPedidoAPI = async function () {
         return;
     }
 
-    // — Número do serviço —
     var totalExistentes = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache.length : 0;
     var numeroServico   = 'RDO' + String(totalExistentes + 1).padStart(3, '0');
 
-    // — Montar mensagem formatada (exatamente como gerarMensagemFormatada) —
     var msgFormatada = window.gerarMensagemFormatada({
-        numeroServico:   numeroServico,
-        solicitante:     solicitante,
-        contato:         contato,
-        mercadoria:      mercadoria,
+        numeroServico:    numeroServico,
+        solicitante:      solicitante,
+        contato:          contato,
+        mercadoria:       mercadoria,
         rotasProcessadas: dados.rotasProcessadas || [],
-        distanciaTotal:  dados.distanciaTotal || 0,
-        tempoTotal:      dados.tempoTotal || 0,
-        valorEstimado:   parseFloat(
-            valorFinal.replace(/[^\d,]/g, '').replace(',', '.')
-        ) || dados.valorEstimado || 0
+        distanciaTotal:   dados.distanciaTotal   || 0,
+        tempoTotal:       dados.tempoTotal        || 0,
+        valorEstimado:    parseFloat(valorFinal.replace(/[^\d,]/g, '').replace(',', '.')) || dados.valorEstimado || 0
     });
 
     var payload = {
-        id_cliente:    clienteId,
-        solicitante:   solicitante,
-        contato:       contato,
-        horario:       horario,
-        mercadoria:    mercadoria,
-        observacao:    obs,
-        distancia:     String(dados.distanciaTotal || 0),
-        tempo:         String(dados.tempoTotal || 0),
-        valor_km:      String(valorKm),
-        retorno:       retorno,
-        prioridade:    prioridade,
-        dinamica:      dinamica,
-        valor_corrida: valorFinal,
+        id_cliente:     clienteId,
+        solicitante:    solicitante,
+        contato:        contato,
+        horario:        horario,
+        mercadoria:     mercadoria,
+        observacao:     obs,
+        distancia:      String(dados.distanciaTotal || 0),
+        tempo:          String(dados.tempoTotal || 0),
+        valor_km:       String(valorKm),
+        retorno:        retorno,
+        prioridade:     prioridade,
+        dinamica:       dinamica,
+        valor_corrida:  valorFinal,
         numero_servico: numeroServico,
-        rotas:         JSON.stringify(dados.rotasProcessadas || []),
-        rotas_texto:   (dados.rotasProcessadas || []).map(function (r, i) {
-                           return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
-                       }).join('\n'),
-        texto:         msgFormatada, // ← campo que o GAS grava no chat
-        mensagem:      msgFormatada, // ← fallback caso o GAS use este nome
-        status:        'PENDENTE'
+        rotas:          JSON.stringify(dados.rotasProcessadas || []),
+        rotas_texto:    (dados.rotasProcessadas || []).map(function (r, i) {
+                            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+                        }).join('\n'),
+        texto:          msgFormatada,
+        mensagem:       msgFormatada,
+        status:         'PENDENTE'
     };
 
     var btnEmitir = document.getElementById('btn-emitir-pedido');
-    if (btnEmitir) { btnEmitir.disabled = true; btnEmitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...'; }
+    if (btnEmitir) {
+        btnEmitir.disabled   = true;
+        btnEmitir.innerHTML  = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    }
     window.AppRDO.isProcessingCheckout = true;
 
     try {
@@ -194,10 +192,23 @@ window.salvarPedidoAPI = async function () {
             throw new Error((resposta && resposta.message) || 'Falha ao criar pedido.');
         }
 
-        var pedidoId = resposta.id || resposta.pedido_id || Date.now();
+        var pedidoId = String(resposta.id || resposta.pedido_id || Date.now());
         var agora    = new Date();
         var dataISO  = agora.toISOString().split('T')[0];
         var hora     = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        var numeroFinal = pedidoId.toUpperCase().startsWith('RDO') ? pedidoId : 'RDO' + pedidoId;
+
+        msgFormatada = window.gerarMensagemFormatada({
+            numeroServico:    numeroFinal,
+            solicitante:      solicitante,
+            contato:          contato,
+            mercadoria:       mercadoria,
+            rotasProcessadas: dados.rotasProcessadas || [],
+            distanciaTotal:   dados.distanciaTotal   || 0,
+            tempoTotal:       dados.tempoTotal        || 0,
+            valorEstimado:    parseFloat(valorFinal.replace(/[^\d,]/g, '').replace(',', '.')) || dados.valorEstimado || 0
+        });
 
         var novoPedido = {
             id:             pedidoId,
@@ -206,7 +217,7 @@ window.salvarPedidoAPI = async function () {
             contato:        contato,
             mercadoria:     mercadoria,
             horario:        horario,
-            numero_servico: numeroServico,
+            numero_servico: numeroFinal,
             texto:          msgFormatada,
             status:         'PENDENTE',
             motoboy:        '',
@@ -225,11 +236,20 @@ window.salvarPedidoAPI = async function () {
             texto: msgFormatada, data: dataISO, hora: hora
         });
 
-        // Renderiza no chat imediatamente
         var container = document.getElementById('chat-messages-container');
         if (container && typeof window._criarWrapperMensagem === 'function') {
             var emptyState = container.querySelector('.chat-empty-state');
             if (emptyState) emptyState.remove();
+
+            var hojeLabel = 'HOJE';
+            var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+            if (!ultimoSep || ultimoSep.textContent.trim() !== hojeLabel) {
+                var sep = document.createElement('div');
+                sep.className = 'chat-date-separator';
+                sep.innerHTML = '<span class="chat-date-badge">' + hojeLabel + '</span>';
+                container.appendChild(sep);
+            }
+
             container.appendChild(
                 window._criarWrapperMensagem(pedidoId, msgFormatada, hora, false, '', 'Alterar Status')
             );
@@ -238,27 +258,43 @@ window.salvarPedidoAPI = async function () {
 
         if (typeof window.EventBus !== 'undefined') window.EventBus.emit('pedido:adicionado', novoPedido);
 
-        // Restaurar input
-        var msgInput = document.getElementById('msg-input');
-        if (msgInput) {
-            msgInput.value = window.MODELO_PADRAO || '';
-            msgInput.style.border = '';
-            msgInput.style.boxShadow = '';
+        if (typeof window.fecharParaChat === 'function') {
+            window.fecharParaChat('modalFormulario');
+        } else {
+            var modalForm = document.getElementById('modalFormulario');
+            if (modalForm) {
+                var instForm = bootstrap.Modal.getInstance(modalForm);
+                if (instForm) { try { instForm.hide(); } catch (_) {} }
+            }
+            window.dadosPedidoAtual        = {};
+            window.AppRDO._mapaModalAberto = false;
+            var msgInput = document.getElementById('msg-input');
+            if (msgInput) {
+                msgInput.value            = window.MODELO_PADRAO || '';
+                msgInput.disabled         = false;
+                msgInput.readOnly         = false;
+                msgInput.style.border     = '';
+                msgInput.style.boxShadow  = '';
+                msgInput.style.opacity    = '';
+                msgInput.style.pointerEvents = '';
+                msgInput.setAttribute('placeholder', 'Digite o pedido...');
+            }
+            var btnEnviar = document.getElementById('btn-enviar-msg');
+            if (btnEnviar) {
+                btnEnviar.disabled            = false;
+                btnEnviar.style.opacity       = '';
+                btnEnviar.style.pointerEvents = '';
+            }
+            setTimeout(function () {
+                _limparBackdrop();
+                var inputFocus = document.getElementById('msg-input');
+                if (inputFocus) inputFocus.focus();
+            }, 400);
         }
-
-        var modalForm = document.getElementById('modalFormulario');
-        if (modalForm) {
-            var instForm = bootstrap.Modal.getInstance(modalForm);
-            if (instForm) { try { instForm.hide(); } catch (_) {} }
-        }
-
-        window.dadosPedidoAtual        = {};
-        window.AppRDO._mapaModalAberto = false;
-
-        setTimeout(function () { _limparBackdrop(); }, 400);
 
         Swal.fire({
-            icon: 'success', title: 'Pedido criado!', text: 'Registrado com sucesso.',
+            icon: 'success', title: 'Pedido criado!',
+            text: numeroFinal + ' registrado com sucesso.',
             toast: true, position: 'top-end', showConfirmButton: false,
             timer: 2500, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
         });
@@ -266,11 +302,14 @@ window.salvarPedidoAPI = async function () {
     } catch (err) {
         Swal.fire({
             icon: 'error', title: 'Erro ao salvar',
-            text: err.message || 'Erro desconhecido',
+            text: err.message || 'Erro desconhecido.',
             confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' }
         });
     } finally {
-        if (btnEmitir) { btnEmitir.disabled = false; btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO'; }
+        if (btnEmitir) {
+            btnEmitir.disabled  = false;
+            btnEmitir.innerHTML = '<i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO';
+        }
         window.AppRDO.isProcessingCheckout = false;
     }
 };

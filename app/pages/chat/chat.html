@@ -190,25 +190,16 @@ calcularemos á sua taxa! 🏁</textarea>
 <script>
 (function () {
     'use strict';
-    
-    console.log('[chat.html] 📄 Inicializando...');
-    
+
     function _carregarScript(src, callback) {
         if (document.querySelector('script[src="' + src + '"]')) {
-            console.log('[chat.html] ✅ Script já inserido:', src);
             if (typeof callback === 'function') callback();
             return;
         }
         var s = document.createElement('script');
         s.src = src;
-        s.onload = function () { 
-            console.log('[chat.html] ✅ Script carregado:', src);
-            if (typeof callback === 'function') callback(); 
-        };
-        s.onerror = function () { 
-            console.error('[chat.html] ❌ Erro ao carregar:', src);
-            if (typeof callback === 'function') callback(); 
-        };
+        s.onload  = function () { if (typeof callback === 'function') callback(); };
+        s.onerror = function () { if (typeof callback === 'function') callback(); };
         document.head.appendChild(s);
     }
 
@@ -235,8 +226,6 @@ calcularemos á sua taxa! 🏁</textarea>
         }
     });
 
-    _carregarScript(base + 'js/status_modal.js', function () {
-        console.log('[chat.html] ✅ status_modal.js carregado');
-    });
+    _carregarScript(base + 'js/status_modal.js', function () {});
 })();
 </script>
