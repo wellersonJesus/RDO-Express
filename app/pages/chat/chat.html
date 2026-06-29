@@ -47,7 +47,6 @@
 
     <div class="col-md-8">
         <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column card-chat">
-
             <div id="step-chat" class="d-flex flex-column h-100">
 
                 <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center gap-2">
@@ -76,57 +75,248 @@
                 </div>
 
             </div>
-
         </div>
     </div>
 
 </div>
 
+<!-- Modal: Alterar Status -->
 <div class="modal fade" id="modalStatus" tabindex="-1" aria-labelledby="modalStatusLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow modal-status-content">
-            <div class="modal-header modal-status-header">
-                <h6 id="modalStatusLabel" class="modal-title fw-semibold mb-0 d-flex align-items-center gap-2 modal-status-title">
-                    <i id="modal-status-icone" class="bi bi-arrow-repeat"></i>
-                    <span id="modal-status-texto">Alterar Status</span>
-                </h6>
-                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body p-3">
-                <div id="box-botoes-status">
-                    <div class="d-flex flex-column gap-2">
-                        <button type="button" class="btn btn-sm w-100 btn-status-emrota" onclick="window.StatusModal.processar('EM_ROTA')">
-                            <i class="bi bi-bicycle me-2"></i>Em Rota
-                        </button>
-                        <button type="button" class="btn btn-sm w-100 btn-status-concluido" onclick="window.StatusModal.processar('CONCLUIDO')">
-                            <i class="bi bi-check-circle-fill me-2"></i>Concluído
-                        </button>
-                        <button type="button" class="btn btn-sm w-100 btn-status-cancelado" onclick="window.StatusModal.processar('CANCELADO')">
-                            <i class="bi bi-x-circle-fill me-2"></i>Cancelado
-                        </button>
-                    </div>
-                </div>
-                <div id="box-selecao-motoboy" class="d-none">
-                    <label class="form-label fw-semibold mb-2 label-motoboy" for="select-motoboy">
-                        <i class="bi bi-person-badge me-1"></i>Motoboy responsável:
-                    </label>
-                    <select id="select-motoboy" class="form-select form-select-sm mb-3 select-motoboy">
-                        <option value="" disabled selected>Selecione o motoboy...</option>
-                    </select>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm w-50 btn-motoboy-voltar" onclick="window.StatusModal.voltar()">
-                            <i class="bi bi-chevron-left me-1"></i>Voltar
-                        </button>
-                        <button type="button" id="btn-confirmar-motoboy" class="btn btn-sm w-50 btn-motoboy-confirmar" onclick="window.StatusModal.confirmarMotoboy()">
-                            <i class="bi bi-check2 me-1"></i>Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+
+      <!-- Header -->
+      <div class="modal-header border-0 px-4 pt-4 pb-2 align-items-start">
+        <div class="d-flex align-items-center gap-2">
+          <span id="modal-status-icon-wrap"
+            class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger bg-opacity-10"
+            style="width:36px;height:36px;flex-shrink:0;">
+            <i id="modal-status-icone" class="bi bi-arrow-repeat text-danger" style="font-size:1.1rem;"></i>
+          </span>
+          <div>
+            <h6 id="modal-status-texto" class="fw-bold mb-0 text-dark" style="font-size:.93rem;">Alterar Status</h6>
+            <small id="modal-status-subtitulo" class="text-muted" style="font-size:.75rem;">Selecione a ação desejada</small>
+          </div>
         </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Fechar"
+          style="font-size:.7rem;margin-top:2px;"></button>
+      </div>
+
+      <div class="modal-body px-4 pb-4 pt-2">
+
+        <!-- ETAPA 1: Botões de ação -->
+        <div id="box-botoes-status">
+          <div class="d-flex flex-column gap-2 mt-1">
+            <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
+              onclick="window.StatusModal.processar('EM_ROTA')">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                style="width:34px;height:34px;background:#e7f1ff;flex-shrink:0;">
+                <i class="bi bi-bicycle text-primary" style="font-size:1rem;"></i>
+              </span>
+              <div>
+                <div class="fw-semibold text-dark" style="font-size:.84rem;">Em Rota</div>
+                <div class="text-muted" style="font-size:.73rem;">Vincular motoboy e despachar pedido</div>
+              </div>
+            </button>
+
+            <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
+              onclick="window.StatusModal.processar('CONCLUIDO')">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                style="width:34px;height:34px;background:#e6f9f0;flex-shrink:0;">
+                <i class="bi bi-check-circle-fill text-success" style="font-size:1rem;"></i>
+              </span>
+              <div>
+                <div class="fw-semibold text-dark" style="font-size:.84rem;">Concluído</div>
+                <div class="text-muted" style="font-size:.73rem;">Marcar entrega como finalizada</div>
+              </div>
+            </button>
+
+            <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
+              onclick="window.StatusModal.processar('CANCELADO')">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                style="width:34px;height:34px;background:#fff0f0;flex-shrink:0;">
+                <i class="bi bi-x-circle-fill text-danger" style="font-size:1rem;"></i>
+              </span>
+              <div>
+                <div class="fw-semibold text-dark" style="font-size:.84rem;">Cancelado</div>
+                <div class="text-muted" style="font-size:.73rem;">Registrar motivo e cancelar pedido</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- ETAPA 2: Seleção de motoboy -->
+        <div id="box-selecao-motoboy" class="d-none">
+          <p class="text-muted mb-3" style="font-size:.78rem;">
+            <i class="bi bi-info-circle me-1"></i>Selecione o motoboy responsável por esta entrega.
+          </p>
+          <label class="form-label fw-semibold text-dark mb-1" style="font-size:.8rem;" for="select-motoboy">
+            <i class="bi bi-person-badge me-1 text-primary"></i>Motoboy
+          </label>
+          <select id="select-motoboy" class="form-select form-select-sm rounded-3 mb-3 shadow-none border"
+            style="font-size:.83rem;">
+            <option value="" disabled selected>Selecione o motoboy...</option>
+          </select>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill"
+              style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
+              <i class="bi bi-chevron-left me-1"></i>Voltar
+            </button>
+            <button type="button" id="btn-confirmar-motoboy"
+              class="btn btn-sm btn-primary rounded-3 flex-fill fw-semibold"
+              style="font-size:.8rem;" onclick="window.StatusModal.confirmarMotoboy()">
+              <i class="bi bi-check2 me-1"></i>Confirmar
+            </button>
+          </div>
+        </div>
+
+        <!-- ETAPA 3: Motivos de cancelamento -->
+        <div id="box-cancelamento" class="d-none">
+          <p class="text-muted mb-3" style="font-size:.78rem;">
+            <i class="bi bi-info-circle me-1"></i>Selecione um ou mais motivos para registrar o cancelamento.
+          </p>
+
+          <!-- Dropdown grupo: Cliente -->
+          <div class="mb-2">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge rounded-pill text-bg-secondary" style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">
+                CLIENTE
+              </span>
+              <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
+            </div>
+            <div class="d-flex flex-column gap-1">
+              <label class="cancel-check-item" data-bs-toggle="tooltip"
+                title="O cliente desistiu devido à demora superior ao tempo estimado.">
+                <input type="checkbox" class="cancel-cb" value="Tempo de espera excessivo">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Tempo de espera excessivo</div>
+                  <div class="cancel-check-desc">Desistiu por demora além do tempo estimado</div>
+                </div>
+              </label>
+              <label class="cancel-check-item"
+                title="Não precisa mais do produto ou cancelou por motivos pessoais.">
+                <input type="checkbox" class="cancel-cb" value="Mudança de planos ou arrependimento">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Mudança de planos ou arrependimento</div>
+                  <div class="cancel-check-desc">Cancelou por decisão própria após o pedido</div>
+                </div>
+              </label>
+              <label class="cancel-check-item"
+                title="Informou endereço errado e optou por cancelar para corrigir.">
+                <input type="checkbox" class="cancel-cb" value="Endereço ou dados incorretos">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Endereço ou dados incorretos</div>
+                  <div class="cancel-check-desc">Local de entrega informado incorretamente</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Dropdown grupo: Motoboy -->
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge rounded-pill text-bg-secondary" style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">
+                MOTOBOY
+              </span>
+              <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
+            </div>
+            <div class="d-flex flex-column gap-1">
+              <label class="cancel-check-item"
+                title="Pneu furado, falha mecânica ou outro problema que impede a entrega.">
+                <input type="checkbox" class="cancel-cb" value="Problemas técnicos ou mecânicos">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Problemas técnicos ou mecânicos</div>
+                  <div class="cancel-check-desc">Falha na moto ou equipamento durante a rota</div>
+                </div>
+              </label>
+              <label class="cancel-check-item"
+                title="Não localizou o endereço ou avaliou risco de segurança na região.">
+                <input type="checkbox" class="cancel-cb" value="Local de difícil acesso ou inseguro">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Local de difícil acesso ou inseguro</div>
+                  <div class="cancel-check-desc">Endereço inacessível ou região de risco</div>
+                </div>
+              </label>
+              <label class="cancel-check-item"
+                title="Chegou ao local mas não obteve retorno do cliente após as tentativas padrão.">
+                <input type="checkbox" class="cancel-cb" value="Impossibilidade de contato com o cliente">
+                <div class="cancel-check-body">
+                  <div class="cancel-check-title">Impossibilidade de contato</div>
+                  <div class="cancel-check-desc">Cliente não atendeu após tentativas no local</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Erro validação -->
+          <div id="cancel-error" class="d-none mb-2 d-flex align-items-center gap-1 text-danger rounded-3 px-2 py-1"
+            style="font-size:.78rem;background:#fff0f0;border:1px solid #f5c6cb;">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span>Selecione ao menos um motivo antes de confirmar.</span>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill"
+              style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
+              <i class="bi bi-chevron-left me-1"></i>Voltar
+            </button>
+            <button type="button" class="btn btn-sm btn-danger rounded-3 flex-fill fw-semibold"
+              style="font-size:.8rem;" onclick="window.StatusModal.confirmarCancelamento()">
+              <i class="bi bi-x-circle me-1"></i>Confirmar
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
+  </div>
 </div>
 
+<!-- Estilos do modal de status -->
+<style>
+.status-btn-action {
+  transition: background .15s, border-color .15s, transform .1s;
+  border-color: #e9ecef !important;
+}
+.status-btn-action:hover {
+  background: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+  transform: translateY(-1px);
+}
+.status-btn-action:active { transform: translateY(0); }
+
+.cancel-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  margin: 0;
+  user-select: none;
+}
+.cancel-check-item:hover { background: #f8f9fa; border-color: #dee2e6; }
+.cancel-check-item:has(.cancel-cb:checked) {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+.cancel-check-item .cancel-cb {
+  margin-top: 3px;
+  accent-color: #dc3545;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.cancel-check-body { flex: 1; min-width: 0; }
+.cancel-check-title { font-size: .81rem; font-weight: 600; color: #343a40; line-height: 1.3; }
+.cancel-check-desc  { font-size: .72rem; color: #6c757d; margin-top: 1px; line-height: 1.4; }
+</style>
+
+<!-- Modal: Mensagem Padrão -->
 <div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-labelledby="modalMensagemPadraoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -159,6 +349,7 @@ calcularemos á sua taxa! 🏁</textarea>
     </div>
 </div>
 
+<!-- Modal: Validação -->
 <div class="modal fade" id="modalValidacao" tabindex="-1" aria-labelledby="modalValidacaoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow rounded-4">
@@ -185,6 +376,37 @@ calcularemos á sua taxa! 🏁</textarea>
     </div>
 </div>
 
+<!-- Estilos: cancelamento -->
+<style>
+.cancel-group-label {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #adb5bd;
+    padding: 2px 0 1px;
+}
+.cancel-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: .8rem;
+    color: #444;
+    cursor: pointer;
+    padding: 5px 7px;
+    border-radius: 6px;
+    transition: background .15s;
+    margin: 0;
+}
+.cancel-option:hover { background: #fff5f5; }
+.cancel-option input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: #dc3545;
+    flex-shrink: 0;
+}
+</style>
+
+<!-- Container de modais dinâmicos -->
 <div id="modal-container"></div>
 
 <script>
@@ -210,22 +432,20 @@ calcularemos á sua taxa! 🏁</textarea>
 
     _carregarScript(base + 'js/form_clientes.js', function () {
         var textarea = document.getElementById('msg-input');
-        if (textarea) {
-            textarea.addEventListener('input', function () {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            });
-            textarea.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    if (typeof window.enviarMensagemGeral === 'function') {
-                        window.enviarMensagemGeral();
-                    }
+        if (!textarea) return;
+        textarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (typeof window.enviarMensagemGeral === 'function') {
+                    window.enviarMensagemGeral();
                 }
-            });
-        }
+            }
+        });
     });
 
-    _carregarScript(base + 'js/status_modal.js', function () {});
 })();
 </script>

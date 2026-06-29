@@ -641,10 +641,14 @@ window.getIconePorStatus = function (status) {
 
 window.StatusModal = (function () {
     var _pedidoId = null;
-    var _modalBS = null;
+    var _modalBS  = null;
 
     function _el(id) { return document.getElementById(id) || null; }
-    function _safeText(el, txt) { if (el && typeof txt === 'string') el.textContent = txt; }
+
+    function _safeText(el, txt) {
+        if (el && typeof txt === 'string') el.textContent = txt;
+    }
+
     function _safeClass(el, action) {
         if (!el || !el.classList) return;
         Array.prototype.slice.call(arguments, 2).forEach(function (c) {
@@ -655,46 +659,33 @@ window.StatusModal = (function () {
 
     function _resetar() {
         try {
-            var texto = _el('modal-status-texto');
+            _safeText(_el('modal-status-texto'), 'Alterar Status');
             var icone = _el('modal-status-icone');
-            var boxBotoes = _el('box-botoes-status');
-            var boxMotoboy = _el('box-selecao-motoboy');
+            if (icone) icone.className = 'bi bi-arrow-repeat text-danger';
+            _safeClass(_el('box-botoes-status'),    'remove', 'd-none');
+            _safeClass(_el('box-selecao-motoboy'),  'add',    'd-none');
+            _safeClass(_el('box-cancelamento'),     'add',    'd-none');
             var select = _el('select-motoboy');
-            _safeText(texto, 'Alterar Status');
-            if (icone) icone.className = 'bi bi-arrow-repeat';
-            _safeClass(boxBotoes, 'remove', 'd-none');
-            _safeClass(boxMotoboy, 'add', 'd-none');
-            if (select) { select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>'; select.style.borderColor = '#ddd'; }
+            if (select) {
+                select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
+                select.style.borderColor = '';
+                select.disabled = false;
+            }
+            document.querySelectorAll('#box-cancelamento .cancel-cb').forEach(function (cb) {
+                cb.checked = false;
+            });
+            _safeClass(_el('cancel-error'), 'add', 'd-none');
         } catch (_) { }
     }
 
-    async function _carregarMotoboys() {
-        var select = _el('select-motoboy');
-        if (!select) return;
-        select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
-        try {
-            var todos = await API.call('getcolaboradores');
-            var lista = Array.isArray(todos) ? todos : [];
-            var motoboys = lista.filter(function (c) {
-                return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                    String(c.status || '').toUpperCase() === 'TRUE';
-            });
-            select.innerHTML = motoboys.length > 0
-                ? '<option value="" disabled selected>Selecione o motoboy...</option>' +
-                motoboys.map(function (m) {
-                    return '<option value="' + String(m.id || '') + '">' +
-                        String(m.username || m.nome || 'Sem nome') + '</option>';
-                }).join('')
-                : '<option value="" disabled selected>Nenhum motoboy disponível</option>';
-        } catch (_) {
-            select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
-        }
+    function _getIconEl(id) {
+        var msgEl = document.querySelector('[data-pedido-id="' + id + '"]');
+        return msgEl ? msgEl.querySelector('.status-icon') : null;
     }
 
-    function _setSpinnerNoBotao(pedidoId) {
+    function _setSpinnerNoBotao(id) {
         try {
-            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
-            var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
+            var iconEl = _getIconEl(id);
             if (!iconEl) return;
             iconEl.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
             iconEl.classList.remove('status-updated');
@@ -703,36 +694,67 @@ window.StatusModal = (function () {
         } catch (_) { }
     }
 
-    function _setIconeFinal(pedidoId, status, motoboyNome) {
+    function _setIconeFinal(id, status, motoboyNome) {
         try {
-            var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
-            var iconEl = msgEl ? msgEl.querySelector('.status-icon') : null;
+            var iconEl = _getIconEl(id);
             if (!iconEl) return;
             iconEl.innerHTML = typeof window.getIconePorStatus === 'function'
-                ? window.getIconePorStatus(status) : '<i class="bi bi-question-circle"></i>';
+                ? window.getIconePorStatus(status)
+                : '<i class="bi bi-question-circle"></i>';
             iconEl.classList.remove('status-pending');
             iconEl.classList.add('status-updated');
-            var statusLabel = String(status || '').replace(/_/g, ' ');
-            var tooltip = motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel;
+            var label   = String(status || '').replace(/_/g, ' ');
+            var tooltip = motoboyNome ? motoboyNome + ' • ' + label : label;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
         } catch (_) { }
     }
 
-    function _atualizarCache(pedidoId, statusFormatado, motoboyNome) {
+    function _atualizarCache(id, statusFmt, motoboyNome) {
         try {
-            var cache = window.AppRDO ? window.AppRDO.pedidosCache : null;
-            if (!Array.isArray(cache)) return;
-            var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId || '').trim(); });
+            var cache = window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)
+                ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(id || '').trim();
+            });
             if (!pedido) return;
-            pedido.status = statusFormatado;
+            pedido.status = statusFmt;
             if (motoboyNome) pedido.motoboy = motoboyNome;
         } catch (_) { }
     }
 
-    async function _executarAlteracao(status, motoboyId) {
+    async function _carregarMotoboys() {
+        var select = _el('select-motoboy');
+        if (!select) return;
+        select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+        select.disabled  = true;
+        try {
+            var todos    = await API.call('getcolaboradores');
+            var lista    = Array.isArray(todos) ? todos : [];
+            var motoboys = lista.filter(function (c) {
+                return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
+                       String(c.status     || '').toUpperCase() === 'TRUE';
+            });
+            select.disabled = false;
+            select.innerHTML = motoboys.length > 0
+                ? '<option value="" disabled selected>Selecione o motoboy...</option>' +
+                  motoboys.map(function (m) {
+                      return '<option value="' + String(m.id || '') + '">' +
+                             String(m.username || m.nome || 'Sem nome') + '</option>';
+                  }).join('')
+                : '<option value="" disabled selected>Nenhum motoboy disponível</option>';
+        } catch (_) {
+            if (select) {
+                select.disabled  = false;
+                select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
+            }
+        }
+    }
+
+    async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
         var motoboyNome = '';
-        var statusFormatado = String(status || '');
+        var statusFmt   = String(status || '');
+
         if (motoboyId) {
             try {
                 var select = _el('select-motoboy');
@@ -741,33 +763,50 @@ window.StatusModal = (function () {
                 }
             } catch (_) { motoboyNome = ''; }
         }
-        if (motoboyNome) statusFormatado = motoboyNome + '/' + status;
+
+        if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
         try { if (_modalBS) _modalBS.hide(); } catch (_) { }
 
         try {
-            var resposta = await API.call('updatepedido', {
-                id: String(_pedidoId || ''), status: statusFormatado, motoboy: motoboyNome
-            });
+            var payload = {
+                id:      String(_pedidoId || ''),
+                status:  statusFmt,
+                motoboy: motoboyNome
+            };
+            if (motivosCancelamento && motivosCancelamento.length > 0) {
+                payload.motivo_cancelamento = motivosCancelamento.join(' | ');
+            }
+
+            var resposta = await API.call('updatepedido', payload);
+
             if (resposta && resposta.status === 'success') {
-                _atualizarCache(_pedidoId, statusFormatado, motoboyNome);
+                _atualizarCache(_pedidoId, statusFmt, motoboyNome);
                 _setIconeFinal(_pedidoId, status, motoboyNome);
                 try {
                     if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
-                        window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFormatado, motoboyNome);
+                        window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFmt, motoboyNome);
                     }
                 } catch (_) { }
             } else {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
         } catch (e) {
-            _setIconeFinal(_pedidoId, '', '');
+            _setSpinnerNoBotao(_pedidoId);
+            var iconEl = _getIconEl(_pedidoId);
+            if (iconEl) {
+                iconEl.innerHTML = '<i class="bi bi-exclamation-circle-fill" style="color:#dc3545;"></i>';
+                iconEl.setAttribute('data-tooltip', 'Erro ao atualizar');
+            }
             try {
                 Swal.fire({
                     icon: 'error', title: 'Erro',
-                    html: '<div style="font-size:.9rem;">Não foi possível alterar o status.</div>',
-                    confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' }
+                    html: '<div style="font-size:.9rem;">Não foi possível alterar o status.<br>' +
+                          '<small class="text-secondary">' + (e.message || 'Tente novamente.') + '</small></div>',
+                    confirmButtonText: 'Fechar',
+                    confirmButtonColor: '#dc3545',
+                    customClass: { popup: 'rounded-4' }
                 });
             } catch (_) { alert('Erro ao alterar o status do pedido.'); }
         }
@@ -776,27 +815,45 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         try {
             if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-            var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+
+            var cache  = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
+                       ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(pedidoId).trim();
+            });
             var statusBruto = String(pedido ? pedido.status : '').trim();
-            var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim().toUpperCase() : statusBruto.toUpperCase();
+            var statusPuro  = statusBruto.includes('/')
+                ? statusBruto.split('/').pop().trim().toUpperCase()
+                : statusBruto.toUpperCase();
 
             if (statusPuro === 'CONCLUIDO' || statusPuro === 'CONCLUÍDO' || statusPuro === 'CANCELADO') {
                 var isConcluido = statusPuro !== 'CANCELADO';
                 Swal.fire({
-                    icon: isConcluido ? 'success' : 'error', title: 'Pedido Finalizado',
-                    html: '<div style="font-size:.93rem;color:#555;">Este pedido já foi <strong style="color:' +
-                        (isConcluido ? '#28a745' : '#dc3545') + ';">' +
-                        (isConcluido ? 'Concluído' : 'Cancelado') + '</strong> e não pode mais ser alterado.</div>',
-                    confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
+                    icon: isConcluido ? 'success' : 'error',
+                    title: 'Pedido Finalizado',
+                    html: '<div style="font-size:.93rem;color:#555;">Este pedido já foi ' +
+                          '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
+                          (isConcluido ? 'Concluído' : 'Cancelado') +
+                          '</strong> e não pode mais ser alterado.</div>',
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#dc3545',
+                    customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
                 });
                 return;
             }
+
             _pedidoId = pedidoId;
             _resetar();
+
             var modalEl = _el('modalStatus');
             if (!modalEl) return;
-            _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+
+            try {
+                var existing = bootstrap.Modal.getInstance(modalEl);
+                if (existing) { try { existing.dispose(); } catch (_) { } }
+            } catch (_) { }
+
+            _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
             _modalBS.show();
         } catch (_) { }
     }
@@ -804,43 +861,57 @@ window.StatusModal = (function () {
     function processar(status) {
         try {
             if (status === 'EM_ROTA') {
-                _safeText(_el('modal-status-texto'), 'Selecione o Motoboy');
-                var icone = _el('modal-status-icone');
-                if (icone) icone.className = 'bi bi-bicycle';
-                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
+                _safeText(_el('modal-status-texto'), 'Selecionar Motoboy');
+                var iconeR = _el('modal-status-icone');
+                if (iconeR) iconeR.className = 'bi bi-bicycle text-primary';
+                _safeClass(_el('box-botoes-status'),   'add', 'd-none');
+                _safeClass(_el('box-cancelamento'),    'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
                 _carregarMotoboys();
                 return;
             }
-            var opcoes = {
-                CONCLUIDO: { titulo: 'Concluir Pedido?', html: 'Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.', icone: 'question', btnTexto: 'Sim, Concluir', btnCor: '#28a745' },
-                CANCELADO: { titulo: 'Cancelar Pedido?', html: 'Ao cancelar, este pedido <strong>não poderá</strong> mais ser reaberto.', icone: 'warning', btnTexto: 'Sim, Cancelar', btnCor: '#dc3545' }
-            };
-            var cfg = opcoes[status];
-            if (!cfg) return;
-            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
-            Swal.fire({
-                icon: cfg.icone, title: cfg.titulo,
-                html: '<div style="font-size:.9rem;color:#555;">' + cfg.html + '</div>',
-                showCancelButton: true, confirmButtonText: cfg.btnTexto,
-                cancelButtonText: 'Voltar', confirmButtonColor: cfg.btnCor,
-                cancelButtonColor: '#6c757d', reverseButtons: true,
-                customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
-            }).then(async function (result) {
-                if (result.isConfirmed) await _executarAlteracao(status);
-            }).catch(function () { });
+
+            if (status === 'CANCELADO') {
+                _safeText(_el('modal-status-texto'), 'Motivo do Cancelamento');
+                var iconeC = _el('modal-status-icone');
+                if (iconeC) iconeC.className = 'bi bi-x-circle-fill text-danger';
+                _safeClass(_el('box-botoes-status'),   'add', 'd-none');
+                _safeClass(_el('box-selecao-motoboy'), 'add', 'd-none');
+                _safeClass(_el('box-cancelamento'),    'remove', 'd-none');
+                return;
+            }
+
+            if (status === 'CONCLUIDO') {
+                try { if (_modalBS) _modalBS.hide(); } catch (_) { }
+                setTimeout(function () {
+                    Swal.fire({
+                        icon: 'question',
+                        title: 'Concluir Pedido?',
+                        html: '<div style="font-size:.9rem;color:#555;">Ao concluir, este pedido <strong>não poderá</strong> mais ser alterado.</div>',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sim, Concluir',
+                        cancelButtonText: 'Voltar',
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true,
+                        customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
+                    }).then(function (result) {
+                        if (result.isConfirmed) _executarAlteracao('CONCLUIDO');
+                    }).catch(function () { });
+                }, 300);
+            }
         } catch (_) { }
     }
 
     async function confirmarMotoboy() {
         try {
-            var select = _el('select-motoboy');
+            var select    = _el('select-motoboy');
             var motoboyId = select ? select.value : '';
             if (!motoboyId) {
                 if (select) {
                     select.style.borderColor = '#dc3545';
                     select.focus();
-                    setTimeout(function () { if (select) select.style.borderColor = '#ddd'; }, 1500);
+                    setTimeout(function () { if (select) select.style.borderColor = ''; }, 1500);
                 }
                 return;
             }
@@ -848,9 +919,39 @@ window.StatusModal = (function () {
         } catch (_) { }
     }
 
+    async function confirmarCancelamento() {
+        try {
+            var checked = document.querySelectorAll('#box-cancelamento .cancel-cb:checked');
+            var motivos = [];
+            checked.forEach(function (cb) { motivos.push(cb.value); });
+
+            if (motivos.length === 0) {
+                var errEl = _el('cancel-error');
+                if (errEl) {
+                    errEl.classList.remove('d-none');
+                    errEl.style.opacity = '0';
+                    setTimeout(function () {
+                        if (errEl) errEl.style.transition = 'opacity .2s';
+                        if (errEl) errEl.style.opacity   = '1';
+                    }, 30);
+                }
+                return;
+            }
+
+            _safeClass(_el('cancel-error'), 'add', 'd-none');
+            await _executarAlteracao('CANCELADO', null, motivos);
+        } catch (_) { }
+    }
+
     function voltar() { _resetar(); }
 
-    return { abrir, processar, confirmarMotoboy, voltar };
+    return {
+        abrir:                abrir,
+        processar:            processar,
+        confirmarMotoboy:     confirmarMotoboy,
+        confirmarCancelamento: confirmarCancelamento,
+        voltar:               voltar
+    };
 })();
 
 window.abrirModalStatus = function (pedidoId) { window.StatusModal.abrir(pedidoId); };
@@ -937,7 +1038,9 @@ window.buscarCoordenadasEndereco = function (endereco) {
             encodeURIComponent(busca) + '&limit=1&countrycodes=br')
             .then(function (resp) { return resp.json(); })
             .then(function (data) {
-                resolve(data && data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null);
+                resolve(data && data.length > 0
+                    ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+                    : null);
             })
             .catch(function () { resolve(null); });
     });
@@ -946,7 +1049,7 @@ window.buscarCoordenadasEndereco = function (endereco) {
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 8)  return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
@@ -960,7 +1063,7 @@ window.formatarTempoHumano = function (minutos) {
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
-    var raw = String(dataStr);
+    var raw  = String(dataStr);
     var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
     if (raw.includes('T') || raw.includes('-')) {
@@ -970,7 +1073,8 @@ window.formatarDataSeparador = function (dataStr) {
             var diff = Math.floor((hoje - d) / 86400000);
             if (diff === 0) return 'HOJE';
             if (diff === 1) return 'ONTEM';
-            return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+            return String(d.getDate()).padStart(2, '0') + '/' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
         }
     }
     var partes = raw.split('/');
@@ -992,14 +1096,15 @@ window.exibirErro = function (erro, contexto) {
             '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
             '<strong>Ops!</strong> Algo deu errado ao ' + contexto + '.' +
             '<br><small class="text-secondary">' + (erro.message || erro) + '</small>' +
-            '<div class="mt-2"><button class="btn btn-sm btn-outline-danger" onclick="window.carregarDados()">Tentar Novamente</button></div></div>';
+            '<div class="mt-2"><button class="btn btn-sm btn-outline-danger" ' +
+            'onclick="window.carregarDados()">Tentar Novamente</button></div></div>';
     } else {
         window.exibirModalValidacao('Falha ao ' + contexto + ': ' + (erro.message || erro));
     }
 };
 
 window.renderizarMapaUnificado = function () {
-    var loaderEl = document.getElementById('mapa-loader');
+    var loaderEl    = document.getElementById('mapa-loader');
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
@@ -1007,13 +1112,15 @@ window.renderizarMapaUnificado = function () {
         try { window._leafletMapInstance.remove(); } catch (_) { }
         window._leafletMapInstance = null;
     }
-    containerEl.innerHTML = '';
+    containerEl.innerHTML  = '';
     containerEl.style.display = 'none';
 
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length === 0) {
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas ||
+        window.dadosPedidoAtual.coordenadas.length === 0) {
         if (loaderEl) {
             loaderEl.style.display = '';
-            loaderEl.innerHTML = '<p class="text-muted small mb-0"><i class="bi bi-exclamation-circle me-1"></i>Nenhuma rota para exibir.</p>';
+            loaderEl.innerHTML = '<p class="text-muted small mb-0">' +
+                '<i class="bi bi-exclamation-circle me-1"></i>Nenhuma rota para exibir.</p>';
         }
         return;
     }
@@ -1021,7 +1128,8 @@ window.renderizarMapaUnificado = function () {
     if (typeof L === 'undefined') {
         if (loaderEl) {
             loaderEl.style.display = '';
-            loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Biblioteca de mapa não carregada.</p>';
+            loaderEl.innerHTML = '<p class="text-danger small mb-0">' +
+                '<i class="bi bi-exclamation-triangle me-1"></i>Biblioteca de mapa não carregada.</p>';
         }
         return;
     }
@@ -1036,11 +1144,12 @@ window.renderizarMapaUnificado = function () {
     window._leafletMapInstance = mapa;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>', maxZoom: 19
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        maxZoom: 19
     }).addTo(mapa);
 
-    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    var todosOsPontos = [];
+    var cores          = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    var todosOsPontos  = [];
 
     var criarIcone = function (emoji) {
         return L.divIcon({
@@ -1077,15 +1186,18 @@ window._renderizarResumo = function (km, min, valor) {
         '<div class="d-flex align-items-center justify-content-center gap-4 py-3">' +
         '<div class="d-flex align-items-center gap-2">' +
         '<i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>' +
-        '<div><div class="small text-muted mb-1">Distância</div><div class="fw-bold text-dark fs-5">' + km + ' km</div></div></div>' +
+        '<div><div class="small text-muted mb-1">Distância</div>' +
+        '<div class="fw-bold text-dark fs-5">' + km + ' km</div></div></div>' +
         '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
         '<div class="d-flex align-items-center gap-2">' +
         '<i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>' +
-        '<div><div class="small text-muted mb-1">Tempo</div><div class="fw-bold text-dark fs-5">' + window.formatarTempoHumano(min) + '</div></div></div>' +
+        '<div><div class="small text-muted mb-1">Tempo</div>' +
+        '<div class="fw-bold text-dark fs-5">' + window.formatarTempoHumano(min) + '</div></div></div>' +
         '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
         '<div class="d-flex align-items-center gap-2">' +
         '<i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>' +
-        '<div><div class="small text-muted mb-1">Valor</div><div class="fw-bold text-success fs-5">' + valor + '</div></div></div></div>';
+        '<div><div class="small text-muted mb-1">Valor</div>' +
+        '<div class="fw-bold text-success fs-5">' + valor + '</div></div></div></div>';
 };
 
 window.enviarMensagemGeral = function () {
@@ -1118,7 +1230,7 @@ window.enviarMensagemGeral = function () {
 };
 
 window.gerarMensagemFormatada = function (dados) {
-    var idBruto = String(dados.numeroServico || '').trim();
+    var idBruto     = String(dados.numeroServico || '').trim();
     var nomeServico = idBruto.toUpperCase().startsWith('RDO')
         ? idBruto
         : (idBruto ? 'RDO' + idBruto : 'N/D');
@@ -1127,8 +1239,7 @@ window.gerarMensagemFormatada = function (dados) {
         '📦 N.SERVIÇO: ' + nomeServico,
         '👤 : ' + (dados.solicitante || 'Não informado') + ' 📞 : ' + (dados.contato || ''),
         '📦 : ' + (dados.mercadoria || 'ENTREGA'),
-        '.',
-        '📍 ROTAS:'
+        '.', '📍 ROTAS:'
     ];
 
     if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
@@ -1151,14 +1262,14 @@ window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
 
     var msgInput = document.getElementById('msg-input');
-    var texto = msgInput ? (msgInput.value || '').trim() : '';
+    var texto    = msgInput ? (msgInput.value || '').trim() : '';
     if (!texto) { window.marcarCampoInvalido(); return; }
 
-    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
-    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
-    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
+    var solicitante   = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)         || [])[1] || 'Não informado').trim();
+    var contato       = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario       = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i)            || [])[1] || '').trim();
+    var mercadoria    = ((texto.match(/(?:MERCADORIA):\s*(.*)/i)                        || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs           = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i)             || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1186,7 +1297,7 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl = document.getElementById('mapa-loader');
+            var loaderEl      = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (loaderEl) loaderEl.style.display = '';
 
@@ -1205,29 +1316,32 @@ window.iniciarFluxoCheckout = function () {
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
                             if (data.routes && data.routes[0]) {
-                                kmTotal += data.routes[0].distance / 1000;
+                                kmTotal  += data.routes[0].distance / 1000;
                                 minTotal += data.routes[0].duration / 60;
-                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
+                                listaCaminhos.push(
+                                    data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; })
+                                );
                             }
                         });
                 });
             })).then(function () {
-                var kmArredondado = Math.round(kmTotal);
+                var kmArredondado  = Math.round(kmTotal);
                 var valorCalculado = kmArredondado * 3.00;
 
                 window.dadosPedidoAtual = {
-                    solicitante: solicitante,
-                    contato: contato,
-                    horario: horario,
-                    mercadoria: mercadoria,
-                    obs: obs,
-                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal: kmArredondado,
-                    tempoTotal: Math.round(minTotal),
-                    coordenadas: listaCaminhos,
-                    valorEstimado: valorCalculado,
+                    solicitante:     solicitante,
+                    contato:         contato,
+                    horario:         horario,
+                    mercadoria:      mercadoria,
+                    obs:             obs,
+                    cliente:         (window.AppRDO ? window.AppRDO.clienteSelecionado : null) ||
+                                     localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                    distanciaTotal:  kmArredondado,
+                    tempoTotal:      Math.round(minTotal),
+                    coordenadas:     listaCaminhos,
+                    valorEstimado:   valorCalculado,
                     rotasProcessadas: rotasExtraidas,
-                    rawInput: texto
+                    rawInput:        texto
                 };
 
                 window._renderizarResumo(
@@ -1237,7 +1351,8 @@ window.iniciarFluxoCheckout = function () {
                 window.renderizarMapaUnificado();
             }).catch(function () {
                 var footer = document.getElementById('footer-resumo-dados');
-                if (footer) footer.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
+                if (footer) footer.innerHTML =
+                    '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
             });
         }, { once: true });
 
@@ -1251,14 +1366,14 @@ window.prosseguirParaFormulario = function () {
         return;
     }
 
-    var modalMapa = document.getElementById('modalMapa');
-    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+    var modalMapa  = document.getElementById('modalMapa');
+    var instMapa   = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
     if (instMapa) { try { instMapa.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalForm = document.getElementById('modalFormulario');
+            var modalForm   = document.getElementById('modalFormulario');
             if (!modalForm) return;
             var bsModalForm = new bootstrap.Modal(modalForm, { backdrop: 'static', keyboard: false });
             modalForm.addEventListener('shown.bs.modal', function () {
@@ -1273,12 +1388,12 @@ window._preencherFormulario = function (dados) {
     if (!dados) return;
     var campos = [
         { id: 'p-solicitante', valor: dados.solicitante || '' },
-        { id: 'p-contato', valor: dados.contato || '' },
-        { id: 'p-horario', valor: dados.horario || '' },
-        { id: 'p-mercadoria', valor: dados.mercadoria || 'ENTREGA' },
-        { id: 'p-distancia', valor: Number(dados.distanciaTotal || 0).toFixed(2) },
-        { id: 'p-tempo', valor: dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '' },
-        { id: 'p-obs', valor: dados.obs || '' }
+        { id: 'p-contato',     valor: dados.contato     || '' },
+        { id: 'p-horario',     valor: dados.horario     || '' },
+        { id: 'p-mercadoria',  valor: dados.mercadoria  || 'ENTREGA' },
+        { id: 'p-distancia',   valor: Number(dados.distanciaTotal || 0).toFixed(2) },
+        { id: 'p-tempo',       valor: dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '' },
+        { id: 'p-obs',         valor: dados.obs || '' }
     ];
     campos.forEach(function (c) {
         var el = document.getElementById(c.id);
@@ -1297,23 +1412,25 @@ window._preencherFormulario = function (dados) {
 
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
-    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+    var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
     if (instForm) { try { instForm.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalMapa = document.getElementById('modalMapa');
+            var modalMapa   = document.getElementById('modalMapa');
             if (!modalMapa) return;
             var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
             modalMapa.addEventListener('shown.bs.modal', function () {
                 var elSolicitante = document.getElementById('header-nome-solicitante');
-                if (elSolicitante && window.dadosPedidoAtual) elSolicitante.innerText = window.dadosPedidoAtual.solicitante || 'N/A';
+                if (elSolicitante && window.dadosPedidoAtual)
+                    elSolicitante.innerText = window.dadosPedidoAtual.solicitante || 'N/A';
                 if (window.dadosPedidoAtual && window.dadosPedidoAtual.distanciaTotal) {
                     window._renderizarResumo(
                         window.dadosPedidoAtual.distanciaTotal,
                         window.dadosPedidoAtual.tempoTotal || 0,
-                        (window.dadosPedidoAtual.valorEstimado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        (window.dadosPedidoAtual.valorEstimado || 0)
+                            .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                     );
                 }
                 window.renderizarMapaUnificado();
@@ -1340,7 +1457,7 @@ window.fecharParaChat = function (modalId) {
         if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
-    window.AppRDO._mapaModalAberto = false;
+    window.AppRDO._mapaModalAberto     = false;
     window.AppRDO.isProcessingCheckout = false;
 
     if (window._leafletMapInstance) {
@@ -1352,21 +1469,21 @@ window.fecharParaChat = function (modalId) {
 
     var input = document.getElementById('msg-input');
     if (input) {
-        input.value = '';
-        input.style.height = 'auto';
-        input.disabled = false;
-        input.readOnly = false;
-        input.style.border = '';
-        input.style.boxShadow = '';
-        input.style.opacity = '';
+        input.value            = '';
+        input.style.height     = 'auto';
+        input.disabled         = false;
+        input.readOnly         = false;
+        input.style.border     = '';
+        input.style.boxShadow  = '';
+        input.style.opacity    = '';
         input.style.pointerEvents = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
     }
 
     var btnEnviar = document.getElementById('btn-enviar-mensagem');
     if (btnEnviar) {
-        btnEnviar.disabled = false;
-        btnEnviar.style.opacity = '';
+        btnEnviar.disabled           = false;
+        btnEnviar.style.opacity      = '';
         btnEnviar.style.pointerEvents = '';
     }
 
@@ -1378,69 +1495,19 @@ window.fecharParaChat = function (modalId) {
 };
 
 (function () {
-    (function () {
-        function _handleSyncClick(e) {
-            if (!e.target.closest('#btn-sync-chat')) return;
-            if (window.AppRDO && window.AppRDO.isFetching) return;
-            if (typeof window.carregarDados === 'function') window.carregarDados();
-        }
-        document.removeEventListener('click', _handleSyncClick);
-        document.addEventListener('click', _handleSyncClick);
+    function _handleSyncClick(e) {
+        if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
+        if (window.AppRDO && window.AppRDO.isFetching) return;
+        if (typeof window.carregarDados === 'function') window.carregarDados();
+    }
 
-        function _tentarInit() {
-            if (window.AppRDO) {
-                window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-                window.AppRDO.listaCarregada = false;
-                window.AppRDO._mapaModalAberto = false;
-            }
-            if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', _tentarInit);
-        } else {
-            _tentarInit();
-        }
-
-        function _registrarEventoPedidoExcluido() {
-            if (typeof window.EventBus === 'undefined') {
-                setTimeout(_registrarEventoPedidoExcluido, 300);
-                return;
-            }
-            window.EventBus.on('pedido:excluido', function (dados) {
-                var idStr = String(dados.id).trim();
-                if (Array.isArray(window.AppRDO.mensagensCache)) {
-                    window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
-                        return String(m.pedido_id).trim() !== idStr;
-                    });
-                }
-                if (Array.isArray(window.AppRDO.pedidosCache)) {
-                    window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                        return String(p.id).trim() !== idStr;
-                    });
-                }
-                var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
-                if (msgEl) {
-                    var wrapper = msgEl.closest('.message-wrapper');
-                    if (wrapper) {
-                        wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                        wrapper.style.opacity = '0';
-                        wrapper.style.transform = 'translateX(30px)';
-                        setTimeout(function () { wrapper.remove(); }, 300);
-                    }
-                }
-            });
-        }
-
-        _registrarEventoPedidoExcluido();
-    })();
     document.removeEventListener('click', _handleSyncClick);
     document.addEventListener('click', _handleSyncClick);
 
     function _tentarInit() {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-            window.AppRDO.listaCarregada = false;
+            window.AppRDO.isMasterOn      = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.listaCarregada  = false;
             window.AppRDO._mapaModalAberto = false;
         }
         if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
@@ -1452,7 +1519,6 @@ window.fecharParaChat = function (modalId) {
         _tentarInit();
     }
 
-    // Registra o listener com retry caso o EventBus ainda não exista
     function _registrarEventoPedidoExcluido() {
         if (typeof window.EventBus === 'undefined') {
             setTimeout(_registrarEventoPedidoExcluido, 300);
@@ -1460,8 +1526,6 @@ window.fecharParaChat = function (modalId) {
         }
         window.EventBus.on('pedido:excluido', function (dados) {
             var idStr = String(dados.id).trim();
-
-            // Atualiza caches
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return String(m.pedido_id).trim() !== idStr;
@@ -1472,15 +1536,13 @@ window.fecharParaChat = function (modalId) {
                     return String(p.id).trim() !== idStr;
                 });
             }
-
-            // Remove visualmente a mensagem no chat
             var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity = '0';
-                    wrapper.style.transform = 'translateX(30px)';
+                    wrapper.style.opacity    = '0';
+                    wrapper.style.transform  = 'translateX(30px)';
                     setTimeout(function () { wrapper.remove(); }, 300);
                 }
             }
@@ -1489,4 +1551,3 @@ window.fecharParaChat = function (modalId) {
 
     _registrarEventoPedidoExcluido();
 })();
-
