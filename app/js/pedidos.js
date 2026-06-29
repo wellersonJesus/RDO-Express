@@ -477,13 +477,16 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     window.RDO_PEDIDOS.removerDoCache = function (id) {
         console.log('[pedidos.js] 🗑️ Removendo do cache:', id);
         if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) { _spinOff(); return; }
+
         var idStr = String(id || '').trim();
         window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
             return String(p.id || '').trim() !== idStr;
         });
+
+        window.pedidosState.dadosCarregados = false;
         window.pedidosState.emAcao = true;
-        _renderizarTabela(window.AppRDO.pedidosCache);
-        setTimeout(_spinOff, 800);
+
+        if (!window.pedidosState.isFetching) _fetchPedidos();
     };
 
     window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
