@@ -121,7 +121,7 @@
         if (!container) return;
 
         if (window._leafletMapInstance) {
-            try { window._leafletMapInstance.remove(); } catch (_) {}
+            try { window._leafletMapInstance.remove(); } catch (_) { }
             window._leafletMapInstance = null;
         }
 
@@ -211,20 +211,20 @@
 
         var msgInput = document.getElementById('msg-input');
         var texto = msgInput ? (msgInput.value || '').trim() : '';
-        
+
         if (!texto) {
             if (typeof window.marcarCampoInvalido === 'function') window.marcarCampoInvalido();
             return;
         }
 
         var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE)\s*:\s*(.*)/i) || [])[1] || 'Não informado').trim();
-        
+
         var contatoMatch = texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*([^\n]+)/i);
         var contatoCompleto = contatoMatch ? contatoMatch[1].trim() : '';
-        
+
         var contato = contatoCompleto.split('|')[0].trim();
         var horario = '';
-        
+
         if (contatoCompleto.includes('|')) {
             var partes = contatoCompleto.split('|');
             for (var i = 1; i < partes.length; i++) {
@@ -254,12 +254,12 @@
 
         window.loadModal('mapa_clientes.html').then(function (carregou) {
             if (!carregou) return;
-            
+
             var modalEl = document.getElementById('modalMapa');
             if (!modalEl) return;
 
             var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) { try { inst.dispose(); } catch (_) {} }
+            if (inst) { try { inst.dispose(); } catch (_) { } }
 
             var modalMapa = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
 
@@ -304,7 +304,7 @@
                         totalKm += parseFloat(res.km);
                         totalMin += parseInt(res.min, 10);
                         coordenadas.push(res.caminho);
-                        
+
                         rotasProcessadas.push({
                             numero: r.numero,
                             de: r.origem,
@@ -383,29 +383,29 @@
                 console.error('[mapa_clientes.js] ❌ Modal formulário não encontrado');
                 return;
             }
-            
+
             var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) { try { inst.dispose(); } catch (_) {} }
-            
+            if (inst) { try { inst.dispose(); } catch (_) { } }
+
             var modalForm = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-            
+
             modalEl.addEventListener('shown.bs.modal', function () {
                 console.log('[mapa_clientes.js] 📝 Modal formulário aberto');
-                
+
                 if (typeof window._preencherFormulario === 'function') {
                     window._preencherFormulario(window.dadosPedidoAtual);
                 } else {
                     console.error('[mapa_clientes.js] ❌ _preencherFormulario não definido');
                 }
             }, { once: true });
-            
+
             modalForm.show();
         });
     }
 
     window.voltarParaMapa = function () {
         console.log('[mapa_clientes.js] ⬅️ voltarParaMapa()');
-        
+
         var modalFormEl = document.getElementById('modalFormulario');
         if (modalFormEl) {
             var inst = bootstrap.Modal.getInstance(modalFormEl);
@@ -417,17 +417,17 @@
 
 window.fecharParaChat = function (modalId) {
     console.log('[fecharParaChat] Fechando modal:', modalId);
-    
+
     var modalEl = document.getElementById(modalId);
     if (!modalEl) return;
-    
+
     var inst = bootstrap.Modal.getInstance(modalEl);
     if (inst) {
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.dadosPedidoAtual = null;
 
             if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (_) {}
+                try { window._leafletMapInstance.remove(); } catch (_) { }
                 window._leafletMapInstance = null;
             }
 

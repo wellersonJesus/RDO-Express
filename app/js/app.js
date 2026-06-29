@@ -69,13 +69,8 @@ window.AppRDO.resetState = function () {
 var PAGES_SEM_HEADER = [];
 
 var PAGE_MODALS = {
-    pedidos: [
-        '/pages/pedidos/form_pedidos.html'
-    ],
-    fin: [
-        '/pages/fin/form_fin.html',
-        '/pages/fin/view_fin.html'
-    ]
+    pedidos: ['/pages/pedidos/form_pedidos.html'],
+    fin:     ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html']
 };
 
 var MODULE_SCRIPTS = {
@@ -88,7 +83,7 @@ var MODULE_SCRIPTS = {
 };
 
 var GLOBAL_SCRIPTS_PRELOAD = [
-    '/js/master_auth.js',     
+    '/js/master_auth.js',
     '/js/mapa_clientes.js',
     '/js/form_clientes.js'
 ];
@@ -234,9 +229,7 @@ function carregarModaisDaPagina(page) {
                     });
                 });
             })
-            .catch(function (err) {
-                console.warn('[app] Falha ao carregar modal:', err.message);
-            });
+            .catch(function () {});
     });
 
     return Promise.all(promises);
@@ -252,9 +245,7 @@ window.loadPage = function (page, title, subtitle) {
     var token    = (window.AppRDO._navToken = (window.AppRDO._navToken || 0) + 1);
     var meuToken = token;
 
-    if (window.AppRDO && typeof window.AppRDO.resetState === 'function') {
-        window.AppRDO.resetState();
-    }
+    window.AppRDO.resetState();
     window.AppRDO.paginaAtual = page;
 
     var esconderHeader = PAGES_SEM_HEADER.indexOf(page) !== -1;
@@ -316,7 +307,6 @@ window.loadPage = function (page, title, subtitle) {
                 '<button class="btn btn-outline-danger btn-sm rounded-pill mt-3" ' +
                 'onclick="loadPage(\'' + page + '\',\'' + (title || '').replace(/'/g, "\\'") + '\',\'' + (subtitle || '').replace(/'/g, "\\'") + '\')">Tentar novamente</button>' +
                 '</div>';
-            console.error('[app] Erro ao carregar página:', err.message);
         });
 };
 
@@ -339,74 +329,11 @@ window.loadModal = function (nomeArquivo) {
             container.appendChild(wrapper);
             return true;
         })
-        .catch(function (err) {
-            console.error('[loadModal]', err.message);
-            return false;
-        });
+        .catch(function () { return false; });
 };
 
 window.carregarScriptExterno = function (src) {
     return _carregarScriptExterno(src);
-};
-
-function obterIniciaisGlobal(nome) {
-    if (!nome || nome === 'Usuário' || nome === '...') return '';
-    var partes = nome.trim().split(/\s+/);
-    if (partes.length >= 2) return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-    return partes[0].substring(0, 2).toUpperCase();
-}
-
-function gerarAvatarSVG(texto) {
-    var t = (texto && texto.trim()) ? texto.trim() : 'U';
-    return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">' +
-        '<rect fill="#dc3545" width="80" height="80" rx="40"/>' +
-        '<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" ' +
-        'fill="#fff" font-size="30" font-family="Poppins,-apple-system,BlinkMacSystemFont,sans-serif" ' +
-        'font-weight="700">' + t + '</text></svg>'
-    );
-}
-
-function urlAvatarConfiavel(url) {
-    if (!url || typeof url !== 'string') return false;
-    var s = url.trim();
-    if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
-    if (s.indexOf('data:image/') === 0) return true;
-    if (s.indexOf('/')           === 0) return true;
-    if (s.indexOf('http://')     === 0 || s.indexOf('https://') === 0) return true;
-    return false;
-}
-
-window.resolverSrcAvatar = function (urlBanco, nome) {
-    if (urlAvatarConfiavel(urlBanco)) return urlBanco;
-    var iniciais = obterIniciaisGlobal(nome || '') || ((nome || 'U').charAt(0).toUpperCase());
-    return gerarAvatarSVG(iniciais);
-};
-
-window.atualizarAvatar = function () {
-    var username = localStorage.getItem('username') || 'Usuário';
-    var iniciais = obterIniciaisGlobal(username) || username.charAt(0).toUpperCase();
-    var imagem   = localStorage.getItem('imagem');
-    var svg      = gerarAvatarSVG(iniciais);
-    var srcFinal = urlAvatarConfiavel(imagem) ? imagem : svg;
-
-    var img1 = document.getElementById('user-avatar-img');
-    if (img1) {
-        img1.onerror = function () { this.onerror = null; this.src = svg; };
-        img1.src     = srcFinal;
-        img1.style.display = 'block';
-        var icon1 = document.querySelector('#avatar-container .avatar-fallback-icon');
-        if (icon1) icon1.style.display = 'none';
-    }
-
-    var img2 = document.getElementById('header-user-avatar');
-    if (img2) {
-        img2.onerror = function () { this.onerror = null; this.src = svg; };
-        img2.src     = srcFinal;
-        img2.style.display = 'block';
-        var icon2 = document.querySelector('#header-avatar-container .avatar-fallback-icon');
-        if (icon2) icon2.style.display = 'none';
-    }
 };
 
 window.salvarDadosUsuarioLocal = function (dados) {

@@ -512,6 +512,25 @@ window.MasterAuth = (function () {
     return { abrir: abrir, cancelar: cancelar, confirmar: confirmar, toggleSenha: toggleSenha, onKeydown: onKeydown };
 })();
 
+window.carregarPedidosDoCliente = async function (clienteId) {
+    if (!clienteId) return;
+    try {
+        var todosPedidos = await API.call('getpedidos');
+        var todasMensagens = await API.call('getchat');
+        var pedidosCliente = todosPedidos.filter(function (p) {
+            return String(p.id_cliente).trim() === String(clienteId).trim();
+        });
+        var mensagensCliente = todasMensagens.filter(function (m) {
+            return String(m.id_cliente).trim() === String(clienteId).trim();
+        });
+        window.AppRDO.pedidosCache = todosPedidos;
+        window.AppRDO.mensagensCache = todasMensagens;
+        window.renderizarMensagens(mensagensCliente, pedidosCliente);
+    } catch (err) {
+        _mostrarChatEmptyState('Erro ao carregar mensagens');
+    }
+};
+
 window.carregarDados = function () {
     var listEl = document.getElementById('lista-contatos-chat');
     var searchInput = document.getElementById('chat-search');
@@ -613,41 +632,18 @@ window.selecionarEAbrir = function (id, nome, isOnline) {
 };
 
 window.abrirConversa = function (id, nome, urlImagem, isOnline) {
-    var container = document.getElementById('chat-messages-container');
     var idCliente = String(id).trim();
     var nameEl = document.getElementById('chat-header-name');
     if (nameEl) { nameEl.innerText = nome; nameEl.className = 'text-dark fw-bold'; }
     _mostrarLoadingMensagens();
-    var todasMensagens = window.AppRDO.mensagensCache;
-    var todosPedidos = window.AppRDO.pedidosCache;
-    var precisaBuscar = !todasMensagens || todasMensagens.length === 0 || !todosPedidos || todosPedidos.length === 0;
-    var promessa = precisaBuscar
-        ? Promise.all([API.call('getchat'), API.call('getpedidos')]).then(function (results) {
-            todasMensagens = Array.isArray(results[0]) ? results[0] : [];
-            todosPedidos = Array.isArray(results[1]) ? results[1] : [];
-            window.AppRDO.mensagensCache = todasMensagens;
-            window.AppRDO.pedidosCache = todosPedidos;
-        })
-        : Promise.resolve();
-    return promessa.then(function () {
-        var historico = todasMensagens.filter(function (m) {
-            return String(m.id_cliente || '').trim() === idCliente;
-        });
-        if (!container) return;
-        container.innerHTML = '';
-        if (historico.length === 0) {
-            _mostrarChatEmptyState('Nenhum histórico encontrado');
-        } else {
-            window.renderizarMensagens(historico, todosPedidos);
-        }
-    }).catch(function () {
-        if (!container) return;
-        container.innerHTML =
-            '<div class="chat-empty-state text-danger">' +
-            '<i class="bi bi-exclamation-triangle" style="font-size:2rem;"></i>' +
-            '<div class="chat-empty-label">Erro ao carregar histórico.</div>' +
-            '</div>';
-    });
+    var msgInput = document.getElementById('msg-input');
+    if (msgInput) {
+        msgInput.value = window.MODELO_PADRAO;
+        msgInput.style.border = '';
+        msgInput.style.boxShadow = '';
+        msgInput.setAttribute('placeholder', 'Digite o pedido...');
+    }
+    return window.carregarPedidosDoCliente(idCliente);
 };
 
 window.renderizarMensagens = function (mensagens, pedidos) {
@@ -1161,34 +1157,22 @@ window.renderizarMapaUnificado = function () {
 window._renderizarResumo = function (km, min, valor) {
     var footer = document.getElementById('footer-resumo-dados');
     if (!footer) return;
-
-    footer.innerHTML = `
-        <div class="d-flex align-items-center justify-content-center gap-4 py-3">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>
-                <div>
-                    <div class="small text-muted mb-1">Distância</div>
-                    <div class="fw-bold text-dark fs-5">${km} km</div>
-                </div>
-            </div>
-            <div class="vr" style="height:50px;opacity:0.3;"></div>
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>
-                <div>
-                    <div class="small text-muted mb-1">Tempo</div>
-                    <div class="fw-bold text-dark fs-5">${window.formatarTempoHumano(min)}</div>
-                </div>
-            </div>
-            <div class="vr" style="height:50px;opacity:0.3;"></div>
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>
-                <div>
-                    <div class="small text-muted mb-1">Valor</div>
-                    <div class="fw-bold text-success fs-5">${valor}</div>
-                </div>
-            </div>
-        </div>
-    `;
+    footer.innerHTML =
+        '<div class="d-flex align-items-center justify-content-center gap-4 py-3">' +
+        '<div class="d-flex align-items-center gap-2">' +
+        '<i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>' +
+        '<div><div class="small text-muted mb-1">Distância</div>' +
+        '<div class="fw-bold text-dark fs-5">' + km + ' km</div></div></div>' +
+        '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+        '<div class="d-flex align-items-center gap-2">' +
+        '<i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>' +
+        '<div><div class="small text-muted mb-1">Tempo</div>' +
+        '<div class="fw-bold text-dark fs-5">' + window.formatarTempoHumano(min) + '</div></div></div>' +
+        '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+        '<div class="d-flex align-items-center gap-2">' +
+        '<i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>' +
+        '<div><div class="small text-muted mb-1">Valor</div>' +
+        '<div class="fw-bold text-success fs-5">' + valor + '</div></div></div></div>';
 };
 
 window.enviarMensagemGeral = function () {
@@ -1212,6 +1196,29 @@ window.enviarMensagemGeral = function () {
         return;
     }
     window.iniciarFluxoCheckout();
+};
+
+window.gerarMensagemFormatada = function (dados) {
+    var nomeServico = String(dados.numeroServico || '').replace(/^RDO/, '');
+    var linhas = [
+        '📦 N.SERVIÇO: ' + nomeServico,
+        '👤 : ' + (dados.solicitante || 'Não informado') + ' 📞 : ' + (dados.contato || ''),
+        '📦 : ' + (dados.mercadoria || 'ENTREGA'),
+        '.',
+        '📍 ROTAS:'
+    ];
+    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
+        dados.rotasProcessadas.forEach(function (r, i) {
+            linhas.push((i + 1) + '. De: ' + r.de + ' | Para: ' + r.para);
+            linhas.push('.');
+        });
+    }
+    linhas.push(
+        '🛣️ ' + (dados.distanciaTotal || 0).toFixed(2) + ' km ' +
+        '⏱️ ' + window.formatarTempoHumano(dados.tempoTotal || 0) + ' ' +
+        '💰 ' + (dados.valorEstimado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    );
+    return linhas.join('\n');
 };
 
 window.iniciarFluxoCheckout = function () {
@@ -1303,7 +1310,6 @@ window.iniciarFluxoCheckout = function () {
                     rawInput: texto
                 };
 
-                // ✅ EXIBIR KM, TEMPO E VALOR
                 window._renderizarResumo(
                     kmArredondado,
                     minTotal,
@@ -1344,7 +1350,6 @@ window.prosseguirParaFormulario = function () {
             var bsModalForm = new bootstrap.Modal(modalForm, { backdrop: 'static', keyboard: false });
 
             modalForm.addEventListener('shown.bs.modal', function () {
-                // ✅ PREENCHER AUTOMATICAMENTE
                 window._preencherFormulario(window.dadosPedidoAtual);
             }, { once: true });
 
@@ -1356,7 +1361,6 @@ window.prosseguirParaFormulario = function () {
 window._preencherFormulario = function (dados) {
     if (!dados) return;
 
-    // CAMPOS PRINCIPAIS
     var elSolicitante = document.getElementById('p-solicitante');
     var elContato = document.getElementById('p-contato');
     var elHorario = document.getElementById('p-horario');
@@ -1376,14 +1380,12 @@ window._preencherFormulario = function (dados) {
     if (elObs) elObs.value = dados.obs || '';
     if (elHeaderCliente) elHeaderCliente.innerText = dados.cliente || 'N/A';
 
-    // ✅ PREENCHER ROTAS (textarea)
     if (elRotas && dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
         elRotas.value = dados.rotasProcessadas.map(function (r, i) {
             return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
         }).join('\n');
     }
 
-    // ✅ CALCULAR VALOR INICIAL
     if (typeof window.calcularTudo === 'function') {
         setTimeout(function () { window.calcularTudo(); }, 200);
     }
@@ -1412,7 +1414,6 @@ window.voltarParaMapa = function () {
                     elSolicitante.innerText = window.dadosPedidoAtual.solicitante || 'N/A';
                 }
 
-                // ✅ REEXIBIR RESUMO
                 if (window.dadosPedidoAtual && window.dadosPedidoAtual.distanciaTotal) {
                     window._renderizarResumo(
                         window.dadosPedidoAtual.distanciaTotal,
@@ -1429,49 +1430,6 @@ window.voltarParaMapa = function () {
     }, 400);
 };
 
-(function () {
-    function _handleSyncClick(e) {
-        if (!e.target.closest('#btn-sync-chat')) return;
-        if (window.AppRDO && window.AppRDO.isFetching) return;
-        if (typeof window.carregarDados === 'function') window.carregarDados();
-    }
-    document.removeEventListener('click', _handleSyncClick);
-    document.addEventListener('click', _handleSyncClick);
-
-    function _tentarInit() {
-        if (window.AppRDO) {
-            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-            window.AppRDO.listaCarregada = false;
-            window.AppRDO._mapaModalAberto = false;
-        }
-        if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
-    }
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _tentarInit);
-    else _tentarInit();
-}
-);
-
-window.fecharParaChat = function (modalId) {
-    var modalEl = document.getElementById(modalId);
-    if (!modalEl) return;
-
-    var inst = bootstrap.Modal.getInstance(modalEl);
-    if (inst) {
-        try { inst.hide(); } catch (_) { }
-    }
-
-    window.AppRDO._mapaModalAberto = false;
-
-    if (window._leafletMapInstance) {
-        try { window._leafletMapInstance.remove(); } catch (_) { }
-        window._leafletMapInstance = null;
-    }
-
-    window.dadosPedidoAtual = {};
-};
-
-// ✅ BOTÕES DE FECHAR MODAIS
 window.fecharParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
     if (!modalForm) return;
@@ -1481,7 +1439,6 @@ window.fecharParaMapa = function () {
         try { inst.hide(); } catch (_) { }
     }
 
-    // Voltar para o mapa
     setTimeout(function () {
         window.voltarParaMapa();
     }, 400);
@@ -1505,13 +1462,11 @@ window.fecharParaChat = function (modalId) {
 
     window.dadosPedidoAtual = {};
 
-    // Limpar backdrop
     setTimeout(function () {
         _limparBackdrop();
     }, 400);
 };
 
-// ✅ INICIALIZAÇÃO AUTOMÁTICA
 (function () {
     function _handleSyncClick(e) {
         if (!e.target.closest('#btn-sync-chat')) return;
@@ -1537,14 +1492,10 @@ window.fecharParaChat = function (modalId) {
         _tentarInit();
     }
 
-    // ✅ ESCUTAR EXCLUSÕES DA LISTA DE PEDIDOS
     if (typeof window.EventBus !== 'undefined') {
         window.EventBus.on('pedido:excluido', function (dados) {
-            console.log('[chat.js] 📡 Evento recebido:', dados.id);
-
             var idStr = String(dados.id).trim();
 
-            // ✅ REMOVER DO CACHE
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return String(m.pedido_id).trim() !== idStr;
@@ -1557,7 +1508,6 @@ window.fecharParaChat = function (modalId) {
                 });
             }
 
-            // ✅ REMOVER VISUALMENTE DO CHAT
             var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
@@ -1568,8 +1518,6 @@ window.fecharParaChat = function (modalId) {
                     setTimeout(function () { wrapper.remove(); }, 300);
                 }
             }
-
-            console.log('[chat.js] ✅ Pedido removido do chat');
         });
     }
 })();

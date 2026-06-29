@@ -515,36 +515,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         window.pedidosState.emAcao = true;
         _renderizarTabela(window.AppRDO.pedidosCache);
-
-        // ✅ ESCUTAR EXCLUSÕES DO CHAT
-        if (typeof window.EventBus !== 'undefined') {
-            window.EventBus.on('pedido:excluido', function (dados) {
-                console.log('[pedidos.js] 📡 Evento recebido:', dados.id);
-
-                if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
-
-                var idStr = String(dados.id).trim();
-
-                // ✅ REMOVER DO CACHE
-                window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                    return String(p.id).trim() !== idStr;
-                });
-
-                // ✅ REMOVER VISUALMENTE DA TABELA
-                var linhaTabela = document.querySelector('tr[data-pedido-id="' + idStr + '"]');
-                if (linhaTabela) {
-                    linhaTabela.style.transition = 'opacity .3s ease';
-                    linhaTabela.style.opacity = '0';
-                    setTimeout(function () {
-                        linhaTabela.remove();
-                        _renderizarTabela(window.AppRDO.pedidosCache);
-                    }, 300);
-                }
-
-                console.log('[pedidos.js] ✅ Pedido removido da lista');
-            });
-        }
-
         setTimeout(_spinOff, 800);
     };
 
@@ -561,7 +531,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     };
 
-    // ✅ ESCUTAR NOVOS PEDIDOS DO CHAT
     if (typeof window.EventBus !== 'undefined') {
         window.EventBus.on('pedido:adicionado', function (novoPedido) {
             console.log('[pedidos.js] 📡 Novo pedido recebido:', novoPedido);
