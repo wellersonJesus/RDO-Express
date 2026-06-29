@@ -20,6 +20,9 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     window.AppRDO.pedidosCache = window.AppRDO.pedidosCache || [];
     window.AppRDO.chatsCache   = window.AppRDO.chatsCache   || [];
 
+    var FRANQUIA_MIN = 10;
+    var TARIFA_MIN   = 0.60;
+
     var els = {
         tbody: null, btnSync: null, iconSync: null, inputBusca: null,
         filtroData: null, btnFiltroTipo: null, dropdownFiltroMenu: null,
@@ -28,17 +31,17 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     };
 
     function _bind() {
-        els.tbody             = document.getElementById('corpo-tabela-pedidos');
-        els.btnSync           = document.getElementById('btn-loop-pedidos');
-        els.iconSync          = document.getElementById('icon-loop-pedidos');
-        els.inputBusca        = document.getElementById('filtro-pedidos');
-        els.filtroData        = document.getElementById('filtro-data-pedidos');
-        els.btnFiltroTipo     = document.getElementById('btn-filtro-tipo');
-        els.dropdownFiltroMenu= document.getElementById('dropdown-filtro-menu');
-        els.labelFiltroTipo   = document.getElementById('label-filtro-tipo');
-        els.btnPrev           = document.getElementById('btn-pag-prev-pedidos');
-        els.btnNext           = document.getElementById('btn-pag-next-pedidos');
-        els.infoPaginacao     = document.getElementById('info-paginacao-pedidos');
+        els.tbody              = document.getElementById('corpo-tabela-pedidos');
+        els.btnSync            = document.getElementById('btn-loop-pedidos');
+        els.iconSync           = document.getElementById('icon-loop-pedidos');
+        els.inputBusca         = document.getElementById('filtro-pedidos');
+        els.filtroData         = document.getElementById('filtro-data-pedidos');
+        els.btnFiltroTipo      = document.getElementById('btn-filtro-tipo');
+        els.dropdownFiltroMenu = document.getElementById('dropdown-filtro-menu');
+        els.labelFiltroTipo    = document.getElementById('label-filtro-tipo');
+        els.btnPrev            = document.getElementById('btn-pag-prev-pedidos');
+        els.btnNext            = document.getElementById('btn-pag-next-pedidos');
+        els.infoPaginacao      = document.getElementById('info-paginacao-pedidos');
         els.filtrosStatus = [
             { el: document.getElementById('ped-filter-todos'),     status: 'todos'     },
             { el: document.getElementById('ped-filter-pendente'),  status: 'pendente'  },
@@ -70,9 +73,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (chat && chat.hora) {
             var h = String(chat.hora).trim();
             var match = h.match(/^(\d{1,2}):(\d{2})/);
-            if (match) {
-                return match[1].padStart(2, '0') + ':' + match[2];
-            }
+            if (match) return match[1].padStart(2, '0') + ':' + match[2];
         }
         if (pedido.horario) {
             var h2 = String(pedido.horario).trim();
@@ -112,9 +113,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
     function _parseMoeda(valor) {
         if (valor === null || valor === undefined || valor === '') return 0;
-        var str = String(valor).trim();
-        str = str.replace(/R\$\s*/gi, '');
-        str = str.replace(/\./g, '').replace(',', '.');
+        var str = String(valor).trim().replace(/R\$\s*/gi, '').replace(/\./g, '').replace(',', '.');
         var num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
@@ -294,12 +293,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     function _registrarEventosLinhas() {
         document.querySelectorAll('.btn-pedido-view').forEach(function (btn) {
             btn.onclick = function () {
-                if (typeof window.visualizarPedido === 'function') window.visualizarPedido(btn.getAttribute('data-id'));
+                window.visualizarPedido(btn.getAttribute('data-id'));
             };
         });
         document.querySelectorAll('.btn-pedido-edit').forEach(function (btn) {
             btn.onclick = function () {
-                if (typeof window.editarPedido === 'function') window.editarPedido(btn.getAttribute('data-id'));
+                window.editarPedido(btn.getAttribute('data-id'));
             };
         });
         document.querySelectorAll('.btn-pedido-delete').forEach(function (btn) {
@@ -336,7 +335,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                           Array.isArray(respPedidos.data)    ? respPedidos.data    : [];
             }
 
-            window.AppRDO.pedidosCache        = pedidos;
+            window.AppRDO.pedidosCache          = pedidos;
             window.pedidosState.dadosCarregados = true;
             _renderizarTabela(pedidos);
 
@@ -437,28 +436,48 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         }
     }
 
-    window.visualizarPedido = function (id) {
-        window.pedidosState.emAcao = true;
+    // ─── Garantia de modal no DOM ────────────────────────────────────────────
+    // Se o modal já existe no DOM (HTML estático ou já carregado), usa direto.
+    // Só chama loadModal se não existir.
+    function _garantirModal(modalId, callback) {
+        if (document.getElementById(modalId)) {
+            callback(true);
+            return;
+        }
+        if (typeof window.loadModal === 'function') {
+            window.loadModal('form_pedidos.html').then(function (ok) {
+                callback(ok && !!document.getElementById(modalId));
+            });
+        } else {
+            console.error('[pedidos.js] ❌ window.loadModal não definido e modal ausente:', modalId);
+            callback(false);
+        }
+    }
 
+    // ─── Visualizar ──────────────────────────────────────────────────────────
+    window.visualizarPedido = function (id) {
         var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
             return String(p.id || p._id || '').trim() === String(id).trim();
         });
         if (!pedido) { console.error('[pedidos.js] ❌ Pedido não encontrado:', id); return; }
 
-        window.loadModal('form_pedidos.html').then(function (ok) {
-            if (!ok) { console.error('[pedidos.js] ❌ loadModal falhou'); return; }
+        _garantirModal('modalPedidoDetalhes', function (ok) {
+            if (!ok) { console.error('[pedidos.js] ❌ #modalPedidoDetalhes indisponível'); return; }
 
             var modalEl = document.getElementById('modalPedidoDetalhes');
-            if (!modalEl) { console.error('[pedidos.js] ❌ #modalPedidoDetalhes não encontrado'); return; }
 
-            var valor    = _resolverValor(pedido);
-            var taxaNum  = _parseMoeda(pedido.taxa_espera);
-            var finalNum = _parseMoeda(pedido.valor_final) || valor;
+            var valorBase = _resolverValor(pedido);
+            var taxaNum   = _parseMoeda(pedido.taxa_espera);
+            var finalNum  = _parseMoeda(pedido.valor_final) || valorBase;
 
             function _s(elId, val) {
                 var el = document.getElementById(elId);
-                if (el) el.value = val != null ? val : '';
-                else console.warn('[pedidos.js] ⚠️ Campo ausente:', elId);
+                if (el) {
+                    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') el.value = val != null ? String(val) : '';
+                    else el.textContent = val != null ? String(val) : '';
+                } else {
+                    console.warn('[pedidos.js] ⚠️ Campo ausente:', elId);
+                }
             }
 
             var tituloEl = document.getElementById('detalhe-titulo');
@@ -467,7 +486,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             _s('det-pedido-id',      _formatarIdServico(id));
             _s('det-data',           _formatarDataExibicao(_extrairDataPedido(pedido)));
             _s('det-horario',        _resolverHoraPedido(pedido));
-            _s('det-contato',        pedido.contato    || '—');
+            _s('det-contato',        pedido.contato     || '—');
             _s('det-cliente',        _resolverNomeCliente(pedido));
             _s('det-mercadoria',     pedido.mercadoria  || '—');
             _s('det-retorno',        pedido.retorno     || 'Não');
@@ -476,7 +495,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             _s('det-para',           pedido.para        || '—');
             _s('det-motoboy',        pedido.motoboy     || '—');
             _s('det-status',         _normalizarStatus(pedido.status));
-            _s('det-valor-original', _formatarMoeda(valor));
+            _s('det-valor-original', _formatarMoeda(valorBase));
             _s('det-taxa-espera',    _formatarMoeda(taxaNum));
             _s('det-valor-final',    _formatarMoeda(finalNum));
             _s('det-espera-tipo',    pedido.espera_tipo    || 'sem_espera');
@@ -487,17 +506,17 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         });
     };
 
+    // ─── Editar ───────────────────────────────────────────────────────────────
     window.editarPedido = function (id) {
-        window.pedidosState.emAcao = true;
-
         var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
             return String(p.id || p._id || '').trim() === String(id).trim();
         });
         if (!pedido) { console.error('[pedidos.js] ❌ Pedido não encontrado:', id); return; }
 
-        function _preencherEAbrir() {
+        _garantirModal('modalEditarPedido', function (ok) {
+            if (!ok) { console.error('[pedidos.js] ❌ #modalEditarPedido indisponível'); return; }
+
             var modalEl = document.getElementById('modalEditarPedido');
-            if (!modalEl) { console.error('[pedidos.js] ❌ #modalEditarPedido não encontrado'); return; }
 
             document.querySelectorAll('.modal.show').forEach(function (m) {
                 var inst = bootstrap.Modal.getInstance(m);
@@ -514,13 +533,13 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
             _s('edit-pedido-id',            id);
             _s('edit-valor-base',           valor);
-            _s('edit-solicitante',          pedido.solicitante || '');
-            _s('edit-contato',              pedido.contato     || '');
+            _s('edit-solicitante',          pedido.solicitante    || '');
+            _s('edit-contato',              pedido.contato        || '');
             _s('edit-data',                 _formatarDataExibicao(_extrairDataPedido(pedido)));
             _s('edit-horario',              _resolverHoraPedido(pedido));
-            _s('edit-de',                   pedido.de          || '');
-            _s('edit-para',                 pedido.para        || '');
-            _s('edit-obs',                  pedido.observacao  || '');
+            _s('edit-de',                   pedido.de             || '');
+            _s('edit-para',                 pedido.para           || '');
+            _s('edit-obs',                  pedido.observacao     || '');
             _s('edit-valor-pedido-display', _formatarMoeda(valor));
             _s('edit-espera-tipo',          pedido.espera_tipo    || 'sem_espera');
             _s('edit-espera-minutos',       pedido.espera_minutos || '');
@@ -531,27 +550,14 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             var errEl = document.getElementById('edit-error-msg');
             if (errEl) errEl.classList.add('d-none');
 
-            if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.calcularEspera === 'function')
+            if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
                 window.RDO_PEDIDOS.calcularEspera();
 
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
-
-        if (document.getElementById('modalEditarPedido')) {
-            _preencherEAbrir();
-            return;
-        }
-
-        if (typeof window.loadModal === 'function') {
-            window.loadModal('form_pedidos.html').then(function (ok) {
-                if (!ok) { console.error('[pedidos.js] ❌ loadModal falhou'); return; }
-                _preencherEAbrir();
-            });
-        } else {
-            console.error('[pedidos.js] ❌ window.loadModal não definido');
-        }
+        });
     };
 
+    // ─── RDO_PEDIDOS namespace ────────────────────────────────────────────────
     window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 
     window.RDO_PEDIDOS.removerDoCache = function (id) {
@@ -571,7 +577,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     };
 
     window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome) {
-        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+        var cache  = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
         var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId || '').trim(); });
         if (!pedido) return;
         pedido.status = statusFormatado;
@@ -579,10 +585,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _renderizarTabela(window.AppRDO.pedidosCache);
     };
 
+    // ─── Calcular espera ──────────────────────────────────────────────────────
     window.RDO_PEDIDOS.calcularEspera = function () {
-        var FRANQUIA_MIN = 10;
-        var TARIFA_MIN   = 0.60;
-
         var tipo      = (document.getElementById('edit-espera-tipo')     || {}).value || 'sem_espera';
         var minutos   = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
         var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
@@ -620,22 +624,176 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (boxResumo) boxResumo.style.display = excedente > 0 ? 'block' : 'none';
     };
 
+    // ─── Salvar edição ────────────────────────────────────────────────────────
+    window.RDO_PEDIDOS.salvarEdicao = function () {
+        var btnSalvar = document.getElementById('btn-salvar-edicao');
+        var errEl     = document.getElementById('edit-error-msg');
+
+        if (errEl) errEl.classList.add('d-none');
+
+        var pedidoId  = (document.getElementById('edit-pedido-id')       || {}).value || '';
+        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+        var tipo      = (document.getElementById('edit-espera-tipo')      || {}).value || 'sem_espera';
+        var minutos   = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
+
+        if (!pedidoId) {
+            if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
+            return;
+        }
+
+        var pontos        = tipo === 'ambos' ? 2 : 1;
+        var franquiaTotal = FRANQUIA_MIN * pontos;
+        var excedente     = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
+        var taxa          = excedente * TARIFA_MIN;
+        var valorFinal    = valorBase + taxa;
+
+        var payload = {
+            id:             pedidoId,
+            solicitante:    (document.getElementById('edit-solicitante') || {}).value || '',
+            contato:        (document.getElementById('edit-contato')     || {}).value || '',
+            horario:        (document.getElementById('edit-horario')     || {}).value || '',
+            de:             (document.getElementById('edit-de')          || {}).value || '',
+            para:           (document.getElementById('edit-para')        || {}).value || '',
+            observacao:     (document.getElementById('edit-obs')         || {}).value || '',
+            espera_tipo:    tipo,
+            espera_minutos: minutos,
+            taxa_espera:    taxa,
+            valor_final:    valorFinal
+        };
+
+        if (btnSalvar) {
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+        }
+
+        API.call('updatepedido', payload)
+            .then(function (res) {
+                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+
+                var cache  = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+                var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+                if (pedido) {
+                    pedido.solicitante    = payload.solicitante;
+                    pedido.contato        = payload.contato;
+                    pedido.horario        = payload.horario;
+                    pedido.de             = payload.de;
+                    pedido.para           = payload.para;
+                    pedido.observacao     = payload.observacao;
+                    pedido.espera_tipo    = payload.espera_tipo;
+                    pedido.espera_minutos = payload.espera_minutos;
+                    pedido.taxa_espera    = payload.taxa_espera;
+                    pedido.valor_final    = payload.valor_final;
+                }
+
+                _renderizarTabela(window.AppRDO.pedidosCache);
+
+                var modalEl = document.getElementById('modalEditarPedido');
+                if (modalEl) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Pedido atualizado!', toast: true,
+                                timer: 2000, position: 'top-end', showConfirmButton: false });
+                }
+            })
+            .catch(function (err) {
+                console.error('[pedidos.js] ❌ salvarEdicao:', err);
+                if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
+            })
+            .finally(function () {
+                if (btnSalvar) {
+                    btnSalvar.disabled = false;
+                    btnSalvar.innerHTML = '<i class="bi bi-check-lg me-1"></i>SALVAR';
+                }
+            });
+    };
+
+    // ─── Salvar novo ──────────────────────────────────────────────────────────
+    window.RDO_PEDIDOS.salvarNovo = function () {
+        var btnSalvar = document.getElementById('btn-salvar-novo');
+        var errEl     = document.getElementById('novo-error-msg');
+
+        if (errEl) errEl.classList.add('d-none');
+
+        var payload = {
+            id_chat:     (document.getElementById('novo-id-chat')     || {}).value || '',
+            solicitante: (document.getElementById('novo-solicitante')  || {}).value || '',
+            contato:     (document.getElementById('novo-contato')      || {}).value || '',
+            horario:     (document.getElementById('novo-horario')      || {}).value || '',
+            mercadoria:  (document.getElementById('novo-mercadoria')   || {}).value || '',
+            retorno:     (document.getElementById('novo-retorno')      || {}).value || 'Não',
+            prioridade:  (document.getElementById('novo-prioridade')   || {}).value || '0',
+            de:          (document.getElementById('novo-de')           || {}).value || '',
+            para:        (document.getElementById('novo-para')         || {}).value || '',
+            observacao:  (document.getElementById('novo-obs')          || {}).value || '',
+            status:      'PENDENTE'
+        };
+
+        if (!payload.solicitante) {
+            if (errEl) { errEl.textContent = 'Informe o solicitante.'; errEl.classList.remove('d-none'); }
+            return;
+        }
+
+        if (btnSalvar) {
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
+        }
+
+        API.call('createpedido', payload)
+            .then(function (res) {
+                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao criar');
+
+                var novoPedido = (res && (res.pedido || res.data)) || payload;
+
+                var modalEl = document.getElementById('modalNovoPedido');
+                if (modalEl) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+
+                if (typeof window.EventBus !== 'undefined') {
+                    window.EventBus.emit('pedido:adicionado', novoPedido);
+                } else {
+                    if (Array.isArray(window.AppRDO.pedidosCache))
+                        window.AppRDO.pedidosCache.push(novoPedido);
+                    _renderizarTabela(window.AppRDO.pedidosCache);
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Pedido criado!', toast: true,
+                                timer: 2000, position: 'top-end', showConfirmButton: false });
+                }
+            })
+            .catch(function (err) {
+                console.error('[pedidos.js] ❌ salvarNovo:', err);
+                if (errEl) { errEl.textContent = err.message || 'Falha ao criar.'; errEl.classList.remove('d-none'); }
+            })
+            .finally(function () {
+                if (btnSalvar) {
+                    btnSalvar.disabled = false;
+                    btnSalvar.innerHTML = '<i class="bi bi-plus-lg me-1"></i>CRIAR PEDIDO';
+                }
+            });
+    };
+
+    // ─── EventBus ────────────────────────────────────────────────────────────
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
         window.EventBus.on('pedido:excluido', function (dados) {
-            console.log('[pedidos.js] 📡 pedido:excluido', dados.id);
             window.RDO_PEDIDOS.removerDoCache(dados.id);
         });
 
         window.EventBus.on('pedido:adicionado', function (novoPedido) {
-            console.log('[pedidos.js] 📡 pedido:adicionado', novoPedido);
             if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
             window.AppRDO.pedidosCache.push(novoPedido);
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
     }
 
+    // ─── Init ─────────────────────────────────────────────────────────────────
     window.initPedidos = function () {
         console.log('[pedidos.js] ========== initPedidos ==========');
         if (!document.getElementById('corpo-tabela-pedidos')) {
