@@ -1,138 +1,197 @@
-<div class="modal fade" id="modalFormAdmin" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h6 class="fw-bold mb-0" id="form-admin-titulo">Novo Registro</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="modalFormAdmin" tabindex="-1" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+            <!-- HEADER -->
+            <div class="modal-pedido-header d-flex align-items-center gap-3">
+                <div class="modal-pedido-icon">
+                    <i class="bi bi-person-fill-gear" id="form-admin-icone"></i>
+                </div>
+                <div>
+                    <div class="modal-pedido-title" id="form-admin-titulo">Novo Registro</div>
+                    <div class="modal-pedido-subtitle" id="form-admin-subtitulo">Preencha os dados abaixo</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto"
+                    data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
 
-            <div class="modal-body px-4 pt-3 pb-2">
-                <div class="alert alert-danger small py-2 d-none" id="form-admin-erro"></div>
+            <!-- BODY -->
+            <div class="modal-pedido-body">
+                <div id="form-admin-erro"
+                    class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
+                    style="font-size:0.8rem;"></div>
 
                 <!-- ═══════════ CAMPOS CLIENTE ═══════════ -->
                 <div id="campos-cliente">
-                    <!-- Linha 1: Nome/Empresa + Responsável -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">Nome / Empresa <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="c-username" placeholder="Ex: Empresa XYZ Ltda">
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-building me-1 text-danger"></i>Dados da Empresa
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Nome / Empresa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-username" placeholder="Ex: Empresa XYZ Ltda">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">Responsável <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="c-responsavel" placeholder="Ex: João Silva">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Responsável <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-responsavel" placeholder="Ex: João Silva">
                         </div>
                     </div>
 
-                    <!-- Linha 2: Contato + E-mail + CPF/CNPJ -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold mb-1">Contato <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="c-contato" placeholder="(31) 99999-0000">
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-telephone-fill me-1 text-danger"></i>Contato & Documento
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">Contato <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-contato" placeholder="(31) 99999-0000">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold mb-1">E-mail</label>
-                            <input type="email" class="form-control form-control-sm" id="c-email" placeholder="email@exemplo.com">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">E-mail</label>
+                            <input type="email" class="form-control form-control-sm modal-pedido-input"
+                                id="c-email" placeholder="email@exemplo.com">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold mb-1">CPF / CNPJ</label>
-                            <input type="text" class="form-control form-control-sm" id="c-cpf_cnpj" placeholder="000.000.000-00">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">CPF / CNPJ</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-cpf_cnpj" placeholder="000.000.000-00">
                         </div>
                     </div>
 
-                    <!-- Linha 3: Endereço -->
-                    <div class="row g-3 mb-3">
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-geo-alt-fill me-1 text-danger"></i>Localização & Mídia
+                    </div>
+                    <div class="row g-2 mb-3">
                         <div class="col-12">
-                            <label class="form-label small fw-semibold mb-1">Endereço</label>
-                            <input type="text" class="form-control form-control-sm" id="c-endereco" placeholder="Rua, nº, bairro, cidade - UF">
+                            <label class="modal-pedido-field-label">Endereço</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-endereco" placeholder="Rua, nº, bairro, cidade - UF">
                         </div>
                     </div>
-
-                    <!-- Linha 4: Imagem -->
-                    <div class="row g-3">
+                    <div class="row g-2">
                         <div class="col-12">
-                            <label class="form-label small fw-semibold mb-1">URL da Imagem</label>
-                            <input type="text" class="form-control form-control-sm" id="c-imagem" placeholder="https://exemplo.com/avatar.png">
+                            <label class="modal-pedido-field-label">URL da Imagem</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-imagem" placeholder="https://exemplo.com/avatar.png">
                         </div>
                     </div>
                 </div>
 
                 <!-- ═══════════ CAMPOS COLABORADOR ═══════════ -->
                 <div id="campos-colaborador" class="d-none">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">Nome Completo <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="col-username" placeholder="Nome do colaborador">
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-person-badge-fill me-1 text-danger"></i>Dados Pessoais
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Nome Completo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="col-username" placeholder="Nome do colaborador">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">CPF / CNPJ <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="col-cpf_cnpj" placeholder="000.000.000-00">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">CPF / CNPJ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="col-cpf_cnpj" placeholder="000.000.000-00">
                         </div>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">Contato</label>
-                            <input type="text" class="form-control form-control-sm" id="col-contato" placeholder="(31) 99999-0000">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">E-mail</label>
-                            <input type="email" class="form-control form-control-sm" id="col-email" placeholder="email@exemplo.com">
-                        </div>
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-telephone-fill me-1 text-danger"></i>Contato & Acesso
                     </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold mb-1">URL da Imagem</label>
-                            <input type="text" class="form-control form-control-sm" id="col-imagem" placeholder="https://exemplo.com/avatar.png">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">Contato</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="col-contato" placeholder="(31) 99999-0000">
                         </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold mb-1">Status</label>
-                            <select class="form-select form-select-sm" id="col-status">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">E-mail</label>
+                            <input type="email" class="form-control form-control-sm modal-pedido-input"
+                                id="col-email" placeholder="email@exemplo.com">
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">Status</label>
+                            <select class="form-select form-select-sm modal-pedido-input" id="col-status">
                                 <option value="TRUE">Ativo</option>
                                 <option value="FALSE">Inativo</option>
                             </select>
                         </div>
                     </div>
 
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="modal-pedido-field-label">URL da Imagem</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="col-imagem" placeholder="https://exemplo.com/avatar.png">
+                        </div>
+                    </div>
+
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-briefcase-fill me-1 text-danger"></i>Função & Comissão
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold mb-2">Funções <span class="text-danger">*</span></label>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input col-funcao" type="checkbox" value="Motorista" id="fn-motorista">
-                                <label class="form-check-label small" for="fn-motorista">Motorista</label>
+                        <label class="modal-pedido-field-label mb-2">Funções <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-3 p-3 rounded-3"
+                            style="background:#fff5f5;border:1px solid #f5c6cb;">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input col-funcao" type="checkbox"
+                                    value="Motorista" id="fn-motorista">
+                                <label class="form-check-label small fw-semibold" for="fn-motorista">
+                                    <i class="bi bi-car-front me-1 text-danger"></i>Motorista
+                                </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input col-funcao" type="checkbox" value="Motoboy" id="fn-motoboy">
-                                <label class="form-check-label small" for="fn-motoboy">Motoboy</label>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input col-funcao" type="checkbox"
+                                    value="Motoboy" id="fn-motoboy">
+                                <label class="form-check-label small fw-semibold" for="fn-motoboy">
+                                    <i class="bi bi-bicycle me-1 text-danger"></i>Motoboy
+                                </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input col-funcao" type="checkbox" value="Operador" id="fn-operador">
-                                <label class="form-check-label small" for="fn-operador">Operador</label>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input col-funcao" type="checkbox"
+                                    value="Operador" id="fn-operador">
+                                <label class="form-check-label small fw-semibold" for="fn-operador">
+                                    <i class="bi bi-headset me-1 text-danger"></i>Operador
+                                </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input col-funcao" type="checkbox" value="Auxiliar" id="fn-auxiliar">
-                                <label class="form-check-label small" for="fn-auxiliar">Auxiliar</label>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input col-funcao" type="checkbox"
+                                    value="Auxiliar" id="fn-auxiliar">
+                                <label class="form-check-label small fw-semibold" for="fn-auxiliar">
+                                    <i class="bi bi-person-fill me-1 text-danger"></i>Auxiliar
+                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3 d-none" id="div-comissao">
-                        <label class="form-label small fw-semibold mb-1">Comissão (%)</label>
-                        <input type="number" class="form-control form-control-sm" id="col-comissao" placeholder="Ex: 10" min="0" max="100">
+                    <div class="row g-2 d-none" id="div-comissao">
+                        <div class="col-12 col-sm-4">
+                            <label class="modal-pedido-field-label">Comissão (%)</label>
+                            <input type="number" class="form-control form-control-sm modal-pedido-input"
+                                id="col-comissao" placeholder="Ex: 10" min="0" max="100">
+                        </div>
                     </div>
+                </div>
+
+                <!-- BOTÕES -->
+                <div class="d-flex gap-2 mt-4">
+                    <button type="button" class="btn btn-cancelar-pedido flex-fill"
+                        data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-salvar-pedido flex-fill"
+                        id="btn-salvar-form-admin">
+                        <span class="spinner-border spinner-border-sm d-none me-1"
+                            id="spinner-salvar-admin"></span>
+                        <i class="bi bi-check-lg me-1" id="icon-salvar-admin"></i>
+                        <span id="txt-salvar-admin">Salvar</span>
+                    </button>
                 </div>
             </div>
 
-            <div class="modal-footer border-0 px-4 pb-4 pt-2">
-                <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-form-admin">
-                    <span class="spinner-border spinner-border-sm d-none me-1" id="spinner-salvar-admin"></span>
-                    <span id="txt-salvar-admin">Salvar</span>
-                </button>
-            </div>
         </div>
     </div>
 </div>
