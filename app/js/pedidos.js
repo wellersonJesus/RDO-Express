@@ -23,6 +23,16 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     var FRANQUIA_MIN = 10;
     var TARIFA_MIN   = 0.60;
 
+    var MOTIVOS_CANCELAMENTO = [
+        { value: 'cliente_desistiu',      label: 'Cliente desistiu' },
+        { value: 'endereco_incorreto',    label: 'Endereço incorreto' },
+        { value: 'sem_motoboy',           label: 'Sem motoboy disponível' },
+        { value: 'pedido_duplicado',      label: 'Pedido duplicado' },
+        { value: 'fora_area_atendimento', label: 'Fora da área de atendimento' },
+        { value: 'problema_pagamento',    label: 'Problema no pagamento' },
+        { value: 'outro',                 label: 'Outro' }
+    ];
+
     var els = {
         tbody: null, btnSync: null, iconSync: null, inputBusca: null,
         filtroData: null, btnFiltroTipo: null, dropdownFiltroMenu: null,
@@ -292,14 +302,10 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
     function _registrarEventosLinhas() {
         document.querySelectorAll('.btn-pedido-view').forEach(function (btn) {
-            btn.onclick = function () {
-                window.visualizarPedido(btn.getAttribute('data-id'));
-            };
+            btn.onclick = function () { window.visualizarPedido(btn.getAttribute('data-id')); };
         });
         document.querySelectorAll('.btn-pedido-edit').forEach(function (btn) {
-            btn.onclick = function () {
-                window.editarPedido(btn.getAttribute('data-id'));
-            };
+            btn.onclick = function () { window.editarPedido(btn.getAttribute('data-id')); };
         });
         document.querySelectorAll('.btn-pedido-delete').forEach(function (btn) {
             btn.onclick = function () {
@@ -436,14 +442,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         }
     }
 
-    // ─── Garantia de modal no DOM ────────────────────────────────────────────
-    // Se o modal já existe no DOM (HTML estático ou já carregado), usa direto.
-    // Só chama loadModal se não existir.
     function _garantirModal(modalId, callback) {
-        if (document.getElementById(modalId)) {
-            callback(true);
-            return;
-        }
+        if (document.getElementById(modalId)) { callback(true); return; }
         if (typeof window.loadModal === 'function') {
             window.loadModal('form_pedidos.html').then(function (ok) {
                 callback(ok && !!document.getElementById(modalId));
@@ -454,7 +454,17 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         }
     }
 
-    // ─── Visualizar ──────────────────────────────────────────────────────────
+    function _resolverMotivoCancelamento(pedido) {
+        var raw = String(pedido.motivo_cancelamento || '').trim();
+        if (!raw) return '';
+        var separador = raw.includes(' | ') ? ' | ' : ',';
+        var partes = raw.split(separador).map(function (v) { return v.trim(); });
+        return partes.map(function (val) {
+            var encontrado = MOTIVOS_CANCELAMENTO.find(function (m) { return m.value === val; });
+            return encontrado ? encontrado.label : val;
+        }).join(', ');
+    }
+
     window.visualizarPedido = function (id) {
         var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
             return String(p.id || p._id || '').trim() === String(id).trim();
@@ -464,8 +474,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _garantirModal('modalPedidoDetalhes', function (ok) {
             if (!ok) { console.error('[pedidos.js] ❌ #modalPedidoDetalhes indisponível'); return; }
 
-            var modalEl = document.getElementById('modalPedidoDetalhes');
-
+            var modalEl   = document.getElementById('modalPedidoDetalhes');
             var valorBase = _resolverValor(pedido);
             var taxaNum   = _parseMoeda(pedido.taxa_espera);
             var finalNum  = _parseMoeda(pedido.valor_final) || valorBase;
@@ -475,9 +484,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 if (el) {
                     if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') el.value = val != null ? String(val) : '';
                     else el.textContent = val != null ? String(val) : '';
-                } else {
-                    console.warn('[pedidos.js] ⚠️ Campo ausente:', elId);
-                }
+                } else { console.warn('[pedidos.js] ⚠️ Campo ausente:', elId); }
             }
 
             var tituloEl = document.getElementById('detalhe-titulo');
@@ -502,11 +509,20 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             _s('det-espera-minutos', pedido.espera_minutos || '0');
             _s('det-obs',            pedido.observacao     || '');
 
+            var cancelamentoBox = document.getElementById('det-cancelamento-box');
+            if (cancelamentoBox) {
+                if (_normalizarStatus(pedido.status) === 'CANCELADO') {
+                    _s('det-motivo-cancelamento', _resolverMotivoCancelamento(pedido) || 'Não informado');
+                    cancelamentoBox.style.display = 'block';
+                } else {
+                    cancelamentoBox.style.display = 'none';
+                }
+            }
+
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         });
     };
 
-    // ─── Editar ───────────────────────────────────────────────────────────────
     window.editarPedido = function (id) {
         var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
             return String(p.id || p._id || '').trim() === String(id).trim();
@@ -557,7 +573,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         });
     };
 
-    // ─── RDO_PEDIDOS namespace ────────────────────────────────────────────────
     window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 
     window.RDO_PEDIDOS.removerDoCache = function (id) {
@@ -576,16 +591,16 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     };
 
-    window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome) {
+    window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome, motivoCancelamento) {
         var cache  = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
         var pedido = cache.find(function (p) { return String(p.id || '').trim() === String(pedidoId || '').trim(); });
         if (!pedido) return;
         pedido.status = statusFormatado;
         if (motoboyNome) pedido.motoboy = motoboyNome;
+        if (motivoCancelamento !== undefined) pedido.motivo_cancelamento = motivoCancelamento;
         _renderizarTabela(window.AppRDO.pedidosCache);
     };
 
-    // ─── Calcular espera ──────────────────────────────────────────────────────
     window.RDO_PEDIDOS.calcularEspera = function () {
         var tipo      = (document.getElementById('edit-espera-tipo')     || {}).value || 'sem_espera';
         var minutos   = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
@@ -624,7 +639,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (boxResumo) boxResumo.style.display = excedente > 0 ? 'block' : 'none';
     };
 
-    // ─── Salvar edição ────────────────────────────────────────────────────────
     window.RDO_PEDIDOS.salvarEdicao = function () {
         var btnSalvar = document.getElementById('btn-salvar-edicao');
         var errEl     = document.getElementById('edit-error-msg');
@@ -710,7 +724,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             });
     };
 
-    // ─── Salvar novo ──────────────────────────────────────────────────────────
     window.RDO_PEDIDOS.salvarNovo = function () {
         var btnSalvar = document.getElementById('btn-salvar-novo');
         var errEl     = document.getElementById('novo-error-msg');
@@ -778,7 +791,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             });
     };
 
-    // ─── EventBus ────────────────────────────────────────────────────────────
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
@@ -791,9 +803,20 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             window.AppRDO.pedidosCache.push(novoPedido);
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
+
+        window.EventBus.on('pedido:cancelado', function (dados) {
+            var cache  = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(dados.id || '').trim();
+            });
+            if (pedido) {
+                pedido.status = 'CANCELADO';
+                pedido.motivo_cancelamento = dados.motivo_cancelamento || '';
+            }
+            _renderizarTabela(window.AppRDO.pedidosCache);
+        });
     }
 
-    // ─── Init ─────────────────────────────────────────────────────────────────
     window.initPedidos = function () {
         console.log('[pedidos.js] ========== initPedidos ==========');
         if (!document.getElementById('corpo-tabela-pedidos')) {
