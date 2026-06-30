@@ -69,7 +69,6 @@ function processarCriarPedido(sheetPedidos, data) {
   var idPedido  = gerarId(sheetPedidos, "pedidos");
   var idCliente = String(data.id_cliente || data.id_chat || "").trim();
 
-  // Extrai De/Para da primeira rota do rotas_texto
   var rotas_texto = String(data.rotas_texto || "");
   var deStr   = "";
   var paraStr = "";
@@ -88,26 +87,20 @@ function processarCriarPedido(sheetPedidos, data) {
   var horaStr = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   var dataStr = agora.toLocaleDateString("pt-BR");
 
-  // Grava no chat: prioriza data.texto (enviado pelo JS), depois data.mensagem, nunca o fallback genérico
   if (sheetChat && idCliente) {
     var textoChat = String(data.texto || data.mensagem || "").trim();
-
-    // Substitui placeholder do ID caso exista na mensagem
     if (textoChat) {
       textoChat = textoChat.replace("[ID_GERADO]", idPedido);
     } else {
-      // Se por algum motivo chegar vazio, monta um resumo mínimo com os dados disponíveis
       textoChat = "📦 N.SERVIÇO: " + idPedido + "\n" +
                   "👤 : " + String(data.solicitante || "Não informado") +
                   " 📞 : " + String(data.contato || "") + "\n" +
                   "📦 : " + String(data.mercadoria || "ENTREGA");
     }
-
     var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
     sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
   }
 
-  // Grava na aba pedidos
   var headers = obterHeaders(sheetPedidos);
   var idIndex = headers.indexOf("id");
 
@@ -133,7 +126,7 @@ function processarCriarPedido(sheetPedidos, data) {
     rowData.tempo          = String(data.tempo         || "");
     rowData.valor_km       = String(data.valor_km      || "");
     rowData.dinamica       = String(data.dinamica      || "");
-    rowData.numero_servico = idPedido; // garante consistência
+    rowData.numero_servico = idPedido;
     rowData.data           = dataStr;
     rowData.hora           = horaStr;
 
@@ -144,24 +137,20 @@ function processarCriarPedido(sheetPedidos, data) {
     sheetPedidos.appendRow(row);
   } else {
     sheetPedidos.appendRow([
-      idPedido,
-      idCliente,
+      idPedido, idCliente,
       String(data.solicitante   || ""),
       String(data.contato       || ""),
       String(data.horario       || ""),
       String(data.mercadoria    || ""),
-      deStr,
-      paraStr,
+      deStr, paraStr,
       String(data.retorno       || ""),
       String(data.prioridade    || "N/A"),
       String(data.valor_corrida || data.valor_final || ""),
       String(data.valor_base    || ""),
       String(data.taxa_espera   || ""),
-      "",
-      "PENDENTE",
+      "", "PENDENTE",
       String(data.observacao    || data.obs || ""),
-      dataStr,
-      horaStr
+      dataStr, horaStr
     ]);
   }
 
@@ -211,19 +200,16 @@ function processarPedidoComChat(sheetPedidos, data) {
   sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
 
   sheetPedidos.appendRow([
-    idPedido,
-    idCliente,
+    idPedido, idCliente,
     String(data.solicitante   || ""),
     String(data.contato       || ""),
     String(data.horario       || ""),
     String(data.mercadoria    || ""),
-    deStr,
-    paraStr,
+    deStr, paraStr,
     String(data.retorno       || ""),
     String(data.prioridade    || "N/A"),
     String(data.valor_corrida || ""),
-    "",
-    "PENDENTE",
+    "", "PENDENTE",
     String(data.observacao    || data.obs || "")
   ]);
 
@@ -331,7 +317,7 @@ function processarGetFinanceiroCompleto() {
 
   var pedidosMap = {};
   if (sheetPed) {
-    var pedRows       = sheetPed.getDataRange().getValues();
+    var pedRows = sheetPed.getDataRange().getValues();
     if (pedRows.length > 1) {
       var pedHeaders        = pedRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
       var pedIdIdx          = pedHeaders.indexOf("id");
@@ -397,21 +383,21 @@ function processarAdd(sheet, data, entity) {
   var headers = obterHeaders(sheet);
   var idIndex = headers.indexOf("id");
 
-  if (idIndex !== -1 && (!data.id || data.id === ""))
+  if (idIndex !== -1 && (!data.id || String(data.id).trim() === ""))
     data.id = gerarId(sheet, entity);
 
-  var rowData = {};
+  var row = [];
   for (var i = 0; i < headers.length; i++) {
     var campo = headers[i];
-    if (campo === "contato" && data.telefone && !data.contato)
-      rowData[campo] = String(data.telefone).trim();
-    else
-      rowData[campo] = data[campo] !== undefined ? String(data[campo]).trim() : "";
-  }
+    var valor = "";
 
-  var row = [];
-  for (var j = 0; j < headers.length; j++) {
-    row.push(rowData[headers[j]] || "");
+    if (campo === "contato" && data.telefone && !data.contato) {
+      valor = String(data.telefone).trim();
+    } else if (data[campo] !== undefined && data[campo] !== null) {
+      valor = String(data[campo]).trim();
+    }
+
+    row.push(valor);
   }
 
   sheet.appendRow(row);

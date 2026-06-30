@@ -25,41 +25,100 @@
         if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
         return (
             s.indexOf('data:image/') === 0 ||
-            s.indexOf('/')           === 0 ||
-            s.indexOf('http://')     === 0 ||
-            s.indexOf('https://')    === 0
+            s.indexOf('/') === 0 ||
+            s.indexOf('http://') === 0 ||
+            s.indexOf('https://') === 0
         );
     }
 
+    function _proxificarUrl(url) {
+        if (!url || typeof url !== 'string') return url;
+        var s = url.trim();
+        if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0) {
+            return '/api/avatar?url=' + encodeURIComponent(s);
+        }
+        return s;
+    }
+
     window.resolverSrcAvatar = function (urlBanco, nome) {
-        if (_urlValida(urlBanco)) return urlBanco;
+        if (_urlValida(urlBanco)) return urlBanco.trim();
         var iniciais = _iniciais(nome || '');
         return _gerarSVG(iniciais || (nome || 'U').charAt(0).toUpperCase());
     };
 
+    function _aplicarAvatarComFallback(imgEl, iconEl, urlOriginal, svg) {
+        if (!imgEl) return;
+
+        var tentativas = 0;
+
+        function _exibirImagem(src) {
+            imgEl.onerror = null;
+            imgEl.onload = null;
+            imgEl.style.display = 'none';
+
+            imgEl.onload = function () {
+                this.onload = null;
+                this.onerror = null;
+                this.style.display = 'block';
+                if (iconEl) iconEl.style.display = 'none';
+            };
+
+            imgEl.onerror = function () {
+                this.onerror = null;
+                this.onload = null;
+                tentativas++;
+
+                if (tentativas === 1 && urlOriginal &&
+                    (urlOriginal.indexOf('http://') === 0 || urlOriginal.indexOf('https://') === 0)) {
+                    _exibirImagem(_proxificarUrl(urlOriginal));
+                    return;
+                }
+
+                // Fallback final: SVG (data:image não dispara onerror, onload é seguro)
+                _usarSVG();
+            };
+
+            imgEl.src = src;
+        }
+
+        function _usarSVG() {
+            imgEl.onerror = null;
+            imgEl.onload = null;
+            imgEl.src = svg;
+            imgEl.style.display = 'block'; // ← garante exibição do SVG
+            if (iconEl) iconEl.style.display = 'none';
+        }
+
+        if (_urlValida(urlOriginal)) {
+            _exibirImagem(urlOriginal.trim());
+        } else {
+            _usarSVG(); // ← sem URL válida, vai direto pro SVG com display:block
+        }
+    }
+
     window.atualizarAvatar = function () {
         var username = localStorage.getItem('username') || 'Usuário';
-        var imagem   = localStorage.getItem('imagem');
+        var tipo = localStorage.getItem('tipo') || '';
+        var imagem = localStorage.getItem('imagem') || '';
+
         var iniciais = _iniciais(username);
-        var svg      = _gerarSVG(iniciais);
-        var src      = _urlValida(imagem) ? imagem : svg;
+        var svg = _gerarSVG(iniciais);
 
-        var img1 = document.getElementById('user-avatar-img');
-        if (img1) {
-            img1.onerror       = function () { this.onerror = null; this.src = svg; };
-            img1.src           = src;
-            img1.style.display = 'block';
-            var icon1 = document.querySelector('#avatar-container .avatar-fallback-icon');
-            if (icon1) icon1.style.display = 'none';
-        }
+        var seletores = [
+            { imgId: 'user-avatar-img', iconId: 'avatar-fallback-icon' },
+            { imgId: 'header-user-avatar', iconId: 'header-avatar-fallback-icon' }
+        ];
 
-        var img2 = document.getElementById('header-user-avatar');
-        if (img2) {
-            img2.onerror       = function () { this.onerror = null; this.src = svg; };
-            img2.src           = src;
-            img2.style.display = 'block';
-            var icon2 = document.querySelector('#header-avatar-container .avatar-fallback-icon');
-            if (icon2) icon2.style.display = 'none';
-        }
+        seletores.forEach(function (s) {
+            var imgEl = document.getElementById(s.imgId);
+            var iconEl = document.getElementById(s.iconId); // ← getElementById, mais confiável
+            _aplicarAvatarComFallback(imgEl, iconEl, imagem, svg);
+        });
+
+        var nameEl = document.getElementById('display-username');
+        var cargoEl = document.getElementById('display-cargo');
+        if (nameEl) nameEl.textContent = username;
+        if (cargoEl) cargoEl.textContent = tipo || '—';
     };
+
 })();

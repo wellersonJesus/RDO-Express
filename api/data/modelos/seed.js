@@ -1,36 +1,53 @@
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
-const axios = require('axios');
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { config } from 'dotenv';
+import axios from 'axios';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+config({ path: path.resolve(__dirname, '../../../.env') });
 
 const popularBanco = async () => {
     console.log("🚀 Iniciando população do banco de usuários...");
 
-    if (!process.env.API_URL) {
-        console.error("❌ Erro: API_URL não definida no .env");
-        process.exit(1);
-    }
+    const hashReal = process.env.MASTER_PASS_HASH.replace(/\$\$/g, '$');
 
     const userData = {
-        action: 'addusuarios', // Aba 'usuarios'
-        apiKey: process.env.SECRET_KEY,
-        id: Date.now().toString(),
-        username: process.env.MASTER_LOGIN || "Master",
-        cargo: process.env.MASTER_CARGO || "SRE Architect",
-        password: process.env.MASTER_PASS_HASH
+        action:   'addusuarios',
+        apiKey:   process.env.SECRET_KEY,
+        id:       Date.now().toString(),
+        username: process.env.MASTER_LOGIN   || "Wellerson",
+        cargo:    process.env.MASTER_CARGO   || "SRE Architect",
+        contato:  process.env.MASTER_CONTATO || "",
+        imagem:   process.env.MASTER_AVATAR  || "",
+        password: hashReal,
+        status:   "TRUE"
     };
 
+    console.log("📦 Payload:", { ...userData, password: '[HASH OCULTO]' });
+
     try {
-        console.log(`📡 Enviando dados para: ${process.env.API_URL}`);
-        const response = await axios.post(process.env.API_URL, userData);
-        
-        if (response.data.status === 'success') {
-            console.log("✅ Usuário Master criado com sucesso na Planilha!");
-            console.log(`👤 Login: ${userData.username}`);
+        const response = await axios.post(
+            process.env.API_URL,
+            JSON.stringify(userData),
+            {
+                headers: { 'Content-Type': 'application/json' },
+                maxRedirects: 5,
+                validateStatus: s => s >= 200 && s < 500
+            }
+        );
+
+        console.log("📨 Resposta:", JSON.stringify(response.data));
+
+        if (response.data?.status === 'success') {
+            console.log(`✅ Usuário '${userData.username}' criado com sucesso!`);
         } else {
-            console.error("⚠️ Resposta da API:", response.data);
+            console.error("⚠️ API retornou:", response.data);
         }
+
     } catch (error) {
-        console.error("❌ Erro ao conectar:", error.message);
+        console.error("❌ Erro:", error.response?.data || error.message);
     }
 };
 

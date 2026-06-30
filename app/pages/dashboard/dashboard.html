@@ -5,7 +5,9 @@
                 <i class="bi bi-speedometer2 text-danger fs-1 me-3"></i>
                 <div>
                     <h3 class="mb-0 fw-bold">Dashboard</h3>
-                    <small class="text-muted">Bem-vindo(a), <span id="user-display-name">...</span></small>
+                    <small class="text-muted">
+                        Bem-vindo(a), <span id="user-display-name">...</span>
+                    </small>
                 </div>
             </div>
             <hr>
@@ -19,10 +21,11 @@
 </div>
 
 <script>
-    // Este script é injetado automaticamente pelo roteador
     (function () {
-        const userName = localStorage.getItem('user_name') || 'Usuário';
-        document.getElementById('user-display-name').innerText = userName;
-        console.log("Dashboard carregado com sucesso.");
+        // ✅ Corrigido: 'username' (igual ao que login.js salva)
+        var userName = localStorage.getItem('username') || 'Usuário';
+        var el = document.getElementById('user-display-name');
+        if (el) el.textContent = userName;
+        console.log('Dashboard carregado com sucesso.');
     })();
 </script>
