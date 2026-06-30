@@ -1,4 +1,3 @@
-// app/js/login.js
 (function () {
     'use strict';
 
