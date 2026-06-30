@@ -383,8 +383,11 @@ function processarAdd(sheet, data, entity) {
   var headers = obterHeaders(sheet);
   var idIndex = headers.indexOf("id");
 
-  if (idIndex !== -1 && (!data.id || String(data.id).trim() === ""))
-    data.id = gerarId(sheet, entity);
+  // Preserva o ID vindo do payload; só gera se realmente estiver vazio
+  if (idIndex !== -1) {
+    var idAtual = data.id !== undefined && data.id !== null ? String(data.id).trim() : "";
+    if (!idAtual) data.id = gerarId(sheet, entity);
+  }
 
   var row = [];
   for (var i = 0; i < headers.length; i++) {
