@@ -1,3 +1,4 @@
+// app/js/pedidos.js
 console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
 (function () {
@@ -447,7 +448,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
             return String(p.id || '').trim() !== idStr;
         });
-        // Aciona o botão loop para recarregar da API
+        _renderizarTabela(window.AppRDO.pedidosCache);
         _dispararSync();
     };
 
@@ -455,9 +456,11 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         window.pedidosState.dadosCarregados = false;
         window.pedidosState.emAcao = true;
         window.pedidosState.isFetching = false;
-        // Simula clique visual no botão, se existir
-        if (els.btnSync) els.btnSync.click();
-        else _fetchPedidos();
+        if (els.btnSync) {
+            els.btnSync.click();
+        } else {
+            _fetchPedidos();
+        }
     }
 
     window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
@@ -557,10 +560,17 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 }
 
                 if (typeof window.EventBus !== 'undefined')
-                    window.EventBus.emit('pedido:atualizado', { id: pedidoId, valor_total: valorFinal, valor_final: valorFinal });
+                    window.EventBus.emit('pedido:atualizado', {
+                        id: pedidoId,
+                        valor_total: valorFinal,
+                        valor_final: valorFinal
+                    });
 
                 if (typeof Swal !== 'undefined')
-                    Swal.fire({ icon: 'success', title: 'Pedido atualizado!', toast: true, timer: 2000, position: 'top-end', showConfirmButton: false });
+                    Swal.fire({
+                        icon: 'success', title: 'Pedido atualizado!',
+                        toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
+                    });
             })
             .catch(function (err) {
                 console.error('[pedidos.js] ❌ salvarEdicao:', err);
@@ -625,7 +635,10 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 }
 
                 if (typeof Swal !== 'undefined')
-                    Swal.fire({ icon: 'success', title: 'Pedido criado!', toast: true, timer: 2000, position: 'top-end', showConfirmButton: false });
+                    Swal.fire({
+                        icon: 'success', title: 'Pedido criado!',
+                        toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
+                    });
             })
             .catch(function (err) {
                 console.error('[pedidos.js] ❌ salvarNovo:', err);
@@ -763,12 +776,34 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             var errEl = document.getElementById('edit-error-msg');
             if (errEl) errEl.classList.add('d-none');
 
-            if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
-                window.RDO_PEDIDOS.calcularEspera();
-
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            setTimeout(function () {
+                if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
+                    window.RDO_PEDIDOS.calcularEspera();
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }, 50);
         });
     };
+
+    async function _fetchComRetry(endpoint, tentativas) {
+        tentativas = tentativas || 3;
+        var ultimoErro;
+        for (var i = 0; i < tentativas; i++) {
+            try {
+                var res = await API.call(endpoint);
+                return res;
+            } catch (err) {
+                ultimoErro = err;
+                var is502 = err && (
+                    String(err.message || '').includes('502') ||
+                    String(err.status || '').includes('502') ||
+                    err.statusCode === 502
+                );
+                if (!is502 || i === tentativas - 1) throw err;
+                await new Promise(function (r) { setTimeout(r, 800 * (i + 1)); });
+            }
+        }
+        throw ultimoErro;
+    }
 
     async function _fetchPedidos() {
         if (window.pedidosState.isFetching) return;
@@ -783,10 +818,10 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             if (typeof API === 'undefined' || typeof API.call !== 'function')
                 throw new Error('API.call indefinido');
 
-            var respChat = await API.call('getchat');
+            var respChat = await _fetchComRetry('getchat');
             window.AppRDO.chatsCache = Array.isArray(respChat) ? respChat : [];
 
-            var respPedidos = await API.call('getpedidos');
+            var respPedidos = await _fetchComRetry('getpedidos');
             var pedidos = [];
             if (Array.isArray(respPedidos)) {
                 pedidos = respPedidos;
@@ -912,7 +947,13 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
         window.EventBus.on('pedido:excluido', function (dados) {
-            window.RDO_PEDIDOS.removerDoCache(dados.id);
+            if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
+            var idStr = String(dados.id || '').trim();
+            window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+                return String(p.id || '').trim() !== idStr;
+            });
+            _renderizarTabela(window.AppRDO.pedidosCache);
+            _dispararSync();
         });
 
         window.EventBus.on('pedido:adicionado', function (novoPedido) {
@@ -943,6 +984,18 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 if (dados.motoboy) pedido.motoboy = dados.motoboy;
                 if (dados.motivo_cancelamento !== undefined)
                     pedido.motivo_cancelamento = dados.motivo_cancelamento;
+            }
+            _renderizarTabela(window.AppRDO.pedidosCache);
+        });
+
+        window.EventBus.on('pedido:atualizado', function (dados) {
+            var idStr = String(dados.id || '').trim();
+            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+                return String(p.id || '').trim() === idStr;
+            });
+            if (pedido) {
+                if (dados.valor_total !== undefined) pedido.valor_total = dados.valor_total;
+                if (dados.valor_final !== undefined) pedido.valor_final = dados.valor_final;
             }
             _renderizarTabela(window.AppRDO.pedidosCache);
         });

@@ -1,5 +1,5 @@
-<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-pedido-header d-flex align-items-center gap-3">
@@ -8,14 +8,13 @@
                     <div class="modal-pedido-title">Editar Pedido</div>
                     <div class="modal-pedido-subtitle" id="editar-titulo">RDO000</div>
                 </div>
-                <button type="button" class="btn-close btn-close-white ms-auto"
-                    data-bs-dismiss="modal" aria-label="Fechar"></button>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"
+                    aria-label="Fechar"></button>
             </div>
             <div class="modal-pedido-body">
                 <input type="hidden" id="edit-pedido-id">
                 <input type="hidden" id="edit-valor-base">
-                <div id="edit-error-msg"
-                    class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
+                <div id="edit-error-msg" class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
                     style="font-size:0.8rem;"></div>
                 <div class="modal-pedido-section-label">
                     <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
@@ -23,30 +22,26 @@
                 <div class="row g-2 mb-3">
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">Cliente / Solicitante</label>
-                        <input type="text" id="edit-solicitante"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-solicitante" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Nome do solicitante">
                     </div>
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">Contato</label>
-                        <input type="text" id="edit-contato"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-contato" class="form-control form-control-sm modal-pedido-input"
                             placeholder="(00) 00000-0000">
                     </div>
                     <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">
                             <i class="bi bi-calendar3 me-1 text-danger"></i>Data
                         </label>
-                        <input type="text" id="edit-data"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-data" class="form-control form-control-sm modal-pedido-input"
                             readonly placeholder="dd/mm/aaaa">
                     </div>
                     <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">
                             <i class="bi bi-clock me-1 text-danger"></i>Hora
                         </label>
-                        <input type="text" id="edit-horario"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-horario" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Ex: 14:30" maxlength="5">
                     </div>
                 </div>
@@ -56,21 +51,18 @@
                 <div class="row g-2 mb-3">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Origem (De)</label>
-                        <input type="text" id="edit-de"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-de" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Endereço de origem">
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Destino (Para)</label>
-                        <input type="text" id="edit-para"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="edit-para" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Endereço de destino">
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="modal-pedido-field-label">Observação</label>
-                    <textarea id="edit-obs" rows="2"
-                        class="form-control form-control-sm modal-pedido-input"
+                    <textarea id="edit-obs" rows="2" class="form-control form-control-sm modal-pedido-input"
                         placeholder="Observações adicionais..."></textarea>
                 </div>
                 <div class="modal-pedido-section-label">
@@ -83,16 +75,14 @@
                                 <i class="bi bi-tag-fill me-1 text-success"></i>Valor Original do Pedido
                             </label>
                             <input type="text" id="edit-valor-pedido-display"
-                                class="form-control form-control-sm modal-pedido-input"
-                                readonly
+                                class="form-control form-control-sm modal-pedido-input" readonly data-moeda="true"
                                 style="font-weight:700;color:#28a745!important;background:#f6fff8!important;border-color:#c3e6cb!important;cursor:default;">
                         </div>
                     </div>
                     <div class="row g-2">
                         <div class="col-12 col-sm-4">
                             <label class="modal-pedido-field-label">Tipo de Espera</label>
-                            <select id="edit-espera-tipo"
-                                class="form-select form-select-sm modal-pedido-input"
+                            <select id="edit-espera-tipo" class="form-select form-select-sm modal-pedido-input"
                                 onchange="window.RDO_PEDIDOS.calcularEspera()">
                                 <option value="sem_espera">Sem espera</option>
                                 <option value="coleta">Espera na Coleta</option>
@@ -103,9 +93,8 @@
                         <div class="col-12 col-sm-4" id="box-espera-minutos" style="display:none;">
                             <label class="modal-pedido-field-label">Minutos de Espera</label>
                             <input type="number" id="edit-espera-minutos"
-                                class="form-control form-control-sm modal-pedido-input"
-                                min="0" step="1" placeholder="Ex: 25"
-                                oninput="window.RDO_PEDIDOS.calcularEspera()">
+                                class="form-control form-control-sm modal-pedido-input" min="0" step="1"
+                                placeholder="Ex: 25" oninput="window.RDO_PEDIDOS.calcularEspera()">
                         </div>
                         <div class="col-12 col-sm-4" id="box-espera-valor-final" style="display:block;">
                             <label class="modal-pedido-field-label">Valor Final</label>
@@ -155,12 +144,10 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-4">
-                    <button type="button" class="btn btn-cancelar-pedido flex-fill"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-cancelar-pedido flex-fill" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Cancelar
                     </button>
-                    <button type="button" id="btn-salvar-edicao"
-                        class="btn btn-salvar-pedido flex-fill"
+                    <button type="button" id="btn-salvar-edicao" class="btn btn-salvar-pedido flex-fill"
                         onclick="window.RDO_PEDIDOS.salvarEdicao()">
                         <i class="bi bi-check-lg me-1"></i>SALVAR
                     </button>
@@ -179,8 +166,8 @@
                     <div class="modal-pedido-title">Detalhes do Pedido</div>
                     <div class="modal-pedido-subtitle" id="detalhe-titulo">RDO000</div>
                 </div>
-                <button type="button" class="btn-close btn-close-white ms-auto"
-                    data-bs-dismiss="modal" aria-label="Fechar"></button>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"
+                    aria-label="Fechar"></button>
             </div>
             <div class="modal-pedido-body">
                 <div class="modal-pedido-section-label">
@@ -189,45 +176,45 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">N. Serviço</label>
-                        <input type="text" id="det-pedido-id"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-pedido-id" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">Data</label>
-                        <input type="text" id="det-data"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-data" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">Hora</label>
-                        <input type="text" id="det-horario"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-horario" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-3">
                         <label class="modal-pedido-field-label">Contato</label>
-                        <input type="text" id="det-contato"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-contato" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Cliente</label>
-                        <input type="text" id="det-cliente"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-cliente" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-2">
                         <label class="modal-pedido-field-label">Mercadoria</label>
-                        <input type="text" id="det-mercadoria"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-mercadoria" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-2">
                         <label class="modal-pedido-field-label">Retorno</label>
-                        <input type="text" id="det-retorno"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-retorno" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-2">
                         <label class="modal-pedido-field-label">Prioridade</label>
-                        <input type="text" id="det-prioridade"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-prioridade" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                 </div>
                 <div class="modal-pedido-section-label mt-3">
@@ -236,25 +223,24 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">De</label>
-                        <input type="text" id="det-de"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-de" class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Para</label>
-                        <input type="text" id="det-para"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-para" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Motoboy</label>
-                        <input type="text" id="det-motoboy"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-motoboy" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Status</label>
-                        <input type="text" id="det-status"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-status" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                 </div>
                 <div id="det-cancelamento-box" class="mb-2" style="display:none;">
@@ -281,21 +267,20 @@
                     </div>
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Taxa de Espera</label>
-                        <input type="text" id="det-taxa-espera"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-taxa-espera" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Valor Final</label>
-                        <input type="text" id="det-valor-final"
-                            class="form-control form-control-sm modal-pedido-input" readonly
-                            style="font-weight:700;color:#dc3545!important;">
+                        <input type="text" id="det-valor-final" class="form-control form-control-sm modal-pedido-input"
+                            readonly style="font-weight:700;color:#dc3545!important;">
                     </div>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Tipo de Espera</label>
-                        <input type="text" id="det-espera-tipo"
-                            class="form-control form-control-sm modal-pedido-input" readonly>
+                        <input type="text" id="det-espera-tipo" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Minutos de Espera</label>
@@ -305,12 +290,11 @@
                 </div>
                 <div class="mb-3">
                     <label class="modal-pedido-field-label">Observação</label>
-                    <textarea id="det-obs" rows="2"
-                        class="form-control form-control-sm modal-pedido-input" readonly></textarea>
+                    <textarea id="det-obs" rows="2" class="form-control form-control-sm modal-pedido-input"
+                        readonly></textarea>
                 </div>
                 <div class="d-flex gap-2 mt-4">
-                    <button type="button" class="btn btn-cancelar-pedido w-100"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-cancelar-pedido w-100" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Fechar
                     </button>
                 </div>
@@ -319,8 +303,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="modalNovoPedido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-pedido-edit-dialog">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-pedido-header d-flex align-items-center gap-3">
@@ -329,13 +313,12 @@
                     <div class="modal-pedido-title">Novo Pedido</div>
                     <div class="modal-pedido-subtitle">Preencha os dados abaixo</div>
                 </div>
-                <button type="button" class="btn-close btn-close-white ms-auto"
-                    data-bs-dismiss="modal" aria-label="Fechar"></button>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"
+                    aria-label="Fechar"></button>
             </div>
             <div class="modal-pedido-body">
                 <input type="hidden" id="novo-id-chat">
-                <div id="novo-error-msg"
-                    class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
+                <div id="novo-error-msg" class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
                     style="font-size:0.8rem;"></div>
                 <div class="modal-pedido-section-label">
                     <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
@@ -343,28 +326,24 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Cliente / Solicitante</label>
-                        <input type="text" id="novo-solicitante"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="novo-solicitante" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Nome do solicitante">
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Contato</label>
-                        <input type="text" id="novo-contato"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="novo-contato" class="form-control form-control-sm modal-pedido-input"
                             placeholder="(00) 00000-0000">
                     </div>
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Hora</label>
-                        <input type="text" id="novo-horario"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="novo-horario" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Ex: 14:30" maxlength="5">
                     </div>
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Mercadoria</label>
-                        <select id="novo-mercadoria"
-                            class="form-select form-select-sm modal-pedido-input">
+                        <select id="novo-mercadoria" class="form-select form-select-sm modal-pedido-input">
                             <option value="">Selecione...</option>
                             <option value="Sacola">Sacola</option>
                             <option value="Coleta">Coleta</option>
@@ -374,8 +353,7 @@
                     </div>
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Retorno</label>
-                        <select id="novo-retorno"
-                            class="form-select form-select-sm modal-pedido-input">
+                        <select id="novo-retorno" class="form-select form-select-sm modal-pedido-input">
                             <option value="Não">Não</option>
                             <option value="Sim">Sim</option>
                         </select>
@@ -384,8 +362,7 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-4">
                         <label class="modal-pedido-field-label">Prioridade</label>
-                        <select id="novo-prioridade"
-                            class="form-select form-select-sm modal-pedido-input">
+                        <select id="novo-prioridade" class="form-select form-select-sm modal-pedido-input">
                             <option value="0">Normal</option>
                             <option value="5">Agendado</option>
                             <option value="10">Urgente</option>
@@ -398,30 +375,25 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Origem (De)</label>
-                        <input type="text" id="novo-de"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="novo-de" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Endereço de origem">
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Destino (Para)</label>
-                        <input type="text" id="novo-para"
-                            class="form-control form-control-sm modal-pedido-input"
+                        <input type="text" id="novo-para" class="form-control form-control-sm modal-pedido-input"
                             placeholder="Endereço de destino">
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="modal-pedido-field-label">Observação</label>
-                    <textarea id="novo-obs" rows="2"
-                        class="form-control form-control-sm modal-pedido-input"
+                    <textarea id="novo-obs" rows="2" class="form-control form-control-sm modal-pedido-input"
                         placeholder="Observações adicionais..."></textarea>
                 </div>
                 <div class="d-flex gap-2 mt-4">
-                    <button type="button" class="btn btn-cancelar-pedido flex-fill"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-cancelar-pedido flex-fill" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Cancelar
                     </button>
-                    <button type="button" id="btn-salvar-novo"
-                        class="btn btn-salvar-pedido flex-fill"
+                    <button type="button" id="btn-salvar-novo" class="btn btn-salvar-pedido flex-fill"
                         onclick="window.RDO_PEDIDOS.salvarNovo()">
                         <i class="bi bi-plus-lg me-1"></i>CRIAR PEDIDO
                     </button>

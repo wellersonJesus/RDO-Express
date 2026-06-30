@@ -20,10 +20,6 @@
                     <div class="fin-form-section-label"><i class="bi bi-calendar-event me-1"></i>Informações Principais</div>
                     <div class="row g-3">
                         <div class="col-6">
-                            <label class="fin-field-label">Data <span class="text-danger">*</span></label>
-                            <input type="date" id="fin-data" class="form-control form-control-sm fin-field-input">
-                        </div>
-                        <div class="col-6">
                             <label class="fin-field-label">Tipo <span class="text-danger">*</span></label>
                             <select id="fin-tipo" class="form-select form-select-sm fin-field-input">
                                 <option value="">Selecione...</option>
@@ -31,22 +27,9 @@
                                 <option value="saida">Saída (Despesa)</option>
                             </select>
                         </div>
-                        <div class="col-12">
-                            <label class="fin-field-label">Descrição <span class="text-danger">*</span></label>
-                            <input type="text" id="fin-descricao" class="form-control form-control-sm fin-field-input" placeholder="Ex: Pagamento corrida cliente X">
-                        </div>
-                    </div>
-                </div>
-                <div class="fin-form-divider"></div>
-                <div class="fin-form-section">
-                    <div class="fin-form-section-label"><i class="bi bi-currency-dollar me-1"></i>Valores e Pagamento</div>
-                    <div class="row g-3">
                         <div class="col-6">
-                            <label class="fin-field-label">Valor (R$) <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text fin-field-prefix">R$</span>
-                                <input type="text" id="fin-valor" class="form-control form-control-sm fin-field-input" placeholder="0,00" inputmode="decimal">
-                            </div>
+                            <label class="fin-field-label">Data <span class="text-danger">*</span></label>
+                            <input type="date" id="fin-data" class="form-control form-control-sm fin-field-input">
                         </div>
                         <div class="col-6">
                             <label class="fin-field-label">Situação</label>
@@ -58,46 +41,51 @@
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="fin-field-label">Forma de Pagamento</label>
-                            <select id="fin-pagamento" class="form-select form-select-sm fin-field-input">
-                                <option value="">Selecione</option>
-                                <option value="pix">PIX</option>
-                                <option value="dinheiro">Dinheiro</option>
-                                <option value="cartao_credito">Cartão Crédito</option>
-                                <option value="cartao_debito">Cartão Débito</option>
-                                <option value="boleto">Boleto</option>
-                                <option value="transferencia">Transferência</option>
+                            <label class="fin-field-label">Colaborador</label>
+                            <select id="fin-colaborador" class="form-select form-select-sm fin-field-input">
+                                <option value="">— Nenhum —</option>
+                                <option value="motoboy">Motoboy</option>
+                                <option value="grupo">Grupo</option>
+                                <option value="equipe_rdo">Equipe RDO</option>
                             </select>
                         </div>
-                        <div class="col-6">
-                            <label class="fin-field-label">Categoria</label>
-                            <input type="text" id="fin-categoria" class="form-control form-control-sm fin-field-input" placeholder="Ex: Corrida, Combustível">
+                        <div class="col-12">
+                            <label class="fin-field-label">Descrição <span class="text-danger">*</span></label>
+                            <input type="text" id="fin-descricao" class="form-control form-control-sm fin-field-input" placeholder="Ex: Pagamento corrida cliente X">
                         </div>
                     </div>
                 </div>
                 <div class="fin-form-divider"></div>
                 <div class="fin-form-section">
-                    <div class="fin-form-section-label"><i class="bi bi-info-circle me-1"></i>Detalhes Adicionais</div>
+                    <div class="fin-form-section-label"><i class="bi bi-currency-dollar me-1"></i>Valor</div>
                     <div class="row g-3">
-                        <div class="col-6">
-                            <label class="fin-field-label">Motoboy</label>
-                            <input type="text" id="fin-motoboy" class="form-control form-control-sm fin-field-input" placeholder="Nome do motoboy">
-                        </div>
-                        <div class="col-6">
-                            <label class="fin-field-label">Pedido (ID)</label>
-                            <input type="text" id="fin-pedido" class="form-control form-control-sm fin-field-input" placeholder="ID do pedido vinculado">
-                        </div>
                         <div class="col-12">
-                            <label class="fin-field-label">Observação</label>
-                            <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2" placeholder="Detalhes adicionais..."></textarea>
+                            <label class="fin-field-label">Valor (R$) <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text fin-field-prefix">R$</span>
+                                <input type="text" id="fin-valor" class="form-control form-control-sm fin-field-input" placeholder="0,00" inputmode="decimal">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fin-preview-comissao" class="d-none mt-3 p-2 rounded-3" style="background:#f8f9fa;font-size:.72rem;">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Total</span>
+                            <span id="preview-valor-total" class="fw-semibold"></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Colaborador (<span id="preview-pct-colab">80</span>%)</span>
+                            <span id="preview-valor-colab" class="fw-semibold" style="color:#6f42c1;"></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Empresa (<span id="preview-pct-empresa">20</span>%)</span>
+                            <span id="preview-valor-empresa" class="fw-semibold" style="color:#0d6efd;"></span>
                         </div>
                     </div>
                 </div>
-                <div class="fin-form-valor-destaque d-none" id="fin-form-valor-destaque">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span class="fin-form-valor-label">VALOR DO LANÇAMENTO</span>
-                        <span class="fin-form-valor-total" id="fin-form-valor-preview">R$ 0,00</span>
-                    </div>
+                <div class="fin-form-divider"></div>
+                <div class="fin-form-section">
+                    <div class="fin-form-section-label"><i class="bi bi-chat-left-text me-1"></i>Observação</div>
+                    <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2" placeholder="Observações opcionais..." style="resize:none;"></textarea>
                 </div>
             </div>
             <div class="fin-form-footer">

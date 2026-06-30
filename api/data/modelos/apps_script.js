@@ -42,6 +42,9 @@ function doPost(e) {
     if (action === "validarsenhamaster")
       return responder(processarValidarSenhaMaster(data.senha));
 
+    if (action === "deletechat")
+      return responder(processarDeleteChat(ss, data));
+
     var entidade = extrairEntidade(action);
     var nomeAba  = mapearEntidade(entidade);
     var sheet    = buscarAba(ss, nomeAba);
@@ -60,6 +63,41 @@ function doPost(e) {
   } catch (err) {
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
   }
+}
+
+function processarDeleteChat(ss, data) {
+  var sheetChat = buscarAba(ss, "chat");
+  if (!sheetChat) return { status: "error", message: "Aba 'chat' nao encontrada" };
+
+  var pedidoId = String(data.pedido_id || data.id || "").trim();
+  if (!pedidoId) return { status: "error", message: "pedido_id nao informado" };
+
+  var rows    = sheetChat.getDataRange().getValues();
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colPedidoId = headers.indexOf("pedido_id");
+  var colId       = headers.indexOf("id");
+
+  if (colPedidoId === -1 && colId === -1)
+    return { status: "error", message: "Coluna 'pedido_id' nao encontrada na aba chat" };
+
+  var colBusca   = colPedidoId !== -1 ? colPedidoId : colId;
+  var pedidoNorm = pedidoId.replace(/^RDO0*/i, "").trim();
+  var deletados  = 0;
+
+  for (var i = rows.length - 1; i >= 1; i--) {
+    var valCelula = String(rows[i][colBusca]).trim();
+    var valNorm   = valCelula.replace(/^RDO0*/i, "").trim();
+    if (valCelula === pedidoId || valNorm === pedidoNorm ||
+        valCelula.toUpperCase() === pedidoId.toUpperCase()) {
+      sheetChat.deleteRow(i + 1);
+      deletados++;
+    }
+  }
+
+  if (deletados > 0)
+    return { status: "success", message: "Chat excluido! Registros: " + deletados };
+
+  return { status: "success", message: "Nenhum chat encontrado para pedido_id: " + pedidoId };
 }
 
 function processarCriarPedido(sheetPedidos, data) {
@@ -383,7 +421,6 @@ function processarAdd(sheet, data, entity) {
   var headers = obterHeaders(sheet);
   var idIndex = headers.indexOf("id");
 
-  // Preserva o ID vindo do payload; só gera se realmente estiver vazio
   if (idIndex !== -1) {
     var idAtual = data.id !== undefined && data.id !== null ? String(data.id).trim() : "";
     if (!idAtual) data.id = gerarId(sheet, entity);
