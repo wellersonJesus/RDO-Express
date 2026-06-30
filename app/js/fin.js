@@ -9,6 +9,7 @@
     cache: [],
     pedidosCache: {},
     clientesCache: {},
+    colaboradoresCache: {},   
     colaboradores: [],
     caixaValoresVisiveis: false,
     tabAtual: 'todos',
@@ -98,7 +99,19 @@
     var situacao = (d.situacao || d.status || 'pendente').toString().trim().toLowerCase();
     var idPedido = (d.id_pedido || d.idPedido || d.pedido_id || '').toString().trim();
     var colaboradorId = (d.colaborador_id || '').toString().trim();
-    var motoboy = (d.motoboy || d.colaborador || '').toString().trim();
+
+    // ── Resolve username do colaborador pelo colaborador_id ──────────────────
+    // O campo motoboy no backend guarda o id OU o nome; priorizamos o lookup
+    var motoboyRaw = (d.motoboy || d.colaborador || '').toString().trim();
+    var motoboyNome = motoboyRaw;
+    if (colaboradorId && state.colaboradoresCache[colaboradorId]) {
+      motoboyNome = state.colaboradoresCache[colaboradorId].username || motoboyRaw;
+    } else if (motoboyRaw && state.colaboradoresCache[motoboyRaw]) {
+      // campo motoboy já veio com o id diretamente
+      motoboyNome = state.colaboradoresCache[motoboyRaw].username || motoboyRaw;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     var observacao = (d.observacao || d.obs || '').toString().trim();
 
     var valorColabBackend = parseFloat(d.valor_colaborador);
@@ -113,7 +126,7 @@
       if (temValoresBackend) {
         valorColab = valorColabBackend;
         valorEmpresa = valorEmpresaBackend;
-      } else if (colaboradorId || motoboy) {
+      } else if (colaboradorId || motoboyNome) {
         valorColab = valorNorm * (percentualComissao / 100);
         valorEmpresa = valorNorm * (pctEmpresa / 100);
       } else {
@@ -135,7 +148,7 @@
       valorEmpresa: valorEmpresa,
       percentualComissao: percentualComissao,
       colaboradorId: colaboradorId,
-      motoboy: motoboy || '-',
+      motoboy: motoboyNome || '-',   // ← agora é sempre o username
       situacao: situacao,
       observacao: observacao,
       grupo: (d.grupo || d.category || d.categoria || '').toString().trim(),
@@ -148,25 +161,40 @@
     for (var i = 0; i < state.cache.length; i++) {
       var reg = state.cache[i];
       var idPedido = (reg.idPedido || '').toString().trim();
+
       if (!idPedido) {
         if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
         if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
         continue;
       }
+
       var pedido = state.pedidosCache[idPedido];
       if (!pedido) {
         if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
         if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
         continue;
       }
+
+      // solicitante
       if (!reg.solicitante || reg.solicitante === '' || reg.solicitante === '-')
         reg.solicitante = (pedido.solicitante || '').toString().trim() || '-';
+
+      // cliente
       if (!reg.cliente || reg.cliente === '' || reg.cliente === '-') {
         var idCliente = (pedido.id_cliente || '').toString().trim();
         reg.cliente = (idCliente && state.clientesCache[idCliente])
           ? (state.clientesCache[idCliente].username || '').toString().trim() || '-'
           : '-';
       }
+
+      // ── Motoboy via pedido (fallback quando financeiro não tem colaborador_id) ──
+      if (!reg.colaboradorId && (reg.motoboy === '-' || reg.motoboy === '')) {
+        var colabIdPedido = (pedido.colaborador_id || '').toString().trim();
+        if (colabIdPedido && state.colaboradoresCache[colabIdPedido]) {
+          reg.motoboy = state.colaboradoresCache[colabIdPedido].username || '-';
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────────────
     }
   }
 
@@ -1629,6 +1657,8 @@
       window.API.call('getclientes', {}),
       window.API.call('getColaboradores', {})
     ]).then(function (results) {
+
+      // ── Clientes ────────────────────────────────────────────────────────────
       var clientesArr = extrairArray(results[2]);
       state.clientesCache = {};
       clientesArr.forEach(function (cli) {
@@ -1641,6 +1671,20 @@
         };
       });
 
+      // ── Colaboradores → cache id → username ─────────────────────────────────
+      var colaboradoresArr = extrairArray(results[3]);
+      state.colaboradoresCache = {};
+      state.colaboradores = colaboradoresArr;
+      colaboradoresArr.forEach(function (col) {
+        var colId = (col.id || '').toString().trim();
+        if (colId) state.colaboradoresCache[colId] = {
+          id: colId,
+          username: (col.username || '').toString().trim(),
+          colaborador: (col.colaborador || '').toString().trim()
+        };
+      });
+
+      // ── Pedidos → inclui colaborador_id para fallback ────────────────────────
       var pedidosArr = extrairArray(results[1]);
       state.pedidosCache = {};
       pedidosArr.forEach(function (ped) {
@@ -1648,12 +1692,13 @@
         if (pedId) state.pedidosCache[pedId] = {
           id: pedId,
           id_cliente: (ped.id_cliente || '').toString().trim(),
-          solicitante: (ped.solicitante || '').toString().trim()
+          solicitante: (ped.solicitante || '').toString().trim(),
+          colaborador_id: (ped.colaborador_id || '').toString().trim()  // ← NOVO
         };
       });
 
-      state.colaboradores = extrairArray(results[3]);
-
+      // ── Financeiro ──────────────────────────────────────────────────────────
+      // colaboradoresCache já populado ANTES de normalizar
       var finArr = extrairArray(results[0]);
       state.cache = [];
       finArr.forEach(function (item) {
@@ -1666,6 +1711,7 @@
       renderTodos();
       renderCaixa();
       renderizarListaExtratos();
+
     }).catch(function (e) {
       console.error('[Fin][carregarDados] Erro:', e);
       finToast('Erro ao carregar dados.', 'danger');
