@@ -554,9 +554,12 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             container.appendChild(sep);
         }
 
-        var pedido = pedidos.find(function (p) { return String(p.id).trim() === String(msg.pedido_id).trim(); });
+        var pedido = pedidos.find(function (p) {
+            return String(p.id).trim() === String(msg.pedido_id).trim();
+        });
+
         var statusBruto = String(pedido ? pedido.status : '').trim();
-        var motoboyNome = String(pedido ? pedido.motoboy : '').trim();
+        var motoboyNome = String(pedido ? (pedido.motoboy || '') : '').trim();
         var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
         var statusUpper = statusPuro.toUpperCase();
         var isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
@@ -567,13 +570,94 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             ? (motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel)
             : 'Alterar Status';
 
+        // FIX: Usa sempre msg.texto se existir — nunca sobrescreve com texto gerado
+        var textoMensagem = _resolverTextoMensagem(msg, pedido);
+
         container.appendChild(
-            _criarWrapperMensagem(msg.pedido_id, msg.texto || '', msg.hora || '', temStatus, statusPuro, tooltipTexto)
+            _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
         );
     });
 
     container.scrollTop = container.scrollHeight;
 };
+
+// FIX PRINCIPAL: Preserva msg.texto original do banco; só gera fallback se realmente não houver texto
+function _resolverTextoMensagem(msg, pedido) {
+    // Se a mensagem tem texto salvo no banco, usa SEMPRE esse texto — sem alteração
+    if (msg && msg.texto && String(msg.texto).trim().length > 0) {
+        return String(msg.texto).trim();
+    }
+
+    // Fallback: monta texto apenas se não há texto salvo
+    if (!pedido) return '';
+
+    var idBruto = String(pedido.id || '').trim();
+    var nomeServico = idBruto.toUpperCase().startsWith('RDO')
+        ? idBruto.toUpperCase()
+        : (idBruto ? 'RDO' + String(idBruto).padStart(3, '0') : 'N/D');
+
+    var solicitante = String(pedido.solicitante || 'Não informado');
+    var contato = String(pedido.contato || '');
+    var mercadoria = String(pedido.mercadoria || 'ENTREGA');
+
+    var linhas = [
+        '📦 N.SERVIÇO: ' + nomeServico,
+        '👤 : ' + solicitante + ' 📞 : ' + contato,
+        '📦 : (' + mercadoria + ')',
+        '.',
+        '📍 ROTAS:'
+    ];
+
+    var rotasTexto = String(pedido.rotas || (pedido.de && pedido.para
+        ? ('1. De: ' + (pedido.de || '') + ' | Para: ' + (pedido.para || ''))
+        : ''));
+
+    if (rotasTexto) {
+        rotasTexto.split('\n').forEach(function (linha) {
+            linha = linha.trim();
+            if (linha) {
+                linhas.push(linha);
+                linhas.push('.');
+            }
+        });
+    }
+
+    var distancia = parseFloat(String(pedido.distancia || '0').replace(',', '.')) || 0;
+    var tempo = String(pedido.tempo || '');
+    var valor = _parseMoedaSeguro(pedido.valor_total || pedido.valor_final || 0);
+
+    linhas.push(
+        '🛣️ ' + distancia.toFixed(2) + ' km ' +
+        '⏱️ ' + (tempo || '—') + ' ' +
+        '💰 ' + valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    );
+
+    return linhas.join('\n');
+}
+
+function _parseMoedaSeguro(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+    var n = Number(valor);
+    if (!isNaN(n)) return n;
+    var str = String(valor).trim().replace(/R\$\s*/gi, '');
+    var temVirgula = str.includes(',');
+    var temPonto = str.includes('.');
+    if (temVirgula && temPonto) {
+        var iPonto = str.lastIndexOf('.');
+        var iVirgula = str.lastIndexOf(',');
+        if (iVirgula > iPonto) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            str = str.replace(/,/g, '');
+        }
+    } else if (temVirgula) {
+        str = str.replace(',', '.');
+    }
+    var num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+}
+
+window._parseMoedaSeguro = _parseMoedaSeguro;
 
 function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
     var div = document.createElement('div');
@@ -678,6 +762,12 @@ window.StatusModal = (function () {
         } catch (_) { }
     }
 
+    // Normaliza ID removendo prefixo RDO e zeros à esquerda para comparação com a API
+    function _normalizarId(id) {
+        var s = String(id || '').trim();
+        return s.replace(/^RDO0*/i, '') || s;
+    }
+
     function _getIconEl(id) {
         var msgEl = document.querySelector('[data-pedido-id="' + id + '"]');
         return msgEl ? msgEl.querySelector('.status-icon') : null;
@@ -714,8 +804,9 @@ window.StatusModal = (function () {
         try {
             var cache = window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)
                 ? window.AppRDO.pedidosCache : [];
+            var idNorm = _normalizarId(id);
             var pedido = cache.find(function (p) {
-                return String(p.id || '').trim() === String(id || '').trim();
+                return _normalizarId(String(p.id || '').trim()) === idNorm;
             });
             if (!pedido) return;
             pedido.status = statusFmt;
@@ -770,8 +861,10 @@ window.StatusModal = (function () {
         try { if (_modalBS) _modalBS.hide(); } catch (_) { }
 
         try {
+            var idParaApi = _normalizarId(_pedidoId);
+
             var payload = {
-                id: String(_pedidoId || ''),
+                id: idParaApi,
                 status: statusFmt,
                 motoboy: motoboyNome
             };
@@ -782,13 +875,32 @@ window.StatusModal = (function () {
             var resposta = await API.call('updatepedido', payload);
 
             if (resposta && resposta.status === 'success') {
+                // Atualiza cache local do chat
                 _atualizarCache(_pedidoId, statusFmt, motoboyNome);
+                // Atualiza ícone na bolha do chat
                 _setIconeFinal(_pedidoId, status, motoboyNome);
-                try {
-                    if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
-                        window.RDO_PEDIDOS.atualizarStatusLocal(_pedidoId, statusFmt, motoboyNome);
-                    }
-                } catch (_) { }
+
+                // FIX: Atualiza a lista de pedidos em pedidos.js
+                if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
+                    window.RDO_PEDIDOS.atualizarStatusLocal(
+                        _pedidoId,
+                        statusFmt,
+                        motoboyNome,
+                        (motivosCancelamento && motivosCancelamento.length > 0)
+                            ? motivosCancelamento.join(' | ')
+                            : undefined
+                    );
+                }
+
+                // FIX: Emite evento para qualquer outro listener (ex: EventBus)
+                if (typeof window.EventBus !== 'undefined') {
+                    window.EventBus.emit('pedido:statusAtualizado', {
+                        id: _pedidoId,
+                        status: statusFmt,
+                        motoboy: motoboyNome,
+                        motivo_cancelamento: motivosCancelamento ? motivosCancelamento.join(' | ') : ''
+                    });
+                }
             } else {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
@@ -818,8 +930,9 @@ window.StatusModal = (function () {
 
             var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
                 ? window.AppRDO.pedidosCache : [];
+            var idNorm = _normalizarId(String(pedidoId).trim());
             var pedido = cache.find(function (p) {
-                return String(p.id || '').trim() === String(pedidoId).trim();
+                return _normalizarId(String(p.id || '').trim()) === idNorm;
             });
             var statusBruto = String(pedido ? pedido.status : '').trim();
             var statusPuro = statusBruto.includes('/')
@@ -842,7 +955,7 @@ window.StatusModal = (function () {
                 return;
             }
 
-            _pedidoId = pedidoId;
+            _pedidoId = String(pedidoId).trim();
             _resetar();
 
             var modalEl = _el('modalStatus');
@@ -1230,16 +1343,17 @@ window.enviarMensagemGeral = function () {
 };
 
 window.gerarMensagemFormatada = function (dados) {
-    var idBruto = String(dados.numeroServico || dados.id || '').trim();
+    var idBruto = String(dados.id || dados.numeroServico || '').trim();
     var nomeServico = idBruto.toUpperCase().startsWith('RDO')
-        ? idBruto
-        : (idBruto ? 'RDO' + idBruto : 'N/D');
+        ? idBruto.toUpperCase()
+        : (idBruto ? 'RDO' + String(idBruto).padStart(3, '0') : 'N/D');
 
     var linhas = [
         '📦 N.SERVIÇO: ' + nomeServico,
         '👤 : ' + (dados.solicitante || 'Não informado') + ' 📞 : ' + (dados.contato || ''),
-        '📦 : ' + (dados.mercadoria || 'ENTREGA'),
-        '.', '📍 ROTAS:'
+        '📦 : (' + (dados.mercadoria || 'ENTREGA') + ')',
+        '.',
+        '📍 ROTAS:'
     ];
 
     if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
@@ -1385,15 +1499,15 @@ window.prosseguirParaFormulario = function () {
 };
 
 window.calcularTudo = function () {
-    var distancia  = parseFloat((document.getElementById('p-distancia')  || {}).value) || 0;
-    var valorKm    = parseFloat((document.getElementById('p-valor-km')   || {}).value) || 3.00;
-    var retorno    = parseFloat((document.getElementById('p-retorno')    || {}).value) || 0;
-    var dinamica   = parseFloat((document.getElementById('p-dinamica')   || {}).value) || 0;
+    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value) || 0;
+    var valorKm = parseFloat((document.getElementById('p-valor-km') || {}).value) || 3.00;
+    var retorno = parseFloat((document.getElementById('p-retorno') || {}).value) || 0;
+    var dinamica = parseFloat((document.getElementById('p-dinamica') || {}).value) || 0;
     var prioridade = parseFloat((document.getElementById('p-prioridade') || {}).value) || 0;
 
-    var base        = distancia * valorKm;
+    var base = distancia * valorKm;
     var taxaRetorno = retorno > 0 ? base * retorno : 0;
-    var total       = base + taxaRetorno + dinamica + prioridade;
+    var total = base + taxaRetorno + dinamica + prioridade;
 
     var elFinal = document.getElementById('view-valor-final');
     if (elFinal) {
@@ -1402,10 +1516,10 @@ window.calcularTudo = function () {
 
     if (window.dadosPedidoAtual) {
         window.dadosPedidoAtual.valorEstimado = total;
-        window.dadosPedidoAtual.valorKm       = valorKm;
-        window.dadosPedidoAtual.retorno       = retorno;
-        window.dadosPedidoAtual.dinamica      = dinamica;
-        window.dadosPedidoAtual.prioridade    = prioridade;
+        window.dadosPedidoAtual.valorKm = valorKm;
+        window.dadosPedidoAtual.retorno = retorno;
+        window.dadosPedidoAtual.dinamica = dinamica;
+        window.dadosPedidoAtual.prioridade = prioridade;
     }
 };
 
@@ -1415,7 +1529,7 @@ window.remitirPedido = async function () {
         if (!el) return false;
         var val = String(el.value || '').trim();
         if (!val) {
-            el.style.border    = '2px solid #dc3545';
+            el.style.border = '2px solid #dc3545';
             el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
             setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
             return false;
@@ -1435,23 +1549,56 @@ window.remitirPedido = async function () {
 
     var dados = window.dadosPedidoAtual || {};
 
+    var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
+    var contato = String((document.getElementById('p-contato') || {}).value || dados.contato || '').trim();
+    var horario = String((document.getElementById('p-horario') || {}).value || dados.horario || '').trim();
+    var mercadoria = String((document.getElementById('p-mercadoria') || {}).value || dados.mercadoria || 'ENTREGA').trim();
+    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
+    var tempo = String((document.getElementById('p-tempo') || {}).value || '').trim();
+    var obs = String((document.getElementById('p-obs') || {}).value || dados.obs || '').trim();
+    var valorKm = String((document.getElementById('p-valor-km') || {}).value || '3').trim();
+    var retorno = String((document.getElementById('p-retorno') || {}).value || '0').trim();
+    var dinamica = String((document.getElementById('p-dinamica') || {}).value || '0').trim();
+    var prioridade = String((document.getElementById('p-prioridade') || {}).value || '0').trim();
+    var valorTotal = Number(dados.valorEstimado || 0);
+
+    var rotasTexto = '';
+    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
+        rotasTexto = dados.rotasProcessadas.map(function (r, i) {
+            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+        }).join('\n');
+    } else {
+        rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
+    }
+
+    var dadosParaMensagem = Object.assign({}, dados, {
+        id: '',
+        solicitante: solicitante,
+        contato: contato,
+        mercadoria: mercadoria,
+        rotasProcessadas: dados.rotasProcessadas || [],
+        distanciaTotal: distancia,
+        tempoTotal: dados.tempoTotal || 0,
+        valorEstimado: valorTotal
+    });
+
     var payload = {
-        id_cliente  : String((window.AppRDO && window.AppRDO.clienteId) || ''),
-        solicitante : String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim(),
-        contato     : String((document.getElementById('p-contato')     || {}).value || dados.contato     || '').trim(),
-        horario     : String((document.getElementById('p-horario')     || {}).value || dados.horario     || '').trim(),
-        mercadoria  : String((document.getElementById('p-mercadoria')  || {}).value || dados.mercadoria  || 'ENTREGA').trim(),
-        rotas       : String((document.getElementById('p-rotas')       || {}).value || '').trim(),
-        distancia   : String((document.getElementById('p-distancia')   || {}).value || dados.distanciaTotal || '0').trim(),
-        tempo       : String((document.getElementById('p-tempo')       || {}).value || '').trim(),
-        obs         : String((document.getElementById('p-obs')         || {}).value || dados.obs         || '').trim(),
-        valor_km    : String((document.getElementById('p-valor-km')    || {}).value || '3').trim(),
-        retorno     : String((document.getElementById('p-retorno')     || {}).value || '0').trim(),
-        dinamica    : String((document.getElementById('p-dinamica')    || {}).value || '0').trim(),
-        prioridade  : String((document.getElementById('p-prioridade')  || {}).value || '0').trim(),
-        valor_total : String(dados.valorEstimado || 0),
-        mensagem    : '',
-        status      : 'PENDENTE'
+        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
+        solicitante: solicitante,
+        contato: contato,
+        horario: horario,
+        mercadoria: mercadoria,
+        rotas: rotasTexto,
+        distancia: distancia.toFixed(2),
+        tempo: tempo,
+        obs: obs,
+        valor_km: valorKm,
+        retorno: retorno,
+        dinamica: dinamica,
+        prioridade: prioridade,
+        valor_total: valorTotal,
+        valor_final: valorTotal,
+        status: 'PENDENTE'
     };
 
     if (!payload.id_cliente) {
@@ -1459,10 +1606,10 @@ window.remitirPedido = async function () {
         return;
     }
 
-    var btnRemitir    = document.getElementById('btn-remitir-pedido');
+    var btnRemitir = document.getElementById('btn-remitir-pedido');
     var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
     if (btnRemitir) {
-        btnRemitir.disabled  = true;
+        btnRemitir.disabled = true;
         btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
     }
 
@@ -1472,42 +1619,47 @@ window.remitirPedido = async function () {
             throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
         }
 
-        var novoPedidoId = resposta.id || resposta.pedido_id || null;
+        var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
+        var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
 
-        var dadosComId = Object.assign({}, dados, { id: novoPedidoId ? String(novoPedidoId) : '' });
+        dadosParaMensagem.id = novoPedidoIdRaw;
         var mensagemFinal = typeof window.gerarMensagemFormatada === 'function'
-            ? window.gerarMensagemFormatada(dadosComId)
+            ? window.gerarMensagemFormatada(dadosParaMensagem)
             : '';
 
         var modalForm = document.getElementById('modalFormulario');
-        var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+        var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
         if (instForm) { try { instForm.hide(); } catch (_) { } }
 
         if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function') {
-            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId);
+            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
         }
 
         if (novoPedidoId) {
-            var novoPedido = Object.assign({}, payload, {
-                id      : String(novoPedidoId),
-                status  : 'PENDENTE',
-                motoboy : '',
+            var novoPedidoCache = Object.assign({}, payload, {
+                id: novoPedidoId,
+                status: 'PENDENTE',
+                motoboy: '',
                 mensagem: mensagemFinal
             });
             if (Array.isArray(window.AppRDO.pedidosCache))
-                window.AppRDO.pedidosCache.push(novoPedido);
+                window.AppRDO.pedidosCache.push(novoPedidoCache);
             if (Array.isArray(window.AppRDO.mensagensCache))
                 window.AppRDO.mensagensCache.push({
-                    id_cliente : payload.id_cliente,
-                    pedido_id  : String(novoPedidoId),
-                    texto      : mensagemFinal,
-                    hora       : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    data       : new Date().toISOString()
+                    id_cliente: payload.id_cliente,
+                    pedido_id: novoPedidoId,
+                    texto: mensagemFinal,
+                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    data: new Date().toISOString()
                 });
+
+            if (typeof window.EventBus !== 'undefined') {
+                window.EventBus.emit('pedido:adicionado', novoPedidoCache);
+            }
         }
 
-        window.dadosPedidoAtual            = {};
-        window.AppRDO._mapaModalAberto     = false;
+        window.dadosPedidoAtual = {};
+        window.AppRDO._mapaModalAberto = false;
         window.AppRDO.isProcessingCheckout = false;
 
         var msgInput = document.getElementById('msg-input');
@@ -1548,35 +1700,35 @@ window._preencherFormulario = function (dados) {
     var _setInput = function (id, valor) {
         var el = document.getElementById(id);
         if (!el) return;
-        el.value       = valor;
-        el.style.border     = '';
-        el.style.boxShadow  = '';
+        el.value = valor;
+        el.style.border = '';
+        el.style.boxShadow = '';
     };
 
     var _setSelect = function (id, valor) {
         var el = document.getElementById(id);
         if (!el || valor == null) return;
-        var str      = String(valor);
+        var str = String(valor);
         var encontrou = Array.prototype.some.call(el.options, function (o) {
             return o.value === str;
         });
         if (encontrou) el.value = str;
-        el.style.border    = '';
+        el.style.border = '';
         el.style.boxShadow = '';
     };
 
     _setInput('p-solicitante', dados.solicitante || '');
-    _setInput('p-contato',     dados.contato     || '');
-    _setInput('p-horario',     dados.horario     || '');
-    _setInput('p-distancia',   Number(dados.distanciaTotal || 0).toFixed(2));
-    _setInput('p-tempo',       dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
-    _setInput('p-obs',         dados.obs         || '');
+    _setInput('p-contato', dados.contato || '');
+    _setInput('p-horario', dados.horario || '');
+    _setInput('p-distancia', Number(dados.distanciaTotal || 0).toFixed(2));
+    _setInput('p-tempo', dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
+    _setInput('p-obs', dados.obs || '');
 
-    _setSelect('p-mercadoria', dados.mercadoria  || 'ENTREGA');
-    _setSelect('p-valor-km',   dados.valorKm     != null ? dados.valorKm   : '3.00');
-    _setSelect('p-retorno',    dados.retorno     != null ? dados.retorno    : '0');
-    _setSelect('p-dinamica',   dados.dinamica    != null ? dados.dinamica   : '0');
-    _setSelect('p-prioridade', dados.prioridade  != null ? dados.prioridade : '0');
+    _setSelect('p-mercadoria', dados.mercadoria || 'ENTREGA');
+    _setSelect('p-valor-km', dados.valorKm != null ? dados.valorKm : '3.00');
+    _setSelect('p-retorno', dados.retorno != null ? dados.retorno : '0');
+    _setSelect('p-dinamica', dados.dinamica != null ? dados.dinamica : '0');
+    _setSelect('p-prioridade', dados.prioridade != null ? dados.prioridade : '0');
 
     var elRotas = document.getElementById('p-rotas');
     if (elRotas && dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
@@ -1708,7 +1860,6 @@ window.fecharParaChat = function (modalId) {
         window.EventBus.on('pedido:excluido', function (dados) {
             var idStr = String(dados.id).trim();
 
-            // 1. Remove dos caches locais
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return String(m.pedido_id).trim() !== idStr;
@@ -1720,7 +1871,6 @@ window.fecharParaChat = function (modalId) {
                 });
             }
 
-            // 2. Anima e remove o elemento do DOM imediatamente
             var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
@@ -1734,10 +1884,8 @@ window.fecharParaChat = function (modalId) {
                 }
             }
 
-            // 3. Recarrega a conversa do cliente ativo (equivale a clicar no botão de sync)
             var clienteId = window.AppRDO && window.AppRDO.clienteId;
             if (clienteId) {
-                // Aguarda a animação terminar antes de recarregar
                 setTimeout(function () {
                     if (!window.AppRDO.isFetching) {
                         _spinChatOn();
@@ -1746,6 +1894,21 @@ window.fecharParaChat = function (modalId) {
                         });
                     }
                 }, 350);
+            }
+        });
+
+        // FIX: Listener para atualização de status vinda de pedidos.js ou outros módulos
+        window.EventBus.on('pedido:statusAtualizado', function (dados) {
+            var idStr = String(dados.id || '').trim();
+            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === idStr ||
+                    String(p.id || '').trim().replace(/^RDO0*/i, '') === idStr.replace(/^RDO0*/i, '');
+            });
+            if (pedido) {
+                pedido.status = dados.status || pedido.status;
+                if (dados.motoboy) pedido.motoboy = dados.motoboy;
+                if (dados.motivo_cancelamento !== undefined) pedido.motivo_cancelamento = dados.motivo_cancelamento;
             }
         });
     }
