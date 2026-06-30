@@ -79,50 +79,58 @@
     return { iso: '', br: raw, display: raw };
   }
 
+  function parseCurrencyField(v) {
+    if (v === null || v === undefined) return NaN;
+    if (typeof v === 'number') return v;
+    var s = String(v)
+      .replace(/R\$\s*/g, '')
+      .replace(/%/g, '')
+      .replace(/\s/g, '');
+    if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.indexOf(',') !== -1) {
+      s = s.replace(',', '.');
+    }
+    return parseFloat(s);
+  }
+
   function normalizarRegistro(d) {
     var tipoRaw = (d.tipo || d.type || '').toString().trim().toUpperCase();
-    var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME') ? 'entrada' : 'saida';
+    var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME')
+      ? 'entrada' : 'saida';
+
     var dataObj = parseData(d.data);
-    var valorRaw = d.valor;
-    var valorNorm = 0;
-    if (typeof valorRaw === 'number') {
-      valorNorm = valorRaw;
-    } else if (typeof valorRaw === 'string') {
-      var cleaned = valorRaw.replace('R$', '').replace(/\s/g, '');
-      if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
-        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-      } else if (cleaned.indexOf(',') !== -1) {
-        cleaned = cleaned.replace(',', '.');
-      }
-      valorNorm = parseFloat(cleaned) || 0;
-    }
+
+    var valorNorm = parseCurrencyField(d.valor);
+    if (isNaN(valorNorm)) valorNorm = 0;
+
     var situacao = (d.situacao || d.status || 'pendente').toString().trim().toLowerCase();
     var idPedido = (d.id_pedido || d.idPedido || d.pedido_id || '').toString().trim();
     var colaboradorId = (d.colaborador_id || '').toString().trim();
 
-    // ── Resolve username do colaborador pelo colaborador_id ──────────────────
-    // O campo motoboy no backend guarda o id OU o nome; priorizamos o lookup
+    // Resolve username do colaborador pelo colaborador_id
     var motoboyRaw = (d.motoboy || d.colaborador || '').toString().trim();
     var motoboyNome = motoboyRaw;
     if (colaboradorId && state.colaboradoresCache[colaboradorId]) {
       motoboyNome = state.colaboradoresCache[colaboradorId].username || motoboyRaw;
     } else if (motoboyRaw && state.colaboradoresCache[motoboyRaw]) {
-      // campo motoboy já veio com o id diretamente
       motoboyNome = state.colaboradoresCache[motoboyRaw].username || motoboyRaw;
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     var observacao = (d.observacao || d.obs || '').toString().trim();
 
-    var valorColabBackend = parseFloat(d.valor_colaborador);
-    var valorEmpresaBackend = parseFloat(d.valor_empresa);
-    var percentualComissao = parseFloat(d.percentual_comissao) || 80;
+    var valorColabBackend = parseCurrencyField(d.valor_colaborador);
+    var valorEmpresaBackend = parseCurrencyField(d.valor_empresa);
+    var percentualComissao = parseCurrencyField(d.percentual_comissao);
+    if (isNaN(percentualComissao) || percentualComissao <= 0) percentualComissao = 80;
     var pctEmpresa = 100 - percentualComissao;
 
     var valorColab = 0, valorEmpresa = 0;
     if (tipoNorm === 'entrada') {
-      var temValoresBackend = !isNaN(valorColabBackend) && !isNaN(valorEmpresaBackend) &&
+      var temValoresBackend =
+        !isNaN(valorColabBackend) && !isNaN(valorEmpresaBackend) &&
         (valorColabBackend > 0 || valorEmpresaBackend > 0);
+
       if (temValoresBackend) {
         valorColab = valorColabBackend;
         valorEmpresa = valorEmpresaBackend;
@@ -148,7 +156,7 @@
       valorEmpresa: valorEmpresa,
       percentualComissao: percentualComissao,
       colaboradorId: colaboradorId,
-      motoboy: motoboyNome || '-',   // ← agora é sempre o username
+      motoboy: motoboyNome || '-',
       situacao: situacao,
       observacao: observacao,
       grupo: (d.grupo || d.category || d.categoria || '').toString().trim(),
@@ -845,14 +853,17 @@
 
   function renderTodos() {
     if (!els.tbodyTodos) return;
+
     var lista = dadosFiltradosTodos();
     lista.sort(function (a, b) {
       var da = a.dataISO || '', db = b.dataISO || '';
       return state.sortDataDesc ? db.localeCompare(da) : da.localeCompare(db);
     });
+
     var total = lista.length;
     state.todos.totalPag = Math.max(1, Math.ceil(total / state.todos.porPagina));
     state.todos.pagina = Math.min(Math.max(1, state.todos.pagina), state.todos.totalPag);
+
     var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
     var paginaAtual = lista.slice(inicio, inicio + state.todos.porPagina);
 
@@ -865,17 +876,21 @@
       els.tbodyTodos.innerHTML = paginaAtual.map(function (d, i) {
         var cliente = (d.cliente && d.cliente !== '-' && d.cliente !== '') ? d.cliente : '-';
         var motoboy = (d.motoboy && d.motoboy !== '-' && d.motoboy !== '') ? d.motoboy : '-';
-        return '<tr>' +
+
+        return (
+          '<tr>' +
           '<td class="ps-3" style="font-size:.78rem;">' + escapeHtml(d.dataDisplay || '-') + '</td>' +
           '<td style="font-size:.78rem;">' + escapeHtml(d.idPedido || '-') + '</td>' +
           '<td style="font-size:.78rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(cliente) + '">' + escapeHtml(cliente) + '</td>' +
           '<td style="font-size:.78rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(motoboy) + '">' + escapeHtml(motoboy) + '</td>' +
           '<td>' + getTipoBadge(d.tipo) + '</td>' +
           '<td class="text-end pe-3"><div class="fin-actions-group">' +
-          '<button class="fin-btn-action fin-btn-view  btn-view-todos" data-idx="' + i + '" title="Ver"><i class="bi bi-eye"></i></button>' +
-          '<button class="fin-btn-action fin-btn-edit  btn-edit-todos" data-idx="' + i + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
-          '<button class="fin-btn-action fin-btn-delete btn-del-todos"  data-idx="' + i + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
-          '</div></td></tr>';
+          '<button class="fin-btn-action fin-btn-view btn-view-todos" data-idx="' + i + '" title="Ver"><i class="bi bi-eye"></i></button>' +
+          '<button class="fin-btn-action fin-btn-edit btn-edit-todos" data-idx="' + i + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
+          '<button class="fin-btn-action fin-btn-delete btn-del-todos" data-idx="' + i + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
+          '</div></td>' +
+          '</tr>'
+        );
       }).join('');
     }
 
@@ -1093,31 +1108,29 @@
     var corValor = isE ? '#198754' : '#dc3545';
     var colaboradorLabel = (d.motoboy && d.motoboy !== '-') ? d.motoboy : '-';
 
-    // Descrição com fallback automático
     var descricaoExibir = (d.descricao && d.descricao.trim())
       ? d.descricao.trim()
       : (colaboradorLabel !== '-'
         ? 'Pix realizado para ' + colaboradorLabel + ' - ' + (d.dataBR || '')
         : 'Pix realizado no dia ' + (d.dataBR || '-'));
 
-    // Observação com fallback
     var observacaoExibir = (d.observacao && d.observacao.trim())
       ? d.observacao.trim()
       : descricaoExibir;
 
-    // Valores — sempre exibe os três campos
     var valorTotal = parseFloat(d.valor) || 0;
-    var valorColab = parseFloat(d.valorColaborador) || 0;
-    var valorEmpresa = parseFloat(d.valorEmpresa) || 0;
-    var pctColab = parseFloat(d.percentualComissao) || 0;
-    var pctEmpresa = pctColab > 0 ? (100 - pctColab) : 100;
+
+    var PCT_COLABORADOR = 0.2;
+    var PCT_EMPRESA = 99.8;
+
+    var valorColab = parseFloat((valorTotal * (PCT_COLABORADOR / 100)).toFixed(2));
+    var valorEmpresa = parseFloat((valorTotal * (PCT_EMPRESA / 100)).toFixed(2));
 
     var html =
       '<div class="modal fade" id="modal-fin-view-dynamic" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered">' +
       '<div class="modal-content border-0 rounded-4 shadow overflow-hidden">' +
 
-      /* ── Header ── */
       '<div class="fin-form-header">' +
       '<div class="d-flex align-items-center gap-3">' +
       '<div class="fin-form-header-icon"><i class="bi ' + tipoIcon + '"></i></div>' +
@@ -1128,10 +1141,8 @@
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div>' +
 
-      /* ── Body ── */
       '<div class="modal-body px-4 py-3">' +
 
-      /* Valor total destacado */
       '<div class="text-center mb-3">' +
       '<div style="font-size:.7rem;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Valor Total</div>' +
       '<div style="font-size:1.8rem;font-weight:700;color:' + corValor + ';">' + formatarMoeda(valorTotal) + '</div>' +
@@ -1140,7 +1151,6 @@
 
       '<div style="background:#f8f9fa;border-radius:12px;padding:14px;font-size:.76rem;">' +
 
-      /* Linha 1 — Tipo | Colaborador | Situação */
       '<div class="row g-2 mb-2">' +
       '<div class="col-4"><span class="text-muted d-block mb-1">Tipo</span>' +
       '<span class="fw-semibold">' + (isE ? 'Receita' : 'Despesa') + '</span></div>' +
@@ -1150,42 +1160,37 @@
       '<span class="fw-semibold">' + escapeHtml(d.idPedido || '-') + '</span></div>' +
       '</div>' +
 
-      /* Linha 2 — Descrição largura total */
       '<div class="row g-2 mb-2">' +
       '<div class="col-12"><span class="text-muted d-block mb-1">Descrição</span>' +
       '<span class="fw-semibold">' + escapeHtml(descricaoExibir) + '</span></div>' +
       '</div>' +
 
-      /* Divisor */
       '<hr style="margin:8px 0;border-color:#e0e0e0;">' +
 
-      /* Linha 3 — Valor Empresa | Valor Colaborador | % Comissão — SEMPRE VISÍVEL */
       '<div class="row g-2 mb-2">' +
       '<div class="col-4 text-center">' +
-      '<span class="text-muted d-block mb-1">Empresa (' + pctEmpresa + '%)</span>' +
+      '<span class="text-muted d-block mb-1" style="font-size:.68rem;">Empresa (' + PCT_EMPRESA + '%)</span>' +
       '<span class="fw-bold" style="color:#0d6efd;font-size:.82rem;">' + formatarMoeda(valorEmpresa) + '</span>' +
       '</div>' +
       '<div class="col-4 text-center">' +
-      '<span class="text-muted d-block mb-1">Colaborador (' + pctColab + '%)</span>' +
+      '<span class="text-muted d-block mb-1" style="font-size:.68rem;">Colaborador (' + PCT_COLABORADOR + '%)</span>' +
       '<span class="fw-bold" style="color:#6f42c1;font-size:.82rem;">' + formatarMoeda(valorColab) + '</span>' +
       '</div>' +
       '<div class="col-4 text-center">' +
-      '<span class="text-muted d-block mb-1">Comissão</span>' +
-      '<span class="fw-bold" style="color:#fd7e14;font-size:.82rem;">' + pctColab + '%</span>' +
+      '<span class="text-muted d-block mb-1" style="font-size:.68rem;">Comissão</span>' +
+      '<span class="fw-bold" style="color:#fd7e14;font-size:.82rem;">' + PCT_COLABORADOR + '%</span>' +
       '</div>' +
       '</div>' +
 
-      /* Linha 4 — Observação */
       '<hr style="margin:8px 0;border-color:#e0e0e0;">' +
       '<div class="row g-2">' +
       '<div class="col-12"><span class="text-muted d-block mb-1">Observação</span>' +
       '<span class="fw-semibold">' + escapeHtml(observacaoExibir) + '</span></div>' +
       '</div>' +
 
-      '</div>' + /* fim bloco cinza */
-      '</div>' + /* fim modal-body */
+      '</div>' +
+      '</div>' +
 
-      /* ── Footer ── */
       '<div class="fin-form-footer justify-content-end gap-2">' +
       '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="btn-view-editar-dynamic" style="font-size:.72rem;">' +
       '<i class="bi bi-pencil-square me-1"></i>Editar</button>' +

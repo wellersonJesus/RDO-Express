@@ -1,6 +1,3 @@
-/* =============================================
-   BASE
-   ============================================= */
 .fin-page-wrapper { padding: 0; }
 
 .fin-content-area {
@@ -14,9 +11,6 @@
   color: #6c757d;
 }
 
-/* =============================================
-   BOTÃO SYNC
-   ============================================= */
 .btn-sync-fin {
   background: none;
   border: none;
@@ -45,9 +39,6 @@
   to   { transform: rotate(360deg); }
 }
 
-/* =============================================
-   TABS NAV
-   ============================================= */
 .fin-tabs-nav {
   display: flex;
   gap: 24px;
@@ -86,9 +77,6 @@
 .fin-tab-content { display: none; }
 .fin-tab-content.active { display: block; }
 
-/* =============================================
-   TOOLBAR ABA TODOS — alinhada à direita
-   ============================================= */
 .fin-toolbar-todos {
   display: flex;
   justify-content: flex-end;
@@ -103,9 +91,6 @@
   flex-wrap: nowrap;
 }
 
-/* =============================================
-   INPUTS / BOTÕES DA TOOLBAR
-   ============================================= */
 .input-filtro-fin {
   height: 30px;
   width: 170px;
@@ -130,9 +115,6 @@
   flex-shrink: 0;
 }
 
-/* =============================================
-   DROPDOWN FILTRO
-   ============================================= */
 .dropdown-filtro-wrapper {
   position: relative;
   display: inline-block;
@@ -264,9 +246,6 @@
 .dropdown-filtro-subitem.active { background: #fce4ec; color: #dc3545; font-weight: 600; }
 .dropdown-filtro-subitem i { font-size: .68rem; width: 14px; text-align: center; }
 
-/* =============================================
-   TABELA TODOS
-   ============================================= */
 .tabela-fin-head {
   font-size: .6rem;
   color: #aaa;
@@ -315,9 +294,6 @@
 
 .btn-sort-data:hover { color: #dc3545; }
 
-/* =============================================
-   BADGES
-   ============================================= */
 .fin-badge-tipo {
   display: inline-flex;
   align-items: center;
@@ -348,9 +324,6 @@
 .fin-badge-pendente  { background: rgba(255, 193, 7, .15);  color: #cc8800; }
 .fin-badge-cancelado { background: rgba(108, 117, 125, .1); color: #6c757d; }
 
-/* =============================================
-   BOTÕES DE AÇÃO NA TABELA
-   ============================================= */
 .fin-btn-action {
   width: 28px;
   height: 28px;
@@ -388,9 +361,6 @@
   flex-wrap: nowrap;
 }
 
-/* =============================================
-   RDO PAY / CAIXA
-   ============================================= */
 .rdo-pay-header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   border-radius: 16px;
@@ -546,9 +516,6 @@
   text-overflow: ellipsis;
 }
 
-/* =============================================
-   CAIXA — LISTA DIÁRIA
-   ============================================= */
 .caixa-lista-diaria-wrapper {
   max-height: 420px;
   overflow-y: auto;
@@ -610,9 +577,6 @@
 
 .caixa-dia-item:hover .caixa-dia-chevron { color: #dc3545; }
 
-/* =============================================
-   MODAL DETALHE DIA
-   ============================================= */
 .detalhe-dia-table-wrapper {
   max-height: 420px;
   overflow-y: auto;
@@ -666,9 +630,6 @@
 .detalhe-dia-valor-entrada { font-size: .76rem; font-weight: 700; color: #198754; white-space: nowrap; }
 .detalhe-dia-valor-saida   { font-size: .76rem; font-weight: 700; color: #dc3545; white-space: nowrap; }
 
-/* =============================================
-   MODAIS — HEADER / FOOTER
-   ============================================= */
 .fin-form-header {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   padding: 18px 24px;
@@ -727,10 +688,6 @@
   gap: 8px;
 }
 
-/* =============================================
-   EXTRATO — TOOLBAR
-   botões de período alinhados à direita
-   ============================================= */
 .extrato-toolbar {
   display: flex;
   flex-direction: column;
@@ -746,7 +703,6 @@
   gap: 8px;
 }
 
-/* grupo dos botões de período → empurrado para a direita */
 .extrato-periodo-group {
   display: flex;
   align-items: center;
@@ -841,9 +797,6 @@
 .extrato-periodo-btn:hover { border-color: #dc3545; color: #dc3545; background: rgba(220, 53, 69, .04); }
 .extrato-periodo-btn.active { background: #dc3545; border-color: #dc3545; color: #fff; }
 
-/* =============================================
-   EXTRATO — LISTA E CARDS
-   ============================================= */
 .extrato-lista {
   margin-top: 14px;
   display: flex;
@@ -960,9 +913,6 @@
 .extrato-item-btn-ver-modal:hover { border-color: #0d6efd; color: #0d6efd; background: rgba(13, 110, 253, .06); }
 .extrato-item-btn-del:hover       { border-color: #dc3545; color: #dc3545; background: rgba(220, 53, 69, .06); }
 
-/* =============================================
-   EXTRATO — LISTA MODAL CAIXA
-   ============================================= */
 #extrato-lista-caixa {
   display: flex;
   flex-direction: column;
@@ -979,9 +929,6 @@
 #extrato-lista-caixa::-webkit-scrollbar-thumb  { background: #ddd; border-radius: 10px; }
 #extrato-lista-caixa::-webkit-scrollbar-thumb:hover { background: #bbb; }
 
-/* =============================================
-   EXTRATO — MODAL OVERLAY (banco)
-   ============================================= */
 .extrato-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1066,9 +1013,6 @@
 
 .extrato-btn-copiar-bank:hover { background: #2d2d4e; }
 
-/* =============================================
-   EXTRATO — CONTEÚDO BANCÁRIO
-   ============================================= */
 .extrato-bank-info {
   padding: 14px 20px;
   border-bottom: 1.5px dashed #ccc;
@@ -1134,9 +1078,6 @@
 .extrato-bank-resumo-item i      { font-size: .72rem; }
 .extrato-bank-resumo-item strong { font-weight: 700; }
 
-/* =============================================
-   LOADING DOTS
-   ============================================= */
 .fin-loading-text { font-size: .72rem; font-weight: 500; color: #999; }
 
 .fin-dots::after {
@@ -1152,9 +1093,16 @@
   100% { content: ""; }
 }
 
-/* =============================================
-   RESPONSIVO
-   ============================================= */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.loading-spin {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
 @media (max-width: 768px) {
   .input-filtro-fin  { width: 130px; }
   .rdo-pay-actions   { justify-content: center; }
