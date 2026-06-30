@@ -641,7 +641,7 @@ window.getIconePorStatus = function (status) {
 
 window.StatusModal = (function () {
     var _pedidoId = null;
-    var _modalBS  = null;
+    var _modalBS = null;
 
     function _el(id) { return document.getElementById(id) || null; }
 
@@ -662,9 +662,9 @@ window.StatusModal = (function () {
             _safeText(_el('modal-status-texto'), 'Alterar Status');
             var icone = _el('modal-status-icone');
             if (icone) icone.className = 'bi bi-arrow-repeat text-danger';
-            _safeClass(_el('box-botoes-status'),    'remove', 'd-none');
-            _safeClass(_el('box-selecao-motoboy'),  'add',    'd-none');
-            _safeClass(_el('box-cancelamento'),     'add',    'd-none');
+            _safeClass(_el('box-botoes-status'), 'remove', 'd-none');
+            _safeClass(_el('box-selecao-motoboy'), 'add', 'd-none');
+            _safeClass(_el('box-cancelamento'), 'add', 'd-none');
             var select = _el('select-motoboy');
             if (select) {
                 select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
@@ -703,7 +703,7 @@ window.StatusModal = (function () {
                 : '<i class="bi bi-question-circle"></i>';
             iconEl.classList.remove('status-pending');
             iconEl.classList.add('status-updated');
-            var label   = String(status || '').replace(/_/g, ' ');
+            var label = String(status || '').replace(/_/g, ' ');
             var tooltip = motoboyNome ? motoboyNome + ' • ' + label : label;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
@@ -727,25 +727,25 @@ window.StatusModal = (function () {
         var select = _el('select-motoboy');
         if (!select) return;
         select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
-        select.disabled  = true;
+        select.disabled = true;
         try {
-            var todos    = await API.call('getcolaboradores');
-            var lista    = Array.isArray(todos) ? todos : [];
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
             var motoboys = lista.filter(function (c) {
                 return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                       String(c.status     || '').toUpperCase() === 'TRUE';
+                    String(c.status || '').toUpperCase() === 'TRUE';
             });
             select.disabled = false;
             select.innerHTML = motoboys.length > 0
                 ? '<option value="" disabled selected>Selecione o motoboy...</option>' +
-                  motoboys.map(function (m) {
-                      return '<option value="' + String(m.id || '') + '">' +
-                             String(m.username || m.nome || 'Sem nome') + '</option>';
-                  }).join('')
+                motoboys.map(function (m) {
+                    return '<option value="' + String(m.id || '') + '">' +
+                        String(m.username || m.nome || 'Sem nome') + '</option>';
+                }).join('')
                 : '<option value="" disabled selected>Nenhum motoboy disponível</option>';
         } catch (_) {
             if (select) {
-                select.disabled  = false;
+                select.disabled = false;
                 select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
             }
         }
@@ -753,7 +753,7 @@ window.StatusModal = (function () {
 
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
         var motoboyNome = '';
-        var statusFmt   = String(status || '');
+        var statusFmt = String(status || '');
 
         if (motoboyId) {
             try {
@@ -771,8 +771,8 @@ window.StatusModal = (function () {
 
         try {
             var payload = {
-                id:      String(_pedidoId || ''),
-                status:  statusFmt,
+                id: String(_pedidoId || ''),
+                status: statusFmt,
                 motoboy: motoboyNome
             };
             if (motivosCancelamento && motivosCancelamento.length > 0) {
@@ -803,7 +803,7 @@ window.StatusModal = (function () {
                 Swal.fire({
                     icon: 'error', title: 'Erro',
                     html: '<div style="font-size:.9rem;">Não foi possível alterar o status.<br>' +
-                          '<small class="text-secondary">' + (e.message || 'Tente novamente.') + '</small></div>',
+                        '<small class="text-secondary">' + (e.message || 'Tente novamente.') + '</small></div>',
                     confirmButtonText: 'Fechar',
                     confirmButtonColor: '#dc3545',
                     customClass: { popup: 'rounded-4' }
@@ -816,13 +816,13 @@ window.StatusModal = (function () {
         try {
             if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
 
-            var cache  = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
-                       ? window.AppRDO.pedidosCache : [];
+            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
+                ? window.AppRDO.pedidosCache : [];
             var pedido = cache.find(function (p) {
                 return String(p.id || '').trim() === String(pedidoId).trim();
             });
             var statusBruto = String(pedido ? pedido.status : '').trim();
-            var statusPuro  = statusBruto.includes('/')
+            var statusPuro = statusBruto.includes('/')
                 ? statusBruto.split('/').pop().trim().toUpperCase()
                 : statusBruto.toUpperCase();
 
@@ -832,9 +832,9 @@ window.StatusModal = (function () {
                     icon: isConcluido ? 'success' : 'error',
                     title: 'Pedido Finalizado',
                     html: '<div style="font-size:.93rem;color:#555;">Este pedido já foi ' +
-                          '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
-                          (isConcluido ? 'Concluído' : 'Cancelado') +
-                          '</strong> e não pode mais ser alterado.</div>',
+                        '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
+                        (isConcluido ? 'Concluído' : 'Cancelado') +
+                        '</strong> e não pode mais ser alterado.</div>',
                     confirmButtonText: 'Entendi',
                     confirmButtonColor: '#dc3545',
                     customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
@@ -864,8 +864,8 @@ window.StatusModal = (function () {
                 _safeText(_el('modal-status-texto'), 'Selecionar Motoboy');
                 var iconeR = _el('modal-status-icone');
                 if (iconeR) iconeR.className = 'bi bi-bicycle text-primary';
-                _safeClass(_el('box-botoes-status'),   'add', 'd-none');
-                _safeClass(_el('box-cancelamento'),    'add', 'd-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
+                _safeClass(_el('box-cancelamento'), 'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
                 _carregarMotoboys();
                 return;
@@ -875,9 +875,9 @@ window.StatusModal = (function () {
                 _safeText(_el('modal-status-texto'), 'Motivo do Cancelamento');
                 var iconeC = _el('modal-status-icone');
                 if (iconeC) iconeC.className = 'bi bi-x-circle-fill text-danger';
-                _safeClass(_el('box-botoes-status'),   'add', 'd-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'add', 'd-none');
-                _safeClass(_el('box-cancelamento'),    'remove', 'd-none');
+                _safeClass(_el('box-cancelamento'), 'remove', 'd-none');
                 return;
             }
 
@@ -905,7 +905,7 @@ window.StatusModal = (function () {
 
     async function confirmarMotoboy() {
         try {
-            var select    = _el('select-motoboy');
+            var select = _el('select-motoboy');
             var motoboyId = select ? select.value : '';
             if (!motoboyId) {
                 if (select) {
@@ -932,7 +932,7 @@ window.StatusModal = (function () {
                     errEl.style.opacity = '0';
                     setTimeout(function () {
                         if (errEl) errEl.style.transition = 'opacity .2s';
-                        if (errEl) errEl.style.opacity   = '1';
+                        if (errEl) errEl.style.opacity = '1';
                     }, 30);
                 }
                 return;
@@ -946,11 +946,11 @@ window.StatusModal = (function () {
     function voltar() { _resetar(); }
 
     return {
-        abrir:                abrir,
-        processar:            processar,
-        confirmarMotoboy:     confirmarMotoboy,
+        abrir: abrir,
+        processar: processar,
+        confirmarMotoboy: confirmarMotoboy,
         confirmarCancelamento: confirmarCancelamento,
-        voltar:               voltar
+        voltar: voltar
     };
 })();
 
@@ -1049,7 +1049,7 @@ window.buscarCoordenadasEndereco = function (endereco) {
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8)  return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
@@ -1063,7 +1063,7 @@ window.formatarTempoHumano = function (minutos) {
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
-    var raw  = String(dataStr);
+    var raw = String(dataStr);
     var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
     if (raw.includes('T') || raw.includes('-')) {
@@ -1074,7 +1074,7 @@ window.formatarDataSeparador = function (dataStr) {
             if (diff === 0) return 'HOJE';
             if (diff === 1) return 'ONTEM';
             return String(d.getDate()).padStart(2, '0') + '/' +
-                   String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+                String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
         }
     }
     var partes = raw.split('/');
@@ -1104,7 +1104,7 @@ window.exibirErro = function (erro, contexto) {
 };
 
 window.renderizarMapaUnificado = function () {
-    var loaderEl    = document.getElementById('mapa-loader');
+    var loaderEl = document.getElementById('mapa-loader');
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
@@ -1112,7 +1112,7 @@ window.renderizarMapaUnificado = function () {
         try { window._leafletMapInstance.remove(); } catch (_) { }
         window._leafletMapInstance = null;
     }
-    containerEl.innerHTML  = '';
+    containerEl.innerHTML = '';
     containerEl.style.display = 'none';
 
     if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas ||
@@ -1148,8 +1148,8 @@ window.renderizarMapaUnificado = function () {
         maxZoom: 19
     }).addTo(mapa);
 
-    var cores          = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    var todosOsPontos  = [];
+    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    var todosOsPontos = [];
 
     var criarIcone = function (emoji) {
         return L.divIcon({
@@ -1230,7 +1230,7 @@ window.enviarMensagemGeral = function () {
 };
 
 window.gerarMensagemFormatada = function (dados) {
-    var idBruto     = String(dados.numeroServico || '').trim();
+    var idBruto = String(dados.numeroServico || dados.id || '').trim();
     var nomeServico = idBruto.toUpperCase().startsWith('RDO')
         ? idBruto
         : (idBruto ? 'RDO' + idBruto : 'N/D');
@@ -1262,14 +1262,14 @@ window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
 
     var msgInput = document.getElementById('msg-input');
-    var texto    = msgInput ? (msgInput.value || '').trim() : '';
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
     if (!texto) { window.marcarCampoInvalido(); return; }
 
-    var solicitante   = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)         || [])[1] || 'Não informado').trim();
-    var contato       = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario       = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i)            || [])[1] || '').trim();
-    var mercadoria    = ((texto.match(/(?:MERCADORIA):\s*(.*)/i)                        || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs           = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i)             || [])[1] || '').trim();
+    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1297,7 +1297,7 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl      = document.getElementById('mapa-loader');
+            var loaderEl = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (loaderEl) loaderEl.style.display = '';
 
@@ -1316,7 +1316,7 @@ window.iniciarFluxoCheckout = function () {
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
                             if (data.routes && data.routes[0]) {
-                                kmTotal  += data.routes[0].distance / 1000;
+                                kmTotal += data.routes[0].distance / 1000;
                                 minTotal += data.routes[0].duration / 60;
                                 listaCaminhos.push(
                                     data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; })
@@ -1325,23 +1325,23 @@ window.iniciarFluxoCheckout = function () {
                         });
                 });
             })).then(function () {
-                var kmArredondado  = Math.round(kmTotal);
+                var kmArredondado = Math.round(kmTotal);
                 var valorCalculado = kmArredondado * 3.00;
 
                 window.dadosPedidoAtual = {
-                    solicitante:     solicitante,
-                    contato:         contato,
-                    horario:         horario,
-                    mercadoria:      mercadoria,
-                    obs:             obs,
-                    cliente:         (window.AppRDO ? window.AppRDO.clienteSelecionado : null) ||
-                                     localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal:  kmArredondado,
-                    tempoTotal:      Math.round(minTotal),
-                    coordenadas:     listaCaminhos,
-                    valorEstimado:   valorCalculado,
+                    solicitante: solicitante,
+                    contato: contato,
+                    horario: horario,
+                    mercadoria: mercadoria,
+                    obs: obs,
+                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) ||
+                        localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                    distanciaTotal: kmArredondado,
+                    tempoTotal: Math.round(minTotal),
+                    coordenadas: listaCaminhos,
+                    valorEstimado: valorCalculado,
                     rotasProcessadas: rotasExtraidas,
-                    rawInput:        texto
+                    rawInput: texto
                 };
 
                 window._renderizarResumo(
@@ -1366,14 +1366,14 @@ window.prosseguirParaFormulario = function () {
         return;
     }
 
-    var modalMapa  = document.getElementById('modalMapa');
-    var instMapa   = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+    var modalMapa = document.getElementById('modalMapa');
+    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
     if (instMapa) { try { instMapa.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalForm   = document.getElementById('modalFormulario');
+            var modalForm = document.getElementById('modalFormulario');
             if (!modalForm) return;
             var bsModalForm = new bootstrap.Modal(modalForm, { backdrop: 'static', keyboard: false });
             modalForm.addEventListener('shown.bs.modal', function () {
@@ -1384,41 +1384,222 @@ window.prosseguirParaFormulario = function () {
     }, 400);
 };
 
+window.calcularTudo = function () {
+    var distancia  = parseFloat((document.getElementById('p-distancia')  || {}).value) || 0;
+    var valorKm    = parseFloat((document.getElementById('p-valor-km')   || {}).value) || 3.00;
+    var retorno    = parseFloat((document.getElementById('p-retorno')    || {}).value) || 0;
+    var dinamica   = parseFloat((document.getElementById('p-dinamica')   || {}).value) || 0;
+    var prioridade = parseFloat((document.getElementById('p-prioridade') || {}).value) || 0;
+
+    var base        = distancia * valorKm;
+    var taxaRetorno = retorno > 0 ? base * retorno : 0;
+    var total       = base + taxaRetorno + dinamica + prioridade;
+
+    var elFinal = document.getElementById('view-valor-final');
+    if (elFinal) {
+        elFinal.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    if (window.dadosPedidoAtual) {
+        window.dadosPedidoAtual.valorEstimado = total;
+        window.dadosPedidoAtual.valorKm       = valorKm;
+        window.dadosPedidoAtual.retorno       = retorno;
+        window.dadosPedidoAtual.dinamica      = dinamica;
+        window.dadosPedidoAtual.prioridade    = prioridade;
+    }
+};
+
+window.remitirPedido = async function () {
+
+    var _validarCampo = function (el) {
+        if (!el) return false;
+        var val = String(el.value || '').trim();
+        if (!val) {
+            el.style.border    = '2px solid #dc3545';
+            el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+            setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+            return false;
+        }
+        return true;
+    };
+
+    var ids = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
+    var invalido = false;
+    ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!_validarCampo(el)) invalido = true;
+    });
+    if (invalido) return;
+
+    if (typeof window.calcularTudo === 'function') window.calcularTudo();
+
+    var dados = window.dadosPedidoAtual || {};
+
+    var payload = {
+        id_cliente  : String((window.AppRDO && window.AppRDO.clienteId) || ''),
+        solicitante : String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim(),
+        contato     : String((document.getElementById('p-contato')     || {}).value || dados.contato     || '').trim(),
+        horario     : String((document.getElementById('p-horario')     || {}).value || dados.horario     || '').trim(),
+        mercadoria  : String((document.getElementById('p-mercadoria')  || {}).value || dados.mercadoria  || 'ENTREGA').trim(),
+        rotas       : String((document.getElementById('p-rotas')       || {}).value || '').trim(),
+        distancia   : String((document.getElementById('p-distancia')   || {}).value || dados.distanciaTotal || '0').trim(),
+        tempo       : String((document.getElementById('p-tempo')       || {}).value || '').trim(),
+        obs         : String((document.getElementById('p-obs')         || {}).value || dados.obs         || '').trim(),
+        valor_km    : String((document.getElementById('p-valor-km')    || {}).value || '3').trim(),
+        retorno     : String((document.getElementById('p-retorno')     || {}).value || '0').trim(),
+        dinamica    : String((document.getElementById('p-dinamica')    || {}).value || '0').trim(),
+        prioridade  : String((document.getElementById('p-prioridade')  || {}).value || '0').trim(),
+        valor_total : String(dados.valorEstimado || 0),
+        mensagem    : '',
+        status      : 'PENDENTE'
+    };
+
+    if (!payload.id_cliente) {
+        window.exibirModalValidacao('Nenhum cliente selecionado.');
+        return;
+    }
+
+    var btnRemitir    = document.getElementById('btn-remitir-pedido');
+    var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
+    if (btnRemitir) {
+        btnRemitir.disabled  = true;
+        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+    }
+
+    try {
+        var resposta = await API.call('createpedido', payload);
+        if (!resposta || resposta.status !== 'success') {
+            throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
+        }
+
+        var novoPedidoId = resposta.id || resposta.pedido_id || null;
+
+        var dadosComId = Object.assign({}, dados, { id: novoPedidoId ? String(novoPedidoId) : '' });
+        var mensagemFinal = typeof window.gerarMensagemFormatada === 'function'
+            ? window.gerarMensagemFormatada(dadosComId)
+            : '';
+
+        var modalForm = document.getElementById('modalFormulario');
+        var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+        if (instForm) { try { instForm.hide(); } catch (_) { } }
+
+        if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function') {
+            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId);
+        }
+
+        if (novoPedidoId) {
+            var novoPedido = Object.assign({}, payload, {
+                id      : String(novoPedidoId),
+                status  : 'PENDENTE',
+                motoboy : '',
+                mensagem: mensagemFinal
+            });
+            if (Array.isArray(window.AppRDO.pedidosCache))
+                window.AppRDO.pedidosCache.push(novoPedido);
+            if (Array.isArray(window.AppRDO.mensagensCache))
+                window.AppRDO.mensagensCache.push({
+                    id_cliente : payload.id_cliente,
+                    pedido_id  : String(novoPedidoId),
+                    texto      : mensagemFinal,
+                    hora       : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    data       : new Date().toISOString()
+                });
+        }
+
+        window.dadosPedidoAtual            = {};
+        window.AppRDO._mapaModalAberto     = false;
+        window.AppRDO.isProcessingCheckout = false;
+
+        var msgInput = document.getElementById('msg-input');
+        if (msgInput) {
+            msgInput.value = '';
+            msgInput.style.height = 'auto';
+            msgInput.setAttribute('placeholder', 'Digite o pedido...');
+        }
+
+        setTimeout(function () { _limparBackdrop(); }, 350);
+
+        try {
+            Swal.fire({
+                icon: 'success', title: 'Pedido enviado!',
+                text: 'O pedido foi registrado com sucesso.',
+                toast: true, position: 'top-end',
+                showConfirmButton: false, timer: 3000, timerProgressBar: true,
+                customClass: { popup: 'rounded-4 shadow' }
+            });
+        } catch (_) { }
+
+    } catch (err) {
+        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
+        try {
+            Swal.fire({
+                icon: 'error', title: 'Erro ao enviar pedido',
+                html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
+                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
+            });
+        } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
+    }
+};
+
 window._preencherFormulario = function (dados) {
     if (!dados) return;
-    var campos = [
-        { id: 'p-solicitante', valor: dados.solicitante || '' },
-        { id: 'p-contato',     valor: dados.contato     || '' },
-        { id: 'p-horario',     valor: dados.horario     || '' },
-        { id: 'p-mercadoria',  valor: dados.mercadoria  || 'ENTREGA' },
-        { id: 'p-distancia',   valor: Number(dados.distanciaTotal || 0).toFixed(2) },
-        { id: 'p-tempo',       valor: dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '' },
-        { id: 'p-obs',         valor: dados.obs || '' }
-    ];
-    campos.forEach(function (c) {
-        var el = document.getElementById(c.id);
-        if (el) { el.value = c.valor; el.style.border = ''; el.style.boxShadow = ''; }
-    });
+
+    var _setInput = function (id, valor) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.value       = valor;
+        el.style.border     = '';
+        el.style.boxShadow  = '';
+    };
+
+    var _setSelect = function (id, valor) {
+        var el = document.getElementById(id);
+        if (!el || valor == null) return;
+        var str      = String(valor);
+        var encontrou = Array.prototype.some.call(el.options, function (o) {
+            return o.value === str;
+        });
+        if (encontrou) el.value = str;
+        el.style.border    = '';
+        el.style.boxShadow = '';
+    };
+
+    _setInput('p-solicitante', dados.solicitante || '');
+    _setInput('p-contato',     dados.contato     || '');
+    _setInput('p-horario',     dados.horario     || '');
+    _setInput('p-distancia',   Number(dados.distanciaTotal || 0).toFixed(2));
+    _setInput('p-tempo',       dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
+    _setInput('p-obs',         dados.obs         || '');
+
+    _setSelect('p-mercadoria', dados.mercadoria  || 'ENTREGA');
+    _setSelect('p-valor-km',   dados.valorKm     != null ? dados.valorKm   : '3.00');
+    _setSelect('p-retorno',    dados.retorno     != null ? dados.retorno    : '0');
+    _setSelect('p-dinamica',   dados.dinamica    != null ? dados.dinamica   : '0');
+    _setSelect('p-prioridade', dados.prioridade  != null ? dados.prioridade : '0');
+
     var elRotas = document.getElementById('p-rotas');
     if (elRotas && dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
         elRotas.value = dados.rotasProcessadas.map(function (r, i) {
             return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
         }).join('\n');
     }
+
     var elHeaderCliente = document.getElementById('header-nome-cliente');
     if (elHeaderCliente) elHeaderCliente.innerText = dados.cliente || 'N/A';
-    if (typeof window.calcularTudo === 'function') setTimeout(function () { window.calcularTudo(); }, 200);
+
+    window.calcularTudo();
 };
 
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
-    var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
     if (instForm) { try { instForm.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalMapa   = document.getElementById('modalMapa');
+            var modalMapa = document.getElementById('modalMapa');
             if (!modalMapa) return;
             var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
             modalMapa.addEventListener('shown.bs.modal', function () {
@@ -1457,7 +1638,7 @@ window.fecharParaChat = function (modalId) {
         if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
-    window.AppRDO._mapaModalAberto     = false;
+    window.AppRDO._mapaModalAberto = false;
     window.AppRDO.isProcessingCheckout = false;
 
     if (window._leafletMapInstance) {
@@ -1469,21 +1650,21 @@ window.fecharParaChat = function (modalId) {
 
     var input = document.getElementById('msg-input');
     if (input) {
-        input.value            = '';
-        input.style.height     = 'auto';
-        input.disabled         = false;
-        input.readOnly         = false;
-        input.style.border     = '';
-        input.style.boxShadow  = '';
-        input.style.opacity    = '';
+        input.value = '';
+        input.style.height = 'auto';
+        input.disabled = false;
+        input.readOnly = false;
+        input.style.border = '';
+        input.style.boxShadow = '';
+        input.style.opacity = '';
         input.style.pointerEvents = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
     }
 
     var btnEnviar = document.getElementById('btn-enviar-mensagem');
     if (btnEnviar) {
-        btnEnviar.disabled           = false;
-        btnEnviar.style.opacity      = '';
+        btnEnviar.disabled = false;
+        btnEnviar.style.opacity = '';
         btnEnviar.style.pointerEvents = '';
     }
 
@@ -1506,8 +1687,8 @@ window.fecharParaChat = function (modalId) {
 
     function _tentarInit() {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn      = localStorage.getItem('bot_master_active') === 'true';
-            window.AppRDO.listaCarregada  = false;
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
         if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
@@ -1526,6 +1707,8 @@ window.fecharParaChat = function (modalId) {
         }
         window.EventBus.on('pedido:excluido', function (dados) {
             var idStr = String(dados.id).trim();
+
+            // 1. Remove dos caches locais
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return String(m.pedido_id).trim() !== idStr;
@@ -1536,15 +1719,33 @@ window.fecharParaChat = function (modalId) {
                     return String(p.id).trim() !== idStr;
                 });
             }
+
+            // 2. Anima e remove o elemento do DOM imediatamente
             var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity    = '0';
-                    wrapper.style.transform  = 'translateX(30px)';
-                    setTimeout(function () { wrapper.remove(); }, 300);
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
+                    setTimeout(function () {
+                        try { wrapper.remove(); } catch (_) { }
+                    }, 300);
                 }
+            }
+
+            // 3. Recarrega a conversa do cliente ativo (equivale a clicar no botão de sync)
+            var clienteId = window.AppRDO && window.AppRDO.clienteId;
+            if (clienteId) {
+                // Aguarda a animação terminar antes de recarregar
+                setTimeout(function () {
+                    if (!window.AppRDO.isFetching) {
+                        _spinChatOn();
+                        window.carregarPedidosDoCliente(clienteId).finally(function () {
+                            _spinChatOff();
+                        });
+                    }
+                }, 350);
             }
         });
     }

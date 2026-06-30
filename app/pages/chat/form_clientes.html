@@ -2,7 +2,6 @@
   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
     <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
 
-      <!-- HEADER -->
       <div class="fin-form-header">
         <div class="d-flex align-items-center justify-content-between w-100">
           <div class="d-flex align-items-center gap-3">
@@ -30,11 +29,9 @@
         </div>
       </div>
 
-      <!-- BODY -->
       <div class="modal-body px-4 py-3">
         <form id="form-checkout" novalidate autocomplete="off" onsubmit="return false;">
 
-          <!-- SEÇÃO 1: Dados Principais -->
           <div class="fin-form-section">
             <div class="fin-form-section-label">
               <i class="bi bi-person-badge me-2"></i>Dados principais
@@ -45,13 +42,11 @@
                 <label class="fin-field-label">Solicitante <span class="text-danger">*</span></label>
                 <input type="text" id="p-solicitante" class="form-control form-control-sm fin-field-input"
                   placeholder="Nome do solicitante" readonly>
-                <div class="invalid-feedback">Campo obrigatório</div>
               </div>
               <div class="col-md-6">
                 <label class="fin-field-label">Contato <span class="text-danger">*</span></label>
                 <input type="text" id="p-contato" class="form-control form-control-sm fin-field-input"
                   placeholder="Telefone ou WhatsApp">
-                <div class="invalid-feedback">Campo obrigatório</div>
               </div>
             </div>
 
@@ -65,7 +60,6 @@
                   <option value="COMPRA">Compra</option>
                   <option value="PAGAMENTO">Pagamento</option>
                 </select>
-                <div class="invalid-feedback">Campo obrigatório</div>
               </div>
               <div class="col-md-3">
                 <label class="fin-field-label">Horário</label>
@@ -87,13 +81,11 @@
             <div class="mb-2">
               <label class="fin-field-label">Rota(s) <span class="text-danger">*</span></label>
               <textarea id="p-rotas" class="form-control form-control-sm fin-field-input" rows="3"
-                style="border-radius:10px!important;resize:none;background:#f8f9fa;cursor:not-allowed;font-family:monospace;font-size:.75rem;line-height:1.6;" 
+                style="border-radius:10px!important;resize:none;background:#f8f9fa;cursor:not-allowed;font-family:monospace;font-size:.75rem;line-height:1.6;"
                 readonly></textarea>
-              <div class="invalid-feedback">Campo obrigatório</div>
             </div>
           </div>
 
-          <!-- SEÇÃO 2: Tarifação -->
           <div class="fin-form-section">
             <div class="fin-form-section-label">
               <i class="bi bi-calculator me-2"></i>Tarifação
@@ -148,14 +140,12 @@
             </div>
           </div>
 
-          <!-- SEÇÃO 3: Resumo Financeiro -->
           <div class="fin-form-section mb-0">
             <div class="fin-form-section-label">
               <i class="bi bi-cash-stack me-2"></i>Resumo financeiro
             </div>
-
             <div class="d-flex align-items-center justify-content-between px-3 py-3 rounded-3 shadow-sm"
-              style="background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);border:2px solid #e9ecef;">
+              style="background:linear-gradient(135deg,#f8f9fa 0%,#ffffff 100%);border:2px solid #e9ecef;">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-currency-dollar text-success" style="font-size:1.3rem;"></i>
                 <span style="font-size:.7rem;font-weight:600;color:#6c757d;text-transform:uppercase;letter-spacing:.05em;">
@@ -164,22 +154,19 @@
               </div>
               <span id="view-valor-final" style="font-size:1.5rem;font-weight:700;color:#198754;">R$ 0,00</span>
             </div>
-
           </div>
 
         </form>
       </div>
 
-      <!-- FOOTER -->
       <div class="fin-form-footer">
         <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
           style="font-size:.72rem;font-weight:600;" onclick="window.voltarParaMapa()">
           <i class="bi bi-arrow-left me-1"></i>Voltar
         </button>
-
-        <button type="button" id="btn-emitir-pedido" class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm"
-          style="font-size:.72rem;font-weight:600;" onclick="window.salvarPedidoAPI()">
-          <i class="bi bi-send-fill me-1"></i>EMITIR PEDIDO
+        <button type="button" id="btn-remitir-pedido" class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm"
+          style="font-size:.72rem;font-weight:600;" onclick="window.remitirPedido()">
+          <i class="bi bi-send-fill me-1"></i>REMITIR PEDIDO
         </button>
       </div>
 
