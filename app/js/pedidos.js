@@ -447,8 +447,18 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
             return String(p.id || '').trim() !== idStr;
         });
-        _renderizarTabela(window.AppRDO.pedidosCache);
+        // Aciona o botão loop para recarregar da API
+        _dispararSync();
     };
+
+    function _dispararSync() {
+        window.pedidosState.dadosCarregados = false;
+        window.pedidosState.emAcao = true;
+        window.pedidosState.isFetching = false;
+        // Simula clique visual no botão, se existir
+        if (els.btnSync) els.btnSync.click();
+        else _fetchPedidos();
+    }
 
     window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
         window.pedidosState.emAcao = true;
