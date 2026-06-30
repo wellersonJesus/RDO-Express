@@ -16,6 +16,8 @@
             <div class="modal-body px-4 pt-4 pb-2">
                 <input type="hidden" id="fin-id">
                 <div id="form-fin-erro" class="alert alert-danger d-none py-2 px-3 rounded-3 mb-3" style="font-size:.74rem;"></div>
+
+                <!-- Seção: Informações Principais -->
                 <div class="fin-form-section">
                     <div class="fin-form-section-label"><i class="bi bi-calendar-event me-1"></i>Informações Principais</div>
                     <div class="row g-3">
@@ -51,11 +53,19 @@
                         </div>
                         <div class="col-12">
                             <label class="fin-field-label">Descrição <span class="text-danger">*</span></label>
-                            <input type="text" id="fin-descricao" class="form-control form-control-sm fin-field-input" placeholder="Ex: Pagamento corrida cliente X">
+                            <input
+                                type="text"
+                                id="fin-descricao"
+                                class="form-control form-control-sm fin-field-input"
+                                placeholder="Ex: Pix realizado para Igor - 01/06/2025"
+                            >
                         </div>
                     </div>
                 </div>
+
                 <div class="fin-form-divider"></div>
+
+                <!-- Seção: Valor -->
                 <div class="fin-form-section">
                     <div class="fin-form-section-label"><i class="bi bi-currency-dollar me-1"></i>Valor</div>
                     <div class="row g-3">
@@ -82,10 +92,19 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="fin-form-divider"></div>
+
+                <!-- Seção: Observação -->
                 <div class="fin-form-section">
                     <div class="fin-form-section-label"><i class="bi bi-chat-left-text me-1"></i>Observação</div>
-                    <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2" placeholder="Observações opcionais..." style="resize:none;"></textarea>
+                    <textarea
+                        id="fin-obs"
+                        class="form-control form-control-sm fin-field-input"
+                        rows="2"
+                        placeholder="Observações opcionais..."
+                        style="resize:none;"
+                    ></textarea>
                 </div>
             </div>
             <div class="fin-form-footer">

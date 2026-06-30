@@ -9,7 +9,7 @@
     cache: [],
     pedidosCache: {},
     clientesCache: {},
-    colaboradoresCache: {},   
+    colaboradoresCache: {},
     colaboradores: [],
     caixaValoresVisiveis: false,
     tabAtual: 'todos',
@@ -1091,7 +1091,26 @@
     var tipoLabel = isE ? 'RECEITA' : 'DESPESA';
     var tipoIcon = isE ? 'bi-arrow-down-left' : 'bi-arrow-up-right';
     var corValor = isE ? '#198754' : '#dc3545';
-    var colaboradorLabel = d.motoboy && d.motoboy !== '-' ? d.motoboy : '-';
+    var colaboradorLabel = (d.motoboy && d.motoboy !== '-') ? d.motoboy : '-';
+
+    // Descrição com fallback automático
+    var descricaoExibir = (d.descricao && d.descricao.trim())
+      ? d.descricao.trim()
+      : (colaboradorLabel !== '-'
+        ? 'Pix realizado para ' + colaboradorLabel + ' - ' + (d.dataBR || '')
+        : 'Pix realizado no dia ' + (d.dataBR || '-'));
+
+    // Observação com fallback
+    var observacaoExibir = (d.observacao && d.observacao.trim())
+      ? d.observacao.trim()
+      : descricaoExibir;
+
+    // Valores — sempre exibe os três campos
+    var valorTotal = parseFloat(d.valor) || 0;
+    var valorColab = parseFloat(d.valorColaborador) || 0;
+    var valorEmpresa = parseFloat(d.valorEmpresa) || 0;
+    var pctColab = parseFloat(d.percentualComissao) || 0;
+    var pctEmpresa = pctColab > 0 ? (100 - pctColab) : 100;
 
     var html =
       '<div class="modal fade" id="modal-fin-view-dynamic" tabindex="-1" aria-hidden="true">' +
@@ -1102,55 +1121,74 @@
       '<div class="fin-form-header">' +
       '<div class="d-flex align-items-center gap-3">' +
       '<div class="fin-form-header-icon"><i class="bi ' + tipoIcon + '"></i></div>' +
-      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">' + tipoLabel + '</h6>' +
-      '<small class="fin-form-subtitle">' + escapeHtml(d.dataBR || '-') + '</small></div>' +
-      '</div>' +
+      '<div>' +
+      '<h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">' + tipoLabel + '</h6>' +
+      '<small class="fin-form-subtitle">' + escapeHtml(d.dataBR || '-') + '</small>' +
+      '</div></div>' +
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div>' +
 
       /* ── Body ── */
       '<div class="modal-body px-4 py-3">' +
 
-      /* Valor + Badge */
+      /* Valor total destacado */
       '<div class="text-center mb-3">' +
-      '<div style="font-size:1.6rem;font-weight:700;color:' + corValor + ';">' + formatarMoeda(d.valor) + '</div>' +
-      '<div>' + getStatusBadge(d.situacao) + '</div>' +
+      '<div style="font-size:.7rem;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Valor Total</div>' +
+      '<div style="font-size:1.8rem;font-weight:700;color:' + corValor + ';">' + formatarMoeda(valorTotal) + '</div>' +
+      '<div class="mt-1">' + getStatusBadge(d.situacao) + '</div>' +
       '</div>' +
 
-      '<div style="background:#f8f9fa;border-radius:10px;padding:12px;font-size:.76rem;">' +
+      '<div style="background:#f8f9fa;border-radius:12px;padding:14px;font-size:.76rem;">' +
 
-      /* Linha 1 — Tipo | Descrição | Colaborador */
+      /* Linha 1 — Tipo | Colaborador | Situação */
       '<div class="row g-2 mb-2">' +
-      '<div class="col-4"><span class="text-muted d-block">Tipo</span><span class="fw-semibold">' + (isE ? 'Receita' : 'Despesa') + '</span></div>' +
-      '<div class="col-4"><span class="text-muted d-block">Descrição</span><span class="fw-semibold" title="' + escapeHtml(d.descricao || '-') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(d.descricao || '-') + '</span></div>' +
-      '<div class="col-4"><span class="text-muted d-block">Colaborador</span><span class="fw-semibold">' + escapeHtml(colaboradorLabel) + '</span></div>' +
+      '<div class="col-4"><span class="text-muted d-block mb-1">Tipo</span>' +
+      '<span class="fw-semibold">' + (isE ? 'Receita' : 'Despesa') + '</span></div>' +
+      '<div class="col-4"><span class="text-muted d-block mb-1">Colaborador</span>' +
+      '<span class="fw-semibold">' + escapeHtml(colaboradorLabel) + '</span></div>' +
+      '<div class="col-4"><span class="text-muted d-block mb-1">Pedido</span>' +
+      '<span class="fw-semibold">' + escapeHtml(d.idPedido || '-') + '</span></div>' +
       '</div>' +
 
-      /* Linha 2 — Pedido | Situação */
+      /* Linha 2 — Descrição largura total */
       '<div class="row g-2 mb-2">' +
-      '<div class="col-6"><span class="text-muted d-block">Pedido</span><span class="fw-semibold">' + escapeHtml(d.idPedido || '-') + '</span></div>' +
-      '<div class="col-6"><span class="text-muted d-block">Situação</span><span class="fw-semibold">' + escapeHtml(d.situacao || '-') + '</span></div>' +
+      '<div class="col-12"><span class="text-muted d-block mb-1">Descrição</span>' +
+      '<span class="fw-semibold">' + escapeHtml(descricaoExibir) + '</span></div>' +
       '</div>' +
 
-      /* Linha 3 — Comissões (apenas entrada com colaborador) */
-      (isE && d.valorColaborador > 0
-        ? '<div class="row g-2 mb-2">' +
-        '<div class="col-6"><span class="text-muted d-block">Colaborador (' + d.percentualComissao + '%)</span><span class="fw-semibold" style="color:#6f42c1;">' + formatarMoeda(d.valorColaborador) + '</span></div>' +
-        '<div class="col-6"><span class="text-muted d-block">Empresa (' + (100 - d.percentualComissao) + '%)</span><span class="fw-semibold" style="color:#0d6efd;">' + formatarMoeda(d.valorEmpresa) + '</span></div>' +
-        '</div>'
-        : '') +
+      /* Divisor */
+      '<hr style="margin:8px 0;border-color:#e0e0e0;">' +
 
-      /* Linha 4 — Observação (largura total) */
+      /* Linha 3 — Valor Empresa | Valor Colaborador | % Comissão — SEMPRE VISÍVEL */
+      '<div class="row g-2 mb-2">' +
+      '<div class="col-4 text-center">' +
+      '<span class="text-muted d-block mb-1">Empresa (' + pctEmpresa + '%)</span>' +
+      '<span class="fw-bold" style="color:#0d6efd;font-size:.82rem;">' + formatarMoeda(valorEmpresa) + '</span>' +
+      '</div>' +
+      '<div class="col-4 text-center">' +
+      '<span class="text-muted d-block mb-1">Colaborador (' + pctColab + '%)</span>' +
+      '<span class="fw-bold" style="color:#6f42c1;font-size:.82rem;">' + formatarMoeda(valorColab) + '</span>' +
+      '</div>' +
+      '<div class="col-4 text-center">' +
+      '<span class="text-muted d-block mb-1">Comissão</span>' +
+      '<span class="fw-bold" style="color:#fd7e14;font-size:.82rem;">' + pctColab + '%</span>' +
+      '</div>' +
+      '</div>' +
+
+      /* Linha 4 — Observação */
+      '<hr style="margin:8px 0;border-color:#e0e0e0;">' +
       '<div class="row g-2">' +
-      '<div class="col-12"><span class="text-muted d-block">Observação</span><span class="fw-semibold">' + escapeHtml(d.observacao || '-') + '</span></div>' +
+      '<div class="col-12"><span class="text-muted d-block mb-1">Observação</span>' +
+      '<span class="fw-semibold">' + escapeHtml(observacaoExibir) + '</span></div>' +
       '</div>' +
 
       '</div>' + /* fim bloco cinza */
       '</div>' + /* fim modal-body */
 
-      /* ── Footer — botões alinhados à direita ── */
+      /* ── Footer ── */
       '<div class="fin-form-footer justify-content-end gap-2">' +
-      '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="btn-view-editar-dynamic" style="font-size:.72rem;"><i class="bi bi-pencil-square me-1"></i>Editar</button>' +
+      '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="btn-view-editar-dynamic" style="font-size:.72rem;">' +
+      '<i class="bi bi-pencil-square me-1"></i>Editar</button>' +
       '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Fechar</button>' +
       '</div>' +
 
@@ -1175,16 +1213,16 @@
 
   function _getModalFinIds() {
     return {
-      id: document.getElementById('fin-id') || document.getElementById('fin-edit-id'),
+      id: document.getElementById('fin-edit-id') || document.getElementById('fin-id'),
       tipo: document.getElementById('fin-tipo'),
       data: document.getElementById('fin-data'),
       situacao: document.getElementById('fin-situacao'),
-      colaborador: document.getElementById('fin-colaborador'),
+      colaborador: document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador'),
       descricao: document.getElementById('fin-descricao'),
       valor: document.getElementById('fin-valor'),
       obs: document.getElementById('fin-obs'),
-      erro: document.getElementById('form-fin-erro') || document.getElementById('form-novo-fin-erro'),
-      btnSalvar: document.getElementById('btn-salvar-fin') || document.getElementById('btn-salvar-novo-fin'),
+      erro: document.getElementById('form-novo-fin-erro') || document.getElementById('form-fin-erro'),
+      btnSalvar: document.getElementById('btn-salvar-novo-fin') || document.getElementById('btn-salvar-fin'),
       spinner: document.getElementById('spinner-salvar-fin'),
       txtSalvar: document.getElementById('txt-salvar-fin')
     };
@@ -1209,20 +1247,45 @@
   }
 
   function abrirModalEditar(d) {
+    // Popula o select de colaboradores antes de setar o valor
+    var selectColab = document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador');
+    if (selectColab) {
+      selectColab.innerHTML = '<option value="">— Nenhum —</option>';
+      state.colaboradores.forEach(function (col) {
+        var opt = document.createElement('option');
+        opt.value = col.id || col.username || '';
+        opt.textContent = col.username || col.colaborador || col.id || '';
+        selectColab.appendChild(opt);
+      });
+    }
+
     var f = _getModalFinIds();
     if (f.erro) f.erro.classList.add('d-none');
     if (f.id) f.id.value = d.id || '';
     if (f.tipo) f.tipo.value = d.tipo || '';
     if (f.data) f.data.value = d.dataISO || '';
     if (f.situacao) f.situacao.value = d.situacao || 'pendente';
-    if (f.colaborador) f.colaborador.value = d.motoboy && d.motoboy !== '-' ? d.motoboy : '';
     if (f.descricao) f.descricao.value = d.descricao || '';
     if (f.valor) f.valor.value = parseFloat(d.valor || 0).toFixed(2).replace('.', ',');
     if (f.obs) f.obs.value = d.observacao || '';
+
+    // Seta colaborador pelo id ou pelo nome
+    if (f.colaborador) {
+      f.colaborador.value = d.colaboradorId || d.motoboy || '';
+      // fallback: tenta pelo username se não achou pelo id
+      if (!f.colaborador.value || f.colaborador.value === '-') {
+        f.colaborador.value = '';
+      }
+    }
+
     atualizarPreviewComissao();
 
-    var modalEl = document.getElementById('modalFormFin') || document.getElementById('modalNovoFinanceiro');
-    if (modalEl) { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.dispose(); new bootstrap.Modal(modalEl).show(); }
+    var modalEl = document.getElementById('modalNovoFinanceiro') || document.getElementById('modalFormFin');
+    if (modalEl) {
+      var inst = bootstrap.Modal.getInstance(modalEl);
+      if (inst) inst.dispose();
+      new bootstrap.Modal(modalEl).show();
+    }
   }
 
   function atualizarPreviewComissao() {
@@ -1651,15 +1714,35 @@
     state.fetching = true;
     spinOn();
 
-    Promise.all([
-      window.API.call('getfinanceiro', {}),
-      window.API.call('getpedidos', {}),
-      window.API.call('getclientes', {}),
-      window.API.call('getColaboradores', {})
-    ]).then(function (results) {
+    var chamadas = [
+      { nome: 'getfinanceiro', payload: {} },
+      { nome: 'getpedidos', payload: {} },
+      { nome: 'getclientes', payload: {} },
+      { nome: 'getColaboradores', payload: {} }
+    ];
 
-      // ── Clientes ────────────────────────────────────────────────────────────
-      var clientesArr = extrairArray(results[2]);
+    Promise.all(
+      chamadas.map(function (c) {
+        return window.API.call(c.nome, c.payload)
+          .then(function (res) { return res; })
+          .catch(function (err) {
+            console.error('[Fin][carregarDados] FALHOU → ' + c.nome, err);
+            return null; // não quebra o Promise.all
+          });
+      })
+    ).then(function (results) {
+      // Loga o resultado de cada chamada
+      chamadas.forEach(function (c, i) {
+        console.log('[Fin][' + c.nome + ']', results[i] ? 'OK' : 'FALHOU (null)');
+      });
+
+      // Continua apenas com os que retornaram dados
+      var clientesArr = extrairArray(results[2] || {});
+      var colaboradoresArr = extrairArray(results[3] || {});
+      var pedidosArr = extrairArray(results[1] || {});
+      var finArr = extrairArray(results[0] || {});
+
+      // ── Clientes ──
       state.clientesCache = {};
       clientesArr.forEach(function (cli) {
         var cliId = (cli.id || '').toString().trim();
@@ -1671,8 +1754,7 @@
         };
       });
 
-      // ── Colaboradores → cache id → username ─────────────────────────────────
-      var colaboradoresArr = extrairArray(results[3]);
+      // ── Colaboradores ──
       state.colaboradoresCache = {};
       state.colaboradores = colaboradoresArr;
       colaboradoresArr.forEach(function (col) {
@@ -1684,8 +1766,7 @@
         };
       });
 
-      // ── Pedidos → inclui colaborador_id para fallback ────────────────────────
-      var pedidosArr = extrairArray(results[1]);
+      // ── Pedidos ──
       state.pedidosCache = {};
       pedidosArr.forEach(function (ped) {
         var pedId = (ped.id || '').toString().trim();
@@ -1693,17 +1774,15 @@
           id: pedId,
           id_cliente: (ped.id_cliente || '').toString().trim(),
           solicitante: (ped.solicitante || '').toString().trim(),
-          colaborador_id: (ped.colaborador_id || '').toString().trim()  // ← NOVO
+          colaborador_id: (ped.colaborador_id || '').toString().trim()
         };
       });
 
-      // ── Financeiro ──────────────────────────────────────────────────────────
-      // colaboradoresCache já populado ANTES de normalizar
-      var finArr = extrairArray(results[0]);
+      // ── Financeiro ──
       state.cache = [];
       finArr.forEach(function (item) {
         try { state.cache.push(normalizarRegistro(item)); }
-        catch (e) { console.error('[Fin][carregarDados] Erro ao normalizar:', item, e); }
+        catch (e) { console.error('[Fin][normalizar]', item, e); }
       });
 
       resolverClienteSolicitante();
@@ -1712,8 +1791,17 @@
       renderCaixa();
       renderizarListaExtratos();
 
+      // Avisa se alguma chamada falhou
+      var falhas = chamadas.filter(function (c, i) { return results[i] === null; });
+      if (falhas.length) {
+        finToast(
+          'Aviso: ' + falhas.map(function (c) { return c.nome; }).join(', ') + ' indisponível(is).',
+          'warning'
+        );
+      }
+
     }).catch(function (e) {
-      console.error('[Fin][carregarDados] Erro:', e);
+      console.error('[Fin][carregarDados] Erro geral:', e);
       finToast('Erro ao carregar dados.', 'danger');
     }).finally(function () {
       state.fetching = false;
