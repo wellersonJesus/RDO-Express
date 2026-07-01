@@ -821,7 +821,7 @@
     if (btnExtratosCaixa) btnExtratosCaixa.addEventListener('click', function (e) { e.preventDefault(); abrirModalExtratosCaixa(); });
 
     var finValorEl = document.getElementById('fin-valor');
-    var finColabEl = document.getElementById('fin-colaborador');
+    var finColabEl = document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador');
     if (finValorEl) { mascaraValor(finValorEl); finValorEl.addEventListener('input', atualizarPreviewComissao); }
     if (finColabEl) finColabEl.addEventListener('change', atualizarPreviewComissao);
 
@@ -849,7 +849,7 @@
         var tipoMap = { entrada: 'receita entrada', saida: 'despesa saida' };
         var campos = [d.id, d.idPedido, d.descricao, d.motoboy, d.observacao, d.dataBR, d.dataDisplay, d.dataISO,
           valorFormatado, valorSimples, valorPonto, valorInt, situacaoMap[d.situacao] || d.situacao,
-        tipoMap[d.tipo] || d.tipo, d.cliente, d.solicitante];
+          tipoMap[d.tipo] || d.tipo, d.cliente, d.solicitante];
         var pool = removerAcentos(campos.map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase());
         var termos = termo.split(/\s+/);
         for (var i = 0; i < termos.length; i++) { if (termos[i] && pool.indexOf(termos[i]) === -1) return false; }
@@ -1563,7 +1563,7 @@
   }
 
   function gerarIdExtrato() {
-    return 'ext_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    return Math.random().toString(36).substr(2, 11);
   }
 
   function renderizarListaExtratos() {
@@ -1677,7 +1677,7 @@
     abrirExtratoModal(extrato);
   }
 
-  function abrirExtratoModal(extrato) {
+   function abrirExtratoModal(extrato) {
     if (!els.extratoModalOverlay || !els.extratoModalBody || !els.extratoModalTitulo) return;
 
     var registros = extrato.registros || [];
@@ -1762,12 +1762,12 @@
     bind();
     registrarEventos();
     configurarExtratoPeriodoBtns();
-
     if (els.btnGerarExtrato) {
       els.btnGerarExtrato.addEventListener('click', function () { gerarExtrato(); });
     }
-
     carregarDados();
   };
 
 })();
+
+

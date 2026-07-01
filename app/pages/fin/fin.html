@@ -24,18 +24,16 @@
       <a href="#" class="fin-tab" data-tab="extrato">Extrato</a>
     </div>
 
+    <!-- ABA TODOS -->
     <div id="fin-tab-content-todos" class="fin-tab-content active">
       <div class="row g-3 mt-0">
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
-
             <div class="card-body pb-0">
               <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-
                 <input type="search" id="filtro-busca-fin"
                   class="form-control form-control-sm rounded-pill input-filtro-fin"
                   placeholder="Buscar..." autocomplete="off">
-
                 <div class="dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-fin">
                   <button class="btn-filtro-inteligente" id="btn-filtro-fin">
                     <i class="bi bi-funnel-fill"></i>
@@ -77,14 +75,11 @@
                     </div>
                   </div>
                 </div>
-
                 <button class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
                   <i class="bi bi-plus-lg"></i> Novo
                 </button>
-
               </div>
             </div>
-
             <div class="table-responsive p-3">
               <table class="table table-hover align-middle border-0 mb-0 fin-table-todos" id="tabela-fin-todos">
                 <thead class="tabela-fin-head text-uppercase">
@@ -112,7 +107,6 @@
                 </tbody>
               </table>
             </div>
-
             <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-todos">0 registros</span>
               <div class="btn-group shadow-sm">
@@ -125,12 +119,12 @@
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </div>
     </div>
 
+    <!-- ABA CAIXA -->
     <div id="fin-tab-content-caixa" class="fin-tab-content">
 
       <div class="rdo-pay-header mb-3">
@@ -146,7 +140,6 @@
             <i class="bi bi-eye-slash" id="icon-toggle-caixa-val"></i>
           </button>
         </div>
-
         <div class="rdo-pay-saldo-wrap">
           <div class="rdo-pay-saldo-label">Saldo disponível (empresa)</div>
           <div class="rdo-pay-saldo-valor fin-valor-caixa" id="rdo-pay-saldo" data-valor-real="R$ 0,00">R$ ****</div>
@@ -155,7 +148,6 @@
             <span class="fin-valor-caixa fw-bold" id="rdo-pay-saldo-colaboradores" data-valor-real="R$ 0,00">R$ ****</span>
           </div>
         </div>
-
         <div class="rdo-pay-actions">
           <div class="rdo-pay-action-item" data-rdo-action="adicionar" style="cursor:pointer;">
             <div class="rdo-pay-action-icon rdo-pay-icon-add"><i class="bi bi-plus-circle"></i></div>
@@ -212,7 +204,6 @@
       <div class="row g-3">
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
-
             <div class="card-body pb-0">
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <div style="flex:1;min-width:120px;">
@@ -230,7 +221,6 @@
                 </div>
               </div>
             </div>
-
             <div class="caixa-lista-diaria-wrapper p-3">
               <div id="caixa-lista-diaria">
                 <div class="text-center text-muted py-4" style="font-size:.8rem;">
@@ -239,7 +229,6 @@
                 </div>
               </div>
             </div>
-
             <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
               <div class="btn-group shadow-sm">
@@ -252,15 +241,14 @@
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </div>
 
     </div>
 
+    <!-- ABA EXTRATO -->
     <div id="fin-tab-content-extrato" class="fin-tab-content">
-
       <div class="extrato-toolbar">
         <div class="extrato-toolbar-row w-100">
           <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -296,20 +284,19 @@
           </div>
         </div>
       </div>
-
       <div class="extrato-lista" id="extrato-lista">
         <div class="extrato-placeholder" id="extrato-placeholder">
           <i class="bi bi-file-earmark-text"></i>
           <span>Nenhum extrato gerado ainda.<br>Selecione o período, a origem e clique em <strong>Gerar</strong>.</span>
         </div>
       </div>
-
     </div>
 
   </div>
 </div>
 
 
+<!-- MODAL NOVO/EDITAR LANÇAMENTO -->
 <div class="modal fade" id="modalNovoFinanceiro" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
@@ -327,7 +314,6 @@
         <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>
         <input type="hidden" id="fin-edit-id">
         <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
-
           <div class="fin-form-section">
             <div class="fin-form-section-label">Dados principais</div>
             <div class="row g-2 mb-2">
@@ -364,7 +350,6 @@
               <input type="text" id="fin-descricao" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Entrega #123">
             </div>
           </div>
-
           <div class="fin-form-section">
             <div class="fin-form-section-label">Valor e Colaborador</div>
             <div class="row g-2 mb-2">
@@ -377,7 +362,6 @@
                 <select id="fin-colaborador-id" class="form-select form-select-sm rounded-pill fin-field-input"></select>
               </div>
             </div>
-
             <div id="fin-preview-comissao" class="d-none mt-2 p-2 rounded-3" style="background:#f8f9fa;font-size:.72rem;">
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Total</span>
@@ -393,18 +377,14 @@
               </div>
             </div>
           </div>
-
           <div class="fin-form-section">
             <div class="fin-form-section-label">Observação</div>
             <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2" placeholder="Observações opcionais..." style="border-radius:12px;resize:none;"></textarea>
           </div>
-
         </form>
       </div>
       <div class="fin-form-footer justify-content-end">
-        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">
-          Cancelar
-        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Cancelar</button>
         <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-novo-fin" style="font-size:.72rem;">
           <i class="bi bi-check-lg me-1"></i>Salvar
         </button>
@@ -414,6 +394,7 @@
 </div>
 
 
+<!-- MODAL DETALHE DIA -->
 <div class="modal fade" id="modalDetalheDia" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px;">
     <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
@@ -481,6 +462,7 @@
 </div>
 
 
+<!-- OVERLAY EXTRATO -->
 <div id="extrato-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
   <div style="background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
     <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
@@ -508,20 +490,18 @@
 
 <script>
 (function () {
-    'use strict';
-
-    function _aguardarFinJs() {
-        if (typeof window.initFinanceiro === 'function') {
-            window.initFinanceiro();
-        } else {
-            setTimeout(_aguardarFinJs, 100);
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _aguardarFinJs);
+  'use strict';
+  function _aguardarFinJs() {
+    if (typeof window.initFinanceiro === 'function') {
+      window.initFinanceiro();
     } else {
-        _aguardarFinJs();
+      setTimeout(_aguardarFinJs, 100);
     }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _aguardarFinJs);
+  } else {
+    _aguardarFinJs();
+  }
 })();
 </script>
