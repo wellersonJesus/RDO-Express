@@ -1215,3 +1215,60 @@
   .fin-table-todos thead th:nth-child(5) { width: 20%; }
   .fin-table-todos thead th:nth-child(6) { width: 40%; }
 }
+
+/* ── Loading Financeiro ── */
+.btn-sync-fin {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+}
+
+.btn-sync-fin.syncing {
+    color: #dc3545;
+}
+
+.btn-sync-fin:hover {
+    transform: scale(1.15);
+}
+
+.btn-sync-fin:disabled {
+    cursor: not-allowed;
+}
+
+.fin-loading-text {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #999;
+}
+
+.fin-dots::after {
+    content: '';
+    animation: finDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes finDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}
+
+.loading-spin {
+    display: inline-block;
+    animation: spin-loop 0.8s linear infinite;
+}
+
+@keyframes spin-loop {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}

@@ -887,30 +887,53 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             };
         }
 
-        if (els.btnFiltroTipo && els.dropdownFiltroMenu) {
-            els.btnFiltroTipo.onclick = function (e) {
+        if (els.btnFiltroTipo) {
+            var menu = document.getElementById('dropdown-filtro-menu');
+
+            els.btnFiltroTipo.addEventListener('click', function (e) {
                 e.stopPropagation();
-                els.dropdownFiltroMenu.classList.toggle('show');
-            };
+                if (!menu) return;
+                var aberto = menu.classList.contains('show');
+                menu.classList.toggle('show', !aberto);
+                els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
+            });
+
             document.addEventListener('click', function (e) {
-                if (!els.btnFiltroTipo || !els.dropdownFiltroMenu) return;
-                if (!els.btnFiltroTipo.contains(e.target) && !els.dropdownFiltroMenu.contains(e.target))
-                    els.dropdownFiltroMenu.classList.remove('show');
+                if (!menu) return;
+                if (!els.btnFiltroTipo.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.remove('show');
+                    els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
+                }
             });
-            els.dropdownFiltroMenu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
-                item.onclick = function (e) {
-                    e.stopPropagation();
-                    window.pedidosState.filtroCategoria = item.getAttribute('data-filtro');
-                    if (els.labelFiltroTipo) els.labelFiltroTipo.textContent = item.textContent.trim();
-                    els.dropdownFiltroMenu.querySelectorAll('.dropdown-filtro-item')
-                        .forEach(function (el) { el.classList.remove('active'); });
-                    item.classList.add('active');
-                    els.dropdownFiltroMenu.classList.remove('show');
-                    window.pedidosState.paginaAtual = 1;
-                    window.pedidosState.emAcao = true;
-                    _renderizarTabela(window.AppRDO.pedidosCache);
-                };
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && menu) {
+                    menu.classList.remove('show');
+                    els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
+                }
             });
+
+            if (menu) {
+                menu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
+                    item.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var filtro = item.getAttribute('data-filtro');
+                        window.pedidosState.filtroCategoria = filtro;
+                        if (els.labelFiltroTipo) {
+                            els.labelFiltroTipo.textContent = item.textContent.trim();
+                        }
+                        menu.querySelectorAll('.dropdown-filtro-item').forEach(function (el) {
+                            el.classList.remove('active');
+                        });
+                        item.classList.add('active');
+                        menu.classList.remove('show');
+                        els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
+                        window.pedidosState.paginaAtual = 1;
+                        window.pedidosState.emAcao = true;
+                        _renderizarTabela(window.AppRDO.pedidosCache);
+                    });
+                });
+            }
         }
 
         els.filtrosStatus.forEach(function (f) {
@@ -934,6 +957,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 }
             };
         }
+
         if (els.btnNext) {
             els.btnNext.onclick = function () {
                 window.pedidosState.paginaAtual++;

@@ -863,3 +863,22 @@
         font-size: 0.8rem;
     }
 }
+
+.dropdown-filtro-menu {
+    display: none;
+    position: absolute;
+    z-index: 1050;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    min-width: 160px;
+}
+
+.dropdown-filtro-menu.show {
+    display: block;
+}
+
+.dropdown-filtro-wrapper {
+    position: relative;
+}
