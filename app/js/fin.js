@@ -96,37 +96,28 @@
 
   function normalizarRegistro(d) {
     var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
-    var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME')
-      ? 'entrada' : 'saida';
-
+    var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME') ? 'entrada' : 'saida';
     var dataObj = parseData(d.data);
-
     var valorNorm = parseCurrencyField(d.vlr_servico);
     if (isNaN(valorNorm)) valorNorm = 0;
-
     var situacao = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var idPedido = (d.id_pedido || '').toString().trim();
     var colaboradorId = (d.colaborador_id || '').toString().trim();
-
     var motoboyRaw = (d.motoboy || d.colaborador || '').toString().trim();
     var motoboyNome = motoboyRaw;
     if (colaboradorId && state.colaboradoresCache[colaboradorId]) {
       motoboyNome = state.colaboradoresCache[colaboradorId].username || motoboyRaw;
     }
-
     var observacao = (d.observacao || '').toString().trim();
-
     var pctColab = 80;
     if (colaboradorId && state.colaboradoresCache[colaboradorId] && state.colaboradoresCache[colaboradorId].percentual_comissao) {
       pctColab = parseFloat(state.colaboradoresCache[colaboradorId].percentual_comissao) || 80;
     }
     var pctEmpresa = 100 - pctColab;
-
     var valorColab = 0, valorEmpresa = 0;
     if (tipoNorm === 'entrada') {
       var colabVal = parseCurrencyField(d.colaborador);
       var rdoVal = parseCurrencyField(d.rdo);
-
       if (!isNaN(colabVal) && colabVal > 0) {
         valorColab = colabVal;
         valorEmpresa = !isNaN(rdoVal) && rdoVal > 0 ? rdoVal : (valorNorm - colabVal);
@@ -138,7 +129,6 @@
         valorEmpresa = valorNorm;
       }
     }
-
     return {
       id: (d.id || '').toString().trim(),
       idPedido: idPedido,
@@ -165,30 +155,25 @@
     for (var i = 0; i < state.cache.length; i++) {
       var reg = state.cache[i];
       var idPedido = (reg.idPedido || '').toString().trim();
-
       if (!idPedido) {
         if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
         if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
         continue;
       }
-
       var pedido = state.pedidosCache[idPedido];
       if (!pedido) {
         if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
         if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
         continue;
       }
-
       if (!reg.solicitante || reg.solicitante === '' || reg.solicitante === '-')
         reg.solicitante = (pedido.solicitante || '').toString().trim() || '-';
-
       if (!reg.cliente || reg.cliente === '' || reg.cliente === '-') {
         var idCliente = (pedido.id_cliente || '').toString().trim();
         reg.cliente = (idCliente && state.clientesCache[idCliente])
           ? (state.clientesCache[idCliente].username || '').toString().trim() || '-'
           : '-';
       }
-
       if (!reg.colaboradorId && (reg.motoboy === '-' || reg.motoboy === '')) {
         var colabIdPedido = (pedido.colaborador_id || '').toString().trim();
         if (colabIdPedido && state.colaboradoresCache[colabIdPedido]) {
@@ -271,6 +256,7 @@
     els.extratoModalBody = document.getElementById('extrato-modal-body');
     els.extratoModalFechar = document.getElementById('extrato-modal-fechar');
     els.extratoModalCopiar = document.getElementById('extrato-modal-copiar');
+    els.extratoModalPdf = document.getElementById('extrato-modal-pdf');
   }
 
   function formatarMoeda(valor) {
@@ -292,11 +278,189 @@
   }
 
   function getDiaSemanaCompleto(dataISO) {
-    if (!dataISO) return '';
-    var nomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    var partes = dataISO.split('-');
-    var dt = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
-    return nomes[dt.getDay()] || '';
+    try {
+      if (!dataISO) return '';
+      const nomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      const data = new Date(dataISO);
+      if (isNaN(data.getTime())) return '';
+      return nomes[data.getDay()] || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function renderizarListaCaixa(registros = [], paginaAtual = 1) {
+    try {
+      const container = document.getElementById('caixa-lista-diaria');
+      if (!container) return;
+
+      if (!registros || registros.length === 0) {
+        container.innerHTML = `
+                <div class="text-center text-muted py-4" style="font-size:.8rem;">
+                    <i class="bi bi-inbox" style="font-size:1.2rem;display:block;opacity:.4;margin-bottom:4px;"></i>
+                    Nenhum registro encontrado no período.
+                </div>
+            `;
+        return;
+      }
+
+      const porDia = {};
+      registros.forEach(reg => {
+        const dia = reg.dataBR || reg.dataDisplay || '-';
+        if (!porDia[dia]) {
+          porDia[dia] = {
+            registros: [],
+            totalEntradas: 0,
+            totalSaidas: 0,
+            totalEmpresa: 0,
+            totalColaboradores: 0
+          };
+        }
+        porDia[dia].registros.push(reg);
+        const valor = parseFloat(reg.valor) || 0;
+        const valorEmpresa = parseFloat(reg.valorEmpresa) || 0;
+        const valorColaborador = parseFloat(reg.valorColaborador) || 0;
+
+        if (reg.tipo === 'entrada') {
+          porDia[dia].totalEntradas += valor;
+        } else {
+          porDia[dia].totalSaidas += valor;
+        }
+        porDia[dia].totalEmpresa += valorEmpresa;
+        porDia[dia].totalColaboradores += valorColaborador;
+      });
+
+      const dias = Object.keys(porDia).sort((a, b) => {
+        const [diaA, mesA, anoA] = a.split('/');
+        const [diaB, mesB, anoB] = b.split('/');
+        const dataA = new Date(anoA, mesA - 1, diaA);
+        const dataB = new Date(anoB, mesB - 1, diaB);
+        return dataB - dataA;
+      });
+
+      let html = '';
+      dias.forEach(dia => {
+        const dados = porDia[dia];
+        const saldo = dados.totalEntradas - dados.totalSaidas;
+        const classeSaldo = saldo >= 0 ? 'text-success' : 'text-danger';
+
+        html += `
+                <div class="caixa-dia-card">
+                    <div class="caixa-dia-header">
+                        <div class="caixa-dia-data">${dia}</div>
+                        <div class="caixa-dia-resumo">
+                            <span class="caixa-resumo-item caixa-resumo-entrada">
+                                <i class="bi bi-arrow-down-circle"></i> ${formatarMoeda(dados.totalEntradas)}
+                            </span>
+                            <span class="caixa-resumo-item caixa-resumo-saida">
+                                <i class="bi bi-arrow-up-circle"></i> ${formatarMoeda(dados.totalSaidas)}
+                            </span>
+                            <span class="caixa-resumo-item ${classeSaldo}">
+                                <i class="bi bi-wallet2"></i> ${formatarMoeda(saldo)}
+                            </span>
+                        </div>
+                        <button class="btn-visualizar-dia" data-dia="${dia}">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                    </div>
+                    <div class="caixa-dia-detalhes">
+                        <div class="caixa-detalhe-mini">
+                            <span class="caixa-detalhe-label">Empresa (20%)</span>
+                            <span class="caixa-detalhe-valor" style="color:#6f42c1;">${formatarMoeda(dados.totalEmpresa)}</span>
+                        </div>
+                        <div class="caixa-detalhe-mini">
+                            <span class="caixa-detalhe-label">Colaboradores (80%)</span>
+                            <span class="caixa-detalhe-valor" style="color:#0d6efd;">${formatarMoeda(dados.totalColaboradores)}</span>
+                        </div>
+                        <div class="caixa-detalhe-mini">
+                            <span class="caixa-detalhe-label">Lançamentos</span>
+                            <span class="caixa-detalhe-valor">${dados.registros.length}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+      });
+
+      container.innerHTML = html;
+
+      document.querySelectorAll('.btn-visualizar-dia').forEach(btn => {
+        btn.onclick = function () {
+          try {
+            const dia = this.getAttribute('data-dia');
+            if (!dia || !porDia[dia]) return;
+
+            const dados = porDia[dia];
+            const saldo = dados.totalEntradas - dados.totalSaidas;
+
+            const modalTitulo = document.getElementById('modal-detalhe-dia-titulo');
+            const modalEntradas = document.getElementById('modal-detalhe-dia-entradas');
+            const modalSaidas = document.getElementById('modal-detalhe-dia-saidas');
+            const modalEmpresa = document.getElementById('modal-detalhe-dia-empresa');
+            const modalColaboradores = document.getElementById('modal-detalhe-dia-colaboradores');
+            const modalSaldo = document.getElementById('modal-detalhe-dia-saldo');
+            const modalBody = document.getElementById('modal-detalhe-dia-body');
+
+            if (modalTitulo) modalTitulo.textContent = dia;
+            if (modalEntradas) modalEntradas.textContent = formatarMoeda(dados.totalEntradas);
+            if (modalSaidas) modalSaidas.textContent = formatarMoeda(dados.totalSaidas);
+            if (modalEmpresa) modalEmpresa.textContent = formatarMoeda(dados.totalEmpresa);
+            if (modalColaboradores) modalColaboradores.textContent = formatarMoeda(dados.totalColaboradores);
+            if (modalSaldo) {
+              modalSaldo.textContent = formatarMoeda(saldo);
+              modalSaldo.style.color = saldo >= 0 ? '#198754' : '#dc3545';
+            }
+
+            if (modalBody) {
+              let tbodyHtml = '';
+              dados.registros.forEach(reg => {
+                const statusClass = {
+                  'pago': 'badge bg-success',
+                  'recebido': 'badge bg-primary',
+                  'pendente': 'badge bg-warning text-dark',
+                  'cancelado': 'badge bg-secondary'
+                }[reg.situacao] || 'badge bg-secondary';
+
+                const statusText = {
+                  'pago': 'Pago',
+                  'recebido': 'Recebido',
+                  'pendente': 'Pendente',
+                  'cancelado': 'Cancelado'
+                }[reg.situacao] || reg.situacao || '-';
+
+                tbodyHtml += `
+                                <tr>
+                                    <td>${reg.idPedido || reg.descricao || '-'}</td>
+                                    <td class="text-end fw-semibold">${formatarMoeda(reg.valor || 0)}</td>
+                                    <td class="text-end" style="color:#0d6efd;">${formatarMoeda(reg.valorColaborador || 0)}</td>
+                                    <td class="text-end" style="color:#6f42c1;">${formatarMoeda(reg.valorEmpresa || 0)}</td>
+                                    <td class="text-center">
+                                        <span class="${statusClass}" style="font-size:.65rem;padding:3px 8px;">${statusText}</span>
+                                    </td>
+                                </tr>
+                            `;
+              });
+              modalBody.innerHTML = tbodyHtml;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalheDia'));
+            modal.show();
+          } catch (err) {
+            console.error('Erro ao abrir modal:', err);
+          }
+        };
+      });
+
+    } catch (err) {
+      console.error('Erro ao renderizar lista:', err);
+      if (container) {
+        container.innerHTML = `
+                <div class="text-center text-danger py-4" style="font-size:.8rem;">
+                    <i class="bi bi-exclamation-triangle" style="font-size:1.2rem;display:block;margin-bottom:4px;"></i>
+                    Erro ao carregar registros
+                </div>
+            `;
+      }
+    }
   }
 
   function obterMesAtualRange() {
@@ -328,19 +492,13 @@
   }
 
   function spinOn() {
-    if (els.btnRefresh) {
-      els.btnRefresh.classList.add('syncing');
-      els.btnRefresh.disabled = true;
-    }
+    if (els.btnRefresh) { els.btnRefresh.classList.add('syncing'); els.btnRefresh.disabled = true; }
     if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat loading-spin';
   }
 
   function spinOff() {
     setTimeout(function () {
-      if (els.btnRefresh) {
-        els.btnRefresh.classList.remove('syncing');
-        els.btnRefresh.disabled = false;
-      }
+      if (els.btnRefresh) { els.btnRefresh.classList.remove('syncing'); els.btnRefresh.disabled = false; }
       if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat';
     }, 500);
   }
@@ -435,7 +593,6 @@
     var OLD_ID = 'modalAdicionarDinheiroDyn';
     var old = document.getElementById(OLD_ID);
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered" style="max-width:400px;">' +
@@ -456,12 +613,10 @@
       '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Cancelar</button>' +
       '<button type="button" class="btn btn-success rounded-pill px-4" id="btn-add-dinheiro-confirmar-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-check-lg me-1"></i>Confirmar</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
     mascaraValor(document.getElementById('add-dinheiro-valor-dyn'));
-
     document.getElementById('btn-add-dinheiro-confirmar-dyn').addEventListener('click', function () {
       var erroEl = document.getElementById('add-dinheiro-erro-dyn');
       var valorEl = document.getElementById('add-dinheiro-valor-dyn');
@@ -487,7 +642,6 @@
         erroEl.textContent = 'Falha na comunicação com o servidor.'; erroEl.classList.remove('d-none');
       }).finally(function () { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; });
     });
-
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
@@ -496,7 +650,6 @@
     var OLD_ID = 'modalTransferirDyn';
     var old = document.getElementById(OLD_ID);
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered" style="max-width:400px;">' +
@@ -519,12 +672,10 @@
       '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Cancelar</button>' +
       '<button type="button" class="btn btn-primary rounded-pill px-4" id="btn-transferir-confirmar-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-check-lg me-1"></i>Confirmar</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
     mascaraValor(document.getElementById('transferir-valor-dyn'));
-
     document.getElementById('btn-transferir-confirmar-dyn').addEventListener('click', function () {
       var erroEl = document.getElementById('transferir-erro-dyn');
       var valorEl = document.getElementById('transferir-valor-dyn');
@@ -553,7 +704,6 @@
         erroEl.textContent = 'Falha na comunicação com o servidor.'; erroEl.classList.remove('d-none');
       }).finally(function () { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; });
     });
-
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
@@ -562,7 +712,6 @@
     var OLD_ID = 'modalRepassesDyn';
     var old = document.getElementById(OLD_ID);
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var dados = state.caixa.dadosFiltrados.length ? state.caixa.dadosFiltrados : state.cache;
     var entradas = dados.filter(function (r) { return r.tipo === 'entrada'; });
     var por = {};
@@ -571,7 +720,6 @@
       por[nome] = (por[nome] || 0) + (parseFloat(r.valorColaborador) || 0);
     });
     var nomes = Object.keys(por).sort(function (a, b) { return por[b] - por[a]; });
-
     var listaHtml = nomes.length
       ? nomes.map(function (nome) {
         return '<div class="d-flex justify-content-between align-items-center py-2 px-1" style="border-bottom:1px solid #f0f0f0;">' +
@@ -581,11 +729,9 @@
           '<span style="font-size:.84rem;font-weight:700;color:#6f42c1;">' + formatarMoeda(por[nome]) + '</span></div>';
       }).join('')
       : '<div class="text-center text-muted py-5"><i class="bi bi-people" style="font-size:2rem;opacity:.3;display:block;margin-bottom:10px;"></i>Nenhum dado disponível.</div>';
-
     var periodoLabel = state.caixa.dataInicio && state.caixa.dataFim
       ? formatDateBR(state.caixa.dataInicio) + ' a ' + formatDateBR(state.caixa.dataFim)
       : 'Todos os registros';
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:420px;">' +
@@ -600,7 +746,6 @@
       '<div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">' +
       '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl);
@@ -612,7 +757,6 @@
     var OLD_ID = 'modalExtratosCaixaDyn';
     var old = document.getElementById(OLD_ID);
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:480px;">' +
@@ -628,13 +772,11 @@
       '<div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">' +
       '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl);
     var container = document.getElementById(OLD_ID + '-lista');
     var extratos = carregarExtratosStorage();
-
     if (!extratos.length) {
       container.innerHTML =
         '<div class="text-center text-muted py-5">' +
@@ -666,7 +808,6 @@
           '<button class="extrato-item-btn extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
           '</div></div>';
       }).join('');
-
       container.querySelectorAll('.extrato-item-btn-ver-modal').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
@@ -681,7 +822,6 @@
         });
       });
     }
-
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
@@ -849,7 +989,7 @@
         var tipoMap = { entrada: 'receita entrada', saida: 'despesa saida' };
         var campos = [d.id, d.idPedido, d.descricao, d.motoboy, d.observacao, d.dataBR, d.dataDisplay, d.dataISO,
           valorFormatado, valorSimples, valorPonto, valorInt, situacaoMap[d.situacao] || d.situacao,
-          tipoMap[d.tipo] || d.tipo, d.cliente, d.solicitante];
+        tipoMap[d.tipo] || d.tipo, d.cliente, d.solicitante];
         var pool = removerAcentos(campos.map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase());
         var termos = termo.split(/\s+/);
         for (var i = 0; i < termos.length; i++) { if (termos[i] && pool.indexOf(termos[i]) === -1) return false; }
@@ -860,20 +1000,16 @@
 
   function renderTodos() {
     if (!els.tbodyTodos) return;
-
     var lista = dadosFiltradosTodos();
     lista.sort(function (a, b) {
       var da = a.dataISO || '', db = b.dataISO || '';
       return state.sortDataDesc ? db.localeCompare(da) : da.localeCompare(db);
     });
-
     var total = lista.length;
     state.todos.totalPag = Math.max(1, Math.ceil(total / state.todos.porPagina));
     state.todos.pagina = Math.min(Math.max(1, state.todos.pagina), state.todos.totalPag);
-
     var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
     var paginaAtual = lista.slice(inicio, inicio + state.todos.porPagina);
-
     if (!paginaAtual.length) {
       els.tbodyTodos.innerHTML =
         '<tr><td colspan="6" class="text-center text-muted py-4">' +
@@ -899,12 +1035,10 @@
         );
       }).join('');
     }
-
     if (els.pagInfoTodos) els.pagInfoTodos.textContent = total + ' registro' + (total !== 1 ? 's' : '');
     if (els.pagPrevTodos) els.pagPrevTodos.disabled = (state.todos.pagina <= 1);
     if (els.pagNextTodos) els.pagNextTodos.disabled = (state.todos.pagina >= state.todos.totalPag);
     if (els.pagLabelTodos) els.pagLabelTodos.textContent = 'Pág ' + state.todos.pagina;
-
     bindAcoesTodas(paginaAtual);
   }
 
@@ -975,13 +1109,11 @@
     if (!container) return;
     var lista = state.caixa.dadosFiltrados || [];
     var visivel = state.caixaValoresVisiveis;
-
     if (!lista.length) {
       container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.2rem;display:block;margin-bottom:4px;opacity:.4;"></i>Nenhum registro no período</div>';
       atualizarPaginacaoCaixa(0);
       return;
     }
-
     var grupos = {}, diasOrdem = [];
     for (var i = 0; i < lista.length; i++) {
       var key = lista[i].dataISO || '';
@@ -989,16 +1121,13 @@
       grupos[key].push(lista[i]);
     }
     diasOrdem.sort();
-
     var totalDias = diasOrdem.length;
     var diasPorPagina = state.caixa.porPagina;
     var totalPag = Math.max(1, Math.ceil(totalDias / diasPorPagina));
     state.caixa.pagina = Math.min(Math.max(1, state.caixa.pagina || 1), totalPag);
     state.caixa.totalPag = totalPag;
-
     var inicioDia = (state.caixa.pagina - 1) * diasPorPagina;
     var diasPagina = diasOrdem.slice(inicioDia, inicioDia + diasPorPagina);
-
     var saldoAcumulado = 0;
     for (var di2 = 0; di2 < inicioDia; di2++) {
       var reg = grupos[diasOrdem[di2]];
@@ -1007,7 +1136,6 @@
         else saldoAcumulado -= parseFloat(reg[r].valor) || 0;
       }
     }
-
     var html = '';
     for (var idx = 0; idx < diasPagina.length; idx++) {
       var diaISO = diasPagina[idx];
@@ -1035,7 +1163,6 @@
         '<i class="bi bi-chevron-right caixa-dia-chevron"></i></div></div>';
     }
     container.innerHTML = html;
-
     container.querySelectorAll('.caixa-dia-item').forEach(function (el) {
       el.addEventListener('click', function () {
         var dia = this.getAttribute('data-dia');
@@ -1107,29 +1234,22 @@
   function abrirViewModal(d) {
     var old = document.getElementById('modal-fin-view-dynamic');
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var isE = d.tipo === 'entrada';
     var tipoLabel = isE ? 'RECEITA' : 'DESPESA';
     var tipoIcon = isE ? 'bi-arrow-down-left' : 'bi-arrow-up-right';
     var corValor = isE ? '#198754' : '#dc3545';
     var colaboradorLabel = (d.motoboy && d.motoboy !== '-') ? d.motoboy : '-';
-
     var descricaoExibir = (d.descricao && d.descricao.trim())
       ? d.descricao.trim()
       : (colaboradorLabel !== '-'
         ? 'Pix realizado para ' + colaboradorLabel + ' - ' + (d.dataBR || '')
         : 'Pix realizado no dia ' + (d.dataBR || '-'));
-
-    var observacaoExibir = (d.observacao && d.observacao.trim())
-      ? d.observacao.trim()
-      : descricaoExibir;
-
+    var observacaoExibir = (d.observacao && d.observacao.trim()) ? d.observacao.trim() : descricaoExibir;
     var valorTotal = parseFloat(d.valor) || 0;
     var pctColab = parseFloat(d.percentualComissao) || 80;
     var pctEmpresa = 100 - pctColab;
     var valorColab = parseFloat(d.valorColaborador) || 0;
     var valorEmpresaVal = parseFloat(d.valorEmpresa) || 0;
-
     var blocoDistribuicao = '';
     if (isE) {
       blocoDistribuicao =
@@ -1145,7 +1265,6 @@
         '</div>' +
         '</div>';
     }
-
     var html =
       '<div class="modal fade" id="modal-fin-view-dynamic" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered">' +
@@ -1181,27 +1300,20 @@
       '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="btn-view-editar-dynamic" style="font-size:.72rem;"><i class="bi bi-pencil-square me-1"></i>Editar</button>' +
       '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Fechar</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById('modal-fin-view-dynamic');
     var modalInst = new bootstrap.Modal(modalEl);
-
     document.getElementById('btn-view-editar-dynamic').addEventListener('click', function () {
       modalInst.hide();
       setTimeout(function () { abrirModalEditar(d); }, 300);
     });
-
-    modalEl.addEventListener('hidden.bs.modal', function () {
-      modalInst.dispose();
-      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
-    });
-
+    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
 
   function _getModalFinIds() {
     return {
-      id: document.getElementById('fin-edit-id') || document.getElementById('fin-id'),
+      id: document.getElementById('fin-edit-id'),
       tipo: document.getElementById('fin-tipo'),
       data: document.getElementById('fin-data'),
       situacao: document.getElementById('fin-situacao'),
@@ -1209,8 +1321,8 @@
       descricao: document.getElementById('fin-descricao'),
       valor: document.getElementById('fin-valor'),
       obs: document.getElementById('fin-obs'),
-      erro: document.getElementById('form-novo-fin-erro') || document.getElementById('form-fin-erro'),
-      btnSalvar: document.getElementById('btn-salvar-novo-fin') || document.getElementById('btn-salvar-fin'),
+      erro: document.getElementById('form-novo-fin-erro'),
+      btnSalvar: document.getElementById('btn-salvar-novo-fin'),
       spinner: document.getElementById('spinner-salvar-fin'),
       txtSalvar: document.getElementById('txt-salvar-fin')
     };
@@ -1229,7 +1341,6 @@
     if (f.erro) f.erro.classList.add('d-none');
     var preview = document.getElementById('fin-preview-comissao');
     if (preview) preview.classList.add('d-none');
-
     var modalEl = document.getElementById('modalNovoFinanceiro');
     if (!modalEl) return;
     var inst = bootstrap.Modal.getInstance(modalEl);
@@ -1249,7 +1360,6 @@
     if (f.obs) f.obs.value = d.observacao || '';
     if (f.erro) f.erro.classList.add('d-none');
     atualizarPreviewComissao();
-
     var modalEl = document.getElementById('modalNovoFinanceiro');
     if (!modalEl) return;
     var inst = bootstrap.Modal.getInstance(modalEl);
@@ -1262,19 +1372,15 @@
     var colabEl = document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador');
     var preview = document.getElementById('fin-preview-comissao');
     if (!valorEl || !preview) return;
-
     var valorNum = parseValor(valorEl.value || '0');
     var colabId = colabEl ? colabEl.value : '';
     var pctColab = 80;
-
     if (colabId && state.colaboradoresCache[colabId] && state.colaboradoresCache[colabId].percentual_comissao) {
       pctColab = parseFloat(state.colaboradoresCache[colabId].percentual_comissao) || 80;
     }
-
     var pctEmpresa = 100 - pctColab;
     var vColab = valorNum * (pctColab / 100);
     var vEmpresa = valorNum * (pctEmpresa / 100);
-
     if (valorNum > 0 && colabId) {
       preview.classList.remove('d-none');
       setText('preview-valor-total', formatarMoeda(valorNum));
@@ -1290,7 +1396,6 @@
   function salvarLancamento() {
     var f = _getModalFinIds();
     if (f.erro) f.erro.classList.add('d-none');
-
     var tipo = f.tipo ? f.tipo.value.trim() : '';
     var data = f.data ? f.data.value.trim() : '';
     var valorStr = f.valor ? f.valor.value.trim() : '';
@@ -1299,34 +1404,19 @@
     var descricao = f.descricao ? f.descricao.value.trim() : '';
     var obs = f.obs ? f.obs.value.trim() : '';
     var editId = f.id ? f.id.value.trim() : '';
-
     if (!tipo) { _showFormErro(f.erro, 'Selecione o tipo (Receita ou Despesa).'); return; }
     if (!data) { _showFormErro(f.erro, 'Informe a data.'); return; }
     if (!valorStr) { _showFormErro(f.erro, 'Informe o valor.'); return; }
     var valorNum = parseValor(valorStr);
     if (isNaN(valorNum) || valorNum <= 0) { _showFormErro(f.erro, 'Informe um valor válido.'); return; }
-
     var colaboradorNome = '';
     if (colaboradorId && state.colaboradoresCache[colaboradorId]) {
       colaboradorNome = state.colaboradoresCache[colaboradorId].username || '';
     }
-
-    var payload = {
-      tipo: tipo,
-      data: data,
-      descricao: descricao,
-      valor: valorNum,
-      situacao: situacao,
-      colaborador_id: colaboradorId,
-      motoboy: colaboradorNome,
-      observacao: obs
-    };
-
+    var payload = { tipo: tipo, data: data, descricao: descricao, valor: valorNum, situacao: situacao, colaborador_id: colaboradorId, motoboy: colaboradorNome, observacao: obs };
     if (f.btnSalvar) { f.btnSalvar.disabled = true; f.btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...'; }
-
     var acao = editId ? 'editfinanceiro' : 'addfinanceiro';
     if (editId) payload.id = editId;
-
     window.API.call(acao, payload)
       .then(function (res) {
         if (isRespostaSucesso(res)) {
@@ -1354,7 +1444,6 @@
     var OLD_ID = 'modalConfirmExclusaoDyn';
     var old = document.getElementById(OLD_ID);
     if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered" style="max-width:380px;">' +
@@ -1376,11 +1465,9 @@
       '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">Cancelar</button>' +
       '<button type="button" class="btn btn-danger rounded-pill px-4" id="btn-confirm-excluir-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-trash me-1"></i>Excluir</button>' +
       '</div></div></div></div>';
-
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-
     document.getElementById('btn-confirm-excluir-dyn').addEventListener('click', function () {
       var btn = this;
       btn.disabled = true;
@@ -1403,7 +1490,6 @@
           btn.innerHTML = '<i class="bi bi-trash me-1"></i>Excluir';
         });
     });
-
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
@@ -1453,53 +1539,40 @@
     state.fetching = true;
     spinOn();
     _mostrarLoadingFin();
-
     var promessas = [
       window.API.call('getfinanceiro', {}).catch(function () { return []; }),
       window.API.call('getpedidos', {}).catch(function () { return []; }),
       window.API.call('getclientes', {}).catch(function () { return []; }),
       window.API.call('getcolaboradores', {}).catch(function () { return []; })
     ];
-
     Promise.all(promessas).then(function (resultados) {
       var rawFin = extrairArray(resultados[0]);
       var rawPedidos = extrairArray(resultados[1]);
       var rawClientes = extrairArray(resultados[2]);
       var rawColabs = extrairArray(resultados[3]);
-
       state.clientesCache = {};
       rawClientes.forEach(function (c) { if (c && c.id) state.clientesCache[c.id.toString()] = c; });
-
       state.colaboradoresCache = {};
       state.colaboradores = [];
       rawColabs.forEach(function (c) {
-        if (c && c.id) {
-          state.colaboradoresCache[c.id.toString()] = c;
-          state.colaboradores.push(c);
-        }
+        if (c && c.id) { state.colaboradoresCache[c.id.toString()] = c; state.colaboradores.push(c); }
       });
-
       state.pedidosCache = {};
       rawPedidos.forEach(function (p) {
         if (p && p.id) state.pedidosCache[p.id.toString()] = p;
         if (p && p.numero_pedido) state.pedidosCache[p.numero_pedido.toString()] = p;
       });
-
       state.cache = rawFin.map(function (d) { return normalizarRegistro(d); });
       resolverClienteSolicitante();
-
       popularSelectColaboradores();
       popularSelectExtratoOrigem();
-
       var finValorEl = document.getElementById('fin-valor');
       var finColabEl = document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador');
       if (finValorEl && !finValorEl._maskBound) { mascaraValor(finValorEl); finValorEl._maskBound = true; finValorEl.addEventListener('input', atualizarPreviewComissao); }
       if (finColabEl && !finColabEl._maskBound) { finColabEl._maskBound = true; finColabEl.addEventListener('change', atualizarPreviewComissao); }
-
       renderTodos();
       renderCaixa();
       popularSelectExtratoOrigem();
-
     }).catch(function () {
       finToast('Erro ao carregar dados financeiros.', 'danger');
       if (els.tbodyTodos) {
@@ -1508,10 +1581,7 @@
           '<i class="bi bi-exclamation-triangle" style="font-size:1.2rem;display:block;margin-bottom:4px;"></i>' +
           'Erro ao carregar dados</td></tr>';
       }
-    }).finally(function () {
-      state.fetching = false;
-      spinOff();
-    });
+    }).finally(function () { state.fetching = false; spinOff(); });
   }
 
   function configurarExtratoPeriodoBtns() {
@@ -1530,7 +1600,6 @@
         if (els.extratoDataFim) els.extratoDataFim.value = toISO(hoje);
       });
     });
-
     var hoje = new Date();
     if (els.extratoDataInicio) els.extratoDataInicio.value = toISO(hoje);
     if (els.extratoDataFim) els.extratoDataFim.value = toISO(hoje);
@@ -1571,18 +1640,13 @@
     var container = els.extratoLista;
     if (!container) return;
     var placeholder = document.getElementById('extrato-placeholder');
-
     if (!lista.length) {
       if (placeholder) placeholder.style.display = '';
-      var existente = container.querySelectorAll('.extrato-item-card');
-      existente.forEach(function (el) { el.remove(); });
+      container.querySelectorAll('.extrato-item-card').forEach(function (el) { el.remove(); });
       return;
     }
     if (placeholder) placeholder.style.display = 'none';
-
-    var existentes = container.querySelectorAll('.extrato-item-card');
-    existentes.forEach(function (el) { el.remove(); });
-
+    container.querySelectorAll('.extrato-item-card').forEach(function (el) { el.remove(); });
     lista.forEach(function (ex) {
       var totalRegs = (ex.registros || []).length;
       var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
@@ -1609,11 +1673,21 @@
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(saldo) + '</span>' +
         '<div style="display:flex;gap:6px;">' +
+        '<button class="extrato-item-btn extrato-item-btn-pdf" data-id="' + escapeHtml(ex.id) + '" title="Gerar PDF" style="color:#dc3545;"><i class="bi bi-file-earmark-pdf-fill"></i></button>' +
         '<button class="extrato-item-btn extrato-item-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
         '<button class="extrato-item-btn extrato-item-btn-del" data-id="' + escapeHtml(ex.id) + '" title="Excluir" style="color:#dc3545;"><i class="bi bi-trash"></i></button>' +
         '</div></div>';
 
-      card.querySelector('.extrato-item-btn-ver').addEventListener('click', function (e) { e.stopPropagation(); var ext = buscarExtratoStoragePorId(this.getAttribute('data-id')); if (ext) abrirExtratoModal(ext); });
+      card.querySelector('.extrato-item-btn-pdf').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
+        if (ext) gerarPdfExtrato(ext);
+      });
+      card.querySelector('.extrato-item-btn-ver').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
+        if (ext) abrirExtratoModal(ext);
+      });
       card.querySelector('.extrato-item-btn-del').addEventListener('click', function (e) {
         e.stopPropagation();
         var id = this.getAttribute('data-id');
@@ -1622,7 +1696,10 @@
         renderizarListaExtratos();
         finToast('Extrato removido.', 'info');
       });
-      card.addEventListener('click', function () { var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id')); if (ext) abrirExtratoModal(ext); });
+      card.addEventListener('click', function () {
+        var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
+        if (ext) abrirExtratoModal(ext);
+      });
       container.appendChild(card);
     });
   }
@@ -1634,7 +1711,6 @@
     var origem = els.extratoOrigem.value;
     if (!di || !df) { finToast('Selecione o período.', 'warning'); return; }
     if (di > df) { finToast('A data inicial não pode ser maior que a data final.', 'warning'); return; }
-
     var registrosFiltrados = state.cache.filter(function (r) {
       if (!r.dataISO) return false;
       if (r.dataISO < di || r.dataISO > df) return false;
@@ -1649,9 +1725,7 @@
       }
       return true;
     });
-
     if (!registrosFiltrados.length) { finToast('Nenhum registro encontrado no período/origem selecionados.', 'warning'); return; }
-
     var origemLabel = '';
     if (origem === '__caixa__') { origemLabel = 'Caixa Geral'; }
     else if (origem.indexOf('__colab__') === 0) {
@@ -1659,9 +1733,7 @@
       origemLabel = state.colaboradoresCache[cId] ? (state.colaboradoresCache[cId].username || cId) : cId;
     } else if (origem.indexOf('__grupo__') === 0) { origemLabel = origem.replace('__grupo__', ''); }
     else { origemLabel = origem; }
-
     var periodoLabel = formatDateBR(di) + (di !== df ? ' a ' + formatDateBR(df) : '');
-
     var extrato = {
       id: gerarIdExtrato(),
       origem: origemLabel,
@@ -1671,15 +1743,32 @@
       criadoEm: Date.now(),
       registros: registrosFiltrados
     };
-
     salvarNovoExtrato(extrato);
     renderizarListaExtratos();
     abrirExtratoModal(extrato);
   }
 
-   function abrirExtratoModal(extrato) {
-    if (!els.extratoModalOverlay || !els.extratoModalBody || !els.extratoModalTitulo) return;
+  function _gerarTextoExtrato(extrato, totalEnt, totalSai, totalEmpresa, totalColabs, saldo) {
+    var registros = extrato.registros || [];
+    var texto = '=== EXTRATO FINANCEIRO ===\n';
+    texto += 'Origem:   ' + (extrato.origem || '-') + '\n';
+    texto += 'Período:  ' + (extrato.periodoLabel || '-') + '\n';
+    texto += 'Gerado em: ' + (extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '\n\n';
+    texto += 'Receitas:    ' + formatarMoeda(totalEnt) + '\n';
+    texto += 'Despesas:    ' + formatarMoeda(totalSai) + '\n';
+    texto += 'Empresa:     ' + formatarMoeda(totalEmpresa) + '\n';
+    texto += 'Colabor.:    ' + formatarMoeda(totalColabs) + '\n';
+    texto += 'Saldo:       ' + formatarMoeda(saldo) + '\n\n';
+    texto += '--- Detalhamento ---\n';
+    registros.forEach(function (r) {
+      var isE = r.tipo === 'entrada';
+      texto += (r.dataDisplay || r.dataBR || '-') + ' | ' + (r.idPedido || '-') + ' | ' + (r.descricao || '-') + ' | ' + (isE ? '+' : '-') + formatarMoeda(r.valor) + '\n';
+    });
+    return texto;
+  }
 
+  function abrirExtratoModal(extrato) {
+    if (!els.extratoModalOverlay || !els.extratoModalBody || !els.extratoModalTitulo) return;
     var registros = extrato.registros || [];
     var totalEnt = 0, totalSai = 0, totalColabs = 0, totalEmpresa = 0;
     registros.forEach(function (r) {
@@ -1690,9 +1779,7 @@
       else { totalSai += val; }
     });
     var saldo = totalEmpresa - totalSai;
-
     els.extratoModalTitulo.textContent = (extrato.origem || 'Extrato').toUpperCase() + ' — ' + (extrato.periodoLabel || '');
-
     var linhas = registros.map(function (r) {
       var isE = r.tipo === 'entrada';
       return (
@@ -1704,21 +1791,12 @@
         '</tr>'
       );
     }).join('');
-
     els.extratoModalBody.innerHTML =
       '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;">' +
-      '<div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;">' +
-      '<div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Receitas</div>' +
-      '<div style="font-size:1rem;font-weight:700;color:#198754;">' + formatarMoeda(totalEnt) + '</div></div>' +
-      '<div style="background:#fff5f5;border-radius:10px;padding:12px 14px;">' +
-      '<div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Despesas</div>' +
-      '<div style="font-size:1rem;font-weight:700;color:#dc3545;">' + formatarMoeda(totalSai) + '</div></div>' +
-      '<div style="background:#f0f4ff;border-radius:10px;padding:12px 14px;">' +
-      '<div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Empresa</div>' +
-      '<div style="font-size:1rem;font-weight:700;color:#0d6efd;">' + formatarMoeda(totalEmpresa) + '</div></div>' +
-      '<div style="background:#f5f0ff;border-radius:10px;padding:12px 14px;">' +
-      '<div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Colaboradores</div>' +
-      '<div style="font-size:1rem;font-weight:700;color:#6f42c1;">' + formatarMoeda(totalColabs) + '</div></div>' +
+      '<div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;"><div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Receitas</div><div style="font-size:1rem;font-weight:700;color:#198754;">' + formatarMoeda(totalEnt) + '</div></div>' +
+      '<div style="background:#fff5f5;border-radius:10px;padding:12px 14px;"><div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Despesas</div><div style="font-size:1rem;font-weight:700;color:#dc3545;">' + formatarMoeda(totalSai) + '</div></div>' +
+      '<div style="background:#f0f4ff;border-radius:10px;padding:12px 14px;"><div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Empresa</div><div style="font-size:1rem;font-weight:700;color:#0d6efd;">' + formatarMoeda(totalEmpresa) + '</div></div>' +
+      '<div style="background:#f5f0ff;border-radius:10px;padding:12px 14px;"><div style="font-size:.65rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Colaboradores</div><div style="font-size:1rem;font-weight:700;color:#6f42c1;">' + formatarMoeda(totalColabs) + '</div></div>' +
       '</div>' +
       '<div style="background:' + (saldo >= 0 ? '#f0fdf4' : '#fff5f5') + ';border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">' +
       '<span style="font-size:.75rem;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;">Saldo Líquido</span>' +
@@ -1734,12 +1812,11 @@
       '</tr></thead>' +
       '<tbody>' + linhas + '</tbody>' +
       '</table></div>';
-
     if (els.extratoModalCopiar) {
       els.extratoModalCopiar.onclick = function () {
         var texto = '=== EXTRATO FINANCEIRO ===\n';
-        texto += 'Origem: ' + (extrato.origem || '-') + '\n';
-        texto += 'Período: ' + (extrato.periodoLabel || '-') + '\n';
+        texto += 'Origem:    ' + (extrato.origem || '-') + '\n';
+        texto += 'Período:   ' + (extrato.periodoLabel || '-') + '\n';
         texto += 'Gerado em: ' + (extrato.criadoEm ? new Date(extrato.criadoEm).toLocaleString('pt-BR') : '-') + '\n\n';
         texto += 'Receitas:    ' + formatarMoeda(totalEnt) + '\n';
         texto += 'Despesas:    ' + formatarMoeda(totalSai) + '\n';
@@ -1754,7 +1831,11 @@
         copiarTextoClipboard(texto);
       };
     }
-
+    if (els.extratoModalPdf) {
+      els.extratoModalPdf.onclick = function () {
+        gerarPdfExtrato(extrato);
+      };
+    }
     els.extratoModalOverlay.style.display = 'flex';
   }
 
@@ -1768,6 +1849,112 @@
     carregarDados();
   };
 
+  function gerarPdfExtrato(extrato) {
+    var registros = extrato.registros || [];
+    var totalEnt = 0, totalSai = 0, totalColabs = 0, totalEmpresa = 0;
+    registros.forEach(function (r) {
+      var val = parseFloat(r.valor) || 0;
+      var vColab = parseFloat(r.valorColaborador) || 0;
+      var vEmp = parseFloat(r.valorEmpresa) || 0;
+      if (r.tipo === 'entrada') { totalEnt += val; totalColabs += vColab; totalEmpresa += vEmp; }
+      else { totalSai += val; }
+    });
+    var saldo = totalEmpresa - totalSai;
+    var agora = new Date();
+    var dataGeracao = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    var origem = (extrato.origem || 'Caixa Geral').toUpperCase();
+    var periodo = extrato.periodoLabel || '-';
+    var linhasHtml = '';
+    registros.forEach(function (r, idx) {
+      var isE = r.tipo === 'entrada';
+      var bgRow = idx % 2 === 0 ? '#ffffff' : '#f9f9f9';
+      linhasHtml +=
+        '<tr style="background:' + bgRow + ';">' +
+        '<td style="padding:8px 10px;font-size:11px;color:#444;border-bottom:1px solid #eee;">' + escapeHtml(r.dataDisplay || r.dataBR || '-') + '</td>' +
+        '<td style="padding:8px 10px;font-size:11px;color:#444;border-bottom:1px solid #eee;">' + escapeHtml(r.idPedido || '-') + '</td>' +
+        '<td style="padding:8px 10px;font-size:11px;color:#444;border-bottom:1px solid #eee;max-width:200px;">' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td style="padding:8px 10px;font-size:11px;border-bottom:1px solid #eee;text-align:center;">' +
+        '<span style="background:' + (isE ? '#e8f5e9' : '#ffeaea') + ';color:' + (isE ? '#2e7d32' : '#c62828') + ';padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">' + (isE ? 'Receita' : 'Despesa') + '</span></td>' +
+        '<td style="padding:8px 10px;font-size:11px;font-weight:700;border-bottom:1px solid #eee;text-align:right;color:' + (isE ? '#2e7d32' : '#c62828') + ';">' + (isE ? '+' : '-') + formatarMoeda(r.valor) + '</td>' +
+        '</tr>';
+    });
+    var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>Extrato - ' + origem + ' - ' + periodo + '</title>' +
+      '<style>' +
+      '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");' +
+      '*{margin:0;padding:0;box-sizing:border-box;}' +
+      'body{font-family:"Inter",Arial,sans-serif;background:#f0f2f5;color:#222;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      '.page{max-width:780px;margin:0 auto;background:#fff;}' +
+      '@media print{body{background:#fff;}.page{max-width:100%;margin:0;}.no-print{display:none!important;}}' +
+      '</style></head><body>' +
+      '<div class="no-print" style="text-align:center;padding:16px 0 0;background:#f0f2f5;">' +
+      '<button onclick="window.print()" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;border:none;padding:10px 32px;border-radius:25px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.5px;">🖨️ Imprimir / Salvar PDF</button>' +
+      '</div>' +
+      '<div class="page">' +
+      '<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:32px 36px 28px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+      '<div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Relatório Financeiro</div>' +
+      '<div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Extrato</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,.65);margin-top:4px;font-weight:500;">' + origem + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+      '<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px 18px;display:inline-block;">' +
+      '<div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Período</div>' +
+      '<div style="font-size:13px;color:#fff;font-weight:700;">' + escapeHtml(periodo) + '</div>' +
+      '</div></div></div>' +
+      '<div style="border-top:1px solid rgba(255,255,255,.12);margin:20px 0 0;"></div>' +
+      '<div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;">' +
+      '<span style="background:rgba(255,255,255,.08);border-radius:20px;padding:4px 12px;font-size:10px;color:rgba(255,255,255,.6);">📅 Gerado em: ' + dataGeracao + '</span>' +
+      '<span style="background:rgba(255,255,255,.08);border-radius:20px;padding:4px 12px;font-size:10px;color:rgba(255,255,255,.6);">📋 ID: ' + escapeHtml(extrato.id || '-') + '</span>' +
+      '<span style="background:rgba(255,255,255,.08);border-radius:20px;padding:4px 12px;font-size:10px;color:rgba(255,255,255,.6);">📊 ' + registros.length + ' lançamento(s)</span>' +
+      '</div></div>' +
+      '<div style="padding:24px 36px 0;">' +
+      '<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;">Resumo Financeiro</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">' +
+      '<div style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border-radius:14px;padding:16px;border-left:4px solid #2e7d32;">' +
+      '<div style="font-size:9px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Receitas</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#1b5e20;">' + formatarMoeda(totalEnt) + '</div></div>' +
+      '<div style="background:linear-gradient(135deg,#ffeaea,#fff5f5);border-radius:14px;padding:16px;border-left:4px solid #c62828;">' +
+      '<div style="font-size:9px;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Despesas</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#b71c1c;">' + formatarMoeda(totalSai) + '</div></div>' +
+      '<div style="background:linear-gradient(135deg,#e8eaf6,#ede7f6);border-radius:14px;padding:16px;border-left:4px solid #5c35c0;">' +
+      '<div style="font-size:9px;font-weight:700;color:#5c35c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Empresa</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#4527a0;">' + formatarMoeda(totalEmpresa) + '</div></div>' +
+      '<div style="background:linear-gradient(135deg,#e3f2fd,#e8f4fd);border-radius:14px;padding:16px;border-left:4px solid #1565c0;">' +
+      '<div style="font-size:9px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Colaboradores</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#0d47a1;">' + formatarMoeda(totalColabs) + '</div></div>' +
+      '</div>' +
+      '<div style="background:' + (saldo >= 0 ? 'linear-gradient(135deg,#e8f5e9,#f1f8e9)' : 'linear-gradient(135deg,#ffeaea,#fff5f5)') + ';border-radius:14px;padding:16px 20px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center;border:2px solid ' + (saldo >= 0 ? '#2e7d32' : '#c62828') + ';">' +
+      '<div><div style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;">Saldo Líquido</div>' +
+      '<div style="font-size:11px;color:#888;margin-top:2px;">(Empresa − Despesas)</div></div>' +
+      '<div style="font-size:22px;font-weight:800;color:' + (saldo >= 0 ? '#1b5e20' : '#b71c1c') + ';">' + (saldo >= 0 ? '+' : '') + formatarMoeda(saldo) + '</div>' +
+      '</div></div>' +
+      '<div style="padding:0 36px 36px;">' +
+      '<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;">Detalhamento dos Lançamentos</div>' +
+      '<table style="width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);">' +
+      '<thead><tr style="background:linear-gradient(135deg,#1a1a2e,#16213e);">' +
+      '<th style="padding:11px 10px;font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.8px;text-align:left;">Data</th>' +
+      '<th style="padding:11px 10px;font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.8px;text-align:left;">N. Serviço</th>' +
+      '<th style="padding:11px 10px;font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.8px;text-align:left;">Descrição</th>' +
+      '<th style="padding:11px 10px;font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.8px;text-align:center;">Tipo</th>' +
+      '<th style="padding:11px 10px;font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.8px;text-align:right;">Valor</th>' +
+      '</tr></thead>' +
+      '<tbody>' + linhasHtml + '</tbody>' +
+      '</table>' +
+      (registros.length === 0 ? '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px;">Nenhum lançamento no período.</div>' : '') +
+      '</div>' +
+      '<div style="background:#f8f9fa;border-top:1px solid #eee;padding:16px 36px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-size:10px;color:#bbb;">RDO Express — Sistema Financeiro</span>' +
+      '<span style="font-size:10px;color:#bbb;">Gerado em ' + dataGeracao + '</span>' +
+      '</div>' +
+      '</div>' +
+      '</body></html>';
+    var win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { alert('Permita pop-ups para este site para gerar o PDF.'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = function () { setTimeout(function () { win.print(); }, 400); };
+  }
+
 })();
-
-
