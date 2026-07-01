@@ -495,7 +495,7 @@ function _abrirModalUsuario(data) {
         var opt = document.createElement('option');
         opt.value = cargo;
         opt.textContent = cargo;
-        if (data && data.tipo === cargo) opt.selected = true;
+        if (data && data.cargo === cargo) opt.selected = true;
         selectCargo.appendChild(opt);
     });
 
@@ -512,37 +512,62 @@ window.salvarUsuarioBot = async function () {
     var id = idField ? idField.value.trim() : '';
     var username = document.getElementById('usuario-bot-username').value.trim();
     var contato = document.getElementById('usuario-bot-contato').value.trim();
-    var tipo = document.getElementById('usuario-bot-tipo').value.trim();
+    var cargo = document.getElementById('usuario-bot-tipo').value.trim();
     var password = document.getElementById('usuario-bot-password').value.trim();
     var imagem = document.getElementById('usuario-bot-imagem').value.trim();
-    if (!username || !contato || !tipo || !password) {
-        Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: 'Preencha nome, contato, cargo e senha.', confirmButtonColor: '#dc3545' });
+
+    if (!username || !contato || !cargo || !password) {
+        Swal.fire({ 
+            icon: 'warning', 
+            title: 'Campos obrigatórios', 
+            text: 'Preencha nome, contato, cargo e senha.', 
+            confirmButtonColor: '#dc3545' 
+        });
         return;
     }
+
     var btn = document.getElementById('btn-salvar-usuario-bot');
     var originalText = btn ? btn.innerHTML : '';
     if (btn) btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
+
     try {
         var resolvedId = window.botState.idEmEdicao || id;
         var isEdicao = !!resolvedId;
+
         var dados = {
             id: isEdicao ? String(resolvedId) : String(Date.now()),
             username: username,
             contato: contato,
-            tipo: tipo,
+            cargo: cargo,
             password: password,
             imagem: imagem,
             status: 'TRUE'
         };
+
         await window.API.call(isEdicao ? 'updateusuarios' : 'addusuarios', dados);
+
         var modalEl = document.getElementById('modalUsuarioBot');
         var inst = bootstrap.Modal.getInstance(modalEl);
         if (inst) inst.hide();
+
         window.botState.idEmEdicao = null;
         await window.reloadBot();
-        Swal.fire({ icon: 'success', title: 'Salvo!', text: isEdicao ? 'Usuário atualizado com sucesso.' : 'Usuário criado com sucesso.', confirmButtonColor: '#dc3545', timer: 2000, showConfirmButton: false });
+
+        Swal.fire({ 
+            icon: 'success', 
+            title: 'Salvo!', 
+            text: isEdicao ? 'Usuário atualizado com sucesso.' : 'Usuário criado com sucesso.', 
+            confirmButtonColor: '#dc3545', 
+            timer: 2000, 
+            showConfirmButton: false 
+        });
     } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível salvar. Tente novamente.', confirmButtonColor: '#dc3545' });
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'Erro', 
+            text: 'Não foi possível salvar. Tente novamente.', 
+            confirmButtonColor: '#dc3545' 
+        });
     } finally {
         if (btn) btn.innerHTML = originalText;
     }
