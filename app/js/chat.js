@@ -1,10 +1,3 @@
-// ============================================================
-// chat.js — VERSÃO ÍNTEGRA REFATORADA
-// Correção principal: msg.texto sempre prevalece;
-// gerarMensagemFormatada alinhado ao modelo exato desejado;
-// remitirPedido envia o texto junto ao payload para persistência.
-// ============================================================
-
 window.marcarCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
@@ -36,25 +29,23 @@ window.limparCampoInvalido = function () {
     input.setAttribute('placeholder', 'Digite o pedido...');
 };
 
-// ─── Estado global ────────────────────────────────────────────
 window.AppRDO = window.AppRDO || {};
-window.AppRDO.debounceTimer          = window.AppRDO.debounceTimer          || null;
-window.AppRDO.listaCarregada         = false;
-window.AppRDO.isFetching             = window.AppRDO.isFetching             || false;
-window.AppRDO.isProcessingCheckout   = false;
-window.AppRDO.pedidosCache           = window.AppRDO.pedidosCache           || [];
-window.AppRDO.motoboyCache           = window.AppRDO.motoboyCache           || [];
-window.AppRDO.pedidoEmEdicao         = null;
-window.AppRDO.clienteId              = window.AppRDO.clienteId              || null;
-window.AppRDO.clienteSelecionado     = window.AppRDO.clienteSelecionado     || null;
-window.AppRDO.clientesCache          = window.AppRDO.clientesCache          || [];
-window.AppRDO.mensagensCache         = window.AppRDO.mensagensCache         || [];
-window.AppRDO.isMasterOn             = localStorage.getItem('bot_master_active') === 'true';
-window.AppRDO._mapaModalAberto       = false;
+window.AppRDO.debounceTimer = window.AppRDO.debounceTimer || null;
+window.AppRDO.listaCarregada = false;
+window.AppRDO.isFetching = window.AppRDO.isFetching || false;
+window.AppRDO.isProcessingCheckout = false;
+window.AppRDO.pedidosCache = window.AppRDO.pedidosCache || [];
+window.AppRDO.motoboyCache = window.AppRDO.motoboyCache || [];
+window.AppRDO.pedidoEmEdicao = null;
+window.AppRDO.clienteId = window.AppRDO.clienteId || null;
+window.AppRDO.clienteSelecionado = window.AppRDO.clienteSelecionado || null;
+window.AppRDO.clientesCache = window.AppRDO.clientesCache || [];
+window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
+window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+window.AppRDO._mapaModalAberto = false;
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
-// ─── Eventos globais ──────────────────────────────────────────
 window.addEventListener('masterStatusChanged', function (e) {
     var isOn = !!(e.detail && e.detail.isOn);
     window.AppRDO.isMasterOn = isOn;
@@ -75,24 +66,23 @@ window.addEventListener('masterStatusChanged', function (e) {
 
 window.addEventListener('clienteStatusChanged', function (e) {
     if (!e.detail) return;
-    var clientes   = e.detail.clientes   || window.AppRDO.clientesCache || [];
+    var clientes = e.detail.clientes || window.AppRDO.clientesCache || [];
     var isMasterOn = e.detail.isMasterOn;
     window.AppRDO.clientesCache = clientes;
-    window.AppRDO.isMasterOn    = isMasterOn;
+    window.AppRDO.isMasterOn = isMasterOn;
     window.renderizarLista(clientes, isMasterOn);
 });
 
-// ─── Helpers UI ───────────────────────────────────────────────
 function _atualizarHeaderCliente(nome, isOnline) {
     var nameEl = document.getElementById('chat-header-name');
     if (nameEl) nameEl.innerText = nome;
     if (window.AppRDO && window.AppRDO.clienteId) {
         var item = document.getElementById('item-contato-' + window.AppRDO.clienteId);
         if (item) {
-            var dot   = item.querySelector('.contact-status-dot');
+            var dot = item.querySelector('.contact-status-dot');
             var label = item.querySelector('.contact-status');
-            if (dot)   dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
-            if (label) label.textContent          = isOnline ? 'Online' : 'Offline';
+            if (dot) dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
+            if (label) label.textContent = isOnline ? 'Online' : 'Offline';
         }
     }
 }
@@ -109,20 +99,19 @@ function _limparModalContainer() {
     var container = document.getElementById('modal-container');
     if (!container) return;
     container.querySelectorAll('.modal').forEach(function (modalEl) {
-        try { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.dispose(); } catch (_) {}
+        try { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.dispose(); } catch (_) { }
     });
     container.innerHTML = '';
 }
 
 window._limparBackdrop = _limparBackdrop;
 
-// ─── Carregamento de modais ───────────────────────────────────
 window.loadModal = function (arquivo) {
     return new Promise(function (resolve) {
         var container = document.getElementById('modal-container');
         if (!container) { resolve(false); return; }
 
-        var abertos   = Array.prototype.slice.call(document.querySelectorAll('#modal-container .modal.show'));
+        var abertos = Array.prototype.slice.call(document.querySelectorAll('#modal-container .modal.show'));
         var pendentes = abertos.length;
 
         function _carregarHtml() {
@@ -146,13 +135,13 @@ window.loadModal = function (arquivo) {
         abertos.forEach(function (modalEl) {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (!inst) {
-                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) {}
+                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
                 return;
             }
             modalEl.addEventListener('hidden.bs.modal', function () {
-                try { inst.dispose(); } catch (_) {}
+                try { inst.dispose(); } catch (_) { }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
             }, { once: true });
@@ -163,7 +152,6 @@ window.loadModal = function (arquivo) {
 
 window.iniciarChat = function () { return window.carregarDados(); };
 
-// ─── Listeners globais de input ───────────────────────────────
 document.addEventListener('input', function (e) {
     if (!e.target) return;
     if (e.target.id === 'p-contato') {
@@ -173,12 +161,12 @@ document.addEventListener('input', function (e) {
     }
     if (e.target.id === 'chat-search') window.filtrarContatos();
     if (e.target.closest && e.target.closest('#modalFormulario')) {
-        e.target.style.border     = '';
-        e.target.style.boxShadow  = '';
+        e.target.style.border = '';
+        e.target.style.boxShadow = '';
     }
     if (e.target.id === 'msg-input') {
-        e.target.style.border     = '';
-        e.target.style.boxShadow  = '';
+        e.target.style.border = '';
+        e.target.style.boxShadow = '';
         e.target.setAttribute('placeholder', 'Digite o pedido...');
     }
 });
@@ -186,7 +174,7 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
     if (!e.target) return;
     if (e.target.closest && e.target.closest('#modalFormulario')) {
-        e.target.style.border    = '';
+        e.target.style.border = '';
         e.target.style.boxShadow = '';
         if (typeof window.calcularTudo === 'function') window.calcularTudo();
     }
@@ -201,7 +189,6 @@ document.addEventListener('change', function (e) {
     document.addEventListener('keydown', _handleMsgKeydown);
 })();
 
-// ─── Modelo padrão ────────────────────────────────────────────
 window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
     '', 'SOLICITANTE: ', 'CONTATO: ', 'HORÁRIO ESTIMADO P/ COLETA:  ',
@@ -212,7 +199,6 @@ window.MODELO_PADRAO = [
     'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
 ].join('\n');
 
-// ─── Validações ───────────────────────────────────────────────
 window.validarClienteOnline = function () {
     if (!window.AppRDO || !window.AppRDO.clienteId) return false;
     var cliente = window.AppRDO.clientesCache.find(function (c) {
@@ -225,17 +211,16 @@ window.validarClienteOnline = function () {
 window.validarMensagemModelo = function (texto) {
     if (!texto || !texto.trim()) return { valido: false, tipo: 'vazio' };
 
-    var matchS    = texto.match(/(?:SOLICITANTE|NOME|CLIENTE)\s*:\s*(.+)/i);
-    var temSolic  = !!(matchS && matchS[1] && matchS[1].trim().length > 0);
-
-    var matchC    = texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*(.+)/i);
+    var matchS = texto.match(/(?:SOLICITANTE|NOME|CLIENTE)\s*:\s*(.+)/i);
+    var temSolic = !!(matchS && matchS[1] && matchS[1].trim().length > 0);
+    var matchC = texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE)\s*:\s*(.+)/i);
     var temContato = !!(matchC && matchC[1] && matchC[1].trim().length > 0);
 
     var quantRotas = 0;
     texto.split('\n').forEach(function (linha) {
         linha = linha.trim();
         if (!/de\s*:/i.test(linha) || !/para\s*:/i.test(linha)) return;
-        var vDe   = linha.match(/de\s*:\s*([^|]+)/i);
+        var vDe = linha.match(/de\s*:\s*([^|]+)/i);
         var vPara = linha.match(/para\s*:\s*(.+)/i);
         if (vDe && vDe[1] && vDe[1].trim() !== '...' && vDe[1].trim().length > 0 &&
             vPara && vPara[1] && vPara[1].trim() !== '...' && vPara[1].trim().length > 0) {
@@ -247,13 +232,12 @@ window.validarMensagemModelo = function (texto) {
     if (temSolic && temContato && temRota) return { valido: true, tipo: 'ok', rotas: quantRotas };
 
     var faltando = [];
-    if (!temSolic)    faltando.push('SOLICITANTE');
-    if (!temContato)  faltando.push('CONTATO');
-    if (!temRota)     faltando.push('ROTA (De: ... | Para: ...)');
+    if (!temSolic) faltando.push('SOLICITANTE');
+    if (!temContato) faltando.push('CONTATO');
+    if (!temRota) faltando.push('ROTA (De: ... | Para: ...)');
     return { valido: false, tipo: 'modelo', camposPendentes: faltando };
 };
 
-// ─── Modal de validação ───────────────────────────────────────
 window.exibirModalValidacao = function (mensagem, opcoes) {
     opcoes = opcoes || {};
     var modalEl = document.getElementById('modalValidacao');
@@ -270,16 +254,16 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
         return;
     }
 
-    var msgEl    = document.getElementById('modal-validacao-mensagem');
-    var iconeEl  = document.getElementById('modal-validacao-icone');
+    var msgEl = document.getElementById('modal-validacao-mensagem');
+    var iconeEl = document.getElementById('modal-validacao-icone');
     var tituloEl = document.getElementById('modal-validacao-titulo');
 
-    if (msgEl)    msgEl.innerHTML    = mensagem;
-    if (iconeEl)  iconeEl.className  = 'bi ' + (opcoes.icone || 'bi-exclamation-triangle-fill') + ' text-warning fs-4';
+    if (msgEl) msgEl.innerHTML = mensagem;
+    if (iconeEl) iconeEl.className = 'bi ' + (opcoes.icone || 'bi-exclamation-triangle-fill') + ' text-warning fs-4';
     if (tituloEl) tituloEl.innerText = opcoes.titulo || 'Atenção';
 
     var modeloContainer = document.getElementById('modal-validacao-modelo');
-    var textareaEl      = document.getElementById('modal-validacao-textarea');
+    var textareaEl = document.getElementById('modal-validacao-textarea');
     if (opcoes.modelo && modeloContainer && textareaEl) {
         textareaEl.value = opcoes.modelo;
         modeloContainer.classList.remove('d-none');
@@ -289,12 +273,12 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
 
     document.querySelectorAll('#modal-container .modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.hide(); } catch (_) {} }
+        if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
     try {
         var instExist = bootstrap.Modal.getInstance(modalEl);
-        if (instExist) { try { instExist.dispose(); } catch (_) {} }
+        if (instExist) { try { instExist.dispose(); } catch (_) { } }
         var jaAberto = document.querySelectorAll('#modal-container .modal.show').length > 0;
         setTimeout(function () { _limparBackdrop(); new bootstrap.Modal(modalEl).show(); }, jaAberto ? 350 : 0);
     } catch (_) {
@@ -320,21 +304,19 @@ window.copiarModeloValidacao = function () {
     }, 2000);
 };
 
-// ─── Filtro de contatos ───────────────────────────────────────
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(function () {
         var searchEl = document.getElementById('chat-search');
-        var termo    = (searchEl ? searchEl.value : '').toLowerCase().trim();
+        var termo = (searchEl ? searchEl.value : '').toLowerCase().trim();
         document.querySelectorAll('.contact-item-clean').forEach(function (item) {
             var nameEl = item.querySelector('.contact-name');
-            var nome   = (nameEl ? nameEl.innerText : '').toLowerCase();
+            var nome = (nameEl ? nameEl.innerText : '').toLowerCase();
             item.style.setProperty('display', nome.includes(termo) ? 'flex' : 'none', 'important');
         });
     }, 300);
 };
 
-// ─── Estados de loading ───────────────────────────────────────
 function _mostrarLoadingContatos() {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
@@ -368,34 +350,64 @@ function _mostrarContatosEmptyState(texto) {
 }
 
 function _spinChatOn() {
-    var btn  = document.getElementById('btn-sync-chat');
+    var btn = document.getElementById('btn-sync-chat');
     var icon = document.getElementById('sync-icon-header');
-    if (btn)  { btn.classList.add('syncing'); btn.disabled = true; }
+    if (btn) { btn.classList.add('syncing'); btn.disabled = true; }
     if (icon) icon.classList.add('spinner-rotate');
 }
 
 function _spinChatOff() {
-    var btn  = document.getElementById('btn-sync-chat');
+    var btn = document.getElementById('btn-sync-chat');
     var icon = document.getElementById('sync-icon-header');
-    if (btn)  { btn.classList.remove('syncing'); btn.disabled = false; }
+    if (btn) { btn.classList.remove('syncing'); btn.disabled = false; }
     if (icon) icon.classList.remove('spinner-rotate');
 }
 
-// ─── Carregamento de pedidos do cliente ───────────────────────
+function _parseMoedaSeguro(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+    var n = Number(valor);
+    if (!isNaN(n)) return n;
+    var str = String(valor).trim().replace(/R\$\s*/gi, '');
+    var temVirgula = str.includes(',');
+    var temPonto = str.includes('.');
+    if (temVirgula && temPonto) {
+        var iPonto = str.lastIndexOf('.');
+        var iVirgula = str.lastIndexOf(',');
+        str = iVirgula > iPonto
+            ? str.replace(/\./g, '').replace(',', '.')
+            : str.replace(/,/g, '');
+    } else if (temVirgula) {
+        str = str.replace(',', '.');
+    }
+    var num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+}
+window._parseMoedaSeguro = _parseMoedaSeguro;
+
+function _formatarNomeServico(idBruto) {
+    if (!idBruto) return 'N/D';
+    var s = String(idBruto).trim();
+    if (s.toUpperCase().startsWith('RDO')) return s.toUpperCase();
+    var num = parseInt(s, 10);
+    if (!isNaN(num)) return 'RDO' + (num < 1000 ? String(num).padStart(3, '0') : String(num));
+    return 'RDO' + s;
+}
+window._formatarNomeServico = _formatarNomeServico;
+
 window.carregarPedidosDoCliente = async function (clienteId) {
     if (!clienteId) return;
     try {
-        var todosPedidos    = await API.call('getpedidos');
-        var todasMensagens  = await API.call('getchat');
+        var todosPedidos = await API.call('getpedidos');
+        var todasMensagens = await API.call('getchat');
 
-        var pedidosCliente  = todosPedidos.filter(function (p) {
+        var pedidosCliente = todosPedidos.filter(function (p) {
             return String(p.id_cliente).trim() === String(clienteId).trim();
         });
         var mensagensCliente = todasMensagens.filter(function (m) {
             return String(m.id_cliente).trim() === String(clienteId).trim();
         });
 
-        window.AppRDO.pedidosCache  = todosPedidos;
+        window.AppRDO.pedidosCache = todosPedidos;
         window.AppRDO.mensagensCache = todasMensagens;
 
         window.renderizarMensagens(mensagensCliente, pedidosCliente);
@@ -404,9 +416,8 @@ window.carregarPedidosDoCliente = async function (clienteId) {
     }
 };
 
-// ─── Carregamento geral ───────────────────────────────────────
 window.carregarDados = function () {
-    var listEl      = document.getElementById('lista-contatos-chat');
+    var listEl = document.getElementById('lista-contatos-chat');
     var searchInput = document.getElementById('chat-search');
     if (!listEl || window.AppRDO.isFetching) return Promise.resolve();
 
@@ -421,14 +432,14 @@ window.carregarDados = function () {
         API.call('getchat'),
         API.call('getpedidos')
     ]).then(function (results) {
-        var listaClientes  = Array.isArray(results[0]) ? results[0] : [];
+        var listaClientes = Array.isArray(results[0]) ? results[0] : [];
         var listaMensagens = Array.isArray(results[1]) ? results[1] : [];
-        var listaPedidos   = Array.isArray(results[2]) ? results[2] : [];
-        var isMasterOn     = window.AppRDO.isMasterOn;
+        var listaPedidos = Array.isArray(results[2]) ? results[2] : [];
+        var isMasterOn = window.AppRDO.isMasterOn;
 
-        window.AppRDO.clientesCache  = listaClientes;
+        window.AppRDO.clientesCache = listaClientes;
         window.AppRDO.mensagensCache = listaMensagens;
-        window.AppRDO.pedidosCache   = listaPedidos;
+        window.AppRDO.pedidosCache = listaPedidos;
 
         window.renderizarLista(listaClientes, isMasterOn);
 
@@ -466,7 +477,6 @@ window.carregarDados = function () {
     });
 };
 
-// ─── Renderização da lista de contatos ───────────────────────
 window.renderizarLista = function (lista, isMasterOn) {
     var listEl = document.getElementById('lista-contatos-chat');
     if (!listEl) return;
@@ -474,12 +484,12 @@ window.renderizarLista = function (lista, isMasterOn) {
 
     var clienteAtivo = window.AppRDO.clienteId;
     listEl.innerHTML = lista.map(function (cliente) {
-        var id       = String(cliente.id || '');
-        var nome     = cliente.username || 'Sem nome';
-        var imagem   = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        var id = String(cliente.id || '');
+        var nome = cliente.username || 'Sem nome';
+        var imagem = cliente.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var isOnline = isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
         var isActive = id === String(clienteAtivo);
-        var nomeEsc  = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        var nomeEsc = nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         return '<div class="list-group-item list-group-item-action border-0 d-flex align-items-center p-2 contact-item-clean ' +
             (isActive ? 'active-contact' : '') + '" id="item-contato-' + id + '" ' +
@@ -497,9 +507,8 @@ window.renderizarLista = function (lista, isMasterOn) {
     }).join('');
 };
 
-// ─── Seleção e abertura de conversa ──────────────────────────
 window.selecionarEAbrir = function (id, nome, isOnline) {
-    window.AppRDO.clienteId          = id;
+    window.AppRDO.clienteId = id;
     window.AppRDO.clienteSelecionado = nome;
     localStorage.setItem('clienteSelecionadoNome', nome);
 
@@ -526,8 +535,8 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
     var msgInput = document.getElementById('msg-input');
     if (msgInput) {
         msgInput.value = '';
-        msgInput.style.height    = 'auto';
-        msgInput.style.border    = '';
+        msgInput.style.height = 'auto';
+        msgInput.style.border = '';
         msgInput.style.boxShadow = '';
         msgInput.setAttribute('placeholder', 'Digite o pedido...');
     }
@@ -535,11 +544,41 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
     return window.carregarPedidosDoCliente(String(id).trim());
 };
 
-// ─── Renderização de mensagens ────────────────────────────────
+function _resolverTextoMensagem(msg, pedido) {
+    // Fonte verdade: texto salvo no banco
+    var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
+    if (textoSalvo.length > 0) return textoSalvo;
+
+    // Fallback: reconstrói via gerarMensagemFormatada para garantir formato idêntico
+    if (!pedido) return '';
+
+    var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
+    var tempo = String(pedido.tempo || pedido.tempoFormatado || '').trim();
+    var tempoMin = 0;
+    // Converte "1h 56min" → minutos para formatarTempoHumano reconstruir igual
+    var mH = tempo.match(/(\d+)h/);
+    var mM = tempo.match(/(\d+)min/);
+    if (mH) tempoMin += parseInt(mH[1]) * 60;
+    if (mM) tempoMin += parseInt(mM[1]);
+
+    return window.gerarMensagemFormatada({
+        id: String(pedido.id || '').trim(),
+        solicitante: String(pedido.solicitante || 'Não informado').trim(),
+        contato: String(pedido.contato || '').trim(),
+        mercadoria: String(pedido.mercadoria || 'ENTREGA').trim(),
+        // Suporte ao modelo de tabela com de/para simples
+        de: String(pedido.de || '').trim(),
+        para: String(pedido.para || '').trim(),
+        distanciaTotal: distancia,
+        tempoTotal: tempoMin,
+        valorEstimado: _parseMoedaSeguro(pedido.valor_total || pedido.valor_final || 0)
+    });
+}
+
 window.renderizarMensagens = function (mensagens, pedidos) {
     var container = document.getElementById('chat-messages-container');
     if (!container) return;
-    container.innerHTML     = '';
+    container.innerHTML = '';
     window.AppRDO.pedidosCache = pedidos;
 
     if (!mensagens || mensagens.length === 0) {
@@ -562,23 +601,19 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             return String(p.id).trim() === String(msg.pedido_id).trim();
         });
 
-        var statusBruto  = String(pedido ? pedido.status : '').trim();
-        var motoboyNome  = String(pedido ? (pedido.motoboy || '') : '').trim();
-        var statusPuro   = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
-        var statusUpper  = statusPuro.toUpperCase();
-        var isFinal      = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
-        var isEmRota     = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
-        var temStatus    = isEmRota || isFinal;
-        var statusLabel  = statusPuro.replace(/_/g, ' ');
+        var statusBruto = String(pedido ? pedido.status : '').trim();
+        var motoboyNome = String(pedido ? (pedido.motoboy || '') : '').trim();
+        var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
+        var statusUpper = statusPuro.toUpperCase();
+        var isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
+        var isEmRota = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
+        var temStatus = isEmRota || isFinal;
+        var statusLabel = statusPuro.replace(/_/g, ' ');
         var tooltipTexto = temStatus
             ? (motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel)
             : 'Alterar Status';
 
-        // ── CORREÇÃO PRINCIPAL ──────────────────────────────────────
-        // Prioridade absoluta: texto salvo no banco via msg.texto
-        // Fallback apenas se msg.texto realmente estiver vazio
         var textoMensagem = _resolverTextoMensagem(msg, pedido);
-        // ────────────────────────────────────────────────────────────
 
         container.appendChild(
             _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
@@ -588,80 +623,12 @@ window.renderizarMensagens = function (mensagens, pedidos) {
     container.scrollTop = container.scrollHeight;
 };
 
-// ─── Resolver texto da mensagem ───────────────────────────────
-// REGRA: msg.texto do banco é SEMPRE a fonte verdade.
-// O fallback só é usado quando o campo texto não existe ou está vazio.
-function _resolverTextoMensagem(msg, pedido) {
-    // ── Texto salvo no banco: usa sem qualquer alteração ──
-    var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
-    if (textoSalvo.length > 0) return textoSalvo;
-
-    // ── Fallback: reconstrói a partir do pedido ────────────
-    if (!pedido) return '';
-
-    var idBruto     = String(pedido.id || '').trim();
-    var nomeServico = _formatarNomeServico(idBruto);
-    var solicitante = String(pedido.solicitante || 'Não informado').trim();
-    var contato     = String(pedido.contato     || '').trim();
-    var mercadoria  = String(pedido.mercadoria  || 'ENTREGA').trim().toUpperCase();
-
-    var linhas = [
-        '📦 N.SERVIÇO: ' + nomeServico,
-        '👤 : ' + solicitante + ' 📞 : ' + contato,
-        '📦 : ' + mercadoria,
-        '.',
-        '📍 ROTAS:'
-    ];
-
-    // Rotas: suporta campo "rotas" (multiline) ou de/para simples
-    var rotasTexto = String(pedido.rotas || '').trim();
-    if (!rotasTexto && pedido.de && pedido.para) {
-        rotasTexto = '1. De: ' + String(pedido.de).trim() + ' | Para: ' + String(pedido.para).trim();
-    }
-
-    if (rotasTexto) {
-        var linhasRotas = rotasTexto.split('\n');
-        linhasRotas.forEach(function (linha) {
-            linha = linha.trim();
-            if (!linha) return;
-            linhas.push(linha);
-            linhas.push('.');
-        });
-    }
-
-    var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
-    var tempo     = String(pedido.tempo || pedido.tempoFormatado || '').trim();
-    var valor     = _parseMoedaSeguro(pedido.valor_total || pedido.valor_final || 0);
-
-    linhas.push(
-        '🛣️ ' + distancia.toFixed(2) + ' km ' +
-        '⏱️ ' + (tempo || '—') + ' ' +
-        '💰 ' + valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    );
-
-    return linhas.join('\n');
-}
-
-// ─── Geração de mensagem formatada (checkout) ─────────────────
-// Esta função produz EXATAMENTE o modelo desejado:
-//
-// 📦 N.SERVIÇO: RDO002
-// 👤 : JOSI FRAGA 📞 : 31 9 3428-9956
-// 📦 : COMPRA
-// .
-// 📍 ROTAS:
-// 1. De: Ravena, Sabará - MG | Para: Conjunto Floramar, BH - MG
-// .
-// 2. De: ... | Para: ...
-// .
-// 🛣️ 88.00 km ⏱️ 1h 56min 💰 R$ 264,00
-//
 window.gerarMensagemFormatada = function (dados) {
-    var idBruto     = String(dados.id || dados.numeroServico || '').trim();
+    var idBruto = String(dados.id || dados.numeroServico || '').trim();
     var nomeServico = _formatarNomeServico(idBruto);
     var solicitante = String(dados.solicitante || 'Não informado').trim();
-    var contato     = String(dados.contato     || '').trim();
-    var mercadoria  = String(dados.mercadoria  || 'ENTREGA').trim().toUpperCase();
+    var contato = String(dados.contato || '').trim();
+    var mercadoria = String(dados.mercadoria || 'ENTREGA').trim().toUpperCase();
 
     var linhas = [
         '📦 N.SERVIÇO: ' + nomeServico,
@@ -671,16 +638,33 @@ window.gerarMensagemFormatada = function (dados) {
         '📍 ROTAS:'
     ];
 
+    // ── Prioridade 1: rotasProcessadas (array de objetos {de, para}) ──
     if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
         dados.rotasProcessadas.forEach(function (r, i) {
             linhas.push((i + 1) + '. De: ' + String(r.de || '').trim() + ' | Para: ' + String(r.para || '').trim());
             linhas.push('.');
         });
     }
+    // ── Prioridade 2: campo "rotas" multiline (texto bruto) ──
+    else if (dados.rotas && String(dados.rotas).trim()) {
+        String(dados.rotas).trim().split('\n').forEach(function (linha, i) {
+            linha = linha.trim();
+            if (!linha) return;
+            // Garante numeração se não tiver
+            if (!/^\d+\./.test(linha)) linha = (i + 1) + '. ' + linha;
+            linhas.push(linha);
+            linhas.push('.');
+        });
+    }
+    // ── Prioridade 3: campos de/para simples (modelo antigo) ──
+    else if (dados.de && dados.para) {
+        linhas.push('1. De: ' + String(dados.de).trim() + ' | Para: ' + String(dados.para).trim());
+        linhas.push('.');
+    }
 
-    var km    = Number(dados.distanciaTotal || 0);
-    var min   = Number(dados.tempoTotal     || 0);
-    var valor = Number(dados.valorEstimado  || 0);
+    var km = Number(dados.distanciaTotal || dados.distancia || 0);
+    var min = Number(dados.tempoTotal || 0);
+    var valor = Number(dados.valorEstimado || dados.valor_total || dados.valor_final || 0);
 
     linhas.push(
         '🛣️ ' + km.toFixed(2) + ' km ' +
@@ -691,47 +675,6 @@ window.gerarMensagemFormatada = function (dados) {
     return linhas.join('\n');
 };
 
-// ─── Helper: formatar ID do serviço ──────────────────────────
-// Garante sempre o formato RDO + número (ex: RDO002, RDO1372)
-function _formatarNomeServico(idBruto) {
-    if (!idBruto) return 'N/D';
-    var s = String(idBruto).trim();
-    if (s.toUpperCase().startsWith('RDO')) return s.toUpperCase();
-    // Numérico puro: mantém os zeros conforme vier da API
-    // (RDO002 = id "2", RDO1372 = id "1372")
-    var num = parseInt(s, 10);
-    if (!isNaN(num)) {
-        // Menor que 1000 → padding 3 dígitos; maior → sem padding
-        return 'RDO' + (num < 1000 ? String(num).padStart(3, '0') : String(num));
-    }
-    return 'RDO' + s;
-}
-
-window._formatarNomeServico = _formatarNomeServico;
-
-// ─── Helpers numéricos ────────────────────────────────────────
-function _parseMoedaSeguro(valor) {
-    if (valor === null || valor === undefined || valor === '') return 0;
-    var n = Number(valor);
-    if (!isNaN(n)) return n;
-    var str        = String(valor).trim().replace(/R\$\s*/gi, '');
-    var temVirgula = str.includes(',');
-    var temPonto   = str.includes('.');
-    if (temVirgula && temPonto) {
-        var iPonto   = str.lastIndexOf('.');
-        var iVirgula = str.lastIndexOf(',');
-        str = iVirgula > iPonto
-            ? str.replace(/\./g, '').replace(',', '.')
-            : str.replace(/,/g, '');
-    } else if (temVirgula) {
-        str = str.replace(',', '.');
-    }
-    var num = parseFloat(str);
-    return isNaN(num) ? 0 : num;
-}
-window._parseMoedaSeguro = _parseMoedaSeguro;
-
-// ─── Criação do wrapper de mensagem ──────────────────────────
 function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
     var div = document.createElement('div');
     div.className = 'message-wrapper';
@@ -763,7 +706,6 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 }
 window._criarWrapperMensagem = _criarWrapperMensagem;
 
-// ─── Envio de mensagem ao container ──────────────────────────
 window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     var container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -771,8 +713,8 @@ window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     var emptyState = container.querySelector('.chat-empty-state');
     if (emptyState) emptyState.remove();
 
-    var hojeLabel  = 'HOJE';
-    var ultimoSep  = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+    var hojeLabel = 'HOJE';
+    var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
     if (!ultimoSep || ultimoSep.textContent !== hojeLabel) {
         var sep = document.createElement('div');
         sep.className = 'chat-date-separator';
@@ -785,7 +727,6 @@ window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
     container.scrollTop = container.scrollHeight;
 };
 
-// ─── Ícone por status ─────────────────────────────────────────
 window.getIconePorStatus = function (status) {
     var s = String(status || '').trim().toUpperCase();
     if (s.includes('EM_ROTA') || s.includes('EM ROTA') || s.includes('/'))
@@ -797,17 +738,16 @@ window.getIconePorStatus = function (status) {
     return '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 };
 
-// ─── Modal de Status ──────────────────────────────────────────
 window.StatusModal = (function () {
     var _pedidoId = null;
-    var _modalBS  = null;
+    var _modalBS = null;
 
     function _el(id) { return document.getElementById(id) || null; }
     function _safeText(el, txt) { if (el && typeof txt === 'string') el.textContent = txt; }
     function _safeClass(el, action) {
         if (!el || !el.classList) return;
         Array.prototype.slice.call(arguments, 2).forEach(function (c) {
-            if (action === 'add')    el.classList.add(c);
+            if (action === 'add') el.classList.add(c);
             else if (action === 'remove') el.classList.remove(c);
         });
     }
@@ -817,18 +757,18 @@ window.StatusModal = (function () {
             _safeText(_el('modal-status-texto'), 'Alterar Status');
             var icone = _el('modal-status-icone');
             if (icone) icone.className = 'bi bi-arrow-repeat text-danger';
-            _safeClass(_el('box-botoes-status'),  'remove', 'd-none');
-            _safeClass(_el('box-selecao-motoboy'), 'add',    'd-none');
-            _safeClass(_el('box-cancelamento'),   'add',    'd-none');
+            _safeClass(_el('box-botoes-status'), 'remove', 'd-none');
+            _safeClass(_el('box-selecao-motoboy'), 'add', 'd-none');
+            _safeClass(_el('box-cancelamento'), 'add', 'd-none');
             var select = _el('select-motoboy');
             if (select) {
-                select.innerHTML  = '<option value="" disabled selected>Selecione o motoboy...</option>';
+                select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>';
                 select.style.borderColor = '';
-                select.disabled   = false;
+                select.disabled = false;
             }
             document.querySelectorAll('#box-cancelamento .cancel-cb').forEach(function (cb) { cb.checked = false; });
             _safeClass(_el('cancel-error'), 'add', 'd-none');
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _normalizarId(id) {
@@ -849,7 +789,7 @@ window.StatusModal = (function () {
             iconEl.classList.remove('status-updated');
             iconEl.classList.add('status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _setIconeFinal(id, status, motoboyNome) {
@@ -861,16 +801,16 @@ window.StatusModal = (function () {
                 : '<i class="bi bi-question-circle"></i>';
             iconEl.classList.remove('status-pending');
             iconEl.classList.add('status-updated');
-            var label   = String(status || '').replace(/_/g, ' ');
+            var label = String(status || '').replace(/_/g, ' ');
             var tooltip = motoboyNome ? motoboyNome + ' • ' + label : label;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function _atualizarCache(id, statusFmt, motoboyNome) {
         try {
-            var cache  = window.AppRDO && Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            var cache = window.AppRDO && Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
             var idNorm = _normalizarId(id);
             var pedido = cache.find(function (p) {
                 return _normalizarId(String(p.id || '').trim()) === idNorm;
@@ -878,22 +818,22 @@ window.StatusModal = (function () {
             if (!pedido) return;
             pedido.status = statusFmt;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function _carregarMotoboys() {
         var select = _el('select-motoboy');
         if (!select) return;
         select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
-        select.disabled  = true;
+        select.disabled = true;
         try {
-            var todos    = await API.call('getcolaboradores');
-            var lista    = Array.isArray(todos) ? todos : [];
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
             var motoboys = lista.filter(function (c) {
                 return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
                     String(c.status || '').toUpperCase() === 'TRUE';
             });
-            select.disabled  = false;
+            select.disabled = false;
             select.innerHTML = motoboys.length > 0
                 ? '<option value="" disabled selected>Selecione o motoboy...</option>' +
                 motoboys.map(function (m) {
@@ -908,7 +848,7 @@ window.StatusModal = (function () {
 
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
         var motoboyNome = '';
-        var statusFmt   = String(status || '');
+        var statusFmt = String(status || '');
 
         if (motoboyId) {
             try {
@@ -920,7 +860,7 @@ window.StatusModal = (function () {
         if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
-        try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
 
         try {
             var payload = { id: _normalizarId(_pedidoId), status: statusFmt, motoboy: motoboyNome };
@@ -935,15 +875,14 @@ window.StatusModal = (function () {
                 if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
                     window.RDO_PEDIDOS.atualizarStatusLocal(
                         _pedidoId, statusFmt, motoboyNome,
-                        (motivosCancelamento && motivosCancelamento.length > 0)
-                            ? motivosCancelamento.join(' | ') : undefined
+                        (motivosCancelamento && motivosCancelamento.length > 0) ? motivosCancelamento.join(' | ') : undefined
                     );
                 }
                 if (typeof window.EventBus !== 'undefined') {
                     window.EventBus.emit('pedido:statusAtualizado', {
-                        id:                 _pedidoId,
-                        status:             statusFmt,
-                        motoboy:            motoboyNome,
+                        id: _pedidoId,
+                        status: statusFmt,
+                        motoboy: motoboyNome,
                         motivo_cancelamento: motivosCancelamento ? motivosCancelamento.join(' | ') : ''
                     });
                 }
@@ -968,9 +907,9 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         try {
             if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-            var cache   = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-            var idNorm  = _normalizarId(String(pedidoId).trim());
-            var pedido  = cache.find(function (p) { return _normalizarId(String(p.id || '').trim()) === idNorm; });
+            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
+            var idNorm = _normalizarId(String(pedidoId).trim());
+            var pedido = cache.find(function (p) { return _normalizarId(String(p.id || '').trim()) === idNorm; });
             var statusB = String(pedido ? pedido.status : '').trim();
             var statusP = (statusB.includes('/') ? statusB.split('/').pop().trim() : statusB).toUpperCase();
 
@@ -994,10 +933,10 @@ window.StatusModal = (function () {
 
             var modalEl = _el('modalStatus');
             if (!modalEl) return;
-            try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (_) {}
+            try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (_) { }
             _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
             _modalBS.show();
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function processar(status) {
@@ -1006,8 +945,8 @@ window.StatusModal = (function () {
                 _safeText(_el('modal-status-texto'), 'Selecionar Motoboy');
                 var iconeR = _el('modal-status-icone');
                 if (iconeR) iconeR.className = 'bi bi-bicycle text-primary';
-                _safeClass(_el('box-botoes-status'),  'add',    'd-none');
-                _safeClass(_el('box-cancelamento'),   'add',    'd-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
+                _safeClass(_el('box-cancelamento'), 'add', 'd-none');
                 _safeClass(_el('box-selecao-motoboy'), 'remove', 'd-none');
                 _carregarMotoboys();
                 return;
@@ -1016,13 +955,13 @@ window.StatusModal = (function () {
                 _safeText(_el('modal-status-texto'), 'Motivo do Cancelamento');
                 var iconeC = _el('modal-status-icone');
                 if (iconeC) iconeC.className = 'bi bi-x-circle-fill text-danger';
-                _safeClass(_el('box-botoes-status'),  'add',    'd-none');
-                _safeClass(_el('box-selecao-motoboy'), 'add',    'd-none');
-                _safeClass(_el('box-cancelamento'),   'remove', 'd-none');
+                _safeClass(_el('box-botoes-status'), 'add', 'd-none');
+                _safeClass(_el('box-selecao-motoboy'), 'add', 'd-none');
+                _safeClass(_el('box-cancelamento'), 'remove', 'd-none');
                 return;
             }
             if (status === 'CONCLUIDO') {
-                try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+                try { if (_modalBS) _modalBS.hide(); } catch (_) { }
                 setTimeout(function () {
                     Swal.fire({
                         icon: 'question', title: 'Concluir Pedido?',
@@ -1031,22 +970,24 @@ window.StatusModal = (function () {
                         cancelButtonText: 'Voltar', confirmButtonColor: '#28a745',
                         cancelButtonColor: '#6c757d', reverseButtons: true,
                         customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
-                    }).then(function (result) { if (result.isConfirmed) _executarAlteracao('CONCLUIDO'); }).catch(function () {});
+                    }).then(function (result) {
+                        if (result.isConfirmed) _executarAlteracao('CONCLUIDO');
+                    }).catch(function () { });
                 }, 300);
             }
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function confirmarMotoboy() {
         try {
-            var select    = _el('select-motoboy');
+            var select = _el('select-motoboy');
             var motoboyId = select ? select.value : '';
             if (!motoboyId) {
                 if (select) { select.style.borderColor = '#dc3545'; select.focus(); setTimeout(function () { if (select) select.style.borderColor = ''; }, 1500); }
                 return;
             }
             await _executarAlteracao('EM_ROTA', motoboyId);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     async function confirmarCancelamento() {
@@ -1056,12 +997,16 @@ window.StatusModal = (function () {
             checked.forEach(function (cb) { motivos.push(cb.value); });
             if (motivos.length === 0) {
                 var errEl = _el('cancel-error');
-                if (errEl) { errEl.classList.remove('d-none'); errEl.style.opacity = '0'; setTimeout(function () { if (errEl) { errEl.style.transition = 'opacity .2s'; errEl.style.opacity = '1'; } }, 30); }
+                if (errEl) {
+                    errEl.classList.remove('d-none');
+                    errEl.style.opacity = '0';
+                    setTimeout(function () { if (errEl) { errEl.style.transition = 'opacity .2s'; errEl.style.opacity = '1'; } }, 30);
+                }
                 return;
             }
             _safeClass(_el('cancel-error'), 'add', 'd-none');
             await _executarAlteracao('CANCELADO', null, motivos);
-        } catch (_) {}
+        } catch (_) { }
     }
 
     function voltar() { _resetar(); }
@@ -1079,8 +1024,8 @@ window.abrirModalEdicao = function (msgId) {
         denyButtonText: 'Excluir',
         customClass: {
             confirmButton: 'btn btn-outline-secondary btn-lg w-100 mb-3',
-            denyButton:    'btn btn-outline-danger btn-lg w-100',
-            popup:         'p-4'
+            denyButton: 'btn btn-outline-danger btn-lg w-100',
+            popup: 'p-4'
         },
         buttonsStyling: false,
         allowOutsideClick: true
@@ -1094,7 +1039,7 @@ window.abrirModalMensagemPadrao = function () {
     var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
     var existing = bootstrap.Modal.getInstance(modalEl);
-    if (existing) { try { existing.dispose(); } catch (_) {} }
+    if (existing) { try { existing.dispose(); } catch (_) { } }
     new bootstrap.Modal(modalEl).show();
 };
 
@@ -1110,14 +1055,13 @@ window.copiarModelo = function () {
     });
 };
 
-// ─── Excluir pedido ───────────────────────────────────────────
 window.excluirPedido = async function (pedidoId) {
     if (!pedidoId) return;
     var idStr = String(pedidoId).trim();
     try {
         var resultados = await Promise.allSettled([
             API.call('deletepedido', { id: idStr }),
-            API.call('deletechat',   { pedido_id: idStr })
+            API.call('deletechat', { pedido_id: idStr })
         ]);
 
         var erroPedido = resultados[0].status === 'rejected' ||
@@ -1131,7 +1075,6 @@ window.excluirPedido = async function (pedidoId) {
 
         if (typeof window.EventBus !== 'undefined')
             window.EventBus.emit('pedido:excluido', { id: idStr });
-
     } catch (e) {
         Swal.fire({
             icon: 'error', title: 'Erro ao excluir',
@@ -1141,26 +1084,24 @@ window.excluirPedido = async function (pedidoId) {
     }
 };
 
-// ─── Extração de rotas do texto ───────────────────────────────
 window.extrairRotasDaMensagem = function (texto) {
     var rotas = [];
     texto.split('\n').forEach(function (linha) {
         linha = linha.trim();
         if (!linha) return;
         var m = linha.match(/De:\s*(.+?)\s*(?:\||–|—|-|→)\s*Para:\s*(.+)/i);
-        if (m)  { rotas.push({ de: m[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m[2].trim() }); return; }
+        if (m) { rotas.push({ de: m[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m[2].trim() }); return; }
         var m2 = linha.match(/De:\s*(.+?)\s+Para:\s*(.+)/i);
-        if (m2)   rotas.push({ de: m2[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m2[2].trim() });
+        if (m2) rotas.push({ de: m2[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m2[2].trim() });
     });
     return rotas;
 };
 
-// ─── Geocoding ────────────────────────────────────────────────
 window.buscarCoordenadasEndereco = function (endereco) {
     return new Promise(function (resolve) {
         var busca = endereco;
-        if (!/MG|Minas Gerais/i.test(busca))  busca += ', MG';
-        if (!/Brasil|Brazil/i.test(busca))     busca += ', Brasil';
+        if (!/MG|Minas Gerais/i.test(busca)) busca += ', MG';
+        if (!/Brasil|Brazil/i.test(busca)) busca += ', Brasil';
         fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
             encodeURIComponent(busca) + '&limit=1&countrycodes=br')
             .then(function (resp) { return resp.json(); })
@@ -1171,11 +1112,10 @@ window.buscarCoordenadasEndereco = function (endereco) {
     });
 };
 
-// ─── Formatação ───────────────────────────────────────────────
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8)  return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
@@ -1189,7 +1129,7 @@ window.formatarTempoHumano = function (minutos) {
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
-    var raw  = String(dataStr);
+    var raw = String(dataStr);
     var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
     if (raw.includes('T') || raw.includes('-')) {
@@ -1214,7 +1154,7 @@ window.formatarDataSeparador = function (dataStr) {
 };
 
 window.exibirErro = function (erro, contexto) {
-    contexto     = contexto || 'Erro desconhecido';
+    contexto = contexto || 'Erro desconhecido';
     var container = document.getElementById('chat-messages-container');
     if (container) {
         container.innerHTML =
@@ -1229,14 +1169,13 @@ window.exibirErro = function (erro, contexto) {
     }
 };
 
-// ─── Mapa ─────────────────────────────────────────────────────
 window.renderizarMapaUnificado = function () {
-    var loaderEl    = document.getElementById('mapa-loader');
+    var loaderEl = document.getElementById('mapa-loader');
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
-    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) {} window._leafletMapInstance = null; }
-    containerEl.innerHTML    = '';
+    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
+    containerEl.innerHTML = '';
     containerEl.style.display = 'none';
 
     if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length === 0) {
@@ -1259,9 +1198,9 @@ window.renderizarMapaUnificado = function () {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>', maxZoom: 19
     }).addTo(mapa);
 
-    var cores           = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    var todosOsPontos   = [];
-    var criarIcone      = function (emoji) {
+    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
+    var todosOsPontos = [];
+    var criarIcone = function (emoji) {
         return L.divIcon({ html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>', className: 'custom-div-icon', iconSize: [28, 28], iconAnchor: [14, 14] });
     };
 
@@ -1276,8 +1215,8 @@ window.renderizarMapaUnificado = function () {
         caminho.forEach(function (p) { todosOsPontos.push(p); });
     });
 
-    if (todosOsPontos.length > 0) { try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) {} }
-    setTimeout(function () { try { mapa.invalidateSize(true); } catch (_) {} }, 300);
+    if (todosOsPontos.length > 0) { try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) { } }
+    setTimeout(function () { try { mapa.invalidateSize(true); } catch (_) { } }, 300);
 };
 
 window._renderizarResumo = function (km, min, valor) {
@@ -1295,7 +1234,6 @@ window._renderizarResumo = function (km, min, valor) {
         '<div><div class="small text-muted mb-1">Valor</div><div class="fw-bold text-success fs-5">' + valor + '</div></div></div></div>';
 };
 
-// ─── Envio de mensagem geral ──────────────────────────────────
 window.enviarMensagemGeral = function () {
     var input = document.getElementById('msg-input');
     if (!window.AppRDO || !window.AppRDO.clienteId) { window.exibirModalValidacao('Selecione um cliente na lista primeiro.'); return; }
@@ -1312,19 +1250,18 @@ window.enviarMensagemGeral = function () {
     window.iniciarFluxoCheckout();
 };
 
-// ─── Fluxo de checkout ────────────────────────────────────────
 window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
 
     var msgInput = document.getElementById('msg-input');
-    var texto    = msgInput ? (msgInput.value || '').trim() : '';
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
     if (!texto) { window.marcarCampoInvalido(); return; }
 
-    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i)  || [])[1] || 'Não informado').trim();
-    var contato     = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario     = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i)    || [])[1] || '').trim();
-    var mercadoria  = ((texto.match(/(?:MERCADORIA):\s*(.*)/i)                || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs         = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i)     || [])[1] || '').trim();
+    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1342,16 +1279,16 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.AppRDO._mapaModalAberto = false;
-            if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) {} window._leafletMapInstance = null; }
+            if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
         }, { once: true });
 
         var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl      = document.getElementById('mapa-loader');
+            var loaderEl = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (loaderEl)      loaderEl.style.display  = '';
+            if (loaderEl) loaderEl.style.display = '';
 
             var kmTotal = 0, minTotal = 0, listaCaminhos = [];
 
@@ -1368,29 +1305,29 @@ window.iniciarFluxoCheckout = function () {
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
                             if (data.routes && data.routes[0]) {
-                                kmTotal  += data.routes[0].distance / 1000;
+                                kmTotal += data.routes[0].distance / 1000;
                                 minTotal += data.routes[0].duration / 60;
                                 listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
                             }
                         });
                 });
             })).then(function () {
-                var kmArredondado  = Math.round(kmTotal);
+                var kmArredondado = Math.round(kmTotal);
                 var valorCalculado = kmArredondado * 3.00;
 
                 window.dadosPedidoAtual = {
-                    solicitante:     solicitante,
-                    contato:         contato,
-                    horario:         horario,
-                    mercadoria:      mercadoria,
-                    obs:             obs,
-                    cliente:         (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal:  kmArredondado,
-                    tempoTotal:      Math.round(minTotal),
-                    coordenadas:     listaCaminhos,
-                    valorEstimado:   valorCalculado,
+                    solicitante: solicitante,
+                    contato: contato,
+                    horario: horario,
+                    mercadoria: mercadoria,
+                    obs: obs,
+                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                    distanciaTotal: kmArredondado,
+                    tempoTotal: Math.round(minTotal),
+                    coordenadas: listaCaminhos,
+                    valorEstimado: valorCalculado,
                     rotasProcessadas: rotasExtraidas,
-                    rawInput:        texto
+                    rawInput: texto
                 };
 
                 window._renderizarResumo(
@@ -1412,8 +1349,8 @@ window.prosseguirParaFormulario = function () {
     if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.distanciaTotal) { alert('Dados do pedido não foram calculados corretamente.'); return; }
 
     var modalMapa = document.getElementById('modalMapa');
-    var instMapa  = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
-    if (instMapa) { try { instMapa.hide(); } catch (_) {} }
+    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+    if (instMapa) { try { instMapa.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
@@ -1431,35 +1368,35 @@ window.prosseguirParaFormulario = function () {
 
 window.calcularTudo = function () {
     var distancia = parseFloat((document.getElementById('p-distancia') || {}).value) || 0;
-    var valorKm   = parseFloat((document.getElementById('p-valor-km')  || {}).value) || 3.00;
-    var retorno   = parseFloat((document.getElementById('p-retorno')   || {}).value) || 0;
-    var dinamica  = parseFloat((document.getElementById('p-dinamica')  || {}).value) || 0;
+    var valorKm = parseFloat((document.getElementById('p-valor-km') || {}).value) || 3.00;
+    var retorno = parseFloat((document.getElementById('p-retorno') || {}).value) || 0;
+    var dinamica = parseFloat((document.getElementById('p-dinamica') || {}).value) || 0;
     var prioridade = parseFloat((document.getElementById('p-prioridade') || {}).value) || 0;
 
-    var base       = distancia * valorKm;
+    var base = distancia * valorKm;
     var taxaRetorno = retorno > 0 ? base * retorno : 0;
-    var total      = base + taxaRetorno + dinamica + prioridade;
+    var total = base + taxaRetorno + dinamica + prioridade;
 
     var elFinal = document.getElementById('view-valor-final');
     if (elFinal) elFinal.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     if (window.dadosPedidoAtual) {
         window.dadosPedidoAtual.valorEstimado = total;
-        window.dadosPedidoAtual.valorKm       = valorKm;
-        window.dadosPedidoAtual.retorno       = retorno;
-        window.dadosPedidoAtual.dinamica      = dinamica;
-        window.dadosPedidoAtual.prioridade    = prioridade;
+        window.dadosPedidoAtual.valorKm = valorKm;
+        window.dadosPedidoAtual.retorno = retorno;
+        window.dadosPedidoAtual.dinamica = dinamica;
+        window.dadosPedidoAtual.prioridade = prioridade;
     }
 };
 
-// ─── Remeter pedido ───────────────────────────────────────────
 window.remitirPedido = async function () {
     var _validarCampo = function (el) {
-        if (!el) return false;
-        if (!String(el.value || '').trim()) {
-            el.style.border    = '2px solid #dc3545';
-            el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
-            setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+        if (!el || !String(el.value || '').trim()) {
+            if (el) {
+                el.style.border = '2px solid #dc3545';
+                el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+            }
             return false;
         }
         return true;
@@ -1473,7 +1410,7 @@ window.remitirPedido = async function () {
 
     if (typeof window.calcularTudo === 'function') window.calcularTudo();
 
-    var dados      = window.dadosPedidoAtual || {};
+    var dados = window.dadosPedidoAtual || {};
     var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
     var contato     = String((document.getElementById('p-contato')     || {}).value || dados.contato     || '').trim();
     var horario     = String((document.getElementById('p-horario')     || {}).value || dados.horario     || '').trim();
@@ -1487,26 +1424,33 @@ window.remitirPedido = async function () {
     var prioridade  = String((document.getElementById('p-prioridade')  || {}).value || '0').trim();
     var valorTotal  = Number(dados.valorEstimado || 0);
 
+    var rotasProcessadas = (
+        Array.isArray(dados.rotasProcessadas) && dados.rotasProcessadas.length > 0
+    ) ? dados.rotasProcessadas : [];
+
     var rotasTexto = '';
-    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
-        rotasTexto = dados.rotasProcessadas.map(function (r, i) {
+    if (rotasProcessadas.length > 0) {
+        rotasTexto = rotasProcessadas.map(function (r, i) {
             return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
         }).join('\n');
     } else {
         rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
     }
 
-    // Pré-monta a mensagem com id temporário para gerar o texto correto
-    var dadosParaMensagem = Object.assign({}, dados, {
-        id:              '',      // será preenchido após resposta da API
-        solicitante:     solicitante,
-        contato:         contato,
-        mercadoria:      mercadoria,
-        rotasProcessadas: dados.rotasProcessadas || [],
-        distanciaTotal:  distancia,
-        tempoTotal:      dados.tempoTotal || 0,
-        valorEstimado:   valorTotal
-    });
+    var dadosParaMensagem = {
+        id:               '[ID_GERADO]',
+        solicitante:      solicitante,
+        contato:          contato,
+        mercadoria:       mercadoria,
+        rotasProcessadas: rotasProcessadas,
+        distanciaTotal:   dados.distanciaTotal || distancia,
+        tempoTotal:       dados.tempoTotal     || 0,
+        valorEstimado:    valorTotal
+    };
+
+    var mensagemProvisoria = typeof window.gerarMensagemFormatada === 'function'
+        ? window.gerarMensagemFormatada(dadosParaMensagem)
+        : '';
 
     var payload = {
         id_cliente:  String((window.AppRDO && window.AppRDO.clienteId) || ''),
@@ -1524,14 +1468,18 @@ window.remitirPedido = async function () {
         prioridade:  prioridade,
         valor_total: valorTotal,
         valor_final: valorTotal,
-        status:      'PENDENTE'
+        status:      'PENDENTE',
+        texto:       mensagemProvisoria
     };
 
     if (!payload.id_cliente) { window.exibirModalValidacao('Nenhum cliente selecionado.'); return; }
 
     var btnRemitir    = document.getElementById('btn-remitir-pedido');
     var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
-    if (btnRemitir) { btnRemitir.disabled = true; btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...'; }
+    if (btnRemitir) {
+        btnRemitir.disabled  = true;
+        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+    }
 
     try {
         var resposta = await API.call('createpedido', payload);
@@ -1541,22 +1489,7 @@ window.remitirPedido = async function () {
         var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
         var novoPedidoId    = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
 
-        // ── Gera a mensagem final com o ID real retornado pela API ──
-        dadosParaMensagem.id = novoPedidoIdRaw;
-        var mensagemFinal    = typeof window.gerarMensagemFormatada === 'function'
-            ? window.gerarMensagemFormatada(dadosParaMensagem)
-            : '';
-
-        // ── Persiste o texto no banco via updatechat (ou campo texto no createpedido) ──
-        // Isso garante que msg.texto estará preenchido na próxima leitura do getchat
-        if (mensagemFinal && novoPedidoId) {
-            try {
-                await API.call('updatechat', { pedido_id: novoPedidoId, texto: mensagemFinal });
-            } catch (_) {
-                // Não bloqueia o fluxo; o fallback de _resolverTextoMensagem ainda cobre
-                console.warn('[chat.js] ⚠️ updatechat falhou — texto pode não persistir no banco.');
-            }
-        }
+        var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
 
         var modalForm = document.getElementById('modalFormulario');
         var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
@@ -1574,11 +1507,12 @@ window.remitirPedido = async function () {
             });
             if (Array.isArray(window.AppRDO.pedidosCache))
                 window.AppRDO.pedidosCache.push(novoPedidoCache);
+
             if (Array.isArray(window.AppRDO.mensagensCache))
                 window.AppRDO.mensagensCache.push({
                     id_cliente: payload.id_cliente,
                     pedido_id:  novoPedidoId,
-                    texto:      mensagemFinal,   // ← CRÍTICO: salva localmente para exibição imediata
+                    texto:      mensagemFinal,
                     hora:       new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                     data:       new Date().toISOString()
                 });
@@ -1587,20 +1521,26 @@ window.remitirPedido = async function () {
                 window.EventBus.emit('pedido:adicionado', novoPedidoCache);
         }
 
-        window.dadosPedidoAtual         = {};
-        window.AppRDO._mapaModalAberto  = false;
+        window.dadosPedidoAtual          = {};
+        window.AppRDO._mapaModalAberto   = false;
         window.AppRDO.isProcessingCheckout = false;
 
         var msgInput = document.getElementById('msg-input');
-        if (msgInput) { msgInput.value = ''; msgInput.style.height = 'auto'; msgInput.setAttribute('placeholder', 'Digite o pedido...'); }
+        if (msgInput) {
+            msgInput.value = '';
+            msgInput.style.height = 'auto';
+            msgInput.setAttribute('placeholder', 'Digite o pedido...');
+        }
 
         setTimeout(function () { _limparBackdrop(); }, 350);
 
         try {
             Swal.fire({
-                icon: 'success', title: 'Pedido enviado!', text: 'O pedido foi registrado com sucesso.',
-                toast: true, position: 'top-end', showConfirmButton: false,
-                timer: 3000, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
+                icon: 'success', title: 'Pedido enviado!',
+                text: 'O pedido foi registrado com sucesso.',
+                toast: true, position: 'top-end',
+                showConfirmButton: false, timer: 3000,
+                timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
             });
         } catch (_) {}
 
@@ -1610,13 +1550,13 @@ window.remitirPedido = async function () {
             Swal.fire({
                 icon: 'error', title: 'Erro ao enviar pedido',
                 html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
-                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545', customClass: { popup: 'rounded-4' }
+                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
             });
         } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
     }
 };
 
-// ─── Preencher formulário ─────────────────────────────────────
 window._preencherFormulario = function (dados) {
     if (!dados) return;
 
@@ -1624,30 +1564,30 @@ window._preencherFormulario = function (dados) {
         var el = document.getElementById(id);
         if (!el) return;
         el.value = valor;
-        el.style.border    = '';
+        el.style.border = '';
         el.style.boxShadow = '';
     };
     var _setSelect = function (id, valor) {
         var el = document.getElementById(id);
         if (!el || valor == null) return;
-        var str      = String(valor);
+        var str = String(valor);
         var encontrou = Array.prototype.some.call(el.options, function (o) { return o.value === str; });
         if (encontrou) el.value = str;
-        el.style.border    = '';
+        el.style.border = '';
         el.style.boxShadow = '';
     };
 
     _setInput('p-solicitante', dados.solicitante || '');
-    _setInput('p-contato',     dados.contato     || '');
-    _setInput('p-horario',     dados.horario     || '');
-    _setInput('p-distancia',   Number(dados.distanciaTotal || 0).toFixed(2));
-    _setInput('p-tempo',       dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
-    _setInput('p-obs',         dados.obs         || '');
+    _setInput('p-contato', dados.contato || '');
+    _setInput('p-horario', dados.horario || '');
+    _setInput('p-distancia', Number(dados.distanciaTotal || 0).toFixed(2));
+    _setInput('p-tempo', dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
+    _setInput('p-obs', dados.obs || '');
 
     _setSelect('p-mercadoria', dados.mercadoria || 'ENTREGA');
-    _setSelect('p-valor-km',   dados.valorKm  != null ? dados.valorKm  : '3.00');
-    _setSelect('p-retorno',    dados.retorno  != null ? dados.retorno  : '0');
-    _setSelect('p-dinamica',   dados.dinamica != null ? dados.dinamica : '0');
+    _setSelect('p-valor-km', dados.valorKm != null ? dados.valorKm : '3.00');
+    _setSelect('p-retorno', dados.retorno != null ? dados.retorno : '0');
+    _setSelect('p-dinamica', dados.dinamica != null ? dados.dinamica : '0');
     _setSelect('p-prioridade', dados.prioridade != null ? dados.prioridade : '0');
 
     var elRotas = document.getElementById('p-rotas');
@@ -1664,13 +1604,13 @@ window._preencherFormulario = function (dados) {
 
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
-    var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-    if (instForm) { try { instForm.hide(); } catch (_) {} }
+    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+    if (instForm) { try { instForm.hide(); } catch (_) { } }
 
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
             if (!ok) return;
-            var modalMapa   = document.getElementById('modalMapa');
+            var modalMapa = document.getElementById('modalMapa');
             if (!modalMapa) return;
             var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
             modalMapa.addEventListener('shown.bs.modal', function () {
@@ -1694,7 +1634,7 @@ window.fecharParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
     if (!modalForm) return;
     var inst = bootstrap.Modal.getInstance(modalForm);
-    if (inst) { try { inst.hide(); } catch (_) {} }
+    if (inst) { try { inst.hide(); } catch (_) { } }
     setTimeout(function () { window.voltarParaMapa(); }, 400);
 };
 
@@ -1704,23 +1644,23 @@ window.fecharParaChat = function (modalId) {
         var modalEl = document.getElementById(id);
         if (!modalEl) return;
         var inst = bootstrap.Modal.getInstance(modalEl);
-        if (inst) { try { inst.hide(); } catch (_) {} }
+        if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
-    window.AppRDO._mapaModalAberto     = false;
+    window.AppRDO._mapaModalAberto = false;
     window.AppRDO.isProcessingCheckout = false;
-    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) {} window._leafletMapInstance = null; }
+    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
     window.dadosPedidoAtual = {};
 
     var input = document.getElementById('msg-input');
     if (input) {
-        input.value             = '';
-        input.style.height      = 'auto';
-        input.disabled          = false;
-        input.readOnly          = false;
-        input.style.border      = '';
-        input.style.boxShadow   = '';
-        input.style.opacity     = '';
+        input.value = '';
+        input.style.height = 'auto';
+        input.disabled = false;
+        input.readOnly = false;
+        input.style.border = '';
+        input.style.boxShadow = '';
+        input.style.opacity = '';
         input.style.pointerEvents = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
     }
@@ -1730,7 +1670,6 @@ window.fecharParaChat = function (modalId) {
     setTimeout(function () { _limparBackdrop(); var inp = document.getElementById('msg-input'); if (inp) inp.focus(); }, 400);
 };
 
-// ─── Bootstrap / EventBus ─────────────────────────────────────
 (function () {
     function _handleSyncClick(e) {
         if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
@@ -1742,7 +1681,7 @@ window.fecharParaChat = function (modalId) {
 
     function _tentarInit() {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn     = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
             window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
@@ -1771,9 +1710,9 @@ window.fecharParaChat = function (modalId) {
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity    = '0';
-                    wrapper.style.transform  = 'translateX(30px)';
-                    setTimeout(function () { try { wrapper.remove(); } catch (_) {} }, 300);
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
+                    setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
                 }
             }
 
@@ -1789,8 +1728,8 @@ window.fecharParaChat = function (modalId) {
         });
 
         window.EventBus.on('pedido:statusAtualizado', function (dados) {
-            var idStr  = String(dados.id || '').trim();
-            var cache  = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            var idStr = String(dados.id || '').trim();
+            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
             var pedido = cache.find(function (p) {
                 return String(p.id || '').trim() === idStr ||
                     String(p.id || '').trim().replace(/^RDO0*/i, '') === idStr.replace(/^RDO0*/i, '');

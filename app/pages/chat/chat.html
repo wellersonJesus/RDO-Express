@@ -426,10 +426,9 @@ calcularemos á sua taxa! 🏁</textarea>
     }
 
     var base = window.location.pathname.replace(/\/[^/]*$/, '/');
-    if (base.indexOf('/pages/') !== -1) {
-        base = base.substring(0, base.indexOf('/pages/') + 1);
-    }
+    if (base.indexOf('/pages/') !== -1) base = base.substring(0, base.indexOf('/pages/') + 1);
 
+    // Carrega form_clientes.js e apenas ajusta o textarea (sem keydown — já tratado em chat.js)
     _carregarScript(base + 'js/form_clientes.js', function () {
         var textarea = document.getElementById('msg-input');
         if (!textarea) return;
@@ -437,15 +436,7 @@ calcularemos á sua taxa! 🏁</textarea>
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
-        textarea.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (typeof window.enviarMensagemGeral === 'function') {
-                    window.enviarMensagemGeral();
-                }
-            }
-        });
+        // ❌ Remover o keydown daqui — chat.js já trata via document
     });
-
 })();
 </script>

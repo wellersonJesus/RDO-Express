@@ -1,4 +1,3 @@
-// app/js/form_clientes.js
 window.marcarCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
@@ -634,14 +633,14 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             return String(p.id).trim() === String(msg.pedido_id).trim();
         });
 
-        var statusBruto  = String(pedido ? pedido.status : '').trim();
-        var motoboyNome  = String(pedido ? (pedido.motoboy || '') : '').trim();
-        var statusPuro   = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
-        var statusUpper  = statusPuro.toUpperCase();
-        var isFinal      = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
-        var isEmRota     = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
-        var temStatus    = isEmRota || isFinal;
-        var statusLabel  = statusPuro.replace(/_/g, ' ');
+        var statusBruto = String(pedido ? pedido.status : '').trim();
+        var motoboyNome = String(pedido ? (pedido.motoboy || '') : '').trim();
+        var statusPuro = statusBruto.includes('/') ? statusBruto.split('/').pop().trim() : statusBruto;
+        var statusUpper = statusPuro.toUpperCase();
+        var isFinal = statusUpper === 'CONCLUIDO' || statusUpper === 'CONCLUÍDO' || statusUpper === 'CANCELADO';
+        var isEmRota = statusUpper === 'EM_ROTA' || statusUpper === 'EM ROTA' || statusBruto.includes('/');
+        var temStatus = isEmRota || isFinal;
+        var statusLabel = statusPuro.replace(/_/g, ' ');
         var tooltipTexto = temStatus
             ? (motoboyNome ? motoboyNome + ' • ' + statusLabel : statusLabel)
             : 'Alterar Status';
@@ -724,29 +723,29 @@ window.StatusModal = (function () {
     'use strict';
 
     var _pedidoId = null;
-    var _modalBS  = null;
+    var _modalBS = null;
 
     function _el(id) { return document.getElementById(id) || null; }
     function _show(id) { var e = _el(id); if (e) e.classList.remove('d-none'); }
     function _hide(id) { var e = _el(id); if (e) e.classList.add('d-none'); }
 
     function _setHeader(texto, subtitulo, iconeClass, bgClass) {
-        var wrap  = _el('modal-status-icon-wrap');
+        var wrap = _el('modal-status-icon-wrap');
         var icone = _el('modal-status-icone');
-        var txt   = _el('modal-status-texto');
-        var sub   = _el('modal-status-subtitulo');
-        if (txt)   txt.textContent  = texto     || 'Alterar Status';
-        if (sub)   sub.textContent  = subtitulo || 'Selecione a ação desejada';
-        if (icone) icone.className  = 'bi ' + (iconeClass || 'bi-arrow-repeat') + ' text-danger';
+        var txt = _el('modal-status-texto');
+        var sub = _el('modal-status-subtitulo');
+        if (txt) txt.textContent = texto || 'Alterar Status';
+        if (sub) sub.textContent = subtitulo || 'Selecione a ação desejada';
+        if (icone) icone.className = 'bi ' + (iconeClass || 'bi-arrow-repeat') + ' text-danger';
         if (wrap) {
             wrap.className = 'd-inline-flex align-items-center justify-content-center rounded-3 '
-                           + (bgClass || 'bg-danger bg-opacity-10');
+                + (bgClass || 'bg-danger bg-opacity-10');
             if (icone) {
                 icone.className = icone.className.replace(/text-\w+/, '');
                 var colorMap = {
-                    'bg-primary bg-opacity-10':   'text-primary',
-                    'bg-success bg-opacity-10':   'text-success',
-                    'bg-danger bg-opacity-10':    'text-danger',
+                    'bg-primary bg-opacity-10': 'text-primary',
+                    'bg-success bg-opacity-10': 'text-success',
+                    'bg-danger bg-opacity-10': 'text-danger',
                     'bg-secondary bg-opacity-10': 'text-secondary'
                 };
                 icone.classList.add(colorMap[bgClass] || 'text-danger');
@@ -770,7 +769,7 @@ window.StatusModal = (function () {
         });
         document.querySelectorAll('#box-cancelamento .cancel-check-item').forEach(function (el) {
             el.style.borderColor = '';
-            el.style.background  = '';
+            el.style.background = '';
         });
         _hide('cancel-error');
     }
@@ -797,7 +796,7 @@ window.StatusModal = (function () {
             : '<i class="bi bi-question-circle"></i>';
         iconEl.classList.remove('status-pending');
         iconEl.classList.add('status-updated');
-        var label   = String(status || '').replace(/_/g, ' ');
+        var label = String(status || '').replace(/_/g, ' ');
         var tooltip = motoboyNome ? motoboyNome + ' • ' + label : label;
         iconEl.setAttribute('data-tooltip', tooltip);
         iconEl.setAttribute('title', tooltip);
@@ -818,13 +817,13 @@ window.StatusModal = (function () {
         var select = _el('select-motoboy');
         if (!select) return;
         select.innerHTML = '<option value="" disabled selected>Carregando...</option>';
-        select.disabled  = true;
+        select.disabled = true;
         try {
-            var todos    = await API.call('getcolaboradores');
-            var lista    = Array.isArray(todos) ? todos : [];
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
             var motoboys = lista.filter(function (c) {
                 return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                       String(c.status     || '').toUpperCase() === 'TRUE';
+                    String(c.status || '').toUpperCase() === 'TRUE';
             });
             select.disabled = false;
             if (motoboys.length === 0) {
@@ -834,17 +833,17 @@ window.StatusModal = (function () {
             select.innerHTML = '<option value="" disabled selected>Selecione o motoboy...</option>' +
                 motoboys.map(function (m) {
                     return '<option value="' + String(m.id || '') + '">' +
-                           String(m.username || m.nome || 'Sem nome') + '</option>';
+                        String(m.username || m.nome || 'Sem nome') + '</option>';
                 }).join('');
         } catch (_) {
-            select.disabled  = false;
+            select.disabled = false;
             select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
         }
     }
 
     async function _executar(status, motoboyId, motivos) {
         var motoboyNome = '';
-        var statusFmt   = String(status || '');
+        var statusFmt = String(status || '');
 
         if (motoboyId) {
             var select = _el('select-motoboy');
@@ -859,7 +858,7 @@ window.StatusModal = (function () {
 
         try {
             var payload = {
-                id:     String(_pedidoId || ''),
+                id: String(_pedidoId || ''),
                 status: statusFmt,
                 motoboy: motoboyNome
             };
@@ -883,7 +882,7 @@ window.StatusModal = (function () {
 
                 if (typeof window.EventBus !== 'undefined') {
                     window.EventBus.emit('pedido:statusAtualizado', {
-                        id:     _pedidoId,
+                        id: _pedidoId,
                         status: statusFmt,
                         motoboy: motoboyNome,
                         motivo_cancelamento: motivos ? motivos.join(' | ') : ''
@@ -902,7 +901,7 @@ window.StatusModal = (function () {
                 Swal.fire({
                     icon: 'error', title: 'Erro',
                     html: '<div style="font-size:.9rem;">Não foi possível alterar o status.<br>' +
-                          '<small class="text-secondary">' + (err.message || 'Tente novamente.') + '</small></div>',
+                        '<small class="text-secondary">' + (err.message || 'Tente novamente.') + '</small></div>',
                     confirmButtonText: 'Fechar',
                     confirmButtonColor: '#dc3545',
                     customClass: { popup: 'rounded-4' }
@@ -914,13 +913,13 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
 
-        var cache  = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
-                   ? window.AppRDO.pedidosCache : [];
+        var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache))
+            ? window.AppRDO.pedidosCache : [];
         var pedido = cache.find(function (p) {
             return String(p.id || '').trim() === String(pedidoId).trim();
         });
         var statusBruto = String(pedido ? pedido.status : '').trim();
-        var statusPuro  = statusBruto.includes('/')
+        var statusPuro = statusBruto.includes('/')
             ? statusBruto.split('/').pop().trim().toUpperCase()
             : statusBruto.toUpperCase();
 
@@ -931,9 +930,9 @@ window.StatusModal = (function () {
                     icon: isConcluido ? 'success' : 'error',
                     title: 'Pedido Finalizado',
                     html: '<div style="font-size:.9rem;color:#555;">Este pedido já foi ' +
-                          '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
-                          (isConcluido ? 'Concluído' : 'Cancelado') +
-                          '</strong> e não pode mais ser alterado.</div>',
+                        '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
+                        (isConcluido ? 'Concluído' : 'Cancelado') +
+                        '</strong> e não pode mais ser alterado.</div>',
                     confirmButtonText: 'Entendi',
                     confirmButtonColor: '#dc3545',
                     customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
@@ -959,7 +958,7 @@ window.StatusModal = (function () {
     function processar(status) {
         if (status === 'EM_ROTA') {
             _setHeader('Selecionar Motoboy', 'Vincule o entregador responsável',
-                       'bi-bicycle', 'bg-primary bg-opacity-10');
+                'bi-bicycle', 'bg-primary bg-opacity-10');
             _hide('box-botoes-status');
             _hide('box-cancelamento');
             _show('box-selecao-motoboy');
@@ -969,7 +968,7 @@ window.StatusModal = (function () {
 
         if (status === 'CANCELADO') {
             _setHeader('Motivo do Cancelamento', 'Selecione um ou mais motivos',
-                       'bi-x-circle-fill', 'bg-danger bg-opacity-10');
+                'bi-x-circle-fill', 'bg-danger bg-opacity-10');
             _hide('box-botoes-status');
             _hide('box-selecao-motoboy');
             _show('box-cancelamento');
@@ -984,7 +983,7 @@ window.StatusModal = (function () {
                         icon: 'question',
                         title: 'Concluir Pedido?',
                         html: '<div style="font-size:.9rem;color:#555;">Ao concluir, este pedido ' +
-                              '<strong>não poderá</strong> mais ser alterado.</div>',
+                            '<strong>não poderá</strong> mais ser alterado.</div>',
                         showCancelButton: true,
                         confirmButtonText: '<i class="bi bi-check2 me-1"></i>Sim, Concluir',
                         cancelButtonText: 'Voltar',
@@ -1003,7 +1002,7 @@ window.StatusModal = (function () {
     }
 
     async function confirmarMotoboy() {
-        var select    = _el('select-motoboy');
+        var select = _el('select-motoboy');
         var motoboyId = select ? select.value : '';
         if (!motoboyId) {
             if (select) {
@@ -1026,7 +1025,7 @@ window.StatusModal = (function () {
             var errEl = _el('cancel-error');
             if (errEl) {
                 errEl.style.transition = 'opacity .2s';
-                errEl.style.opacity    = '0';
+                errEl.style.opacity = '0';
                 setTimeout(function () { errEl.style.opacity = '1'; }, 50);
             }
             return;
@@ -1038,11 +1037,11 @@ window.StatusModal = (function () {
     function voltar() { _resetar(); }
 
     return {
-        abrir               : abrir,
-        processar           : processar,
-        confirmarMotoboy    : confirmarMotoboy,
+        abrir: abrir,
+        processar: processar,
+        confirmarMotoboy: confirmarMotoboy,
         confirmarCancelamento: confirmarCancelamento,
-        voltar              : voltar
+        voltar: voltar
     };
 })();
 
@@ -1093,7 +1092,7 @@ window.excluirPedido = async function (pedidoId) {
     try {
         var resultados = await Promise.allSettled([
             API.call('deletepedido', { id: idStr }),
-            API.call('deletechat',   { pedido_id: idStr })
+            API.call('deletechat', { pedido_id: idStr })
         ]);
 
         var erroPedido = resultados[0].status === 'rejected'
@@ -1151,7 +1150,7 @@ window.buscarCoordenadasEndereco = function (endereco) {
 window.formatarTelefone = function (tel) {
     if (!tel) return '';
     var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8)  return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
     if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
     if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
     return val;
@@ -1206,7 +1205,7 @@ window.exibirErro = function (erro, contexto) {
 };
 
 window.renderizarMapaUnificado = function () {
-    var loaderEl    = document.getElementById('mapa-loader');
+    var loaderEl = document.getElementById('mapa-loader');
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
@@ -1331,35 +1330,53 @@ window.enviarMensagemGeral = function () {
     window.iniciarFluxoCheckout();
 };
 
-window.gerarMensagemFormatada = function (dados) {
-    var idBruto = String(dados.id || dados.numeroServico || '').trim();
-    var nomeServico = idBruto.toUpperCase().startsWith('RDO')
-        ? idBruto.toUpperCase()
-        : (idBruto ? 'RDO' + String(idBruto).padStart(3, '0') : 'N/D');
-
-    var linhas = [
-        '📦 N.SERVIÇO: ' + nomeServico,
-        '👤 : ' + (dados.solicitante || 'Não informado') + ' 📞 : ' + (dados.contato || ''),
-        '📦 : (' + (dados.mercadoria || 'ENTREGA') + ')',
-        '.',
-        '📍 ROTAS:'
-    ];
-
-    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
-        dados.rotasProcessadas.forEach(function (r, i) {
-            linhas.push((i + 1) + '. De: ' + r.de + ' | Para: ' + r.para);
-            linhas.push('.');
-        });
-    }
-
-    linhas.push(
-        '🛣️ ' + Number(dados.distanciaTotal || 0).toFixed(2) + ' km ' +
-        '⏱️ ' + window.formatarTempoHumano(dados.tempoTotal || 0) + ' ' +
-        '💰 ' + Number(dados.valorEstimado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    );
-
-    return linhas.join('\n');
+window.marcarCampoInvalido = window.marcarCampoInvalido || function () {
+    var input = document.getElementById('msg-input');
+    if (!input) return;
+    input.style.border = '2px solid #dc3545';
+    input.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+    input.setAttribute('placeholder', '⚠️ Digite os dados do pedido aqui...');
+    setTimeout(function () {
+        input.style.border = '';
+        input.style.boxShadow = '';
+        input.setAttribute('placeholder', 'Digite o pedido...');
+    }, 3000);
 };
+
+window.marcarCampoFormInvalido = window.marcarCampoFormInvalido || function (campo) {
+    if (!campo) return;
+    campo.style.border = '2px solid #dc3545';
+    campo.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+    setTimeout(function () {
+        campo.style.border = '';
+        campo.style.boxShadow = '';
+    }, 3000);
+};
+
+window.limparCampoInvalido = window.limparCampoInvalido || function () {
+    var input = document.getElementById('msg-input');
+    if (!input) return;
+    input.style.border = '';
+    input.style.boxShadow = '';
+    input.setAttribute('placeholder', 'Digite o pedido...');
+};
+
+window.AppRDO = window.AppRDO || {};
+window.AppRDO.debounceTimer = window.AppRDO.debounceTimer || null;
+window.AppRDO.listaCarregada = false;
+window.AppRDO.isFetching = window.AppRDO.isFetching || false;
+window.AppRDO.isProcessingCheckout = false;
+window.AppRDO.pedidosCache = window.AppRDO.pedidosCache || [];
+window.AppRDO.motoboyCache = window.AppRDO.motoboyCache || [];
+window.AppRDO.pedidoEmEdicao = null;
+window.AppRDO.clienteId = window.AppRDO.clienteId || null;
+window.AppRDO.clienteSelecionado = window.AppRDO.clienteSelecionado || null;
+window.AppRDO.clientesCache = window.AppRDO.clientesCache || [];
+window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
+window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+window.AppRDO._mapaModalAberto = false;
+
+window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
@@ -1369,10 +1386,10 @@ window.iniciarFluxoCheckout = function () {
     if (!texto) { window.marcarCampoInvalido(); return; }
 
     var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
-    var contato     = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario     = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
-    var mercadoria  = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs         = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
     var rotasExtraidas = window.extrairRotasDaMensagem(texto);
 
     if (rotasExtraidas.length === 0) {
@@ -1400,7 +1417,7 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('shown.bs.modal', function () {
             var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl      = document.getElementById('mapa-loader');
+            var loaderEl = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
             if (loaderEl) loaderEl.style.display = '';
 
@@ -1419,7 +1436,7 @@ window.iniciarFluxoCheckout = function () {
                         .then(function (resp) { return resp.json(); })
                         .then(function (data) {
                             if (data.routes && data.routes[0]) {
-                                kmTotal  += data.routes[0].distance / 1000;
+                                kmTotal += data.routes[0].distance / 1000;
                                 minTotal += data.routes[0].duration / 60;
                                 listaCaminhos.push(
                                     data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; })
@@ -1428,23 +1445,23 @@ window.iniciarFluxoCheckout = function () {
                         });
                 });
             })).then(function () {
-                var kmArredondado  = Math.round(kmTotal);
+                var kmArredondado = Math.round(kmTotal);
                 var valorCalculado = kmArredondado * 3.00;
 
                 window.dadosPedidoAtual = {
-                    solicitante:     solicitante,
-                    contato:         contato,
-                    horario:         horario,
-                    mercadoria:      mercadoria,
-                    obs:             obs,
-                    cliente:         (window.AppRDO ? window.AppRDO.clienteSelecionado : null) ||
-                                     localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal:  kmArredondado,
-                    tempoTotal:      Math.round(minTotal),
-                    coordenadas:     listaCaminhos,
-                    valorEstimado:   valorCalculado,
+                    solicitante: solicitante,
+                    contato: contato,
+                    horario: horario,
+                    mercadoria: mercadoria,
+                    obs: obs,
+                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) ||
+                        localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                    distanciaTotal: kmArredondado,
+                    tempoTotal: Math.round(minTotal),
+                    coordenadas: listaCaminhos,
+                    valorEstimado: valorCalculado,
                     rotasProcessadas: rotasExtraidas,
-                    rawInput:        texto
+                    rawInput: texto
                 };
 
                 window._renderizarResumo(
@@ -1470,7 +1487,7 @@ window.prosseguirParaFormulario = function () {
     }
 
     var modalMapa = document.getElementById('modalMapa');
-    var instMapa  = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
+    var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
     if (instMapa) { try { instMapa.hide(); } catch (_) { } }
 
     setTimeout(function () {
@@ -1488,15 +1505,15 @@ window.prosseguirParaFormulario = function () {
 };
 
 window.calcularTudo = function () {
-    var distancia  = parseFloat((document.getElementById('p-distancia') || {}).value) || 0;
-    var valorKm    = parseFloat((document.getElementById('p-valor-km') || {}).value) || 3.00;
-    var retorno    = parseFloat((document.getElementById('p-retorno') || {}).value) || 0;
-    var dinamica   = parseFloat((document.getElementById('p-dinamica') || {}).value) || 0;
+    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value) || 0;
+    var valorKm = parseFloat((document.getElementById('p-valor-km') || {}).value) || 3.00;
+    var retorno = parseFloat((document.getElementById('p-retorno') || {}).value) || 0;
+    var dinamica = parseFloat((document.getElementById('p-dinamica') || {}).value) || 0;
     var prioridade = parseFloat((document.getElementById('p-prioridade') || {}).value) || 0;
 
-    var base        = distancia * valorKm;
+    var base = distancia * valorKm;
     var taxaRetorno = retorno > 0 ? base * retorno : 0;
-    var total       = base + taxaRetorno + dinamica + prioridade;
+    var total = base + taxaRetorno + dinamica + prioridade;
 
     var elFinal = document.getElementById('view-valor-final');
     if (elFinal) {
@@ -1505,179 +1522,10 @@ window.calcularTudo = function () {
 
     if (window.dadosPedidoAtual) {
         window.dadosPedidoAtual.valorEstimado = total;
-        window.dadosPedidoAtual.valorKm       = valorKm;
-        window.dadosPedidoAtual.retorno       = retorno;
-        window.dadosPedidoAtual.dinamica      = dinamica;
-        window.dadosPedidoAtual.prioridade    = prioridade;
-    }
-};
-
-window.remitirPedido = async function () {
-    var _validarCampo = function (el) {
-        if (!el) return false;
-        var val = String(el.value || '').trim();
-        if (!val) {
-            el.style.border    = '2px solid #dc3545';
-            el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
-            setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
-            return false;
-        }
-        return true;
-    };
-
-    var ids = ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'];
-    var invalido = false;
-    ids.forEach(function (id) {
-        var el = document.getElementById(id);
-        if (!_validarCampo(el)) invalido = true;
-    });
-    if (invalido) return;
-
-    if (typeof window.calcularTudo === 'function') window.calcularTudo();
-
-    var dados      = window.dadosPedidoAtual || {};
-    var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
-    var contato     = String((document.getElementById('p-contato')     || {}).value || dados.contato    || '').trim();
-    var horario     = String((document.getElementById('p-horario')     || {}).value || dados.horario    || '').trim();
-    var mercadoria  = String((document.getElementById('p-mercadoria')  || {}).value || dados.mercadoria || 'ENTREGA').trim();
-    var distancia   = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
-    var tempo       = String((document.getElementById('p-tempo')       || {}).value || '').trim();
-    var obs         = String((document.getElementById('p-obs')         || {}).value || dados.obs        || '').trim();
-    var valorKm     = String((document.getElementById('p-valor-km')    || {}).value || '3').trim();
-    var retorno     = String((document.getElementById('p-retorno')     || {}).value || '0').trim();
-    var dinamica    = String((document.getElementById('p-dinamica')    || {}).value || '0').trim();
-    var prioridade  = String((document.getElementById('p-prioridade')  || {}).value || '0').trim();
-    var valorTotal  = Number(dados.valorEstimado || 0);
-
-    var rotasTexto = '';
-    if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
-        rotasTexto = dados.rotasProcessadas.map(function (r, i) {
-            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
-        }).join('\n');
-    } else {
-        rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
-    }
-
-    var dadosParaMensagem = Object.assign({}, dados, {
-        id:              '',
-        solicitante:     solicitante,
-        contato:         contato,
-        mercadoria:      mercadoria,
-        rotasProcessadas: dados.rotasProcessadas || [],
-        distanciaTotal:  distancia,
-        tempoTotal:      dados.tempoTotal || 0,
-        valorEstimado:   valorTotal
-    });
-
-    var payload = {
-        id_cliente:  String((window.AppRDO && window.AppRDO.clienteId) || ''),
-        solicitante: solicitante,
-        contato:     contato,
-        horario:     horario,
-        mercadoria:  mercadoria,
-        rotas:       rotasTexto,
-        distancia:   distancia.toFixed(2),
-        tempo:       tempo,
-        obs:         obs,
-        valor_km:    valorKm,
-        retorno:     retorno,
-        dinamica:    dinamica,
-        prioridade:  prioridade,
-        valor_total: valorTotal,
-        valor_final: valorTotal,
-        status:      'PENDENTE'
-    };
-
-    if (!payload.id_cliente) {
-        window.exibirModalValidacao('Nenhum cliente selecionado.');
-        return;
-    }
-
-    var btnRemitir    = document.getElementById('btn-remitir-pedido');
-    var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
-    if (btnRemitir) {
-        btnRemitir.disabled = true;
-        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
-    }
-
-    try {
-        var resposta = await API.call('createpedido', payload);
-        if (!resposta || resposta.status !== 'success') {
-            throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
-        }
-
-        var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
-        var novoPedidoId    = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
-
-        dadosParaMensagem.id = novoPedidoIdRaw;
-        var mensagemFinal = typeof window.gerarMensagemFormatada === 'function'
-            ? window.gerarMensagemFormatada(dadosParaMensagem)
-            : '';
-
-        var modalForm = document.getElementById('modalFormulario');
-        var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-        if (instForm) { try { instForm.hide(); } catch (_) { } }
-
-        if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function') {
-            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
-        }
-
-        if (novoPedidoId) {
-            var novoPedidoCache = Object.assign({}, payload, {
-                id:       novoPedidoId,
-                status:   'PENDENTE',
-                motoboy:  '',
-                mensagem: mensagemFinal
-            });
-            if (Array.isArray(window.AppRDO.pedidosCache))
-                window.AppRDO.pedidosCache.push(novoPedidoCache);
-            if (Array.isArray(window.AppRDO.mensagensCache))
-                window.AppRDO.mensagensCache.push({
-                    id_cliente: payload.id_cliente,
-                    pedido_id:  novoPedidoId,
-                    texto:      mensagemFinal,
-                    hora:       new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    data:       new Date().toISOString()
-                });
-
-            if (typeof window.EventBus !== 'undefined') {
-                window.EventBus.emit('pedido:adicionado', novoPedidoCache);
-            }
-        }
-
-        window.dadosPedidoAtual          = {};
-        window.AppRDO._mapaModalAberto   = false;
-        window.AppRDO.isProcessingCheckout = false;
-
-        var msgInput = document.getElementById('msg-input');
-        if (msgInput) {
-            msgInput.value = '';
-            msgInput.style.height = 'auto';
-            msgInput.setAttribute('placeholder', 'Digite o pedido...');
-        }
-
-        setTimeout(function () { _limparBackdrop(); }, 350);
-
-        try {
-            Swal.fire({
-                icon: 'success', title: 'Pedido enviado!',
-                text: 'O pedido foi registrado com sucesso.',
-                toast: true, position: 'top-end',
-                showConfirmButton: false, timer: 3000, timerProgressBar: true,
-                customClass: { popup: 'rounded-4 shadow' }
-            });
-        } catch (_) { }
-
-    } catch (err) {
-        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
-        try {
-            Swal.fire({
-                icon: 'error', title: 'Erro ao enviar pedido',
-                html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
-                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
-                customClass: { popup: 'rounded-4' }
-            });
-        } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
+        window.dadosPedidoAtual.valorKm = valorKm;
+        window.dadosPedidoAtual.retorno = retorno;
+        window.dadosPedidoAtual.dinamica = dinamica;
+        window.dadosPedidoAtual.prioridade = prioridade;
     }
 };
 
@@ -1688,7 +1536,7 @@ window._preencherFormulario = function (dados) {
         var el = document.getElementById(id);
         if (!el) return;
         el.value = valor;
-        el.style.border    = '';
+        el.style.border = '';
         el.style.boxShadow = '';
     };
 
@@ -1700,21 +1548,21 @@ window._preencherFormulario = function (dados) {
             return o.value === str;
         });
         if (encontrou) el.value = str;
-        el.style.border    = '';
+        el.style.border = '';
         el.style.boxShadow = '';
     };
 
     _setInput('p-solicitante', dados.solicitante || '');
-    _setInput('p-contato',     dados.contato     || '');
-    _setInput('p-horario',     dados.horario     || '');
-    _setInput('p-distancia',   Number(dados.distanciaTotal || 0).toFixed(2));
-    _setInput('p-tempo',       dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
-    _setInput('p-obs',         dados.obs         || '');
+    _setInput('p-contato', dados.contato || '');
+    _setInput('p-horario', dados.horario || '');
+    _setInput('p-distancia', Number(dados.distanciaTotal || 0).toFixed(2));
+    _setInput('p-tempo', dados.tempoTotal ? window.formatarTempoHumano(dados.tempoTotal) : '');
+    _setInput('p-obs', dados.obs || '');
 
     _setSelect('p-mercadoria', dados.mercadoria || 'ENTREGA');
-    _setSelect('p-valor-km',   dados.valorKm  != null ? dados.valorKm  : '3.00');
-    _setSelect('p-retorno',    dados.retorno   != null ? dados.retorno  : '0');
-    _setSelect('p-dinamica',   dados.dinamica  != null ? dados.dinamica : '0');
+    _setSelect('p-valor-km', dados.valorKm != null ? dados.valorKm : '3.00');
+    _setSelect('p-retorno', dados.retorno != null ? dados.retorno : '0');
+    _setSelect('p-dinamica', dados.dinamica != null ? dados.dinamica : '0');
     _setSelect('p-prioridade', dados.prioridade != null ? dados.prioridade : '0');
 
     var elRotas = document.getElementById('p-rotas');
@@ -1732,7 +1580,7 @@ window._preencherFormulario = function (dados) {
 
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
-    var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+    var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
     if (instForm) { try { instForm.hide(); } catch (_) { } }
 
     setTimeout(function () {
@@ -1777,7 +1625,7 @@ window.fecharParaChat = function (modalId) {
         if (inst) { try { inst.hide(); } catch (_) { } }
     });
 
-    window.AppRDO._mapaModalAberto    = false;
+    window.AppRDO._mapaModalAberto = false;
     window.AppRDO.isProcessingCheckout = false;
 
     if (window._leafletMapInstance) {
@@ -1790,20 +1638,20 @@ window.fecharParaChat = function (modalId) {
     var input = document.getElementById('msg-input');
     if (input) {
         input.value = '';
-        input.style.height       = 'auto';
-        input.disabled           = false;
-        input.readOnly           = false;
-        input.style.border       = '';
-        input.style.boxShadow    = '';
-        input.style.opacity      = '';
+        input.style.height = 'auto';
+        input.disabled = false;
+        input.readOnly = false;
+        input.style.border = '';
+        input.style.boxShadow = '';
+        input.style.opacity = '';
         input.style.pointerEvents = '';
         input.setAttribute('placeholder', 'Digite o pedido...');
     }
 
     var btnEnviar = document.getElementById('btn-enviar-mensagem');
     if (btnEnviar) {
-        btnEnviar.disabled           = false;
-        btnEnviar.style.opacity      = '';
+        btnEnviar.disabled = false;
+        btnEnviar.style.opacity = '';
         btnEnviar.style.pointerEvents = '';
     }
 
@@ -1826,7 +1674,7 @@ window.fecharParaChat = function (modalId) {
 
     function _tentarInit() {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn    = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
             window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
@@ -1864,8 +1712,8 @@ window.fecharParaChat = function (modalId) {
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity    = '0';
-                    wrapper.style.transform  = 'translateX(30px)';
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
                     setTimeout(function () {
                         try { wrapper.remove(); } catch (_) { }
                     }, 300);
