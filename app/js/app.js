@@ -428,3 +428,4 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('[APP] Sistema pronto');
         });
 });
+

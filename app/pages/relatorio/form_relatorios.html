@@ -1,0 +1,83 @@
+<div class="modal fade" id="modalNovoRelatorio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <!-- Header -->
+      <div class="rel-form-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rel-form-header-icon" id="rel-form-header-icon">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <div>
+            <h6 id="form-rel-titulo" class="fw-bold mb-0 text-white">Gerar Relatório</h6>
+            <small class="rel-form-subtitle" id="rel-form-subtitle">Selecione os filtros desejados</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body px-4 pt-4 pb-2">
+        <input type="hidden" id="rel-edit-id">
+        <input type="hidden" id="rel-tipo-hidden">
+        
+        <div id="form-relatorio-erro" class="alert alert-danger d-none py-2 px-3 rounded-3 mb-3" style="font-size:.74rem;"></div>
+
+        <!-- Filtros Dinâmicos -->
+        <div class="rel-form-section">
+          <div class="rel-form-section-label">
+            <i class="bi bi-funnel me-1"></i>Filtros
+          </div>
+          
+          <div class="row g-3">
+            <!-- Motoboy (apenas para aba motoboys) -->
+            <div class="col-12" id="rel-field-motoboy" style="display:none;">
+              <label class="rel-field-label">Motoboy <span class="text-danger">*</span></label>
+              <select id="rel-motoboy-select" class="form-select form-select-sm rel-field-input">
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <!-- Cliente (apenas para aba clientes) -->
+            <div class="col-12" id="rel-field-cliente" style="display:none;">
+              <label class="rel-field-label">Cliente <span class="text-danger">*</span></label>
+              <select id="rel-cliente-select" class="form-select form-select-sm rel-field-input">
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <!-- Tipo Financeiro (apenas para aba financeiro) -->
+            <div class="col-12" id="rel-field-tipo-fin" style="display:none;">
+              <label class="rel-field-label">Tipo <span class="text-danger">*</span></label>
+              <select id="rel-tipo-financeiro" class="form-select form-select-sm rel-field-input">
+                <option value="__todos__">Todos</option>
+                <option value="entrada">Receitas</option>
+                <option value="saida">Despesas</option>
+              </select>
+            </div>
+
+            <!-- Período -->
+            <div class="col-6">
+              <label class="rel-field-label">Data Inicial <span class="text-danger">*</span></label>
+              <input type="date" id="rel-data-inicio" class="form-control form-control-sm rel-field-input">
+            </div>
+            
+            <div class="col-6">
+              <label class="rel-field-label">Data Final <span class="text-danger">*</span></label>
+              <input type="date" id="rel-data-fim" class="form-control form-control-sm rel-field-input">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="rel-form-footer">
+        <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button type="button" id="btn-gerar-relatorio" class="btn btn-danger btn-sm rounded-pill px-4">
+          <i class="bi bi-file-earmark-arrow-down me-1"></i>Gerar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -433,6 +433,8 @@ function processarAdd(sheet, data, entity) {
 
     if (campo === "contato" && data.telefone && !data.contato) {
       valor = String(data.telefone).trim();
+    } else if (campo === "data_criacao" && !data.data_criacao) {
+      valor = new Date().toISOString();
     } else if (data[campo] !== undefined && data[campo] !== null) {
       valor = String(data[campo]).trim();
     }
@@ -490,7 +492,7 @@ function processarDelete(sheet, id) {
   for (var i = rows.length - 1; i >= 1; i--) {
     var idCelula    = String(rows[i][idIndex]).trim();
     var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
-    if (idCelula === idBuscaFull || idCelulaNum === idBuscaNum) {
+    if (idCelula === idBuscaFull || idCelulaNum === idBuscaNum || idCelula === idBusca) {
       sheet.deleteRow(i + 1);
       return { status: "success", message: "Excluido!" };
     }
@@ -524,7 +526,9 @@ function mapearEntidade(entity) {
     "chat":          "chat",
     "pedido":        "pedidos",
     "pedidos":       "pedidos",
-    "financeiro":    "financeiro"
+    "financeiro":    "financeiro",
+    "relatorio":     "relatorios",
+    "relatorios":    "relatorios"
   };
   return mapa[entity] || entity;
 }
@@ -593,6 +597,10 @@ function gerarId(sheet, entity) {
     var paddedFin = String(nextFin);
     while (paddedFin.length < 4) paddedFin = "0" + paddedFin;
     return "FIN" + paddedFin;
+  }
+
+  if (entity.indexOf("relatorio") !== -1) {
+    return "REL" + Date.now();
   }
 
   var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
