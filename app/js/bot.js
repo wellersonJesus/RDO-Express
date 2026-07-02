@@ -7,12 +7,19 @@ window.botState = {
     itensPorPagina: 15,
     isFetching: false,
     isTogglingAll: false,
-    _listenersRegistrados: false  // flag anti-acúmulo
+    _listenersRegistrados: false,
+    _cacheCarregado: false
 };
 
-var CARGOS_DISPONIVEIS = [
-    'Atendente', 'Financeiro', 'Gestor', 'Administrativo', 'SRE Architect'
-];
+var CARGOS_DISPONIVEIS = ['Atendente', 'Financeiro', 'Gestor', 'Administrativo', 'SRE Tecnologia'];
+
+window.PERMISSOES_PADRAO = {
+    'Atendente': ['Dashboard', 'Chat', 'Pedidos'],
+    'Financeiro': ['Dashboard', 'Pedidos', 'Financeiro', 'Relatórios'],
+    'Gestor': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios'],
+    'Administrativo': ['Dashboard', 'Pedidos', 'Administração', 'Relatórios', 'Bot'],
+    'SRE Tecnologia': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios', 'Bot']
+};
 
 function normalizeStatus(val) {
     if (val === true || val === 1) return 'TRUE';
@@ -72,7 +79,6 @@ function atualizarSeletorGlobal() {
     var seletor = document.getElementById('seletor-global-status');
     if (!seletor) return;
     var isMasterOn = window.checkMaster();
-    // agora considera TODOS os itens, inclusive usuários
     var comStatus = window.botState.cacheCompleto.filter(function (i) {
         return String(i.id).trim() !== '';
     });
@@ -107,7 +113,6 @@ window.alternarTodosStatus = async function (ativar) {
     for (var i = 0; i < window.botState.cacheCompleto.length; i++) {
         var item = window.botState.cacheCompleto[i];
         var itemId = String(item.id || '').trim();
-        // pula registros com ID inválido
         if (!itemId) continue;
         item.status = novoStatus;
         promessas.push(
@@ -135,7 +140,14 @@ window.mudarPagina = function (dir) {
     renderizarTabela();
 };
 
-window.initBot = async function () {
+window.initBot = function() {
+    console.log('[BOT] Iniciando...');
+    
+    if (window.botState.isFetching) {
+        console.log('[BOT] Já carregando');
+        return Promise.resolve();
+    }
+
     var raw = localStorage.getItem('bot_master_active');
     if (raw === null) {
         localStorage.setItem('bot_master_active', 'false');
@@ -145,7 +157,6 @@ window.initBot = async function () {
     applyMasterVisual(isMasterOn);
     if (window.AppRDO) window.AppRDO.isMasterOn = isMasterOn;
 
-    // ✅ Registra listeners de busca/filtro apenas UMA vez por ciclo de vida
     if (!window.botState._listenersRegistrados) {
         var filtroSelect = document.getElementById('filtro-tipo');
         var buscaInput = document.getElementById('busca-nome');
@@ -157,7 +168,6 @@ window.initBot = async function () {
         }
 
         if (buscaInput) {
-            // 'input' já cobre digitação em tempo real — 'keydown' Enter fica como fallback
             buscaInput.addEventListener('input', function () {
                 window.filtrarBot();
             });
@@ -169,23 +179,42 @@ window.initBot = async function () {
         window.botState._listenersRegistrados = true;
     }
 
-    await window.reloadBot();
+    return window.reloadBot();
 };
 
-window.reloadBot = async function () {
+window.reloadBot = function() {
     var tbody = document.getElementById('bot-list');
-    if (!tbody || window.botState.isFetching) return;
+    if (window.botState.isFetching) {
+        console.log('[BOT] Carregamento em andamento');
+        return Promise.resolve();
+    }
+    
     window.botState.isFetching = true;
+    window.botState._cacheCarregado = false;
     syncStart();
-    try {
-        var results = await Promise.all([
-            window.API.call('getusuarios').catch(function () { return []; }),
-            window.API.call('getclientes').catch(function () { return []; }),
-            window.API.call('getcolaboradores').catch(function () { return []; })
-        ]);
+    
+    console.log('[BOT] Buscando dados...');
+    
+    return Promise.all([
+        window.API.call('getusuarios').catch(function (err) { 
+            console.error('[BOT] Erro getusuarios:', err);
+            return []; 
+        }),
+        window.API.call('getclientes').catch(function (err) { 
+            console.error('[BOT] Erro getclientes:', err);
+            return []; 
+        }),
+        window.API.call('getcolaboradores').catch(function (err) { 
+            console.error('[BOT] Erro getcolaboradores:', err);
+            return []; 
+        })
+    ])
+    .then(function(results) {
         var users = Array.isArray(results[0]) ? results[0] : (results[0]?.data || []);
         var clients = Array.isArray(results[1]) ? results[1] : (results[1]?.data || []);
         var cols = Array.isArray(results[2]) ? results[2] : (results[2]?.data || []);
+
+        console.log('[BOT] Recebidos - Users:', users.length, 'Clientes:', clients.length, 'Colaboradores:', cols.length);
 
         var todosDados = [];
 
@@ -193,10 +222,24 @@ window.reloadBot = async function () {
             var usr = Object.assign({}, users[u]);
             usr.origem = 'usuarios';
             usr.status = normalizeStatus(usr.status);
-            // ✅ descarta registros com ID vazio que poluem a lista
+            
+            // Carrega permissões customizadas do localStorage se existirem
+            try {
+                var storageKey = 'permissoes_usuario_' + usr.id;
+                var storedPerms = localStorage.getItem(storageKey);
+                if (storedPerms) {
+                    usr.permissoes = JSON.parse(storedPerms);
+                } else {
+                    usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
+                }
+            } catch (e) {
+                usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
+            }
+            
             if (!String(usr.id || '').trim()) continue;
             todosDados.push(usr);
         }
+        
         for (var c = 0; c < clients.length; c++) {
             var cli = Object.assign({}, clients[c]);
             cli.origem = 'clientes';
@@ -204,6 +247,7 @@ window.reloadBot = async function () {
             if (!String(cli.id || '').trim()) continue;
             todosDados.push(cli);
         }
+        
         for (var b = 0; b < cols.length; b++) {
             var col = Object.assign({}, cols[b]);
             col.origem = 'colaboradores';
@@ -213,6 +257,9 @@ window.reloadBot = async function () {
         }
 
         window.botState.cacheCompleto = todosDados;
+        window.botState._cacheCarregado = true;
+        
+        console.log('[BOT] Cache completo:', todosDados.length, 'registros');
 
         if (window.AppRDO) {
             window.AppRDO.clientesCache = clients
@@ -225,14 +272,21 @@ window.reloadBot = async function () {
         }
 
         window.filtrarBot();
-    } catch (e) {
-        tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center text-danger py-4">' +
-            '<i class="bi bi-wifi-off me-2"></i>Falha na conexão. Tente novamente.</td></tr>';
-    } finally {
+
+        window.dispatchEvent(new CustomEvent('botCacheAtualizado', { detail: { registros: todosDados.length } }));
+        console.log('[BOT] Evento disparado');
+    })
+    .catch(function(e) {
+        console.error('[BOT] Erro crítico:', e);
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-wifi-off me-2"></i>Falha na conexão</td></tr>';
+        }
+    })
+    .finally(function() {
         window.botState.isFetching = false;
         syncStop();
-    }
+        console.log('[BOT] Finalizado');
+    });
 };
 
 window.filtrarBot = function () {
@@ -248,7 +302,6 @@ window.filtrarBot = function () {
 
     if (termoBusca.length > 0) {
         dados = dados.filter(function (item) {
-            // ✅ busca ampla: nome, id, contato/telefone, tipo/cargo
             var nome = (item.username || item.nome || item.responsavel || item.colaborador || '').toLowerCase();
             var id = String(item.id || '').toLowerCase();
             var contato = (item.contato || item.telefone || '').toLowerCase();
@@ -310,9 +363,7 @@ function renderizarTabela() {
     if (infoTotal) infoTotal.innerText = dados.length + ' registro' + (dados.length !== 1 ? 's' : '');
 
     if (dados.length === 0) {
-        tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center text-muted py-4">' +
-            '<i class="bi bi-inbox me-2"></i>Nenhum registro encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox me-2"></i>Nenhum registro encontrado.</td></tr>';
         atualizarSeletorGlobal();
         return;
     }
@@ -330,7 +381,6 @@ function renderizarTabela() {
         var tr = document.createElement('tr');
         if (!isMasterOn) tr.classList.add('text-muted');
 
-        // ── Switch de status ──────────────────────────────────────────
         var tdSwitch = document.createElement('td');
         tdSwitch.className = 'ps-3';
         var divSwitch = document.createElement('div');
@@ -339,7 +389,6 @@ function renderizarTabela() {
         chk.className = 'form-check-input';
         chk.type = 'checkbox';
         chk.checked = i.status === 'TRUE';
-        // ✅ habilitado para TODOS quando master está on (removida restrição de usuário)
         chk.disabled = !isMasterOn;
         (function (cId, cOrigem) {
             chk.addEventListener('change', function () {
@@ -349,7 +398,6 @@ function renderizarTabela() {
         divSwitch.appendChild(chk);
         tdSwitch.appendChild(divSwitch);
 
-        // ── Avatar ────────────────────────────────────────────────────
         var tdAvatar = document.createElement('td');
         if (srcImg) {
             var imgEl = document.createElement('img');
@@ -374,19 +422,16 @@ function renderizarTabela() {
             tdAvatar.appendChild(fallback);
         }
 
-        // ── Nome ──────────────────────────────────────────────────────
         var tdNome = document.createElement('td');
         tdNome.className = 'fw-semibold';
         tdNome.textContent = nome;
 
-        // ── Badge tipo ────────────────────────────────────────────────
         var tdTipo = document.createElement('td');
         var badge = document.createElement('span');
         badge.className = 'badge-tipo badge-' + i.origem + (!isMasterOn ? ' opacity-50' : '');
         badge.textContent = _labelOrigem(i.origem);
         tdTipo.appendChild(badge);
 
-        // ── Ações ─────────────────────────────────────────────────────
         var tdAcoes = document.createElement('td');
         tdAcoes.className = 'text-end pe-3';
 
@@ -433,7 +478,32 @@ window.abrirModalCadastro = function () {
     }
     window.botState.idEmEdicao = null;
     window.botState.origemEmEdicao = 'usuarios';
-    _abrirModalUsuario(null);
+    
+    document.getElementById('usuario-bot-id').value = '';
+    document.getElementById('usuario-bot-username').value = '';
+    document.getElementById('usuario-bot-contato').value = '';
+    document.getElementById('usuario-bot-password').value = '';
+    document.getElementById('usuario-bot-imagem').value = '';
+    document.getElementById('usuario-bot-cargo').value = '';
+    
+    var display = document.getElementById('cargo-selecionado-display');
+    if (display) {
+        display.querySelector('.cargo-display-icon i').className = 'bi bi-briefcase';
+        display.querySelector('.cargo-display-nome').textContent = 'Nenhum cargo selecionado';
+        display.querySelector('.cargo-display-hint').textContent = 'Clique para selecionar';
+        display.classList.remove('cargo-selected');
+    }
+
+    document.querySelectorAll('.permissao-checkbox').forEach(function(cb) { 
+        cb.checked = false; 
+    });
+
+    var modalCargo = document.getElementById('modalSelecionarCargo');
+    if (modalCargo) {
+        var existingInstance = bootstrap.Modal.getInstance(modalCargo);
+        if (existingInstance) existingInstance.dispose();
+        new bootstrap.Modal(modalCargo, { backdrop: 'static' }).show();
+    }
 };
 
 window.editarBot = async function (id, origem) {
@@ -467,6 +537,55 @@ function _abrirModalUsuario(data) {
     document.getElementById('usuario-bot-password').value = data ? (data.password || '') : '';
     document.getElementById('usuario-bot-imagem').value = data ? (data.imagem || '') : '';
 
+    var cargoSelecionado = data ? (data.cargo || '') : '';
+    document.getElementById('usuario-bot-cargo').value = cargoSelecionado;
+
+    var display = document.getElementById('cargo-selecionado-display');
+    if (display && cargoSelecionado) {
+        var iconMap = {
+            'Atendente': 'bi-headset',
+            'Financeiro': 'bi-currency-dollar',
+            'Gestor': 'bi-award',
+            'Administrativo': 'bi-building',
+            'SRE Tecnologia': 'bi-shield-lock'
+        };
+        display.querySelector('.cargo-display-icon i').className = 'bi ' + (iconMap[cargoSelecionado] || 'bi-briefcase');
+        display.querySelector('.cargo-display-nome').textContent = cargoSelecionado;
+        display.querySelector('.cargo-display-hint').textContent = 'Clique para alterar';
+        display.classList.add('cargo-selected');
+    }
+
+    var permissoes = [];
+    var userId = data ? String(data.id) : null;
+    
+    // Tenta buscar permissões customizadas salvas localmente
+    var permissoesCustomizadas = null;
+    if (userId) {
+        try {
+            var storageKey = 'permissoes_usuario_' + userId;
+            var stored = localStorage.getItem(storageKey);
+            if (stored) {
+                permissoesCustomizadas = JSON.parse(stored);
+                console.log('[BOT] Permissões customizadas encontradas para usuário', userId, ':', permissoesCustomizadas);
+            }
+        } catch (e) {
+            console.error('[BOT] Erro ao carregar permissões customizadas:', e);
+        }
+    }
+
+    // Se existem permissões customizadas, usa elas. Caso contrário, usa padrão do cargo
+    if (permissoesCustomizadas && Array.isArray(permissoesCustomizadas)) {
+        permissoes = permissoesCustomizadas;
+        console.log('[BOT] Usando permissões CUSTOMIZADAS');
+    } else if (cargoSelecionado && window.PERMISSOES_PADRAO[cargoSelecionado]) {
+        permissoes = window.PERMISSOES_PADRAO[cargoSelecionado];
+        console.log('[BOT] Usando permissões PADRÃO do cargo:', cargoSelecionado);
+    }
+
+    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+        checkbox.checked = permissoes.includes(checkbox.value);
+    });
+
     var inputSenha = document.getElementById('usuario-bot-password');
     var btnOlhinho = document.getElementById('btn-toggle-senha-bot');
     var iconOlhinho = document.getElementById('icon-toggle-senha-bot');
@@ -489,30 +608,77 @@ function _abrirModalUsuario(data) {
         });
     }
 
-    var selectCargo = document.getElementById('usuario-bot-tipo');
-    selectCargo.innerHTML = '';
-    CARGOS_DISPONIVEIS.forEach(function (cargo) {
-        var opt = document.createElement('option');
-        opt.value = cargo;
-        opt.textContent = cargo;
-        if (data && data.cargo === cargo) opt.selected = true;
-        selectCargo.appendChild(opt);
-    });
-
     var tituloEl = document.getElementById('modal-usuario-bot-titulo');
     if (tituloEl) tituloEl.textContent = data ? 'Editar Usuário' : 'Novo Usuário';
 
     var existingInstance = bootstrap.Modal.getInstance(modalEl);
     if (existingInstance) existingInstance.dispose();
-    new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true }).show();
+    new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true }).show();
 }
+
+window.selecionarCargo = function(cargo) {
+    document.getElementById('usuario-bot-cargo').value = cargo;
+    
+    var iconMap = {
+        'Atendente': 'bi-headset',
+        'Financeiro': 'bi-currency-dollar',
+        'Gestor': 'bi-award',
+        'Administrativo': 'bi-building',
+        'SRE Tecnologia': 'bi-shield-lock'
+    };
+
+    var display = document.getElementById('cargo-selecionado-display');
+    display.querySelector('.cargo-display-icon i').className = 'bi ' + iconMap[cargo];
+    display.querySelector('.cargo-display-nome').textContent = cargo;
+    display.querySelector('.cargo-display-hint').textContent = 'Clique para alterar';
+    display.classList.add('cargo-selected');
+
+    var permissoes = window.PERMISSOES_PADRAO[cargo] || [];
+    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+        checkbox.checked = permissoes.includes(checkbox.value);
+    });
+
+    var modalCargo = document.getElementById('modalSelecionarCargo');
+    var modalCargoInstance = bootstrap.Modal.getInstance(modalCargo);
+    if (modalCargoInstance) modalCargoInstance.hide();
+
+    setTimeout(function() {
+        var modalUsuario = document.getElementById('modalUsuarioBot');
+        var existingInstance = bootstrap.Modal.getInstance(modalUsuario);
+        if (existingInstance) existingInstance.dispose();
+        new bootstrap.Modal(modalUsuario, { backdrop: 'static' }).show();
+    }, 300);
+};
+
+window.reabrirModalCargo = function() {
+    var modalUsuario = document.getElementById('modalUsuarioBot');
+    var modalUsuarioInstance = bootstrap.Modal.getInstance(modalUsuario);
+    if (modalUsuarioInstance) modalUsuarioInstance.hide();
+    
+    setTimeout(function() {
+        var modalCargo = document.getElementById('modalSelecionarCargo');
+        var existingInstance = bootstrap.Modal.getInstance(modalCargo);
+        if (existingInstance) existingInstance.dispose();
+        new bootstrap.Modal(modalCargo, { backdrop: 'static' }).show();
+    }, 300);
+};
+
+window.aplicarPermissoesPorCargo = function() {
+    var cargoInput = document.getElementById('usuario-bot-cargo');
+    if (!cargoInput) return;
+    var cargo = cargoInput.value;
+    var permissoes = window.PERMISSOES_PADRAO[cargo] || [];
+    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+        checkbox.checked = permissoes.includes(checkbox.value);
+    });
+};
 
 window.salvarUsuarioBot = async function () {
     var idField = document.getElementById('usuario-bot-id');
     var id = idField ? idField.value.trim() : '';
     var username = document.getElementById('usuario-bot-username').value.trim();
     var contato = document.getElementById('usuario-bot-contato').value.trim();
-    var cargo = document.getElementById('usuario-bot-tipo').value.trim();
+    var cargo = document.getElementById('usuario-bot-cargo').value.trim();
     var password = document.getElementById('usuario-bot-password').value.trim();
     var imagem = document.getElementById('usuario-bot-imagem').value.trim();
 
@@ -526,6 +692,15 @@ window.salvarUsuarioBot = async function () {
         return;
     }
 
+    var permissoesSelecionadas = [];
+    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+        if (checkbox.checked) {
+            permissoesSelecionadas.push(checkbox.value);
+        }
+    });
+
+    console.log('[BOT] Salvando permissões selecionadas:', permissoesSelecionadas);
+
     var btn = document.getElementById('btn-salvar-usuario-bot');
     var originalText = btn ? btn.innerHTML : '';
     if (btn) btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i> Salvando...';
@@ -533,9 +708,10 @@ window.salvarUsuarioBot = async function () {
     try {
         var resolvedId = window.botState.idEmEdicao || id;
         var isEdicao = !!resolvedId;
+        var finalId = isEdicao ? String(resolvedId) : String(Date.now());
 
         var dados = {
-            id: isEdicao ? String(resolvedId) : String(Date.now()),
+            id: finalId,
             username: username,
             contato: contato,
             cargo: cargo,
@@ -544,14 +720,45 @@ window.salvarUsuarioBot = async function () {
             status: 'TRUE'
         };
 
+        console.log('[BOT] Dados enviados para API:', JSON.stringify(dados, null, 2));
+
         await window.API.call(isEdicao ? 'updateusuarios' : 'addusuarios', dados);
+
+        console.log('[BOT] Resposta da API recebida com sucesso');
+
+        // Salva permissões customizadas no localStorage
+        var storageKey = 'permissoes_usuario_' + finalId;
+        var permissoesPadraoCargo = window.PERMISSOES_PADRAO[cargo] || [];
+        var permissoesForamCustomizadas = JSON.stringify(permissoesSelecionadas.sort()) !== JSON.stringify(permissoesPadraoCargo.sort());
+
+        if (permissoesForamCustomizadas) {
+            localStorage.setItem(storageKey, JSON.stringify(permissoesSelecionadas));
+            console.log('[BOT] Permissões customizadas salvas:', permissoesSelecionadas);
+        } else {
+            localStorage.removeItem(storageKey);
+            console.log('[BOT] Permissões padrão mantidas, customização removida');
+        }
+
+        // Atualiza cache local
+        for (var i = 0; i < window.botState.cacheCompleto.length; i++) {
+            if (String(window.botState.cacheCompleto[i].id) === String(finalId) && window.botState.cacheCompleto[i].origem === 'usuarios') {
+                window.botState.cacheCompleto[i].username = dados.username;
+                window.botState.cacheCompleto[i].contato = dados.contato;
+                window.botState.cacheCompleto[i].cargo = dados.cargo;
+                window.botState.cacheCompleto[i].password = dados.password;
+                window.botState.cacheCompleto[i].imagem = dados.imagem;
+                window.botState.cacheCompleto[i].status = dados.status;
+                window.botState.cacheCompleto[i].permissoes = permissoesSelecionadas;
+                console.log('[BOT] Cache local atualizado:', window.botState.cacheCompleto[i]);
+                break;
+            }
+        }
 
         var modalEl = document.getElementById('modalUsuarioBot');
         var inst = bootstrap.Modal.getInstance(modalEl);
         if (inst) inst.hide();
 
         window.botState.idEmEdicao = null;
-        await window.reloadBot();
 
         Swal.fire({ 
             icon: 'success', 
@@ -561,7 +768,15 @@ window.salvarUsuarioBot = async function () {
             timer: 2000, 
             showConfirmButton: false 
         });
+
+        await window.reloadBot();
+
+        setTimeout(function() {
+            window.bloquearAcessoPorPermissao();
+        }, 500);
+
     } catch (err) {
+        console.error('[BOT] Erro ao salvar usuário:', err);
         Swal.fire({ 
             icon: 'error', 
             title: 'Erro', 
@@ -585,7 +800,10 @@ window.abrirModalEspecifico = async function (origem, data) {
             if (!resp.ok) throw new Error('Modal não encontrado: ' + paths[origem]);
             document.body.insertAdjacentHTML('beforeend', await resp.text());
             modalEl = document.getElementById(modalId);
-        } catch (err) { return; }
+        } catch (err) { 
+            console.error('[BOT] Erro ao carregar modal:', err);
+            return; 
+        }
     }
     if (!modalEl) return;
     var inputs = modalEl.querySelectorAll('input, select');
@@ -607,8 +825,9 @@ window.alterarStatusDireto = async function (id, status, origem) {
     var origemStr = String(origem || '').trim();
     var novoStatus = status ? 'TRUE' : 'FALSE';
 
-    // ✅ aborta silenciosamente se id ou origem inválidos
     if (!idStr || !origemStr) return;
+
+    console.log('[BOT] Alterando status:', idStr, origemStr, novoStatus);
 
     try {
         await window.API.call('update' + origemStr, { id: idStr, status: novoStatus });
@@ -617,6 +836,7 @@ window.alterarStatusDireto = async function (id, status, origem) {
             var it = window.botState.cacheCompleto[k];
             if (String(it.id).trim() === idStr && it.origem === origemStr) {
                 it.status = novoStatus;
+                console.log('[BOT] Status atualizado no cache completo');
                 break;
             }
         }
@@ -624,6 +844,7 @@ window.alterarStatusDireto = async function (id, status, origem) {
             var it2 = window.botState.cache[m];
             if (String(it2.id).trim() === idStr && it2.origem === origemStr) {
                 it2.status = novoStatus;
+                console.log('[BOT] Status atualizado no cache filtrado');
                 break;
             }
         }
@@ -638,8 +859,16 @@ window.alterarStatusDireto = async function (id, status, origem) {
                 detail: { id: idStr, status: novoStatus, isMasterOn: window.checkMaster(), clientes: window.AppRDO.clientesCache }
             }));
         }
+        
         renderizarTabela();
+        
+        if (origemStr === 'usuarios') {
+            setTimeout(function() {
+                window.bloquearAcessoPorPermissao();
+            }, 300);
+        }
     } catch (err) {
+        console.error('[BOT] Erro ao alterar status:', err);
         await window.reloadBot();
     }
 };
@@ -705,6 +934,7 @@ window.executarExclusao = async function (id, origem) {
         window.filtrarBot();
         Swal.fire({ icon: 'success', title: 'Excluído!', text: 'Registro removido com sucesso.', confirmButtonColor: '#dc3545', timer: 2000, showConfirmButton: false });
     } catch (err) {
+        console.error('[BOT] Erro ao excluir:', err);
         Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível excluir. Tente novamente.', confirmButtonColor: '#dc3545' });
     }
 };
@@ -712,3 +942,186 @@ window.executarExclusao = async function (id, origem) {
 window.initBotPage = function () {
     window.initBot();
 };
+
+window.bloquearAcessoPorPermissao = function() {
+    var usuarioLogado = localStorage.getItem('username');
+    var contatoLogado = localStorage.getItem('contato');
+    
+    if (!usuarioLogado && !contatoLogado) {
+        console.warn('[BLOQUEIO] Sem identificação');
+        return;
+    }
+
+    if (!window.botState || !window.botState._cacheCarregado || !window.botState.cacheCompleto || window.botState.cacheCompleto.length === 0) {
+        console.warn('[BLOQUEIO] Cache não pronto, reagendando...');
+        setTimeout(window.bloquearAcessoPorPermissao, 300);
+        return;
+    }
+
+    console.log('[BLOQUEIO] Executando...');
+    console.log('[BLOQUEIO] Username:', usuarioLogado);
+    console.log('[BLOQUEIO] Contato:', contatoLogado);
+    console.log('[BLOQUEIO] Cache:', window.botState.cacheCompleto.length);
+
+    var usuariosNoBanco = window.botState.cacheCompleto.filter(function(item) {
+        return item.origem === 'usuarios';
+    });
+
+    console.log('[BLOQUEIO] Usuários:', usuariosNoBanco.map(function(u) {
+        return { username: u.username, contato: u.contato, cargo: u.cargo, permissoes: u.permissoes, status: u.status }; 
+    }));
+
+    var usuarioEncontrado = null;
+
+    for (var i = 0; i < usuariosNoBanco.length; i++) {
+        var item = usuariosNoBanco[i];
+        
+        var usernameDb = String(item.username || '').trim().toLowerCase();
+        var contatoDb = String(item.contato || '').trim().toLowerCase();
+        
+        var usernameLogin = String(usuarioLogado || '').trim().toLowerCase();
+        var contatoLogin = String(contatoLogado || usuarioLogado || '').trim().toLowerCase();
+
+        if (usernameDb === usernameLogin || contatoDb === contatoLogin || usernameDb === contatoLogin || contatoDb === usernameLogin) {
+            usuarioEncontrado = item;
+            console.log('[BLOQUEIO] ✅ Encontrado:', item);
+            break;
+        }
+    }
+
+    if (!usuarioEncontrado) {
+        console.error('[BLOQUEIO] ❌ Não encontrado');
+        
+        var cargoLocal = localStorage.getItem('tipo') || localStorage.getItem('cargo');
+        if (cargoLocal && window.PERMISSOES_PADRAO[cargoLocal]) {
+            var permissoesCargo = window.PERMISSOES_PADRAO[cargoLocal];
+            console.log('[BLOQUEIO] Fallback cargo:', cargoLocal, permissoesCargo);
+            _aplicarBloqueiosPorPermissoes(permissoesCargo);
+        } else {
+            console.error('[BLOQUEIO] Bloqueando tudo');
+            _bloquearTudo();
+        }
+        return;
+    }
+
+    if (usuarioEncontrado.status !== 'TRUE') {
+        console.warn('[BLOQUEIO] ⚠️ Usuário INATIVO, bloqueando tudo');
+        _bloquearTudo();
+        return;
+    }
+
+    console.log('[BLOQUEIO] Usuário:', usuarioEncontrado.username || usuarioEncontrado.contato);
+    console.log('[BLOQUEIO] Cargo:', usuarioEncontrado.cargo);
+    console.log('[BLOQUEIO] Status:', usuarioEncontrado.status);
+
+    var permissoes = [];
+    try {
+        if (Array.isArray(usuarioEncontrado.permissoes)) {
+            permissoes = usuarioEncontrado.permissoes;
+        } else if (typeof usuarioEncontrado.permissoes === 'string') {
+            permissoes = JSON.parse(usuarioEncontrado.permissoes || '[]');
+        } else if (usuarioEncontrado.cargo && window.PERMISSOES_PADRAO[usuarioEncontrado.cargo]) {
+            permissoes = window.PERMISSOES_PADRAO[usuarioEncontrado.cargo];
+        }
+    } catch (e) {
+        console.error('[BLOQUEIO] Erro parse:', e);
+        if (usuarioEncontrado.cargo && window.PERMISSOES_PADRAO[usuarioEncontrado.cargo]) {
+            permissoes = window.PERMISSOES_PADRAO[usuarioEncontrado.cargo];
+        }
+    }
+
+    console.log('[BLOQUEIO] Permissões ANTES de aplicar:', permissoes);
+    _aplicarBloqueiosPorPermissoes(permissoes);
+};
+
+function _aplicarBloqueiosPorPermissoes(permissoes) {
+    var mapeamentoPermissoes = {
+        'Dashboard': ['dashboard'],
+        'Chat': ['chat'],
+        'Pedidos': ['pedidos'],
+        'Administração': ['admin'],
+        'Financeiro': ['fin'],
+        'Relatórios': ['relatorio'],
+        'Bot': ['bot']
+    };
+
+    var paginasBloqueadas = [];
+    for (var perm in mapeamentoPermissoes) {
+        if (!permissoes.includes(perm)) {
+            paginasBloqueadas = paginasBloqueadas.concat(mapeamentoPermissoes[perm]);
+        }
+    }
+
+    console.log('[BLOQUEIO] Permissões recebidas:', permissoes);
+    console.log('[BLOQUEIO] Bloqueadas:', paginasBloqueadas);
+
+    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function(link) {
+        var pagina = link.getAttribute('data-page');
+        var bloqueado = paginasBloqueadas.includes(pagina);
+        
+        var lockIcon = link.querySelector('.bi-lock-fill');
+        if (lockIcon) lockIcon.remove();
+        
+        if (bloqueado) {
+            link.style.opacity = '0.4';
+            link.style.pointerEvents = 'none';
+            link.style.cursor = 'not-allowed';
+            link.title = 'Sem acesso';
+            link.setAttribute('data-bloqueado', 'true');
+            
+            var icon = document.createElement('i');
+            icon.className = 'bi bi-lock-fill ms-1 text-muted';
+            icon.style.fontSize = '0.75rem';
+            link.appendChild(icon);
+        } else {
+            link.style.opacity = '1';
+            link.style.pointerEvents = 'auto';
+            link.style.cursor = 'pointer';
+            link.title = '';
+            link.removeAttribute('data-bloqueado');
+        }
+    });
+
+    localStorage.setItem('paginas_bloqueadas', JSON.stringify(paginasBloqueadas));
+
+    var paginaAtual = window.AppRDO?.paginaAtual || 'dashboard';
+    if (paginasBloqueadas.includes(paginaAtual)) {
+        console.warn('[BLOQUEIO] Página atual bloqueada');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acesso Negado',
+            text: 'Você não tem permissão para acessar este módulo.',
+            confirmButtonColor: '#dc3545'
+        }).then(function() {
+            window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
+        });
+    }
+
+    console.log('[BLOQUEIO] ✅ Concluído');
+}
+
+function _bloquearTudo() {
+    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function(link) {
+        var pagina = link.getAttribute('data-page');
+        
+        if (pagina === 'dashboard') return;
+        
+        link.style.opacity = '0.4';
+        link.style.pointerEvents = 'none';
+        link.style.cursor = 'not-allowed';
+        link.title = 'Acesso restrito';
+        link.setAttribute('data-bloqueado', 'true');
+        
+        var lockIcon = link.querySelector('.bi-lock-fill');
+        if (lockIcon) lockIcon.remove();
+        
+        var icon = document.createElement('i');
+        icon.className = 'bi bi-lock-fill ms-1 text-danger';
+        icon.style.fontSize = '0.75rem';
+        link.appendChild(icon);
+    });
+    
+    localStorage.setItem('paginas_bloqueadas', JSON.stringify(['chat', 'pedidos', 'admin', 'fin', 'relatorio', 'bot']));
+}
+
+console.log('[BOT] Carregado');

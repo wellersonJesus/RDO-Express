@@ -20,7 +20,7 @@
                     <button class="btn btn-danger btn-sm rounded-pill px-3" onclick="window.abrirModalCadastro()">
                         <i class="bi bi-plus-lg"></i> Novo
                     </button>
-                    <button class="btn-sync-bot" onclick="window.initBot()" title="Atualizar">
+                    <button class="btn-sync-bot" onclick="window.reloadBot()" title="Atualizar">
                         <i id="sync-icon-bot" class="bi bi-arrow-repeat"></i>
                     </button>
                 </div>
@@ -28,7 +28,7 @@
 
             <div class="d-flex gap-2 align-items-center">
                 <select id="filtro-tipo" class="form-select form-select-sm rounded-pill"
-                    style="width:150px;font-size:0.78rem;" onchange="window.filtrarBot()">
+                    style="width:150px;font-size:0.78rem;">
                     <option value="TODOS">Todos</option>
                     <option value="usuarios">Usuários</option>
                     <option value="clientes">Clientes</option>
@@ -39,7 +39,7 @@
                         <i class="bi bi-search text-muted" style="font-size:0.8rem;"></i>
                     </span>
                     <input id="busca-nome" type="text" class="form-control border-start-0 rounded-end-pill"
-                        placeholder="Buscar por nome..." style="font-size:0.78rem;" oninput="window.filtrarBot()">
+                        placeholder="Buscar por nome..." style="font-size:0.78rem;">
                 </div>
             </div>
 
@@ -54,8 +54,7 @@
                         <th class="ps-3" style="width:60px;">
                             <div class="d-flex align-items-center gap-2">
                                 <input type="checkbox" id="seletor-global-status" class="seletor-global-checkbox"
-                                    title="Ativar/Desativar todos" disabled
-                                    onchange="window.alternarTodosStatus(this.checked)">
+                                    title="Ativar/Desativar todos" disabled>
                                 <span>Status</span>
                             </div>
                         </th>
@@ -111,8 +110,72 @@
 </div>
 
 
-<div class="modal fade" id="modalUsuarioBot" tabindex="-1" data-bs-backdrop="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+<div class="modal fade" id="modalSelecionarCargo" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="bot-form-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bot-form-header-icon">
+                        <i class="bi bi-briefcase"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">Selecionar Cargo</h6>
+                        <small class="bot-form-subtitle">Escolha o cargo do usuário</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-3">
+                <div class="cargo-grid">
+                    <div class="cargo-card" onclick="window.selecionarCargo('Atendente')">
+                        <div class="cargo-icon">
+                            <i class="bi bi-headset"></i>
+                        </div>
+                        <div class="cargo-nome">Atendente</div>
+                        <div class="cargo-desc">Atendimento e pedidos</div>
+                    </div>
+
+                    <div class="cargo-card" onclick="window.selecionarCargo('Financeiro')">
+                        <div class="cargo-icon">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                        <div class="cargo-nome">Financeiro</div>
+                        <div class="cargo-desc">Gestão financeira</div>
+                    </div>
+
+                    <div class="cargo-card" onclick="window.selecionarCargo('Gestor')">
+                        <div class="cargo-icon">
+                            <i class="bi bi-award"></i>
+                        </div>
+                        <div class="cargo-nome">Gestor</div>
+                        <div class="cargo-desc">Gestão completa</div>
+                    </div>
+
+                    <div class="cargo-card" onclick="window.selecionarCargo('Administrativo')">
+                        <div class="cargo-icon">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="cargo-nome">Administrativo</div>
+                        <div class="cargo-desc">Administração geral</div>
+                    </div>
+
+                    <div class="cargo-card" onclick="window.selecionarCargo('SRE Tecnologia')">
+                        <div class="cargo-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <div class="cargo-nome">SRE Tecnologia</div>
+                        <div class="cargo-desc">Acesso total master</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalUsuarioBot" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content border-0 rounded-4 shadow overflow-hidden">
 
             <div class="bot-form-header">
@@ -122,7 +185,7 @@
                     </div>
                     <div>
                         <h6 class="fw-bold mb-0 text-white" id="modal-usuario-bot-titulo" style="font-size:.88rem;">Novo Usuário</h6>
-                        <small class="bot-form-subtitle">Preencha os dados abaixo</small>
+                        <small class="bot-form-subtitle">Preencha os dados e defina as permissões</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -131,46 +194,148 @@
             <div class="modal-body px-4 py-3">
                 <input type="hidden" id="usuario-bot-id">
 
-                <div class="bot-form-section">
-                    <div class="bot-form-section-label">Identificação</div>
-                    <div class="mb-3">
-                        <label class="bot-field-label">Nome</label>
-                        <input type="text" id="usuario-bot-username"
-                            class="form-control form-control-sm bot-field-input"
-                            placeholder="Nome do usuário">
-                    </div>
-                    <div class="mb-3">
-                        <label class="bot-field-label">Contato</label>
-                        <input type="text" id="usuario-bot-contato"
-                            class="form-control form-control-sm bot-field-input"
-                            placeholder="+55 11 99999-9999">
-                    </div>
-                    <div class="mb-3">
-                        <label class="bot-field-label">Cargo</label>
-                        <select id="usuario-bot-tipo" class="form-select form-select-sm bot-field-input"></select>
-                    </div>
-                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="bot-form-section">
+                            <div class="bot-form-section-label">Identificação</div>
+                            <div class="mb-3">
+                                <label class="bot-field-label">Nome</label>
+                                <input type="text" id="usuario-bot-username"
+                                    class="form-control form-control-sm bot-field-input"
+                                    placeholder="Nome do usuário">
+                            </div>
+                            <div class="mb-3">
+                                <label class="bot-field-label">Contato</label>
+                                <input type="text" id="usuario-bot-contato"
+                                    class="form-control form-control-sm bot-field-input"
+                                    placeholder="+55 11 99999-9999">
+                            </div>
+                            <div class="mb-3">
+                                <label class="bot-field-label">Cargo</label>
+                                <div class="cargo-display" id="cargo-selecionado-display" onclick="window.reabrirModalCargo()">
+                                    <div class="cargo-display-icon">
+                                        <i class="bi bi-briefcase"></i>
+                                    </div>
+                                    <div class="cargo-display-info">
+                                        <div class="cargo-display-nome">Nenhum cargo selecionado</div>
+                                        <div class="cargo-display-hint">Clique para selecionar</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right cargo-display-arrow"></i>
+                                </div>
+                                <input type="hidden" id="usuario-bot-cargo">
+                            </div>
+                        </div>
 
-                <div class="bot-form-section">
-                    <div class="bot-form-section-label">Acesso</div>
-                    <div class="mb-3">
-                        <label class="bot-field-label">Senha</label>
-                        <div class="input-group input-group-sm">
-                            <input type="password" id="usuario-bot-password"
-                                class="form-control bot-field-input"
-                                style="border-radius:10px 0 0 10px !important;"
-                                placeholder="Senha">
-                            <button type="button" class="btn-olhinho-clean oculto" id="btn-toggle-senha-bot"
-                                style="border:1px solid #e9ecef;border-left:none;border-radius:0 10px 10px 0;padding:0 10px;">
-                                <i class="bi bi-eye-slash" id="icon-toggle-senha-bot"></i>
-                            </button>
+                        <div class="bot-form-section">
+                            <div class="bot-form-section-label">Acesso</div>
+                            <div class="mb-3">
+                                <label class="bot-field-label">Senha</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="password" id="usuario-bot-password"
+                                        class="form-control bot-field-input"
+                                        style="border-radius:10px 0 0 10px !important;"
+                                        placeholder="Senha">
+                                    <button type="button" class="btn-olhinho-clean oculto" id="btn-toggle-senha-bot"
+                                        style="border:1px solid #e9ecef;border-left:none;border-radius:0 10px 10px 0;padding:0 10px;">
+                                        <i class="bi bi-eye-slash" id="icon-toggle-senha-bot"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="bot-field-label">URL da Imagem (opcional)</label>
+                                <input type="text" id="usuario-bot-imagem"
+                                    class="form-control form-control-sm bot-field-input"
+                                    placeholder="https://...">
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-2">
-                        <label class="bot-field-label">URL da Imagem (opcional)</label>
-                        <input type="text" id="usuario-bot-imagem"
-                            class="form-control form-control-sm bot-field-input"
-                            placeholder="https://...">
+
+                    <div class="col-md-6">
+                        <div class="bot-form-section">
+                            <div class="bot-form-section-label">
+                                Permissões de Acesso
+                                <i class="bi bi-info-circle text-muted ms-1" 
+                                   title="Permissões pré-definidas pelo cargo, personalize se necessário" 
+                                   style="font-size:.7rem;cursor:help;"></i>
+                            </div>
+                            
+                            <div class="permissoes-container">
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-dashboard" value="Dashboard">
+                                        <label class="form-check-label permissao-label" for="perm-dashboard">
+                                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-chat" value="Chat">
+                                        <label class="form-check-label permissao-label" for="perm-chat">
+                                            <i class="bi bi-chat-dots me-2"></i>Chat
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-pedidos" value="Pedidos">
+                                        <label class="form-check-label permissao-label" for="perm-pedidos">
+                                            <i class="bi bi-cart3 me-2"></i>Pedidos
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-administracao" value="Administração">
+                                        <label class="form-check-label permissao-label" for="perm-administracao">
+                                            <i class="bi bi-people me-2"></i>Administração
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-financeiro" value="Financeiro">
+                                        <label class="form-check-label permissao-label" for="perm-financeiro">
+                                            <i class="bi bi-currency-dollar me-2"></i>Financeiro
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-relatorios" value="Relatórios">
+                                        <label class="form-check-label permissao-label" for="perm-relatorios">
+                                            <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatórios
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="permissao-item">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" 
+                                               id="perm-bot" value="Bot">
+                                        <label class="form-check-label permissao-label" for="perm-bot">
+                                            <i class="bi bi-gear-wide-connected me-2"></i>Bot
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info p-2 mt-3 mb-0" style="font-size:.68rem;border-radius:8px;">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                Permissões pré-configuradas por cargo. Personalize conforme necessário.
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -193,18 +358,41 @@
 
 
 <script>
-(function () {
-    const btnToggle = document.getElementById('btn-toggle-senha-bot');
-    const inputSenha = document.getElementById('usuario-bot-password');
-    const iconToggle = document.getElementById('icon-toggle-senha-bot');
+(function() {
+    'use strict';
+    
+    const initBotHTML = function() {
+        const seletorGlobal = document.getElementById('seletor-global-status');
+        if (seletorGlobal) {
+            seletorGlobal.addEventListener('change', function() {
+                if (window.alternarTodosStatus) {
+                    window.alternarTodosStatus(this.checked);
+                }
+            });
+        }
 
-    if (btnToggle && inputSenha && iconToggle) {
-        btnToggle.addEventListener('click', function () {
-            const visivel = inputSenha.type === 'text';
-            inputSenha.type = visivel ? 'password' : 'text';
-            iconToggle.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
-            btnToggle.classList.toggle('oculto', visivel);
-        });
+        const btnToggle = document.getElementById('btn-toggle-senha-bot');
+        const inputSenha = document.getElementById('usuario-bot-password');
+        const iconToggle = document.getElementById('icon-toggle-senha-bot');
+
+        if (btnToggle && inputSenha && iconToggle) {
+            const newBtn = btnToggle.cloneNode(true);
+            btnToggle.parentNode.replaceChild(newBtn, btnToggle);
+            const newIcon = newBtn.querySelector('i');
+            
+            newBtn.addEventListener('click', function() {
+                const visivel = inputSenha.type === 'text';
+                inputSenha.type = visivel ? 'password' : 'text';
+                newIcon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
+                newBtn.classList.toggle('oculto', visivel);
+            });
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBotHTML);
+    } else {
+        initBotHTML();
     }
 })();
 </script>

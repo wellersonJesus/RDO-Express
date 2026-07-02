@@ -128,9 +128,9 @@
             <div class="user-area d-flex align-items-center gap-3">
                 <div class="text-end d-none d-md-block">
                     <div id="display-username" class="fw-bold small text-dark">...</div>
-                    <div id="display-cargo" class="text-danger small" style="font-size:0.7rem;font-weight:600;">...</div>
+                    <div id="display-cargo" class="text-danger small" style="font-size:0.7rem;font-weight:600;">...
+                    </div>
                 </div>
-                <!-- Avatar com id no ícone fallback para controle via ui.js -->
                 <div id="avatar-container"
                     style="width:40px;height:40px;border-radius:50%;overflow:hidden;cursor:pointer;background:#dc3545;display:flex;align-items:center;justify-content:center;">
                     <img id="user-avatar-img" alt="Avatar"
@@ -169,25 +169,20 @@
         </div>
     </div>
 
-    <!-- Libs externas -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- App scripts — ordem importa: ui.js antes de app.js -->
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/sync-bot-chat.js"></script>
     <script src="/js/event_bus.js"></script>
     <script src="/js/master_auth.js"></script>
-    <script src="/js/chat.js"></script>
-    <script src="/js/pedidos.js"></script>
 
     <script>
-        // ─── Logout ───────────────────────────────────────────────────────────
         window.logoutSeguro = function () {
-            ['rdo_auth', 'username', 'tipo', 'imagem'].forEach(function (k) {
+            ['rdo_auth', 'username', 'contato', 'tipo', 'imagem', 'paginas_bloqueadas'].forEach(function (k) {
                 localStorage.removeItem(k);
             });
             window.location.replace('/pages/login/login.html');
@@ -198,21 +193,16 @@
             if (el) bootstrap.Modal.getOrCreateInstance(el).show();
         }
 
-        // ─── Init ─────────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', function () {
-
-            // Guarda dupla: caso o redirect do <head> não tenha acontecido ainda
             if (!localStorage.getItem('rdo_auth')) {
                 window.location.replace('/pages/login/login.html');
                 return;
             }
 
-            // Avatar
             if (typeof window.atualizarAvatar === 'function') {
                 window.atualizarAvatar();
             }
 
-            // Sidebar toggle
             var btnToggle = document.getElementById('btn-toggle-sidebar');
             if (btnToggle) {
                 btnToggle.addEventListener('click', function () {
@@ -220,34 +210,62 @@
                 });
             }
 
-            // Logout triggers
-            var btnLogoutSidebar   = document.getElementById('btn-logout-sidebar');
-            var avatarContainer    = document.getElementById('avatar-container');
+            var btnLogoutSidebar = document.getElementById('btn-logout-sidebar');
+            var avatarContainer = document.getElementById('avatar-container');
             var btnLogoutConfirmar = document.getElementById('btn-logout-confirmar');
 
-            if (btnLogoutSidebar)   btnLogoutSidebar.addEventListener('click', _abrirModalLogout);
-            if (avatarContainer)    avatarContainer.addEventListener('click', _abrirModalLogout);
+            if (btnLogoutSidebar) btnLogoutSidebar.addEventListener('click', _abrirModalLogout);
+            if (avatarContainer) avatarContainer.addEventListener('click', _abrirModalLogout);
             if (btnLogoutConfirmar) btnLogoutConfirmar.addEventListener('click', window.logoutSeguro);
 
-            // Navegação sidebar
-            document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
-                link.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    window.loadPage(
-                        this.getAttribute('data-page'),
-                        this.getAttribute('data-title'),
-                        this.getAttribute('data-subtitle')
-                    );
-                });
-            });
-
-            // Carrega página inicial se router-view estiver vazio
-            var rv = document.getElementById('router-view');
-            if (rv && rv.innerHTML.trim() === '') {
-                window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
+            function _aguardarPermissoesCarregadas(callback) {
+                var tentativas = 0;
+                var intervalo = setInterval(function() {
+                    tentativas++;
+                    
+                    if (window.AppRDO && window.AppRDO.permissoesCarregadas) {
+                        clearInterval(intervalo);
+                        console.log('[INDEX] Permissões confirmadas, aplicando bloqueios');
+                        callback();
+                    } else if (tentativas > 50) {
+                        clearInterval(intervalo);
+                        console.warn('[INDEX] Timeout aguardando permissões');
+                        callback();
+                    }
+                }, 100);
             }
+
+            _aguardarPermissoesCarregadas(function() {
+                document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
+                    link.addEventListener('click', function (e) {
+                        e.preventDefault();
+
+                        if (this.getAttribute('data-bloqueado') === 'true') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Acesso Negado',
+                                text: 'Você não tem permissão para acessar este módulo.',
+                                confirmButtonColor: '#dc3545'
+                            });
+                            return;
+                        }
+
+                        window.loadPage(
+                            this.getAttribute('data-page'),
+                            this.getAttribute('data-title'),
+                            this.getAttribute('data-subtitle')
+                        );
+                    });
+                });
+
+                var rv = document.getElementById('router-view');
+                if (rv && rv.innerHTML.trim() === '') {
+                    window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
+                }
+            });
         });
     </script>
 
 </body>
+
 </html>

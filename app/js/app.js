@@ -1,25 +1,26 @@
 window.checkMaster = function () {
     var val = localStorage.getItem('bot_master_active');
-    if (val === null || val === undefined) return false;
     return val === 'true';
 };
 
 window.AppRDO = window.AppRDO || {};
-window.AppRDO.isFetching            = window.AppRDO.isFetching            || false;
-window.AppRDO.listaCarregada        = window.AppRDO.listaCarregada        || false;
-window.AppRDO.clienteId             = window.AppRDO.clienteId             || null;
-window.AppRDO.clienteSelecionado    = window.AppRDO.clienteSelecionado    || null;
-window.AppRDO.clientesCache         = window.AppRDO.clientesCache         || [];
-window.AppRDO.mensagensCache        = window.AppRDO.mensagensCache        || [];
-window.AppRDO.pedidosCache          = window.AppRDO.pedidosCache          || [];
-window.AppRDO.motoboyCache          = window.AppRDO.motoboyCache          || [];
-window.AppRDO.financeiroCache       = window.AppRDO.financeiroCache       || [];
-window.AppRDO.relatoriosCache       = window.AppRDO.relatoriosCache       || [];
-window.AppRDO.paginaAtual           = window.AppRDO.paginaAtual           || null;
-window.AppRDO._modalTransitioning   = window.AppRDO._modalTransitioning   || false;
-window.AppRDO._navToken             = window.AppRDO._navToken             || 0;
-window.AppRDO._chatIntervaloId      = window.AppRDO._chatIntervaloId      || null;
-window.AppRDO._syncIntervaloId      = window.AppRDO._syncIntervaloId      || null;
+window.AppRDO.isFetching = false;
+window.AppRDO.listaCarregada = false;
+window.AppRDO.clienteId = null;
+window.AppRDO.clienteSelecionado = null;
+window.AppRDO.clientesCache = [];
+window.AppRDO.mensagensCache = [];
+window.AppRDO.pedidosCache = [];
+window.AppRDO.motoboyCache = [];
+window.AppRDO.financeiroCache = [];
+window.AppRDO.relatoriosCache = [];
+window.AppRDO.paginaAtual = null;
+window.AppRDO._modalTransitioning = false;
+window.AppRDO._navToken = 0;
+window.AppRDO._chatIntervaloId = null;
+window.AppRDO._syncIntervaloId = null;
+window.AppRDO.botCarregado = false;
+window.AppRDO.permissoesCarregadas = false;
 
 (function () {
     var raw = localStorage.getItem('bot_master_active');
@@ -32,10 +33,10 @@ window.AppRDO._syncIntervaloId      = window.AppRDO._syncIntervaloId      || nul
 })();
 
 window.AppRDO.resetState = function () {
-    window.AppRDO.isFetching          = false;
-    window.AppRDO.listaCarregada      = false;
+    window.AppRDO.isFetching = false;
+    window.AppRDO.listaCarregada = false;
     window.AppRDO._modalTransitioning = false;
-    window.AppRDO.isMasterOn          = localStorage.getItem('bot_master_active') === 'true';
+    window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 
     if (window.AppRDO._chatIntervaloId) {
         clearInterval(window.AppRDO._chatIntervaloId);
@@ -45,9 +46,7 @@ window.AppRDO.resetState = function () {
         clearInterval(window.AppRDO._syncIntervaloId);
         window.AppRDO._syncIntervaloId = null;
     }
-    if (window.botState) {
-        window.botState.isFetching = false;
-    }
+    if (window.botState) window.botState.isFetching = false;
     if (window.pedidosState) {
         window.pedidosState.isFetching = false;
         if (window.pedidosState.intervaloId) {
@@ -56,29 +55,26 @@ window.AppRDO.resetState = function () {
         }
     }
     if (window.adminState) {
-        window.adminState.fetching      = false;
+        window.adminState.fetching = false;
         window.adminState.formCarregado = false;
     }
-    if (window.financeiroState) {
-        window.financeiroState.fetching = false;
-    }
+    if (window.financeiroState) window.financeiroState.fetching = false;
 
     _fecharModaisAbertos();
 };
 
 var PAGES_SEM_HEADER = [];
-
 var PAGE_MODALS = {
     pedidos: ['/pages/pedidos/form_pedidos.html'],
-    fin:     ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html']
+    fin: ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html']
 };
 
 var MODULE_SCRIPTS = {
-    chat:      '/js/chat.js',
-    pedidos:   '/js/pedidos.js',
-    bot:       '/js/bot.js',
-    admin:     '/js/admin.js',
-    fin:       '/js/fin.js',
+    chat: '/js/chat.js',
+    pedidos: '/js/pedidos.js',
+    bot: '/js/bot.js',
+    admin: '/js/admin.js',
+    fin: '/js/fin.js',
     relatorio: '/js/relatorios.js'
 };
 
@@ -91,7 +87,7 @@ var GLOBAL_SCRIPTS_PRELOAD = [
 var MODULE_INITS = {
     chat: function () {
         if (window.AppRDO) {
-            window.AppRDO.isMasterOn     = localStorage.getItem('bot_master_active') === 'true';
+            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
             window.AppRDO.listaCarregada = false;
         }
         function _tentarCarregar(tentativas) {
@@ -104,17 +100,17 @@ var MODULE_INITS = {
         }
         _tentarCarregar();
     },
-    pedidos:   function () { if (typeof window.initPedidos    === 'function') window.initPedidos();    },
-    bot:       function () { if (typeof window.initBot        === 'function') window.initBot();        },
-    admin:     function () { if (typeof window.initAdmin      === 'function') window.initAdmin();      },
-    fin:       function () { if (typeof window.initFinanceiro === 'function') window.initFinanceiro(); },
+    pedidos: function () { if (typeof window.initPedidos === 'function') window.initPedidos(); },
+    bot: function () { if (typeof window.initBot === 'function') window.initBot(); },
+    admin: function () { if (typeof window.initAdmin === 'function') window.initAdmin(); },
+    fin: function () { if (typeof window.initFinanceiro === 'function') window.initFinanceiro(); },
     relatorio: function () { if (typeof window.initRelatorios === 'function') window.initRelatorios(); }
 };
 
 function _fecharModaisAbertos() {
     document.querySelectorAll('.modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.hide(); } catch (e) {} }
+        if (inst) { try { inst.hide(); } catch (e) { } }
     });
     document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
     document.body.classList.remove('modal-open');
@@ -127,7 +123,7 @@ function _fecharModaisAbortando() {
         m.classList.remove('show', 'fade');
         m.style.display = 'none';
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.dispose(); } catch (e) {} }
+        if (inst) { try { inst.dispose(); } catch (e) { } }
     });
     document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
     document.body.classList.remove('modal-open');
@@ -140,7 +136,7 @@ function _limparModalContainer() {
     if (!container) return;
     container.querySelectorAll('.modal').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.dispose(); } catch (e) {} }
+        if (inst) { try { inst.dispose(); } catch (e) { } }
     });
     container.innerHTML = '';
 }
@@ -156,10 +152,10 @@ function _carregarScriptExterno(src, forceReload) {
             var existe = document.querySelector('script[src="' + src + '"]');
             if (existe) { resolve(); return; }
         }
-        var s     = document.createElement('script');
-        s.src     = src;
-        s.async   = false;
-        s.onload  = resolve;
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = false;
+        s.onload = resolve;
         s.onerror = resolve;
         document.body.appendChild(s);
     });
@@ -173,8 +169,20 @@ function _precarregarScriptsGlobais() {
     return chain;
 }
 
+function _verificarPermissaoAcesso(page) {
+    var paginasBloqueadasRaw = localStorage.getItem('paginas_bloqueadas');
+    if (!paginasBloqueadasRaw) return true;
+
+    try {
+        var paginasBloqueadas = JSON.parse(paginasBloqueadasRaw);
+        return !paginasBloqueadas.includes(page);
+    } catch (e) {
+        return true;
+    }
+}
+
 function carregarModaisDaPagina(page) {
-    var arquivos  = PAGE_MODALS[page];
+    var arquivos = PAGE_MODALS[page];
     if (!arquivos || !arquivos.length) return Promise.resolve();
     var container = document.getElementById('modal-container');
     if (!container) return Promise.resolve();
@@ -187,7 +195,7 @@ function carregarModaisDaPagina(page) {
             })
             .then(function (html) {
                 html = html.replace(/<link[^>]*>/gi, '');
-                var scriptsSrc    = [];
+                var scriptsSrc = [];
                 var scriptsInline = [];
                 html = html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, function (match, attrs, content) {
                     var srcMatch = attrs.match(/src\s*=\s*["']([^"']+)["']/i);
@@ -198,7 +206,7 @@ function carregarModaisDaPagina(page) {
                     }
                     return '';
                 });
-                var wrapper       = document.createElement('div');
+                var wrapper = document.createElement('div');
                 wrapper.innerHTML = html;
                 container.appendChild(wrapper);
                 var chain = Promise.resolve();
@@ -211,7 +219,7 @@ function carregarModaisDaPagina(page) {
                         if (pendentes === 0) { resolve(); return; }
                         scriptsInline.forEach(function (code) {
                             try {
-                                var s         = document.createElement('script');
+                                var s = document.createElement('script');
                                 s.textContent = code;
                                 document.body.appendChild(s);
                                 Promise.resolve().then(function () {
@@ -229,20 +237,30 @@ function carregarModaisDaPagina(page) {
                     });
                 });
             })
-            .catch(function () {});
+            .catch(function () { });
     });
 
     return Promise.all(promises);
 }
 
 window.loadPage = function (page, title, subtitle) {
-    var container  = document.getElementById('router-view');
-    var headerEl   = document.getElementById('page-header');
-    var titleEl    = document.getElementById('page-title');
+    if (!_verificarPermissaoAcesso(page)) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acesso Negado',
+            text: 'Você não tem permissão para acessar este módulo.',
+            confirmButtonColor: '#dc3545'
+        });
+        return Promise.resolve();
+    }
+
+    var container = document.getElementById('router-view');
+    var headerEl = document.getElementById('page-header');
+    var titleEl = document.getElementById('page-title');
     var subtitleEl = document.getElementById('page-subtitle');
     if (!container) return Promise.resolve();
 
-    var token    = (window.AppRDO._navToken = (window.AppRDO._navToken || 0) + 1);
+    var token = (window.AppRDO._navToken = (window.AppRDO._navToken || 0) + 1);
     var meuToken = token;
 
     window.AppRDO.resetState();
@@ -254,7 +272,7 @@ window.loadPage = function (page, title, subtitle) {
             headerEl.style.display = 'none';
         } else {
             headerEl.style.display = '';
-            if (titleEl)    titleEl.textContent    = title    || '';
+            if (titleEl) titleEl.textContent = title || '';
             if (subtitleEl) subtitleEl.textContent = subtitle || '';
         }
     }
@@ -343,7 +361,8 @@ window.carregarScriptExterno = function (src) {
 window.salvarDadosUsuarioLocal = function (dados) {
     if (!dados) return;
     if (dados.username) localStorage.setItem('username', dados.username);
-    if (dados.tipo)     localStorage.setItem('tipo',     dados.tipo);
+    if (dados.contato) localStorage.setItem('contato', dados.contato);
+    if (dados.tipo) localStorage.setItem('tipo', dados.tipo);
 
     if (dados.imagem && dados.imagem !== 'null' && dados.imagem !== 'undefined' && dados.imagem.length >= 10) {
         localStorage.setItem('imagem', dados.imagem);
@@ -354,6 +373,58 @@ window.salvarDadosUsuarioLocal = function (dados) {
     if (typeof window.atualizarAvatar === 'function') window.atualizarAvatar();
 };
 
+window.inicializarBotGlobal = function () {
+    console.log('[APP] Iniciando bot global...');
+    
+    return _carregarScriptExterno('/js/bot.js', false)
+        .then(function () {
+            console.log('[APP] bot.js carregado');
+            if (typeof window.initBot === 'function') {
+                return window.initBot();
+            }
+            return Promise.resolve();
+        })
+        .then(function () {
+            console.log('[APP] Bot inicializado');
+            window.AppRDO.botCarregado = true;
+            window.AppRDO.permissoesCarregadas = true;
+            return new Promise(function(resolve) {
+                setTimeout(resolve, 100);
+            });
+        })
+        .catch(function (err) {
+            console.error('[APP] Erro ao inicializar bot:', err);
+        });
+};
+
+window.addEventListener('botCacheAtualizado', function (e) {
+    console.log('[APP] Evento botCacheAtualizado recebido');
+    
+    if (window.botState && window.botState._cacheCarregado) {
+        console.log('[APP] Cache confirmado, aplicando bloqueios');
+        window.AppRDO.permissoesCarregadas = true;
+        
+        if (typeof window.bloquearAcessoPorPermissao === 'function') {
+            window.bloquearAcessoPorPermissao();
+        }
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function () {
-    _precarregarScriptsGlobais();
+    console.log('[APP] DOM carregado, inicializando sistema');
+    
+    _precarregarScriptsGlobais()
+        .then(function () {
+            console.log('[APP] Scripts globais carregados');
+            return window.inicializarBotGlobal();
+        })
+        .then(function () {
+            console.log('[APP] Bot inicializado, aguardando estabilização');
+            return new Promise(function(resolve) {
+                setTimeout(resolve, 200);
+            });
+        })
+        .then(function() {
+            console.log('[APP] Sistema pronto');
+        });
 });
