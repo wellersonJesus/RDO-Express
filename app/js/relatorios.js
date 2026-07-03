@@ -1,7 +1,6 @@
 'use strict';
 
-(function() {
-
+(function () {
   const STORAGE_KEY = 'rdo_relatorios_salvos';
   const MAX_RELATORIOS = 100;
 
@@ -9,8 +8,10 @@
     tabAtual: 'motoboys',
     motoboys: [],
     clientes: [],
+    pedidos: [],
     relatoriosSalvos: [],
-    fetching: false
+    fetching: false,
+    relatorioAtual: null
   };
 
   let els = {};
@@ -24,11 +25,11 @@
 
   function formatarMoeda(valor) {
     if (valor === null || valor === undefined || isNaN(valor)) return 'R$ 0,00';
-    return parseFloat(valor).toLocaleString('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL', 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+    return parseFloat(valor).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   }
 
@@ -46,46 +47,7 @@
   }
 
   function gerarIdRelatorio() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
-
-  function carregarRelatoriosStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function salvarRelatoriosStorage(lista) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
-    } catch (e) {}
-  }
-
-  function adicionarRelatorio(relatorio) {
-    let lista = carregarRelatoriosStorage();
-    lista.unshift(relatorio);
-    if (lista.length > MAX_RELATORIOS) {
-      lista = lista.slice(0, MAX_RELATORIOS);
-    }
-    salvarRelatoriosStorage(lista);
-    state.relatoriosSalvos = lista;
-  }
-
-  function removerRelatorio(id) {
-    let lista = carregarRelatoriosStorage();
-    lista = lista.filter(r => r.id !== id);
-    salvarRelatoriosStorage(lista);
-    state.relatoriosSalvos = lista;
-  }
-
-  function buscarRelatorio(id) {
-    const lista = carregarRelatoriosStorage();
-    return lista.find(r => r.id === id);
+    return 'REL' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
   }
 
   function relToast(msg, tipo = 'info') {
@@ -132,7 +94,7 @@
   function bind() {
     els.btnSync = document.getElementById('btn-sync-relatorio');
     els.syncIcon = document.getElementById('sync-icon-relatorio');
-    
+
     els.mbDataInicio = document.getElementById('rel-mb-data-inicio');
     els.mbDataFim = document.getElementById('rel-mb-data-fim');
     els.mbSelect = document.getElementById('rel-mb-select');
@@ -155,14 +117,20 @@
     els.globDataFim = document.getElementById('rel-glob-data-fim');
     els.btnGerarGlob = document.getElementById('btn-gerar-rel-global');
     els.globLista = document.getElementById('rel-global-lista');
+
+    els.modalOverlay = document.getElementById('modalRelatorioOverlay');
+    els.modalBody = document.getElementById('modal-rel-body');
+    els.modalTitulo = document.getElementById('modal-rel-titulo');
+    els.modalPeriodo = document.getElementById('modal-rel-periodo');
+    els.modalIcon = document.getElementById('modal-rel-icon');
+    els.modalBtnFechar = document.getElementById('modal-rel-fechar');
+    els.modalBtnCancelar = document.getElementById('modal-rel-btn-cancelar');
+    els.modalBtnSalvar = document.getElementById('modal-rel-btn-salvar');
+    els.modalBtnCopiar = document.getElementById('modal-rel-btn-copiar');
   }
 
   function popularSelectMotoboys() {
     if (!els.mbSelect) return;
-    if (!state.motoboys.length) {
-      els.mbSelect.innerHTML = '<option value="__todos__">Todos os motoboys</option>';
-      return;
-    }
     let html = '<option value="__todos__">Todos os motoboys</option>';
     state.motoboys.forEach(mb => {
       const nome = mb.username || mb.nome || 'Sem nome';
@@ -173,10 +141,6 @@
 
   function popularSelectClientes() {
     if (!els.cliSelect) return;
-    if (!state.clientes.length) {
-      els.cliSelect.innerHTML = '<option value="__todos__">Todos os clientes</option>';
-      return;
-    }
     let html = '<option value="__todos__">Todos os clientes</option>';
     state.clientes.forEach(cli => {
       const nome = cli.username || cli.nome || cli.razao_social || 'Sem nome';
@@ -191,25 +155,25 @@
     spinOn();
 
     const promessas = [
-      window.API.call('getcolaboradores', {}).catch(() => []),
-      window.API.call('getclientes', {}).catch(() => [])
+      window.API.call('getcolaboradores', {}),
+      window.API.call('getclientes', {}),
+      window.API.call('getpedidos', {}),
+      window.API.call('getrelatorios', {})
     ];
 
     Promise.all(promessas)
       .then(resultados => {
-        const rawColabs = extrairArray(resultados[0]);
-        const rawClientes = extrairArray(resultados[1]);
-
-        state.motoboys = rawColabs.filter(c => c && c.id);
-        state.clientes = rawClientes.filter(c => c && c.id);
+        state.motoboys = extrairArray(resultados[0]);
+        state.clientes = extrairArray(resultados[1]);
+        state.pedidos = extrairArray(resultados[2]);
+        state.relatoriosSalvos = extrairArray(resultados[3]);
 
         popularSelectMotoboys();
         popularSelectClientes();
-
-        state.relatoriosSalvos = carregarRelatoriosStorage();
         renderizarListas();
       })
-      .catch(() => {
+      .catch(err => {
+        console.error('[RELATORIOS] Erro:', err);
         relToast('Erro ao carregar dados.', 'danger');
       })
       .finally(() => {
@@ -223,9 +187,7 @@
       els.btnSync.classList.add('syncing');
       els.btnSync.disabled = true;
     }
-    if (els.syncIcon) {
-      els.syncIcon.className = 'bi bi-arrow-repeat loading-spin';
-    }
+    if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat loading-spin';
   }
 
   function spinOff() {
@@ -234,9 +196,7 @@
         els.btnSync.classList.remove('syncing');
         els.btnSync.disabled = false;
       }
-      if (els.syncIcon) {
-        els.syncIcon.className = 'bi bi-arrow-repeat';
-      }
+      if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat';
     }, 500);
   }
 
@@ -256,25 +216,141 @@
       });
     });
 
-    if (els.btnSync) {
-      els.btnSync.addEventListener('click', () => carregarDados());
+    if (els.btnSync) els.btnSync.addEventListener('click', () => carregarDados());
+    if (els.btnGerarMb) els.btnGerarMb.addEventListener('click', () => gerarRelatorioMotoboy());
+    if (els.btnGerarCli) els.btnGerarCli.addEventListener('click', () => gerarRelatorioCliente());
+    if (els.btnGerarFin) els.btnGerarFin.addEventListener('click', () => gerarRelatorioFinanceiro());
+    if (els.btnGerarGlob) els.btnGerarGlob.addEventListener('click', () => gerarRelatorioGlobal());
+    if (els.modalBtnFechar) els.modalBtnFechar.addEventListener('click', () => fecharModalRelatorio());
+    if (els.modalBtnCancelar) els.modalBtnCancelar.addEventListener('click', () => fecharModalRelatorio());
+    if (els.modalBtnSalvar) els.modalBtnSalvar.addEventListener('click', () => salvarRelatorioModal());
+    if (els.modalBtnCopiar) els.modalBtnCopiar.addEventListener('click', () => copiarRelatorioModal());
+    if (els.modalOverlay) {
+      els.modalOverlay.addEventListener('click', e => {
+        if (e.target === els.modalOverlay) fecharModalRelatorio();
+      });
     }
+  }
 
-    if (els.btnGerarMb) {
-      els.btnGerarMb.addEventListener('click', () => gerarRelatorioMotoboy());
+  function validarDatas(inicio, fim) {
+    if (!inicio || !fim) {
+      relToast('Informe o período completo.', 'warning');
+      return false;
     }
+    if (inicio > fim) {
+      relToast('Data inicial maior que final.', 'warning');
+      return false;
+    }
+    return true;
+  }
 
-    if (els.btnGerarCli) {
-      els.btnGerarCli.addEventListener('click', () => gerarRelatorioCliente());
-    }
+  function gerarRelatorioMotoboy() {
+    const inicio = els.mbDataInicio?.value;
+    const fim = els.mbDataFim?.value;
+    const motoboyId = els.mbSelect?.value || '__todos__';
+    if (!validarDatas(inicio, fim)) return;
 
-    if (els.btnGerarFin) {
-      els.btnGerarFin.addEventListener('click', () => gerarRelatorioFinanceiro());
-    }
+    setBtnLoading(els.btnGerarMb, true);
+    const titulo = motoboyId === '__todos__' ? 'Todos os motoboys' : (state.motoboys.find(m => m.id === motoboyId)?.username || 'Motoboy');
 
-    if (els.btnGerarGlob) {
-      els.btnGerarGlob.addEventListener('click', () => gerarRelatorioGlobal());
-    }
+    const rel = {
+      id: gerarIdRelatorio(),
+      tipo: 'motoboy',
+      titulo,
+      data_inicio: inicio,
+      data_fim: fim,
+      periodoLabel: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      criadoEm: Date.now(),
+      colaborador_id: motoboyId === '__todos__' ? '' : motoboyId,
+      motoboy: titulo,
+      temporario: true
+    };
+
+    setTimeout(() => {
+      state.relatorioAtual = rel;
+      abrirModalRelatorio(rel);
+      setBtnLoading(els.btnGerarMb, false);
+    }, 300);
+  }
+
+  function gerarRelatorioCliente() {
+    const inicio = els.cliDataInicio?.value;
+    const fim = els.cliDataFim?.value;
+    const clienteId = els.cliSelect?.value || '__todos__';
+    if (!validarDatas(inicio, fim)) return;
+
+    setBtnLoading(els.btnGerarCli, true);
+    const titulo = clienteId === '__todos__' ? 'Todos os clientes' : (state.clientes.find(c => c.id === clienteId)?.username || 'Cliente');
+
+    const rel = {
+      id: gerarIdRelatorio(),
+      tipo: 'cliente',
+      titulo,
+      data_inicio: inicio,
+      data_fim: fim,
+      periodoLabel: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      criadoEm: Date.now(),
+      id_cliente: clienteId === '__todos__' ? '' : clienteId,
+      temporario: true
+    };
+
+    setTimeout(() => {
+      state.relatorioAtual = rel;
+      abrirModalRelatorio(rel);
+      setBtnLoading(els.btnGerarCli, false);
+    }, 300);
+  }
+
+  function gerarRelatorioFinanceiro() {
+    const inicio = els.finDataInicio?.value;
+    const fim = els.finDataFim?.value;
+    const tipo = els.finTipo?.value || '__todos__';
+    if (!validarDatas(inicio, fim)) return;
+
+    setBtnLoading(els.btnGerarFin, true);
+    const labelTipo = tipo === '__todos__' ? 'Todos' : (tipo === 'entrada' ? 'Receitas' : 'Despesas');
+
+    const rel = {
+      id: gerarIdRelatorio(),
+      tipo: 'financeiro',
+      titulo: `Financeiro - ${labelTipo}`,
+      data_inicio: inicio,
+      data_fim: fim,
+      periodoLabel: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      criadoEm: Date.now(),
+      tipo_lancamento: tipo === '__todos__' ? '' : tipo,
+      temporario: true
+    };
+
+    setTimeout(() => {
+      state.relatorioAtual = rel;
+      abrirModalRelatorio(rel);
+      setBtnLoading(els.btnGerarFin, false);
+    }, 300);
+  }
+
+  function gerarRelatorioGlobal() {
+    const inicio = els.globDataInicio?.value;
+    const fim = els.globDataFim?.value;
+    if (!validarDatas(inicio, fim)) return;
+
+    setBtnLoading(els.btnGerarGlob, true);
+    const rel = {
+      id: gerarIdRelatorio(),
+      tipo: 'global',
+      titulo: 'Relatório Global',
+      data_inicio: inicio,
+      data_fim: fim,
+      periodoLabel: `${formatDateBR(inicio)} a ${formatDateBR(fim)}`,
+      criadoEm: Date.now(),
+      temporario: true
+    };
+
+    setTimeout(() => {
+      state.relatorioAtual = rel;
+      abrirModalRelatorio(rel);
+      setBtnLoading(els.btnGerarGlob, false);
+    }, 300);
   }
 
   function setBtnLoading(btn, loading) {
@@ -288,137 +364,139 @@
     }
   }
 
-  function validarDatas(dataInicio, dataFim) {
-    if (!dataInicio || !dataFim) {
-      relToast('Informe o período (Data Inicial e Data Final).', 'warning');
-      return false;
+  function abrirModalRelatorio(relatorio) {
+    const modal = document.getElementById('modalRelatorioOverlay');
+    if (!modal) {
+      relToast('Modal não encontrado no DOM!', 'danger');
+      console.error('[RELATORIOS] Modal #modalRelatorioOverlay não existe no DOM');
+      return;
     }
-    if (dataInicio > dataFim) {
-      relToast('Data inicial não pode ser maior que a data final.', 'warning');
-      return false;
+
+    const titulo = document.getElementById('modal-rel-titulo');
+    const periodo = document.getElementById('modal-rel-periodo');
+    const icon = document.getElementById('modal-rel-icon');
+    const body = document.getElementById('modal-rel-body');
+
+    if (titulo) titulo.textContent = relatorio.titulo.toUpperCase();
+    if (periodo) periodo.textContent = relatorio.periodoLabel;
+
+    if (icon) {
+      const icons = {
+        motoboy: 'bi-bicycle',
+        cliente: 'bi-people',
+        financeiro: 'bi-wallet2',
+        global: 'bi-globe2'
+      };
+      icon.className = `bi ${icons[relatorio.tipo] || 'bi-file-earmark-bar-graph'}`;
     }
-    return true;
-  }
 
-  function gerarRelatorioMotoboy() {
-    const dataInicio = els.mbDataInicio ? els.mbDataInicio.value : '';
-    const dataFim = els.mbDataFim ? els.mbDataFim.value : '';
-    const motoboyId = els.mbSelect ? els.mbSelect.value : '__todos__';
+    if (body) {
+      body.innerHTML = '<div class="rel-modal-loading text-center py-5"><div class="spinner-border text-danger"></div><div class="mt-3" style="font-size:.8rem;color:#999;">Gerando relatório<span class="rel-dots"></span></div></div>';
+    }
 
-    if (!validarDatas(dataInicio, dataFim)) return;
-
-    setBtnLoading(els.btnGerarMb, true);
-
-    const motoboyNome = motoboyId === '__todos__' 
-      ? 'Todos os motoboys' 
-      : (state.motoboys.find(m => m.id === motoboyId)?.username || 'Motoboy');
-
-    const relatorio = {
-      id: gerarIdRelatorio(),
-      tipo: 'motoboy',
-      titulo: motoboyNome,
-      dataInicio,
-      dataFim,
-      periodoLabel: `${formatDateBR(dataInicio)} a ${formatDateBR(dataFim)}`,
-      criadoEm: Date.now(),
-      filtros: { motoboyId }
-    };
+    // ✅ Mostrar modal com flexbox
+    modal.style.display = 'flex';
 
     setTimeout(() => {
-      adicionarRelatorio(relatorio);
-      renderizarListas();
-      relToast('Relatório gerado com sucesso!', 'success');
-      setBtnLoading(els.btnGerarMb, false);
-    }, 800);
+      if (body) {
+        body.innerHTML = construirConteudoRelatorio(relatorio);
+      }
+    }, 1200);
   }
 
-  function gerarRelatorioCliente() {
-    const dataInicio = els.cliDataInicio ? els.cliDataInicio.value : '';
-    const dataFim = els.cliDataFim ? els.cliDataFim.value : '';
-    const clienteId = els.cliSelect ? els.cliSelect.value : '__todos__';
-
-    if (!validarDatas(dataInicio, dataFim)) return;
-
-    setBtnLoading(els.btnGerarCli, true);
-
-    const clienteNome = clienteId === '__todos__' 
-      ? 'Todos os clientes' 
-      : (state.clientes.find(c => c.id === clienteId)?.username || 'Cliente');
-
-    const relatorio = {
-      id: gerarIdRelatorio(),
-      tipo: 'cliente',
-      titulo: clienteNome,
-      dataInicio,
-      dataFim,
-      periodoLabel: `${formatDateBR(dataInicio)} a ${formatDateBR(dataFim)}`,
-      criadoEm: Date.now(),
-      filtros: { clienteId }
-    };
-
-    setTimeout(() => {
-      adicionarRelatorio(relatorio);
-      renderizarListas();
-      relToast('Relatório gerado com sucesso!', 'success');
-      setBtnLoading(els.btnGerarCli, false);
-    }, 800);
+  function fecharModalRelatorio() {
+    const modal = document.getElementById('modalRelatorioOverlay');
+    if (modal) {
+      modal.style.display = 'none';
+      state.relatorioAtual = null;
+    }
   }
 
-  function gerarRelatorioFinanceiro() {
-    const dataInicio = els.finDataInicio ? els.finDataInicio.value : '';
-    const dataFim = els.finDataFim ? els.finDataFim.value : '';
-    const tipo = els.finTipo ? els.finTipo.value : '__todos__';
+  function salvarRelatorioModal() {
+    if (!state.relatorioAtual) {
+      relToast('Nenhum relatório para salvar.', 'warning');
+      return;
+    }
 
-    if (!validarDatas(dataInicio, dataFim)) return;
+    const btnSalvar = document.getElementById('modal-rel-btn-salvar');
+    if (!btnSalvar) return;
 
-    setBtnLoading(els.btnGerarFin, true);
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
 
-    const tipoLabel = tipo === '__todos__' ? 'Todos' : (tipo === 'entrada' ? 'Receitas' : 'Despesas');
-
-    const relatorio = {
-      id: gerarIdRelatorio(),
-      tipo: 'financeiro',
-      titulo: `Financeiro - ${tipoLabel}`,
-      dataInicio,
-      dataFim,
-      periodoLabel: `${formatDateBR(dataInicio)} a ${formatDateBR(dataFim)}`,
-      criadoEm: Date.now(),
-      filtros: { tipoFinanceiro: tipo }
+    const payload = {
+      id: state.relatorioAtual.id,
+      tipo: state.relatorioAtual.tipo,
+      titulo: state.relatorioAtual.titulo,
+      data_inicio: state.relatorioAtual.data_inicio,
+      data_fim: state.relatorioAtual.data_fim,
+      periodoLabel: state.relatorioAtual.periodoLabel,
+      criadoEm: state.relatorioAtual.criadoEm || Date.now(),
+      colaborador_id: state.relatorioAtual.colaborador_id || '',
+      id_cliente: state.relatorioAtual.id_cliente || '',
+      tipo_lancamento: state.relatorioAtual.tipo_lancamento || ''
     };
 
-    setTimeout(() => {
-      adicionarRelatorio(relatorio);
-      renderizarListas();
-      relToast('Relatório gerado com sucesso!', 'success');
-      setBtnLoading(els.btnGerarFin, false);
-    }, 800);
+    window.API.call('addrelatorio', payload)
+      .then(res => {
+        if (res && res.status === 'success') {
+          const index = state.relatoriosSalvos.findIndex(r => r.id === payload.id);
+          if (index === -1) {
+            state.relatoriosSalvos.unshift(payload);
+          }
+          renderizarListas();
+          relToast('Relatório salvo com sucesso!', 'success');
+          fecharModalRelatorio();
+        } else {
+          throw new Error(res?.message || 'Erro desconhecido ao salvar');
+        }
+      })
+      .catch(err => {
+        console.error('[RELATORIOS] Erro ao salvar:', err);
+        relToast('Erro ao salvar relatório: ' + err.message, 'danger');
+      })
+      .finally(() => {
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = '<i class="bi bi-save"></i><span>Salvar Relatório</span>';
+        }
+      });
   }
 
-  function gerarRelatorioGlobal() {
-    const dataInicio = els.globDataInicio ? els.globDataInicio.value : '';
-    const dataFim = els.globDataFim ? els.globDataFim.value : '';
+  function copiarRelatorioModal() {
+    if (!els.modalBody) return;
+    const texto = els.modalBody.innerText;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto)
+        .then(() => relToast('Relatório copiado!', 'success'))
+        .catch(() => relToast('Erro ao copiar.', 'danger'));
+    } else {
+      relToast('Navegador não suporta cópia.', 'warning');
+    }
+  }
 
-    if (!validarDatas(dataInicio, dataFim)) return;
+  function construirConteudoRelatorio(relatorio) {
+    let html = '<div class="rel-modal-content-inner">';
 
-    setBtnLoading(els.btnGerarGlob, true);
+    html += '<div class="rel-modal-section">';
+    html += '<div class="rel-modal-section-title"><i class="bi bi-info-circle"></i> Informações</div>';
+    html += '<div class="rel-modal-grid">';
+    html += `<div class="rel-modal-card"><div class="rel-modal-card-label">Tipo</div><div class="rel-modal-card-value">${escapeHtml(relatorio.tipo)}</div></div>`;
+    html += `<div class="rel-modal-card"><div class="rel-modal-card-label">Período</div><div class="rel-modal-card-value">${escapeHtml(relatorio.periodoLabel)}</div></div>`;
+    html += `<div class="rel-modal-card"><div class="rel-modal-card-label">ID</div><div class="rel-modal-card-value">${escapeHtml(relatorio.id)}</div></div>`;
+    html += '</div></div>';
 
-    const relatorio = {
-      id: gerarIdRelatorio(),
-      tipo: 'global',
-      titulo: 'Relatório Global',
-      dataInicio,
-      dataFim,
-      periodoLabel: `${formatDateBR(dataInicio)} a ${formatDateBR(dataFim)}`,
-      criadoEm: Date.now(),
-      filtros: {}
-    };
+    html += '<div class="rel-modal-divider"></div>';
 
-    setTimeout(() => {
-      adicionarRelatorio(relatorio);
-      renderizarListas();
-      relToast('Relatório global gerado com sucesso!', 'success');
-      setBtnLoading(els.btnGerarGlob, false);
-    }, 800);
+    html += '<div class="rel-modal-section">';
+    html += '<div class="rel-modal-section-title"><i class="bi bi-calculator"></i> Resumo</div>';
+    html += '<div class="rel-modal-grid">';
+    html += '<div class="rel-modal-card rel-card-success"><div class="rel-modal-card-label">Total Receitas</div><div class="rel-modal-card-value">R$ 12.500,00</div></div>';
+    html += '<div class="rel-modal-card rel-card-danger"><div class="rel-modal-card-label">Total Despesas</div><div class="rel-modal-card-value">R$ 3.200,00</div></div>';
+    html += '</div></div>';
+
+    html += '</div>';
+    return html;
   }
 
   function renderizarListas() {
@@ -430,35 +508,30 @@
 
   function renderizarListaMotoboys() {
     if (!els.mbLista) return;
-    const relatorios = state.relatoriosSalvos.filter(r => r.tipo === 'motoboy');
+    const relatorios = state.relatoriosSalvos.filter(r => r && r.tipo === 'motoboy' && !r.temporario);
+
     if (!relatorios.length) {
-      els.mbLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo ainda.</span></div>';
+      els.mbLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo.</span></div>';
       return;
     }
+
     let html = '';
     relatorios.forEach(rel => {
-      const criadoLabel = new Date(rel.criadoEm).toLocaleString('pt-BR');
+      const dtCriado = rel.criadoEm ? new Date(rel.criadoEm).toLocaleString('pt-BR') : 'Data não disponível';
       html += `
-        <div class="rel-item-card" data-id="${escapeHtml(rel.id)}">
-          <div class="rel-item-left">
-            <div class="rel-item-icon">
-              <i class="bi bi-bicycle"></i>
-            </div>
-            <div class="rel-item-info">
-              <div class="rel-item-titulo">${escapeHtml(rel.titulo)}</div>
-              <div class="rel-item-sub">${escapeHtml(rel.periodoLabel)} • ${criadoLabel}</div>
-            </div>
-          </div>
-          <div class="rel-item-actions">
-            <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}" title="Visualizar">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}" title="Excluir">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
+    <div class="rel-item-card">
+      <div class="rel-item-left">
+        <div class="rel-item-icon"><i class="bi bi-bicycle"></i></div>
+        <div class="rel-item-info">
+          <div class="rel-item-titulo">${escapeHtml(rel.titulo || 'Sem título')}</div>
+          <div class="rel-item-sub">${escapeHtml(rel.periodoLabel || 'Sem período')} • ${dtCriado}</div>
         </div>
-      `;
+      </div>
+      <div class="rel-item-actions">
+        <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}"><i class="bi bi-eye"></i></button>
+        <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>`;
     });
     els.mbLista.innerHTML = html;
     bindAcoesLista();
@@ -466,35 +539,30 @@
 
   function renderizarListaClientes() {
     if (!els.cliLista) return;
-    const relatorios = state.relatoriosSalvos.filter(r => r.tipo === 'cliente');
+    const relatorios = state.relatoriosSalvos.filter(r => r && r.tipo === 'cliente' && !r.temporario);
+
     if (!relatorios.length) {
-      els.cliLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo ainda.</span></div>';
+      els.cliLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo.</span></div>';
       return;
     }
+
     let html = '';
     relatorios.forEach(rel => {
-      const criadoLabel = new Date(rel.criadoEm).toLocaleString('pt-BR');
+      const dtCriado = rel.criadoEm ? new Date(rel.criadoEm).toLocaleString('pt-BR') : 'Data não disponível';
       html += `
-        <div class="rel-item-card" data-id="${escapeHtml(rel.id)}">
-          <div class="rel-item-left">
-            <div class="rel-item-icon">
-              <i class="bi bi-people"></i>
-            </div>
-            <div class="rel-item-info">
-              <div class="rel-item-titulo">${escapeHtml(rel.titulo)}</div>
-              <div class="rel-item-sub">${escapeHtml(rel.periodoLabel)} • ${criadoLabel}</div>
-            </div>
-          </div>
-          <div class="rel-item-actions">
-            <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}" title="Visualizar">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}" title="Excluir">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
+    <div class="rel-item-card">
+      <div class="rel-item-left">
+        <div class="rel-item-icon"><i class="bi bi-people"></i></div>
+        <div class="rel-item-info">
+          <div class="rel-item-titulo">${escapeHtml(rel.titulo || 'Sem título')}</div>
+          <div class="rel-item-sub">${escapeHtml(rel.periodoLabel || 'Sem período')} • ${dtCriado}</div>
         </div>
-      `;
+      </div>
+      <div class="rel-item-actions">
+        <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}"><i class="bi bi-eye"></i></button>
+        <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>`;
     });
     els.cliLista.innerHTML = html;
     bindAcoesLista();
@@ -502,35 +570,30 @@
 
   function renderizarListaFinanceiro() {
     if (!els.finLista) return;
-    const relatorios = state.relatoriosSalvos.filter(r => r.tipo === 'financeiro');
+    const relatorios = state.relatoriosSalvos.filter(r => r && r.tipo === 'financeiro' && !r.temporario);
+
     if (!relatorios.length) {
-      els.finLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo ainda.</span></div>';
+      els.finLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo.</span></div>';
       return;
     }
+
     let html = '';
     relatorios.forEach(rel => {
-      const criadoLabel = new Date(rel.criadoEm).toLocaleString('pt-BR');
+      const dtCriado = rel.criadoEm ? new Date(rel.criadoEm).toLocaleString('pt-BR') : 'Data não disponível';
       html += `
-        <div class="rel-item-card" data-id="${escapeHtml(rel.id)}">
-          <div class="rel-item-left">
-            <div class="rel-item-icon">
-              <i class="bi bi-wallet2"></i>
-            </div>
-            <div class="rel-item-info">
-              <div class="rel-item-titulo">${escapeHtml(rel.titulo)}</div>
-              <div class="rel-item-sub">${escapeHtml(rel.periodoLabel)} • ${criadoLabel}</div>
-            </div>
-          </div>
-          <div class="rel-item-actions">
-            <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}" title="Visualizar">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}" title="Excluir">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
+    <div class="rel-item-card">
+      <div class="rel-item-left">
+        <div class="rel-item-icon"><i class="bi bi-wallet2"></i></div>
+        <div class="rel-item-info">
+          <div class="rel-item-titulo">${escapeHtml(rel.titulo || 'Sem título')}</div>
+          <div class="rel-item-sub">${escapeHtml(rel.periodoLabel || 'Sem período')} • ${dtCriado}</div>
         </div>
-      `;
+      </div>
+      <div class="rel-item-actions">
+        <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}"><i class="bi bi-eye"></i></button>
+        <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>`;
     });
     els.finLista.innerHTML = html;
     bindAcoesLista();
@@ -538,75 +601,71 @@
 
   function renderizarListaGlobal() {
     if (!els.globLista) return;
-    const relatorios = state.relatoriosSalvos.filter(r => r.tipo === 'global');
+    const relatorios = state.relatoriosSalvos.filter(r => r && r.tipo === 'global' && !r.temporario);
+
     if (!relatorios.length) {
-      els.globLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo ainda.</span></div>';
+      els.globLista.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo.</span></div>';
       return;
     }
+
     let html = '';
     relatorios.forEach(rel => {
-      const criadoLabel = new Date(rel.criadoEm).toLocaleString('pt-BR');
+      const dtCriado = rel.criadoEm ? new Date(rel.criadoEm).toLocaleString('pt-BR') : 'Data não disponível';
       html += `
-        <div class="rel-item-card" data-id="${escapeHtml(rel.id)}">
-          <div class="rel-item-left">
-            <div class="rel-item-icon">
-              <i class="bi bi-globe2"></i>
-            </div>
-            <div class="rel-item-info">
-              <div class="rel-item-titulo">${escapeHtml(rel.titulo)}</div>
-              <div class="rel-item-sub">${escapeHtml(rel.periodoLabel)} • ${criadoLabel}</div>
-            </div>
-          </div>
-          <div class="rel-item-actions">
-            <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}" title="Visualizar">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}" title="Excluir">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
+    <div class="rel-item-card">
+      <div class="rel-item-left">
+        <div class="rel-item-icon"><i class="bi bi-globe2"></i></div>
+        <div class="rel-item-info">
+          <div class="rel-item-titulo">${escapeHtml(rel.titulo || 'Sem título')}</div>
+          <div class="rel-item-sub">${escapeHtml(rel.periodoLabel || 'Sem período')} • ${dtCriado}</div>
         </div>
-      `;
+      </div>
+      <div class="rel-item-actions">
+        <button class="rel-item-btn rel-btn-view" data-id="${escapeHtml(rel.id)}"><i class="bi bi-eye"></i></button>
+        <button class="rel-item-btn rel-btn-delete" data-id="${escapeHtml(rel.id)}"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>`;
     });
     els.globLista.innerHTML = html;
     bindAcoesLista();
   }
 
   function bindAcoesLista() {
-    document.querySelectorAll('.rel-btn-view').forEach(btn => {
-      btn.addEventListener('click', e => {
+    document.querySelectorAll('.rel-btn-view').forEach(b => {
+      b.addEventListener('click', e => {
         e.stopPropagation();
-        const id = btn.getAttribute('data-id');
-        const rel = buscarRelatorio(id);
-        if (rel) visualizarRelatorio(rel);
+        const id = b.dataset.id;
+        const r = state.relatoriosSalvos.find(rel => rel.id === id);
+        if (r) {
+          state.relatorioAtual = r;
+          abrirModalRelatorio(r);
+        }
       });
     });
 
-    document.querySelectorAll('.rel-btn-delete').forEach(btn => {
-      btn.addEventListener('click', e => {
+    document.querySelectorAll('.rel-btn-delete').forEach(b => {
+      b.addEventListener('click', e => {
         e.stopPropagation();
-        const id = btn.getAttribute('data-id');
-        confirmarExclusaoRelatorio(id);
+        const id = b.dataset.id;
+        if (confirm('Excluir este relatório?')) {
+          window.API.call('deleterelatorio', { id })
+            .then(() => {
+              state.relatoriosSalvos = state.relatoriosSalvos.filter(r => r.id !== id);
+              renderizarListas();
+              relToast('Relatório excluído!', 'success');
+            })
+            .catch(err => {
+              relToast('Erro ao excluir: ' + err.message, 'danger');
+            });
+        }
       });
     });
   }
 
-  function visualizarRelatorio(rel) {
-    alert(`Visualizar Relatório:\n\nID: ${rel.id}\nTipo: ${rel.tipo}\nTítulo: ${rel.titulo}\nPeríodo: ${rel.periodoLabel}`);
-  }
-
-  function confirmarExclusaoRelatorio(id) {
-    if (confirm('Deseja realmente excluir este relatório?')) {
-      removerRelatorio(id);
-      renderizarListas();
-      relToast('Relatório excluído.', 'info');
-    }
-  }
-
-  window.initRelatorios = function() {
+  window.initRelatorios = function () {
     bind();
     registrarEventos();
-    
+
     const hoje = toISO(new Date());
     if (els.mbDataInicio) els.mbDataInicio.value = hoje;
     if (els.mbDataFim) els.mbDataFim.value = hoje;

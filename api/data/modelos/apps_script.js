@@ -616,3 +616,4 @@ function responder(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+

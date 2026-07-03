@@ -66,7 +66,7 @@ window.AppRDO.resetState = function () {
 var PAGES_SEM_HEADER = [];
 var PAGE_MODALS = {
     pedidos: ['/pages/pedidos/form_pedidos.html'],
-    fin: ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html']
+    fin: ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html'],
 };
 
 var MODULE_SCRIPTS = {
