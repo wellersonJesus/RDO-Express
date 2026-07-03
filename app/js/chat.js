@@ -616,11 +616,49 @@ window.renderizarMensagens = function (mensagens, pedidos) {
         var textoMensagem = _resolverTextoMensagem(msg, pedido);
 
         container.appendChild(
-            _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
+            _criarWrapperMensagemComCopia(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
         );
     });
 
     container.scrollTop = container.scrollHeight;
+};
+
+function _criarWrapperMensagemComCopia(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
+    var div = document.createElement('div');
+    div.className = 'message-wrapper';
+
+    var iconHTML = temStatus
+        ? window.getIconePorStatus(statusPuro)
+        : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
+
+    div.innerHTML =
+        '<button class="btn-copiar-msg" title="Copiar mensagem" ' +
+        'onclick="event.stopPropagation();window._copiarMensagemWrapper(\'' + pedidoId + '\', this)">' +
+        '<i class="bi bi-clipboard"></i>' +
+        '</button>' +
+        '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
+        'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
+        '<div class="message-body">' + String(texto).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
+        'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
+        'data-tooltip="' + tooltipTexto + '">' +
+        iconHTML +
+        '</div>' +
+        '<span class="message-time">' + hora + '</span>' +
+        '</div>';
+
+    div.addEventListener('mouseenter', function () { div.classList.add('msg-hover-active'); });
+    div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
+
+    return div;
+}
+
+window._copiarMensagemWrapper = function(pedidoId, botao) {
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"] .message-body');
+    if (!msgEl) return;
+    
+    var texto = msgEl.textContent || msgEl.innerText || '';
+    window._copiarMensagem(texto, botao);
 };
 
 window.gerarMensagemFormatada = function (dados) {
@@ -704,6 +742,7 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 
     return div;
 }
+
 window._criarWrapperMensagem = _criarWrapperMensagem;
 
 window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
@@ -1843,6 +1882,155 @@ window.fecharParaChat = function (modalId) {
             }
         };
     });
+};
+
+window._renderizarMensagens = function(mensagens) {
+    var container = document.getElementById('chat-messages-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!mensagens || mensagens.length === 0) {
+        container.innerHTML = '<div class="chat-empty-state"><div class="chat-empty-label">Nenhuma mensagem encontrada</div></div>';
+        return;
+    }
+    
+    mensagens.forEach(function(msg) {
+        var isBot = (msg.remetente === 'bot' || msg.remetente === 'sistema');
+        var wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper ' + (isBot ? 'message-bot' : 'message-user');
+        
+        var bubble = document.createElement('div');
+        bubble.className = 'message-bubble ' + (isBot ? 'bubble-bot' : 'bubble-user');
+        
+        var conteudo = String(msg.conteudo || msg.mensagem || msg.texto || '').trim();
+        
+        var textoElement = document.createElement('div');
+        textoElement.className = 'message-text';
+        textoElement.textContent = conteudo;
+        
+        if (msg.pedido_id) {
+            textoElement.setAttribute('data-pedido-id', msg.pedido_id);
+        }
+        
+        var timestamp = document.createElement('div');
+        timestamp.className = 'message-timestamp';
+        timestamp.textContent = _formatarDataHora(msg.data_envio || msg.created_at || msg.hora);
+        
+        bubble.appendChild(textoElement);
+        bubble.appendChild(timestamp);
+        
+        var btnCopiar = document.createElement('button');
+        btnCopiar.className = 'btn-copiar-mensagem';
+        btnCopiar.innerHTML = '<i class="bi bi-clipboard"></i>';
+        btnCopiar.title = 'Copiar mensagem';
+        btnCopiar.onclick = function(e) {
+            e.stopPropagation();
+            _copiarMensagem(conteudo, btnCopiar);
+        };
+        
+        bubble.appendChild(btnCopiar);
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+    });
+    
+    container.scrollTop = container.scrollHeight;
+};
+
+window._copiarMensagem = function(texto, botao) {
+    if (!texto) return;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(function() {
+            _feedbackCopia(botao, true);
+        }).catch(function() {
+            _copiarFallback(texto, botao);
+        });
+    } else {
+        _copiarFallback(texto, botao);
+    }
+};
+
+window._copiarFallback = function(texto, botao) {
+    var textarea = document.createElement('textarea');
+    textarea.value = texto;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    try {
+        var sucesso = document.execCommand('copy');
+        _feedbackCopia(botao, sucesso);
+    } catch (err) {
+        _feedbackCopia(botao, false);
+    }
+    
+    document.body.removeChild(textarea);
+};
+
+window._feedbackCopia = function(botao, sucesso) {
+    if (!botao) return;
+    
+    var iconOriginal = botao.innerHTML;
+    
+    if (sucesso) {
+        botao.innerHTML = '<i class="bi bi-check2"></i>';
+        botao.style.color = '#28a745';
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Copiado!',
+                text: 'Mensagem copiada para a área de transferência',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                showConfirmButton: false,
+                timerProgressBar: true
+            });
+        }
+        
+        setTimeout(function() {
+            botao.innerHTML = iconOriginal;
+            botao.style.color = '';
+        }, 2000);
+    } else {
+        botao.innerHTML = '<i class="bi bi-x"></i>';
+        botao.style.color = '#dc3545';
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: 'Não foi possível copiar a mensagem',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                showConfirmButton: false,
+                timerProgressBar: true
+            });
+        }
+        
+        setTimeout(function() {
+            botao.innerHTML = iconOriginal;
+            botao.style.color = '';
+        }, 2000);
+    }
+};
+
+window._formatarDataHora = function(dataStr) {
+    if (!dataStr) return '';
+    try {
+        var data = new Date(dataStr);
+        var horas = String(data.getHours()).padStart(2, '0');
+        var minutos = String(data.getMinutes()).padStart(2, '0');
+        return horas + ':' + minutos;
+    } catch (e) {
+        return '';
+    }
 };
 
 window._destacarPedidoNoChat = function(pedidoId) {
