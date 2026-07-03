@@ -43,8 +43,175 @@ window.AppRDO.clientesCache = window.AppRDO.clientesCache || [];
 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
 window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 window.AppRDO._mapaModalAberto = false;
+window.AppRDO.notificacoes = window.AppRDO.notificacoes || [];
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
+
+window.NotificationManager = (function () {
+    var notifications = [];
+    var maxNotifications = 50;
+    var cashSound = null;
+
+    function _init() {
+        cashSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDGM0vLTgjMHHWm98+eXSgwNU6bo87FeFgs+lt3zzn0pBSl+zPDglEELF2S68+ijURALTKXi8sFqIAQ1kdXyzYQ2Bx9sv/PojUsNDlWq5vKsWhYKPJrb88yAKgUpfs3w4JVCCxdlu/PooDsKRZrg7rtnIQQ2kNXy0IM1Bx5rv/PnkEsND1Oo5fGpWxYJPJrb886CKgUpgM7w3pJCCxZkvPPmnkoLRp7g7bxkIQQ3kdXyz4E1Bx5rv/PnjEwNDlKo5fGuXBYJPZrb89B/KwQogM7x5JRDDhdlvfPlnkoLRp3f7btkIgQ4kdXyz4I2Bx9rwPPnjEwODlGo5fGqWxYKPZvb89CCKgUpgc7x5JNCDBZlvfPknUkKRpzf7bdkIgQ5kdXyzYE2Bx5qvvPmiUsNDVCn5PCsWxYKO5rb88yAKQUqgc7x5ZJCDBVkvPPjnEkKRZvf7LZjIQQ5kNTxx4A1Bh1pvO/likoMDE+m4+6rWhUJOpjZ8cmCKgUpgc3x5pFBCxVju/LhmkkKRJre7LRiIQU6j9Pxx38zBhxou+/kh0oMDU6l4u2qWRQIOZfY8saBKQQpgMzx5Y9BCxRiuvLgmEgJQ5jd7LNhIQU6jtLwxn4yBRxnuvDjhkkMC0yk4e2oWBQJOJbX8cV/KQUpf8vx5I5ACxNhu/HflkgJQpjd7LBgIAU7jdHvxX0xBRtmuvDhg0kLDUuj4OynVxMIOJXX8cN+KAQqfsvx441ACxNgu/HdlUcJQpfc66tgIAU7jNDvxXwxBRpmuvDfgkgLDEmi4OumVxMIOpTW8cF9JwQqfcrw4oxACxJfu+/clEcJQpXb6qpfHwU8i8/uw3swBRpmue/egUgLCkii3+ulVhIIOJPV8cB9JgQpfMnw4YtACxFfu+/bk0YJQpTa6qlgHwU8is/uwnowBRllue/dgEgKCkah3+ujVhEHN5LU8b98JgQpfMjw4IpACxFfu+/akUYJQZPa6ahfHwU7ic7uwXkwBRlkuO/cf0gKCUag3+uiVREHNpHT8b58JQQofcjw34lACg9euu7akEYIQJLZ6adfHwU8iM3twHgvBRhkuO7bf0gKCUSf3+qhVREHNZDS8bx8JQQne8fv3og/Cg5duu7Zj0UIQJHY6KZeHgU7h8zswHcuBRhjt+7afkgJCEKe3umgUxAGNI/S8bp7JAMoe8bv3Yc/CQ5cue7Yjk');
+
+        if (typeof window.EventBus !== 'undefined') {
+            window.EventBus.on('pedido:statusAtualizado', function (dados) {
+                _handleStatusChange(dados);
+            });
+
+            window.EventBus.on('pedido:excluido', function (dados) {
+                _addNotification('EXCLUÍDO', dados.id, 'danger');
+            });
+
+            window.EventBus.on('pedido:adicionado', function (dados) {
+                _addNotification('CRIADO', dados.id, 'success');
+            });
+        }
+    }
+
+    function _handleStatusChange(dados) {
+        var status = String(dados.status || '').toUpperCase();
+        var pedidoId = dados.id;
+
+        if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) {
+            _playCashSound();
+            _addNotification('CONCLUÍDO', pedidoId, 'success');
+        } else if (status.includes('CANCELADO')) {
+            _addNotification('CANCELADO', pedidoId, 'danger');
+        } else if (status.includes('EM_ROTA') || status.includes('EM ROTA')) {
+            _addNotification('EM ROTA', pedidoId, 'primary');
+        }
+
+        _updateNotificationBadge();
+    }
+
+    function _playCashSound() {
+        if (!cashSound) return;
+        try {
+            cashSound.currentTime = 0;
+            cashSound.volume = 0.5;
+            cashSound.play().catch(function () { });
+        } catch (e) { }
+    }
+
+    function _addNotification(tipo, pedidoId, variant) {
+        var now = new Date();
+        var notification = {
+            id: 'notif_' + now.getTime() + '_' + Math.random().toString(36).substr(2, 9),
+            tipo: tipo,
+            pedidoId: pedidoId,
+            timestamp: now.toISOString(),
+            variant: variant,
+            lida: false
+        };
+
+        notifications.unshift(notification);
+
+        if (notifications.length > maxNotifications) {
+            notifications = notifications.slice(0, maxNotifications);
+        }
+
+        window.AppRDO.notificacoes = notifications;
+        _updateNotificationBadge();
+    }
+
+    function _updateNotificationBadge() {
+        var badge = document.getElementById('notif-badge');
+        var naoLidas = notifications.filter(function (n) { return !n.lida; }).length;
+
+        if (!badge) return;
+
+        if (naoLidas > 0) {
+            badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
+
+    function _renderNotifications() {
+        var container = document.getElementById('notifications-list');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-bell-slash me-2"></i><small>Nenhuma notificação</small></div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(function (notif) {
+            var iconClass = notif.tipo === 'CONCLUÍDO' ? 'bi-check-circle-fill text-success' :
+                notif.tipo === 'CANCELADO' ? 'bi-x-circle-fill text-danger' :
+                    notif.tipo === 'EM ROTA' ? 'bi-bicycle text-primary' :
+                        notif.tipo === 'CRIADO' ? 'bi-plus-circle-fill text-success' :
+                            'bi-trash3-fill text-danger';
+
+            var dataObj = new Date(notif.timestamp);
+            var horas = String(dataObj.getHours()).padStart(2, '0');
+            var minutos = String(dataObj.getMinutes()).padStart(2, '0');
+            var horaStr = horas + ':' + minutos;
+
+            var bgClass = notif.lida ? '' : 'bg-light';
+
+            return '<div class="notif-item ' + bgClass + '" data-notif-id="' + notif.id + '" onclick="window.NotificationManager.marcarComoLida(\'' + notif.id + '\'); window.NotificationManager.irParaPedido(\'' + notif.pedidoId + '\');">' +
+                '<div class="d-flex align-items-start gap-2">' +
+                '<i class="' + iconClass + '" style="font-size:1.1rem;margin-top:2px;"></i>' +
+                '<div class="flex-grow-1">' +
+                '<div class="d-flex align-items-center justify-content-between">' +
+                '<span class="fw-semibold" style="font-size:.85rem;">Pedido ' + _formatarNomeServico(notif.pedidoId) + '</span>' +
+                '<span class="text-muted" style="font-size:.7rem;">' + horaStr + '</span>' +
+                '</div>' +
+                '<div class="text-muted" style="font-size:.75rem;">Status: <strong>' + notif.tipo + '</strong></div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function marcarComoLida(notifId) {
+        var notif = notifications.find(function (n) { return n.id === notifId; });
+        if (notif) notif.lida = true;
+        _updateNotificationBadge();
+    }
+
+    function marcarTodasComoLidas() {
+        notifications.forEach(function (n) { n.lida = true; });
+        _updateNotificationBadge();
+        _renderNotifications();
+    }
+
+    function limparNotificacoes() {
+        notifications = [];
+        window.AppRDO.notificacoes = [];
+        _updateNotificationBadge();
+        _renderNotifications();
+    }
+
+    function irParaPedido(pedidoId) {
+        if (typeof window._destacarPedidoNoChat === 'function') {
+            window._destacarPedidoNoChat(pedidoId);
+        }
+
+        var dropdown = document.getElementById('dropdown-notifications');
+        if (dropdown) {
+            var bsDropdown = bootstrap.Dropdown.getInstance(dropdown.querySelector('.btn-notifications'));
+            if (bsDropdown) bsDropdown.hide();
+        }
+    }
+
+    function abrirDropdown() {
+        _renderNotifications();
+    }
+
+    return {
+        init: _init,
+        abrirDropdown: abrirDropdown,
+        marcarComoLida: marcarComoLida,
+        marcarTodasComoLidas: marcarTodasComoLidas,
+        limparNotificacoes: limparNotificacoes,
+        irParaPedido: irParaPedido
+    };
+})();
 
 window.addEventListener('masterStatusChanged', function (e) {
     var isOn = !!(e.detail && e.detail.isOn);
@@ -545,17 +712,14 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
 };
 
 function _resolverTextoMensagem(msg, pedido) {
-    // Fonte verdade: texto salvo no banco
     var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
     if (textoSalvo.length > 0) return textoSalvo;
 
-    // Fallback: reconstrói via gerarMensagemFormatada para garantir formato idêntico
     if (!pedido) return '';
 
     var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
     var tempo = String(pedido.tempo || pedido.tempoFormatado || '').trim();
     var tempoMin = 0;
-    // Converte "1h 56min" → minutos para formatarTempoHumano reconstruir igual
     var mH = tempo.match(/(\d+)h/);
     var mM = tempo.match(/(\d+)min/);
     if (mH) tempoMin += parseInt(mH[1]) * 60;
@@ -566,7 +730,6 @@ function _resolverTextoMensagem(msg, pedido) {
         solicitante: String(pedido.solicitante || 'Não informado').trim(),
         contato: String(pedido.contato || '').trim(),
         mercadoria: String(pedido.mercadoria || 'ENTREGA').trim(),
-        // Suporte ao modelo de tabela com de/para simples
         de: String(pedido.de || '').trim(),
         para: String(pedido.para || '').trim(),
         distanciaTotal: distancia,
@@ -676,25 +839,21 @@ window.gerarMensagemFormatada = function (dados) {
         '📍 ROTAS:'
     ];
 
-    // ── Prioridade 1: rotasProcessadas (array de objetos {de, para}) ──
     if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
         dados.rotasProcessadas.forEach(function (r, i) {
             linhas.push((i + 1) + '. De: ' + String(r.de || '').trim() + ' | Para: ' + String(r.para || '').trim());
             linhas.push('.');
         });
     }
-    // ── Prioridade 2: campo "rotas" multiline (texto bruto) ──
     else if (dados.rotas && String(dados.rotas).trim()) {
         String(dados.rotas).trim().split('\n').forEach(function (linha, i) {
             linha = linha.trim();
             if (!linha) return;
-            // Garante numeração se não tiver
             if (!/^\d+\./.test(linha)) linha = (i + 1) + '. ' + linha;
             linhas.push(linha);
             linhas.push('.');
         });
     }
-    // ── Prioridade 3: campos de/para simples (modelo antigo) ──
     else if (dados.de && dados.para) {
         linhas.push('1. De: ' + String(dados.de).trim() + ' | Para: ' + String(dados.para).trim());
         linhas.push('.');
@@ -1724,6 +1883,11 @@ window.fecharParaChat = function (modalId) {
             window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
+
+        if (typeof window.NotificationManager !== 'undefined') {
+            window.NotificationManager.init();
+        }
+
         if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
     }
 
@@ -2099,6 +2263,17 @@ window.fecharParaChat = function (modalId) {
             var clienteId = window.AppRDO && window.AppRDO.clienteId;
             if (clienteId) {
                 window._carregarPedidosDropdown(clienteId);
+            }
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        var notifBtn = document.querySelector('.btn-notifications');
+        if (!notifBtn) return;
+
+        if (e.target === notifBtn || notifBtn.contains(e.target)) {
+            if (typeof window.NotificationManager !== 'undefined') {
+                window.NotificationManager.abrirDropdown();
             }
         }
     });

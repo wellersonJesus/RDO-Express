@@ -18,9 +18,39 @@
                         <small class="text-muted chat-subtitle">Central de Pedidos</small>
                     </div>
                 </div>
-                <button type="button" id="btn-sync-chat" class="btn-sync-chat" title="Atualizar tudo">
-                    <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dropdown" id="dropdown-notifications">
+                        <button class="btn-notifications" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notificações">
+                            <i class="bi bi-bell-fill"></i>
+                            <span id="notif-badge" class="d-none">0</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg">
+                            <li class="notif-header">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <h6 class="notif-title mb-0">Notificações</h6>
+                                    <div class="notif-actions">
+                                        <button type="button" class="notif-action-btn" onclick="window.NotificationManager.marcarTodasComoLidas()" title="Marcar todas como lidas">
+                                            <i class="bi bi-check-all me-1"></i>Ler todas
+                                        </button>
+                                        <button type="button" class="notif-action-btn" onclick="window.NotificationManager.limparNotificacoes()" title="Limpar notificações">
+                                            <i class="bi bi-trash3 me-1"></i>Limpar
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                            <li><hr class="dropdown-divider m-0"></li>
+                            <div id="notifications-list">
+                                <div class="p-4 text-center text-muted">
+                                    <i class="bi bi-bell-slash me-2"></i>
+                                    <small>Nenhuma notificação</small>
+                                </div>
+                            </div>
+                        </ul>
+                    </div>
+                    <button type="button" id="btn-sync-chat" class="btn-sync-chat" title="Atualizar tudo">
+                        <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
