@@ -12,11 +12,11 @@
     },
     colaboradores: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
-      campos: { username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix', comissao: 'Comissão', status: 'Status' }
+      campos: { id: 'ID', username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix', comissao: 'Comissão', status: 'Status' }
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
-      campos: { id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para', retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação' }
+      campos: { id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para', retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação' }
     },
     chat: {
       label: 'Chat', icon: 'bi-chat-dots', endpoint: 'getchat',
@@ -24,7 +24,7 @@
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
-      campos: { colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO', observacao: 'Observação', situacao: 'Situação' }
+      campos: { id: 'ID', colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO', observacao: 'Observação', situacao: 'Situação' }
     }
   };
 
@@ -227,7 +227,19 @@
         state.pedidos = extrairArray(r[3]);
         state.chat = extrairArray(r[4]);
         state.financeiro = extrairArray(r[5]);
-        state.relatoriosSalvos = extrairArray(r[6]);
+        state.relatoriosSalvos = extrairArray(r[6]).map(function(rel) {
+          if (rel.data && rel.data.indexOf('_') !== -1) {
+            const partes = rel.data.split('_');
+            if (partes.length === 2) {
+              rel.data_inicio = partes[0];
+              rel.data_fim = partes[1];
+              rel.periodoLabel = formatDateBR(partes[0]) + ' a ' + formatDateBR(partes[1]);
+            }
+          }
+          if (rel.rdo) rel.titulo = rel.rdo;
+          if (rel.observacao && !rel.periodoLabel) rel.periodoLabel = rel.observacao;
+          return rel;
+        });
 
         popularSelectMotoboys();
         popularSelectClientes();
@@ -245,7 +257,7 @@
   }
 
   function exibirLoadingListas() {
-    const loadingHtml = '<div class="rel-lista-loading"><div class="spinner-border text-danger" role="status"></div><div class="mt-3" style="font-size:.85rem;color:#999;font-weight:400;">Buscando relatórios<span class="rel-dots"></span></div></div>';
+    const loadingHtml = '<div class="rel-lista-loading"><div class="spinner-border text-danger" role="status"></div><div class="mt-3" style="font-size:.85rem;color:#999;font-weight:500;">Buscando relatórios<span class="rel-dots"></span></div></div>';
     if (els.mbLista) els.mbLista.innerHTML = loadingHtml;
     if (els.cliLista) els.cliLista.innerHTML = loadingHtml;
     if (els.finLista) els.finLista.innerHTML = loadingHtml;
@@ -635,7 +647,7 @@
       id: atual.id,
       colaborador_id: '',
       id_pedido: '',
-      data: atual.data_inicio + '_' + atual.data_fim,
+      data: formatDateBR(atual.data_inicio) + ' - ' + formatDateBR(atual.data_fim),
       tipo: atual.tipo,
       descricao: JSON.stringify(atual.snapshot || {}),
       motoboy: '',
@@ -655,7 +667,10 @@
             titulo: payload.rdo,
             periodoLabel: payload.observacao,
             criadoEm: atual.criadoEm,
-            descricao: payload.descricao
+            descricao: payload.descricao,
+            data_inicio: atual.data_inicio,
+            data_fim: atual.data_fim,
+            data: payload.data
           };
           state.relatoriosSalvos.unshift(registroLista);
           state.paginaAtual = 1;
@@ -696,7 +711,7 @@
     html += '<div class="rel-modal-grid">';
     html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Tipo</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.tipo) + '</div></div>';
     html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Período</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.periodoLabel) + '</div></div>';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Criado em</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.criadoEm ? new Date(relatorio.criadoEm).toLocaleString('pt-BR') : '-') + '</div></div>';
+    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">ID</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.id) + '</div></div>';
     html += '</div></div>';
 
     const bancos = snapshot && snapshot.bancos ? snapshot.bancos : {};
@@ -704,27 +719,25 @@
       const info = bancos[banco];
       html += '<div class="rel-modal-divider"></div>';
       html += '<div class="rel-modal-section">';
-      html += '<div class="rel-modal-section-title"><i class="bi bi-list-ul"></i> ' + escapeHtml(info.label) + ' (' + info.linhas.length + ')</div>';
+      html += '<div class="rel-modal-section-title"><i class="bi bi-table"></i> ' + escapeHtml(info.label) + ' (' + info.linhas.length + ')</div>';
 
       if (!info.linhas.length) {
-        html += '<div class="rel-registro-vazio">Nenhum registro no período.</div>';
+        html += '<div style="font-size:.75rem;color:#999;">Nenhum registro no período.</div>';
       } else {
-        html += '<div class="rel-registros-lista">';
-        info.linhas.forEach(function (linha, idx) {
-          html += '<div class="rel-registro-card">';
-          html += '<div class="rel-registro-num">#' + (idx + 1) + '</div>';
-          html += '<div class="rel-registro-campos">';
+        html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
+        html += '<thead><tr>';
+        info.campos.forEach(function (c) { html += '<th>' + escapeHtml(c.label) + '</th>'; });
+        html += '</tr></thead><tbody>';
+        info.linhas.forEach(function (linha) {
+          html += '<tr>';
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
             if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
-            html += '<div class="rel-registro-campo">' +
-              '<span class="rel-registro-label">' + escapeHtml(c.label) + '</span>' +
-              '<span class="rel-registro-valor">' + escapeHtml(valor) + '</span>' +
-              '</div>';
+            html += '<td>' + escapeHtml(valor) + '</td>';
           });
-          html += '</div></div>';
+          html += '</tr>';
         });
-        html += '</div>';
+        html += '</tbody></table></div>';
       }
       html += '</div>';
     });
@@ -742,7 +755,7 @@
       old.remove();
     }
 
-    const html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered" style="max-width:380px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#dc3545 0%,#b02a37 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-trash-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-semibold mb-0 text-white" style="font-size:.92rem;">Excluir Relatório</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Esta ação não pode ser desfeita</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-4 py-4"><p style="font-size:.82rem;color:#444;margin:0;">Tem certeza que deseja excluir este relatório?</p><div style="background:#f8f9fa;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.76rem;"><div><span class="text-muted">Título: </span><span>' + escapeHtml(rel.titulo || '-') + '</span></div><div><span class="text-muted">Período: </span><span>' + escapeHtml(rel.periodoLabel || '-') + '</span></div><div><span class="text-muted">Tipo: </span><span>' + escapeHtml(rel.tipo || '-') + '</span></div></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">Cancelar</button><button type="button" class="btn btn-danger rounded-pill px-4" id="btn-confirm-excluir-rel-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-trash me-1"></i>Excluir</button></div></div></div></div>';
+    const html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered" style="max-width:380px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#dc3545 0%,#b02a37 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-trash-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Excluir Relatório</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Esta ação não pode ser desfeita</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-4 py-4"><p style="font-size:.82rem;color:#444;margin:0;">Tem certeza que deseja excluir este relatório?</p><div style="background:#f8f9fa;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.76rem;"><div><span class="text-muted">Título: </span><span class="fw-bold">' + escapeHtml(rel.titulo || '-') + '</span></div><div><span class="text-muted">Período: </span><span class="fw-bold">' + escapeHtml(rel.periodoLabel || '-') + '</span></div><div><span class="text-muted">Tipo: </span><span class="fw-bold">' + escapeHtml(rel.tipo || '-') + '</span></div></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">Cancelar</button><button type="button" class="btn btn-danger rounded-pill px-4" id="btn-confirm-excluir-rel-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-trash me-1"></i>Excluir</button></div></div></div></div>';
 
     document.body.insertAdjacentHTML('beforeend', html);
     const modalEl = document.getElementById(OLD_ID);
@@ -870,62 +883,5 @@
 
     carregarDados();
   };
-
-  function construirTituloInterno(snapshot) {
-    const bancos = snapshot && snapshot.bancos ? Object.keys(snapshot.bancos) : [];
-    if (!bancos.length) return 'Relatório Geral';
-    const labels = bancos.map(function (b) { return snapshot.bancos[b].label; });
-    if (labels.length === 1) return 'Relatório de ' + labels[0];
-    const ultimo = labels.pop();
-    return 'Relatório de ' + labels.join(', ') + ' e ' + ultimo;
-  }
-
-  function construirConteudoRelatorio(relatorio, snapshot) {
-    let html = '<div class="rel-modal-content-inner">';
-
-    // Título interno dinâmico
-    html += '<div class="rel-extrato-titulo"><i class="bi bi-receipt"></i> ' + escapeHtml(construirTituloInterno(snapshot)) + '</div>';
-    html += '<div class="rel-extrato-sub">' + escapeHtml(relatorio.periodoLabel || '') + '</div>';
-
-    html += '<div class="rel-extrato-lista">';
-
-    const bancos = snapshot && snapshot.bancos ? snapshot.bancos : {};
-    let totalItens = 0;
-
-    Object.keys(bancos).forEach(function (banco) {
-      const info = bancos[banco];
-      info.linhas.forEach(function (linha, idx) {
-        totalItens++;
-        // Cabeçalho leve do registro (numeração, sem título de banco)
-        html += '<div class="rel-extrato-registro-marca">Registro ' + (totalItens) + '</div>';
-        info.campos.forEach(function (c) {
-          let valor = linha[c.chave];
-          if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
-          html += '<div class="rel-extrato-linha">' +
-            '<span class="rel-extrato-label">' + escapeHtml(c.label) + '</span>' +
-            '<span class="rel-extrato-dots"></span>' +
-            '<span class="rel-extrato-valor">' + escapeHtml(valor) + '</span>' +
-            '</div>';
-        });
-      });
-    });
-
-    if (!totalItens) {
-      html += '<div class="rel-registro-vazio">Nenhum registro encontrado no período.</div>';
-    }
-
-    html += '</div>'; // fim lista
-
-    // Footer objetivo
-    const agora = new Date();
-    html += '<div class="rel-extrato-footer">' +
-      '<span>RDO Express</span>' +
-      '<span>' + agora.toLocaleDateString('pt-BR') + '</span>' +
-      '<span>' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '</span>' +
-      '</div>';
-
-    html += '</div>';
-    return html;
-  }
 
 })();
