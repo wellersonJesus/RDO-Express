@@ -38,46 +38,52 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-              <div class="rel-filtros-container">
-                <div class="rel-filtros-linha">
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar3 me-1"></i> Data Inicial
-                    </label>
-                    <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar-check me-1"></i> Data Final
-                    </label>
-                    <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item rel-filtro-select-wrapper">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-person-check me-1"></i> Motoboy
-                    </label>
-                    <select id="rel-mb-select" class="form-select rel-filtro-select">
-                      <option value="__todos__">Carregando...</option>
-                    </select>
-                  </div>
-                  <div class="rel-filtro-item-btn">
-                    <button class="btn-rel-gerar" id="btn-gerar-rel-motoboy" type="button">
-                      <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                      <span class="btn-rel-label">Gerar Relatório</span>
-                      <span class="btn-rel-loading">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                        Gerando...
-                      </span>
-                    </button>
-                  </div>
+              <div class="rel-filtros-linha">
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+                  <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+                  <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-select-wrapper">
+                  <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Motoboy</label>
+                  <select id="rel-mb-select" class="form-select rel-filtro-select">
+                    <option value="__todos__">Carregando...</option>
+                  </select>
+                </div>
+                <div class="rel-filtro-item-btn">
+                  <button class="btn-rel-gerar" id="btn-gerar-rel-motoboy" type="button">
+                    <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="btn-rel-label">Gerar Relatório</span>
+                    <span class="btn-rel-loading">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Gerando...
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            
+
             <div id="rel-motoboys-lista" class="rel-lista-salvos">
               <div class="rel-lista-vazio">
                 <i class="bi bi-inbox"></i>
                 <span>Nenhum relatório salvo ainda.</span>
+              </div>
+            </div>
+
+            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="btn-pag-prev-motoboys">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="info-paginacao-motoboys" disabled>
+                  Pág 1
+                </button>
+                <button class="btn btn-light" id="btn-pag-next-motoboys">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -90,46 +96,52 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-              <div class="rel-filtros-container">
-                <div class="rel-filtros-linha">
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar3 me-1"></i> Data Inicial
-                    </label>
-                    <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar-check me-1"></i> Data Final
-                    </label>
-                    <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item rel-filtro-select-wrapper">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-building me-1"></i> Cliente
-                    </label>
-                    <select id="rel-cli-select" class="form-select rel-filtro-select">
-                      <option value="__todos__">Carregando...</option>
-                    </select>
-                  </div>
-                  <div class="rel-filtro-item-btn">
-                    <button class="btn-rel-gerar" id="btn-gerar-rel-cliente" type="button">
-                      <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                      <span class="btn-rel-label">Gerar Relatório</span>
-                      <span class="btn-rel-loading">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                        Gerando...
-                      </span>
-                    </button>
-                  </div>
+              <div class="rel-filtros-linha">
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+                  <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+                  <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-select-wrapper">
+                  <label class="rel-filtro-label"><i class="bi bi-building me-1"></i> Cliente</label>
+                  <select id="rel-cli-select" class="form-select rel-filtro-select">
+                    <option value="__todos__">Carregando...</option>
+                  </select>
+                </div>
+                <div class="rel-filtro-item-btn">
+                  <button class="btn-rel-gerar" id="btn-gerar-rel-cliente" type="button">
+                    <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="btn-rel-label">Gerar Relatório</span>
+                    <span class="btn-rel-loading">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Gerando...
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            
+
             <div id="rel-clientes-lista" class="rel-lista-salvos">
               <div class="rel-lista-vazio">
                 <i class="bi bi-inbox"></i>
                 <span>Nenhum relatório salvo ainda.</span>
+              </div>
+            </div>
+
+            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="btn-pag-prev-clientes">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="info-paginacao-clientes" disabled>
+                  Pág 1
+                </button>
+                <button class="btn btn-light" id="btn-pag-next-clientes">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -142,48 +154,54 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-              <div class="rel-filtros-container">
-                <div class="rel-filtros-linha">
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar3 me-1"></i> Data Inicial
-                    </label>
-                    <input type="date" id="rel-fin-data-inicio" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar-check me-1"></i> Data Final
-                    </label>
-                    <input type="date" id="rel-fin-data-fim" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item rel-filtro-select-wrapper">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-filter me-1"></i> Tipo
-                    </label>
-                    <select id="rel-fin-tipo" class="form-select rel-filtro-select">
-                      <option value="__todos__">Todos</option>
-                      <option value="entrada">Receitas</option>
-                      <option value="saida">Despesas</option>
-                    </select>
-                  </div>
-                  <div class="rel-filtro-item-btn">
-                    <button class="btn-rel-gerar" id="btn-gerar-rel-financeiro" type="button">
-                      <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                      <span class="btn-rel-label">Gerar Relatório</span>
-                      <span class="btn-rel-loading">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                        Gerando...
-                      </span>
-                    </button>
-                  </div>
+              <div class="rel-filtros-linha">
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+                  <input type="date" id="rel-fin-data-inicio" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+                  <input type="date" id="rel-fin-data-fim" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-select-wrapper">
+                  <label class="rel-filtro-label"><i class="bi bi-filter me-1"></i> Tipo</label>
+                  <select id="rel-fin-tipo" class="form-select rel-filtro-select">
+                    <option value="__todos__">Todos</option>
+                    <option value="entrada">Receitas</option>
+                    <option value="saida">Despesas</option>
+                  </select>
+                </div>
+                <div class="rel-filtro-item-btn">
+                  <button class="btn-rel-gerar" id="btn-gerar-rel-financeiro" type="button">
+                    <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="btn-rel-label">Gerar Relatório</span>
+                    <span class="btn-rel-loading">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Gerando...
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            
+
             <div id="rel-financeiro-lista" class="rel-lista-salvos">
               <div class="rel-lista-vazio">
                 <i class="bi bi-inbox"></i>
                 <span>Nenhum relatório salvo ainda.</span>
+              </div>
+            </div>
+
+            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="btn-pag-prev-financeiro">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="info-paginacao-financeiro" disabled>
+                  Pág 1
+                </button>
+                <button class="btn btn-light" id="btn-pag-next-financeiro">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -196,38 +214,46 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-              <div class="rel-filtros-container">
-                <div class="rel-filtros-linha">
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar3 me-1"></i> Data Inicial
-                    </label>
-                    <input type="date" id="rel-glob-data-inicio" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item">
-                    <label class="rel-filtro-label">
-                      <i class="bi bi-calendar-check me-1"></i> Data Final
-                    </label>
-                    <input type="date" id="rel-glob-data-fim" class="form-control rel-filtro-input">
-                  </div>
-                  <div class="rel-filtro-item-btn">
-                    <button class="btn-rel-gerar" id="btn-gerar-rel-global" type="button">
-                      <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                      <span class="btn-rel-label">Gerar Global</span>
-                      <span class="btn-rel-loading">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                        Gerando...
-                      </span>
-                    </button>
-                  </div>
+              <div class="rel-filtros-linha">
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+                  <input type="date" id="rel-glob-data-inicio" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-item">
+                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+                  <input type="date" id="rel-glob-data-fim" class="form-control rel-filtro-input">
+                </div>
+                <div class="rel-filtro-item-btn">
+                  <button class="btn-rel-gerar" id="btn-gerar-rel-global" type="button">
+                    <span class="btn-rel-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="btn-rel-label">Gerar Global</span>
+                    <span class="btn-rel-loading">
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                      Gerando...
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            
+
             <div id="rel-global-lista" class="rel-lista-salvos">
               <div class="rel-lista-vazio">
                 <i class="bi bi-inbox"></i>
                 <span>Nenhum relatório salvo ainda.</span>
+              </div>
+            </div>
+
+            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
+              <div class="btn-group shadow-sm">
+                <button class="btn btn-light" id="btn-pag-prev-global">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="btn btn-light" id="info-paginacao-global" disabled>
+                  Pág 1
+                </button>
+                <button class="btn btn-light" id="btn-pag-next-global">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -240,7 +266,7 @@
 
 <div id="modalRelatorioOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
   <div id="modalRelatorioContainer" style="background:#fff;border-radius:16px;width:100%;max-width:880px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
-    
+
     <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
       <div class="d-flex align-items-center gap-3">
         <div style="width:50px;height:50px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
@@ -251,7 +277,7 @@
           <div id="modal-rel-periodo" style="font-size:.68rem;color:rgba(255,255,255,.55);margin-top:2px;">—</div>
         </div>
       </div>
-      <button id="modal-rel-fechar" style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;" title="Fechar">
+      <button id="modal-rel-fechar" type="button" style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;" title="Fechar">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
@@ -265,25 +291,25 @@
 
     <div style="padding:14px 20px;background:#fff;border-top:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="d-flex gap-2">
-        <button id="modal-rel-btn-pdf" class="btn-modal-rel btn-modal-rel-secondary" title="Exportar PDF">
+        <button id="modal-rel-btn-pdf" type="button" class="btn-modal-rel btn-modal-rel-secondary" title="Exportar PDF">
           <i class="bi bi-file-earmark-pdf"></i>
           <span>PDF</span>
         </button>
-        <button id="modal-rel-btn-excel" class="btn-modal-rel btn-modal-rel-secondary" title="Exportar Excel">
+        <button id="modal-rel-btn-excel" type="button" class="btn-modal-rel btn-modal-rel-secondary" title="Exportar Excel">
           <i class="bi bi-file-earmark-excel"></i>
           <span>Excel</span>
         </button>
-        <button id="modal-rel-btn-copiar" class="btn-modal-rel btn-modal-rel-secondary" title="Copiar">
+        <button id="modal-rel-btn-copiar" type="button" class="btn-modal-rel btn-modal-rel-secondary" title="Copiar">
           <i class="bi bi-clipboard"></i>
           <span>Copiar</span>
         </button>
       </div>
       <div class="d-flex gap-2">
-        <button id="modal-rel-btn-cancelar" class="btn-modal-rel btn-modal-rel-light">
+        <button id="modal-rel-btn-cancelar" type="button" class="btn-modal-rel btn-modal-rel-light">
           <i class="bi bi-x-circle"></i>
           <span>Cancelar</span>
         </button>
-        <button id="modal-rel-btn-salvar" class="btn-modal-rel btn-modal-rel-primary">
+        <button id="modal-rel-btn-salvar" type="button" class="btn-modal-rel btn-modal-rel-primary">
           <i class="bi bi-save"></i>
           <span>Salvar Relatório</span>
         </button>
@@ -294,19 +320,19 @@
 </div>
 
 <script>
-(function() {
-    'use strict';
-    function _aguardar() {
-        if (typeof window.initRelatorios === 'function') {
-            window.initRelatorios();
-        } else {
-            setTimeout(_aguardar, 100);
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _aguardar);
+(function () {
+  'use strict';
+  function _aguardar() {
+    if (typeof window.initRelatorios === 'function') {
+      window.initRelatorios();
     } else {
-        _aguardar();
+      setTimeout(_aguardar, 100);
     }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _aguardar);
+  } else {
+    _aguardar();
+  }
 })();
 </script>
