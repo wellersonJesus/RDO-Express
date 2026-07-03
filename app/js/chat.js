@@ -653,10 +653,10 @@ function _criarWrapperMensagemComCopia(pedidoId, texto, hora, temStatus, statusP
     return div;
 }
 
-window._copiarMensagemWrapper = function(pedidoId, botao) {
+window._copiarMensagemWrapper = function (pedidoId, botao) {
     var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"] .message-body');
     if (!msgEl) return;
-    
+
     var texto = msgEl.textContent || msgEl.innerText || '';
     window._copiarMensagem(texto, botao);
 };
@@ -1451,17 +1451,17 @@ window.remitirPedido = async function () {
 
     var dados = window.dadosPedidoAtual || {};
     var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
-    var contato     = String((document.getElementById('p-contato')     || {}).value || dados.contato     || '').trim();
-    var horario     = String((document.getElementById('p-horario')     || {}).value || dados.horario     || '').trim();
-    var mercadoria  = String((document.getElementById('p-mercadoria')  || {}).value || dados.mercadoria  || 'ENTREGA').trim();
-    var distancia   = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
-    var tempo       = String((document.getElementById('p-tempo')       || {}).value || '').trim();
-    var obs         = String((document.getElementById('p-obs')         || {}).value || dados.obs         || '').trim();
-    var valorKm     = String((document.getElementById('p-valor-km')    || {}).value || '3').trim();
-    var retorno     = String((document.getElementById('p-retorno')     || {}).value || '0').trim();
-    var dinamica    = String((document.getElementById('p-dinamica')    || {}).value || '0').trim();
-    var prioridade  = String((document.getElementById('p-prioridade')  || {}).value || '0').trim();
-    var valorTotal  = Number(dados.valorEstimado || 0);
+    var contato = String((document.getElementById('p-contato') || {}).value || dados.contato || '').trim();
+    var horario = String((document.getElementById('p-horario') || {}).value || dados.horario || '').trim();
+    var mercadoria = String((document.getElementById('p-mercadoria') || {}).value || dados.mercadoria || 'ENTREGA').trim();
+    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
+    var tempo = String((document.getElementById('p-tempo') || {}).value || '').trim();
+    var obs = String((document.getElementById('p-obs') || {}).value || dados.obs || '').trim();
+    var valorKm = String((document.getElementById('p-valor-km') || {}).value || '3').trim();
+    var retorno = String((document.getElementById('p-retorno') || {}).value || '0').trim();
+    var dinamica = String((document.getElementById('p-dinamica') || {}).value || '0').trim();
+    var prioridade = String((document.getElementById('p-prioridade') || {}).value || '0').trim();
+    var valorTotal = Number(dados.valorEstimado || 0);
 
     var rotasProcessadas = (
         Array.isArray(dados.rotasProcessadas) && dados.rotasProcessadas.length > 0
@@ -1477,14 +1477,14 @@ window.remitirPedido = async function () {
     }
 
     var dadosParaMensagem = {
-        id:               '[ID_GERADO]',
-        solicitante:      solicitante,
-        contato:          contato,
-        mercadoria:       mercadoria,
+        id: '[ID_GERADO]',
+        solicitante: solicitante,
+        contato: contato,
+        mercadoria: mercadoria,
         rotasProcessadas: rotasProcessadas,
-        distanciaTotal:   dados.distanciaTotal || distancia,
-        tempoTotal:       dados.tempoTotal     || 0,
-        valorEstimado:    valorTotal
+        distanciaTotal: dados.distanciaTotal || distancia,
+        tempoTotal: dados.tempoTotal || 0,
+        valorEstimado: valorTotal
     };
 
     var mensagemProvisoria = typeof window.gerarMensagemFormatada === 'function'
@@ -1492,31 +1492,31 @@ window.remitirPedido = async function () {
         : '';
 
     var payload = {
-        id_cliente:  String((window.AppRDO && window.AppRDO.clienteId) || ''),
+        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
         solicitante: solicitante,
-        contato:     contato,
-        horario:     horario,
-        mercadoria:  mercadoria,
-        rotas:       rotasTexto,
-        distancia:   distancia.toFixed(2),
-        tempo:       tempo,
-        obs:         obs,
-        valor_km:    valorKm,
-        retorno:     retorno,
-        dinamica:    dinamica,
-        prioridade:  prioridade,
+        contato: contato,
+        horario: horario,
+        mercadoria: mercadoria,
+        rotas: rotasTexto,
+        distancia: distancia.toFixed(2),
+        tempo: tempo,
+        obs: obs,
+        valor_km: valorKm,
+        retorno: retorno,
+        dinamica: dinamica,
+        prioridade: prioridade,
         valor_total: valorTotal,
         valor_final: valorTotal,
-        status:      'PENDENTE',
-        texto:       mensagemProvisoria
+        status: 'PENDENTE',
+        texto: mensagemProvisoria
     };
 
     if (!payload.id_cliente) { window.exibirModalValidacao('Nenhum cliente selecionado.'); return; }
 
-    var btnRemitir    = document.getElementById('btn-remitir-pedido');
+    var btnRemitir = document.getElementById('btn-remitir-pedido');
     var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
     if (btnRemitir) {
-        btnRemitir.disabled  = true;
+        btnRemitir.disabled = true;
         btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
     }
 
@@ -1526,22 +1526,22 @@ window.remitirPedido = async function () {
             throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
 
         var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
-        var novoPedidoId    = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
+        var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
 
         var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
 
         var modalForm = document.getElementById('modalFormulario');
-        var instForm  = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-        if (instForm) { try { instForm.hide(); } catch (_) {} }
+        var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+        if (instForm) { try { instForm.hide(); } catch (_) { } }
 
         if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function')
             window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
 
         if (novoPedidoId) {
             var novoPedidoCache = Object.assign({}, payload, {
-                id:       novoPedidoId,
-                status:   'PENDENTE',
-                motoboy:  '',
+                id: novoPedidoId,
+                status: 'PENDENTE',
+                motoboy: '',
                 mensagem: mensagemFinal
             });
             if (Array.isArray(window.AppRDO.pedidosCache))
@@ -1550,18 +1550,18 @@ window.remitirPedido = async function () {
             if (Array.isArray(window.AppRDO.mensagensCache))
                 window.AppRDO.mensagensCache.push({
                     id_cliente: payload.id_cliente,
-                    pedido_id:  novoPedidoId,
-                    texto:      mensagemFinal,
-                    hora:       new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    data:       new Date().toISOString()
+                    pedido_id: novoPedidoId,
+                    texto: mensagemFinal,
+                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    data: new Date().toISOString()
                 });
 
             if (typeof window.EventBus !== 'undefined')
                 window.EventBus.emit('pedido:adicionado', novoPedidoCache);
         }
 
-        window.dadosPedidoAtual          = {};
-        window.AppRDO._mapaModalAberto   = false;
+        window.dadosPedidoAtual = {};
+        window.AppRDO._mapaModalAberto = false;
         window.AppRDO.isProcessingCheckout = false;
 
         var msgInput = document.getElementById('msg-input');
@@ -1581,7 +1581,7 @@ window.remitirPedido = async function () {
                 showConfirmButton: false, timer: 3000,
                 timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
             });
-        } catch (_) {}
+        } catch (_) { }
 
     } catch (err) {
         if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
@@ -1781,324 +1781,327 @@ window.fecharParaChat = function (modalId) {
         });
     }
 
-  window._carregarPedidosDropdown = function(clienteId) {
-    var lista = document.getElementById('dropdown-pedidos-lista');
-    if (!lista) return;
-    
-    lista.innerHTML = '<li class="text-center py-2"><div class="spinner-border spinner-border-sm text-danger"></div></li>';
-    
-    var pedidos = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-    var pedidosCliente = pedidos.filter(function(p) {
-        return String(p.id_cliente || '').trim() === String(clienteId).trim();
-    });
-    
-    if (pedidosCliente.length === 0) {
-        lista.innerHTML = '<li class="px-3 py-2 text-muted text-center"><small>Nenhum pedido encontrado</small></li>';
-        return;
-    }
-    
-    var htmlBusca = '<li class="px-2 pb-2">' +
-        '<div class="input-group input-group-sm">' +
-        '<span class="input-group-text bg-white border-end-0" style="border-radius:8px 0 0 8px;border-color:#e9ecef;">' +
-        '<i class="bi bi-search text-muted" style="font-size:.8rem;"></i>' +
-        '</span>' +
-        '<input type="text" id="input-busca-pedido" class="form-control border-start-0 shadow-none" ' +
-        'placeholder="Buscar ID..." style="border-radius:0 8px 8px 0;font-size:.8rem;border-color:#e9ecef;">' +
-        '</div>' +
-        '</li>' +
-        '<li><hr class="dropdown-divider my-1"></li>';
-    
-    var htmlPedidos = pedidosCliente.map(function(p) {
-        var id = String(p.id || '').trim();
-        var idFormatado = _formatarNomeServico(id);
-        var status = String(p.status || 'PENDENTE').toUpperCase();
-        var iconClass = 'bi-box-seam text-muted';
-        
-        if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) {
-            iconClass = 'bi-check-circle-fill text-success';
-        } else if (status.includes('CANCELADO')) {
-            iconClass = 'bi-x-circle-fill text-danger';
-        } else if (status.includes('EM_ROTA') || status.includes('EM ROTA') || status.includes('/')) {
-            iconClass = 'bi-bicycle text-primary';
-        }
-        
-        return '<li><a class="dropdown-item d-flex align-items-center gap-2 pedido-dropdown-item" href="#" data-pedido-id="' + id + '" data-pedido-formatado="' + idFormatado + '">' +
-               '<i class="' + iconClass + '"></i>' +
-               '<span class="texto-pedido-dropdown">' + idFormatado + '</span>' +
-               '</a></li>';
-    }).join('');
-    
-    lista.innerHTML = htmlBusca + htmlPedidos;
-    
-    var inputBusca = document.getElementById('input-busca-pedido');
-    if (inputBusca) {
-        inputBusca.addEventListener('input', function() {
-            var termo = this.value.toLowerCase().trim();
-            var itens = lista.querySelectorAll('.pedido-dropdown-item');
-            
-            itens.forEach(function(item) {
-                var idFormatado = String(item.getAttribute('data-pedido-formatado') || '').toLowerCase();
-                var idPuro = String(item.getAttribute('data-pedido-id') || '').toLowerCase();
-                
-                if (idFormatado.includes(termo) || idPuro.includes(termo)) {
-                    item.parentElement.style.display = '';
-                } else {
-                    item.parentElement.style.display = 'none';
-                }
-            });
+    window._carregarPedidosDropdown = function (clienteId) {
+        var lista = document.getElementById('dropdown-pedidos-lista');
+        if (!lista) return;
+
+        lista.innerHTML = '<li class="text-center py-2"><div class="spinner-border spinner-border-sm text-danger"></div></li>';
+
+        var pedidos = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
+        var pedidosCliente = pedidos.filter(function (p) {
+            return String(p.id_cliente || '').trim() === String(clienteId).trim();
         });
-        
-        inputBusca.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
+
+        if (pedidosCliente.length === 0) {
+            lista.innerHTML = '<li class="px-3 py-2 text-muted text-center"><small>Nenhum pedido encontrado</small></li>';
+            return;
+        }
+
+        var htmlBusca = '<li class="px-2 pb-2">' +
+            '<div class="input-group input-group-sm">' +
+            '<span class="input-group-text bg-white border-end-0" style="border-radius:8px 0 0 8px;border-color:#e9ecef;">' +
+            '<i class="bi bi-search text-muted" style="font-size:.8rem;"></i>' +
+            '</span>' +
+            '<input type="text" id="input-busca-pedido" class="form-control border-start-0 shadow-none" ' +
+            'placeholder="Buscar ID..." style="border-radius:0 8px 8px 0;font-size:.8rem;border-color:#e9ecef;">' +
+            '</div>' +
+            '</li>' +
+            '<li><hr class="dropdown-divider my-1"></li>';
+
+        var htmlPedidos = pedidosCliente.map(function (p) {
+            var id = String(p.id || '').trim();
+            var idFormatado = _formatarNomeServico(id);
+            var status = String(p.status || 'PENDENTE').toUpperCase();
+            var iconClass = 'bi-box-seam text-muted';
+
+            if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) {
+                iconClass = 'bi-check-circle-fill text-success';
+            } else if (status.includes('CANCELADO')) {
+                iconClass = 'bi-x-circle-fill text-danger';
+            } else if (status.includes('EM_ROTA') || status.includes('EM ROTA') || status.includes('/')) {
+                iconClass = 'bi-bicycle text-primary';
+            }
+
+            return '<li><a class="dropdown-item d-flex align-items-center gap-2 pedido-dropdown-item" href="#" data-pedido-id="' + id + '" data-pedido-formatado="' + idFormatado + '">' +
+                '<i class="' + iconClass + '"></i>' +
+                '<span class="texto-pedido-dropdown">' + idFormatado + '</span>' +
+                '</a></li>';
+        }).join('');
+
+        lista.innerHTML = htmlBusca + htmlPedidos;
+
+        var inputBusca = document.getElementById('input-busca-pedido');
+        if (inputBusca) {
+            inputBusca.addEventListener('input', function () {
                 var termo = this.value.toLowerCase().trim();
-                var primeiroVisivel = lista.querySelector('.pedido-dropdown-item:not([style*="display: none"])');
-                if (primeiroVisivel) {
-                    var pedidoId = primeiroVisivel.getAttribute('data-pedido-id');
-                    window._destacarPedidoNoChat(pedidoId);
-                    var dropdownEl = document.getElementById('dropdown-pedidos');
-                    if (dropdownEl) {
-                        var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
-                        if (bsDropdown) bsDropdown.hide();
+                var itens = lista.querySelectorAll('.pedido-dropdown-item');
+
+                itens.forEach(function (item) {
+                    var idFormatado = String(item.getAttribute('data-pedido-formatado') || '').toLowerCase();
+                    var idPuro = String(item.getAttribute('data-pedido-id') || '').toLowerCase();
+
+                    if (idFormatado.includes(termo) || idPuro.includes(termo)) {
+                        item.parentElement.style.display = '';
+                    } else {
+                        item.parentElement.style.display = 'none';
+                    }
+                });
+            });
+
+            inputBusca.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var termo = this.value.toLowerCase().trim();
+                    var primeiroVisivel = lista.querySelector('.pedido-dropdown-item:not([style*="display: none"])');
+                    if (primeiroVisivel) {
+                        var pedidoId = primeiroVisivel.getAttribute('data-pedido-id');
+                        window._destacarPedidoNoChat(pedidoId);
+                        var dropdownEl = document.getElementById('dropdown-pedidos');
+                        if (dropdownEl) {
+                            var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
+                            if (bsDropdown) bsDropdown.hide();
+                        }
                     }
                 }
-            }
-        });
-        
-        setTimeout(function() {
-            if (inputBusca) inputBusca.focus();
-        }, 100);
-    }
-    
-    lista.querySelectorAll('.pedido-dropdown-item').forEach(function(item) {
-        item.onclick = function(e) {
-            e.preventDefault();
-            var pedidoId = this.getAttribute('data-pedido-id');
-            window._destacarPedidoNoChat(pedidoId);
-            var dropdownEl = document.getElementById('dropdown-pedidos');
-            if (dropdownEl) {
-                var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
-                if (bsDropdown) bsDropdown.hide();
-            }
-        };
-    });
-};
-
-window._renderizarMensagens = function(mensagens) {
-    var container = document.getElementById('chat-messages-container');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (!mensagens || mensagens.length === 0) {
-        container.innerHTML = '<div class="chat-empty-state"><div class="chat-empty-label">Nenhuma mensagem encontrada</div></div>';
-        return;
-    }
-    
-    mensagens.forEach(function(msg) {
-        var isBot = (msg.remetente === 'bot' || msg.remetente === 'sistema');
-        var wrapper = document.createElement('div');
-        wrapper.className = 'message-wrapper ' + (isBot ? 'message-bot' : 'message-user');
-        
-        var bubble = document.createElement('div');
-        bubble.className = 'message-bubble ' + (isBot ? 'bubble-bot' : 'bubble-user');
-        
-        var conteudo = String(msg.conteudo || msg.mensagem || msg.texto || '').trim();
-        
-        var textoElement = document.createElement('div');
-        textoElement.className = 'message-text';
-        textoElement.textContent = conteudo;
-        
-        if (msg.pedido_id) {
-            textoElement.setAttribute('data-pedido-id', msg.pedido_id);
-        }
-        
-        var timestamp = document.createElement('div');
-        timestamp.className = 'message-timestamp';
-        timestamp.textContent = _formatarDataHora(msg.data_envio || msg.created_at || msg.hora);
-        
-        bubble.appendChild(textoElement);
-        bubble.appendChild(timestamp);
-        
-        var btnCopiar = document.createElement('button');
-        btnCopiar.className = 'btn-copiar-mensagem';
-        btnCopiar.innerHTML = '<i class="bi bi-clipboard"></i>';
-        btnCopiar.title = 'Copiar mensagem';
-        btnCopiar.onclick = function(e) {
-            e.stopPropagation();
-            _copiarMensagem(conteudo, btnCopiar);
-        };
-        
-        bubble.appendChild(btnCopiar);
-        wrapper.appendChild(bubble);
-        container.appendChild(wrapper);
-    });
-    
-    container.scrollTop = container.scrollHeight;
-};
-
-window._copiarMensagem = function(texto, botao) {
-    if (!texto) return;
-    
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(texto).then(function() {
-            _feedbackCopia(botao, true);
-        }).catch(function() {
-            _copiarFallback(texto, botao);
-        });
-    } else {
-        _copiarFallback(texto, botao);
-    }
-};
-
-window._copiarFallback = function(texto, botao) {
-    var textarea = document.createElement('textarea');
-    textarea.value = texto;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    textarea.style.pointerEvents = 'none';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    
-    try {
-        var sucesso = document.execCommand('copy');
-        _feedbackCopia(botao, sucesso);
-    } catch (err) {
-        _feedbackCopia(botao, false);
-    }
-    
-    document.body.removeChild(textarea);
-};
-
-window._feedbackCopia = function(botao, sucesso) {
-    if (!botao) return;
-    
-    var iconOriginal = botao.innerHTML;
-    
-    if (sucesso) {
-        botao.innerHTML = '<i class="bi bi-check2"></i>';
-        botao.style.color = '#28a745';
-        
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'success',
-                title: 'Copiado!',
-                text: 'Mensagem copiada para a área de transferência',
-                toast: true,
-                position: 'top-end',
-                timer: 2000,
-                showConfirmButton: false,
-                timerProgressBar: true
             });
-        }
-        
-        setTimeout(function() {
-            botao.innerHTML = iconOriginal;
-            botao.style.color = '';
-        }, 2000);
-    } else {
-        botao.innerHTML = '<i class="bi bi-x"></i>';
-        botao.style.color = '#dc3545';
-        
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro',
-                text: 'Não foi possível copiar a mensagem',
-                toast: true,
-                position: 'top-end',
-                timer: 2000,
-                showConfirmButton: false,
-                timerProgressBar: true
-            });
-        }
-        
-        setTimeout(function() {
-            botao.innerHTML = iconOriginal;
-            botao.style.color = '';
-        }, 2000);
-    }
-};
 
-window._formatarDataHora = function(dataStr) {
-    if (!dataStr) return '';
-    try {
-        var data = new Date(dataStr);
-        var horas = String(data.getHours()).padStart(2, '0');
-        var minutos = String(data.getMinutes()).padStart(2, '0');
-        return horas + ':' + minutos;
-    } catch (e) {
-        return '';
-    }
-};
+            setTimeout(function () {
+                if (inputBusca) inputBusca.focus();
+            }, 100);
+        }
 
-window._destacarPedidoNoChat = function(pedidoId) {
-    var container = document.getElementById('chat-messages-container');
-    if (!container) return;
-    
-    var todasMensagens = container.querySelectorAll('.message-wrapper');
-    var encontrado = false;
-    
-    todasMensagens.forEach(function(wrapper) {
-        var msgEl = wrapper.querySelector('[data-pedido-id]');
-        if (!msgEl) return;
-        
-        var idMsg = String(msgEl.getAttribute('data-pedido-id') || '').trim();
-        var idNorm = idMsg.replace(/^RDO0*/i, '');
-        var pedidoNorm = String(pedidoId).replace(/^RDO0*/i, '');
-        
-        if (idNorm === pedidoNorm) {
-            wrapper.style.display = 'flex';
-            wrapper.style.opacity = '1';
-            wrapper.style.transform = 'scale(1)';
-            
-            if (!encontrado) {
-                wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                wrapper.style.animation = 'destacarPedido 1.2s ease-out';
-                encontrado = true;
+        lista.querySelectorAll('.pedido-dropdown-item').forEach(function (item) {
+            item.onclick = function (e) {
+                e.preventDefault();
+                var pedidoId = this.getAttribute('data-pedido-id');
+                window._destacarPedidoNoChat(pedidoId);
+                var dropdownEl = document.getElementById('dropdown-pedidos');
+                if (dropdownEl) {
+                    var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
+                    if (bsDropdown) bsDropdown.hide();
+                }
+            };
+        });
+    };
+
+    window._renderizarMensagens = function (mensagens) {
+        var container = document.getElementById('chat-messages-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!mensagens || mensagens.length === 0) {
+            container.innerHTML = '<div class="chat-empty-state"><div class="chat-empty-label">Nenhuma mensagem encontrada</div></div>';
+            return;
+        }
+
+        mensagens.forEach(function (msg) {
+            var isBot = (msg.remetente === 'bot' || msg.remetente === 'sistema');
+            var wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper ' + (isBot ? 'message-bot' : 'message-user');
+
+            var bubble = document.createElement('div');
+            bubble.className = 'message-bubble ' + (isBot ? 'bubble-bot' : 'bubble-user');
+
+            var conteudo = String(msg.conteudo || msg.mensagem || msg.texto || '').trim();
+
+            var textoElement = document.createElement('div');
+            textoElement.className = 'message-text';
+            textoElement.textContent = conteudo;
+
+            if (msg.pedido_id) {
+                textoElement.setAttribute('data-pedido-id', msg.pedido_id);
             }
+
+            var timestamp = document.createElement('div');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = _formatarDataHora(msg.data_envio || msg.created_at || msg.hora);
+
+            bubble.appendChild(textoElement);
+            bubble.appendChild(timestamp);
+
+            var btnCopiar = document.createElement('button');
+            btnCopiar.className = 'btn-copiar-mensagem';
+            btnCopiar.innerHTML = '<i class="bi bi-clipboard"></i>';
+            btnCopiar.title = 'Copiar mensagem';
+            btnCopiar.onclick = function (e) {
+                e.stopPropagation();
+                _copiarMensagem(conteudo, btnCopiar);
+            };
+
+            bubble.appendChild(btnCopiar);
+            wrapper.appendChild(bubble);
+            container.appendChild(wrapper);
+        });
+
+        container.scrollTop = container.scrollHeight;
+    };
+
+    window._copiarMensagem = function (texto, botao) {
+        if (!texto) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texto).then(function () {
+                _feedbackCopia(botao, true);
+            }).catch(function () {
+                _copiarFallback(texto, botao);
+            });
         } else {
-            wrapper.style.display = 'none';
-            wrapper.style.opacity = '0';
-            wrapper.style.transform = 'scale(0.95)';
+            _copiarFallback(texto, botao);
+        }
+    };
+
+    window._copiarFallback = function (texto, botao) {
+        var textarea = document.createElement('textarea');
+        textarea.value = texto;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        textarea.style.pointerEvents = 'none';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        try {
+            var sucesso = document.execCommand('copy');
+            _feedbackCopia(botao, sucesso);
+        } catch (err) {
+            _feedbackCopia(botao, false);
+        }
+
+        document.body.removeChild(textarea);
+    };
+
+    window._feedbackCopia = function (botao, sucesso) {
+        if (!botao) return;
+
+        var iconOriginal = botao.innerHTML;
+
+        if (sucesso) {
+            botao.innerHTML = '<i class="bi bi-check2"></i>';
+            botao.style.color = '#28a745';
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Copiado!',
+                    text: 'Mensagem copiada para a área de transferência',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    timerProgressBar: true
+                });
+            }
+
+            setTimeout(function () {
+                botao.innerHTML = iconOriginal;
+                botao.style.color = '';
+            }, 2000);
+        } else {
+            botao.innerHTML = '<i class="bi bi-x"></i>';
+            botao.style.color = '#dc3545';
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: 'Não foi possível copiar a mensagem',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    timerProgressBar: true
+                });
+            }
+
+            setTimeout(function () {
+                botao.innerHTML = iconOriginal;
+                botao.style.color = '';
+            }, 2000);
+        }
+    };
+
+    window._formatarDataHora = function (dataStr) {
+        if (!dataStr) return '';
+        try {
+            var data = new Date(dataStr);
+            var horas = String(data.getHours()).padStart(2, '0');
+            var minutos = String(data.getMinutes()).padStart(2, '0');
+            return horas + ':' + minutos;
+        } catch (e) {
+            return '';
+        }
+    };
+
+    window._destacarPedidoNoChat = function (pedidoId) {
+        var container = document.getElementById('chat-messages-container');
+        if (!container) return;
+
+        var todasMensagens = container.querySelectorAll('.message-wrapper');
+        var encontrado = false;
+
+        todasMensagens.forEach(function (wrapper) {
+            var msgEl = wrapper.querySelector('[data-pedido-id]');
+            if (!msgEl) return;
+
+            var idMsg = String(msgEl.getAttribute('data-pedido-id') || '').trim();
+            var idNorm = idMsg.replace(/^RDO0*/i, '');
+            var pedidoNorm = String(pedidoId).replace(/^RDO0*/i, '');
+
+            if (idNorm === pedidoNorm) {
+                wrapper.style.display = 'flex';
+                wrapper.style.opacity = '1';
+                wrapper.style.transform = 'scale(1)';
+
+                if (!encontrado) {
+                    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    wrapper.classList.add('pedido-destacado');
+                    encontrado = true;
+
+                    setTimeout(function () {
+                        wrapper.classList.remove('pedido-destacado');
+                    }, 600);
+                }
+            } else {
+                wrapper.style.display = 'none';
+                wrapper.style.opacity = '0';
+                wrapper.style.transform = 'scale(0.95)';
+            }
+        });
+
+        if (!encontrado && typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Nenhuma mensagem',
+                text: 'Não há mensagens para este pedido no chat',
+                toast: true,
+                position: 'top-end',
+                timer: 2500,
+                showConfirmButton: false,
+                timerProgressBar: true
+            });
+        }
+
+        setTimeout(function () {
+            todasMensagens.forEach(function (wrapper) {
+                wrapper.style.display = 'flex';
+                wrapper.style.opacity = '1';
+                wrapper.style.transform = 'scale(1)';
+            });
+        }, 8000);
+    };
+
+    document.addEventListener('click', function (e) {
+        var dropdownBtn = document.querySelector('.btn-dropdown-pedidos');
+        if (!dropdownBtn) return;
+
+        if (e.target === dropdownBtn || dropdownBtn.contains(e.target)) {
+            var clienteId = window.AppRDO && window.AppRDO.clienteId;
+            if (clienteId) {
+                window._carregarPedidosDropdown(clienteId);
+            }
         }
     });
-    
-    if (!encontrado && typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'info',
-            title: 'Nenhuma mensagem',
-            text: 'Não há mensagens para este pedido no chat',
-            toast: true,
-            position: 'top-end',
-            timer: 2500,
-            showConfirmButton: false,
-            timerProgressBar: true
-        });
-    }
-    
-    setTimeout(function() {
-        todasMensagens.forEach(function(wrapper) {
-            wrapper.style.display = 'flex';
-            wrapper.style.opacity = '1';
-            wrapper.style.transform = 'scale(1)';
-            wrapper.style.animation = '';
-        });
-    }, 8000);
-};
-
-document.addEventListener('click', function(e) {
-    var dropdownBtn = document.querySelector('.btn-dropdown-pedidos');
-    if (!dropdownBtn) return;
-    
-    if (e.target === dropdownBtn || dropdownBtn.contains(e.target)) {
-        var clienteId = window.AppRDO && window.AppRDO.clienteId;
-        if (clienteId) {
-            window._carregarPedidosDropdown(clienteId);
-        }
-    }
-});
 
     _registrarEventos();
 })();
