@@ -64,9 +64,15 @@ window.AppRDO.resetState = function () {
 };
 
 var PAGES_SEM_HEADER = [];
+
 var PAGE_MODALS = {
     pedidos: ['/pages/pedidos/form_pedidos.html'],
     fin: ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html'],
+    relatorio: ['/pages/relatorio/modal_relatorio.html']
+};
+
+var PAGE_CSS = {
+    relatorio: ['/pages/relatorio/modal_relatorio.css']
 };
 
 var MODULE_SCRIPTS = {
@@ -159,6 +165,29 @@ function _carregarScriptExterno(src, forceReload) {
         s.onerror = resolve;
         document.body.appendChild(s);
     });
+}
+
+function _carregarCssExterno(href) {
+    return new Promise(function (resolve) {
+        var existe = document.querySelector('link[href="' + href + '"]');
+        if (existe) { resolve(); return; }
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = href;
+        l.onload = resolve;
+        l.onerror = resolve;
+        document.head.appendChild(l);
+    });
+}
+
+function _carregarCssDaPagina(page) {
+    var arquivos = PAGE_CSS[page];
+    if (!arquivos || !arquivos.length) return Promise.resolve();
+    var chain = Promise.resolve();
+    arquivos.forEach(function (href) {
+        chain = chain.then(function () { return _carregarCssExterno(href); });
+    });
+    return chain;
 }
 
 function _precarregarScriptsGlobais() {
@@ -293,7 +322,10 @@ window.loadPage = function (page, title, subtitle) {
         if (link.getAttribute('data-page') === page) link.classList.add('active');
     });
 
-    return fetch('/pages/' + page + '/' + page + '.html')
+    return _carregarCssDaPagina(page)
+        .then(function () {
+            return fetch('/pages/' + page + '/' + page + '.html');
+        })
         .then(function (res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.text();
@@ -358,6 +390,10 @@ window.carregarScriptExterno = function (src) {
     return _carregarScriptExterno(src);
 };
 
+window.carregarCssExterno = function (href) {
+    return _carregarCssExterno(href);
+};
+
 window.salvarDadosUsuarioLocal = function (dados) {
     if (!dados) return;
     if (dados.username) localStorage.setItem('username', dados.username);
@@ -375,7 +411,7 @@ window.salvarDadosUsuarioLocal = function (dados) {
 
 window.inicializarBotGlobal = function () {
     console.log('[APP] Iniciando bot global...');
-    
+
     return _carregarScriptExterno('/js/bot.js', false)
         .then(function () {
             console.log('[APP] bot.js carregado');
@@ -388,7 +424,7 @@ window.inicializarBotGlobal = function () {
             console.log('[APP] Bot inicializado');
             window.AppRDO.botCarregado = true;
             window.AppRDO.permissoesCarregadas = true;
-            return new Promise(function(resolve) {
+            return new Promise(function (resolve) {
                 setTimeout(resolve, 100);
             });
         })
@@ -399,11 +435,11 @@ window.inicializarBotGlobal = function () {
 
 window.addEventListener('botCacheAtualizado', function (e) {
     console.log('[APP] Evento botCacheAtualizado recebido');
-    
+
     if (window.botState && window.botState._cacheCarregado) {
         console.log('[APP] Cache confirmado, aplicando bloqueios');
         window.AppRDO.permissoesCarregadas = true;
-        
+
         if (typeof window.bloquearAcessoPorPermissao === 'function') {
             window.bloquearAcessoPorPermissao();
         }
@@ -412,7 +448,7 @@ window.addEventListener('botCacheAtualizado', function (e) {
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log('[APP] DOM carregado, inicializando sistema');
-    
+
     _precarregarScriptsGlobais()
         .then(function () {
             console.log('[APP] Scripts globais carregados');
@@ -420,12 +456,11 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(function () {
             console.log('[APP] Bot inicializado, aguardando estabilização');
-            return new Promise(function(resolve) {
+            return new Promise(function (resolve) {
                 setTimeout(resolve, 200);
             });
         })
-        .then(function() {
+        .then(function () {
             console.log('[APP] Sistema pronto');
         });
 });
-

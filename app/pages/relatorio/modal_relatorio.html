@@ -1,0 +1,54 @@
+<div id="modalBuilderOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;">
+  <div id="modalBuilderContainer" style="background:#fff;border-radius:16px;width:100%;max-width:820px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+
+    <div class="rb-header">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rb-header-icon"><i class="bi bi-sliders"></i></div>
+        <div>
+          <div class="rb-header-title">Construtor de Relatório</div>
+          <div class="rb-header-sub" id="rb-header-step">Etapa 1 de 2 - Selecione os campos</div>
+        </div>
+      </div>
+      <button id="rb-btn-fechar" type="button" class="rb-btn-close" title="Fechar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="rb-steps-track">
+      <div class="rb-step-dot active" data-step="1"><span>1</span> Campos</div>
+      <div class="rb-step-line"></div>
+      <div class="rb-step-dot" data-step="2"><span>2</span> Nome</div>
+    </div>
+
+    <div id="rb-step-1" class="rb-step-content active">
+      <div class="rb-banco-tabs" id="rb-banco-tabs"></div>
+      <div class="rb-banco-panels" id="rb-banco-panels"></div>
+    </div>
+
+    <div id="rb-step-2" class="rb-step-content">
+      <div class="rb-step2-wrapper">
+        <div class="rb-step2-icon"><i class="bi bi-file-earmark-text"></i></div>
+        <label class="rb-step2-label">Nome do Relatório</label>
+        <input type="text" id="rb-nome-relatorio" class="form-control rb-nome-input" placeholder="Ex: Fechamento Mensal Motoboys - Julho">
+        <div class="rb-step2-resumo" id="rb-step2-resumo"></div>
+      </div>
+    </div>
+
+    <div class="rb-footer">
+      <button id="rb-btn-voltar" type="button" class="btn-modal-rel btn-modal-rel-light" style="display:none;">
+        <i class="bi bi-arrow-left"></i>
+        <span>Voltar</span>
+      </button>
+      <div class="rb-footer-spacer"></div>
+      <button id="rb-btn-avancar" type="button" class="btn-modal-rel btn-modal-rel-primary">
+        <span>Avançar</span>
+        <i class="bi bi-arrow-right"></i>
+      </button>
+      <button id="rb-btn-gerar-final" type="button" class="btn-modal-rel btn-modal-rel-primary" style="display:none;">
+        <i class="bi bi-file-earmark-bar-graph"></i>
+        <span>Gerar Relatório</span>
+      </button>
+    </div>
+
+  </div>
+</div>
