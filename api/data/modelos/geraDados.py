@@ -59,6 +59,8 @@ CHATS_EXISTENTES = set()
 RDO_SEQ = 0
 
 STATUS_CLIENTE_PADRAO = "TRUE"
+STATUS_PEDIDO_PADRAO = "CONCLUIDO"
+TIPO_FINANCEIRO_PADRAO = "RECEITA"
 
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
@@ -206,38 +208,11 @@ def carregar_chats_existentes():
 
 
 def corrigir_horarios_antigos():
-    resultado = post({"action": "getpedidos", "apiKey": API_KEY})
-    dados = _extrair_lista_dados(resultado, "getpedidos")
-    corrigidos = 0
-    falhas = 0
-    for item in dados:
-        rdo_id = str(item.get("id", "")).strip().upper()
-        horario_atual = str(item.get("horario", "")).strip()
-        if not rdo_id or not horario_atual:
-            continue
-        if "/" in horario_atual or "-" in horario_atual:
-            hora_corrigida = somente_hora(horario_atual)
-            payload = {
-                "action": "atualizarpedido",
-                "apiKey": API_KEY,
-                "id": rdo_id,
-                "horario": hora_corrigida,
-            }
-            try:
-                resp = post(payload)
-            except ErroApi as exc:
-                falhas += 1
-                logger.error("Falha ao corrigir horario de %s: %s", rdo_id, exc)
-                time.sleep(INTERVALO_ENTRE_REQUISICOES)
-                continue
-            if resp and resp.get("status") == "success":
-                corrigidos += 1
-                logger.info("Corrigido horario de %s: '%s' -> '%s'", rdo_id, horario_atual, hora_corrigida)
-            else:
-                falhas += 1
-                logger.error("Resposta inesperada ao corrigir horario de %s: %s", rdo_id, resp)
-            time.sleep(INTERVALO_ENTRE_REQUISICOES)
-    logger.info("Correção de horários concluída: corrigidos=%d falhas=%d", corrigidos, falhas)
+    logger.warning(
+        "corrigir_horarios_antigos() DESATIVADA: backend não possui a action "
+        "'atualizarpedido' (retorna 'Aba nao encontrada'). Pulando etapa."
+    )
+    return
 
 
 def proximo_rdo_id():
@@ -380,6 +355,9 @@ def parse_linha(linha):
         "valor_corrida": campos[7],
         "motoboy": campos[8],
         "observacao_bruta": campos[9] if len(campos) > 9 else "",
+        "telefone": campos[10] if len(campos) > 10 else "",
+        "distancia_km": campos[11] if len(campos) > 11 else "",
+        "tempo_min": campos[12] if len(campos) > 12 else "",
     }
 
 
@@ -429,98 +407,211 @@ def separar_data_hora(dados):
 
 
 def montar_texto_chat(rdo_id, dados):
-    solicitante = dados["solicitante"] or "Não informado"
-    contato = dados["solicitante"] or ""
-    tipo_servico = dados["tipo_servico"] or "ENTREGA"
-    origem = dados["cliente_nome"] or ""
-    destino = dados["endereco"] or ""
-    valor = formatar_valor(dados["valor_corrida"])
+    """
+    Monta o texto do chat seguindo exatamente o modelo:
+    📦 N.SERVIÇO / 👤 Solicitante 📞 Telefone / 📦 Tipo / 📍 ROTAS / 🛣️ km ⏱️ min 💰 Valor
+
+    Todos os valores são extraídos do dadoBruto (parse_linha).
+    Texto ausente = "N/D" | Número ausente = "-"
+    """
+    solicitante = dados["solicitante"] or "N/D"
+    telefone = dados.get("telefone") or "N/D"
+    tipo_servico = dados["tipo_servico"] or "N/D"
+    origem = dados["cliente_nome"] or "N/D"
+    destino = dados["endereco"] or "N/D"
+
+    distancia_km = dados.get("distancia_km") or "-"
+    tempo_min = dados.get("tempo_min") or "-"
+    valor = formatar_valor(dados["valor_corrida"]) if dados["valor_corrida"] else "-"
+
     linhas = [
         f"📦 N.SERVIÇO: {rdo_id}",
-        f"👤 : {solicitante} 📞 : {contato}",
+        f"👤 : {solicitante} 📞 : {telefone}",
         f"📦 : {tipo_servico}",
         "📍 ROTAS:",
         f"1. De: {origem} | Para: {destino}.",
-        f"🛣️ 0.00 km ⏱️ 0min 💰 R$ {valor}",
+        f"🛣️ {distancia_km} km ⏱️ {tempo_min}min 💰 R$ {valor}",
     ]
     return "\n".join(linhas)
 
 
-def criar_pedido(rdo_id, dados, id_cliente, motoboy_final, observacao):
+def montar_descricao_financeiro(dados):
+    """
+    Monta a descrição do lançamento financeiro extraindo os dados
+    reais da linha bruta (tipo de serviço, cliente e endereço).
+    """
+    tipo_servico = dados["tipo_servico"] or "ENTREGA"
+    cliente_nome = dados["cliente_nome"] or ""
+    endereco = dados["endereco"] or ""
+
+    partes = [tipo_servico]
+    if cliente_nome:
+        partes.append(f"de {cliente_nome}")
+    if endereco:
+        partes.append(f"para {endereco}")
+
+    return " ".join(partes).strip()
+
+
+def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observacao):
     data_str, hora_str = separar_data_hora(dados)
     hora_str = somente_hora(hora_str)
 
+    if not data_str:
+        data_str = datetime.now().strftime("%d/%m/%Y")
+        logger.warning("RDO %s: data não encontrada nos dados brutos. Usando data atual: %s", rdo_id, data_str)
+
+    tipo_servico = dados["tipo_servico"] or "ENTREGA"
+    cliente_nome = dados["cliente_nome"] or ""
+    endereco_para = dados["endereco"] or ""
+    solicitante = dados["solicitante"] or ""
+
+    status_final = STATUS_PEDIDO_PADRAO
+    descricao_final = montar_descricao_financeiro(dados)
     texto_chat = montar_texto_chat(rdo_id, dados)
-    status_final = f"{motoboy_final}/CONCLUIDO" if motoboy_final else "CONCLUIDO"
+    valor_num = parse_valor(dados["valor_corrida"])
+
+    return {
+        "rdo_id": rdo_id,
+        "id_cliente": id_cliente,
+        "cliente_nome": cliente_nome,
+        "solicitante": solicitante,
+        "motoboy_final": motoboy_final,
+        "observacao": observacao or dados["observacao_bruta"],
+        "data_str": data_str,
+        "hora_str": hora_str,
+        "status_final": status_final,
+        "descricao_final": descricao_final,
+        "tipo_servico": tipo_servico,
+        "endereco_para": endereco_para,
+        "texto_chat": texto_chat,
+        "valor_corrida_raw": dados["valor_corrida"],
+        "valor_num": valor_num,
+        "email": dados["email"],
+    }
+
+
+def criar_pedido(consolidado):
+    rdo_id = consolidado["rdo_id"]
 
     payload = {
         "action": "criarpedido",
         "apiKey": API_KEY,
         "id": rdo_id,
-        "id_cliente": id_cliente,
-        "solicitante": dados["solicitante"],
-        "contato": dados["solicitante"],
-        "horario": hora_str,
-        "mercadoria": dados["tipo_servico"] or "ENTREGA",
-        "de": dados["cliente_nome"],
-        "para": dados["endereco"],
+        "id_cliente": consolidado["id_cliente"],
+        "cliente": consolidado["cliente_nome"],
+        "solicitante": consolidado["solicitante"],
+        "contato": consolidado["email"] or consolidado["solicitante"],
+        "data": consolidado["data_str"],
+        "horario": consolidado["hora_str"],
+        "hora": consolidado["hora_str"],
+        "mercadoria": consolidado["tipo_servico"],
+        "de": consolidado["cliente_nome"],
+        "para": consolidado["endereco_para"],
         "retorno": "NÃO",
-        "prioridade": definir_prioridade(dados["endereco"]),
-        "valor_corrida": dados["valor_corrida"],
-        "motoboy": motoboy_final,
-        "status": status_final,
-        "observacao": observacao or dados["observacao_bruta"],
-        "texto": texto_chat,
-        "hora": hora_str,
-        "data_chat": data_str,
+        "prioridade": definir_prioridade(consolidado["endereco_para"]),
+        "valor_corrida": consolidado["valor_corrida_raw"],
+        "motoboy": consolidado["motoboy_final"],
+        "status": consolidado["status_final"],
+        "observacao": consolidado["observacao"],
     }
     try:
         resultado = post(payload)
     except ErroApi as exc:
         logger.error("Exceção ao criar pedido %s: %s", rdo_id, exc)
-        return False
+        return False, str(exc)
 
     if not resultado or resultado.get("status") != "success":
-        logger.error("Falha ao criar pedido %s: resposta=%s", rdo_id, resultado)
-        return False
+        detalhe = f"resposta={resultado!r}"
+        logger.error("Falha ao criar pedido %s: %s", rdo_id, detalhe)
+        return False, detalhe
+
+    logger.info("Pedido criado: %s | cliente=%s | data=%s | status=%s | motoboy=%s",
+                rdo_id, consolidado["cliente_nome"], consolidado["data_str"],
+                consolidado["status_final"], consolidado["motoboy_final"])
+    return True, None
+
+
+def criar_chat(consolidado):
+    rdo_id = consolidado["rdo_id"]
+
+    if rdo_id in CHATS_EXISTENTES:
+        logger.info("Chat já existente para %s, pulando criação.", rdo_id)
+        return True, None
+
+    payload = {
+        "action": "criarchat",
+        "apiKey": API_KEY,
+        "id": gerar_id_curto(),
+        "pedido_id": rdo_id,
+        "id_cliente": consolidado["id_cliente"],
+        "remetente": "SISTEMA",
+        "mensagem": consolidado["texto_chat"],
+        "texto": consolidado["texto_chat"],
+        "data": consolidado["data_str"],
+        "hora": consolidado["hora_str"],
+    }
+
+    try:
+        resultado = post(payload)
+    except ErroApi as exc:
+        logger.error("Exceção ao criar chat do pedido %s: %s", rdo_id, exc)
+        return False, str(exc)
+
+    if not resultado or resultado.get("status") != "success":
+        detalhe = f"resposta={resultado!r}"
+        logger.error("Falha ao criar chat do pedido %s: %s", rdo_id, detalhe)
+        return False, detalhe
 
     CHATS_EXISTENTES.add(rdo_id)
-    return True
+    logger.info("Chat criado para o pedido %s.", rdo_id)
+    return True, None
 
 
-def criar_financeiro(rdo_id, dados, motoboy_final, observacao):
+def criar_financeiro(consolidado):
+    rdo_id = consolidado["rdo_id"]
+    motoboy_final = consolidado["motoboy_final"]
+
     colaborador_id = COLABORADORES.get(motoboy_final)
     if not colaborador_id:
-        logger.error("Colaborador '%s' não encontrado no mapa. Financeiro será enviado sem colaborador_id.", motoboy_final)
+        logger.warning("Financeiro %s: colaborador '%s' não encontrado no mapa.", rdo_id, motoboy_final)
 
-    data_str, _ = separar_data_hora(dados)
-    tipo_servico = dados["tipo_servico"] or "ENTREGA"
-    endereco_para = dados["endereco"] or ""
-    descricao_final = f"{tipo_servico} para {endereco_para}".strip()
+    valor_num = consolidado["valor_num"]
 
     payload = {
         "action": "addfinanceiro",
         "apiKey": API_KEY,
         "id": gerar_id_curto(),
-        "colaborador_id": colaborador_id,
         "id_pedido": rdo_id,
-        "data": data_str,
-        "tipo": tipo_servico,
-        "descricao": descricao_final,
+        "colaborador_id": colaborador_id or "",
+        "data": consolidado["data_str"],
+        "tipo": TIPO_FINANCEIRO_PADRAO,
+        "descricao": consolidado["descricao_final"],
+        "cliente": consolidado["cliente_nome"],
         "motoboy": motoboy_final,
-        "vlr_servico": parse_valor(dados["valor_corrida"]),
         "colaborador": motoboy_final,
-        "observacao": observacao or dados["observacao_bruta"],
+        "solicitante": consolidado["solicitante"],
+        "vlr_servico": valor_num,
+        "valor": valor_num,
+        "observacao": consolidado["observacao"],
         "situacao": "PAGO",
     }
+
     try:
         resultado = post(payload)
     except ErroApi as exc:
-        logger.error("Exceção ao lançar financeiro %s: %s", rdo_id, exc)
-        return
+        logger.error("Exceção ao lançar financeiro do pedido %s: %s", rdo_id, exc)
+        return False, str(exc)
 
     if not resultado or resultado.get("status") != "success":
-        logger.error("Falha ao lançar financeiro %s: resposta=%s", rdo_id, resultado)
+        detalhe = f"resposta={resultado!r}"
+        logger.error("Falha ao lançar financeiro do pedido %s: %s", rdo_id, detalhe)
+        return False, detalhe
+
+    logger.info("Financeiro lançado: %s | data=%s | cliente=%s | motoboy=%s | tipo=%s | valor=%.2f",
+                rdo_id, consolidado["data_str"], consolidado["cliente_nome"],
+                motoboy_final, TIPO_FINANCEIRO_PADRAO, valor_num)
+    return True, None
 
 
 def _tratar_interrupcao(signum, frame):
@@ -549,9 +640,14 @@ def main():
     inseridos = 0
     ignorados = 0
     clientes_criados = 0
+    pedidos_sem_chat = 0
+    pedidos_sem_financeiro = 0
     erros_detalhados = []
 
+    total_linhas = len(linhas)
+
     for indice, linha in enumerate(linhas, start=1):
+        rdo_id = None
         try:
             dados = parse_linha(linha)
             if not dados:
@@ -561,7 +657,12 @@ def main():
 
             nome_cliente = dados["cliente_nome"]
             existia = nome_cliente in CLIENTES
-            id_cliente = garantir_cliente(nome_cliente, responsavel=dados["solicitante"])
+            try:
+                id_cliente = garantir_cliente(nome_cliente, responsavel=dados["solicitante"])
+            except Exception as exc:
+                id_cliente = None
+                erros_detalhados.append((indice, "EXCECAO_GARANTIR_CLIENTE", f"{nome_cliente} | {exc}"))
+                logger.error("Exceção não tratada ao garantir cliente '%s': %s", nome_cliente, exc)
             time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
             if not id_cliente:
@@ -575,29 +676,59 @@ def main():
             motoboy_final, observacao = definir_colaborador(dados["motoboy"])
             rdo_id = proximo_rdo_id()
 
-            if not criar_pedido(rdo_id, dados, id_cliente, motoboy_final, observacao):
+            consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observacao)
+
+            try:
+                pedido_ok, erro_pedido = criar_pedido(consolidado)
+            except Exception as exc:
+                pedido_ok, erro_pedido = False, str(exc)
+                logger.error("Exceção não tratada ao criar pedido %s: %s", rdo_id, exc)
+
+            if not pedido_ok:
                 ignorados += 1
-                erros_detalhados.append((indice, "FALHA_CRIAR_PEDIDO", rdo_id))
+                erros_detalhados.append((indice, "FALHA_CRIAR_PEDIDO", f"{rdo_id} | {erro_pedido}"))
                 time.sleep(INTERVALO_ENTRE_REQUISICOES)
                 continue
             time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
-            criar_financeiro(rdo_id, dados, motoboy_final, observacao)
+            try:
+                chat_ok, erro_chat = criar_chat(consolidado)
+            except Exception as exc:
+                chat_ok, erro_chat = False, str(exc)
+                logger.error("Exceção não tratada ao criar chat do pedido %s: %s", rdo_id, exc)
+
+            if not chat_ok:
+                pedidos_sem_chat += 1
+                erros_detalhados.append((indice, "FALHA_CRIAR_CHAT", f"{rdo_id} | {erro_chat}"))
             time.sleep(INTERVALO_ENTRE_REQUISICOES)
+
+            try:
+                financeiro_ok, erro_financeiro = criar_financeiro(consolidado)
+            except Exception as exc:
+                financeiro_ok, erro_financeiro = False, str(exc)
+                logger.error("Exceção não tratada ao criar financeiro do pedido %s: %s", rdo_id, exc)
+            time.sleep(INTERVALO_ENTRE_REQUISICOES)
+
+            if not financeiro_ok:
+                pedidos_sem_financeiro += 1
+                erros_detalhados.append((indice, "FALHA_CRIAR_FINANCEIRO", f"{rdo_id} | {erro_financeiro}"))
 
             inseridos += 1
 
         except Exception as exc:
             ignorados += 1
             trace = traceback.format_exc()
-            erros_detalhados.append((indice, "EXCECAO_NAO_TRATADA", f"{exc} | {trace}"))
-            logger.critical("Erro não tratado na linha %d: %s\n%s", indice, exc, trace)
+            erros_detalhados.append((indice, "EXCECAO_NAO_TRATADA", f"rdo={rdo_id} | {exc} | {trace}"))
+            logger.critical("Erro não tratado na linha %d (rdo=%s): %s\n%s", indice, rdo_id, exc, trace)
             continue
 
-        if indice % 20 == 0:
-            logger.info("Progresso: %d/%d", indice, len(linhas))
+        if indice % 20 == 0 or indice == total_linhas:
+            logger.info("Progresso: %d/%d", indice, total_linhas)
 
-    logger.info("Concluído. Pedidos: %d | Clientes novos: %d | Ignorados: %d", inseridos, clientes_criados, ignorados)
+    logger.info(
+        "Concluído. Pedidos: %d | Clientes novos: %d | Ignorados: %d | Sem chat: %d | Sem financeiro: %d",
+        inseridos, clientes_criados, ignorados, pedidos_sem_chat, pedidos_sem_financeiro,
+    )
 
     if erros_detalhados:
         logger.error("=== RELATÓRIO DETALHADO DE ERROS (%d) ===", len(erros_detalhados))

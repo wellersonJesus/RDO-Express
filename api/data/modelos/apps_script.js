@@ -124,11 +124,53 @@ function chatJaExiste(sheetChat, idPedido) {
 }
 
 function montarTextoChat(idPedido, data) {
-  var textoCustom = String(data.texto || data.mensagem || "").trim();
-  if (textoCustom) {
-    return textoCustom.replace("[ID_GERADO]", idPedido);
+  var solicitante = String(data.solicitante || "").trim() || "N/D";
+  var contato     = String(data.contato || data.telefone || "").trim() || "N/D";
+  var mercadoria  = String(data.mercadoria || "").trim() || "N/D";
+
+  var rotasTexto = String(data.rotas_texto || "").trim();
+  var linhasRotas = [];
+
+  if (rotasTexto) {
+    var linhasBrutas = rotasTexto.split("\n");
+    for (var i = 0; i < linhasBrutas.length; i++) {
+      var linha = linhasBrutas[i].trim();
+      if (!linha) continue;
+      var deMatch   = linha.match(/De:\s*([^|]+)/i);
+      var paraMatch = linha.match(/Para:\s*(.+)/i);
+      var de   = deMatch   ? deMatch[1].trim()   : "N/D";
+      var para = paraMatch ? paraMatch[1].trim() : "N/D";
+      linhasRotas.push((linhasRotas.length + 1) + ". De: " + de + " | Para: " + para + ".");
+    }
   }
-  return MODELO_PADRAO.replace("[ID_GERADO]", idPedido);
+
+  if (linhasRotas.length === 0) {
+    var de   = String(data.de   || "").trim() || "N/D";
+    var para = String(data.para || "").trim() || "N/D";
+    linhasRotas.push("1. De: " + de + " | Para: " + para + ".");
+  }
+
+  var distancia = String(data.distancia || "").trim() || "-";
+  var tempo     = String(data.tempo     || "").trim() || "-";
+
+  var valorRaw = data.valor_corrida || data.valor_final || "";
+  var valorNum = parseFloat(String(valorRaw).replace("R$", "").replace(".", "").replace(",", "."));
+  var valor = isNaN(valorNum) ? "-" : valorNum.toFixed(2).replace(".", ",");
+
+  var linhas = [
+    "📦 N.SERVIÇO: " + idPedido,
+    "👤 : " + solicitante + " 📞 : " + contato,
+    "📦 : " + mercadoria,
+    "📍 ROTAS:"
+  ];
+
+  for (var r = 0; r < linhasRotas.length; r++) {
+    linhas.push(linhasRotas[r]);
+  }
+
+  linhas.push("🛣️ " + distancia + " km ⏱️ " + tempo + "min 💰 R$ " + valor);
+
+  return linhas.join("\n");
 }
 
 function processarCriarPedido(sheetPedidos, data) {
