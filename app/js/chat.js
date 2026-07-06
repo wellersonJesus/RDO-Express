@@ -1072,8 +1072,21 @@ window._copiarMensagemWrapper = function (pedidoId, botao) {
 
     var textoOriginal = msgEl.getAttribute('data-texto-original');
     var texto = textoOriginal
-        ? textoOriginal.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+        ? textoOriginal.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         : (msgEl.querySelector('.message-body') ? msgEl.querySelector('.message-body').innerText : '');
+
+    texto = String(texto || '').trim();
+
+    if (!texto) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning', title: 'Nada para copiar',
+                toast: true, position: 'top-end',
+                showConfirmButton: false, timer: 2000
+            });
+        }
+        return;
+    }
 
     function _feedbackSucesso() {
         if (botao) {
@@ -1098,25 +1111,75 @@ window._copiarMensagemWrapper = function (pedidoId, botao) {
         }
     }
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(texto).then(_feedbackSucesso).catch(function () {
-            _copiarFallback(texto, _feedbackSucesso);
-        });
+    function _feedbackErro() {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Não foi possível copiar',
+                text: 'Selecione e copie manualmente o texto.',
+                confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
+            });
+        }
+    }
+
+    // 1ª tentativa: Clipboard API moderna (requer HTTPS/contexto seguro)
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        navigator.clipboard.writeText(texto)
+            .then(_feedbackSucesso)
+            .catch(function () {
+                // Fallback caso a Permissions Policy bloqueie o clipboard-write
+                _copiarFallback(texto, _feedbackSucesso, _feedbackErro);
+            });
     } else {
-        _copiarFallback(texto, _feedbackSucesso);
+        // Ambiente sem Clipboard API (http, iframe restrito, navegador antigo)
+        _copiarFallback(texto, _feedbackSucesso, _feedbackErro);
     }
 };
 
-function _copiarFallback(texto, callback) {
+function _copiarFallback(texto, callbackSucesso, callbackErro) {
+    var sucesso = false;
     var temp = document.createElement('textarea');
+
+    // Configurações essenciais para funcionar em iOS/Android/WebViews:
+    // precisa estar "visível" o suficiente para o navegador permitir seleção real,
+    // mesmo que fora da área visível do usuário.
     temp.value = texto;
+    temp.setAttribute('readonly', ''); // evita abrir teclado virtual em mobile
     temp.style.position = 'fixed';
+    temp.style.top = '0';
+    temp.style.left = '0';
+    temp.style.width = '1px';
+    temp.style.height = '1px';
+    temp.style.padding = '0';
+    temp.style.border = 'none';
+    temp.style.outline = 'none';
+    temp.style.boxShadow = 'none';
+    temp.style.background = 'transparent';
+    temp.style.fontSize = '16px'; // evita zoom automático em iOS
     temp.style.opacity = '0';
+    temp.style.zIndex = '-1';
+
     document.body.appendChild(temp);
-    temp.select();
-    try { document.execCommand('copy'); } catch (_) { }
+
+    try {
+        temp.focus({ preventScroll: true });
+        temp.select();
+        // Necessário para iOS Safari: select() sozinho não é suficiente
+        temp.setSelectionRange(0, temp.value.length);
+
+        sucesso = document.execCommand('copy');
+    } catch (err) {
+        sucesso = false;
+    }
+
     document.body.removeChild(temp);
-    if (typeof callback === 'function') callback();
+
+    if (sucesso) {
+        if (typeof callbackSucesso === 'function') callbackSucesso();
+    } else {
+        if (typeof callbackErro === 'function') callbackErro();
+    }
 }
 
 window.renderizarMensagens = function (mensagens, pedidos) {

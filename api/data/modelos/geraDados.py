@@ -311,6 +311,11 @@ def criar_pedido(rdo_id, dados, id_cliente, motoboy_final, observacao):
 
     texto_chat = montar_texto_chat(rdo_id, dados)  # modelo 2 (com rotas)
 
+    # Status final: pedido já concluído, com o motoboy embutido no formato
+    # "MOTOBOY/CONCLUIDO" (mesmo padrão usado pelo StatusModal do chat.js),
+    # garantindo que a tabela de pedidos exiba corretamente o motoboy responsável.
+    status_final = f"{motoboy_final}/CONCLUIDO" if motoboy_final else "CONCLUIDO"
+
     payload = {
         "action": "criarpedido",
         "apiKey": API_KEY,
@@ -326,7 +331,7 @@ def criar_pedido(rdo_id, dados, id_cliente, motoboy_final, observacao):
         "prioridade": definir_prioridade(dados["endereco"]),
         "valor_corrida": dados["valor_corrida"],
         "motoboy": motoboy_final,
-        "status": "NÃO",
+        "status": status_final,
         "observacao": observacao or dados["observacao_bruta"],
         # Enviado junto para o WebScript usar na criação automática do chat:
         "texto": texto_chat,
