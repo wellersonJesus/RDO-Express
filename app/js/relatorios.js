@@ -127,11 +127,6 @@
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
   }
 
-  /**
-   * NOVO: normaliza qualquer data (formato BR dd/mm/yyyy vindo do Apps Script,
-   * ou ISO yyyy-mm-dd vindo do input type=date) para o padrão ISO yyyy-mm-dd,
-   * permitindo comparação de strings correta.
-   */
   function normalizarDataISO(valor) {
     if (!valor) return '';
     let v = String(valor).trim();
@@ -526,10 +521,6 @@
     return true;
   }
 
-  /**
-   * CORRIGIDO: agora normaliza a data antes de comparar,
-   * eliminando o bug de Pedidos/Financeiro não retornarem dados.
-   */
   function dentroPeriodo(dataStr, inicio, fim) {
     if (!dataStr) return true;
     const d = normalizarDataISO(dataStr);
