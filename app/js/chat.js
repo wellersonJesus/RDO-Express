@@ -48,170 +48,414 @@ window.AppRDO.notificacoes = window.AppRDO.notificacoes || [];
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
 window.NotificationManager = (function () {
-    var notifications = [];
-    var maxNotifications = 50;
-    var cashSound = null;
+    var notificacoes = [];
+    var maxNotificacoes = 50;
+    var audioCtx = null;
+    var isAberto = false;
 
-    function _init() {
-        cashSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDGM0vLTgjMHHWm98+eXSgwNU6bo87FeFgs+lt3zzn0pBSl+zPDglEELF2S68+ijURALTKXi8sFqIAQ1kdXyzYQ2Bx9sv/PojUsNDlWq5vKsWhYKPJrb88yAKgUpfs3w4JVCCxdlu/PooDsKRZrg7rtnIQQ2kNXy0IM1Bx5rv/PnkEsND1Oo5fGpWxYJPJrb886CKgUpgM7w3pJCCxZkvPPmnkoLRp7g7bxkIQQ3kdXyz4E1Bx5rv/PnjEwNDlKo5fGuXBYJPZrb89B/KwQogM7x5JRDDhdlvfPlnkoLRp3f7btkIgQ4kdXyz4I2Bx9rwPPnjEwODlGo5fGqWxYKPZvb89CCKgUpgc7x5JNCDBZlvfPknUkKRpzf7bdkIgQ5kdXyzYE2Bx5qvvPmiUsNDVCn5PCsWxYKO5rb88yAKQUqgc7x5ZJCDBVkvPPjnEkKRZvf7LZjIQQ5kNTxx4A1Bh1pvO/likoMDE+m4+6rWhUJOpjZ8cmCKgUpgc3x5pFBCxVju/LhmkkKRJre7LRiIQU6j9Pxx38zBhxou+/kh0oMDU6l4u2qWRQIOZfY8saBKQQpgMzx5Y9BCxRiuvLgmEgJQ5jd7LNhIQU6jtLwxn4yBRxnuvDjhkkMC0yk4e2oWBQJOJbX8cV/KQUpf8vx5I5ACxNhu/HflkgJQpjd7LBgIAU7jdHvxX0xBRtmuvDhg0kLDUuj4OynVxMIOJXX8cN+KAQqfsvx441ACxNgu/HdlUcJQpfc66tgIAU7jNDvxXwxBRpmuvDfgkgLDEmi4OumVxMIOpTW8cF9JwQqfcrw4oxACxJfu+/clEcJQpXb6qpfHwU8i8/uw3swBRpmue/egUgLCkii3+ulVhIIOJPV8cB9JgQpfMnw4YtACxFfu+/bk0YJQpTa6qlgHwU8is/uwnowBRllue/dgEgKCkah3+ujVhEHN5LU8b98JgQpfMjw4IpACxFfu+/akUYJQZPa6ahfHwU7ic7uwXkwBRlkuO/cf0gKCUag3+uiVREHNpHT8b58JQQofcjw34lACg9euu7akEYIQJLZ6adfHwU8iM3twHgvBRhkuO7bf0gKCUSf3+qhVREHNZDS8bx8JQQne8fv3og/Cg5duu7Zj0UIQJHY6KZeHgU7h8zswHcuBRhjt+7afkgJCEKe3umgUxAGNI/S8bp7JAMoe8bv3Yc/CQ5cue7Yjk');
+    function _getCtx() {
+        if (!audioCtx) {
+            try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            catch (e) { audioCtx = null; }
+        }
+        return audioCtx;
+    }
 
-        if (typeof window.EventBus !== 'undefined') {
-            window.EventBus.on('pedido:statusAtualizado', function (dados) {
-                _handleStatusChange(dados);
-            });
+    function _tocarTom(freqs, duracoes, tipo) {
+        var ctx = _getCtx();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) { } }
+        var tempoAtual = ctx.currentTime;
+        freqs.forEach(function (freq, i) {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = tipo || 'sine';
+            osc.frequency.value = freq;
+            var inicio = tempoAtual + (i * (duracoes[i] || 0.12));
+            var dur = duracoes[i] || 0.12;
+            gain.gain.setValueAtTime(0, inicio);
+            gain.gain.linearRampToValueAtTime(0.35, inicio + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, inicio + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        });
+    }
 
-            window.EventBus.on('pedido:excluido', function (dados) {
-                _addNotification('EXCLUÍDO', dados.id, 'danger');
-            });
+    function _tocarSomConcluido() { _tocarTom([1200, 1500, 1900, 2400], [0.09, 0.09, 0.09, 0.18], 'sine'); }
+    function _tocarSomCancelado() { _tocarTom([440, 330], [0.15, 0.28], 'sawtooth'); }
+    function _tocarSomExcluido() { _tocarTom([600, 400, 250], [0.1, 0.1, 0.22], 'triangle'); }
 
-            window.EventBus.on('pedido:adicionado', function (dados) {
-                _addNotification('CRIADO', dados.id, 'success');
-            });
+    function _escutarEventos() {
+        if (!window.EventBus) return;
+
+        window.EventBus.on('pedido:statusAtualizado', function (data) {
+            var status = (data.status || '').toUpperCase();
+            var pedidoId = data.pedidoId || data.id;
+            var tipo = '';
+
+            if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) { tipo = 'CONCLUÍDO'; _tocarSomConcluido(); }
+            else if (status.includes('CANCELADO')) { tipo = 'CANCELADO'; _tocarSomCancelado(); }
+            else if (status.includes('EM_ROTA') || status.includes('EM ROTA')) tipo = 'EM ROTA';
+            else if (status.includes('PENDENTE')) tipo = 'PENDENTE';
+            else if (status.includes('PREPARANDO')) tipo = 'PREPARANDO';
+            else tipo = status;
+
+            if (tipo) {
+                _adicionarNotificacao({ pedidoId: pedidoId, tipo: tipo, timestamp: new Date(), variant: _getVariant(tipo) });
+            }
+        });
+
+        window.EventBus.on('pedido:excluido', function (data) {
+            _tocarSomExcluido();
+            _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'EXCLUÍDO', timestamp: new Date(), variant: 'danger' });
+        });
+
+        window.EventBus.on('pedido:adicionado', function (data) {
+            _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'CRIADO', timestamp: new Date(), variant: 'success' });
+        });
+    }
+
+    function _getVariant(tipo) {
+        switch (tipo) {
+            case 'CONCLUÍDO':
+            case 'CRIADO': return 'success';
+            case 'CANCELADO':
+            case 'EXCLUÍDO': return 'danger';
+            case 'EM ROTA':
+            case 'PREPARANDO': return 'primary';
+            case 'PENDENTE': return 'warning';
+            default: return 'info';
         }
     }
 
-    function _handleStatusChange(dados) {
-        var status = String(dados.status || '').toUpperCase();
-        var pedidoId = dados.id;
-
-        if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) {
-            _playCashSound();
-            _addNotification('CONCLUÍDO', pedidoId, 'success');
-        } else if (status.includes('CANCELADO')) {
-            _addNotification('CANCELADO', pedidoId, 'danger');
-        } else if (status.includes('EM_ROTA') || status.includes('EM ROTA')) {
-            _addNotification('EM ROTA', pedidoId, 'primary');
-        }
-
-        _updateNotificationBadge();
-    }
-
-    function _playCashSound() {
-        if (!cashSound) return;
-        try {
-            cashSound.currentTime = 0;
-            cashSound.volume = 0.5;
-            cashSound.play().catch(function () { });
-        } catch (e) { }
-    }
-
-    function _addNotification(tipo, pedidoId, variant) {
-        var now = new Date();
-        var notification = {
-            id: 'notif_' + now.getTime() + '_' + Math.random().toString(36).substr(2, 9),
-            tipo: tipo,
-            pedidoId: pedidoId,
-            timestamp: now.toISOString(),
-            variant: variant,
+    function _adicionarNotificacao(dados) {
+        var notif = {
+            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            pedidoId: dados.pedidoId,
+            tipo: dados.tipo,
+            timestamp: dados.timestamp.toISOString(),
+            variant: dados.variant || 'info',
             lida: false
         };
-
-        notifications.unshift(notification);
-
-        if (notifications.length > maxNotifications) {
-            notifications = notifications.slice(0, maxNotifications);
-        }
-
-        window.AppRDO.notificacoes = notifications;
-        _updateNotificationBadge();
+        notificacoes.unshift(notif);
+        if (notificacoes.length > maxNotificacoes) notificacoes = notificacoes.slice(0, maxNotificacoes);
+        if (window.AppRDO) window.AppRDO.notificacoes = notificacoes;
+        _atualizarBadge();
+        _renderizarLista();
     }
 
-    function _updateNotificationBadge() {
+    function _atualizarBadge() {
         var badge = document.getElementById('notif-badge');
-        var naoLidas = notifications.filter(function (n) { return !n.lida; }).length;
-
         if (!badge) return;
-
-        if (naoLidas > 0) {
-            badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
-            badge.classList.remove('d-none');
-        } else {
-            badge.classList.add('d-none');
-        }
+        var naoLidas = notificacoes.filter(function (n) { return !n.lida; }).length;
+        if (naoLidas > 0) { badge.textContent = naoLidas > 99 ? '99+' : naoLidas; badge.classList.remove('d-none'); }
+        else badge.classList.add('d-none');
     }
 
-    function _renderNotifications() {
-        var container = document.getElementById('notifications-list');
-        if (!container) return;
+    function _renderizarLista() {
+        var listaEl = document.getElementById('notifications-list');
+        if (!listaEl) return;
 
-        if (notifications.length === 0) {
-            container.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-bell-slash me-2"></i><small>Nenhuma notificação</small></div>';
+        if (notificacoes.length === 0) {
+            listaEl.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-bell-slash me-2"></i><small>Nenhuma notificação</small></div>';
             return;
         }
 
-        container.innerHTML = notifications.map(function (notif) {
-            var iconClass = notif.tipo === 'CONCLUÍDO' ? 'bi-check-circle-fill text-success' :
-                notif.tipo === 'CANCELADO' ? 'bi-x-circle-fill text-danger' :
-                    notif.tipo === 'EM ROTA' ? 'bi-bicycle text-primary' :
-                        notif.tipo === 'CRIADO' ? 'bi-plus-circle-fill text-success' :
-                            'bi-trash3-fill text-danger';
-
-            var dataObj = new Date(notif.timestamp);
-            var horas = String(dataObj.getHours()).padStart(2, '0');
-            var minutos = String(dataObj.getMinutes()).padStart(2, '0');
-            var horaStr = horas + ':' + minutos;
-
-            var bgClass = notif.lida ? '' : 'bg-light';
-
-            return '<div class="notif-item ' + bgClass + '" data-notif-id="' + notif.id + '" onclick="window.NotificationManager.marcarComoLida(\'' + notif.id + '\'); window.NotificationManager.irParaPedido(\'' + notif.pedidoId + '\');">' +
-                '<div class="d-flex align-items-start gap-2">' +
-                '<i class="' + iconClass + '" style="font-size:1.1rem;margin-top:2px;"></i>' +
+        listaEl.innerHTML = notificacoes.map(function (n) {
+            var icone = _getIcone(n.tipo);
+            var tempo = _formatarTempo(n.timestamp);
+            var classeNaoLida = n.lida ? '' : 'bg-light';
+            return '<div class="notif-item ' + classeNaoLida + '" data-nid="' + n.id + '" onclick="window.NotificationManager.marcarLida(\'' + n.id + '\'); window.NotificationManager.irParaPedido(\'' + n.pedidoId + '\');">' +
+                '<div class="d-flex align-items-start gap-2">' + icone +
                 '<div class="flex-grow-1">' +
-                '<div class="d-flex align-items-center justify-content-between">' +
-                '<span class="fw-semibold" style="font-size:.85rem;">Pedido ' + _formatarNomeServico(notif.pedidoId) + '</span>' +
-                '<span class="text-muted" style="font-size:.7rem;">' + horaStr + '</span>' +
+                '<div class="d-flex justify-content-between align-items-start">' +
+                '<span class="fw-semibold" style="font-size:0.75rem;">Pedido ' + _formatarIdPedido(n.pedidoId) + '</span>' +
+                '<span class="text-muted" style="font-size:0.68rem;">' + tempo + '</span>' +
                 '</div>' +
-                '<div class="text-muted" style="font-size:.75rem;">Status: <strong>' + notif.tipo + '</strong></div>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
+                '<div class="text-muted" style="font-size:0.68rem;font-weight:300;">Status: <b style="font-weight:500;">' + n.tipo + '</b></div>' +
+                '</div></div></div>';
         }).join('');
     }
 
-    function marcarComoLida(notifId) {
-        var notif = notifications.find(function (n) { return n.id === notifId; });
-        if (notif) notif.lida = true;
-        _updateNotificationBadge();
-    }
-
-    function marcarTodasComoLidas() {
-        notifications.forEach(function (n) { n.lida = true; });
-        _updateNotificationBadge();
-        _renderNotifications();
-    }
-
-    function limparNotificacoes() {
-        notifications = [];
-        window.AppRDO.notificacoes = [];
-        _updateNotificationBadge();
-        _renderNotifications();
-    }
-
-    function irParaPedido(pedidoId) {
-        if (typeof window._destacarPedidoNoChat === 'function') {
-            window._destacarPedidoNoChat(pedidoId);
-        }
-
-        var dropdown = document.getElementById('dropdown-notifications');
-        if (dropdown) {
-            var bsDropdown = bootstrap.Dropdown.getInstance(dropdown.querySelector('.btn-notifications'));
-            if (bsDropdown) bsDropdown.hide();
+    function _getIcone(tipo) {
+        switch (tipo) {
+            case 'CONCLUÍDO': return '<i class="bi bi-check-circle-fill text-success" style="font-size:1rem;"></i>';
+            case 'CANCELADO':
+            case 'EXCLUÍDO': return '<i class="bi bi-x-circle-fill text-danger" style="font-size:1rem;"></i>';
+            case 'EM ROTA': return '<i class="bi bi-bicycle text-primary" style="font-size:1rem;"></i>';
+            case 'CRIADO': return '<i class="bi bi-plus-circle-fill text-success" style="font-size:1rem;"></i>';
+            case 'PENDENTE': return '<i class="bi bi-clock-fill text-warning" style="font-size:1rem;"></i>';
+            case 'PREPARANDO': return '<i class="bi bi-hourglass-split text-primary" style="font-size:1rem;"></i>';
+            default: return '<i class="bi bi-bell-fill text-info" style="font-size:1rem;"></i>';
         }
     }
 
-    function abrirDropdown() {
-        _renderNotifications();
+    function _formatarTempo(timestamp) {
+        var data = new Date(timestamp);
+        var horas = data.getHours().toString().padStart(2, '0');
+        var minutos = data.getMinutes().toString().padStart(2, '0');
+        return horas + ':' + minutos;
+    }
+
+    function _formatarIdPedido(id) {
+        if (typeof window._formatarNomeServico === 'function') return window._formatarNomeServico(id);
+        return id;
+    }
+
+    function _marcarLida(notifId) {
+        var notif = notificacoes.find(function (n) { return n.id === notifId; });
+        if (notif) { notif.lida = true; _atualizarBadge(); _renderizarLista(); }
+    }
+
+    function _irParaPedido(pedidoId) {
+        if (typeof window._destacarPedidoNoChat === 'function') window._destacarPedidoNoChat(pedidoId);
+        _fecharDropdown();
+    }
+
+    function _marcarTodasComoLidas() {
+        notificacoes.forEach(function (n) { n.lida = true; });
+        _atualizarBadge();
+        _renderizarLista();
+    }
+
+    function _limparTodas() {
+        notificacoes = [];
+        if (window.AppRDO) window.AppRDO.notificacoes = [];
+        _atualizarBadge();
+        _renderizarLista();
+    }
+
+    function _getMenu() {
+        return document.getElementById('notif-dropdown-menu');
+    }
+
+    function _getBtn() {
+        return document.querySelector('.btn-notifications');
+    }
+
+    function _posicionarDropdown() {
+        var btn = _getBtn();
+        var menu = _getMenu();
+        if (!btn || !menu) return;
+
+        var margem = 12;
+        var rect = btn.getBoundingClientRect();
+        var menuW = menu.offsetWidth || 340;
+        var menuH = menu.offsetHeight || 480;
+        var windowW = window.innerWidth;
+        var windowH = window.innerHeight;
+
+        var left = rect.right - menuW;
+        if (left < margem) left = margem;
+        if (left + menuW > windowW - margem) left = windowW - menuW - margem;
+
+        var top = rect.bottom + 8;
+        if (top + menuH > windowH - margem) {
+            var topAcima = rect.top - menuH - 8;
+            top = topAcima > margem ? topAcima : margem;
+        }
+
+        menu.style.position = 'fixed';
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        menu.style.right = 'auto';
+        menu.style.bottom = 'auto';
+    }
+
+    function _abrirDropdown() {
+        var menu = _getMenu();
+        if (!menu) return;
+        if (window.PedidosDropdown && typeof window.PedidosDropdown.close === 'function') window.PedidosDropdown.close();
+        _renderizarLista();
+        menu.style.display = 'flex';
+        menu.style.flexDirection = 'column';
+        _posicionarDropdown();
+        requestAnimationFrame(function () { menu.classList.add('show'); });
+        isAberto = true;
+        window.addEventListener('resize', _posicionarDropdown);
+        window.addEventListener('scroll', _posicionarDropdown, true);
+    }
+
+    function _fecharDropdown() {
+        var menu = _getMenu();
+        if (!menu) return;
+        menu.classList.remove('show');
+        setTimeout(function () {
+            if (!menu.classList.contains('show')) menu.style.display = 'none';
+        }, 180);
+        isAberto = false;
+        window.removeEventListener('resize', _posicionarDropdown);
+        window.removeEventListener('scroll', _posicionarDropdown, true);
+    }
+
+    function _toggleDropdown() {
+        if (isAberto) _fecharDropdown();
+        else _abrirDropdown();
+    }
+
+    function _configurar() {
+        document.addEventListener('click', function (e) {
+            var btn = _getBtn();
+            var menu = _getMenu();
+            if (!btn || !menu) return;
+
+            if (btn.contains(e.target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                _toggleDropdown();
+                return;
+            }
+
+            if (isAberto && !menu.contains(e.target)) _fecharDropdown();
+        });
+    }
+
+    function _init() {
+        _escutarEventos();
+        _atualizarBadge();
+        _configurar();
     }
 
     return {
         init: _init,
-        abrirDropdown: abrirDropdown,
-        marcarComoLida: marcarComoLida,
-        marcarTodasComoLidas: marcarTodasComoLidas,
-        limparNotificacoes: limparNotificacoes,
-        irParaPedido: irParaPedido
+        marcarLida: _marcarLida,
+        irParaPedido: _irParaPedido,
+        abrirDropdown: _abrirDropdown,
+        fecharDropdown: _fecharDropdown,
+        close: _fecharDropdown,
+        marcarTodasComoLidas: _marcarTodasComoLidas,
+        limparNotificacoes: _limparTodas,
+        tocarSomConcluido: _tocarSomConcluido,
+        tocarSomCancelado: _tocarSomCancelado,
+        tocarSomExcluido: _tocarSomExcluido
     };
 })();
+
+window.PedidosDropdown = (function () {
+    var pedidosAtuais = [];
+    var btn = document.getElementById('btn-dropdown-pedidos');
+    var painel = document.getElementById('dropdown-pedidos-lista');
+    var inputBusca = document.getElementById('busca-pedido-id');
+    var listaItens = document.getElementById('lista-pedidos-itens');
+
+    function abrir() {
+        if (!btn || !painel || !inputBusca) return;
+        if (window.NotificationManager && typeof window.NotificationManager.close === 'function') {
+            window.NotificationManager.close();
+        }
+        posicionarPainel();
+        painel.style.display = 'flex';
+        requestAnimationFrame(function () { painel.classList.add('show'); });
+        inputBusca.value = '';
+        inputBusca.focus();
+        renderizarLista(pedidosAtuais);
+        document.addEventListener('click', fecharAoClicarFora, true);
+    }
+
+    function fechar() {
+        if (!painel) return;
+        painel.classList.remove('show');
+        setTimeout(function () {
+            if (!painel.classList.contains('show')) painel.style.display = 'none';
+        }, 180);
+        document.removeEventListener('click', fecharAoClicarFora, true);
+    }
+
+    function fecharAoClicarFora(e) {
+        if (!painel || !btn) return;
+        if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) fechar();
+    }
+
+    function posicionarPainel() {
+        if (!btn || !painel) return;
+        var rect = btn.getBoundingClientRect();
+        var larguraPainel = 320;
+        var left = rect.right - larguraPainel;
+        if (left < 8) left = 8;
+        painel.style.position = 'fixed';
+        painel.style.top = (rect.bottom + 6) + 'px';
+        painel.style.left = left + 'px';
+        painel.style.right = 'auto';
+    }
+
+    function renderizarLista(pedidos) {
+        if (!listaItens) return;
+        if (!pedidos || pedidos.length === 0) {
+            listaItens.innerHTML = '<div class="px-3 py-3 text-muted text-center"><small>Nenhum pedido encontrado</small></div>';
+            return;
+        }
+
+        listaItens.innerHTML = pedidos.map(function (p) {
+            var idExibicao = p.idFormatado || p.id;
+            return '<div class="pedido-item" data-pedido-id="' + p.id + '">' +
+                '<div class="pedido-item-info">' +
+                '<span class="pedido-item-id">' + idExibicao + '</span>' +
+                '<span class="pedido-item-rota">' + (p.resumo || '') + '</span>' +
+                '</div></div>';
+        }).join('');
+
+        listaItens.querySelectorAll('.pedido-item').forEach(function (el) {
+            el.addEventListener('click', function () {
+                var id = el.getAttribute('data-pedido-id');
+                irParaPedidoNoChat(id);
+                fechar();
+            });
+        });
+    }
+
+    function filtrar(termo) {
+        termo = (termo || '').trim().toLowerCase();
+        if (!termo) { renderizarLista(pedidosAtuais); return; }
+        var filtrados = pedidosAtuais.filter(function (p) {
+            var idFmt = (p.idFormatado || '').toLowerCase();
+            var idBruto = String(p.id).toLowerCase();
+            return idFmt.includes(termo) || idBruto.includes(termo);
+        });
+        renderizarLista(filtrados);
+    }
+
+    function irParaPedidoNoChat(id) {
+        var msgEl = document.querySelector('#chat-messages-container [data-pedido-id="' + id + '"]');
+        if (!msgEl) return;
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var wrapper = msgEl.closest('.message-wrapper') || msgEl;
+        wrapper.classList.add('pedido-highlight');
+        setTimeout(function () { wrapper.classList.remove('pedido-highlight'); }, 1600);
+    }
+
+    function setPedidos(lista) {
+        pedidosAtuais = lista || [];
+        if (painel && painel.classList.contains('show')) renderizarLista(pedidosAtuais);
+    }
+
+    function init() {
+        if (!btn || !painel || !inputBusca) return;
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var aberto = painel.classList.contains('show');
+            aberto ? fechar() : abrir();
+        });
+        inputBusca.addEventListener('input', function (e) { filtrar(e.target.value); });
+    }
+
+    return { init: init, setPedidos: setPedidos, abrir: abrir, fechar: fechar, close: fechar };
+})();
+
+function _atualizarHeaderCliente(nome, isOnline) {
+    var nameEl = document.getElementById('chat-header-name');
+    if (nameEl) nameEl.innerText = nome;
+    if (window.AppRDO && window.AppRDO.clienteId) {
+        var item = document.getElementById('item-contato-' + window.AppRDO.clienteId);
+        if (item) {
+            var dot = item.querySelector('.contact-status-dot');
+            var label = item.querySelector('.contact-status');
+            if (dot) dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
+            if (label) label.textContent = isOnline ? 'Online' : 'Offline';
+        }
+    }
+}
 
 window.addEventListener('masterStatusChanged', function (e) {
     var isOn = !!(e.detail && e.detail.isOn);
@@ -240,20 +484,6 @@ window.addEventListener('clienteStatusChanged', function (e) {
     window.renderizarLista(clientes, isMasterOn);
 });
 
-function _atualizarHeaderCliente(nome, isOnline) {
-    var nameEl = document.getElementById('chat-header-name');
-    if (nameEl) nameEl.innerText = nome;
-    if (window.AppRDO && window.AppRDO.clienteId) {
-        var item = document.getElementById('item-contato-' + window.AppRDO.clienteId);
-        if (item) {
-            var dot = item.querySelector('.contact-status-dot');
-            var label = item.querySelector('.contact-status');
-            if (dot) dot.style.backgroundColor = isOnline ? '#28a745' : '#adb5bd';
-            if (label) label.textContent = isOnline ? 'Online' : 'Offline';
-        }
-    }
-}
-
 function _limparBackdrop() {
     document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
     document.body.classList.remove('modal-open');
@@ -261,6 +491,7 @@ function _limparBackdrop() {
     document.body.style.removeProperty('overflow-y');
     document.body.style.removeProperty('padding-right');
 }
+window._limparBackdrop = _limparBackdrop;
 
 function _limparModalContainer() {
     var container = document.getElementById('modal-container');
@@ -270,8 +501,6 @@ function _limparModalContainer() {
     });
     container.innerHTML = '';
 }
-
-window._limparBackdrop = _limparBackdrop;
 
 window.loadModal = function (arquivo) {
     return new Promise(function (resolve) {
@@ -347,14 +576,16 @@ document.addEventListener('change', function (e) {
     }
 });
 
-(function () {
-    function _handleMsgKeydown(e) {
-        if (!e.target || e.target.id !== 'msg-input') return;
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.enviarMensagemGeral(); }
-    }
-    document.removeEventListener('keydown', _handleMsgKeydown);
-    document.addEventListener('keydown', _handleMsgKeydown);
-})();
+document.addEventListener('keydown', function (e) {
+    if (!e.target || e.target.id !== 'msg-input') return;
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.enviarMensagemGeral(); }
+});
+
+document.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
+    if (window.AppRDO && window.AppRDO.isFetching) return;
+    if (typeof window.carregarDados === 'function') window.carregarDados();
+});
 
 window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
@@ -561,6 +792,47 @@ function _formatarNomeServico(idBruto) {
 }
 window._formatarNomeServico = _formatarNomeServico;
 
+window.formatarTelefone = function (tel) {
+    if (!tel) return '';
+    var val = String(tel).replace(/\D/g, '');
+    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
+    if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
+    return val;
+};
+
+window.formatarTempoHumano = function (minutos) {
+    var h = Math.floor(minutos / 60);
+    var m = Math.round(minutos % 60);
+    return h > 0 ? h + 'h ' + m + 'min' : m + 'min';
+};
+
+window.formatarDataSeparador = function (dataStr) {
+    if (!dataStr) return null;
+    var raw = String(dataStr);
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+
+    if (raw.includes('T') || raw.includes('-')) {
+        var d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+            d.setHours(0, 0, 0, 0);
+            var diff = Math.floor((hoje - d) / 86400000);
+            if (diff === 0) return 'HOJE';
+            if (diff === 1) return 'ONTEM';
+            return String(d.getDate()).padStart(2, '0') + '/' +
+                String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+        }
+    }
+    var partes = raw.split('/');
+    if (partes.length === 3) {
+        var dm = new Date(partes[2], partes[1] - 1, partes[0]); dm.setHours(0, 0, 0, 0);
+        var dc = Math.floor((hoje - dm) / 86400000);
+        if (dc === 0) return 'HOJE';
+        if (dc === 1) return 'ONTEM';
+    }
+    return raw;
+};
+
 window.carregarPedidosDoCliente = async function (clienteId) {
     if (!clienteId) return;
     try {
@@ -576,6 +848,20 @@ window.carregarPedidosDoCliente = async function (clienteId) {
 
         window.AppRDO.pedidosCache = todosPedidos;
         window.AppRDO.mensagensCache = todasMensagens;
+
+        var listaParaDropdown = pedidosCliente.map(function (p) {
+            var idFormatado = typeof window._formatarNomeServico === 'function'
+                ? window._formatarNomeServico(p.id)
+                : String(p.id);
+            var resumo = String(p.de || '').trim() && String(p.para || '').trim()
+                ? p.de + ' → ' + p.para
+                : (p.status || '');
+            return { id: String(p.id).trim(), idFormatado: idFormatado, resumo: resumo };
+        });
+
+        if (window.PedidosDropdown && typeof window.PedidosDropdown.setPedidos === 'function') {
+            window.PedidosDropdown.setPedidos(listaParaDropdown);
+        }
 
         window.renderizarMensagens(mensagensCliente, pedidosCliente);
     } catch (err) {
@@ -714,7 +1000,6 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
 function _resolverTextoMensagem(msg, pedido) {
     var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
     if (textoSalvo.length > 0) return textoSalvo;
-
     if (!pedido) return '';
 
     var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
@@ -736,6 +1021,92 @@ function _resolverTextoMensagem(msg, pedido) {
         tempoTotal: tempoMin,
         valorEstimado: _parseMoedaSeguro(pedido.valor_total || pedido.valor_final || 0)
     });
+}
+
+function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
+    var div = document.createElement('div');
+    div.className = 'message-wrapper';
+
+    var iconHTML = temStatus
+        ? window.getIconePorStatus(statusPuro)
+        : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
+
+    div.innerHTML =
+        '<div class="msg-action-buttons">' +
+        '<button class="btn-copiar-msg" title="Copiar mensagem" ' +
+        'onclick="event.stopPropagation();window._copiarMensagemWrapper(\'' + pedidoId + '\', this)">' +
+        '<i class="bi bi-clipboard"></i>' +
+        '</button>' +
+        '<button class="btn-excluir-msg" title="Excluir mensagem" ' +
+        'onclick="event.stopPropagation();window.MasterAuth.abrir(\'' + pedidoId + '\')">' +
+        '<i class="bi bi-trash3-fill"></i>' +
+        '</button>' +
+        '</div>' +
+        '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
+        'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
+        '<div class="message-body">' + String(texto).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
+        'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
+        'data-tooltip="' + tooltipTexto + '">' +
+        iconHTML +
+        '</div>' +
+        '<span class="message-time">' + hora + '</span>' +
+        '</div>';
+
+    div.addEventListener('mouseenter', function () { div.classList.add('msg-hover-active'); });
+    div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
+
+    return div;
+}
+window._criarWrapperMensagem = _criarWrapperMensagem;
+
+window._copiarMensagemWrapper = function (pedidoId, botao) {
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"] .message-body');
+    if (!msgEl) return;
+    var texto = msgEl.textContent || msgEl.innerText || '';
+
+    function _feedbackSucesso() {
+        if (botao) {
+            var icon = botao.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-check2';
+                setTimeout(function () { icon.className = 'bi bi-clipboard'; }, 1500);
+            }
+        }
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Pedido copiado!',
+                text: 'Agora você pode colar no WhatsApp.',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 1800,
+                timerProgressBar: true,
+                customClass: { popup: 'rounded-4 shadow' }
+            });
+        }
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(_feedbackSucesso).catch(function () {
+            _copiarFallback(texto, _feedbackSucesso);
+        });
+    } else {
+        _copiarFallback(texto, _feedbackSucesso);
+    }
+};
+
+function _copiarFallback(texto, callback) {
+    var temp = document.createElement('textarea');
+    temp.value = texto;
+    temp.style.position = 'fixed';
+    temp.style.opacity = '0';
+    document.body.appendChild(temp);
+    temp.select();
+    try { document.execCommand('copy'); } catch (_) { }
+    document.body.removeChild(temp);
+    if (typeof callback === 'function') callback();
 }
 
 window.renderizarMensagens = function (mensagens, pedidos) {
@@ -779,49 +1150,43 @@ window.renderizarMensagens = function (mensagens, pedidos) {
         var textoMensagem = _resolverTextoMensagem(msg, pedido);
 
         container.appendChild(
-            _criarWrapperMensagemComCopia(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
+            _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
         );
     });
 
     container.scrollTop = container.scrollHeight;
 };
 
-function _criarWrapperMensagemComCopia(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
-    var div = document.createElement('div');
-    div.className = 'message-wrapper';
+window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
+    var container = document.getElementById('chat-messages-container');
+    if (!container) return;
 
-    var iconHTML = temStatus
-        ? window.getIconePorStatus(statusPuro)
-        : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
+    var emptyState = container.querySelector('.chat-empty-state');
+    if (emptyState) emptyState.remove();
 
-    div.innerHTML =
-        '<button class="btn-copiar-msg" title="Copiar mensagem" ' +
-        'onclick="event.stopPropagation();window._copiarMensagemWrapper(\'' + pedidoId + '\', this)">' +
-        '<i class="bi bi-clipboard"></i>' +
-        '</button>' +
-        '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
-        'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
-        '<div class="message-body">' + String(texto).replace(/\n/g, '<br>') + '</div>' +
-        '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
-        'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
-        'data-tooltip="' + tooltipTexto + '">' +
-        iconHTML +
-        '</div>' +
-        '<span class="message-time">' + hora + '</span>' +
-        '</div>';
+    var hojeLabel = 'HOJE';
+    var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
+    if (!ultimoSep || ultimoSep.textContent !== hojeLabel) {
+        var sep = document.createElement('div');
+        sep.className = 'chat-date-separator';
+        sep.innerHTML = '<span class="chat-date-badge">' + hojeLabel + '</span>';
+        container.appendChild(sep);
+    }
 
-    div.addEventListener('mouseenter', function () { div.classList.add('msg-hover-active'); });
-    div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
+    var horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    container.appendChild(_criarWrapperMensagem(pedidoId || null, texto, horaAtual, false, '', 'Alterar Status'));
+    container.scrollTop = container.scrollHeight;
+};
 
-    return div;
-}
-
-window._copiarMensagemWrapper = function (pedidoId, botao) {
-    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"] .message-body');
-    if (!msgEl) return;
-
-    var texto = msgEl.textContent || msgEl.innerText || '';
-    window._copiarMensagem(texto, botao);
+window.getIconePorStatus = function (status) {
+    var s = String(status || '').trim().toUpperCase();
+    if (s.includes('EM_ROTA') || s.includes('EM ROTA') || s.includes('/'))
+        return '<i class="bi bi-bicycle" style="color:#0d6efd;"></i>';
+    if (s.includes('CONCLUIDO') || s.includes('CONCLUÍDO'))
+        return '<i class="bi bi-check-circle-fill" style="color:#28a745;"></i>';
+    if (s.includes('CANCELADO'))
+        return '<i class="bi bi-x-circle-fill" style="color:#dc3545;"></i>';
+    return '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 };
 
 window.gerarMensagemFormatada = function (dados) {
@@ -870,70 +1235,6 @@ window.gerarMensagemFormatada = function (dados) {
     );
 
     return linhas.join('\n');
-};
-
-function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
-    var div = document.createElement('div');
-    div.className = 'message-wrapper';
-
-    var iconHTML = temStatus
-        ? window.getIconePorStatus(statusPuro)
-        : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
-
-    div.innerHTML =
-        '<button class="btn-excluir-msg" title="Excluir mensagem" ' +
-        'onclick="event.stopPropagation();window.MasterAuth.abrir(\'' + pedidoId + '\')">' +
-        '<i class="bi bi-trash3-fill"></i>' +
-        '</button>' +
-        '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
-        'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
-        '<div class="message-body">' + String(texto).replace(/\n/g, '<br>') + '</div>' +
-        '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
-        'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
-        'data-tooltip="' + tooltipTexto + '">' +
-        iconHTML +
-        '</div>' +
-        '<span class="message-time">' + hora + '</span>' +
-        '</div>';
-
-    div.addEventListener('mouseenter', function () { div.classList.add('msg-hover-active'); });
-    div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
-
-    return div;
-}
-
-window._criarWrapperMensagem = _criarWrapperMensagem;
-
-window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
-    var container = document.getElementById('chat-messages-container');
-    if (!container) return;
-
-    var emptyState = container.querySelector('.chat-empty-state');
-    if (emptyState) emptyState.remove();
-
-    var hojeLabel = 'HOJE';
-    var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
-    if (!ultimoSep || ultimoSep.textContent !== hojeLabel) {
-        var sep = document.createElement('div');
-        sep.className = 'chat-date-separator';
-        sep.innerHTML = '<span class="chat-date-badge">' + hojeLabel + '</span>';
-        container.appendChild(sep);
-    }
-
-    var horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    container.appendChild(_criarWrapperMensagem(pedidoId || null, texto, horaAtual, false, '', 'Alterar Status'));
-    container.scrollTop = container.scrollHeight;
-};
-
-window.getIconePorStatus = function (status) {
-    var s = String(status || '').trim().toUpperCase();
-    if (s.includes('EM_ROTA') || s.includes('EM ROTA') || s.includes('/'))
-        return '<i class="bi bi-bicycle" style="color:#0d6efd;"></i>';
-    if (s.includes('CONCLUIDO') || s.includes('CONCLUÍDO'))
-        return '<i class="bi bi-check-circle-fill" style="color:#28a745;"></i>';
-    if (s.includes('CANCELADO'))
-        return '<i class="bi bi-x-circle-fill" style="color:#dc3545;"></i>';
-    return '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 };
 
 window.StatusModal = (function () {
@@ -1308,47 +1609,6 @@ window.buscarCoordenadasEndereco = function (endereco) {
             })
             .catch(function () { resolve(null); });
     });
-};
-
-window.formatarTelefone = function (tel) {
-    if (!tel) return '';
-    var val = String(tel).replace(/\D/g, '');
-    if (val.length === 8) return val.replace(/^(\d{4})(\d{4})$/, '$1-$2');
-    if (val.length === 10) return val.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
-    if (val.length === 11) return val.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, '($1) $2 $3-$4');
-    return val;
-};
-
-window.formatarTempoHumano = function (minutos) {
-    var h = Math.floor(minutos / 60);
-    var m = Math.round(minutos % 60);
-    return h > 0 ? h + 'h ' + m + 'min' : m + 'min';
-};
-
-window.formatarDataSeparador = function (dataStr) {
-    if (!dataStr) return null;
-    var raw = String(dataStr);
-    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-
-    if (raw.includes('T') || raw.includes('-')) {
-        var d = new Date(raw);
-        if (!isNaN(d.getTime())) {
-            d.setHours(0, 0, 0, 0);
-            var diff = Math.floor((hoje - d) / 86400000);
-            if (diff === 0) return 'HOJE';
-            if (diff === 1) return 'ONTEM';
-            return String(d.getDate()).padStart(2, '0') + '/' +
-                String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-        }
-    }
-    var partes = raw.split('/');
-    if (partes.length === 3) {
-        var dm = new Date(partes[2], partes[1] - 1, partes[0]); dm.setHours(0, 0, 0, 0);
-        var dc = Math.floor((hoje - dm) / 86400000);
-        if (dc === 0) return 'HOJE';
-        if (dc === 1) return 'ONTEM';
-    }
-    return raw;
 };
 
 window.exibirErro = function (erro, contexto) {
@@ -1869,25 +2129,14 @@ window.fecharParaChat = function (modalId) {
 };
 
 (function () {
-    function _handleSyncClick(e) {
-        if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
-        if (window.AppRDO && window.AppRDO.isFetching) return;
-        if (typeof window.carregarDados === 'function') window.carregarDados();
-    }
-    document.removeEventListener('click', _handleSyncClick);
-    document.addEventListener('click', _handleSyncClick);
-
     function _tentarInit() {
         if (window.AppRDO) {
             window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
             window.AppRDO.listaCarregada = false;
             window.AppRDO._mapaModalAberto = false;
         }
-
-        if (typeof window.NotificationManager !== 'undefined') {
-            window.NotificationManager.init();
-        }
-
+        window.PedidosDropdown.init();
+        window.NotificationManager.init();
         if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
     }
 
@@ -1944,339 +2193,6 @@ window.fecharParaChat = function (modalId) {
             }
         });
     }
-
-    window._carregarPedidosDropdown = function (clienteId) {
-        var lista = document.getElementById('dropdown-pedidos-lista');
-        if (!lista) return;
-
-        lista.innerHTML = '<li class="text-center py-2"><div class="spinner-border spinner-border-sm text-danger"></div></li>';
-
-        var pedidos = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-        var pedidosCliente = pedidos.filter(function (p) {
-            return String(p.id_cliente || '').trim() === String(clienteId).trim();
-        });
-
-        if (pedidosCliente.length === 0) {
-            lista.innerHTML = '<li class="px-3 py-2 text-muted text-center"><small>Nenhum pedido encontrado</small></li>';
-            return;
-        }
-
-        var htmlBusca = '<li class="px-2 pb-2">' +
-            '<div class="input-group input-group-sm">' +
-            '<span class="input-group-text bg-white border-end-0" style="border-radius:8px 0 0 8px;border-color:#e9ecef;">' +
-            '<i class="bi bi-search text-muted" style="font-size:.8rem;"></i>' +
-            '</span>' +
-            '<input type="text" id="input-busca-pedido" class="form-control border-start-0 shadow-none" ' +
-            'placeholder="Buscar ID..." style="border-radius:0 8px 8px 0;font-size:.8rem;border-color:#e9ecef;">' +
-            '</div>' +
-            '</li>' +
-            '<li><hr class="dropdown-divider my-1"></li>';
-
-        var htmlPedidos = pedidosCliente.map(function (p) {
-            var id = String(p.id || '').trim();
-            var idFormatado = _formatarNomeServico(id);
-            var status = String(p.status || 'PENDENTE').toUpperCase();
-            var iconClass = 'bi-box-seam text-muted';
-
-            if (status.includes('CONCLUIDO') || status.includes('CONCLUÍDO')) {
-                iconClass = 'bi-check-circle-fill text-success';
-            } else if (status.includes('CANCELADO')) {
-                iconClass = 'bi-x-circle-fill text-danger';
-            } else if (status.includes('EM_ROTA') || status.includes('EM ROTA') || status.includes('/')) {
-                iconClass = 'bi-bicycle text-primary';
-            }
-
-            return '<li><a class="dropdown-item d-flex align-items-center gap-2 pedido-dropdown-item" href="#" data-pedido-id="' + id + '" data-pedido-formatado="' + idFormatado + '">' +
-                '<i class="' + iconClass + '"></i>' +
-                '<span class="texto-pedido-dropdown">' + idFormatado + '</span>' +
-                '</a></li>';
-        }).join('');
-
-        lista.innerHTML = htmlBusca + htmlPedidos;
-
-        var inputBusca = document.getElementById('input-busca-pedido');
-        if (inputBusca) {
-            inputBusca.addEventListener('input', function () {
-                var termo = this.value.toLowerCase().trim();
-                var itens = lista.querySelectorAll('.pedido-dropdown-item');
-
-                itens.forEach(function (item) {
-                    var idFormatado = String(item.getAttribute('data-pedido-formatado') || '').toLowerCase();
-                    var idPuro = String(item.getAttribute('data-pedido-id') || '').toLowerCase();
-
-                    if (idFormatado.includes(termo) || idPuro.includes(termo)) {
-                        item.parentElement.style.display = '';
-                    } else {
-                        item.parentElement.style.display = 'none';
-                    }
-                });
-            });
-
-            inputBusca.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    var termo = this.value.toLowerCase().trim();
-                    var primeiroVisivel = lista.querySelector('.pedido-dropdown-item:not([style*="display: none"])');
-                    if (primeiroVisivel) {
-                        var pedidoId = primeiroVisivel.getAttribute('data-pedido-id');
-                        window._destacarPedidoNoChat(pedidoId);
-                        var dropdownEl = document.getElementById('dropdown-pedidos');
-                        if (dropdownEl) {
-                            var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
-                            if (bsDropdown) bsDropdown.hide();
-                        }
-                    }
-                }
-            });
-
-            setTimeout(function () {
-                if (inputBusca) inputBusca.focus();
-            }, 100);
-        }
-
-        lista.querySelectorAll('.pedido-dropdown-item').forEach(function (item) {
-            item.onclick = function (e) {
-                e.preventDefault();
-                var pedidoId = this.getAttribute('data-pedido-id');
-                window._destacarPedidoNoChat(pedidoId);
-                var dropdownEl = document.getElementById('dropdown-pedidos');
-                if (dropdownEl) {
-                    var bsDropdown = bootstrap.Dropdown.getInstance(dropdownEl.querySelector('.btn-dropdown-pedidos'));
-                    if (bsDropdown) bsDropdown.hide();
-                }
-            };
-        });
-    };
-
-    window._renderizarMensagens = function (mensagens) {
-        var container = document.getElementById('chat-messages-container');
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        if (!mensagens || mensagens.length === 0) {
-            container.innerHTML = '<div class="chat-empty-state"><div class="chat-empty-label">Nenhuma mensagem encontrada</div></div>';
-            return;
-        }
-
-        mensagens.forEach(function (msg) {
-            var isBot = (msg.remetente === 'bot' || msg.remetente === 'sistema');
-            var wrapper = document.createElement('div');
-            wrapper.className = 'message-wrapper ' + (isBot ? 'message-bot' : 'message-user');
-
-            var bubble = document.createElement('div');
-            bubble.className = 'message-bubble ' + (isBot ? 'bubble-bot' : 'bubble-user');
-
-            var conteudo = String(msg.conteudo || msg.mensagem || msg.texto || '').trim();
-
-            var textoElement = document.createElement('div');
-            textoElement.className = 'message-text';
-            textoElement.textContent = conteudo;
-
-            if (msg.pedido_id) {
-                textoElement.setAttribute('data-pedido-id', msg.pedido_id);
-            }
-
-            var timestamp = document.createElement('div');
-            timestamp.className = 'message-timestamp';
-            timestamp.textContent = _formatarDataHora(msg.data_envio || msg.created_at || msg.hora);
-
-            bubble.appendChild(textoElement);
-            bubble.appendChild(timestamp);
-
-            var btnCopiar = document.createElement('button');
-            btnCopiar.className = 'btn-copiar-mensagem';
-            btnCopiar.innerHTML = '<i class="bi bi-clipboard"></i>';
-            btnCopiar.title = 'Copiar mensagem';
-            btnCopiar.onclick = function (e) {
-                e.stopPropagation();
-                _copiarMensagem(conteudo, btnCopiar);
-            };
-
-            bubble.appendChild(btnCopiar);
-            wrapper.appendChild(bubble);
-            container.appendChild(wrapper);
-        });
-
-        container.scrollTop = container.scrollHeight;
-    };
-
-    window._copiarMensagem = function (texto, botao) {
-        if (!texto) return;
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(texto).then(function () {
-                _feedbackCopia(botao, true);
-            }).catch(function () {
-                _copiarFallback(texto, botao);
-            });
-        } else {
-            _copiarFallback(texto, botao);
-        }
-    };
-
-    window._copiarFallback = function (texto, botao) {
-        var textarea = document.createElement('textarea');
-        textarea.value = texto;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        textarea.style.pointerEvents = 'none';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-
-        try {
-            var sucesso = document.execCommand('copy');
-            _feedbackCopia(botao, sucesso);
-        } catch (err) {
-            _feedbackCopia(botao, false);
-        }
-
-        document.body.removeChild(textarea);
-    };
-
-    window._feedbackCopia = function (botao, sucesso) {
-        if (!botao) return;
-
-        var iconOriginal = botao.innerHTML;
-
-        if (sucesso) {
-            botao.innerHTML = '<i class="bi bi-check2"></i>';
-            botao.style.color = '#28a745';
-
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Copiado!',
-                    text: 'Mensagem copiada para a área de transferência',
-                    toast: true,
-                    position: 'top-end',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    timerProgressBar: true
-                });
-            }
-
-            setTimeout(function () {
-                botao.innerHTML = iconOriginal;
-                botao.style.color = '';
-            }, 2000);
-        } else {
-            botao.innerHTML = '<i class="bi bi-x"></i>';
-            botao.style.color = '#dc3545';
-
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erro',
-                    text: 'Não foi possível copiar a mensagem',
-                    toast: true,
-                    position: 'top-end',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    timerProgressBar: true
-                });
-            }
-
-            setTimeout(function () {
-                botao.innerHTML = iconOriginal;
-                botao.style.color = '';
-            }, 2000);
-        }
-    };
-
-    window._formatarDataHora = function (dataStr) {
-        if (!dataStr) return '';
-        try {
-            var data = new Date(dataStr);
-            var horas = String(data.getHours()).padStart(2, '0');
-            var minutos = String(data.getMinutes()).padStart(2, '0');
-            return horas + ':' + minutos;
-        } catch (e) {
-            return '';
-        }
-    };
-
-    window._destacarPedidoNoChat = function (pedidoId) {
-        var container = document.getElementById('chat-messages-container');
-        if (!container) return;
-
-        var todasMensagens = container.querySelectorAll('.message-wrapper');
-        var encontrado = false;
-
-        todasMensagens.forEach(function (wrapper) {
-            var msgEl = wrapper.querySelector('[data-pedido-id]');
-            if (!msgEl) return;
-
-            var idMsg = String(msgEl.getAttribute('data-pedido-id') || '').trim();
-            var idNorm = idMsg.replace(/^RDO0*/i, '');
-            var pedidoNorm = String(pedidoId).replace(/^RDO0*/i, '');
-
-            if (idNorm === pedidoNorm) {
-                wrapper.style.display = 'flex';
-                wrapper.style.opacity = '1';
-                wrapper.style.transform = 'scale(1)';
-
-                if (!encontrado) {
-                    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    wrapper.classList.add('pedido-destacado');
-                    encontrado = true;
-
-                    setTimeout(function () {
-                        wrapper.classList.remove('pedido-destacado');
-                    }, 600);
-                }
-            } else {
-                wrapper.style.display = 'none';
-                wrapper.style.opacity = '0';
-                wrapper.style.transform = 'scale(0.95)';
-            }
-        });
-
-        if (!encontrado && typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'info',
-                title: 'Nenhuma mensagem',
-                text: 'Não há mensagens para este pedido no chat',
-                toast: true,
-                position: 'top-end',
-                timer: 2500,
-                showConfirmButton: false,
-                timerProgressBar: true
-            });
-        }
-
-        setTimeout(function () {
-            todasMensagens.forEach(function (wrapper) {
-                wrapper.style.display = 'flex';
-                wrapper.style.opacity = '1';
-                wrapper.style.transform = 'scale(1)';
-            });
-        }, 8000);
-    };
-
-    document.addEventListener('click', function (e) {
-        var dropdownBtn = document.querySelector('.btn-dropdown-pedidos');
-        if (!dropdownBtn) return;
-
-        if (e.target === dropdownBtn || dropdownBtn.contains(e.target)) {
-            var clienteId = window.AppRDO && window.AppRDO.clienteId;
-            if (clienteId) {
-                window._carregarPedidosDropdown(clienteId);
-            }
-        }
-    });
-
-    document.addEventListener('click', function (e) {
-        var notifBtn = document.querySelector('.btn-notifications');
-        if (!notifBtn) return;
-
-        if (e.target === notifBtn || notifBtn.contains(e.target)) {
-            if (typeof window.NotificationManager !== 'undefined') {
-                window.NotificationManager.abrirDropdown();
-            }
-        }
-    });
 
     _registrarEventos();
 })();

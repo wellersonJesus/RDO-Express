@@ -1,137 +1,138 @@
 <div class="row g-3 h-100">
-    <div class="col-12">
-        <div id="global-error-container" class="alert alert-danger d-none rounded-4 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <span id="global-error-message"></span>
-        </div>
+  <div class="col-12">
+    <div id="global-error-container" class="alert alert-danger d-none rounded-4 shadow-sm" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <span id="global-error-message"></span>
     </div>
+  </div>
 
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-whatsapp fs-3 text-danger"></i>
-                    <div>
-                        <h5 class="fw-bold mb-0 text-dark">
-                            <span class="text-danger">RDO</span> Express - Chat
-                        </h5>
-                        <small class="text-muted chat-subtitle">Central de Pedidos</small>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="dropdown" id="dropdown-notifications">
-                        <button class="btn-notifications" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notificações">
-                            <i class="bi bi-bell-fill"></i>
-                            <span id="notif-badge" class="d-none">0</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg">
-                            <li class="notif-header">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <h6 class="notif-title mb-0">Notificações</h6>
-                                    <div class="notif-actions">
-                                        <button type="button" class="notif-action-btn" onclick="window.NotificationManager.marcarTodasComoLidas()" title="Marcar todas como lidas">
-                                            <i class="bi bi-check-all me-1"></i>Ler todas
-                                        </button>
-                                        <button type="button" class="notif-action-btn" onclick="window.NotificationManager.limparNotificacoes()" title="Limpar notificações">
-                                            <i class="bi bi-trash3 me-1"></i>Limpar
-                                        </button>
-                                    </div>
-                                </div>
-                            </li>
-                            <li><hr class="dropdown-divider m-0"></li>
-                            <div id="notifications-list">
-                                <div class="p-4 text-center text-muted">
-                                    <i class="bi bi-bell-slash me-2"></i>
-                                    <small>Nenhuma notificação</small>
-                                </div>
-                            </div>
-                        </ul>
-                    </div>
-                    <button type="button" id="btn-sync-chat" class="btn-sync-chat" title="Atualizar tudo">
-                        <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
+  <div class="col-12">
+    <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
+      <div class="card-body p-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-whatsapp fs-3 text-danger"></i>
+          <div>
+            <h5 class="fw-bold mb-0 text-dark"><span class="text-danger">RDO</span> Express - Chat</h5>
+            <small class="text-muted chat-subtitle">Central de Pedidos</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="dropdown" id="dropdown-notifications">
+            <button class="btn-notifications" type="button" title="Notificações">
+              <i class="bi bi-bell-fill"></i>
+              <span id="notif-badge" class="d-none">0</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg" id="notif-dropdown-menu">
+              <li class="notif-header">
+                <div class="d-flex align-items-center justify-content-between">
+                  <h6 class="notif-title mb-0">Notificações</h6>
+                  <div class="notif-actions">
+                    <button type="button" class="notif-action-btn" onclick="window.NotificationManager.marcarTodasComoLidas()">
+                      <i class="bi bi-check-all me-1"></i>Ler todas
                     </button>
+                    <button type="button" class="notif-action-btn" onclick="window.NotificationManager.limparNotificacoes()">
+                      <i class="bi bi-trash3 me-1"></i>Limpar
+                    </button>
+                  </div>
                 </div>
-            </div>
+              </li>
+              <li><hr class="dropdown-divider m-0"></li>
+              <li id="notifications-list">
+                <div class="p-4 text-center text-muted">
+                  <i class="bi bi-bell-slash me-2"></i><small>Nenhuma notificação</small>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <button type="button" id="btn-sync-chat" class="btn-sync-chat" title="Atualizar tudo">
+            <i id="sync-icon-header" class="bi bi-arrow-repeat"></i>
+          </button>
         </div>
+      </div>
     </div>
+  </div>
 
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column card-contatos">
-            <div class="p-3 border-bottom d-flex align-items-center gap-2">
-                <div class="input-group bg-light rounded-pill px-2 flex-grow-1">
-                    <span class="input-group-text bg-transparent border-0">
-                        <i class="bi bi-search text-secondary"></i>
-                    </span>
-                    <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar cliente..." autocomplete="off">
-                </div>
-            </div>
-            <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
-                <div class="text-center text-muted py-4">
-                    <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                    <div class="mt-2 chat-loading-text">Buscando clientes<span class="chat-dots"></span></div>
-                </div>
-            </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white d-flex flex-column card-contatos">
+      <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <div class="input-group bg-light rounded-pill px-2 flex-grow-1">
+          <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar cliente..." autocomplete="off">
         </div>
-    </div>
-
-    <div class="col-md-8">
-        <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column card-chat">
-            <div id="step-chat" class="d-flex flex-column h-100">
-
-                <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="position-relative flex-shrink-0" id="chat-header-avatar-wrapper" style="display:none!important;">
-                            <img id="chat-header-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle" width="36" height="36" alt="Avatar">
-                            <span id="chat-header-status-dot" class="position-absolute bottom-0 end-0 rounded-circle border border-white" style="width:10px;height:10px;background-color:#adb5bd;"></span>
-                        </div>
-                        <div class="ms-1">
-                            <h6 id="chat-header-name" class="fw-bold mb-0 text-dark">Selecione um contato</h6>
-                        </div>
-                    </div>
-                    <div class="dropdown" id="dropdown-pedidos">
-                        <button class="btn-dropdown-pedidos" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Ver pedidos deste cliente">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" id="dropdown-pedidos-lista">
-                            <li class="px-3 py-2 text-muted text-center"><small>Selecione um cliente</small></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div id="chat-messages-container" class="flex-grow-1 p-4 whatsapp-bg overflow-auto d-flex flex-column gap-2">
-                    <div class="chat-empty-state">
-                        <div class="chat-empty-label">Selecione um contato para ver as mensagens</div>
-                    </div>
-                </div>
-
-                <div class="p-3 bg-white border-top">
-                    <div class="input-group bg-light rounded-pill p-1 align-items-end">
-                        <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea" rows="1" placeholder="Digite o pedido..." autocomplete="off" style="resize:none;overflow-y:auto;max-height:120px;"></textarea>
-                        <button type="button" id="btn-enviar-mensagem" class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0" title="Enviar pedido" onclick="window.enviarMensagemGeral()">
-                            <i class="bi bi-send-fill"></i>
-                        </button>
-                    </div>
-                </div>
-
-            </div>
+      </div>
+      <div id="lista-contatos-chat" class="list-group list-group-flush overflow-auto flex-grow-1">
+        <div class="text-center text-muted py-4">
+          <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
+          <div class="mt-2 chat-loading-text">Buscando clientes<span class="chat-dots"></span></div>
         </div>
+      </div>
     </div>
+  </div>
+
+  <div class="col-md-8">
+    <div id="dynamic-content-area" class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column card-chat">
+      <div id="step-chat" class="d-flex flex-column h-100">
+        <div id="chat-header" class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="position-relative flex-shrink-0 d-none" id="chat-header-avatar-wrapper">
+              <img id="chat-header-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="rounded-circle" width="36" height="36" alt="Avatar">
+              <span id="chat-header-status-dot" class="contact-status-dot position-absolute bottom-0 end-0 rounded-circle border border-white" style="background-color:#adb5bd;"></span>
+            </div>
+            <div class="ms-1">
+              <h6 id="chat-header-name" class="fw-bold mb-0 text-dark">Selecione um contato</h6>
+            </div>
+          </div>
+          <div class="dropdown" id="dropdown-pedidos">
+            <button id="btn-dropdown-pedidos" class="btn-dropdown-pedidos" type="button" title="Ver pedidos deste cliente">
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow-sm p-0" id="dropdown-pedidos-lista" style="width:320px;max-height:420px;">
+              <div class="p-2 border-bottom bg-white sticky-top">
+                <div class="input-group input-group-sm bg-light rounded-pill px-2">
+                  <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
+                  <input type="text" id="busca-pedido-id" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar por ID do pedido..." autocomplete="off">
+                </div>
+              </div>
+              <div id="lista-pedidos-itens" class="overflow-auto" style="max-height:360px;">
+                <div class="px-3 py-3 text-muted text-center"><small>Selecione um cliente</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="chat-messages-container" class="flex-grow-1 whatsapp-bg d-flex flex-column gap-2">
+          <div class="chat-empty-state">
+            <div class="chat-empty-label">Selecione um contato para ver as mensagens</div>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="input-group bg-light rounded-pill p-1 align-items-end">
+            <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea" rows="1" placeholder="Digite o pedido..." autocomplete="off" style="max-height:120px;overflow-y:auto;"></textarea>
+            <button type="button" id="btn-enviar-mensagem" class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0" title="Enviar pedido" onclick="window.enviarMensagemGeral()">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="modal fade" id="modalStatus" tabindex="-1" aria-labelledby="modalStatusLabel" aria-hidden="true">
+<div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
-    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-      <div class="modal-header border-0 px-4 pt-4 pb-2 align-items-start">
+    <div class="modal-content modal-status-content border-0 shadow-lg">
+      <div class="modal-status-header modal-header border-0 px-4 pt-4 pb-2 align-items-start">
         <div class="d-flex align-items-center gap-2">
-          <span id="modal-status-icon-wrap" class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger bg-opacity-10" style="width:36px;height:36px;flex-shrink:0;">
+          <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger bg-opacity-10" style="width:36px;height:36px;flex-shrink:0;">
             <i id="modal-status-icone" class="bi bi-arrow-repeat text-danger" style="font-size:1.1rem;"></i>
           </span>
           <div>
-            <h6 id="modal-status-texto" class="fw-bold mb-0 text-dark" style="font-size:.93rem;">Alterar Status</h6>
-            <small id="modal-status-subtitulo" class="text-muted" style="font-size:.75rem;">Selecione a ação desejada</small>
+            <h6 id="modal-status-texto" class="modal-status-title fw-bold mb-0">Alterar Status</h6>
+            <small class="text-muted" style="font-size:.75rem;">Selecione a ação desejada</small>
           </div>
         </div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Fechar" style="font-size:.7rem;margin-top:2px;"></button>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" style="font-size:.7rem;margin-top:2px;"></button>
       </div>
       <div class="modal-body px-4 pb-4 pt-2">
         <div id="box-botoes-status">
@@ -165,10 +166,9 @@
             </button>
           </div>
         </div>
+
         <div id="box-selecao-motoboy" class="d-none">
-          <p class="text-muted mb-3" style="font-size:.78rem;">
-            <i class="bi bi-info-circle me-1"></i>Selecione o motoboy responsável por esta entrega.
-          </p>
+          <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione o motoboy responsável por esta entrega.</p>
           <label class="form-label fw-semibold text-dark mb-1" style="font-size:.8rem;" for="select-motoboy">
             <i class="bi bi-person-badge me-1 text-primary"></i>Motoboy
           </label>
@@ -179,22 +179,21 @@
             <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
               <i class="bi bi-chevron-left me-1"></i>Voltar
             </button>
-            <button type="button" id="btn-confirmar-motoboy" class="btn btn-sm btn-primary rounded-3 flex-fill fw-semibold" style="font-size:.8rem;" onclick="window.StatusModal.confirmarMotoboy()">
+            <button type="button" class="btn btn-sm btn-primary rounded-3 flex-fill fw-semibold" style="font-size:.8rem;" onclick="window.StatusModal.confirmarMotoboy()">
               <i class="bi bi-check2 me-1"></i>Confirmar
             </button>
           </div>
         </div>
+
         <div id="box-cancelamento" class="d-none">
-          <p class="text-muted mb-3" style="font-size:.78rem;">
-            <i class="bi bi-info-circle me-1"></i>Selecione um ou mais motivos para registrar o cancelamento.
-          </p>
+          <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione um ou mais motivos para registrar o cancelamento.</p>
           <div class="mb-2">
             <div class="d-flex align-items-center gap-2 mb-2">
               <span class="badge rounded-pill text-bg-secondary" style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">CLIENTE</span>
               <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
             </div>
             <div class="d-flex flex-column gap-1">
-              <label class="cancel-check-item" data-bs-toggle="tooltip" title="O cliente desistiu devido à demora superior ao tempo estimado.">
+              <label class="cancel-check-item" title="O cliente desistiu devido à demora superior ao tempo estimado.">
                 <input type="checkbox" class="cancel-cb" value="Tempo de espera excessivo">
                 <div class="cancel-check-body">
                   <div class="cancel-check-title">Tempo de espera excessivo</div>
@@ -247,8 +246,7 @@
             </div>
           </div>
           <div id="cancel-error" class="d-none mb-2 d-flex align-items-center gap-1 text-danger rounded-3 px-2 py-1" style="font-size:.78rem;background:#fff0f0;border:1px solid #f5c6cb;">
-            <i class="bi bi-exclamation-circle-fill"></i>
-            <span>Selecione ao menos um motivo antes de confirmar.</span>
+            <i class="bi bi-exclamation-circle-fill"></i><span>Selecione ao menos um motivo antes de confirmar.</span>
           </div>
           <div class="d-flex gap-2">
             <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
@@ -264,15 +262,15 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-labelledby="modalMensagemPadraoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="modalMensagemPadraoLabel">MODELO MENSAGENS</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body">
-                <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly aria-label="Modelo de mensagem">📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
+<div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">MODELO MENSAGENS</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly>📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
 
 SOLICITANTE: 
 CONTATO: 
@@ -288,54 +286,61 @@ OBSERVAÇÃO: Descreva a observação aqui se necessario
 
 Assim que enviar esta mensagem preenchida, 
 calcularemos á sua taxa! 🏁</textarea>
-                <button type="button" class="btn btn-outline-danger w-100 rounded-pill" onclick="window.copiarModelo()">
-                    <i class="bi bi-clipboard me-1"></i> Copiar Modelo
-                </button>
-            </div>
-        </div>
+        <button type="button" class="btn btn-outline-danger w-100 rounded-pill" onclick="window.copiarModelo()">
+          <i class="bi bi-clipboard me-1"></i> Copiar Modelo
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-<div class="modal fade" id="modalValidacao" tabindex="-1" aria-labelledby="modalValidacaoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <div class="d-flex align-items-center gap-2">
-                    <i id="modal-validacao-icone" class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
-                    <h6 class="modal-title fw-bold mb-0" id="modalValidacaoLabel">Atenção</h6>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size:.9rem;"></p>
-                <div id="modal-validacao-modelo" class="d-none mt-3">
-                    <textarea id="modal-validacao-textarea" class="form-control bg-light textarea-modelo" rows="12" readonly></textarea>
-                    <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2" onclick="window.copiarModeloValidacao()">
-                        <i class="bi bi-clipboard me-1"></i> Copiar Modelo
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-danger rounded-pill px-4 w-100" data-bs-dismiss="modal">Entendi</button>
-            </div>
+<div class="modal fade" id="modalValidacao" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow rounded-4">
+      <div class="modal-header border-0 pb-0">
+        <div class="d-flex align-items-center gap-2">
+          <i id="modal-validacao-icone" class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+          <h6 class="modal-title fw-bold mb-0">Atenção</h6>
         </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size:.9rem;"></p>
+        <div id="modal-validacao-modelo" class="d-none mt-3">
+          <textarea id="modal-validacao-textarea" class="form-control bg-light textarea-modelo" rows="12" readonly></textarea>
+          <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2" onclick="window.copiarModeloValidacao()">
+            <i class="bi bi-clipboard me-1"></i> Copiar Modelo
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-danger rounded-pill px-4 w-100" data-bs-dismiss="modal">Entendi</button>
+      </div>
     </div>
+  </div>
 </div>
 
 <div id="modal-container"></div>
 
 <script>
-(function(){
-var base=window.location.pathname.replace(/\/[^/]*$/,'/');
-if(base.indexOf('/pages/')!==-1)base=base.substring(0,base.indexOf('/pages/')+1);
-function _loadScript(src,cb){
-if(document.querySelector('script[src="'+src+'"]')){if(typeof cb==='function')cb();return;}
-var s=document.createElement('script');s.src=src;s.onload=function(){if(typeof cb==='function')cb();};s.onerror=function(){if(typeof cb==='function')cb();};document.head.appendChild(s);
-}
-_loadScript(base+'js/form_clientes.js',function(){
-var textarea=document.getElementById('msg-input');
-if(!textarea)return;
-textarea.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
-});
+(function () {
+  var base = window.location.pathname.replace(/\/[^/]*$/, '/');
+  if (base.indexOf('/pages/') !== -1) base = base.substring(0, base.indexOf('/pages/') + 1);
+  function _loadScript(src, cb) {
+    if (document.querySelector('script[src="' + src + '"]')) { if (typeof cb === 'function') cb(); return; }
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function () { if (typeof cb === 'function') cb(); };
+    s.onerror = function () { if (typeof cb === 'function') cb(); };
+    document.head.appendChild(s);
+  }
+  _loadScript(base + 'js/form_clientes.js', function () {
+    var textarea = document.getElementById('msg-input');
+    if (!textarea) return;
+    textarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+  });
 })();
 </script>
