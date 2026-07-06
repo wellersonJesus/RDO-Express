@@ -4,36 +4,24 @@
   const BANCOS = {
     usuarios: {
       label: 'Usuários', icon: 'bi-person-badge', endpoint: 'getusuarios',
-      campos: {
-        id: 'ID',
-        username: 'Nome',
-        cargo: 'Cargo',
-        contato: 'Contato',
-        imagem: 'Imagem',
-        status: 'Status'
-      }
+      campos: { id: 'ID', username: 'Nome', cargo: 'Cargo', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
     },
     clientes: {
       label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
-      campos: {
-        id: 'ID',
-        username: 'Nome',
-        responsavel: 'Responsável',
-        contato: 'Contato',
-        imagem: 'Imagem',
-        status: 'Status'
-      }
+      campos: { id: 'ID', username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
     },
     colaboradores: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
+      // ID removido conforme solicitado
       campos: {
-        id: 'ID', username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ',
+        username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ',
         placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro',
         chave_pix: 'Chave Pix', comissao: 'Comissão', imagem: 'Imagem', status: 'Status'
       }
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
+      // ID mantido conforme solicitado
       campos: {
         id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
         horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
@@ -43,15 +31,13 @@
     },
     chat: {
       label: 'Chat', icon: 'bi-chat-dots', endpoint: 'getchat',
-      campos: {
-        id: 'ID', id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto',
-        hora: 'Hora', data: 'Data', finalizado: 'Finalizado'
-      }
+      campos: { id: 'ID', id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
+      // ID removido conforme solicitado
       campos: {
-        id: 'ID', colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data',
+        colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data',
         tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
         vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO',
         observacao: 'Observação', situacao: 'Situação'
@@ -59,12 +45,37 @@
     }
   };
 
-
   const PRESETS = {
-    motoboys: { bancos: ['colaboradores', 'pedidos', 'financeiro'], campos: { colaboradores: ['username', 'colaborador', 'placa', 'comissao'], pedidos: ['motoboy', 'de', 'para', 'valor_corrida', 'status'], financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao'] } },
-    clientes: { bancos: ['clientes', 'pedidos', 'chat'], campos: { clientes: ['username', 'responsavel', 'contato'], pedidos: ['id_cliente', 'solicitante', 'de', 'para', 'valor_corrida', 'status'], chat: ['id_cliente', 'texto', 'data'] } },
-    financeiro: { bancos: ['financeiro'], campos: { financeiro: ['data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'situacao'] } },
-    global: { bancos: ['usuarios', 'clientes', 'colaboradores', 'pedidos', 'financeiro'], campos: { usuarios: ['username', 'cargo', 'status'], clientes: ['username', 'responsavel'], colaboradores: ['username', 'colaborador', 'status'], pedidos: ['id_cliente', 'motoboy', 'de', 'para', 'valor_corrida', 'status'], financeiro: ['data', 'tipo', 'vlr_servico', 'situacao'] } }
+    motoboys: {
+      bancos: ['colaboradores', 'pedidos', 'financeiro'],
+      campos: {
+        colaboradores: ['username', 'colaborador', 'placa', 'comissao'],
+        pedidos: ['motoboy', 'de', 'para', 'valor_corrida', 'status'],
+        financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao']
+      }
+    },
+    clientes: {
+      bancos: ['clientes', 'pedidos', 'chat'],
+      campos: {
+        clientes: ['username', 'responsavel', 'contato'],
+        pedidos: ['id_cliente', 'solicitante', 'de', 'para', 'valor_corrida', 'status'],
+        chat: ['id_cliente', 'texto', 'data']
+      }
+    },
+    financeiro: {
+      bancos: ['financeiro'],
+      campos: { financeiro: ['data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'situacao'] }
+    },
+    global: {
+      bancos: ['usuarios', 'clientes', 'colaboradores', 'pedidos', 'financeiro'],
+      campos: {
+        usuarios: ['username', 'cargo', 'status'],
+        clientes: ['username', 'responsavel'],
+        colaboradores: ['username', 'colaborador', 'status'],
+        pedidos: ['id_cliente', 'motoboy', 'de', 'para', 'valor_corrida', 'status'],
+        financeiro: ['data', 'tipo', 'vlr_servico', 'situacao']
+      }
+    }
   };
 
   const state = {
@@ -91,7 +102,7 @@
     }
   };
 
-  let els = {};
+  const els = {};
 
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -101,7 +112,7 @@
   }
 
   function formatarMoeda(valor) {
-    if (valor === null || valor === undefined || isNaN(valor)) return 'R$ 0,00';
+    if (valor === null || valor === undefined || valor === '' || isNaN(valor)) return 'R$ 0,00';
     return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
@@ -109,11 +120,30 @@
     if (!iso) return '';
     const p = iso.split('-');
     if (p.length !== 3) return iso;
-    return `${p[2]}/${p[1]}/${p[0]}`;
+    return p[2] + '/' + p[1] + '/' + p[0];
   }
 
   function toISO(date) {
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * NOVO: normaliza qualquer data (formato BR dd/mm/yyyy vindo do Apps Script,
+   * ou ISO yyyy-mm-dd vindo do input type=date) para o padrão ISO yyyy-mm-dd,
+   * permitindo comparação de strings correta.
+   */
+  function normalizarDataISO(valor) {
+    if (!valor) return '';
+    let v = String(valor).trim();
+
+    // Já está em ISO (yyyy-mm-dd ou yyyy-mm-ddTHH:mm...)
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.substring(0, 10);
+
+    // Formato BR: dd/mm/yyyy (com ou sem hora depois)
+    const mBR = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (mBR) return mBR[3] + '-' + mBR[2] + '-' + mBR[1];
+
+    return '';
   }
 
   function gerarIdRelatorio() {
@@ -260,7 +290,7 @@
         state.chat = extrairArray(r[4]);
         state.financeiro = extrairArray(r[5]);
         state.relatoriosSalvos = extrairArray(r[6]).map(function (rel) {
-          if (rel.data && rel.data.indexOf('_') !== -1) {
+          if (rel.data && typeof rel.data === 'string' && rel.data.indexOf('_') !== -1) {
             const partes = rel.data.split('_');
             if (partes.length === 2) {
               rel.data_inicio = partes[0];
@@ -328,6 +358,9 @@
       filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value };
     } else if (tipo === 'global') {
       inicio = els.globDataInicio.value; fim = els.globDataFim.value;
+    } else {
+      relToast('Tipo de relatório inválido.', 'danger');
+      return;
     }
 
     if (!validarDatas(inicio, fim)) return;
@@ -341,6 +374,7 @@
 
     const preset = PRESETS[tipo] || PRESETS.global;
     preset.bancos.forEach(function (banco) {
+      if (!BANCOS[banco]) return;
       state.builder.selecionados[banco] = {};
       const camposPreset = preset.campos[banco] || Object.keys(BANCOS[banco].campos);
       Object.keys(BANCOS[banco].campos).forEach(function (campo) {
@@ -381,9 +415,10 @@
     let html = '';
     bancos.forEach(function (banco) {
       const info = BANCOS[banco];
+      if (!info) return;
       const ativo = banco === state.builder.bancoAtivo ? 'active' : '';
       html += '<div class="rb-banco-tab ' + ativo + '" data-banco="' + banco + '">' +
-        '<i class="bi ' + info.icon + '"></i>' + info.label +
+        '<i class="bi ' + info.icon + '"></i>' + escapeHtml(info.label) +
         '<span class="rb-tab-count">' + contarSelecionados(banco) + '</span></div>';
     });
     els.builderTabs.innerHTML = html;
@@ -403,20 +438,21 @@
     let html = '';
     bancos.forEach(function (banco) {
       const info = BANCOS[banco];
+      if (!info) return;
       const ativo = banco === state.builder.bancoAtivo ? 'active' : '';
       html += '<div class="rb-banco-panel ' + ativo + '" data-banco="' + banco + '">' +
         '<div class="rb-panel-toolbar">' +
-        '<div class="rb-panel-toolbar-title"><i class="bi ' + info.icon + '"></i>' + info.label + '</div>' +
+        '<div class="rb-panel-toolbar-title"><i class="bi ' + info.icon + '"></i>' + escapeHtml(info.label) + '</div>' +
         '<div class="rb-panel-toolbar-actions">' +
-        '<button data-acao="marcar" data-banco="' + banco + '">Marcar todos</button>' +
-        '<button data-acao="desmarcar" data-banco="' + banco + '">Desmarcar</button>' +
+        '<button type="button" data-acao="marcar" data-banco="' + banco + '">Marcar todos</button>' +
+        '<button type="button" data-acao="desmarcar" data-banco="' + banco + '">Desmarcar</button>' +
         '</div></div>' +
         '<div class="rb-campos-grid">';
 
       Object.keys(info.campos).forEach(function (campo) {
-        const checked = state.builder.selecionados[banco][campo];
+        const checked = !!state.builder.selecionados[banco][campo];
         html += '<div class="rb-campo-item ' + (checked ? 'checked' : '') + '" data-banco="' + banco + '" data-campo="' + campo + '">' +
-          '<input type="checkbox" id="rb-chk-' + banco + '-' + campo + '" ' + (checked ? 'checked' : '') + '>' +
+          '<input type="checkbox" id="rb-chk-' + banco + '-' + campo + '" ' + (checked ? 'checked' : '') + ' readonly>' +
           '<label for="rb-chk-' + banco + '-' + campo + '">' + escapeHtml(info.campos[campo]) + '</label></div>';
       });
 
@@ -490,9 +526,14 @@
     return true;
   }
 
+  /**
+   * CORRIGIDO: agora normaliza a data antes de comparar,
+   * eliminando o bug de Pedidos/Financeiro não retornarem dados.
+   */
   function dentroPeriodo(dataStr, inicio, fim) {
     if (!dataStr) return true;
-    const d = dataStr.length >= 10 ? dataStr.substring(0, 10) : dataStr;
+    const d = normalizarDataISO(dataStr);
+    if (!d) return true; // se não conseguiu interpretar, não filtra (evita perder registros)
     return d >= inicio && d <= fim;
   }
 
@@ -501,11 +542,13 @@
     let dados = [];
 
     if (banco === 'usuarios') dados = state.usuarios.slice();
-    if (banco === 'clientes') dados = state.clientes.slice();
-    if (banco === 'colaboradores') dados = state.motoboys.slice();
-    if (banco === 'pedidos') dados = state.pedidos.filter(function (r) { return dentroPeriodo(r.horario || r.data, p.inicio, p.fim); });
-    if (banco === 'chat') dados = state.chat.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
-    if (banco === 'financeiro') dados = state.financeiro.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
+    else if (banco === 'clientes') dados = state.clientes.slice();
+    else if (banco === 'colaboradores') dados = state.motoboys.slice();
+    // CORRIGIDO: pedidos agora filtra por r.data (campo de data real),
+    // não mais por r.horario (que é o horário estimado de coleta, ex: "10:30")
+    else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
+    else if (banco === 'chat') dados = state.chat.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
+    else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
 
     const fx = state.builder.filtroExtra;
     if (fx && fx.valor && fx.valor !== '__todos__') {
@@ -528,7 +571,7 @@
   }
 
   function montarSnapshot() {
-    const snapshot = { bancos: {} };
+    const snapshot = { bancos: {}, meta: {} };
     bancosDoBuilder().forEach(function (banco) {
       const camposSel = Object.keys(state.builder.selecionados[banco]).filter(function (c) { return state.builder.selecionados[banco][c]; });
       if (!camposSel.length) return;
@@ -538,12 +581,19 @@
         camposSel.forEach(function (campo) { linha[campo] = registro[campo]; });
         return linha;
       });
-      snapshot.bancos[banco] = { label: BANCOS[banco].label, campos: camposSel.map(function (c) { return { chave: c, label: BANCOS[banco].campos[c] }; }), linhas: linhas };
+      snapshot.bancos[banco] = {
+        label: BANCOS[banco].label,
+        campos: camposSel.map(function (c) { return { chave: c, label: BANCOS[banco].campos[c] }; }),
+        linhas: linhas
+      };
     });
+    snapshot.meta.usuarioGerador = obterUsuarioLogado();
+    snapshot.meta.horaGeracao = obterHoraAtualBR();
     return snapshot;
   }
 
   function finalizarGeracao() {
+    if (!els.builderNomeInput) return;
     const nome = (els.builderNomeInput.value || '').trim();
     if (!nome) { relToast('Informe o nome do relatório.', 'warning'); els.builderNomeInput.focus(); return; }
 
@@ -562,6 +612,8 @@
       data_fim: p.fim,
       periodoLabel: formatDateBR(p.inicio) + ' a ' + formatDateBR(p.fim),
       criadoEm: Date.now(),
+      usuarioGerador: obterUsuarioLogado(),
+      horaGeracao: obterHoraAtualBR(),
       snapshot: snapshot
     };
 
@@ -616,11 +668,13 @@
       els.builderOverlay.addEventListener('click', function (e) { if (e.target === els.builderOverlay) fecharBuilder(); });
     }
 
-    Object.keys(els.paginacao).forEach(function (tab) {
-      const p = els.paginacao[tab];
-      if (p.prev) p.prev.addEventListener('click', function () { if (state.paginaAtual > 1) { state.paginaAtual--; renderizarListas(); } });
-      if (p.next) p.next.addEventListener('click', function () { state.paginaAtual++; renderizarListas(); });
-    });
+    if (els.paginacao) {
+      Object.keys(els.paginacao).forEach(function (tab) {
+        const p = els.paginacao[tab];
+        if (p.prev) p.prev.addEventListener('click', function () { if (state.paginaAtual > 1) { state.paginaAtual--; renderizarListas(); } });
+        if (p.next) p.next.addEventListener('click', function () { state.paginaAtual++; renderizarListas(); });
+      });
+    }
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
@@ -702,8 +756,11 @@
             descricao: payload.descricao,
             data_inicio: atual.data_inicio,
             data_fim: atual.data_fim,
-            data: payload.data
+            data: payload.data,
+            usuarioGerador: atual.usuarioGerador,
+            horaGeracao: atual.horaGeracao
           };
+
           state.relatoriosSalvos.unshift(registroLista);
           state.paginaAtual = 1;
           renderizarListas();
@@ -738,12 +795,16 @@
   function construirConteudoRelatorio(relatorio, snapshot) {
     let html = '<div class="rel-modal-content-inner">';
 
+    const usuarioGerador = relatorio.usuarioGerador || (snapshot && snapshot.meta && snapshot.meta.usuarioGerador) || 'Não identificado';
+    const horaGeracao = relatorio.horaGeracao || (snapshot && snapshot.meta && snapshot.meta.horaGeracao) || '-';
+
     html += '<div class="rel-modal-section">';
     html += '<div class="rel-modal-section-title"><i class="bi bi-info-circle"></i> Informações</div>';
     html += '<div class="rel-modal-grid">';
     html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Tipo</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.tipo) + '</div></div>';
     html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Período</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.periodoLabel) + '</div></div>';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">ID</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.id) + '</div></div>';
+    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Gerado por</div><div class="rel-modal-card-value">' + escapeHtml(usuarioGerador) + '</div></div>';
+    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Hora</div><div class="rel-modal-card-value">' + escapeHtml(horaGeracao) + '</div></div>';
     html += '</div></div>';
 
     const bancos = snapshot && snapshot.bancos ? snapshot.bancos : {};
@@ -831,6 +892,37 @@
     else if (state.tabAtual === 'global') renderizarListaGenerica(els.globLista, 'global', 'bi-globe2', 'global');
   }
 
+  function obterUsuarioLogado() {
+    try {
+      if (window.usuarioLogado && (window.usuarioLogado.username || window.usuarioLogado.nome)) {
+        return window.usuarioLogado.username || window.usuarioLogado.nome;
+      }
+      if (window.API && typeof window.API.getUsuarioLogado === 'function') {
+        const u = window.API.getUsuarioLogado();
+        if (u && (u.username || u.nome)) return u.username || u.nome;
+      }
+      const fontes = [sessionStorage, localStorage];
+      for (const store of fontes) {
+        const raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
+        if (raw) {
+          try {
+            const obj = JSON.parse(raw);
+            if (obj && (obj.username || obj.nome)) return obj.username || obj.nome;
+          } catch (e) {
+            if (typeof raw === 'string' && raw.trim()) return raw;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[RELATORIOS] Não foi possível obter usuário logado:', e);
+    }
+    return 'Usuário não identificado';
+  }
+
+  function obterHoraAtualBR() {
+    return new Date().toLocaleString('pt-BR');
+  }
+
   function renderizarListaGenerica(container, tipo, icone, tab) {
     if (!container) return;
     const relatorios = state.relatoriosSalvos.filter(function (r) { return r && r.tipo === tipo; });
@@ -859,7 +951,7 @@
         '<div class="rel-item-icon"><i class="bi ' + icone + '"></i></div>' +
         '<div class="rel-item-info">' +
         '<div class="rel-item-titulo">' + escapeHtml(rel.titulo || 'Sem título') + '</div>' +
-        '<div class="rel-item-sub">' + escapeHtml(rel.periodoLabel || 'Sem período') + ' • ' + dtCriado + '</div>' +
+        '<div class="rel-item-sub">' + escapeHtml(rel.periodoLabel || 'Sem período') + ' • ' + escapeHtml(dtCriado) + '</div>' +
         '</div></div>' +
         '<div class="rel-item-actions">' +
         '<button class="rel-item-btn rel-btn-view" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
