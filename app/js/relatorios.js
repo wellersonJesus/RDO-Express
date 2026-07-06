@@ -4,29 +4,61 @@
   const BANCOS = {
     usuarios: {
       label: 'Usuários', icon: 'bi-person-badge', endpoint: 'getusuarios',
-      campos: { id: 'ID', username: 'Nome', cargo: 'Cargo', contato: 'Contato', status: 'Status' }
+      campos: {
+        id: 'ID',
+        username: 'Nome',
+        cargo: 'Cargo',
+        contato: 'Contato',
+        imagem: 'Imagem',
+        status: 'Status'
+      }
     },
     clientes: {
       label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
-      campos: { id: 'ID', username: 'Nome', responsavel: 'Responsável', contato: 'Contato', status: 'Status' }
+      campos: {
+        id: 'ID',
+        username: 'Nome',
+        responsavel: 'Responsável',
+        contato: 'Contato',
+        imagem: 'Imagem',
+        status: 'Status'
+      }
     },
     colaboradores: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
-      campos: { id: 'ID', username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix', comissao: 'Comissão', status: 'Status' }
+      campos: {
+        id: 'ID', username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ',
+        placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro',
+        chave_pix: 'Chave Pix', comissao: 'Comissão', imagem: 'Imagem', status: 'Status'
+      }
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
-      campos: { id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para', retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação' }
+      campos: {
+        id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
+        horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
+        retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida',
+        motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
+      }
     },
     chat: {
       label: 'Chat', icon: 'bi-chat-dots', endpoint: 'getchat',
-      campos: { id: 'ID', id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
+      campos: {
+        id: 'ID', id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto',
+        hora: 'Hora', data: 'Data', finalizado: 'Finalizado'
+      }
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
-      campos: { id: 'ID', colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO', observacao: 'Observação', situacao: 'Situação' }
+      campos: {
+        id: 'ID', colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data',
+        tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
+        vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO',
+        observacao: 'Observação', situacao: 'Situação'
+      }
     }
   };
+
 
   const PRESETS = {
     motoboys: { bancos: ['colaboradores', 'pedidos', 'financeiro'], campos: { colaboradores: ['username', 'colaborador', 'placa', 'comissao'], pedidos: ['motoboy', 'de', 'para', 'valor_corrida', 'status'], financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao'] } },
@@ -227,7 +259,7 @@
         state.pedidos = extrairArray(r[3]);
         state.chat = extrairArray(r[4]);
         state.financeiro = extrairArray(r[5]);
-        state.relatoriosSalvos = extrairArray(r[6]).map(function(rel) {
+        state.relatoriosSalvos = extrairArray(r[6]).map(function (rel) {
           if (rel.data && rel.data.indexOf('_') !== -1) {
             const partes = rel.data.split('_');
             if (partes.length === 2) {
