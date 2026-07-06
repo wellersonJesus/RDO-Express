@@ -1031,6 +1031,11 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
         ? window.getIconePorStatus(statusPuro)
         : '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
 
+    var textoSeguro = String(texto || '');
+    var textoEscapadoAttr = textoSeguro
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+
     div.innerHTML =
         '<div class="msg-action-buttons">' +
         '<button class="btn-copiar-msg" title="Copiar mensagem" ' +
@@ -1043,8 +1048,9 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
         '</button>' +
         '</div>' +
         '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
+        'data-texto-original="' + textoEscapadoAttr + '" ' +
         'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
-        '<div class="message-body">' + String(texto).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="message-body">' + textoSeguro.replace(/\n/g, '<br>') + '</div>' +
         '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
         'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
         'data-tooltip="' + tooltipTexto + '">' +
@@ -1061,9 +1067,13 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 window._criarWrapperMensagem = _criarWrapperMensagem;
 
 window._copiarMensagemWrapper = function (pedidoId, botao) {
-    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"] .message-body');
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
     if (!msgEl) return;
-    var texto = msgEl.textContent || msgEl.innerText || '';
+
+    var textoOriginal = msgEl.getAttribute('data-texto-original');
+    var texto = textoOriginal
+        ? textoOriginal.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+        : (msgEl.querySelector('.message-body') ? msgEl.querySelector('.message-body').innerText : '');
 
     function _feedbackSucesso() {
         if (botao) {
@@ -1204,25 +1214,25 @@ window.gerarMensagemFormatada = function (dados) {
         '📍 ROTAS:'
     ];
 
+    var rotasFinais = [];
     if (dados.rotasProcessadas && dados.rotasProcessadas.length > 0) {
-        dados.rotasProcessadas.forEach(function (r, i) {
-            linhas.push((i + 1) + '. De: ' + String(r.de || '').trim() + ' | Para: ' + String(r.para || '').trim());
-            linhas.push('.');
-        });
+        rotasFinais = dados.rotasProcessadas;
+    } else if (dados.rotas && String(dados.rotas).trim()) {
+        rotasFinais = String(dados.rotas).trim().split('\n')
+            .map(function (linha) { return linha.trim(); })
+            .filter(function (linha) { return !!linha; })
+            .map(function (linha) {
+                var m = linha.match(/De:\s*(.+?)\s*\|\s*Para:\s*(.+)/i);
+                return m ? { de: m[1].trim(), para: m[2].trim() } : { de: linha, para: '' };
+            });
+    } else if (dados.de && dados.para) {
+        rotasFinais = [{ de: String(dados.de).trim(), para: String(dados.para).trim() }];
     }
-    else if (dados.rotas && String(dados.rotas).trim()) {
-        String(dados.rotas).trim().split('\n').forEach(function (linha, i) {
-            linha = linha.trim();
-            if (!linha) return;
-            if (!/^\d+\./.test(linha)) linha = (i + 1) + '. ' + linha;
-            linhas.push(linha);
-            linhas.push('.');
-        });
-    }
-    else if (dados.de && dados.para) {
-        linhas.push('1. De: ' + String(dados.de).trim() + ' | Para: ' + String(dados.para).trim());
+
+    rotasFinais.forEach(function (r, i) {
+        linhas.push((i + 1) + '. De: ' + String(r.de || '').trim() + ' | Para: ' + String(r.para || '').trim());
         linhas.push('.');
-    }
+    });
 
     var km = Number(dados.distanciaTotal || dados.distancia || 0);
     var min = Number(dados.tempoTotal || 0);
