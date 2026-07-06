@@ -1539,17 +1539,51 @@ window.abrirModalEdicao = function (msgId) {
         buttonsStyling: false,
         allowOutsideClick: true
     }).then(function (result) {
-        if (result.isConfirmed) window.abrirModalMensagemPadrao();
-        else if (result.isDenied) window.MasterAuth.abrir(msgId);
+        // Garante que o Swal e seu backdrop foram completamente destruídos
+        // antes de abrir o próximo modal (evita conflito de z-index/backdrop).
+        setTimeout(function () {
+            _limparBackdrop();
+            if (result.isConfirmed) window.abrirModalMensagemPadrao();
+            else if (result.isDenied) window.MasterAuth.abrir(msgId);
+        }, 150);
     });
 };
 
 window.abrirModalMensagemPadrao = function () {
     var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
+
+    // Remove qualquer instância/backdrop residual antes de criar um novo modal
     var existing = bootstrap.Modal.getInstance(modalEl);
     if (existing) { try { existing.dispose(); } catch (_) { } }
-    new bootstrap.Modal(modalEl).show();
+    _limparBackdrop();
+
+    var modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
+
+    // Força o z-index correto assim que o modal (e seu backdrop) forem inseridos no DOM,
+    // garantindo que fiquem acima de qualquer overlay anterior.
+    modalEl.addEventListener('shown.bs.modal', function () {
+        modalEl.style.zIndex = '1075';
+        var backdrops = document.querySelectorAll('.modal-backdrop');
+        // O backdrop mais recente (deste modal) deve ficar imediatamente atrás dele
+        var ultimoBackdrop = backdrops[backdrops.length - 1];
+        if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
+        // Garante que o textarea/mensagem fique focável e selecionável
+        var textareaModelo = modalEl.querySelector('textarea, #texto-modelo');
+        if (textareaModelo) {
+            textareaModelo.style.position = 'relative';
+            textareaModelo.style.zIndex = '1080';
+            textareaModelo.style.pointerEvents = 'auto';
+        }
+    }, { once: true });
+
+    // Ao fechar, remove o backdrop imediatamente (sem deixar sobra para o próximo modal)
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        _limparBackdrop();
+    }, { once: true });
+
+    modal.show();
 };
 
 window.copiarModelo = function () {
