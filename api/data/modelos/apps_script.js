@@ -1,5 +1,15 @@
 var SECRET_KEY = "aquieumakdjdddggjrtr";
 
+var MODELO_PADRAO = [
+  '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
+  '', 'SOLICITANTE: ', 'CONTATO: ', 'HORÁRIO ESTIMADO P/ COLETA:  ',
+  'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)', 'ROTA(s): ',
+  '📍1. De: ... | Para: ...', '📍2. De: ... | Para: ... ', '📍3. De: ... | Para: ... ',
+  'RETORNO:  (SIM /NÃO)', 'PRIORIDADE: (Normal, Agendado, Urgente) ',
+  'OBSERVAÇÃO: Descreva a observação aqui se necessario', '',
+  'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
+].join('\n');
+
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents)
@@ -30,11 +40,8 @@ function doPost(e) {
       return responder(processarCriarPedido(sheetPedidos, data));
     }
 
-    if (action === "finalizarpedido") {
-      var sheetPed = buscarAba(ss, "pedidos");
-      if (!sheetPed) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
-      return responder(processarPedidoComChat(sheetPed, data));
-    }
+    if (action === "criarchat" || action === "addchat" || action === "savechat")
+      return responder({ status: "error", message: "Acao bloqueada. O chat e criado automaticamente junto com o pedido." });
 
     if (action === "getfinanceirocompleto")
       return responder(processarGetFinanceiroCompleto());
@@ -101,11 +108,34 @@ function processarDeleteChat(ss, data) {
   return { status: "success", message: "Nenhum chat encontrado para pedido_id: " + pedidoId };
 }
 
+function chatJaExiste(sheetChat, idPedido) {
+  var rows = sheetChat.getDataRange().getValues();
+  if (rows.length <= 1) return false;
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colPedidoId = headers.indexOf("pedido_id");
+  if (colPedidoId === -1) return false;
+
+  var idNorm = String(idPedido).trim().toUpperCase();
+  for (var i = 1; i < rows.length; i++) {
+    var valCelula = String(rows[i][colPedidoId]).trim().toUpperCase();
+    if (valCelula === idNorm) return true;
+  }
+  return false;
+}
+
+function montarTextoChat(idPedido, data) {
+  var textoCustom = String(data.texto || data.mensagem || "").trim();
+  if (textoCustom) {
+    return textoCustom.replace("[ID_GERADO]", idPedido);
+  }
+  return MODELO_PADRAO.replace("[ID_GERADO]", idPedido);
+}
+
 function processarCriarPedido(sheetPedidos, data) {
   var ss        = SpreadsheetApp.getActiveSpreadsheet();
   var sheetChat = buscarAba(ss, "chat");
 
-  var idPedido  = gerarId(sheetPedidos, "pedidos");
+  var idPedido  = String(data.id || "").trim() || gerarId(sheetPedidos, "pedidos");
   var idCliente = String(data.id_cliente || data.id_chat || "").trim();
 
   var rotas_texto = String(data.rotas_texto || "");
@@ -123,19 +153,11 @@ function processarCriarPedido(sheetPedidos, data) {
   if (!paraStr) paraStr = String(data.para || "");
 
   var agora   = new Date();
-  var horaStr = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  var dataStr = agora.toLocaleDateString("pt-BR");
+  var horaStr = String(data.hora || data.horario_chat || agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })).trim();
+  var dataStr = String(data.data_chat || agora.toLocaleDateString("pt-BR")).trim();
 
-  if (sheetChat && idCliente) {
-    var textoChat = String(data.texto || data.mensagem || "").trim();
-    if (textoChat) {
-      textoChat = textoChat.replace("[ID_GERADO]", idPedido);
-    } else {
-      textoChat = "📦 N.SERVIÇO: " + idPedido + "\n" +
-                  "👤 : " + String(data.solicitante || "Não informado") +
-                  " 📞 : " + String(data.contato || "") + "\n" +
-                  "📦 : " + String(data.mercadoria || "ENTREGA");
-    }
+  if (sheetChat && idCliente && !chatJaExiste(sheetChat, idPedido)) {
+    var textoChat = montarTextoChat(idPedido, data);
     var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
     sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
   }
@@ -195,66 +217,6 @@ function processarCriarPedido(sheetPedidos, data) {
   }
 
   return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
-}
-
-function processarPedidoComChat(sheetPedidos, data) {
-  var ss        = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetChat = buscarAba(ss, "chat");
-
-  if (!sheetChat)
-    return { status: "error", message: "Aba 'chat' nao encontrada" };
-
-  var idPedido  = gerarId(sheetPedidos, "pedidos");
-  var idCliente = String(data.id_cliente || "").trim();
-
-  if (!idCliente)
-    return { status: "error", message: "ID do cliente nao informado" };
-
-  var linhasRota = data.rotas_texto ? String(data.rotas_texto).split("\n") : [];
-
-  var deStr = linhasRota.map(function (l) {
-    var parte = l.split("|")[0];
-    return parte ? parte.replace(/De:/i, "").trim() : "";
-  }).filter(Boolean).join(", ");
-
-  var paraStr = linhasRota.map(function (l) {
-    var parte = l.split("|")[1];
-    return parte ? parte.replace(/Para:/i, "").trim() : "";
-  }).filter(Boolean).join(", ");
-
-  var textoChat = String(data.texto || data.mensagem || "").trim();
-  if (textoChat) {
-    textoChat = textoChat.replace("[ID_GERADO]", idPedido);
-  } else {
-    textoChat = "📦 N.SERVIÇO: " + idPedido + "\n" +
-                "👤 : " + String(data.solicitante || "Não informado") +
-                " 📞 : " + String(data.contato || "") + "\n" +
-                "📦 : " + String(data.mercadoria || "ENTREGA");
-  }
-
-  var agora   = new Date();
-  var horaStr = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  var dataStr = agora.toLocaleDateString("pt-BR");
-  var idMsg   = Math.random().toString(36).substring(2, 13).toUpperCase();
-
-  sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
-
-  sheetPedidos.appendRow([
-    idPedido, idCliente,
-    String(data.solicitante   || ""),
-    String(data.contato       || ""),
-    String(data.horario       || ""),
-    String(data.mercadoria    || ""),
-    deStr, paraStr,
-    String(data.retorno       || ""),
-    String(data.prioridade    || "N/A"),
-    String(data.valor_corrida || ""),
-    String(data.motoboy       || ""),
-    "PENDENTE",
-    String(data.observacao    || data.obs || "")
-  ]);
-
-  return { status: "success", id: idPedido, id_cliente: idCliente, message: "Pedido e chat salvos com sucesso!" };
 }
 
 function processarValidarSenhaMaster(senha) {
@@ -506,16 +468,13 @@ function processarDelete(sheet, id) {
 }
 
 function extrairEntidade(action) {
-  return action
-    .replace("finalizar", "")
-    .replace("criar",     "")
-    .replace("get",       "")
-    .replace("add",       "")
-    .replace("delete",    "")
-    .replace("update",    "")
-    .replace("save",      "")
-    .toLowerCase()
-    .trim();
+  var acoes = ["criar", "get", "add", "delete", "update", "save"];
+  for (var i = 0; i < acoes.length; i++) {
+    if (action.indexOf(acoes[i]) === 0) {
+      return action.substring(acoes[i].length).toLowerCase().trim();
+    }
+  }
+  return action.toLowerCase().trim();
 }
 
 function mapearEntidade(entity) {
@@ -529,9 +488,11 @@ function mapearEntidade(entity) {
     "colaborador":   "colaboradores",
     "colaboradores": "colaboradores",
     "chat":          "chat",
+    "chats":         "chat",
     "pedido":        "pedidos",
     "pedidos":       "pedidos",
     "financeiro":    "financeiro",
+    "financeiros":   "financeiro",
     "relatorio":     "relatorios",
     "relatorios":    "relatorios"
   };
