@@ -894,22 +894,29 @@
 
   function obterUsuarioLogado() {
     try {
+      // 1. Checa variável global (se setada em algum outro ponto do app)
       if (window.usuarioLogado && (window.usuarioLogado.username || window.usuarioLogado.nome)) {
         return window.usuarioLogado.username || window.usuarioLogado.nome;
       }
-      if (window.API && typeof window.API.getUsuarioLogado === 'function') {
-        const u = window.API.getUsuarioLogado();
-        if (u && (u.username || u.nome)) return u.username || u.nome;
+
+      // 2. Lê diretamente a chave 'username' salva pelo login.js
+      //    (localStorage.setItem('username', username))
+      var username = localStorage.getItem('username');
+      if (username && username.trim() && username !== 'null' && username !== 'undefined') {
+        return username.trim();
       }
-      const fontes = [sessionStorage, localStorage];
-      for (const store of fontes) {
-        const raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
+
+      // 3. Fallback: tenta formatos alternativos (objeto JSON), caso mude no futuro
+      var fontes = [sessionStorage, localStorage];
+      for (var i = 0; i < fontes.length; i++) {
+        var store = fontes[i];
+        var raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
         if (raw) {
           try {
-            const obj = JSON.parse(raw);
+            var obj = JSON.parse(raw);
             if (obj && (obj.username || obj.nome)) return obj.username || obj.nome;
           } catch (e) {
-            if (typeof raw === 'string' && raw.trim()) return raw;
+            if (typeof raw === 'string' && raw.trim()) return raw.trim();
           }
         }
       }
