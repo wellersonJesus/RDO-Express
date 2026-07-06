@@ -63,6 +63,17 @@ docker-compose stop
 #Para subir novamente (sem reconstruir):
 docker-compose start
 ```
+
+# GeraDados banco
+
+```bash
+#Na raiz
+python3 api/data/modelos/geraDados.py
+
+#Na pasta
+python geraDados.py
+```
+
 ---
 
 <div align="center">

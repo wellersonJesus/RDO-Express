@@ -54,7 +54,8 @@ function doPost(e) {
 
     if (action.indexOf("get")    === 0) return responder(processarGet(sheet));
     if (action.indexOf("add")    === 0 ||
-        action.indexOf("save")   === 0) return responder(processarAdd(sheet, data, nomeAba));
+        action.indexOf("save")   === 0 ||
+        action.indexOf("criar")  === 0) return responder(processarAdd(sheet, data, nomeAba));
     if (action.indexOf("update") === 0) return responder(processarUpdate(sheet, data));
     if (action.indexOf("delete") === 0) return responder(processarDelete(sheet, data.id));
 
@@ -157,8 +158,8 @@ function processarCriarPedido(sheetPedidos, data) {
     rowData.valor_corrida  = String(data.valor_corrida || data.valor_final || "");
     rowData.valor_base     = String(data.valor_base    || "");
     rowData.taxa_espera    = String(data.taxa_espera   || "");
-    rowData.motoboy        = "";
-    rowData.status         = "PENDENTE";
+    rowData.motoboy        = String(data.motoboy       || "");
+    rowData.status         = String(data.status        || "PENDENTE");
     rowData.observacao     = String(data.observacao    || data.obs || "");
     rowData.distancia      = String(data.distancia     || "");
     rowData.tempo          = String(data.tempo         || "");
@@ -186,7 +187,8 @@ function processarCriarPedido(sheetPedidos, data) {
       String(data.valor_corrida || data.valor_final || ""),
       String(data.valor_base    || ""),
       String(data.taxa_espera   || ""),
-      "", "PENDENTE",
+      String(data.motoboy       || ""),
+      String(data.status        || "PENDENTE"),
       String(data.observacao    || data.obs || ""),
       dataStr, horaStr
     ]);
@@ -247,7 +249,8 @@ function processarPedidoComChat(sheetPedidos, data) {
     String(data.retorno       || ""),
     String(data.prioridade    || "N/A"),
     String(data.valor_corrida || ""),
-    "", "PENDENTE",
+    String(data.motoboy       || ""),
+    "PENDENTE",
     String(data.observacao    || data.obs || "")
   ]);
 
@@ -443,7 +446,9 @@ function processarAdd(sheet, data, entity) {
   }
 
   sheet.appendRow(row);
-  return { status: "success", message: "Adicionado!", id: data.id };
+
+  var idIndexRetorno = headers.indexOf("id");
+  return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? data.id : undefined };
 }
 
 function processarUpdate(sheet, data) {
@@ -616,4 +621,3 @@ function responder(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
-

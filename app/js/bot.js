@@ -29,6 +29,22 @@ function normalizeStatus(val) {
     if (s === 'TRUE' || s === '1' || s === 'ATIVO' || s === 'ON' || s === 'SIM' || s === 'YES') return 'TRUE';
     return 'FALSE';
 }
+function normalizeStatus(val, fallback) {
+    fallback = fallback || 'FALSE'; // permite decidir o padrão por chamada
+    if (val === true || val === 1) return 'TRUE';
+    if (val === false || val === 0) return 'FALSE';
+
+    var s = String(val || '').trim().toUpperCase();
+
+    // Se o campo veio vazio/nulo (registro recém-populado sem status definido)
+    if (s === '') return fallback;
+
+    if (s === 'TRUE' || s === '1' || s === 'ATIVO' || s === 'ON' || s === 'SIM' || s === 'YES') return 'TRUE';
+    if (s === 'FALSE' || s === '0' || s === 'INATIVO' || s === 'OFF' || s === 'NÃO' || s === 'NAO' || s === 'NO') return 'FALSE';
+
+    // Valor desconhecido/inesperado: não assume silenciosamente FALSE
+    return fallback;
+}
 
 function syncStart() {
     var icon = document.getElementById('sync-icon-bot');
@@ -141,7 +157,7 @@ window.mudarPagina = function (dir) {
     renderizarTabela();
 };
 
-window.initBot = function() {
+window.initBot = function () {
     if (window.botState.isFetching) return Promise.resolve();
 
     var raw = localStorage.getItem('bot_master_active');
@@ -178,7 +194,7 @@ window.initBot = function() {
     return window.reloadBot();
 };
 
-window.reloadBot = function() {
+window.reloadBot = function () {
     var tbody = document.getElementById('bot-list');
     if (window.botState.isFetching) return Promise.resolve();
 
@@ -191,76 +207,77 @@ window.reloadBot = function() {
         window.API.call('getclientes').catch(function () { return []; }),
         window.API.call('getcolaboradores').catch(function () { return []; })
     ])
-    .then(function(results) {
-        var users = Array.isArray(results[0]) ? results[0] : (results[0]?.data || []);
-        var clients = Array.isArray(results[1]) ? results[1] : (results[1]?.data || []);
-        var cols = Array.isArray(results[2]) ? results[2] : (results[2]?.data || []);
+        .then(function (results) {
+            var users = Array.isArray(results[0]) ? results[0] : (results[0]?.data || []);
+            var clients = Array.isArray(results[1]) ? results[1] : (results[1]?.data || []);
+            var cols = Array.isArray(results[2]) ? results[2] : (results[2]?.data || []);
 
-        var todosDados = [];
+            var todosDados = [];
 
-        for (var u = 0; u < users.length; u++) {
-            var usr = Object.assign({}, users[u]);
-            usr.origem = 'usuarios';
-            usr.status = normalizeStatus(usr.status);
+            for (var u = 0; u < users.length; u++) {
+                var usr = Object.assign({}, users[u]);
+                usr.origem = 'usuarios';
+                usr.status = normalizeStatus(usr.status);
 
-            try {
-                var storageKey = 'permissoes_usuario_' + usr.id;
-                var storedPerms = localStorage.getItem(storageKey);
-                if (storedPerms) {
-                    usr.permissoes = JSON.parse(storedPerms);
-                } else {
+                try {
+                    var storageKey = 'permissoes_usuario_' + usr.id;
+                    var storedPerms = localStorage.getItem(storageKey);
+                    if (storedPerms) {
+                        usr.permissoes = JSON.parse(storedPerms);
+                    } else {
+                        usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
+                    }
+                } catch (e) {
                     usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
                 }
-            } catch (e) {
-                usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
+
+                if (!String(usr.id || '').trim()) continue;
+                todosDados.push(usr);
             }
 
-            if (!String(usr.id || '').trim()) continue;
-            todosDados.push(usr);
-        }
+            for (var c = 0; c < clients.length; c++) {
+                var cli = Object.assign({}, clients[c]);
+                cli.origem = 'clientes';
+                cli.status = normalizeStatus(cli.status);
+                if (!String(cli.id || '').trim()) continue;
+                todosDados.push(cli);
+            }
 
-        for (var c = 0; c < clients.length; c++) {
-            var cli = Object.assign({}, clients[c]);
-            cli.origem = 'clientes';
-            cli.status = normalizeStatus(cli.status);
-            if (!String(cli.id || '').trim()) continue;
-            todosDados.push(cli);
-        }
+            for (var b = 0; b < cols.length; b++) {
+                var col = Object.assign({}, cols[b]);
+                col.origem = 'colaboradores';
+                col.status = normalizeStatus(col.status);
+                if (!String(col.id || '').trim()) continue;
+                todosDados.push(col);
+            }
 
-        for (var b = 0; b < cols.length; b++) {
-            var col = Object.assign({}, cols[b]);
-            col.origem = 'colaboradores';
-            col.status = normalizeStatus(col.status);
-            if (!String(col.id || '').trim()) continue;
-            todosDados.push(col);
-        }
+            window.botState.cacheCompleto = todosDados;
+            window.botState._cacheCarregado = true;
 
-        window.botState.cacheCompleto = todosDados;
-        window.botState._cacheCarregado = true;
+            if (window.AppRDO) {
+                window.AppRDO.clientesCache = clients
+                    .filter(function (ci) { return !!String(ci.id || '').trim(); })
+                    .map(function (ci) {
+                        var it = Object.assign({}, ci);
+                        // Cliente sem status definido na planilha é considerado ATIVO por padrão
+                        it.status = normalizeStatus(it.status, 'TRUE');
+                        return it;
+                    });
+            }
 
-        if (window.AppRDO) {
-            window.AppRDO.clientesCache = clients
-                .filter(function (ci) { return !!String(ci.id || '').trim(); })
-                .map(function (ci) {
-                    var it = Object.assign({}, ci);
-                    it.status = normalizeStatus(it.status);
-                    return it;
-                });
-        }
+            window.filtrarBot();
 
-        window.filtrarBot();
-
-        window.dispatchEvent(new CustomEvent('botCacheAtualizado', { detail: { registros: todosDados.length } }));
-    })
-    .catch(function() {
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-wifi-off me-2"></i>Falha na conexão</td></tr>';
-        }
-    })
-    .finally(function() {
-        window.botState.isFetching = false;
-        syncStop();
-    });
+            window.dispatchEvent(new CustomEvent('botCacheAtualizado', { detail: { registros: todosDados.length } }));
+        })
+        .catch(function () {
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-wifi-off me-2"></i>Falha na conexão</td></tr>';
+            }
+        })
+        .finally(function () {
+            window.botState.isFetching = false;
+            syncStop();
+        });
 };
 
 window.filtrarBot = function () {
@@ -481,7 +498,7 @@ window.abrirModalCadastro = function () {
         display.classList.remove('cargo-selected');
     }
 
-    document.querySelectorAll('.permissao-checkbox').forEach(function(cb) {
+    document.querySelectorAll('.permissao-checkbox').forEach(function (cb) {
         cb.checked = false;
     });
 
@@ -702,7 +719,7 @@ function _abrirModalUsuario(data) {
         permissoes = window.PERMISSOES_PADRAO[cargoSelecionado];
     }
 
-    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+    document.querySelectorAll('.permissao-checkbox').forEach(function (checkbox) {
         checkbox.checked = permissoes.includes(checkbox.value);
     });
 
@@ -736,7 +753,7 @@ function _abrirModalUsuario(data) {
     new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true }).show();
 }
 
-window.selecionarCargo = function(cargo) {
+window.selecionarCargo = function (cargo) {
     document.getElementById('usuario-bot-cargo').value = cargo;
 
     var iconMap = {
@@ -754,7 +771,7 @@ window.selecionarCargo = function(cargo) {
     display.classList.add('cargo-selected');
 
     var permissoes = window.PERMISSOES_PADRAO[cargo] || [];
-    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+    document.querySelectorAll('.permissao-checkbox').forEach(function (checkbox) {
         checkbox.checked = permissoes.includes(checkbox.value);
     });
 
@@ -762,7 +779,7 @@ window.selecionarCargo = function(cargo) {
     var modalCargoInstance = bootstrap.Modal.getInstance(modalCargo);
     if (modalCargoInstance) modalCargoInstance.hide();
 
-    setTimeout(function() {
+    setTimeout(function () {
         var modalUsuario = document.getElementById('modalUsuarioBot');
         var existingInstance = bootstrap.Modal.getInstance(modalUsuario);
         if (existingInstance) existingInstance.dispose();
@@ -770,12 +787,12 @@ window.selecionarCargo = function(cargo) {
     }, 300);
 };
 
-window.reabrirModalCargo = function() {
+window.reabrirModalCargo = function () {
     var modalUsuario = document.getElementById('modalUsuarioBot');
     var modalUsuarioInstance = bootstrap.Modal.getInstance(modalUsuario);
     if (modalUsuarioInstance) modalUsuarioInstance.hide();
 
-    setTimeout(function() {
+    setTimeout(function () {
         var modalCargo = document.getElementById('modalSelecionarCargo');
         var existingInstance = bootstrap.Modal.getInstance(modalCargo);
         if (existingInstance) existingInstance.dispose();
@@ -783,12 +800,12 @@ window.reabrirModalCargo = function() {
     }, 300);
 };
 
-window.aplicarPermissoesPorCargo = function() {
+window.aplicarPermissoesPorCargo = function () {
     var cargoInput = document.getElementById('usuario-bot-cargo');
     if (!cargoInput) return;
     var cargo = cargoInput.value;
     var permissoes = window.PERMISSOES_PADRAO[cargo] || [];
-    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+    document.querySelectorAll('.permissao-checkbox').forEach(function (checkbox) {
         checkbox.checked = permissoes.includes(checkbox.value);
     });
 };
@@ -813,7 +830,7 @@ window.salvarUsuarioBot = async function () {
     }
 
     var permissoesSelecionadas = [];
-    document.querySelectorAll('.permissao-checkbox').forEach(function(checkbox) {
+    document.querySelectorAll('.permissao-checkbox').forEach(function (checkbox) {
         if (checkbox.checked) permissoesSelecionadas.push(checkbox.value);
     });
 
@@ -878,7 +895,7 @@ window.salvarUsuarioBot = async function () {
 
         await window.reloadBot();
 
-        setTimeout(function() {
+        setTimeout(function () {
             window.bloquearAcessoPorPermissao();
         }, 500);
 
@@ -1068,7 +1085,7 @@ window.alterarStatusDireto = async function (id, status, origem) {
         renderizarTabela();
 
         if (origemStr === 'usuarios') {
-            setTimeout(function() {
+            setTimeout(function () {
                 window.bloquearAcessoPorPermissao();
             }, 300);
         }
@@ -1146,7 +1163,7 @@ window.initBotPage = function () {
     window.initBot();
 };
 
-window.bloquearAcessoPorPermissao = function() {
+window.bloquearAcessoPorPermissao = function () {
     var usuarioLogado = localStorage.getItem('username');
     var contatoLogado = localStorage.getItem('contato');
 
@@ -1157,7 +1174,7 @@ window.bloquearAcessoPorPermissao = function() {
         return;
     }
 
-    var usuariosNoBanco = window.botState.cacheCompleto.filter(function(item) {
+    var usuariosNoBanco = window.botState.cacheCompleto.filter(function (item) {
         return item.origem === 'usuarios';
     });
 
@@ -1229,7 +1246,7 @@ function _aplicarBloqueiosPorPermissoes(permissoes) {
         }
     }
 
-    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function(link) {
+    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
         var pagina = link.getAttribute('data-page');
         var bloqueado = paginasBloqueadas.includes(pagina);
 
@@ -1265,14 +1282,14 @@ function _aplicarBloqueiosPorPermissoes(permissoes) {
             title: 'Acesso Negado',
             text: 'Você não tem permissão para acessar este módulo.',
             confirmButtonColor: '#dc3545'
-        }).then(function() {
+        }).then(function () {
             window.loadPage('dashboard', 'Dashboard', 'Visão geral operacional');
         });
     }
 }
 
 function _bloquearTudo() {
-    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function(link) {
+    document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
         var pagina = link.getAttribute('data-page');
 
         if (pagina === 'dashboard') return;
