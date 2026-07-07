@@ -1,11 +1,83 @@
 'use strict';
 
 (function () {
-  const BANCOS = {
-    usuarios: {
-      label: 'Usuários', icon: 'bi-person-badge', endpoint: 'getusuarios',
-      campos: { username: 'Nome', cargo: 'Cargo', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
+  const ALIASES = {
+    pedidos: {
+      id: ['id'],
+      id_cliente: ['id_cliente'],
+      solicitante: ['solicitante'],
+      contato: ['contato'],
+      data: ['data'],
+      hora: ['hora'],
+      horario: ['horario'],
+      mercadoria: ['mercadoria'],
+      de: ['de'],
+      para: ['para'],
+      retorno: ['retorno'],
+      prioridade: ['prioridade'],
+      valor_corrida: ['valor_corrida', 'vlr_servico'],
+      motoboy: ['motoboy'],
+      status: ['status'],
+      observacao: ['observacao']
     },
+    financeiro: {
+      id: ['id'],
+      colaborador_id: ['colaborador_id'],
+      id_pedido: ['id_pedido'],
+      data: ['data'],
+      tipo: ['tipo'],
+      descricao: ['descricao'],
+      motoboy: ['motoboy'],
+      vlr_servico: ['vlr_servico', 'valor_corrida'],
+      colaborador: ['colaborador'],
+      observacao: ['observacao'],
+      situacao: ['situacao']
+    },
+    clientes: {
+      id: ['id'],
+      username: ['username'],
+      responsavel: ['responsavel'],
+      contato: ['contato'],
+      imagem: ['imagem'],
+      pagamento: ['pagamento'],
+      status: ['status']
+    },
+    colaboradores: {
+      id: ['id'],
+      username: ['username'],
+      colaborador: ['colaborador'],
+      cpf_cnpj: ['cpf_cnpj'],
+      placa: ['placa'],
+      email: ['email'],
+      endereco: ['endereco'],
+      bairro: ['bairro'],
+      chave_pix: ['chave_pix'],
+      comissao: ['comissao'],
+      imagem: ['imagem'],
+      status: ['status']
+    },
+    chat: {
+      id: ['id'],
+      id_cliente: ['id_cliente'],
+      pedido_id: ['pedido_id'],
+      texto: ['texto'],
+      hora: ['hora'],
+      data: ['data'],
+      finalizado: ['finalizado']
+    }
+  };
+
+  function resolverValor(banco, campo, registro) {
+    if (!registro) return '';
+    const chaves = (ALIASES[banco] && ALIASES[banco][campo]) || [campo];
+    for (let i = 0; i < chaves.length; i++) {
+      const k = chaves[i];
+      if (registro[k] !== undefined && registro[k] !== null && registro[k] !== '') return registro[k];
+    }
+    return '';
+  }
+
+  const BANCOS = {
     clientes: {
       label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
       campos: { username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', pagamento: 'Pagamento', status: 'Status' }
@@ -13,16 +85,16 @@
     colaboradores: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
       campos: {
-        username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ',
-        placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro',
-        chave_pix: 'Chave Pix', comissao: 'Comissão', imagem: 'Imagem', status: 'Status'
+        username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa',
+        email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix',
+        comissao: 'Comissão', imagem: 'Imagem', status: 'Status'
       }
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
       campos: {
         id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
-        horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
+        data: 'Data', hora: 'Hora', horario: 'Horário Estimado', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
         retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida',
         motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
       }
@@ -34,10 +106,9 @@
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
       campos: {
-        colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data',
-        tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
-        vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', rdo: 'RDO',
-        observacao: 'Observação', situacao: 'Situação'
+        colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo',
+        descricao: 'Descrição', motoboy: 'Motoboy', vlr_servico: 'Valor Serviço',
+        colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
       }
     }
   };
@@ -47,7 +118,7 @@
       bancos: ['colaboradores', 'pedidos', 'financeiro'],
       campos: {
         colaboradores: ['username', 'colaborador', 'placa', 'comissao'],
-        pedidos: ['motoboy', 'de', 'para', 'valor_corrida', 'status'],
+        pedidos: ['motoboy', 'data', 'de', 'para', 'valor_corrida', 'status'],
         financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao']
       }
     },
@@ -55,7 +126,7 @@
       bancos: ['clientes', 'pedidos', 'chat'],
       campos: {
         clientes: ['username', 'responsavel', 'contato', 'pagamento'],
-        pedidos: ['id_cliente', 'solicitante', 'de', 'para', 'valor_corrida', 'status'],
+        pedidos: ['id_cliente', 'solicitante', 'data', 'de', 'para', 'valor_corrida', 'status'],
         chat: ['id_cliente', 'texto', 'data']
       }
     },
@@ -64,12 +135,11 @@
       campos: { financeiro: ['data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'situacao'] }
     },
     global: {
-      bancos: ['usuarios', 'clientes', 'colaboradores', 'pedidos', 'financeiro'],
+      bancos: ['clientes', 'colaboradores', 'pedidos', 'financeiro'],
       campos: {
-        usuarios: ['username', 'cargo', 'status'],
-        clientes: ['username', 'responsavel'],
+        clientes: ['username', 'responsavel', 'status'],
         colaboradores: ['username', 'colaborador', 'status'],
-        pedidos: ['id_cliente', 'motoboy', 'de', 'para', 'valor_corrida', 'status'],
+        pedidos: ['id_cliente', 'motoboy', 'data', 'de', 'para', 'valor_corrida', 'status'],
         financeiro: ['data', 'tipo', 'vlr_servico', 'situacao']
       }
     }
@@ -77,26 +147,14 @@
 
   const state = {
     tabAtual: 'motoboys',
-    usuarios: [],
-    motoboys: [],
-    clientes: [],
-    pedidos: [],
-    chat: [],
-    financeiro: [],
+    motoboys: [], clientes: [], pedidos: [], chat: [], financeiro: [],
     relatoriosSalvos: [],
     fetching: false,
     relatorioAtual: null,
+    ultimoBuilderState: null,
     paginaAtual: 1,
     itensPorPagina: 10,
-    builder: {
-      tipo: null,
-      periodo: { inicio: '', fim: '' },
-      filtroExtra: null,
-      bancoAtivo: null,
-      selecionados: {},
-      step: 1,
-      nome: ''
-    }
+    builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
   };
 
   const els = {};
@@ -127,14 +185,9 @@
   function normalizarDataISO(valor) {
     if (!valor) return '';
     let v = String(valor).trim();
-
-    // Já está em ISO (yyyy-mm-dd ou yyyy-mm-ddTHH:mm...)
     if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.substring(0, 10);
-
-    // Formato BR: dd/mm/yyyy (com ou sem hora depois)
     const mBR = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (mBR) return mBR[3] + '-' + mBR[2] + '-' + mBR[1];
-
     return '';
   }
 
@@ -213,6 +266,7 @@
     els.modalIcon = document.getElementById('modal-rel-icon');
     els.modalBtnFechar = document.getElementById('modal-rel-fechar');
     els.modalBtnCancelar = document.getElementById('modal-rel-btn-cancelar');
+    els.modalBtnVoltar = document.getElementById('modal-rel-btn-voltar');
     els.modalBtnSalvar = document.getElementById('modal-rel-btn-salvar');
     els.modalBtnCopiar = document.getElementById('modal-rel-btn-copiar');
     els.modalBtnPdf = document.getElementById('modal-rel-btn-pdf');
@@ -243,7 +297,7 @@
     if (!els.mbSelect) return;
     let html = '<option value="__todos__">Todos os motoboys</option>';
     state.motoboys.forEach(function (mb) {
-      const nome = mb.username || mb.nome || 'Sem nome';
+      const nome = resolverValor('colaboradores', 'username', mb) || 'Sem nome';
       html += '<option value="' + escapeHtml(mb.id) + '">' + escapeHtml(nome) + '</option>';
     });
     els.mbSelect.innerHTML = html;
@@ -253,7 +307,7 @@
     if (!els.cliSelect) return;
     let html = '<option value="__todos__">Todos os clientes</option>';
     state.clientes.forEach(function (cli) {
-      const nome = cli.username || cli.nome || cli.razao_social || 'Sem nome';
+      const nome = resolverValor('clientes', 'username', cli) || 'Sem nome';
       html += '<option value="' + escapeHtml(cli.id) + '">' + escapeHtml(nome) + '</option>';
     });
     els.cliSelect.innerHTML = html;
@@ -265,33 +319,47 @@
     spinOn();
     exibirLoadingListas();
 
-    Promise.all([
-      window.API.call('getusuarios', {}),
+    const chamadas = [
       window.API.call('getclientes', {}),
       window.API.call('getcolaboradores', {}),
       window.API.call('getpedidos', {}),
       window.API.call('getchat', {}),
       window.API.call('getfinanceiro', {}),
       window.API.call('getrelatorios', {})
-    ])
+    ];
+
+    Promise.allSettled(chamadas)
       .then(function (r) {
-        state.usuarios = extrairArray(r[0]);
-        state.clientes = extrairArray(r[1]);
-        state.motoboys = extrairArray(r[2]);
-        state.pedidos = extrairArray(r[3]);
-        state.chat = extrairArray(r[4]);
-        state.financeiro = extrairArray(r[5]);
-        state.relatoriosSalvos = extrairArray(r[6]).map(function (rel) {
-          if (rel.data && typeof rel.data === 'string' && rel.data.indexOf('_') !== -1) {
-            const partes = rel.data.split('_');
-            if (partes.length === 2) {
-              rel.data_inicio = partes[0];
-              rel.data_fim = partes[1];
-              rel.periodoLabel = formatDateBR(partes[0]) + ' a ' + formatDateBR(partes[1]);
-            }
+        function pega(idx) {
+          return r[idx].status === 'fulfilled' ? r[idx].value : null;
+        }
+
+        r.forEach(function (res, i) {
+          if (res.status === 'rejected') {
+            console.error('[RELATORIOS] Falha na requisição índice ' + i + ':', res.reason);
           }
-          if (rel.rdo) rel.titulo = rel.rdo;
-          if (rel.observacao && !rel.periodoLabel) rel.periodoLabel = rel.observacao;
+        });
+
+        state.clientes = extrairArray(pega(0));
+        state.motoboys = extrairArray(pega(1));
+        state.pedidos = extrairArray(pega(2));
+        state.chat = extrairArray(pega(3));
+        state.financeiro = extrairArray(pega(4));
+
+        state.relatoriosSalvos = extrairArray(pega(5)).map(function (rel) {
+          let titulo = '';
+          let snapshot = null;
+          if (rel.descricao) {
+            try {
+              const obj = JSON.parse(rel.descricao);
+              if (obj && obj.titulo) titulo = obj.titulo;
+              if (obj && obj.snapshot) snapshot = obj.snapshot;
+              else if (obj && obj.bancos) snapshot = obj;
+            } catch (e) { }
+          }
+          rel.titulo = titulo || rel.tipo || 'Relatório';
+          rel.snapshot = snapshot;
+          rel.periodoLabel = rel.observacao || rel.data || '';
           return rel;
         });
 
@@ -300,7 +368,6 @@
         renderizarListas();
       })
       .catch(function (err) {
-        console.error('[RELATORIOS] Erro:', err);
         relToast('Erro ao carregar dados.', 'danger');
         renderizarListas();
       })
@@ -336,18 +403,35 @@
     return true;
   }
 
-  function abrirBuilder(tipo) {
+  function obterValoresSelecionados(selectEl) {
+    if (!selectEl) return ['__todos__'];
+    const opts = Array.from(selectEl.selectedOptions || []).map(function (o) { return o.value; });
+    if (!opts.length) return ['__todos__'];
+    return opts;
+  }
+
+  function abrirBuilder(tipo, estadoPreservado) {
+    if (estadoPreservado) {
+      state.builder = JSON.parse(JSON.stringify(estadoPreservado));
+      renderizarBuilderTabs();
+      renderizarBuilderPanels();
+      irParaStep(2);
+      if (els.builderNomeInput) els.builderNomeInput.value = state.builder.nome || '';
+      if (els.builderOverlay) { els.builderOverlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      return;
+    }
+
     let inicio = '', fim = '', filtroExtra = null;
 
     if (tipo === 'motoboys') {
       inicio = els.mbDataInicio.value; fim = els.mbDataFim.value;
-      filtroExtra = { campo: 'motoboy_id', valor: els.mbSelect.value };
+      filtroExtra = { campo: 'motoboy_id', valor: obterValoresSelecionados(els.mbSelect) };
     } else if (tipo === 'clientes') {
       inicio = els.cliDataInicio.value; fim = els.cliDataFim.value;
-      filtroExtra = { campo: 'cliente_id', valor: els.cliSelect.value };
+      filtroExtra = { campo: 'cliente_id', valor: obterValoresSelecionados(els.cliSelect) };
     } else if (tipo === 'financeiro') {
       inicio = els.finDataInicio.value; fim = els.finDataFim.value;
-      filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value };
+      filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value ? [els.finTipo.value] : ['__todos__'] };
     } else if (tipo === 'global') {
       inicio = els.globDataInicio.value; fim = els.globDataFim.value;
     } else {
@@ -438,14 +522,13 @@
         '<div class="rb-panel-toolbar-actions">' +
         '<button type="button" data-acao="marcar" data-banco="' + banco + '">Marcar todos</button>' +
         '<button type="button" data-acao="desmarcar" data-banco="' + banco + '">Desmarcar</button>' +
-        '</div></div>' +
-        '<div class="rb-campos-grid">';
+        '</div></div><div class="rb-campos-grid">';
 
       Object.keys(info.campos).forEach(function (campo) {
         const checked = !!state.builder.selecionados[banco][campo];
         html += '<div class="rb-campo-item ' + (checked ? 'checked' : '') + '" data-banco="' + banco + '" data-campo="' + campo + '">' +
-          '<input type="checkbox" id="rb-chk-' + banco + '-' + campo + '" ' + (checked ? 'checked' : '') + ' readonly>' +
-          '<label for="rb-chk-' + banco + '-' + campo + '">' + escapeHtml(info.campos[campo]) + '</label></div>';
+          '<span class="rb-campo-checkicon"><i class="bi ' + (checked ? 'bi-check-square-fill' : 'bi-square') + '"></i></span>' +
+          '<label>' + escapeHtml(info.campos[campo]) + '</label></div>';
       });
 
       html += '</div></div>';
@@ -508,6 +591,18 @@
       }
     });
     html += '<div style="margin-top:8px;"><strong>Período:</strong> ' + formatDateBR(state.builder.periodo.inicio) + ' a ' + formatDateBR(state.builder.periodo.fim) + '</div>';
+
+    const fx = state.builder.filtroExtra;
+    if (fx && Array.isArray(fx.valor) && fx.valor.indexOf('__todos__') === -1 && fx.valor.length) {
+      let labels = [];
+      if (fx.campo === 'motoboy_id') {
+        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(m.id) !== -1; }).map(function (m) { return resolverValor('colaboradores', 'username', m); });
+      } else if (fx.campo === 'cliente_id') {
+        labels = state.clientes.filter(function (c) { return fx.valor.indexOf(c.id) !== -1; }).map(function (c) { return resolverValor('clientes', 'username', c); });
+      }
+      if (labels.length) html += '<div><strong>Filtro:</strong> ' + escapeHtml(labels.join(', ')) + '</div>';
+    }
+
     html += '<div><strong>Total de campos selecionados:</strong> ' + totalCampos + '</div>';
     els.builderResumo.innerHTML = html;
   }
@@ -519,43 +614,118 @@
   }
 
   function dentroPeriodo(dataStr, inicio, fim) {
-    if (!dataStr) return true;
     const d = normalizarDataISO(dataStr);
-    if (!d) return true; // se não conseguiu interpretar, não filtra (evita perder registros)
+    if (!d) return false;
     return d >= inicio && d <= fim;
+  }
+
+  function normalizarComparacao(v) {
+    return String(v == null ? '' : v).trim().toUpperCase();
+  }
+
+  function idsParaNomes(ids, lista, banco) {
+    const nomes = [];
+    lista.forEach(function (item) {
+      if (ids.indexOf(item.id) !== -1 || ids.indexOf(String(item.id)) !== -1) {
+        const nome = resolverValor(banco, 'username', item);
+        if (nome) nomes.push(normalizarComparacao(nome));
+      }
+    });
+    return nomes;
   }
 
   function coletarDadosBanco(banco) {
     const p = state.builder.periodo;
     let dados = [];
 
-    if (banco === 'usuarios') dados = state.usuarios.slice();
-    else if (banco === 'clientes') dados = state.clientes.slice();
+    if (banco === 'clientes') dados = state.clientes.slice();
     else if (banco === 'colaboradores') dados = state.motoboys.slice();
-    // CORRIGIDO: pedidos agora filtra por r.data (campo de data real),
-    // não mais por r.horario (que é o horário estimado de coleta, ex: "10:30")
-    else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
-    else if (banco === 'chat') dados = state.chat.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
-    else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) { return dentroPeriodo(r.data, p.inicio, p.fim); });
+    else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) {
+      return dentroPeriodo(resolverValor('pedidos', 'data', r), p.inicio, p.fim);
+    });
+    else if (banco === 'chat') dados = state.chat.filter(function (r) {
+      return dentroPeriodo(resolverValor('chat', 'data', r), p.inicio, p.fim);
+    });
+    else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
+      return dentroPeriodo(resolverValor('financeiro', 'data', r), p.inicio, p.fim);
+    });
 
     const fx = state.builder.filtroExtra;
-    if (fx && fx.valor && fx.valor !== '__todos__') {
-      if (fx.campo === 'motoboy_id') {
-        if (banco === 'colaboradores') dados = dados.filter(function (r) { return r.id === fx.valor; });
-        if (banco === 'pedidos') dados = dados.filter(function (r) { return r.motoboy === fx.valor || r.id_motoboy === fx.valor; });
-        if (banco === 'financeiro') dados = dados.filter(function (r) { return r.colaborador_id === fx.valor || r.motoboy === fx.valor; });
-      }
-      if (fx.campo === 'cliente_id') {
-        if (banco === 'clientes') dados = dados.filter(function (r) { return r.id === fx.valor; });
-        if (banco === 'pedidos') dados = dados.filter(function (r) { return r.id_cliente === fx.valor; });
-        if (banco === 'chat') dados = dados.filter(function (r) { return r.id_cliente === fx.valor; });
-      }
-      if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
-        dados = dados.filter(function (r) { return r.tipo === fx.valor; });
+    if (fx && fx.valor) {
+      const valores = Array.isArray(fx.valor) ? fx.valor : [fx.valor];
+      const contemTodos = valores.indexOf('__todos__') !== -1;
+
+      if (!contemTodos && valores.length) {
+        if (fx.campo === 'motoboy_id') {
+          const nomesSelecionados = idsParaNomes(valores, state.motoboys, 'colaboradores');
+
+          if (banco === 'colaboradores') {
+            dados = dados.filter(function (r) {
+              return valores.indexOf(r.id) !== -1 || valores.indexOf(String(r.id)) !== -1;
+            });
+          }
+          if (banco === 'pedidos') {
+            dados = dados.filter(function (r) {
+              const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
+              return nomesSelecionados.indexOf(mb) !== -1;
+            });
+          }
+          if (banco === 'financeiro') {
+            dados = dados.filter(function (r) {
+              const cId = resolverValor('financeiro', 'colaborador_id', r);
+              const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
+              const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
+              return valores.indexOf(cId) !== -1 || valores.indexOf(String(cId)) !== -1 ||
+                nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+            });
+          }
+        }
+
+        if (fx.campo === 'cliente_id') {
+          if (banco === 'clientes') {
+            dados = dados.filter(function (r) {
+              return valores.indexOf(r.id) !== -1 || valores.indexOf(String(r.id)) !== -1;
+            });
+          }
+          if (banco === 'pedidos') {
+            dados = dados.filter(function (r) {
+              const v = resolverValor('pedidos', 'id_cliente', r);
+              return valores.indexOf(v) !== -1 || valores.indexOf(String(v)) !== -1;
+            });
+          }
+          if (banco === 'chat') {
+            dados = dados.filter(function (r) {
+              const v = resolverValor('chat', 'id_cliente', r);
+              return valores.indexOf(v) !== -1 || valores.indexOf(String(v)) !== -1;
+            });
+          }
+        }
+
+        if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
+          dados = dados.filter(function (r) {
+            return valores.indexOf(resolverValor('financeiro', 'tipo', r)) !== -1;
+          });
+        }
       }
     }
 
     return dados;
+  }
+
+  function buscarFinanceiroDoPedido(pedido) {
+    const idPedido = pedido.id;
+    return state.financeiro.find(function (f) {
+      return String(resolverValor('financeiro', 'id_pedido', f)) === String(idPedido);
+    });
+  }
+
+  function obterValorCampoPedido(campo, pedido) {
+    let valor = resolverValor('pedidos', campo, pedido);
+    if ((valor === '' || valor === null || valor === undefined) && campo === 'valor_corrida') {
+      const lanc = buscarFinanceiroDoPedido(pedido);
+      if (lanc) valor = resolverValor('financeiro', 'vlr_servico', lanc);
+    }
+    return valor;
   }
 
   function montarSnapshot() {
@@ -566,7 +736,9 @@
       const dados = coletarDadosBanco(banco);
       const linhas = dados.map(function (registro) {
         const linha = {};
-        camposSel.forEach(function (campo) { linha[campo] = registro[campo]; });
+        camposSel.forEach(function (campo) {
+          linha[campo] = banco === 'pedidos' ? obterValorCampoPedido(campo, registro) : resolverValor(banco, campo, registro);
+        });
         return linha;
       });
       snapshot.bancos[banco] = {
@@ -584,6 +756,9 @@
     if (!els.builderNomeInput) return;
     const nome = (els.builderNomeInput.value || '').trim();
     if (!nome) { relToast('Informe o nome do relatório.', 'warning'); els.builderNomeInput.focus(); return; }
+
+    state.builder.nome = nome;
+    state.ultimoBuilderState = JSON.parse(JSON.stringify(state.builder));
 
     els.builderBtnGerar.disabled = true;
     els.builderBtnGerar.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gerando...</span>';
@@ -641,6 +816,13 @@
     if (els.modalBtnSalvar) els.modalBtnSalvar.addEventListener('click', salvarRelatorioModal);
     if (els.modalBtnCopiar) els.modalBtnCopiar.addEventListener('click', copiarRelatorioModal);
     if (els.modalBtnPdf) els.modalBtnPdf.addEventListener('click', function () { window.print(); });
+
+    if (els.modalBtnVoltar) els.modalBtnVoltar.addEventListener('click', function () {
+      if (!state.ultimoBuilderState) { relToast('Não há edição anterior disponível.', 'warning'); return; }
+      fecharModalRelatorio();
+      abrirBuilder(state.ultimoBuilderState.tipo, state.ultimoBuilderState);
+    });
+
     if (els.modalOverlay) {
       els.modalOverlay.addEventListener('click', function (e) { if (e.target === els.modalOverlay) fecharModalRelatorio(); });
     }
@@ -686,22 +868,15 @@
     }
 
     if (els.modalBtnSalvar) els.modalBtnSalvar.style.display = novoGerado ? 'inline-flex' : 'none';
+    if (els.modalBtnVoltar) els.modalBtnVoltar.style.display = (novoGerado && state.ultimoBuilderState) ? 'inline-flex' : 'none';
 
     if (els.modalBody) {
-      const snapshot = relatorio.snapshot || parseSnapshot(relatorio);
+      const snapshot = relatorio.snapshot || { bancos: {} };
       els.modalBody.innerHTML = construirConteudoRelatorio(relatorio, snapshot);
     }
 
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-  }
-
-  function parseSnapshot(relatorio) {
-    if (relatorio.snapshot) return relatorio.snapshot;
-    if (relatorio.descricao) {
-      try { return JSON.parse(relatorio.descricao); } catch (e) { return { bancos: {} }; }
-    }
-    return { bancos: {} };
   }
 
   function fecharModalRelatorio() {
@@ -717,17 +892,18 @@
     btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
 
     const atual = state.relatorioAtual;
+    const descricao = JSON.stringify({ titulo: atual.titulo, snapshot: atual.snapshot });
+
     const payload = {
       id: atual.id,
       colaborador_id: '',
       id_pedido: '',
       data: formatDateBR(atual.data_inicio) + ' - ' + formatDateBR(atual.data_fim),
       tipo: atual.tipo,
-      descricao: JSON.stringify(atual.snapshot || {}),
+      descricao: descricao,
       motoboy: '',
       vlr_servico: '',
       colaborador: '',
-      rdo: atual.titulo,
       observacao: atual.periodoLabel,
       situacao: 'gerado'
     };
@@ -738,10 +914,11 @@
           const registroLista = {
             id: payload.id,
             tipo: payload.tipo,
-            titulo: payload.rdo,
+            titulo: atual.titulo,
             periodoLabel: payload.observacao,
             criadoEm: atual.criadoEm,
             descricao: payload.descricao,
+            snapshot: atual.snapshot,
             data_inicio: atual.data_inicio,
             data_fim: atual.data_fim,
             data: payload.data,
@@ -750,6 +927,7 @@
           };
 
           state.relatoriosSalvos.unshift(registroLista);
+          state.ultimoBuilderState = null;
           state.paginaAtual = 1;
           renderizarListas();
           relToast('Relatório salvo com sucesso!', 'success');
@@ -759,7 +937,6 @@
         }
       })
       .catch(function (err) {
-        console.error('[RELATORIOS] Erro ao salvar:', err);
         relToast('Erro ao salvar relatório: ' + err.message, 'danger');
       })
       .finally(function () {
@@ -882,19 +1059,11 @@
 
   function obterUsuarioLogado() {
     try {
-      // 1. Checa variável global (se setada em algum outro ponto do app)
       if (window.usuarioLogado && (window.usuarioLogado.username || window.usuarioLogado.nome)) {
         return window.usuarioLogado.username || window.usuarioLogado.nome;
       }
-
-      // 2. Lê diretamente a chave 'username' salva pelo login.js
-      //    (localStorage.setItem('username', username))
       var username = localStorage.getItem('username');
-      if (username && username.trim() && username !== 'null' && username !== 'undefined') {
-        return username.trim();
-      }
-
-      // 3. Fallback: tenta formatos alternativos (objeto JSON), caso mude no futuro
+      if (username && username.trim() && username !== 'null' && username !== 'undefined') return username.trim();
       var fontes = [sessionStorage, localStorage];
       for (var i = 0; i < fontes.length; i++) {
         var store = fontes[i];
@@ -908,9 +1077,7 @@
           }
         }
       }
-    } catch (e) {
-      console.warn('[RELATORIOS] Não foi possível obter usuário logado:', e);
-    }
+    } catch (e) { }
     return 'Usuário não identificado';
   }
 
@@ -986,6 +1153,11 @@
     });
   }
 
+  window.RelatoriosDebug = {
+    getState: function () { return state; },
+    recarregar: carregarDados
+  };
+
   window.initRelatorios = function () {
     bind();
     registrarEventos();
@@ -1002,5 +1174,4 @@
 
     carregarDados();
   };
-
 })();
