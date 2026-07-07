@@ -1,44 +1,148 @@
 (function () {
-
-    var state = {
-        origem:        'clientes',
-        cache:         [],
-        pagina:        1,
-        porPagina:     15,
-        filtro:        '',
-        tipoFiltro:    'todos',
-        statusFiltro:  null,
-        fetching:      false,
-        idEdicao:      null,
-        modoVisualizar: false,
-        formCarregado: false
+    var ACTIONS = {
+        clientes: {
+            listar: 'getclientes',
+            criar: 'addclientes',
+            atualizar: 'updateclientes',
+            excluir: 'deleteclientes'
+        },
+        colaboradores: {
+            listar: 'getcolaboradores',
+            criar: 'addcolaboradores',
+            atualizar: 'updatecolaboradores',
+            excluir: 'deletecolaboradores'
+        }
     };
 
+    var state = {
+        origem: 'clientes',
+        cache: [],
+        pagina: 1,
+        porPagina: 15,
+        filtro: '',
+        tipoFiltro: 'todos',
+        blocoAtivo: 'todos',
+        filtroStatus: 'todos',
+        fetching: false,
+        idEdicao: null,
+        modoVisualizar: false,
+        formCarregado: false,
+        sortDesc: false
+    };
     window.adminState = state;
 
     var els = {};
 
     function bind() {
-        els.tbody          = document.getElementById('admin-list');
-        els.filtro         = document.getElementById('filtro-admin');
-        els.syncIcon       = document.getElementById('sync-icon-admin');
-        els.btnSync        = document.getElementById('btn-sync-admin');
-        els.btnNovo        = document.getElementById('btn-novo-admin');
-        els.infoPag        = document.getElementById('info-paginacao-admin');
-        els.btnPrev        = document.getElementById('btn-pag-prev-admin');
-        els.btnNext        = document.getElementById('btn-pag-next-admin');
+        els.tbody = document.getElementById('admin-list');
+        els.filtro = document.getElementById('filtro-admin');
+        els.syncIcon = document.getElementById('sync-icon-admin');
+        els.btnSync = document.getElementById('btn-sync-admin');
+        els.btnNovo = document.getElementById('btn-novo-admin');
+        els.infoPag = document.getElementById('info-paginacao-admin');
+        els.btnPrev = document.getElementById('btn-pag-prev-admin');
+        els.btnNext = document.getElementById('btn-pag-next-admin');
         els.modalContainer = document.getElementById('admin-modal-container');
+        els.thead = document.querySelector('#tabela-admin thead');
+        els.iconSortNome = document.getElementById('icon-sort-nome-admin');
+        els.thPagamento = document.getElementById('th-pagamento-admin');
+        els.blocosPagamento = document.querySelectorAll('.admin-bloco-pagamento');
+        els.wrapperFiltro = document.getElementById('dropdown-filtro-wrapper-admin');
+        els.btnFiltro = document.getElementById('btn-filtro-admin');
+        els.menuFiltro = document.getElementById('dropdown-filtro-menu-admin');
+        els.labelFiltro = document.getElementById('label-filtro-admin');
+        els.btnLoopHeader = document.getElementById('btn-loop-admin');
+        els.iconLoopHeader = document.getElementById('icon-loop-admin');
+
+        els.blocosStatus = [
+            { el: document.getElementById('adm-filter-todos'), tipo: 'todos' },
+            { el: document.getElementById('adm-filter-diario'), tipo: 'diario' },
+            { el: document.getElementById('adm-filter-semanal'), tipo: 'semanal' },
+            { el: document.getElementById('adm-filter-quinzenal'), tipo: 'quinzenal' },
+            { el: document.getElementById('adm-filter-mensal'), tipo: 'mensal' }
+        ];
+    }
+
+    function getAction(tipo) {
+        var grupo = ACTIONS[state.origem];
+        if (!grupo || !grupo[tipo]) {
+            throw new Error('Ação "' + tipo + '" não mapeada para origem "' + state.origem + '".');
+        }
+        return grupo[tipo];
+    }
+
+    function extrairMsgErro(err) {
+        if (!err) return 'Erro desconhecido.';
+        if (typeof err === 'string') return err;
+        if (err.message) return err.message;
+        if (err.msg) return err.msg;
+        if (err.error) return typeof err.error === 'string' ? err.error : extrairMsgErro(err.error);
+        try { return JSON.stringify(err); } catch (e) { return 'Erro desconhecido.'; }
+    }
+
+    function mostrarErro(msg, contexto) {
+        var texto = (contexto ? contexto + ': ' : '') + msg;
+        console.error('[Admin]', texto);
+        try {
+            if (window.finToast) {
+                window.finToast(texto, 'danger');
+                return;
+            }
+        } catch (e) { console.error('Falha ao exibir toast:', e); }
+        alert(texto);
+    }
+
+    function mostrarErroTabela(msg) {
+        if (!els.tbody) return;
+        els.tbody.innerHTML =
+            '<tr><td colspan="5" class="text-center text-danger py-4">' +
+            '<i class="bi bi-exclamation-triangle" style="font-size:1.3rem;display:block;margin-bottom:6px;"></i>' +
+            '<strong>' + (msg || 'Erro ao carregar dados') + '</strong>' +
+            '</td></tr>';
+    }
+
+    function tratarErro(err, contexto) {
+        var msg = extrairMsgErro(err);
+        mostrarErro(msg, contexto);
+        return msg;
     }
 
     function onClickTab(e) {
         e.preventDefault();
         var origem = e.currentTarget.getAttribute('data-origem');
-        if (origem) fetchDados(origem);
+        if (!origem || origem === state.origem || !ACTIONS[origem]) return;
+        state.origem = origem;
+        state.pagina = 1;
+        state.filtro = '';
+        state.blocoAtivo = 'todos';
+        state.filtroStatus = 'todos';
+        if (els.filtro) els.filtro.value = '';
+        if (els.labelFiltro) els.labelFiltro.textContent = 'Status';
+        if (els.menuFiltro) {
+            els.menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-status]').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-filtro-status') === 'todos');
+            });
+        }
+        els.blocosStatus.forEach(function (b) {
+            if (b.el) b.el.classList.toggle('active', b.tipo === 'todos');
+        });
+        atualizarTabsAtivas();
+        atualizarColunaPagamento();
+        fetchDados();
     }
 
     function onInputFiltro() {
-        state.filtro  = (els.filtro.value || '').trim().toLowerCase();
-        state.pagina  = 1;
+        state.filtro = (els.filtro.value || '').trim().toLowerCase();
+        state.pagina = 1;
+        renderTabela();
+    }
+
+    function onClickBloco(bloco) {
+        state.blocoAtivo = bloco.tipo;
+        state.pagina = 1;
+        els.blocosStatus.forEach(function (b) {
+            if (b.el) b.el.classList.toggle('active', b.tipo === bloco.tipo);
+        });
         renderTabela();
     }
 
@@ -53,26 +157,82 @@
             els.filtro.addEventListener('input', onInputFiltro);
         }
 
-        if (els.btnSync)  els.btnSync.onclick  = function () { fetchDados(state.origem); };
-        if (els.btnNovo)  els.btnNovo.onclick  = function () { abrirForm(null, false); };
-        if (els.btnPrev)  els.btnPrev.onclick  = function () { mudarPagina(-1); };
-        if (els.btnNext)  els.btnNext.onclick  = function () { mudarPagina(1); };
+        if (els.btnSync) els.btnSync.onclick = function () { fetchDados(); };
+        if (els.btnLoopHeader) els.btnLoopHeader.onclick = function () { fetchDados(); };
+        if (els.btnNovo) els.btnNovo.onclick = function () { abrirForm(null, false); };
+        if (els.btnPrev) els.btnPrev.onclick = function () { mudarPagina(-1); };
+        if (els.btnNext) els.btnNext.onclick = function () { mudarPagina(1); };
+
+        els.blocosStatus.forEach(function (b) {
+            if (b.el) {
+                b.el.onclick = function () { onClickBloco(b); };
+            }
+        });
+
+        if (els.thead) {
+            els.thead.addEventListener('click', function (e) {
+                if (e.target.closest('#btn-sort-nome-admin')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSortNome();
+                }
+            });
+        }
+
+        if (els.btnFiltro && els.menuFiltro && els.wrapperFiltro) {
+            els.btnFiltro.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                els.wrapperFiltro.classList.toggle('open');
+            });
+            document.addEventListener('click', function (e) {
+                if (els.wrapperFiltro && !els.wrapperFiltro.contains(e.target)) {
+                    els.wrapperFiltro.classList.remove('open');
+                }
+            });
+            els.menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-status]').forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    state.filtroStatus = this.getAttribute('data-filtro-status') || 'todos';
+                    state.pagina = 1;
+                    var labelMap = { todos: 'Status', ativo: 'Ativo', inativo: 'Inativo' };
+                    if (els.labelFiltro) els.labelFiltro.textContent = labelMap[state.filtroStatus] || 'Status';
+                    els.menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-status]').forEach(function (el) {
+                        el.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    els.wrapperFiltro.classList.remove('open');
+                    renderTabela();
+                });
+            });
+        }
+    }
+
+    function toggleSortNome() {
+        state.sortDesc = !state.sortDesc;
+        if (els.iconSortNome) {
+            els.iconSortNome.className = state.sortDesc ? 'bi bi-arrow-down' : 'bi bi-arrow-up';
+        }
+        state.pagina = 1;
+        renderTabela();
     }
 
     function spinOn() {
-        if (els.btnSync)  els.btnSync.classList.add('syncing');
+        if (els.btnSync) els.btnSync.classList.add('syncing');
         if (els.syncIcon) els.syncIcon.classList.add('spinner-rotate');
+        if (els.btnLoopHeader) els.btnLoopHeader.classList.add('syncing');
     }
-
     function spinOff() {
-        if (els.btnSync)  els.btnSync.classList.remove('syncing');
+        if (els.btnSync) els.btnSync.classList.remove('syncing');
         if (els.syncIcon) els.syncIcon.classList.remove('spinner-rotate');
+        if (els.btnLoopHeader) els.btnLoopHeader.classList.remove('syncing');
     }
 
     function mostrarLoading() {
         if (!els.tbody) return;
         els.tbody.innerHTML =
-            '<tr><td colspan="4" class="text-center text-muted py-4">' +
+            '<tr><td colspan="5" class="text-center text-muted py-4">' +
             '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
             '<div class="mt-2 admin-loading-text">Buscando dados<span class="admin-dots"></span></div>' +
             '</td></tr>';
@@ -84,250 +244,298 @@
         });
     }
 
-    function fetchDados(origem) {
-        if (state.fetching) return;
+    function atualizarColunaPagamento() {
+        var isCliente = state.origem === 'clientes';
+        if (els.thPagamento) els.thPagamento.classList.toggle('d-none', !isCliente);
+        if (els.blocosPagamento) {
+            els.blocosPagamento.forEach(function (el) {
+                el.classList.toggle('d-none', !isCliente);
+            });
+        }
+        var tiposPagamento = ['diario', 'semanal', 'quinzenal', 'mensal'];
+        if (!isCliente && tiposPagamento.indexOf(state.blocoAtivo) !== -1) {
+            state.blocoAtivo = 'todos';
+            els.blocosStatus.forEach(function (b) {
+                if (b.el) b.el.classList.toggle('active', b.tipo === 'todos');
+            });
+        }
+    }
 
-        state.origem   = origem || state.origem;
-        state.pagina   = 1;
-        state.filtro   = '';
+    function verificarAPI() {
+        if (!window.API || typeof window.API.call !== 'function') {
+            throw new Error('Módulo API não está disponível. Verifique se api.js foi carregado antes de admin.js.');
+        }
+    }
+
+    function fetchDados() {
+        if (state.fetching) return Promise.resolve();
         state.fetching = true;
-
-        if (els.filtro) els.filtro.value = '';
-
-        atualizarTabsAtivas();
-        spinOn();
         mostrarLoading();
-
-        window.API.call('get' + state.origem)
+        spinOn();
+        var action;
+        try {
+            verificarAPI();
+            action = getAction('listar');
+        } catch (err) {
+            tratarErro(err, 'Erro de inicialização');
+            mostrarErroTabela(extrairMsgErro(err));
+            spinOff();
+            state.fetching = false;
+            return Promise.reject(err);
+        }
+        return window.API.call(action)
             .then(function (res) {
-                state.cache = Array.isArray(res) ? res : [];
+                if (res && res.status === 'error') {
+                    throw new Error(extrairMsgErro(res.message || res.error || res));
+                }
+                var dados = Array.isArray(res) ? res : (res && res.data !== undefined ? res.data : null);
+                if (!Array.isArray(dados)) {
+                    throw new Error('Resposta inválida do servidor para a ação "' + action + '".');
+                }
+                state.cache = dados;
+                state.pagina = 1;
+                renderTabela();
             })
-            .catch(function () {
+            .catch(function (err) {
+                var msg = tratarErro(err, 'Erro ao carregar dados (' + action + ')');
                 state.cache = [];
+                mostrarErroTabela(msg);
             })
             .finally(function () {
                 state.fetching = false;
                 spinOff();
-                renderTabela();
             });
     }
 
-    function aplicarFiltro() {
-        var dados = state.cache;
+    function _nomeItem(item) {
+        return String(item.nome || item.username || '').toLowerCase();
+    }
 
-        if (state.statusFiltro && state.statusFiltro !== 'todos') {
+    function contarPagamento(dados, tipo) {
+        return dados.filter(function (i) {
+            return String(i.pagamento || '').trim().toUpperCase() === tipo;
+        }).length;
+    }
+
+    function atualizarContadores(dados) {
+        var total = dados.length;
+        var diario = contarPagamento(dados, 'DIÁRIO');
+        var semanal = contarPagamento(dados, 'SEMANAL');
+        var quinzenal = contarPagamento(dados, 'QUINZENAL');
+        var mensal = contarPagamento(dados, 'MENSAL');
+
+        function pct(n) {
+            return total > 0 ? Math.round((n / total) * 100) + '%' : '0%';
+        }
+
+        function set(id, count, pctTexto) {
+            var elC = document.getElementById('adm-count-' + id);
+            var elP = document.getElementById('adm-pct-' + id);
+            if (elC) elC.textContent = count;
+            if (elP) elP.textContent = pctTexto;
+        }
+
+        set('todos', total, 'de ' + total);
+        set('diario', diario, pct(diario));
+        set('semanal', semanal, pct(semanal));
+        set('quinzenal', quinzenal, pct(quinzenal));
+        set('mensal', mensal, pct(mensal));
+    }
+
+    function aplicarFiltroBloco(dados) {
+        var mapaPagamento = {
+            diario: 'DIÁRIO',
+            semanal: 'SEMANAL',
+            quinzenal: 'QUINZENAL',
+            mensal: 'MENSAL'
+        };
+        if (mapaPagamento[state.blocoAtivo]) {
+            var alvo = mapaPagamento[state.blocoAtivo];
+            return dados.filter(function (item) {
+                return String(item.pagamento || '').trim().toUpperCase() === alvo;
+            });
+        }
+        return dados;
+    }
+
+    function aplicarFiltroStatus(dados) {
+        if (state.filtroStatus === 'todos') return dados;
+        var querAtivo = state.filtroStatus === 'ativo';
+        return dados.filter(function (item) {
+            var ativo = String(item.status || '').toUpperCase() === 'TRUE';
+            return ativo === querAtivo;
+        });
+    }
+
+    function aplicarFiltro() {
+        var base = Array.isArray(state.cache) ? state.cache : [];
+        atualizarContadores(base);
+
+        var dados = aplicarFiltroBloco(base);
+        dados = aplicarFiltroStatus(dados);
+
+        if (state.filtro) {
             dados = dados.filter(function (item) {
-                var s = String(item.status || '').toUpperCase();
-                if (state.statusFiltro === 'ativo')   return s === 'TRUE';
-                if (state.statusFiltro === 'inativo') return s !== 'TRUE';
-                return true;
+                var txt;
+                if (state.tipoFiltro === 'nome') {
+                    txt = String(item.nome || item.username || '').toLowerCase();
+                } else {
+                    txt = [
+                        item.nome, item.username, item.responsavel,
+                        item.contato, item.email, item.pagamento, item.cpf_cnpj
+                    ].join(' ').toLowerCase();
+                }
+                return txt.indexOf(state.filtro) !== -1;
             });
         }
 
-        if (!state.filtro) return dados;
-
-        return dados.filter(function (item) {
-            var texto = state.tipoFiltro === 'nome'
-                ? (item.nome || item.username || '').toLowerCase()
-                : [
-                    item.nome       || item.username || '',
-                    item.responsavel || '',
-                    item.contato     || '',
-                    item.email       || '',
-                    item.cpf_cnpj    || ''
-                  ].join(' ').toLowerCase();
-
-            return texto.indexOf(state.filtro) !== -1;
+        dados = dados.slice().sort(function (a, b) {
+            var na = _nomeItem(a);
+            var nb = _nomeItem(b);
+            if (na < nb) return state.sortDesc ? 1 : -1;
+            if (na > nb) return state.sortDesc ? -1 : 1;
+            return 0;
         });
+
+        return dados;
     }
 
     function calcTotalPag(total) {
         return Math.max(1, Math.ceil(total / state.porPagina));
     }
 
-    function abrirModalConfirmacao(nome, onConfirm) {
-        var existente = document.getElementById('modalConfirmDelete');
-        if (existente) existente.remove();
-
-        var div = document.createElement('div');
-        div.innerHTML =
-            '<div class="modal fade" id="modalConfirmDelete" tabindex="-1">' +
-            '  <div class="modal-dialog modal-sm modal-dialog-centered">' +
-            '    <div class="modal-content">' +
-            '      <div class="modal-body text-center py-4">' +
-            '        <i class="bi bi-exclamation-triangle text-danger fs-2"></i>' +
-            '        <p class="mt-2 mb-1 fw-bold">Excluir registro?</p>' +
-            '        <p class="text-muted small mb-0">' + nome + '</p>' +
-            '      </div>' +
-            '      <div class="modal-footer justify-content-center border-0 pt-0">' +
-            '        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>' +
-            '        <button class="btn btn-sm btn-danger" id="btn-confirm-delete">Excluir</button>' +
-            '      </div>' +
-            '    </div>' +
-            '  </div>' +
-            '</div>';
-
-        document.body.appendChild(div.firstElementChild);
-
-        var modalEl = document.getElementById('modalConfirmDelete');
-        var modal   = new bootstrap.Modal(modalEl);
-
-        document.getElementById('btn-confirm-delete').addEventListener('click', function () {
-            modal.hide();
-            onConfirm();
-        });
-
-        modalEl.addEventListener('hidden.bs.modal', function () { modalEl.remove(); });
-
-        modal.show();
-    }
-
-    function confirmarExclusao(id, nome) {
-        if (!id) {
-            console.error('[DELETE] ID não encontrado');
-            return;
-        }
-
-        abrirModalConfirmacao(nome, function () {
-            var action = 'delete' + state.origem;
-            console.log('[DELETE] action:', action, '| id:', id);
-
-            window.API.call(action, { id: id })
-                .then(function (res) {
-                    console.log('[DELETE] Sucesso:', res);
-                    state.cache = state.cache.filter(function (x) {
-                        return String(x.id) !== String(id);
-                    });
-                    renderTabela();
-                })
-                .catch(function (err) {
-                    console.error('[DELETE] Erro:', err.message);
-                    alert('Erro ao excluir: ' + err.message);
-                });
-        });
-    }
-
     function renderTabela() {
         if (!els.tbody) return;
-
-        var dados    = aplicarFiltro();
+        var dados;
+        try {
+            dados = aplicarFiltro();
+        } catch (err) {
+            var msg = tratarErro(err, 'Erro ao processar dados');
+            mostrarErroTabela(msg);
+            return;
+        }
         var totalPag = calcTotalPag(dados.length);
-
         if (state.pagina > totalPag) state.pagina = totalPag;
-        if (state.pagina < 1)        state.pagina = 1;
-
+        if (state.pagina < 1) state.pagina = 1;
         var inicio = (state.pagina - 1) * state.porPagina;
         var pagina = dados.slice(inicio, inicio + state.porPagina);
-
         if (pagina.length === 0) {
-            els.tbody.innerHTML =
-                '<tr><td colspan="4" class="text-center text-muted p-4">Nenhum registro encontrado.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Nenhum registro encontrado.</td></tr>';
         } else {
-            els.tbody.innerHTML = pagina.map(renderLinha).join('');
-            registrarEventosLinhas();
+            try {
+                els.tbody.innerHTML = pagina.map(renderLinha).join('');
+                registrarEventosLinhas();
+            } catch (err) {
+                var msg2 = tratarErro(err, 'Erro ao renderizar tabela');
+                mostrarErroTabela(msg2);
+            }
         }
-
         atualizarPaginacao(totalPag);
     }
 
-    function renderLinha(item) {
-        var ativo  = String(item.status || '').toUpperCase() === 'TRUE';
-        var avatar = item.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-        var nome   = item.nome || item.username || 'N/A';
-        var nomeSafe = nome.replace(/"/g, '&quot;');
+    function badgePagamento(pagamento) {
+        var val = String(pagamento || '').toUpperCase();
+        if (!val) return '<span class="text-muted">-</span>';
+        var classes = {
+            'DIÁRIO': 'badge-soft-red',
+            'SEMANAL': 'badge-soft-blue',
+            'QUINZENAL': 'badge-soft-yellow',
+            'MENSAL': 'badge-soft-green'
+        };
+        var classe = classes[val] || 'badge-soft-gray';
+        return '<span class="badge-soft ' + classe + '">' + pagamento + '</span>';
+    }
 
-        return (
-            '<tr>' +
+    function renderLinha(it) {
+        var ativo = String(it.status || '').toUpperCase() === 'TRUE';
+        var avatar = it.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        var nome = it.nome || it.username || 'N/A';
+        var nomeSafe = nome.replace(/"/g, '&quot;');
+        var isCliente = (state.origem === 'clientes');
+        var pag = isCliente
+            ? '<td>' + badgePagamento(it.pagamento) + '</td>'
+            : '<td class="d-none"></td>';
+        var statusClasse = ativo ? 'badge-soft-green' : 'badge-soft-gray';
+        var statusTexto = ativo ? 'Ativo' : 'Inativo';
+        return '<tr>' +
             '<td class="ps-3">' +
-            '<img src="' + avatar + '" width="30" height="30" class="rounded-circle" ' +
-            'style="object-fit:cover;" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
+            '<img src="' + avatar + '" width="26" height="26" class="rounded-circle" style="object-fit:cover;" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
             '</td>' +
             '<td>' + nome + '</td>' +
-            '<td>' +
-            '<span class="badge ' + (ativo ? 'bg-success' : 'bg-secondary') + '">' +
-            (ativo ? 'Ativo' : 'Inativo') +
-            '</span>' +
-            '</td>' +
+            pag +
+            '<td><span class="badge-soft ' + statusClasse + '">' + statusTexto + '</span></td>' +
             '<td class="text-end pe-3">' +
-            '<button class="btn btn-light btn-sm me-1 btn-admin-edit" data-id="' + item.id + '">' +
-            '<i class="bi bi-pencil-square"></i>' +
-            '</button>' +
-            '<button class="btn btn-light btn-sm me-1 btn-admin-view" data-id="' + item.id + '">' +
-            '<i class="bi bi-eye"></i>' +
-            '</button>' +
-            '<button class="btn btn-light btn-sm btn-admin-delete" data-id="' + item.id + '" data-nome="' + nomeSafe + '">' +
-            '<i class="bi bi-trash text-danger"></i>' +
-            '</button>' +
-            '</td>' +
-            '</tr>'
-        );
+            '<button class="btn btn-light btn-sm me-1 btn-admin-edit" data-id="' + it.id + '"><i class="bi bi-pencil-square"></i></button>' +
+            '<button class="btn btn-light btn-sm me-1 btn-admin-view" data-id="' + it.id + '"><i class="bi bi-eye"></i></button>' +
+            '<button class="btn btn-light btn-sm btn-admin-delete" data-id="' + it.id + '" data-nome="' + nomeSafe + '"><i class="bi bi-trash text-danger"></i></button>' +
+            '</td></tr>';
     }
 
     function registrarEventosLinhas() {
         if (!els.tbody) return;
-
-        els.tbody.querySelectorAll('.btn-admin-edit').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var item = buscarPorId(btn.getAttribute('data-id'));
-                if (item) abrirForm(item, false);
-            });
+        els.tbody.querySelectorAll('.btn-admin-edit').forEach(function (b) {
+            b.onclick = function () {
+                var it = buscarPorId(this.getAttribute('data-id'));
+                if (it) abrirForm(it, false);
+                else mostrarErro('Registro não encontrado no cache local.', 'Erro ao editar');
+            };
         });
-
-        els.tbody.querySelectorAll('.btn-admin-view').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var item = buscarPorId(btn.getAttribute('data-id'));
-                if (item) abrirForm(item, true);
-            });
+        els.tbody.querySelectorAll('.btn-admin-view').forEach(function (b) {
+            b.onclick = function () {
+                var it = buscarPorId(this.getAttribute('data-id'));
+                if (it) abrirForm(it, true);
+                else mostrarErro('Registro não encontrado no cache local.', 'Erro ao visualizar');
+            };
         });
-
-        els.tbody.querySelectorAll('.btn-admin-delete').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                confirmarExclusao(btn.getAttribute('data-id'), btn.getAttribute('data-nome'));
-            });
+        els.tbody.querySelectorAll('.btn-admin-delete').forEach(function (b) {
+            b.onclick = function () { confirmarExclusao(this.getAttribute('data-id'), this.getAttribute('data-nome')); };
         });
     }
 
     function buscarPorId(id) {
-        return state.cache.find(function (x) {
-            return String(x.id) === String(id);
-        }) || null;
+        return (Array.isArray(state.cache) ? state.cache : []).find(function (x) { return String(x.id) === String(id); });
     }
 
-    function atualizarPaginacao(totalPag) {
-        if (els.infoPag) els.infoPag.textContent = 'Pág ' + state.pagina + ' de ' + totalPag;
-        if (els.btnPrev) els.btnPrev.disabled = state.pagina <= 1;
-        if (els.btnNext) els.btnNext.disabled = state.pagina >= totalPag;
+    function atualizarPaginacao(tp) {
+        if (els.infoPag) els.infoPag.textContent = 'Pág ' + state.pagina + ' de ' + tp;
+        if (els.btnPrev) els.btnPrev.disabled = (state.pagina <= 1);
+        if (els.btnNext) els.btnNext.disabled = (state.pagina >= tp);
     }
 
     function mudarPagina(dir) {
-        var totalPag = calcTotalPag(aplicarFiltro().length);
-        var nova     = state.pagina + dir;
-        if (nova >= 1 && nova <= totalPag) {
-            state.pagina = nova;
-            renderTabela();
-        }
+        var t = calcTotalPag(aplicarFiltro().length);
+        var np = state.pagina + dir;
+        if (np < 1 || np > t) return;
+        state.pagina = np;
+        renderTabela();
     }
 
     function carregarFormHTML() {
         if (state.formCarregado) return Promise.resolve(true);
-        if (!els.modalContainer) return Promise.resolve(false);
-
+        if (!els.modalContainer) {
+            mostrarErro('Container do modal não encontrado no DOM.', 'Erro ao abrir formulário');
+            return Promise.resolve(false);
+        }
         return fetch('pages/admin/form_admin.html')
-            .then(function (res) { return res.ok ? res.text() : false; })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Falha ao carregar formulário (HTTP ' + res.status + ').');
+                return res.text();
+            })
             .then(function (html) {
-                if (!html) return false;
                 els.modalContainer.innerHTML = html;
                 state.formCarregado = true;
                 registrarEventosForm();
                 return true;
             })
-            .catch(function () { return false; });
+            .catch(function (err) {
+                tratarErro(err, 'Erro ao carregar formulário');
+                return false;
+            });
     }
 
     function registrarEventosForm() {
         var btnSalvar = document.getElementById('btn-salvar-form-admin');
         if (btnSalvar) btnSalvar.onclick = function () { salvar(); };
-
         var fnMotoboy = document.getElementById('fn-motoboy');
         if (fnMotoboy) {
             fnMotoboy.onchange = function () {
@@ -335,359 +543,179 @@
                 if (div) div.classList.toggle('d-none', !fnMotoboy.checked);
             };
         }
-
         var modalEl = document.getElementById('modalFormAdmin');
-        if (modalEl) modalEl.addEventListener('hidden.bs.modal', limparForm);
+        if (modalEl) modalEl.addEventListener('hidden.bs.modal', function () { limparForm(); });
     }
 
     function limparForm() {
-        state.idEdicao      = null;
-        state.modoVisualizar = false;
-
-        var modalEl = document.getElementById('modalFormAdmin');
-        if (!modalEl) return;
-
-        modalEl.querySelectorAll('input[type=text], input[type=email], input[type=number]').forEach(function (el) {
-            el.value = '';
-            el.classList.remove('input-error');
-            el.disabled = false;
-        });
-
-        modalEl.querySelectorAll('select').forEach(function (s) {
-            s.selectedIndex = 0;
-            s.disabled = false;
-        });
-
-        modalEl.querySelectorAll('.col-funcao').forEach(function (c) {
-            c.checked  = false;
-            c.disabled = false;
-        });
-
-        esconderErroForm();
-
-        var divComissao = document.getElementById('div-comissao');
-        if (divComissao) divComissao.classList.add('d-none');
+        state.idEdicao = null; state.modoVisualizar = false;
+        var form = document.getElementById('form-admin');
+        if (form) form.reset();
+        var div = document.getElementById('div-comissao');
+        if (div) div.classList.add('d-none');
     }
 
-    function abrirForm(item, readOnly) {
+    function preencherCampo(id, valor) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') { el.checked = !!valor; } else { el.value = valor != null ? valor : ''; }
+    }
+
+    function setCamposReadOnly(v) {
+        var form = document.getElementById('form-admin');
+        if (!form) return;
+        form.querySelectorAll('input, select, textarea').forEach(function (el) { el.disabled = v; });
+        var btn = document.getElementById('btn-salvar-form-admin');
+        if (btn) btn.classList.toggle('d-none', v);
+    }
+
+    function abrirForm(it, readOnly) {
         carregarFormHTML().then(function (ok) {
             if (!ok) return;
-
-            limparForm();
-
-            var titulo        = document.getElementById('form-admin-titulo');
-            var camposCliente = document.getElementById('campos-cliente');
-            var camposColab   = document.getElementById('campos-colaborador');
-            var btnSalvar     = document.getElementById('btn-salvar-form-admin');
-            var isCliente     = state.origem === 'clientes';
-
-            if (camposCliente) camposCliente.classList.toggle('d-none', !isCliente);
-            if (camposColab)   camposColab.classList.toggle('d-none', isCliente);
-
-            if (item) {
-                state.idEdicao      = item.id;
-                state.modoVisualizar = readOnly;
-                if (titulo) titulo.textContent = readOnly ? 'Visualizar Registro' : 'Editar Registro';
-                if (isCliente) preencherCliente(item); else preencherColaborador(item);
-                if (readOnly) desabilitarCampos();
-            } else {
-                state.idEdicao      = null;
-                state.modoVisualizar = false;
-                if (titulo) titulo.textContent = 'Novo ' + (isCliente ? 'Cliente' : 'Colaborador');
+            try {
+                state.idEdicao = it ? it.id : null; state.modoVisualizar = !!readOnly;
+                limparForm();
+                var tituloEl = document.getElementById('titulo-form-admin');
+                if (tituloEl) tituloEl.textContent = readOnly ? 'Visualizar' : (it ? 'Editar' : 'Novo');
+                if (it) {
+                    preencherCampo('fn-nome', it.nome || it.username);
+                    preencherCampo('fn-contato', it.contato);
+                    preencherCampo('fn-email', it.email);
+                    preencherCampo('fn-responsavel', it.responsavel);
+                    preencherCampo('fn-cpf-cnpj', it.cpf_cnpj);
+                    preencherCampo('fn-pagamento', it.pagamento);
+                    preencherCampo('fn-status', String(it.status || '').toUpperCase() === 'TRUE');
+                    preencherCampo('fn-imagem', it.imagem);
+                    var fnMotoboy = document.getElementById('fn-motoboy');
+                    var divComissao = document.getElementById('div-comissao');
+                    if (fnMotoboy && divComissao) {
+                        var isMotoboy = String(it.motoboy || '').toUpperCase() === 'TRUE';
+                        fnMotoboy.checked = isMotoboy;
+                        divComissao.classList.toggle('d-none', !isMotoboy);
+                        preencherCampo('fn-comissao', it.comissao);
+                    }
+                }
+                setCamposReadOnly(readOnly);
+                var modalEl = document.getElementById('modalFormAdmin');
+                if (modalEl && window.bootstrap) {
+                    var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                } else {
+                    throw new Error('Modal ou Bootstrap não disponíveis.');
+                }
+            } catch (err) {
+                tratarErro(err, 'Erro ao abrir formulário');
             }
-
-            if (btnSalvar) btnSalvar.style.display = readOnly ? 'none' : '';
-
-            var modalEl = document.getElementById('modalFormAdmin');
-            if (modalEl) new bootstrap.Modal(modalEl).show();
         });
     }
 
-    function preencherCliente(item) {
-        setVal('c-username',  item.username   || item.nome || '');
-        setVal('c-responsavel', item.responsavel || '');
-        setVal('c-contato',   item.contato    || '');
-        setVal('c-email',     item.email      || '');
-        setVal('c-cpf_cnpj',  item.cpf_cnpj   || '');
-        setVal('c-endereco',  item.endereco   || '');
-        setVal('c-imagem',    item.imagem     || '');
-    }
-
-    function preencherColaborador(item) {
-        setVal('col-username', item.username || item.nome || '');
-        setVal('col-cpf_cnpj', item.cpf_cnpj || '');
-        setVal('col-contato',  item.contato  || '');
-        setVal('col-email',    item.email    || '');
-        setVal('col-imagem',   item.imagem   || '');
-        setVal('col-comissao', item.comissao || '');
-        setSelect('col-status', item.status);
-
-        var funcoes = (item.colaborador || '').split('/');
-        document.querySelectorAll('.col-funcao').forEach(function (c) {
-            c.checked = funcoes.indexOf(c.value) !== -1;
-        });
-
-        var temMotoboy  = funcoes.indexOf('Motoboy') !== -1;
-        var divComissao = document.getElementById('div-comissao');
-        if (divComissao) divComissao.classList.toggle('d-none', !temMotoboy);
-    }
-
-    function desabilitarCampos() {
-        var modalEl = document.getElementById('modalFormAdmin');
-        if (!modalEl) return;
-        modalEl.querySelectorAll('input, select').forEach(function (el) { el.disabled = true; });
-        modalEl.querySelectorAll('.col-funcao').forEach(function (c) { c.disabled = true; });
-    }
-
-    function setVal(id, v) {
-        var el = document.getElementById(id);
-        if (el) el.value = v;
-    }
-
-    function getVal(id) {
-        var el = document.getElementById(id);
-        return el ? (el.value || '') : '';
-    }
-
-    function setSelect(id, valor) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        var v = String(valor || '').toUpperCase();
-        for (var i = 0; i < el.options.length; i++) {
-            if (el.options[i].value === v) { el.selectedIndex = i; break; }
-        }
-    }
-
-    function coletarCliente() {
-        return {
-            username:    getVal('c-username'),
-            responsavel: getVal('c-responsavel'),
-            contato:     getVal('c-contato'),
-            email:       getVal('c-email'),
-            cpf_cnpj:    getVal('c-cpf_cnpj'),
-            endereco:    getVal('c-endereco'),
-            imagem:      getVal('c-imagem'),
-            status:      'TRUE'
+    function coletarDadosForm() {
+        var dados = {
+            nome: (document.getElementById('fn-nome') || {}).value || '',
+            contato: (document.getElementById('fn-contato') || {}).value || '',
+            email: (document.getElementById('fn-email') || {}).value || '',
+            responsavel: (document.getElementById('fn-responsavel') || {}).value || '',
+            cpf_cnpj: (document.getElementById('fn-cpf-cnpj') || {}).value || '',
+            pagamento: (document.getElementById('fn-pagamento') || {}).value || '',
+            status: (document.getElementById('fn-status') || {}).checked ? 'TRUE' : 'FALSE',
+            imagem: (document.getElementById('fn-imagem') || {}).value || ''
         };
-    }
-
-    function coletarColaborador() {
-        var funcoes = [];
-        document.querySelectorAll('.col-funcao:checked').forEach(function (c) { funcoes.push(c.value); });
-        return {
-            username:    getVal('col-username'),
-            cpf_cnpj:    getVal('col-cpf_cnpj'),
-            contato:     getVal('col-contato'),
-            email:       getVal('col-email'),
-            imagem:      getVal('col-imagem'),
-            comissao:    getVal('col-comissao'),
-            status:      getVal('col-status') || 'TRUE',
-            colaborador: funcoes.join('/'),
-            funcoes:     funcoes
-        };
-    }
-
-    function mostrarErroForm(msg) {
-        var el = document.getElementById('form-admin-erro');
-        if (!el) return;
-        el.textContent = msg;
-        el.classList.remove('d-none');
-    }
-
-    function esconderErroForm() {
-        var el = document.getElementById('form-admin-erro');
-        if (el) el.classList.add('d-none');
-    }
-
-    function marcarErro(id) {
-        var el = document.getElementById(id);
-        if (el) el.classList.add('input-error');
-    }
-
-    function limparErro(id) {
-        var el = document.getElementById(id);
-        if (el) el.classList.remove('input-error');
-    }
-
-    function validarCliente(dados) {
-        var ok = true;
-        [
-            { id: 'c-username',    v: dados.username    },
-            { id: 'c-responsavel', v: dados.responsavel },
-            { id: 'c-contato',     v: dados.contato     }
-        ].forEach(function (c) {
-            if (!c.v.trim()) { marcarErro(c.id); ok = false; } else { limparErro(c.id); }
-        });
-        return ok;
-    }
-
-    function validarColaborador(dados) {
-        var erros = [];
-
-        [
-            { id: 'col-username', v: dados.username },
-            { id: 'col-cpf_cnpj', v: dados.cpf_cnpj }
-        ].forEach(function (c) {
-            if (!c.v.trim()) { marcarErro(c.id); erros.push(c.id); } else { limparErro(c.id); }
-        });
-
-        if (dados.funcoes.length === 0) erros.push('funcoes');
-
-        if (dados.cpf_cnpj.trim()) {
-            var dup = state.cache.find(function (c) {
-                return c.cpf_cnpj === dados.cpf_cnpj.trim() && String(c.id) !== String(state.idEdicao);
-            });
-            if (dup) { marcarErro('col-cpf_cnpj'); erros.push('cpf_duplicado'); }
+        var fnMotoboy = document.getElementById('fn-motoboy');
+        if (fnMotoboy) {
+            dados.motoboy = fnMotoboy.checked ? 'TRUE' : 'FALSE';
+            dados.comissao = fnMotoboy.checked ? ((document.getElementById('fn-comissao') || {}).value || '') : '';
         }
-
-        return { valido: erros.length === 0, erros: erros };
+        if (state.idEdicao) dados.id = state.idEdicao;
+        return dados;
     }
 
-    function toggleSalvarLoading(ativo) {
-        var btn     = document.getElementById('btn-salvar-form-admin');
-        var spinner = document.getElementById('spinner-salvar-admin');
-        var txt     = document.getElementById('txt-salvar-admin');
-
-        if (btn)     btn.disabled = ativo;
-        if (spinner) {
-            spinner.classList.toggle('d-none', !ativo);
-            spinner.classList.toggle('spinner-rotate', ativo);
+    function validarForm(dados) {
+        if (!dados.nome || !dados.nome.trim()) {
+            mostrarErro('O campo Nome é obrigatório.', 'Validação');
+            return false;
         }
-        if (txt) txt.textContent = ativo ? 'Salvando...' : 'Salvar';
+        return true;
     }
 
     function salvar() {
-        esconderErroForm();
-
-        var isCliente = state.origem === 'clientes';
         var dados;
+        try {
+            dados = coletarDadosForm();
+        } catch (err) {
+            tratarErro(err, 'Erro ao coletar dados do formulário');
+            return;
+        }
+        if (!validarForm(dados)) return;
 
-        if (isCliente) {
-            dados = coletarCliente();
-            if (!validarCliente(dados)) {
-                mostrarErroForm('Preencha os campos obrigatórios (Nome, Responsável e Contato).');
-                return;
-            }
-        } else {
-            dados = coletarColaborador();
-            var resultado = validarColaborador(dados);
-            if (!resultado.valido) {
-                var msg = 'Preencha os campos obrigatórios.';
-                if (resultado.erros.indexOf('funcoes')       !== -1) msg = 'Selecione pelo menos uma função.';
-                if (resultado.erros.indexOf('cpf_duplicado') !== -1) msg = 'CPF/CNPJ já cadastrado.';
-                mostrarErroForm(msg);
-                return;
-            }
-            delete dados.funcoes;
+        var acao;
+        try {
+            verificarAPI();
+            acao = state.idEdicao ? getAction('atualizar') : getAction('criar');
+        } catch (err) {
+            tratarErro(err, 'Erro de inicialização');
+            return;
         }
 
-        if (state.idEdicao) dados.id = state.idEdicao;
+        var btn = document.getElementById('btn-salvar-form-admin');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; }
 
-        toggleSalvarLoading(true);
-
-        var action = (state.idEdicao ? 'update' : 'add') + state.origem;
-
-        window.API.call(action, dados)
-            .then(function () {
-                var modalEl = document.getElementById('modalFormAdmin');
-                if (modalEl) {
-                    var inst = bootstrap.Modal.getInstance(modalEl);
-                    if (inst) inst.hide();
+        window.API.call(acao, dados)
+            .then(function (res) {
+                if (res && res.status === 'error') {
+                    throw new Error(extrairMsgErro(res.message || res.error || res));
                 }
-                fetchDados(state.origem);
+                var el = document.getElementById('modalFormAdmin');
+                if (el && window.bootstrap) { var m = window.bootstrap.Modal.getInstance(el); if (m) m.hide(); }
+                fetchDados();
             })
-            .catch(function () {
-                mostrarErroForm('Erro ao salvar. Tente novamente.');
-            })
-            .finally(function () {
-                toggleSalvarLoading(false);
-            });
+            .catch(function (err) { tratarErro(err, 'Erro ao salvar (' + acao + ')'); })
+            .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; } });
     }
 
-    window.toggleDropdownFiltroAdmin = function () {
-        var wrapper = document.querySelector('#btn-filtro-admin').closest('.dropdown-filtro-wrapper');
-        if (wrapper) wrapper.classList.toggle('open');
-    };
+    function confirmarExclusao(id, nome) {
+        if (!id) { mostrarErro('ID inválido.', 'Erro ao excluir'); return; }
+        var conf = window.confirm('Deseja excluir: "' + nome + '"?');
+        if (!conf) return;
 
-    window.selecionarFiltroAdmin = function (tipo, label, el) {
-        state.tipoFiltro  = tipo;
-        state.statusFiltro = null;
-        state.pagina      = 1;
+        var acao;
+        try {
+            verificarAPI();
+            acao = getAction('excluir');
+        } catch (err) {
+            tratarErro(err, 'Erro de inicialização');
+            return;
+        }
 
-        var labelEl = document.getElementById('label-filtro-admin');
-        if (labelEl) labelEl.textContent = label;
+        window.API.call(acao, { id: id })
+            .then(function (res) {
+                if (res && res.status === 'error') {
+                    throw new Error(extrairMsgErro(res.message || res.error || res));
+                }
+                state.cache = (Array.isArray(state.cache) ? state.cache : []).filter(function (x) {
+                    return String(x.id) !== String(id);
+                });
+                renderTabela();
+            })
+            .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); });
+    }
 
-        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (i) {
-            i.classList.remove('active');
-        });
-        document.querySelectorAll('#dropdown-filtro-menu-admin .dropdown-filtro-item-has-sub').forEach(function (i) {
-            i.classList.remove('active');
-        });
-        if (el) el.classList.add('active');
+    function init() {
+        try {
+            bind();
+            registrarEventos();
+            atualizarTabsAtivas();
+            atualizarColunaPagamento();
+            fetchDados();
+        } catch (err) {
+            tratarErro(err, 'Erro na inicialização do módulo Admin');
+        }
+    }
 
-        var wrapper = document.querySelector('#btn-filtro-admin').closest('.dropdown-filtro-wrapper');
-        if (wrapper) wrapper.classList.remove('open');
-
-        if (els.filtro) { els.filtro.value = ''; state.filtro = ''; }
-
-        renderTabela();
-    };
-
-    window.toggleSubMenuStatusAdmin = function (event) {
-        event.stopPropagation();
-        var parent = event.currentTarget.closest('.dropdown-filtro-item-has-sub');
-        if (parent) parent.classList.toggle('sub-open');
-    };
-
-    window.selecionarFiltroStatusAdmin = function (status, label, el) {
-        state.tipoFiltro   = 'status';
-        state.statusFiltro = status;
-        state.pagina       = 1;
-
-        var labelEl = document.getElementById('label-filtro-admin');
-        if (labelEl) labelEl.textContent = status === 'todos' ? 'Status' : label;
-
-        document.querySelectorAll('#dropdown-filtro-menu-admin > .dropdown-filtro-item').forEach(function (i) {
-            i.classList.remove('active');
-        });
-
-        var parentSub = document.querySelector('#dropdown-filtro-menu-admin .dropdown-filtro-item-has-sub');
-        if (parentSub) parentSub.classList.add('active');
-
-        document.querySelectorAll('#submenu-status-admin .dropdown-filtro-subitem').forEach(function (i) {
-            i.classList.remove('active');
-        });
-        if (el) el.classList.add('active');
-
-        var wrapper = document.querySelector('#btn-filtro-admin').closest('.dropdown-filtro-wrapper');
-        if (wrapper) wrapper.classList.remove('open');
-
-        if (els.filtro) { els.filtro.value = ''; state.filtro = ''; }
-
-        renderTabela();
-    };
-
-    document.addEventListener('click', function (e) {
-        var wrapper = document.querySelector('#btn-filtro-admin')?.closest('.dropdown-filtro-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) wrapper.classList.remove('open');
+    window.addEventListener('error', function (e) {
+        if (e && e.message) console.error('[Admin][window.onerror]', e.message);
     });
 
-    window.initAdmin = function () {
-        state.formCarregado  = false;
-        state.fetching       = false;
-        state.cache          = [];
-        state.pagina         = 1;
-        state.filtro         = '';
-        state.tipoFiltro     = 'todos';
-        state.statusFiltro   = null;
-        state.idEdicao       = null;
-        state.modoVisualizar = false;
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); }); else init();
 
-        bind();
-        registrarEventos();
-        fetchDados('clientes');
-    };
-
-    window.carregarAdmin = fetchDados;
-
+    window.adminModule = { fetchDados: fetchDados, renderTabela: renderTabela, abrirForm: abrirForm };
 })();
