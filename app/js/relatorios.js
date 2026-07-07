@@ -4,15 +4,14 @@
   const BANCOS = {
     usuarios: {
       label: 'Usuários', icon: 'bi-person-badge', endpoint: 'getusuarios',
-      campos: { id: 'ID', username: 'Nome', cargo: 'Cargo', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
+      campos: { username: 'Nome', cargo: 'Cargo', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
     },
     clientes: {
       label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
-      campos: { id: 'ID', username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', status: 'Status' }
+      campos: { username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', pagamento: 'Pagamento', status: 'Status' }
     },
     colaboradores: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
-      // ID removido conforme solicitado
       campos: {
         username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ',
         placa: 'Placa', email: 'Email', endereco: 'Endereço', bairro: 'Bairro',
@@ -21,7 +20,6 @@
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
-      // ID mantido conforme solicitado
       campos: {
         id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
         horario: 'Horário', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
@@ -31,11 +29,10 @@
     },
     chat: {
       label: 'Chat', icon: 'bi-chat-dots', endpoint: 'getchat',
-      campos: { id: 'ID', id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
+      campos: { id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
-      // ID removido conforme solicitado
       campos: {
         colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data',
         tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
@@ -57,7 +54,7 @@
     clientes: {
       bancos: ['clientes', 'pedidos', 'chat'],
       campos: {
-        clientes: ['username', 'responsavel', 'contato'],
+        clientes: ['username', 'responsavel', 'contato', 'pagamento'],
         pedidos: ['id_cliente', 'solicitante', 'de', 'para', 'valor_corrida', 'status'],
         chat: ['id_cliente', 'texto', 'data']
       }
