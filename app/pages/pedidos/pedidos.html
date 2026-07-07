@@ -103,13 +103,13 @@
                                     </div>
                                 </div>
 
-                                <input type="text" 
+                                <input type="text"
                                        id="filtro-pedidos"
                                        class="form-control form-control-sm rounded-pill input-filtro-pedidos"
-                                       placeholder="Buscar..." 
+                                       placeholder="Buscar..."
                                        autocomplete="off">
 
-                                <input type="date" 
+                                <input type="date"
                                        id="filtro-data-pedidos"
                                        class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
                                        title="Filtrar por data">
@@ -121,7 +121,7 @@
                         <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
                             <thead class="text-uppercase tabela-pedidos-head">
                                 <tr>
-                                    <th class="ps-3 border-0 fw-normal">N.Serviço</th>
+                                    <th class="border-0 fw-normal">N.Serviço <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço"><i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i></button></th>
                                     <th class="border-0 fw-normal">Data</th>
                                     <th class="border-0 fw-normal">Cliente</th>
                                     <th class="border-0 fw-normal">Status</th>
@@ -168,23 +168,19 @@
 <script>
 (function() {
     'use strict';
-    
-    console.log('[pedidos.html] 📄 Inicializando...');
-    
+
     function _aguardarPedidosJs() {
         if (typeof window.initPedidos === 'function') {
-            console.log('[pedidos.html] ✅ initPedidos encontrado, executando...');
             window.initPedidos();
         } else {
-            console.warn('[pedidos.html] ⏳ initPedidos não disponível, aguardando...');
             setTimeout(_aguardarPedidosJs, 100);
         }
     }
-    
+
     function _inicializar() {
         _aguardarPedidosJs();
     }
-    
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', _inicializar);
     } else {

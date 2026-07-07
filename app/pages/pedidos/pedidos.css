@@ -172,7 +172,8 @@
     transition: transform 0.2s ease;
 }
 
-.dropdown-filtro-wrapper.open .chevron-filtro {
+.dropdown-filtro-menu.show .chevron-filtro,
+.dropdown-filtro-wrapper .btn-filtro-inteligente[aria-expanded="true"] .chevron-filtro {
     transform: rotate(180deg);
 }
 
@@ -188,11 +189,11 @@
     border-radius: 12px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     padding: 6px 0;
-    animation: fadeInDropFiltro 0.15s ease;
 }
 
-.dropdown-filtro-wrapper.open .dropdown-filtro-menu {
+.dropdown-filtro-menu.show {
     display: block;
+    animation: fadeInDropFiltro 0.15s ease;
 }
 
 @keyframes fadeInDropFiltro {
@@ -670,10 +671,6 @@
     color: #b02a37;
 }
 
-/* ============================================
-   🎨 BOTÕES DE AÇÃO - CINZA NEUTRO
-   ============================================ */
-
 .btn-pedido-view,
 .btn-pedido-edit,
 .btn-pedido-delete {
@@ -702,7 +699,6 @@
     z-index: 1;
 }
 
-/* Hover - Background Cinza + Cores nos Ícones */
 .btn-pedido-view:hover {
     background: #e9ecef;
     border-color: #adb5bd;
@@ -736,7 +732,6 @@
     color: #dc3545;
 }
 
-/* Active State */
 .btn-pedido-view:active,
 .btn-pedido-edit:active,
 .btn-pedido-delete:active {
@@ -744,7 +739,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Disabled */
 .btn-pedido-view:disabled,
 .btn-pedido-edit:disabled,
 .btn-pedido-delete:disabled {
@@ -768,12 +762,24 @@
     color: #6c757d;
 }
 
-/* Gap entre botões */
 #tabela-pedidos .d-flex.gap-2 {
     gap: 6px !important;
 }
 
-/* Responsivo */
+.btn-sort-data {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
+    color: #adb5bd;
+    font-size: 0.65rem;
+    transition: color 0.2s ease;
+}
+
+.btn-sort-data:hover {
+    color: #dc3545;
+}
+
 @media (max-width: 768px) {
     .input-filtro-pedidos {
         max-width: 140px;
@@ -856,29 +862,10 @@
         width: 30px;
         height: 30px;
     }
-    
+
     .btn-pedido-view i,
     .btn-pedido-edit i,
     .btn-pedido-delete i {
         font-size: 0.8rem;
     }
-}
-
-.dropdown-filtro-menu {
-    display: none;
-    position: absolute;
-    z-index: 1050;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,.1);
-    min-width: 160px;
-}
-
-.dropdown-filtro-menu.show {
-    display: block;
-}
-
-.dropdown-filtro-wrapper {
-    position: relative;
 }

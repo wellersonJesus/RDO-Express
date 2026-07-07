@@ -1,4 +1,3 @@
-// app/js/pedidos.js
 console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
 (function () {
@@ -14,7 +13,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         paginaAtual: 1,
         itensPorPagina: 10,
         dadosCarregados: false,
-        emAcao: false
+        emAcao: false,
+        sortDesc: true
     };
 
     window.AppRDO = window.AppRDO || {};
@@ -23,6 +23,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
     var FRANQUIA_MIN = 10;
     var TARIFA_MIN = 0.60;
+    var spinFeedbackTimer = null;
 
     var MOTIVOS_CANCELAMENTO = [
         { value: 'cliente_desistiu', label: 'Cliente desistiu' },
@@ -38,7 +39,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         tbody: null, btnSync: null, iconSync: null, inputBusca: null,
         filtroData: null, btnFiltroTipo: null, dropdownFiltroMenu: null,
         labelFiltroTipo: null, btnPrev: null, btnNext: null,
-        infoPaginacao: null, filtrosStatus: []
+        infoPaginacao: null, filtrosStatus: [], thead: null, iconSortData: null
     };
 
     window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
@@ -55,6 +56,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         els.btnPrev = document.getElementById('btn-pag-prev-pedidos');
         els.btnNext = document.getElementById('btn-pag-next-pedidos');
         els.infoPaginacao = document.getElementById('info-paginacao-pedidos');
+        els.thead = document.querySelector('#tabela-pedidos thead');
+        els.iconSortData = document.getElementById('icon-sort-data-pedidos');
         els.filtrosStatus = [
             { el: document.getElementById('ped-filter-todos'), status: 'todos' },
             { el: document.getElementById('ped-filter-pendente'), status: 'pendente' },
@@ -196,6 +199,11 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         } catch (_) { return 'RDO000'; }
     }
 
+    function _idNumerico(id) {
+        var n = parseInt(String(id || '').replace(/\D/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+    }
+
     function _escHtml(str) {
         var div = document.createElement('div');
         div.textContent = String(str || '');
@@ -227,6 +235,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             if (els.btnSync) { els.btnSync.classList.remove('syncing'); els.btnSync.disabled = false; }
             if (els.iconSync) els.iconSync.classList.remove('spinner-rotate');
         }, 500);
+    }
+
+    function _spinFeedback() {
+        _spinOn();
+        clearTimeout(spinFeedbackTimer);
+        spinFeedbackTimer = setTimeout(_spinOff, 500);
     }
 
     function _mostrarLoading() {
@@ -335,6 +349,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             );
         });
 
+        filtrados.sort(function (a, b) {
+            var na = _idNumerico(a.id || a._id);
+            var nb = _idNumerico(b.id || b._id);
+            return window.pedidosState.sortDesc ? (nb - na) : (na - nb);
+        });
+
         _atualizarContadores(pedidos);
 
         if (filtrados.length === 0) {
@@ -360,6 +380,17 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (els.btnNext) els.btnNext.disabled = window.pedidosState.paginaAtual >= totalPag;
 
         _registrarEventosLinhas();
+    }
+
+    function _toggleSort() {
+        window.pedidosState.sortDesc = !window.pedidosState.sortDesc;
+        if (els.iconSortData) {
+            els.iconSortData.className = window.pedidosState.sortDesc ? 'bi bi-arrow-down' : 'bi bi-arrow-up';
+        }
+        window.pedidosState.paginaAtual = 1;
+        window.pedidosState.emAcao = true;
+        _spinFeedback();
+        _renderizarTabela(window.AppRDO.pedidosCache || []);
     }
 
     function _registrarEventosLinhas() {
@@ -857,10 +888,21 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             };
         }
 
+        if (els.thead) {
+            els.thead.addEventListener('click', function (e) {
+                var btn = e.target.closest('#btn-sort-data-pedidos');
+                if (!btn) return;
+                e.preventDefault();
+                e.stopPropagation();
+                _toggleSort();
+            });
+        }
+
         if (els.inputBusca) {
             var tBusca = null;
             els.inputBusca.oninput = function () {
                 clearTimeout(tBusca);
+                _spinFeedback();
                 tBusca = setTimeout(function () {
                     window.pedidosState.busca = els.inputBusca.value.trim();
                     window.pedidosState.paginaAtual = 1;
@@ -875,6 +917,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 window.pedidosState.filtroData = els.filtroData.value || '';
                 window.pedidosState.paginaAtual = 1;
                 window.pedidosState.emAcao = true;
+                _spinFeedback();
                 _renderizarTabela(window.AppRDO.pedidosCache);
             };
             els.filtroData.oninput = function () {
@@ -882,6 +925,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                     window.pedidosState.filtroData = '';
                     window.pedidosState.paginaAtual = 1;
                     window.pedidosState.emAcao = true;
+                    _spinFeedback();
                     _renderizarTabela(window.AppRDO.pedidosCache);
                 }
             };
@@ -930,6 +974,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                         els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
                         window.pedidosState.paginaAtual = 1;
                         window.pedidosState.emAcao = true;
+                        _spinFeedback();
                         _renderizarTabela(window.AppRDO.pedidosCache);
                     });
                 });
@@ -944,6 +989,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                 window.pedidosState.filtroStatus = f.status;
                 window.pedidosState.paginaAtual = 1;
                 window.pedidosState.emAcao = true;
+                _spinFeedback();
                 _renderizarTabela(window.AppRDO.pedidosCache);
             };
         });
@@ -1035,6 +1081,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         window.pedidosState.isFetching = false;
         window.pedidosState.dadosCarregados = false;
         window.pedidosState.emAcao = false;
+        window.pedidosState.sortDesc = true;
 
         if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
 
