@@ -223,6 +223,7 @@
         if (els.syncIcon) els.syncIcon.classList.add('spinner-rotate');
         if (els.btnLoopHeader) els.btnLoopHeader.classList.add('syncing');
     }
+    
     function spinOff() {
         if (els.btnSync) els.btnSync.classList.remove('syncing');
         if (els.syncIcon) els.syncIcon.classList.remove('spinner-rotate');
