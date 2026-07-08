@@ -1,68 +1,38 @@
 'use strict';
 
 (function () {
+  window.addEventListener('error', function (e) {
+    relToast('Erro: ' + e.message, 'danger');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    const msg = (e.reason && e.reason.message) ? e.reason.message : e.reason;
+    relToast('Erro assíncrono: ' + msg, 'danger');
+  });
+
   const ALIASES = {
     pedidos: {
-      id: ['id'],
-      id_cliente: ['id_cliente'],
-      solicitante: ['solicitante'],
-      contato: ['contato'],
-      data: ['data'],
-      horario: ['horario', 'hora'],
-      mercadoria: ['mercadoria'],
-      de: ['de'],
-      para: ['para'],
-      retorno: ['retorno'],
-      prioridade: ['prioridade'],
-      valor_corrida: ['valor_corrida', 'vlr_servico'],
-      motoboy: ['motoboy'],
-      status: ['status'],
-      observacao: ['observacao']
+      id: ['id'], id_cliente: ['id_cliente'], solicitante: ['solicitante'], contato: ['contato'],
+      data: ['data'], horario: ['horario', 'hora'], mercadoria: ['mercadoria'], de: ['de'], para: ['para'],
+      retorno: ['retorno'], prioridade: ['prioridade'], valor_corrida: ['valor_corrida', 'vlr_servico'],
+      motoboy: ['motoboy'], status: ['status'], observacao: ['observacao']
     },
     financeiro: {
-      id: ['id'],
-      colaborador_id: ['colaborador_id'],
-      id_pedido: ['id_pedido'],
-      data: ['data'],
-      tipo: ['tipo'],
-      descricao: ['descricao'],
-      motoboy: ['motoboy'],
-      vlr_servico: ['vlr_servico', 'valor_corrida'],
-      colaborador: ['colaborador'],
-      observacao: ['observacao'],
-      situacao: ['situacao']
+      id: ['id'], id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'], descricao: ['descricao'],
+      motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'], colaborador: ['colaborador'],
+      observacao: ['observacao'], situacao: ['situacao']
     },
     clientes: {
-      id: ['id'],
-      username: ['username'],
-      responsavel: ['responsavel'],
-      contato: ['contato'],
-      imagem: ['imagem'],
-      pagamento: ['pagamento'],
-      status: ['status']
+      id: ['id'], username: ['username'], responsavel: ['responsavel'], contato: ['contato'],
+      pagamento: ['pagamento'], status: ['status']
     },
     colaborador: {
-      id: ['id'],
-      username: ['username'],
-      colaborador: ['colaborador'],
-      cpf_cnpj: ['cpf_cnpj'],
-      placa: ['placa'],
-      email: ['email'],
-      endereco: ['endereco'],
-      bairro: ['bairro'],
-      chave_pix: ['chave_pix'],
-      comissao: ['comissao'],
-      imagem: ['imagem'],
-      status: ['status']
+      id: ['id'], username: ['username'], colaborador: ['colaborador'], cpf_cnpj: ['cpf_cnpj'],
+      placa: ['placa'], email: ['email'], endereco: ['endereco'], bairro: ['bairro'],
+      chave_pix: ['chave_pix'], status: ['status']
     },
     chat: {
-      id: ['id'],
-      id_cliente: ['id_cliente'],
-      pedido_id: ['pedido_id'],
-      texto: ['texto'],
-      hora: ['hora'],
-      data: ['data'],
-      finalizado: ['finalizado']
+      id: ['id'], id_cliente: ['id_cliente'], pedido_id: ['pedido_id'], texto: ['texto'],
+      hora: ['hora'], data: ['data'], finalizado: ['finalizado']
     }
   };
 
@@ -76,6 +46,28 @@
     return '';
   }
 
+  // ===== CORREÇÃO PRINCIPAL: parser de moeda robusto =====
+  // Trata "R$ 48,00", "48,00", "48.00", 48, "" etc.
+  function parseMoeda(v) {
+    if (v === null || v === undefined || v === '') return NaN;
+    if (typeof v === 'number') return v;
+    let s = String(v).trim();
+    s = s.replace(/r\$\s*/gi, ''); // remove "R$"
+    // se tem vírgula como decimal (padrão BR: 1.234,56)
+    if (s.indexOf(',') !== -1) {
+      s = s.replace(/\./g, '');   // remove separador de milhar
+      s = s.replace(',', '.');    // vírgula -> ponto decimal
+    }
+    s = s.replace(/[^0-9.\-]/g, ''); // remove qualquer lixo remanescente
+    const n = parseFloat(s);
+    return n;
+  }
+
+  function valorNumericoValido(v) {
+    const n = parseMoeda(v);
+    return !isNaN(n) && n !== 0;
+  }
+
   function extrairHora(valor) {
     if (!valor) return '';
     const v = String(valor).trim();
@@ -85,37 +77,34 @@
   }
 
   const BANCOS = {
-    clientes: {
-      label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
-      campos: { username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', pagamento: 'Pagamento', status: 'Status' }
-    },
     colaborador: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
       campos: {
-        username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa',
-        email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix',
-        comissao: 'Comissão', imagem: 'Imagem', status: 'Status'
+        username: 'Username', colaborador: 'Colaborador', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa',
+        email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix', status: 'Status'
       }
+    },
+    clientes: {
+      label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
+      campos: { username: 'Username', responsavel: 'Responsável', contato: 'Contato', pagamento: 'Pagamento', status: 'Status' }
     },
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
       campos: {
-        id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
-        data: 'Data', horario: 'Hora', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
-        retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida',
-        motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
+        id: 'ID', solicitante: 'Solicitante', contato: 'Contato', data: 'Data', horario: 'Horário',
+        mercadoria: 'Mercadoria', de: 'De', para: 'Para', retorno: 'Retorno', prioridade: 'Prioridade',
+        valor_corrida: 'Valor Corrida', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
       }
     },
     chat: {
       label: 'Chat', icon: 'bi-chat-dots', endpoint: 'getchat',
-      campos: { id_cliente: 'Cliente', pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
+      campos: { pedido_id: 'Pedido', texto: 'Texto', hora: 'Hora', data: 'Data', finalizado: 'Finalizado' }
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
       campos: {
-        colaborador_id: 'Colaborador', id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo',
-        descricao: 'Descrição', motoboy: 'Motoboy', vlr_servico: 'Valor Serviço',
-        colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
+        id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
+        vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
       }
     }
   };
@@ -124,30 +113,51 @@
     motoboys: {
       bancos: ['colaborador', 'pedidos', 'financeiro'],
       campos: {
-        colaborador: ['username', 'colaborador', 'placa', 'comissao'],
-        pedidos: ['motoboy', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
-        financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao']
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
+      },
+      defaults: {
+        colaborador: ['username'],
+        pedidos: ['solicitante', 'contato', 'de', 'para', 'valor_corrida'],
+        financeiro: ['id_pedido', 'data', 'descricao', 'motoboy', 'vlr_servico']
       }
     },
     clientes: {
-      bancos: ['clientes', 'pedidos', 'chat'],
+      bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
       campos: {
-        clientes: ['username', 'responsavel', 'contato', 'pagamento'],
-        pedidos: ['id_cliente', 'solicitante', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
-        chat: ['id_cliente', 'texto', 'data']
+        clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
+        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
+      },
+      defaults: {
+        clientes: ['username'],
+        pedidos: ['solicitante', 'contato', 'de', 'para', 'valor_corrida'],
+        chat: ['pedido_id', 'hora', 'data'],
+        financeiro: ['id_pedido', 'data', 'vlr_servico']
       }
     },
     financeiro: {
       bancos: ['financeiro'],
-      campos: { financeiro: ['data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'situacao'] }
+      campos: { financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'] },
+      defaults: { financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'] }
     },
     global: {
-      bancos: ['clientes', 'colaborador', 'pedidos', 'financeiro'],
+      bancos: ['colaborador', 'clientes', 'pedidos', 'financeiro', 'chat'],
       campos: {
-        clientes: ['username', 'responsavel', 'status'],
-        colaborador: ['username', 'colaborador', 'status'],
-        pedidos: ['id_cliente', 'motoboy', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
-        financeiro: ['data', 'tipo', 'vlr_servico', 'situacao']
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
+        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
+      },
+      defaults: {
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
+        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       }
     }
   };
@@ -174,8 +184,9 @@
   }
 
   function formatarMoeda(valor) {
-    if (valor === null || valor === undefined || valor === '' || isNaN(valor)) return 'R$ 0,00';
-    return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const n = parseMoeda(valor);
+    if (isNaN(n)) return 'R$ 0,00';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function formatDateBR(iso) {
@@ -221,7 +232,7 @@
       toast.style.opacity = '0';
       toast.style.transition = 'opacity .3s ease';
       setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 350);
-    }, 3000);
+    }, 4000);
   }
 
   function extrairArray(res) {
@@ -354,61 +365,65 @@
   }
 
   function abrirBuilder(tipo, estadoPreservado) {
-    if (estadoPreservado) {
-      state.builder = JSON.parse(JSON.stringify(estadoPreservado));
+    try {
+      if (estadoPreservado) {
+        state.builder = JSON.parse(JSON.stringify(estadoPreservado));
+        renderizarBuilderTabs();
+        renderizarBuilderPanels();
+        irParaStep(2);
+        if (els.builderNomeInput) els.builderNomeInput.value = state.builder.nome || '';
+        if (els.builderOverlay) { els.builderOverlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        return;
+      }
+
+      let inicio = '', fim = '', filtroExtra = null;
+
+      if (tipo === 'motoboys') {
+        inicio = els.mbDataInicio.value; fim = els.mbDataFim.value;
+        filtroExtra = { campo: 'motoboy_id', valor: obterValoresSelecionados(els.mbSelect) };
+      } else if (tipo === 'clientes') {
+        inicio = els.cliDataInicio.value; fim = els.cliDataFim.value;
+        filtroExtra = { campo: 'cliente_id', valor: obterValoresSelecionados(els.cliSelect) };
+      } else if (tipo === 'financeiro') {
+        inicio = els.finDataInicio.value; fim = els.finDataFim.value;
+        filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value ? [els.finTipo.value] : ['__todos__'] };
+      } else if (tipo === 'global') {
+        inicio = els.globDataInicio.value; fim = els.globDataFim.value;
+      } else {
+        relToast('Tipo de relatório inválido.', 'danger');
+        return;
+      }
+
+      if (!validarDatas(inicio, fim)) return;
+
+      state.builder.tipo = tipo;
+      state.builder.periodo = { inicio: inicio, fim: fim };
+      state.builder.filtroExtra = filtroExtra;
+      state.builder.step = 1;
+      state.builder.nome = '';
+      state.builder.selecionados = {};
+
+      const preset = PRESETS[tipo] || PRESETS.global;
+      preset.bancos.forEach(function (banco) {
+        if (!BANCOS[banco]) return;
+        state.builder.selecionados[banco] = {};
+        const camposDefault = (preset.defaults && preset.defaults[banco]) || Object.keys(BANCOS[banco].campos);
+        Object.keys(BANCOS[banco].campos).forEach(function (campo) {
+          state.builder.selecionados[banco][campo] = camposDefault.indexOf(campo) !== -1;
+        });
+      });
+      state.builder.bancoAtivo = preset.bancos[0];
+
       renderizarBuilderTabs();
       renderizarBuilderPanels();
-      irParaStep(2);
-      if (els.builderNomeInput) els.builderNomeInput.value = state.builder.nome || '';
-      if (els.builderOverlay) { els.builderOverlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-      return;
-    }
+      irParaStep(1);
 
-    let inicio = '', fim = '', filtroExtra = null;
-
-    if (tipo === 'motoboys') {
-      inicio = els.mbDataInicio.value; fim = els.mbDataFim.value;
-      filtroExtra = { campo: 'motoboy_id', valor: obterValoresSelecionados(els.mbSelect) };
-    } else if (tipo === 'clientes') {
-      inicio = els.cliDataInicio.value; fim = els.cliDataFim.value;
-      filtroExtra = { campo: 'cliente_id', valor: obterValoresSelecionados(els.cliSelect) };
-    } else if (tipo === 'financeiro') {
-      inicio = els.finDataInicio.value; fim = els.finDataFim.value;
-      filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value ? [els.finTipo.value] : ['__todos__'] };
-    } else if (tipo === 'global') {
-      inicio = els.globDataInicio.value; fim = els.globDataFim.value;
-    } else {
-      relToast('Tipo de relatório inválido.', 'danger');
-      return;
-    }
-
-    if (!validarDatas(inicio, fim)) return;
-
-    state.builder.tipo = tipo;
-    state.builder.periodo = { inicio: inicio, fim: fim };
-    state.builder.filtroExtra = filtroExtra;
-    state.builder.step = 1;
-    state.builder.nome = '';
-    state.builder.selecionados = {};
-
-    const preset = PRESETS[tipo] || PRESETS.global;
-    preset.bancos.forEach(function (banco) {
-      if (!BANCOS[banco]) return;
-      state.builder.selecionados[banco] = {};
-      const camposPreset = preset.campos[banco] || Object.keys(BANCOS[banco].campos);
-      Object.keys(BANCOS[banco].campos).forEach(function (campo) {
-        state.builder.selecionados[banco][campo] = camposPreset.indexOf(campo) !== -1;
-      });
-    });
-    state.builder.bancoAtivo = preset.bancos[0];
-
-    renderizarBuilderTabs();
-    renderizarBuilderPanels();
-    irParaStep(1);
-
-    if (els.builderOverlay) {
-      els.builderOverlay.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
+      if (els.builderOverlay) {
+        els.builderOverlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+    } catch (e) {
+      relToast('Erro ao abrir construtor de relatório: ' + e.message, 'danger');
     }
   }
 
@@ -577,6 +592,57 @@
     return nomes;
   }
 
+  function buscarFinanceiroDoPedido(pedido) {
+    const idPedido = pedido.id;
+    return state.financeiro.find(function (f) {
+      return String(resolverValor('financeiro', 'id_pedido', f)) === String(idPedido);
+    });
+  }
+
+  function buscarPedidoDoFinanceiro(registro) {
+    const idPedido = resolverValor('financeiro', 'id_pedido', registro);
+    return state.pedidos.find(function (p) {
+      return String(resolverValor('pedidos', 'id', p)) === String(idPedido);
+    });
+  }
+
+  function obterDataPedidoComFallback(pedido) {
+    var data = resolverValor('pedidos', 'data', pedido);
+    if (data) return data;
+    var lanc = buscarFinanceiroDoPedido(pedido);
+    return lanc ? resolverValor('financeiro', 'data', lanc) : '';
+  }
+
+  function obterValorCampoPedido(campo, pedido) {
+    let valor = resolverValor('pedidos', campo, pedido);
+    if (campo === 'horario') return extrairHora(valor);
+    if (campo === 'data' && !valor) return obterDataPedidoComFallback(pedido);
+    if (campo === 'valor_corrida' && !valorNumericoValido(valor)) {
+      const lanc = buscarFinanceiroDoPedido(pedido);
+      if (lanc) {
+        const vFin = resolverValor('financeiro', 'vlr_servico', lanc);
+        if (valorNumericoValido(vFin)) valor = vFin;
+      }
+    }
+    return valor;
+  }
+
+  function obterValorCampoFinanceiro(campo, registro) {
+    let valor = resolverValor('financeiro', campo, registro);
+    if (campo === 'vlr_servico' && !valorNumericoValido(valor)) {
+      const pedido = buscarPedidoDoFinanceiro(registro);
+      if (pedido) {
+        const vPed = resolverValor('pedidos', 'valor_corrida', pedido);
+        if (valorNumericoValido(vPed)) valor = vPed;
+      }
+    }
+    if (campo === 'data' && !valor) {
+      const pedido = buscarPedidoDoFinanceiro(registro);
+      if (pedido) valor = resolverValor('pedidos', 'data', pedido);
+    }
+    return valor;
+  }
+
   function coletarDadosBanco(banco) {
     const p = state.builder.periodo;
     let dados = [];
@@ -590,7 +656,8 @@
       return dentroPeriodo(resolverValor('chat', 'data', r), p.inicio, p.fim);
     });
     else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
-      return dentroPeriodo(resolverValor('financeiro', 'data', r), p.inicio, p.fim);
+      const dataF = obterValorCampoFinanceiro('data', r);
+      return dentroPeriodo(dataF, p.inicio, p.fim);
     });
 
     const fx = state.builder.filtroExtra;
@@ -615,11 +682,9 @@
           }
           if (banco === 'financeiro') {
             dados = dados.filter(function (r) {
-              const cId = resolverValor('financeiro', 'colaborador_id', r);
               const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
               const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
-              return valores.indexOf(cId) !== -1 || valores.indexOf(String(cId)) !== -1 ||
-                nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+              return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
             });
           }
         }
@@ -655,43 +720,6 @@
     return dados;
   }
 
-  function buscarFinanceiroDoPedido(pedido) {
-    const idPedido = pedido.id;
-    return state.financeiro.find(function (f) {
-      return String(resolverValor('financeiro', 'id_pedido', f)) === String(idPedido);
-    });
-  }
-
-  function obterDataPedidoComFallback(pedido) {
-    var data = resolverValor('pedidos', 'data', pedido);
-    if (data) return data;
-
-    // Fallback: busca a data no financeiro pelo id_pedido
-    var lanc = buscarFinanceiroDoPedido(pedido);
-    return lanc ? resolverValor('financeiro', 'data', lanc) : '';
-  }
-
-  function obterValorCampoPedido(campo, pedido) {
-    let valor = resolverValor('pedidos', campo, pedido);
-    if (campo === 'horario') return extrairHora(valor);
-    if (campo === 'data' && !valor) return obterDataPedidoComFallback(pedido);
-    if ((valor === '' || valor === null || valor === undefined) && campo === 'valor_corrida') {
-      const lanc = buscarFinanceiroDoPedido(pedido);
-      if (lanc) valor = resolverValor('financeiro', 'vlr_servico', lanc);
-    }
-    return valor;
-  }
-
-  function obterValorCampoPedido(campo, pedido) {
-    let valor = resolverValor('pedidos', campo, pedido);
-    if (campo === 'horario') return extrairHora(valor);
-    if ((valor === '' || valor === null || valor === undefined) && campo === 'valor_corrida') {
-      const lanc = buscarFinanceiroDoPedido(pedido);
-      if (lanc) valor = resolverValor('financeiro', 'vlr_servico', lanc);
-    }
-    return valor;
-  }
-
   function montarSnapshot() {
     const snapshot = { bancos: {}, meta: {} };
     bancosDoBuilder().forEach(function (banco) {
@@ -701,7 +729,13 @@
       const linhas = dados.map(function (registro) {
         const linha = {};
         camposSel.forEach(function (campo) {
-          linha[campo] = banco === 'pedidos' ? obterValorCampoPedido(campo, registro) : resolverValor(banco, campo, registro);
+          if (banco === 'pedidos') {
+            linha[campo] = obterValorCampoPedido(campo, registro);
+          } else if (banco === 'financeiro') {
+            linha[campo] = obterValorCampoFinanceiro(campo, registro);
+          } else {
+            linha[campo] = resolverValor(banco, campo, registro);
+          }
         });
         return linha;
       });
@@ -717,39 +751,47 @@
   }
 
   function finalizarGeracao() {
-    if (!els.builderNomeInput) return;
-    const nome = (els.builderNomeInput.value || '').trim();
-    if (!nome) { relToast('Informe o nome do relatório.', 'warning'); els.builderNomeInput.focus(); return; }
+    try {
+      if (!els.builderNomeInput) return;
+      const nome = (els.builderNomeInput.value || '').trim();
+      if (!nome) { relToast('Informe o nome do relatório.', 'warning'); els.builderNomeInput.focus(); return; }
 
-    state.builder.nome = nome;
-    state.ultimoBuilderState = JSON.parse(JSON.stringify(state.builder));
+      state.builder.nome = nome;
+      state.ultimoBuilderState = JSON.parse(JSON.stringify(state.builder));
 
-    els.builderBtnGerar.disabled = true;
-    els.builderBtnGerar.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gerando...</span>';
+      els.builderBtnGerar.disabled = true;
+      els.builderBtnGerar.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gerando...</span>';
 
-    const snapshot = montarSnapshot();
-    const p = state.builder.periodo;
-    const tipo = state.builder.tipo;
+      const snapshot = montarSnapshot();
+      const p = state.builder.periodo;
+      const tipo = state.builder.tipo;
 
-    const rel = {
-      id: gerarIdRelatorio(),
-      tipo: tipo,
-      titulo: nome,
-      data_inicio: p.inicio,
-      data_fim: p.fim,
-      periodoLabel: formatDateBR(p.inicio) + ' a ' + formatDateBR(p.fim),
-      criadoEm: Date.now(),
-      usuarioGerador: obterUsuarioLogado(),
-      horaGeracao: obterHoraAtualBR(),
-      snapshot: snapshot
-    };
+      const rel = {
+        id: gerarIdRelatorio(),
+        tipo: tipo,
+        titulo: nome,
+        data_inicio: p.inicio,
+        data_fim: p.fim,
+        periodoLabel: formatDateBR(p.inicio) + ' a ' + formatDateBR(p.fim),
+        criadoEm: Date.now(),
+        usuarioGerador: obterUsuarioLogado(),
+        horaGeracao: obterHoraAtualBR(),
+        snapshot: snapshot
+      };
 
-    setTimeout(function () {
-      els.builderBtnGerar.disabled = false;
-      els.builderBtnGerar.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span>Gerar Relatório</span>';
-      fecharBuilder();
-      abrirModalRelatorio(rel, true);
-    }, 400);
+      setTimeout(function () {
+        els.builderBtnGerar.disabled = false;
+        els.builderBtnGerar.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span>Gerar Relatório</span>';
+        fecharBuilder();
+        abrirModalRelatorio(rel, true);
+      }, 400);
+    } catch (e) {
+      relToast('Erro ao gerar relatório: ' + e.message, 'danger');
+      if (els.builderBtnGerar) {
+        els.builderBtnGerar.disabled = false;
+        els.builderBtnGerar.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span>Gerar Relatório</span>';
+      }
+    }
   }
 
   function registrarEventos() {
@@ -818,29 +860,33 @@
   }
 
   function abrirModalRelatorio(relatorio, novoGerado) {
-    const modal = els.modalOverlay;
-    if (!modal) { relToast('Modal não encontrado no DOM!', 'danger'); return; }
+    try {
+      const modal = els.modalOverlay;
+      if (!modal) { relToast('Modal não encontrado no DOM!', 'danger'); return; }
 
-    state.relatorioAtual = relatorio;
+      state.relatorioAtual = relatorio;
 
-    if (els.modalTitulo) els.modalTitulo.textContent = (relatorio.titulo || '').toUpperCase();
-    if (els.modalPeriodo) els.modalPeriodo.textContent = relatorio.periodoLabel || '';
+      if (els.modalTitulo) els.modalTitulo.textContent = (relatorio.titulo || '').toUpperCase();
+      if (els.modalPeriodo) els.modalPeriodo.textContent = relatorio.periodoLabel || '';
 
-    if (els.modalIcon) {
-      const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
-      els.modalIcon.className = 'bi ' + (icons[relatorio.tipo] || 'bi-file-earmark-bar-graph');
+      if (els.modalIcon) {
+        const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
+        els.modalIcon.className = 'bi ' + (icons[relatorio.tipo] || 'bi-file-earmark-bar-graph');
+      }
+
+      if (els.modalBtnSalvar) els.modalBtnSalvar.style.display = novoGerado ? 'inline-flex' : 'none';
+      if (els.modalBtnVoltar) els.modalBtnVoltar.style.display = (novoGerado && state.ultimoBuilderState) ? 'inline-flex' : 'none';
+
+      if (els.modalBody) {
+        const snapshot = relatorio.snapshot || { bancos: {} };
+        els.modalBody.innerHTML = construirConteudoRelatorio(relatorio, snapshot);
+      }
+
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    } catch (e) {
+      relToast('Erro ao exibir relatório: ' + e.message, 'danger');
     }
-
-    if (els.modalBtnSalvar) els.modalBtnSalvar.style.display = novoGerado ? 'inline-flex' : 'none';
-    if (els.modalBtnVoltar) els.modalBtnVoltar.style.display = (novoGerado && state.ultimoBuilderState) ? 'inline-flex' : 'none';
-
-    if (els.modalBody) {
-      const snapshot = relatorio.snapshot || { bancos: {} };
-      els.modalBody.innerHTML = construirConteudoRelatorio(relatorio, snapshot);
-    }
-
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
   }
 
   function fecharModalRelatorio() {
@@ -860,7 +906,6 @@
 
     const payload = {
       id: atual.id,
-      colaborador_id: '',
       id_pedido: '',
       data: formatDateBR(atual.data_inicio) + ' - ' + formatDateBR(atual.data_fim),
       tipo: atual.tipo,
@@ -954,9 +999,14 @@
           html += '<tr>';
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
-            if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
-            if (c.chave === 'horario') valor = extrairHora(valor);
-            html += '<td>' + escapeHtml(valor) + '</td>';
+            // moeda: usa parseMoeda internamente via formatarMoeda -> corrige "R$ 48,00"
+            if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') {
+              valor = formatarMoeda(valor);
+            } else if (c.chave === 'horario') {
+              valor = extrairHora(valor);
+            }
+            // "data" já vem formatada em DD/MM/YYYY pelo Apps Script - não reformatar
+            html += '<td>' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
           });
           html += '</tr>';
         });
@@ -1170,7 +1220,7 @@
         r.forEach(function (res, i) {
           if (res.status === 'rejected') {
             houveFalha = true;
-            console.error('[RELATORIOS] Falha na requisição "' + labels[i] + '":', res.reason);
+            relToast('Falha ao carregar "' + labels[i] + '": ' + (res.reason && res.reason.message ? res.reason.message : res.reason), 'danger');
           }
         });
 
@@ -1206,7 +1256,7 @@
         }
       })
       .catch(function (err) {
-        relToast('Erro ao carregar dados.', 'danger');
+        relToast('Erro ao carregar dados: ' + err.message, 'danger');
         renderizarListas();
       })
       .finally(function () {
@@ -1217,23 +1267,28 @@
 
   window.RelatoriosDebug = {
     getState: function () { return state; },
-    recarregar: carregarDados
+    recarregar: carregarDados,
+    parseMoeda: parseMoeda // exposto para debug no console
   };
 
   window.initRelatorios = function () {
-    bind();
-    registrarEventos();
+    try {
+      bind();
+      registrarEventos();
 
-    const hoje = toISO(new Date());
-    if (els.mbDataInicio) els.mbDataInicio.value = hoje;
-    if (els.mbDataFim) els.mbDataFim.value = hoje;
-    if (els.cliDataInicio) els.cliDataInicio.value = hoje;
-    if (els.cliDataFim) els.cliDataFim.value = hoje;
-    if (els.finDataInicio) els.finDataInicio.value = hoje;
-    if (els.finDataFim) els.finDataFim.value = hoje;
-    if (els.globDataInicio) els.globDataInicio.value = hoje;
-    if (els.globDataFim) els.globDataFim.value = hoje;
+      const hoje = toISO(new Date());
+      if (els.mbDataInicio) els.mbDataInicio.value = hoje;
+      if (els.mbDataFim) els.mbDataFim.value = hoje;
+      if (els.cliDataInicio) els.cliDataInicio.value = hoje;
+      if (els.cliDataFim) els.cliDataFim.value = hoje;
+      if (els.finDataInicio) els.finDataInicio.value = hoje;
+      if (els.finDataFim) els.finDataFim.value = hoje;
+      if (els.globDataInicio) els.globDataInicio.value = hoje;
+      if (els.globDataFim) els.globDataFim.value = hoje;
 
-    carregarDados();
+      carregarDados();
+    } catch (e) {
+      relToast('Erro ao inicializar módulo de relatórios: ' + e.message, 'danger');
+    }
   };
 })();
