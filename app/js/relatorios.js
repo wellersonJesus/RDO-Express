@@ -9,6 +9,9 @@
     relToast('Erro assíncrono: ' + msg, 'danger');
   });
 
+  const PERCENTUAL_MOTOBOY = 0.80;
+  const PERCENTUAL_RDO = 0.20;
+
   const ALIASES = {
     pedidos: {
       id: ['id'], id_cliente: ['id_cliente'], solicitante: ['solicitante'], contato: ['contato'],
@@ -645,21 +648,57 @@
 
   function agruparPorMotoboy(pedidos) {
     const mapa = {};
+
     pedidos.forEach(function (p) {
       const nome = resolverValor('pedidos', 'motoboy', p) || 'Sem motoboy';
       const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
       const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
+      const valorValido = !isNaN(valor) ? valor : 0;
+      const concluido = (status === 'CONCLUIDO' || status === 'CONCLUÍDO');
 
-      if (!mapa[nome]) mapa[nome] = { nome: nome, total: 0, qtd: 0, totalPendente: 0, qtdPendente: 0 };
+      if (!mapa[nome]) {
+        mapa[nome] = {
+          nome: nome,
+          qtd: 0,
+          qtdPendente: 0,
+          receitaTotal: 0,
+          receitaPendente: 0
+        };
+      }
+
       mapa[nome].qtd++;
-      if (!isNaN(valor)) mapa[nome].total += valor;
+      mapa[nome].receitaTotal += valorValido;
 
-      if (status !== 'CONCLUIDO' && status !== 'CONCLUÍDO') {
+      if (!concluido) {
         mapa[nome].qtdPendente++;
-        if (!isNaN(valor)) mapa[nome].totalPendente += valor;
+        mapa[nome].receitaPendente += valorValido;
       }
     });
-    return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
+
+    return Object.keys(mapa).map(function (k) {
+      const m = mapa[k];
+
+      // ===== Lógica de divisão 80% Motoboy / 20% RDO =====
+      const valorMotoboy = m.receitaTotal * PERCENTUAL_MOTOBOY;
+      const valorRdo = m.receitaTotal * PERCENTUAL_RDO;
+
+      const valorMotoboyPendente = m.receitaPendente * PERCENTUAL_MOTOBOY;
+      const valorRdoPendente = m.receitaPendente * PERCENTUAL_RDO;
+
+      return {
+        nome: m.nome,
+        qtd: m.qtd,
+        qtdPendente: m.qtdPendente,
+        receitaTotal: m.receitaTotal,
+        receitaPendente: m.receitaPendente,
+        valorMotoboy: valorMotoboy,
+        valorRdo: valorRdo,
+        valorMotoboyPendente: valorMotoboyPendente,
+        valorRdoPendente: valorRdoPendente,
+        // Soma de conferência (deve ser igual à receitaTotal)
+        valorTotalCalculado: valorMotoboy + valorRdo
+      };
+    }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
   }
 
   function agruparPorCliente(pedidos) {
@@ -1073,23 +1112,63 @@
       html += '<div class="rel-modal-divider"></div>';
       html += '<div class="rel-modal-section">';
       html += '<div class="rel-modal-section-title"><i class="bi bi-bicycle"></i> Resumo por Motoboy</div>';
-      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.75rem;background:#fff;">';
-      html += '<thead><tr><th>Motoboy</th><th>Qtd. Corridas</th><th>Total Recebido</th><th>Pendente (qtd)</th><th>Total Pendente</th></tr></thead><tbody>';
-      let totalGeralMB = 0, totalPendGeralMB = 0;
+
+      // ===== Explicação da regra de divisão =====
+      html += '<div style="background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.75rem;color:#1c3d5a;">';
+      html += '<i class="bi bi-info-circle-fill" style="margin-right:6px;color:#0d6efd;"></i>';
+      html += '<strong>Regra de divisão da corrida:</strong> do valor total de cada corrida, <strong>' +
+        (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%</strong> é destinado ao motoboy e <strong>' +
+        (PERCENTUAL_RDO * 100).toFixed(0) + '%</strong> é retido pela RDO (empresa). ' +
+        'O "Valor Total Receita" representa a soma bruta das corridas; "Valor Motoboy" e "Valor RDO" são os valores já calculados conforme essa divisão.';
+      html += '</div>';
+
+      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
+      html += '<thead><tr>' +
+        '<th>Motoboy</th>' +
+        '<th>Qtd. Corridas</th>' +
+        '<th>Valor Total Receita</th>' +
+        '<th>Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</th>' +
+        '<th>Valor RDO (' + (PERCENTUAL_RDO * 100).toFixed(0) + '%)</th>' +
+        '<th>Total Calculado</th>' +
+        '</tr></thead><tbody>';
+
+      let totalGeralReceita = 0, totalGeralMotoboy = 0, totalGeralRdo = 0, totalGeralCalculado = 0;
+
       resumos.motoboys.forEach(function (m) {
-        totalGeralMB += m.total;
-        totalPendGeralMB += m.totalPendente;
+        totalGeralReceita += m.receitaTotal;
+        totalGeralMotoboy += m.valorMotoboy;
+        totalGeralRdo += m.valorRdo;
+        totalGeralCalculado += m.valorTotalCalculado;
+
         html += '<tr>' +
           '<td><strong>' + escapeHtml(m.nome) + '</strong></td>' +
           '<td>' + m.qtd + '</td>' +
-          '<td>' + formatarMoeda(m.total) + '</td>' +
-          '<td>' + (m.qtdPendente || '-') + '</td>' +
-          '<td>' + (m.totalPendente ? formatarMoeda(m.totalPendente) : '-') + '</td>' +
+          '<td>' + formatarMoeda(m.receitaTotal) + '</td>' +
+          '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(m.valorMotoboy) + '</td>' +
+          '<td style="color:#0d6efd;font-weight:600;">' + formatarMoeda(m.valorRdo) + '</td>' +
+          '<td>' + formatarMoeda(m.valorTotalCalculado) + '</td>' +
           '</tr>';
       });
+
       html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
-        '<td>TOTAL GERAL</td><td>-</td><td>' + formatarMoeda(totalGeralMB) + '</td><td>-</td><td>' + formatarMoeda(totalPendGeralMB) + '</td>' +
-        '</tr></tfoot></table></div></div>';
+        '<td>TOTAL GERAL</td>' +
+        '<td>-</td>' +
+        '<td>' + formatarMoeda(totalGeralReceita) + '</td>' +
+        '<td style="color:#0a7d2c;">' + formatarMoeda(totalGeralMotoboy) + '</td>' +
+        '<td style="color:#0d6efd;">' + formatarMoeda(totalGeralRdo) + '</td>' +
+        '<td>' + formatarMoeda(totalGeralCalculado) + '</td>' +
+        '</tr></tfoot></table></div>';
+
+      // Bloco extra: pendentes (se existirem)
+      const temPendentes = resumos.motoboys.some(function (m) { return m.qtdPendente > 0; });
+      if (temPendentes) {
+        html += '<div style="margin-top:12px;font-size:.72rem;color:#b02a37;background:#fff3f3;border:1px solid #f5c2c7;border-radius:8px;padding:8px 12px;">';
+        html += '<i class="bi bi-exclamation-triangle-fill" style="margin-right:6px;"></i>';
+        html += '<strong>Atenção:</strong> existem corridas com status pendente (não concluído) inclusas nos totais acima. Consulte a coluna de status na tabela de pedidos para detalhes individuais.';
+        html += '</div>';
+      }
+
+      html += '</div>';
     }
 
     if (resumos.clientes && resumos.clientes.length) {
