@@ -49,8 +49,6 @@
     return '';
   }
 
-  // ===== CORREÇÃO PRINCIPAL: parser de moeda robusto =====
-  // Trata "R$ 48,00", "48,00", "48.00", 48, "" etc.
   function parseMoeda(v) {
     if (v === null || v === undefined || v === '') return NaN;
     if (typeof v === 'number') return v;
