@@ -55,7 +55,6 @@ COLABORADORES = {}
 CLIENTES_PENDENTES = set()
 
 RDOS_EXISTENTES = set()
-CHATS_EXISTENTES = set()
 RDO_SEQ = 0
 
 STATUS_CLIENTE_PADRAO = "TRUE"
@@ -65,12 +64,17 @@ TIPO_FINANCEIRO_PADRAO = "RECEITA"
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
+RDO_SEQ_MINIMO = 0
+
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS",
     "BRENO", "JOSI FRAGA", "MIMA-ME", "NATU PET", "MAURICIO", "JESSICA CESTA",
 ]
 PAGAMENTO_QUINZENAL = ["TELECOM", "AMMI BELVEDERE", "ROSA DALIA"]
 PAGAMENTO_MENSAL = ["BASIQUE", "BETE PLURAL", "FFASHION", "ELISA STHANIS"]
+
+CAMPOS_LINHA_MINIMO = 9
+CAMPOS_LINHA_TOTAL = 13
 
 
 class ErroFatalGeracao(Exception):
@@ -178,41 +182,24 @@ def _extrair_lista_dados(resultado, action):
 
 
 def carregar_rdos_existentes():
-    resultado = post({"action": "getpedidos", "apiKey": API_KEY})
-    dados = _extrair_lista_dados(resultado, "getpedidos")
     ids = set()
-    maior = 0
-    for item in dados:
-        rdo_id = str(item.get("id", "")).strip().upper()
-        if rdo_id:
-            ids.add(rdo_id)
-            match = RDO_PATTERN.match(rdo_id)
-            if match:
-                numero = int(match.group(1))
-                if numero > maior:
-                    maior = numero
-    logger.info("Pedidos existentes: %d | Maior sequência: %d", len(ids), maior)
-    return ids, maior
+    try:
+        resultado = post({"action": "getpedidos", "apiKey": API_KEY})
+        dados = _extrair_lista_dados(resultado, "getpedidos")
+        for item in dados:
+            rdo_id = str(item.get("id", "")).strip().upper()
+            if rdo_id:
+                ids.add(rdo_id)
+    except ErroApi as exc:
+        logger.error("Falha ao buscar pedidos existentes na API: %s. Prosseguindo apenas com o piso fixo.", exc)
+    except ErroFatalGeracao as exc:
+        logger.error("Resposta inesperada ao buscar pedidos existentes: %s. Prosseguindo apenas com o piso fixo.", exc)
 
-
-def carregar_chats_existentes():
-    resultado = post({"action": "getchats", "apiKey": API_KEY})
-    dados = _extrair_lista_dados(resultado, "getchats")
-    pedidos_com_chat = set()
-    for item in dados:
-        pedido_id = str(item.get("pedido_id", "")).strip().upper()
-        if pedido_id:
-            pedidos_com_chat.add(pedido_id)
-    logger.info("Pedidos com chat já existente: %d", len(pedidos_com_chat))
-    return pedidos_com_chat
-
-
-def corrigir_horarios_antigos():
-    logger.warning(
-        "corrigir_horarios_antigos() DESATIVADA: backend não possui a action "
-        "'atualizarpedido' (retorna 'Aba nao encontrada'). Pulando etapa."
+    logger.info(
+        "Pedidos existentes localizados na API: %d | Sequência FORÇADA a partir de RDO%03d (próximo pedido = RDO%03d).",
+        len(ids), RDO_SEQ_MINIMO, RDO_SEQ_MINIMO + 1
     )
-    return
+    return ids, RDO_SEQ_MINIMO
 
 
 def proximo_rdo_id():
@@ -226,8 +213,13 @@ def proximo_rdo_id():
 
 
 def carregar_colaboradores():
-    resultado = post({"action": "getcolaboradores", "apiKey": API_KEY})
-    dados = _extrair_lista_dados(resultado, "getcolaboradores")
+    try:
+        resultado = post({"action": "getcolaboradores", "apiKey": API_KEY})
+        dados = _extrair_lista_dados(resultado, "getcolaboradores")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        logger.critical("Falha crítica ao carregar colaboradores: %s", exc)
+        raise ErroFatalGeracao(f"Não foi possível carregar colaboradores: {exc}") from exc
+
     mapa = {}
     for item in dados:
         nome = str(item.get("username", "")).strip().upper()
@@ -243,8 +235,13 @@ def carregar_colaboradores():
 
 
 def carregar_clientes():
-    resultado = post({"action": "getclientes", "apiKey": API_KEY})
-    dados = _extrair_lista_dados(resultado, "getclientes")
+    try:
+        resultado = post({"action": "getclientes", "apiKey": API_KEY})
+        dados = _extrair_lista_dados(resultado, "getclientes")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        logger.critical("Falha crítica ao carregar clientes: %s", exc)
+        raise ErroFatalGeracao(f"Não foi possível carregar clientes: {exc}") from exc
+
     mapa = {}
     for item in dados:
         nome = str(item.get("username", "")).strip().upper()
@@ -259,8 +256,8 @@ def carregar_clientes():
     return mapa
 
 
-def garantir_cliente(nome_cliente, responsavel=""):
-    nome_upper = nome_cliente.strip().upper()
+def garantir_cliente(nome_cliente):
+    nome_upper = (nome_cliente or "").strip().upper()
     if not nome_upper:
         logger.error("Nome de cliente vazio recebido em garantir_cliente().")
         return None
@@ -276,7 +273,7 @@ def garantir_cliente(nome_cliente, responsavel=""):
         "action": "criarcliente",
         "apiKey": API_KEY,
         "username": nome_upper,
-        "responsavel": responsavel or "",
+        "responsavel": "",
         "contato": "",
         "imagem": "",
         "pagamento": pagamento_identificado,
@@ -323,6 +320,10 @@ def formatar_valor(valor_str):
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def formatar_valor_rs(valor_str):
+    return f"R$ {formatar_valor(valor_str)}"
+
+
 def definir_colaborador(motoboy_raw):
     nome = (motoboy_raw or "").strip().upper()
     if nome in MOTOBOYS_FIXOS:
@@ -337,13 +338,13 @@ def parse_linha(linha):
     if not campos:
         logger.error("Linha vazia após split: %r", linha)
         return None
-    if campos[0].isdigit():
+    if campos[0] == "" or campos[0].isdigit():
         campos = campos[1:]
-    if len(campos) < 9:
-        logger.error("Linha com campos insuficientes (%d < 9): %r", len(campos), linha)
+    if len(campos) < CAMPOS_LINHA_MINIMO:
+        logger.error("Linha com campos insuficientes (%d < %d): %r", len(campos), CAMPOS_LINHA_MINIMO, linha)
         return None
-    while len(campos) < 10:
-        campos.insert(2, "")
+    while len(campos) < CAMPOS_LINHA_TOTAL:
+        campos.append("")
     return {
         "data_lancamento": campos[0],
         "email": campos[1],
@@ -354,10 +355,10 @@ def parse_linha(linha):
         "endereco": campos[6],
         "valor_corrida": campos[7],
         "motoboy": campos[8],
-        "observacao_bruta": campos[9] if len(campos) > 9 else "",
-        "telefone": campos[10] if len(campos) > 10 else "",
-        "distancia_km": campos[11] if len(campos) > 11 else "",
-        "tempo_min": campos[12] if len(campos) > 12 else "",
+        "observacao_bruta": campos[9],
+        "telefone": campos[10],
+        "distancia_km": campos[11],
+        "tempo_min": campos[12],
     }
 
 
@@ -407,13 +408,6 @@ def separar_data_hora(dados):
 
 
 def montar_texto_chat(rdo_id, dados):
-    """
-    Monta o texto do chat seguindo exatamente o modelo:
-    📦 N.SERVIÇO / 👤 Solicitante 📞 Telefone / 📦 Tipo / 📍 ROTAS / 🛣️ km ⏱️ min 💰 Valor
-
-    Todos os valores são extraídos do dadoBruto (parse_linha).
-    Texto ausente = "N/D" | Número ausente = "-"
-    """
     solicitante = dados["solicitante"] or "N/D"
     telefone = dados.get("telefone") or "N/D"
     tipo_servico = dados["tipo_servico"] or "N/D"
@@ -436,10 +430,6 @@ def montar_texto_chat(rdo_id, dados):
 
 
 def montar_descricao_financeiro(dados):
-    """
-    Monta a descrição do lançamento financeiro extraindo os dados
-    reais da linha bruta (tipo de serviço, cliente e endereço).
-    """
     tipo_servico = dados["tipo_servico"] or "ENTREGA"
     cliente_nome = dados["cliente_nome"] or ""
     endereco = dados["endereco"] or ""
@@ -469,7 +459,7 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observac
     status_final = STATUS_PEDIDO_PADRAO
     descricao_final = montar_descricao_financeiro(dados)
     texto_chat = montar_texto_chat(rdo_id, dados)
-    valor_num = parse_valor(dados["valor_corrida"])
+    valor_rs = formatar_valor_rs(dados["valor_corrida"])
 
     return {
         "rdo_id": rdo_id,
@@ -485,9 +475,7 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observac
         "tipo_servico": tipo_servico,
         "endereco_para": endereco_para,
         "texto_chat": texto_chat,
-        "valor_corrida_raw": dados["valor_corrida"],
-        "valor_num": valor_num,
-        "email": dados["email"],
+        "valor_rs": valor_rs,
     }
 
 
@@ -499,18 +487,16 @@ def criar_pedido(consolidado):
         "apiKey": API_KEY,
         "id": rdo_id,
         "id_cliente": consolidado["id_cliente"],
-        "cliente": consolidado["cliente_nome"],
         "solicitante": consolidado["solicitante"],
-        "contato": consolidado["email"] or consolidado["solicitante"],
+        "contato": "",
         "data": consolidado["data_str"],
         "horario": consolidado["hora_str"],
-        "hora": consolidado["hora_str"],
         "mercadoria": consolidado["tipo_servico"],
         "de": consolidado["cliente_nome"],
         "para": consolidado["endereco_para"],
         "retorno": "NÃO",
         "prioridade": definir_prioridade(consolidado["endereco_para"]),
-        "valor_corrida": consolidado["valor_corrida_raw"],
+        "valor_corrida": consolidado["valor_rs"],
         "motoboy": consolidado["motoboy_final"],
         "status": consolidado["status_final"],
         "observacao": consolidado["observacao"],
@@ -535,36 +521,30 @@ def criar_pedido(consolidado):
 def criar_chat(consolidado):
     rdo_id = consolidado["rdo_id"]
 
-    if rdo_id in CHATS_EXISTENTES:
-        logger.info("Chat já existente para %s, pulando criação.", rdo_id)
-        return True, None
-
     payload = {
         "action": "criarchat",
         "apiKey": API_KEY,
         "id": gerar_id_curto(),
-        "pedido_id": rdo_id,
         "id_cliente": consolidado["id_cliente"],
-        "remetente": "SISTEMA",
-        "mensagem": consolidado["texto_chat"],
+        "pedido_id": rdo_id,
         "texto": consolidado["texto_chat"],
-        "data": consolidado["data_str"],
         "hora": consolidado["hora_str"],
+        "data": consolidado["data_str"],
+        "finalizado": "TRUE",
     }
-
     try:
         resultado = post(payload)
     except ErroApi as exc:
-        logger.error("Exceção ao criar chat do pedido %s: %s", rdo_id, exc)
+        logger.error("Exceção ao lançar chat do pedido %s: %s", rdo_id, exc)
         return False, str(exc)
 
     if not resultado or resultado.get("status") != "success":
         detalhe = f"resposta={resultado!r}"
-        logger.error("Falha ao criar chat do pedido %s: %s", rdo_id, detalhe)
+        logger.error("Falha ao lançar chat do pedido %s: %s", rdo_id, detalhe)
         return False, detalhe
 
-    CHATS_EXISTENTES.add(rdo_id)
-    logger.info("Chat criado para o pedido %s.", rdo_id)
+    logger.info("Chat lançado: %s | id_cliente=%s | data=%s | hora=%s",
+                rdo_id, consolidado["id_cliente"], consolidado["data_str"], consolidado["hora_str"])
     return True, None
 
 
@@ -576,23 +556,18 @@ def criar_financeiro(consolidado):
     if not colaborador_id:
         logger.warning("Financeiro %s: colaborador '%s' não encontrado no mapa.", rdo_id, motoboy_final)
 
-    valor_num = consolidado["valor_num"]
-
     payload = {
         "action": "addfinanceiro",
         "apiKey": API_KEY,
         "id": gerar_id_curto(),
-        "id_pedido": rdo_id,
         "colaborador_id": colaborador_id or "",
+        "id_pedido": rdo_id,
         "data": consolidado["data_str"],
         "tipo": TIPO_FINANCEIRO_PADRAO,
         "descricao": consolidado["descricao_final"],
-        "cliente": consolidado["cliente_nome"],
         "motoboy": motoboy_final,
+        "vlr_servico": consolidado["valor_rs"],
         "colaborador": motoboy_final,
-        "solicitante": consolidado["solicitante"],
-        "vlr_servico": valor_num,
-        "valor": valor_num,
         "observacao": consolidado["observacao"],
         "situacao": "PAGO",
     }
@@ -608,9 +583,8 @@ def criar_financeiro(consolidado):
         logger.error("Falha ao lançar financeiro do pedido %s: %s", rdo_id, detalhe)
         return False, detalhe
 
-    logger.info("Financeiro lançado: %s | data=%s | cliente=%s | motoboy=%s | tipo=%s | valor=%.2f",
-                rdo_id, consolidado["data_str"], consolidado["cliente_nome"],
-                motoboy_final, TIPO_FINANCEIRO_PADRAO, valor_num)
+    logger.info("Financeiro lançado: %s | data=%s | motoboy=%s | tipo=%s | valor=%s",
+                rdo_id, consolidado["data_str"], motoboy_final, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
     return True, None
 
 
@@ -623,14 +597,14 @@ signal.signal(signal.SIGINT, _tratar_interrupcao)
 
 
 def main():
-    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, CHATS_EXISTENTES
+    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ
 
     COLABORADORES = carregar_colaboradores()
     CLIENTES = carregar_clientes()
     RDOS_EXISTENTES, RDO_SEQ = carregar_rdos_existentes()
-    CHATS_EXISTENTES = carregar_chats_existentes()
+    RDO_SEQ = RDO_SEQ_MINIMO
 
-    corrigir_horarios_antigos()
+    logger.info("Sequência RDO travada em %d. Primeiro pedido desta execução será RDO%03d.", RDO_SEQ, RDO_SEQ + 1)
 
     linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
     if not linhas:
@@ -640,8 +614,8 @@ def main():
     inseridos = 0
     ignorados = 0
     clientes_criados = 0
-    pedidos_sem_chat = 0
     pedidos_sem_financeiro = 0
+    pedidos_sem_chat = 0
     erros_detalhados = []
 
     total_linhas = len(linhas)
@@ -658,7 +632,7 @@ def main():
             nome_cliente = dados["cliente_nome"]
             existia = nome_cliente in CLIENTES
             try:
-                id_cliente = garantir_cliente(nome_cliente, responsavel=dados["solicitante"])
+                id_cliente = garantir_cliente(nome_cliente)
             except Exception as exc:
                 id_cliente = None
                 erros_detalhados.append((indice, "EXCECAO_GARANTIR_CLIENTE", f"{nome_cliente} | {exc}"))
@@ -696,11 +670,11 @@ def main():
             except Exception as exc:
                 chat_ok, erro_chat = False, str(exc)
                 logger.error("Exceção não tratada ao criar chat do pedido %s: %s", rdo_id, exc)
+            time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
             if not chat_ok:
                 pedidos_sem_chat += 1
                 erros_detalhados.append((indice, "FALHA_CRIAR_CHAT", f"{rdo_id} | {erro_chat}"))
-            time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
             try:
                 financeiro_ok, erro_financeiro = criar_financeiro(consolidado)

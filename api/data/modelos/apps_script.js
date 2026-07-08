@@ -53,16 +53,16 @@ function doPost(e) {
       return responder(processarDeleteChat(ss, data));
 
     var entidade = extrairEntidade(action);
-    var nomeAba  = mapearEntidade(entidade);
-    var sheet    = buscarAba(ss, nomeAba);
+    var nomeAba = mapearEntidade(entidade);
+    var sheet = buscarAba(ss, nomeAba);
 
     if (!sheet)
       return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
 
-    if (action.indexOf("get")    === 0) return responder(processarGet(sheet));
-    if (action.indexOf("add")    === 0 ||
-        action.indexOf("save")   === 0 ||
-        action.indexOf("criar")  === 0) return responder(processarAdd(sheet, data, nomeAba));
+    if (action.indexOf("get") === 0) return responder(processarGet(sheet));
+    if (action.indexOf("add") === 0 ||
+      action.indexOf("save") === 0 ||
+      action.indexOf("criar") === 0) return responder(processarAdd(sheet, data, nomeAba));
     if (action.indexOf("update") === 0) return responder(processarUpdate(sheet, data));
     if (action.indexOf("delete") === 0) return responder(processarDelete(sheet, data.id));
 
@@ -80,23 +80,23 @@ function processarDeleteChat(ss, data) {
   var pedidoId = String(data.pedido_id || data.id || "").trim();
   if (!pedidoId) return { status: "error", message: "pedido_id nao informado" };
 
-  var rows    = sheetChat.getDataRange().getValues();
+  var rows = sheetChat.getDataRange().getValues();
   var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var colPedidoId = headers.indexOf("pedido_id");
-  var colId       = headers.indexOf("id");
+  var colId = headers.indexOf("id");
 
   if (colPedidoId === -1 && colId === -1)
     return { status: "error", message: "Coluna 'pedido_id' nao encontrada na aba chat" };
 
-  var colBusca   = colPedidoId !== -1 ? colPedidoId : colId;
+  var colBusca = colPedidoId !== -1 ? colPedidoId : colId;
   var pedidoNorm = pedidoId.replace(/^RDO0*/i, "").trim();
-  var deletados  = 0;
+  var deletados = 0;
 
   for (var i = rows.length - 1; i >= 1; i--) {
     var valCelula = String(rows[i][colBusca]).trim();
-    var valNorm   = valCelula.replace(/^RDO0*/i, "").trim();
+    var valNorm = valCelula.replace(/^RDO0*/i, "").trim();
     if (valCelula === pedidoId || valNorm === pedidoNorm ||
-        valCelula.toUpperCase() === pedidoId.toUpperCase()) {
+      valCelula.toUpperCase() === pedidoId.toUpperCase()) {
       sheetChat.deleteRow(i + 1);
       deletados++;
     }
@@ -125,8 +125,8 @@ function chatJaExiste(sheetChat, idPedido) {
 
 function montarTextoChat(idPedido, data) {
   var solicitante = String(data.solicitante || "").trim() || "N/D";
-  var contato     = String(data.contato || data.telefone || "").trim() || "N/D";
-  var mercadoria  = String(data.mercadoria || "").trim() || "N/D";
+  var contato = String(data.contato || data.telefone || "").trim() || "N/D";
+  var mercadoria = String(data.mercadoria || "").trim() || "N/D";
 
   var rotasTexto = String(data.rotas_texto || "").trim();
   var linhasRotas = [];
@@ -136,22 +136,22 @@ function montarTextoChat(idPedido, data) {
     for (var i = 0; i < linhasBrutas.length; i++) {
       var linha = linhasBrutas[i].trim();
       if (!linha) continue;
-      var deMatch   = linha.match(/De:\s*([^|]+)/i);
+      var deMatch = linha.match(/De:\s*([^|]+)/i);
       var paraMatch = linha.match(/Para:\s*(.+)/i);
-      var de   = deMatch   ? deMatch[1].trim()   : "N/D";
+      var de = deMatch ? deMatch[1].trim() : "N/D";
       var para = paraMatch ? paraMatch[1].trim() : "N/D";
       linhasRotas.push((linhasRotas.length + 1) + ". De: " + de + " | Para: " + para + ".");
     }
   }
 
   if (linhasRotas.length === 0) {
-    var de   = String(data.de   || "").trim() || "N/D";
+    var de = String(data.de || "").trim() || "N/D";
     var para = String(data.para || "").trim() || "N/D";
     linhasRotas.push("1. De: " + de + " | Para: " + para + ".");
   }
 
   var distancia = String(data.distancia || "").trim() || "-";
-  var tempo     = String(data.tempo     || "").trim() || "-";
+  var tempo = String(data.tempo || "").trim() || "-";
 
   var valorRaw = data.valor_corrida || data.valor_final || "";
   var valorNum = parseFloat(String(valorRaw).replace("R$", "").replace(".", "").replace(",", "."));
@@ -174,27 +174,27 @@ function montarTextoChat(idPedido, data) {
 }
 
 function processarCriarPedido(sheetPedidos, data) {
-  var ss        = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetChat = buscarAba(ss, "chat");
 
-  var idPedido  = String(data.id || "").trim() || gerarId(sheetPedidos, "pedidos");
+  var idPedido = String(data.id || "").trim() || gerarId(sheetPedidos, "pedidos");
   var idCliente = String(data.id_cliente || data.id_chat || "").trim();
 
   var rotas_texto = String(data.rotas_texto || "");
-  var deStr   = "";
+  var deStr = "";
   var paraStr = "";
 
   if (rotas_texto) {
     var primeiraLinha = rotas_texto.split("\n")[0] || "";
-    var deMatch       = primeiraLinha.match(/De:\s*([^|]+)/i);
-    var paraMatch     = primeiraLinha.match(/Para:\s*(.+)/i);
-    if (deMatch)   deStr   = deMatch[1].trim();
+    var deMatch = primeiraLinha.match(/De:\s*([^|]+)/i);
+    var paraMatch = primeiraLinha.match(/Para:\s*(.+)/i);
+    if (deMatch) deStr = deMatch[1].trim();
     if (paraMatch) paraStr = paraMatch[1].trim();
   }
-  if (!deStr)   deStr   = String(data.de   || "");
+  if (!deStr) deStr = String(data.de || "");
   if (!paraStr) paraStr = String(data.para || "");
 
-  var agora   = new Date();
+  var agora = new Date();
   var horaStr = String(data.hora || data.horario_chat || agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })).trim();
   var dataStr = String(data.data_chat || agora.toLocaleDateString("pt-BR")).trim();
 
@@ -209,29 +209,29 @@ function processarCriarPedido(sheetPedidos, data) {
 
   if (headers.length > 1 && idIndex !== -1) {
     var rowData = {};
-    rowData.id             = idPedido;
-    rowData.id_cliente     = idCliente;
-    rowData.solicitante    = String(data.solicitante   || "");
-    rowData.contato        = String(data.contato       || "");
-    rowData.horario        = String(data.horario       || "");
-    rowData.mercadoria     = String(data.mercadoria    || "");
-    rowData.de             = deStr;
-    rowData.para           = paraStr;
-    rowData.retorno        = String(data.retorno       || "");
-    rowData.prioridade     = String(data.prioridade    || "N/A");
-    rowData.valor_corrida  = String(data.valor_corrida || data.valor_final || "");
-    rowData.valor_base     = String(data.valor_base    || "");
-    rowData.taxa_espera    = String(data.taxa_espera   || "");
-    rowData.motoboy        = String(data.motoboy       || "");
-    rowData.status         = String(data.status        || "PENDENTE");
-    rowData.observacao     = String(data.observacao    || data.obs || "");
-    rowData.distancia      = String(data.distancia     || "");
-    rowData.tempo          = String(data.tempo         || "");
-    rowData.valor_km       = String(data.valor_km      || "");
-    rowData.dinamica       = String(data.dinamica      || "");
+    rowData.id = idPedido;
+    rowData.id_cliente = idCliente;
+    rowData.solicitante = String(data.solicitante || "");
+    rowData.contato = String(data.contato || "");
+    rowData.horario = String(data.horario || "");
+    rowData.mercadoria = String(data.mercadoria || "");
+    rowData.de = deStr;
+    rowData.para = paraStr;
+    rowData.retorno = String(data.retorno || "");
+    rowData.prioridade = String(data.prioridade || "N/A");
+    rowData.valor_corrida = String(data.valor_corrida || data.valor_final || "");
+    rowData.valor_base = String(data.valor_base || "");
+    rowData.taxa_espera = String(data.taxa_espera || "");
+    rowData.motoboy = String(data.motoboy || "");
+    rowData.status = String(data.status || "PENDENTE");
+    rowData.observacao = String(data.observacao || data.obs || "");
+    rowData.distancia = String(data.distancia || "");
+    rowData.tempo = String(data.tempo || "");
+    rowData.valor_km = String(data.valor_km || "");
+    rowData.dinamica = String(data.dinamica || "");
     rowData.numero_servico = idPedido;
-    rowData.data           = dataStr;
-    rowData.hora           = horaStr;
+    rowData.data = dataStr;
+    rowData.hora = horaStr;
 
     var row = [];
     for (var i = 0; i < headers.length; i++) {
@@ -241,19 +241,19 @@ function processarCriarPedido(sheetPedidos, data) {
   } else {
     sheetPedidos.appendRow([
       idPedido, idCliente,
-      String(data.solicitante   || ""),
-      String(data.contato       || ""),
-      String(data.horario       || ""),
-      String(data.mercadoria    || ""),
+      String(data.solicitante || ""),
+      String(data.contato || ""),
+      String(data.horario || ""),
+      String(data.mercadoria || ""),
       deStr, paraStr,
-      String(data.retorno       || ""),
-      String(data.prioridade    || "N/A"),
+      String(data.retorno || ""),
+      String(data.prioridade || "N/A"),
       String(data.valor_corrida || data.valor_final || ""),
-      String(data.valor_base    || ""),
-      String(data.taxa_espera   || ""),
-      String(data.motoboy       || ""),
-      String(data.status        || "PENDENTE"),
-      String(data.observacao    || data.obs || ""),
+      String(data.valor_base || ""),
+      String(data.taxa_espera || ""),
+      String(data.motoboy || ""),
+      String(data.status || "PENDENTE"),
+      String(data.observacao || data.obs || ""),
       dataStr, horaStr
     ]);
   }
@@ -273,16 +273,16 @@ function processarValidarSenhaMaster(senha) {
   if (rows.length <= 1)
     return { status: "error", valido: false, message: "Nenhum usuario cadastrado." };
 
-  var headers  = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
-  var colPass  = buscarColuna(headers, ["password", "senha", "pass"]);
-  var colTipo  = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
+  var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
 
   if (colPass === -1)
     return { status: "error", valido: false, message: "Coluna de senha nao encontrada." };
 
   var senhaTrim = String(senha).trim();
   for (var i = 1; i < rows.length; i++) {
-    var tipo     = colTipo !== -1 ? String(rows[i][colTipo]).trim().toLowerCase() : "";
+    var tipo = colTipo !== -1 ? String(rows[i][colTipo]).trim().toLowerCase() : "";
     var isMaster = tipo === "master" || tipo === "admin";
     if (isMaster && String(rows[i][colPass]).trim() === senhaTrim)
       return { status: "success", valido: true };
@@ -306,7 +306,7 @@ function processarLogin(user, pass) {
   var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
   var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
   var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
-  var colImg  = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+  var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
 
   if (colUser === -1 || colPass === -1)
     return { status: "error", message: "Colunas 'username' ou 'password' nao encontradas" };
@@ -316,13 +316,13 @@ function processarLogin(user, pass) {
 
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][colUser]).trim() === userTrim &&
-        String(rows[i][colPass]).trim() === passTrim) {
+      String(rows[i][colPass]).trim() === passTrim) {
       return {
         status: "success",
         user: {
           username: String(rows[i][colUser]).trim(),
-          tipo:     colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
-          imagem:   colImg  !== -1 ? String(rows[i][colImg]).trim()  : ""
+          tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+          imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
         }
       };
     }
@@ -334,7 +334,7 @@ function processarGet(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
 
-  var headers   = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var resultado = [];
   for (var i = 1; i < rows.length; i++) {
     var obj = {};
@@ -347,7 +347,7 @@ function processarGet(sheet) {
 }
 
 function processarGetFinanceiroCompleto() {
-  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetFin = buscarAba(ss, "financeiro");
   var sheetPed = buscarAba(ss, "pedidos");
   var sheetCli = buscarAba(ss, "clientes");
@@ -364,14 +364,14 @@ function processarGetFinanceiroCompleto() {
   if (sheetPed) {
     var pedRows = sheetPed.getDataRange().getValues();
     if (pedRows.length > 1) {
-      var pedHeaders        = pedRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
-      var pedIdIdx          = pedHeaders.indexOf("id");
-      var pedClienteIdx     = pedHeaders.indexOf("id_cliente");
+      var pedHeaders = pedRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+      var pedIdIdx = pedHeaders.indexOf("id");
+      var pedClienteIdx = pedHeaders.indexOf("id_cliente");
       var pedSolicitanteIdx = pedHeaders.indexOf("solicitante");
       for (var p = 1; p < pedRows.length; p++) {
         var pedId = pedIdIdx !== -1 ? String(pedRows[p][pedIdIdx]).trim() : "";
         if (pedId) pedidosMap[pedId] = {
-          id_cliente:  pedClienteIdx     !== -1 ? String(pedRows[p][pedClienteIdx]).trim()     : "",
+          id_cliente: pedClienteIdx !== -1 ? String(pedRows[p][pedClienteIdx]).trim() : "",
           solicitante: pedSolicitanteIdx !== -1 ? String(pedRows[p][pedSolicitanteIdx]).trim() : ""
         };
       }
@@ -382,8 +382,8 @@ function processarGetFinanceiroCompleto() {
   if (sheetCli) {
     var cliRows = sheetCli.getDataRange().getValues();
     if (cliRows.length > 1) {
-      var cliHeaders     = cliRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
-      var cliIdIdx       = cliHeaders.indexOf("id");
+      var cliHeaders = cliRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+      var cliIdIdx = cliHeaders.indexOf("id");
       var cliUsernameIdx = cliHeaders.indexOf("username");
       for (var c = 1; c < cliRows.length; c++) {
         var cliId = cliIdIdx !== -1 ? String(cliRows[c][cliIdIdx]).trim() : "";
@@ -409,14 +409,14 @@ function processarGetFinanceiroCompleto() {
       if (finHeaders[col] !== "") obj[finHeaders[col]] = converterValorCelula(finRows[r][col]);
     }
     var idPedido = finIdPedidoIdx !== -1 ? String(finRows[r][finIdPedidoIdx]).trim() : "";
-    var pedido   = idPedido ? pedidosMap[idPedido] : null;
+    var pedido = idPedido ? pedidosMap[idPedido] : null;
     if (pedido) {
       obj.solicitante = pedido.solicitante || "";
-      var cliente     = pedido.id_cliente ? clientesMap[pedido.id_cliente] : null;
-      obj.cliente     = cliente ? cliente.username || "" : "";
+      var cliente = pedido.id_cliente ? clientesMap[pedido.id_cliente] : null;
+      obj.cliente = cliente ? cliente.username || "" : "";
     } else {
       obj.solicitante = obj.solicitante || "";
-      obj.cliente     = obj.cliente     || "";
+      obj.cliente = obj.cliente || "";
     }
     resultado.push(obj);
   }
@@ -456,18 +456,18 @@ function processarAdd(sheet, data, entity) {
 }
 
 function processarUpdate(sheet, data) {
-  var values  = sheet.getDataRange().getValues();
+  var values = sheet.getDataRange().getValues();
   var headers = values[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
 
   if (idIndex === -1) return { status: "error", message: "Coluna 'id' nao encontrada" };
-  if (!data.id)       return { status: "error", message: "ID nao informado para atualizacao" };
+  if (!data.id) return { status: "error", message: "ID nao informado para atualizacao" };
 
-  var idBusca    = String(data.id).trim();
+  var idBusca = String(data.id).trim();
   var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
 
   for (var i = 1; i < values.length; i++) {
-    var idCelula    = String(values[i][idIndex]).trim();
+    var idCelula = String(values[i][idIndex]).trim();
     var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
 
     if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
@@ -487,19 +487,19 @@ function processarDelete(sheet, id) {
   if (!id || String(id).trim() === "")
     return { status: "error", message: "ID nao informado para exclusao" };
 
-  var rows    = sheet.getDataRange().getValues();
+  var rows = sheet.getDataRange().getValues();
   var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
 
   if (idIndex === -1)
     return { status: "error", message: "Coluna 'id' nao encontrada" };
 
-  var idBusca     = String(id).trim();
-  var idBuscaNum  = idBusca.replace(/^RDO0*/i, "").trim();
+  var idBusca = String(id).trim();
+  var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
   var idBuscaFull = idBusca.toUpperCase();
 
   for (var i = rows.length - 1; i >= 1; i--) {
-    var idCelula    = String(rows[i][idIndex]).trim();
+    var idCelula = String(rows[i][idIndex]).trim();
     var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
     if (idCelula === idBuscaFull || idCelulaNum === idBuscaNum || idCelula === idBusca) {
       sheet.deleteRow(i + 1);
@@ -521,28 +521,28 @@ function extrairEntidade(action) {
 
 function mapearEntidade(entity) {
   var mapa = {
-    "usuario":       "usuarios",
-    "usuarios":      "usuarios",
-    "cliente":       "clientes",
-    "clientes":      "clientes",
-    "contato":       "clientes",
-    "contatos":      "clientes",
-    "colaborador":   "colaboradores",
+    "usuario": "usuarios",
+    "usuarios": "usuarios",
+    "cliente": "clientes",
+    "clientes": "clientes",
+    "contato": "clientes",
+    "contatos": "clientes",
+    "colaborador": "colaboradores",
     "colaboradores": "colaboradores",
-    "chat":          "chat",
-    "chats":         "chat",
-    "pedido":        "pedidos",
-    "pedidos":       "pedidos",
-    "financeiro":    "financeiro",
-    "financeiros":   "financeiro",
-    "relatorio":     "relatorios",
-    "relatorios":    "relatorios"
+    "chat": "chat",
+    "chats": "chat",
+    "pedido": "pedidos",
+    "pedidos": "pedidos",
+    "financeiro": "financeiro",
+    "financeiros": "financeiro",
+    "relatorio": "relatorios",
+    "relatorios": "relatorios"
   };
   return mapa[entity] || entity;
 }
 
 function buscarAba(ss, nome) {
-  var sheets    = ss.getSheets();
+  var sheets = ss.getSheets();
   var nomeLower = nome.toLowerCase().trim();
   for (var i = 0; i < sheets.length; i++) {
     if (String(sheets[i].getName()).toLowerCase().trim() === nomeLower)
@@ -559,13 +559,24 @@ function obterHeaders(sheet) {
 
 function converterValorCelula(val) {
   if (val === null || val === undefined || val === "") return "";
+
   if (val instanceof Date) {
+    var y = val.getFullYear();
+
+    // Se o ano for a data-base do Google Sheets (1899), é um valor de HORA pura
+    if (y === 1899) {
+      var h = val.getHours();
+      var min = val.getMinutes();
+      return (h < 10 ? "0" + h : h) + ":" + (min < 10 ? "0" + min : min);
+    }
+
+    // Caso contrário, é uma data completa
     var d = val.getDate();
     var m = val.getMonth() + 1;
-    var y = val.getFullYear();
     return (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y;
   }
-  if (typeof val === "number")  return val;
+
+  if (typeof val === "number") return val;
   if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
   return String(val).trim();
 }
@@ -579,7 +590,7 @@ function buscarColuna(headers, nomesPossiveis) {
 }
 
 function gerarId(sheet, entity) {
-  var data    = sheet.getDataRange().getValues();
+  var data = sheet.getDataRange().getValues();
   var headers = data[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
 
@@ -589,7 +600,7 @@ function gerarId(sheet, entity) {
       var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ""), 10);
       if (!isNaN(val) && val > maxId) maxId = val;
     }
-    var next   = maxId + 1;
+    var next = maxId + 1;
     var padded = String(next);
     while (padded.length < 3) padded = "0" + padded;
     return "RDO" + padded;
@@ -601,7 +612,7 @@ function gerarId(sheet, entity) {
       var num = parseInt(String(data[j][idIndex]).replace(/[^0-9]/g, ""), 10);
       if (!isNaN(num) && num > maxFin) maxFin = num;
     }
-    var nextFin   = maxFin + 1;
+    var nextFin = maxFin + 1;
     var paddedFin = String(nextFin);
     while (paddedFin.length < 4) paddedFin = "0" + paddedFin;
     return "FIN" + paddedFin;
@@ -612,7 +623,7 @@ function gerarId(sheet, entity) {
   }
 
   var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  var id    = "";
+  var id = "";
   for (var k = 0; k < 11; k++) {
     id += chars.charAt(Math.floor(Math.random() * chars.length));
   }

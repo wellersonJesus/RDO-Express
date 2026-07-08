@@ -8,8 +8,7 @@
       solicitante: ['solicitante'],
       contato: ['contato'],
       data: ['data'],
-      hora: ['hora'],
-      horario: ['horario'],
+      horario: ['horario', 'hora'],
       mercadoria: ['mercadoria'],
       de: ['de'],
       para: ['para'],
@@ -42,7 +41,7 @@
       pagamento: ['pagamento'],
       status: ['status']
     },
-    colaboradores: {
+    colaborador: {
       id: ['id'],
       username: ['username'],
       colaborador: ['colaborador'],
@@ -77,12 +76,20 @@
     return '';
   }
 
+  function extrairHora(valor) {
+    if (!valor) return '';
+    const v = String(valor).trim();
+    const mCompleto = v.match(/(\d{2}:\d{2}(:\d{2})?)/);
+    if (mCompleto) return mCompleto[1].substring(0, 5);
+    return v;
+  }
+
   const BANCOS = {
     clientes: {
       label: 'Clientes', icon: 'bi-people', endpoint: 'getclientes',
       campos: { username: 'Nome', responsavel: 'Responsável', contato: 'Contato', imagem: 'Imagem', pagamento: 'Pagamento', status: 'Status' }
     },
-    colaboradores: {
+    colaborador: {
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
       campos: {
         username: 'Nome', colaborador: 'Função', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa',
@@ -94,7 +101,7 @@
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
       campos: {
         id: 'ID', id_cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato',
-        data: 'Data', hora: 'Hora', horario: 'Horário Estimado', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
+        data: 'Data', horario: 'Hora', mercadoria: 'Mercadoria', de: 'De', para: 'Para',
         retorno: 'Retorno', prioridade: 'Prioridade', valor_corrida: 'Valor Corrida',
         motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
       }
@@ -115,10 +122,10 @@
 
   const PRESETS = {
     motoboys: {
-      bancos: ['colaboradores', 'pedidos', 'financeiro'],
+      bancos: ['colaborador', 'pedidos', 'financeiro'],
       campos: {
-        colaboradores: ['username', 'colaborador', 'placa', 'comissao'],
-        pedidos: ['motoboy', 'data', 'de', 'para', 'valor_corrida', 'status'],
+        colaborador: ['username', 'colaborador', 'placa', 'comissao'],
+        pedidos: ['motoboy', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
         financeiro: ['motoboy', 'data', 'tipo', 'vlr_servico', 'situacao']
       }
     },
@@ -126,7 +133,7 @@
       bancos: ['clientes', 'pedidos', 'chat'],
       campos: {
         clientes: ['username', 'responsavel', 'contato', 'pagamento'],
-        pedidos: ['id_cliente', 'solicitante', 'data', 'de', 'para', 'valor_corrida', 'status'],
+        pedidos: ['id_cliente', 'solicitante', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
         chat: ['id_cliente', 'texto', 'data']
       }
     },
@@ -135,11 +142,11 @@
       campos: { financeiro: ['data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'situacao'] }
     },
     global: {
-      bancos: ['clientes', 'colaboradores', 'pedidos', 'financeiro'],
+      bancos: ['clientes', 'colaborador', 'pedidos', 'financeiro'],
       campos: {
         clientes: ['username', 'responsavel', 'status'],
-        colaboradores: ['username', 'colaborador', 'status'],
-        pedidos: ['id_cliente', 'motoboy', 'data', 'de', 'para', 'valor_corrida', 'status'],
+        colaborador: ['username', 'colaborador', 'status'],
+        pedidos: ['id_cliente', 'motoboy', 'data', 'horario', 'de', 'para', 'valor_corrida', 'status'],
         financeiro: ['data', 'tipo', 'vlr_servico', 'situacao']
       }
     }
@@ -297,7 +304,7 @@
     if (!els.mbSelect) return;
     let html = '<option value="__todos__">Todos os motoboys</option>';
     state.motoboys.forEach(function (mb) {
-      const nome = resolverValor('colaboradores', 'username', mb) || 'Sem nome';
+      const nome = resolverValor('colaborador', 'username', mb) || 'Sem nome';
       html += '<option value="' + escapeHtml(mb.id) + '">' + escapeHtml(nome) + '</option>';
     });
     els.mbSelect.innerHTML = html;
@@ -311,70 +318,6 @@
       html += '<option value="' + escapeHtml(cli.id) + '">' + escapeHtml(nome) + '</option>';
     });
     els.cliSelect.innerHTML = html;
-  }
-
-  function carregarDados() {
-    if (state.fetching) return;
-    state.fetching = true;
-    spinOn();
-    exibirLoadingListas();
-
-    const chamadas = [
-      window.API.call('getclientes', {}),
-      window.API.call('getcolaboradores', {}),
-      window.API.call('getpedidos', {}),
-      window.API.call('getchat', {}),
-      window.API.call('getfinanceiro', {}),
-      window.API.call('getrelatorios', {})
-    ];
-
-    Promise.allSettled(chamadas)
-      .then(function (r) {
-        function pega(idx) {
-          return r[idx].status === 'fulfilled' ? r[idx].value : null;
-        }
-
-        r.forEach(function (res, i) {
-          if (res.status === 'rejected') {
-            console.error('[RELATORIOS] Falha na requisição índice ' + i + ':', res.reason);
-          }
-        });
-
-        state.clientes = extrairArray(pega(0));
-        state.motoboys = extrairArray(pega(1));
-        state.pedidos = extrairArray(pega(2));
-        state.chat = extrairArray(pega(3));
-        state.financeiro = extrairArray(pega(4));
-
-        state.relatoriosSalvos = extrairArray(pega(5)).map(function (rel) {
-          let titulo = '';
-          let snapshot = null;
-          if (rel.descricao) {
-            try {
-              const obj = JSON.parse(rel.descricao);
-              if (obj && obj.titulo) titulo = obj.titulo;
-              if (obj && obj.snapshot) snapshot = obj.snapshot;
-              else if (obj && obj.bancos) snapshot = obj;
-            } catch (e) { }
-          }
-          rel.titulo = titulo || rel.tipo || 'Relatório';
-          rel.snapshot = snapshot;
-          rel.periodoLabel = rel.observacao || rel.data || '';
-          return rel;
-        });
-
-        popularSelectMotoboys();
-        popularSelectClientes();
-        renderizarListas();
-      })
-      .catch(function (err) {
-        relToast('Erro ao carregar dados.', 'danger');
-        renderizarListas();
-      })
-      .finally(function () {
-        state.fetching = false;
-        spinOff();
-      });
   }
 
   function exibirLoadingListas() {
@@ -596,7 +539,7 @@
     if (fx && Array.isArray(fx.valor) && fx.valor.indexOf('__todos__') === -1 && fx.valor.length) {
       let labels = [];
       if (fx.campo === 'motoboy_id') {
-        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(m.id) !== -1; }).map(function (m) { return resolverValor('colaboradores', 'username', m); });
+        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(m.id) !== -1; }).map(function (m) { return resolverValor('colaborador', 'username', m); });
       } else if (fx.campo === 'cliente_id') {
         labels = state.clientes.filter(function (c) { return fx.valor.indexOf(c.id) !== -1; }).map(function (c) { return resolverValor('clientes', 'username', c); });
       }
@@ -639,9 +582,9 @@
     let dados = [];
 
     if (banco === 'clientes') dados = state.clientes.slice();
-    else if (banco === 'colaboradores') dados = state.motoboys.slice();
+    else if (banco === 'colaborador') dados = state.motoboys.slice();
     else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) {
-      return dentroPeriodo(resolverValor('pedidos', 'data', r), p.inicio, p.fim);
+      return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
     });
     else if (banco === 'chat') dados = state.chat.filter(function (r) {
       return dentroPeriodo(resolverValor('chat', 'data', r), p.inicio, p.fim);
@@ -657,9 +600,9 @@
 
       if (!contemTodos && valores.length) {
         if (fx.campo === 'motoboy_id') {
-          const nomesSelecionados = idsParaNomes(valores, state.motoboys, 'colaboradores');
+          const nomesSelecionados = idsParaNomes(valores, state.motoboys, 'colaborador');
 
-          if (banco === 'colaboradores') {
+          if (banco === 'colaborador') {
             dados = dados.filter(function (r) {
               return valores.indexOf(r.id) !== -1 || valores.indexOf(String(r.id)) !== -1;
             });
@@ -719,8 +662,29 @@
     });
   }
 
+  function obterDataPedidoComFallback(pedido) {
+    var data = resolverValor('pedidos', 'data', pedido);
+    if (data) return data;
+
+    // Fallback: busca a data no financeiro pelo id_pedido
+    var lanc = buscarFinanceiroDoPedido(pedido);
+    return lanc ? resolverValor('financeiro', 'data', lanc) : '';
+  }
+
   function obterValorCampoPedido(campo, pedido) {
     let valor = resolverValor('pedidos', campo, pedido);
+    if (campo === 'horario') return extrairHora(valor);
+    if (campo === 'data' && !valor) return obterDataPedidoComFallback(pedido);
+    if ((valor === '' || valor === null || valor === undefined) && campo === 'valor_corrida') {
+      const lanc = buscarFinanceiroDoPedido(pedido);
+      if (lanc) valor = resolverValor('financeiro', 'vlr_servico', lanc);
+    }
+    return valor;
+  }
+
+  function obterValorCampoPedido(campo, pedido) {
+    let valor = resolverValor('pedidos', campo, pedido);
+    if (campo === 'horario') return extrairHora(valor);
     if ((valor === '' || valor === null || valor === undefined) && campo === 'valor_corrida') {
       const lanc = buscarFinanceiroDoPedido(pedido);
       if (lanc) valor = resolverValor('financeiro', 'vlr_servico', lanc);
@@ -991,6 +955,7 @@
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
             if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
+            if (c.chave === 'horario') valor = extrairHora(valor);
             html += '<td>' + escapeHtml(valor) + '</td>';
           });
           html += '</tr>';
@@ -1062,15 +1027,15 @@
       if (window.usuarioLogado && (window.usuarioLogado.username || window.usuarioLogado.nome)) {
         return window.usuarioLogado.username || window.usuarioLogado.nome;
       }
-      var username = localStorage.getItem('username');
+      const username = localStorage.getItem('username');
       if (username && username.trim() && username !== 'null' && username !== 'undefined') return username.trim();
-      var fontes = [sessionStorage, localStorage];
-      for (var i = 0; i < fontes.length; i++) {
-        var store = fontes[i];
-        var raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
+      const fontes = [sessionStorage, localStorage];
+      for (let i = 0; i < fontes.length; i++) {
+        const store = fontes[i];
+        const raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
         if (raw) {
           try {
-            var obj = JSON.parse(raw);
+            const obj = JSON.parse(raw);
             if (obj && (obj.username || obj.nome)) return obj.username || obj.nome;
           } catch (e) {
             if (typeof raw === 'string' && raw.trim()) return raw.trim();
@@ -1151,6 +1116,103 @@
         if (r) confirmarExclusaoRelatorio(r);
       });
     });
+  }
+
+  function apiComRetry(endpoint, params, tentativas) {
+    tentativas = tentativas || 2;
+    return window.API.call(endpoint, params).catch(function (err) {
+      if (tentativas > 1) {
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(apiComRetry(endpoint, params, tentativas - 1));
+          }, 800);
+        });
+      }
+      throw err;
+    });
+  }
+
+  function executarSequencial(chamadas) {
+    const resultados = [];
+    return chamadas.reduce(function (promessaAnterior, fnChamada) {
+      return promessaAnterior.then(function () {
+        return fnChamada()
+          .then(function (res) { resultados.push({ status: 'fulfilled', value: res }); })
+          .catch(function (err) { resultados.push({ status: 'rejected', reason: err }); });
+      });
+    }, Promise.resolve()).then(function () { return resultados; });
+  }
+
+  function carregarDados() {
+    if (state.fetching) return;
+    state.fetching = true;
+    spinOn();
+    exibirLoadingListas();
+
+    const chamadas = [
+      function () { return apiComRetry('getclientes', {}); },
+      function () { return apiComRetry('getcolaboradores', {}); },
+      function () { return apiComRetry('getpedidos', {}); },
+      function () { return apiComRetry('getchat', {}); },
+      function () { return apiComRetry('getfinanceiro', {}); },
+      function () { return apiComRetry('getrelatorios', {}); }
+    ];
+
+    executarSequencial(chamadas)
+      .then(function (r) {
+        function pega(idx) {
+          return r[idx].status === 'fulfilled' ? r[idx].value : null;
+        }
+
+        const labels = ['clientes', 'colaboradores', 'pedidos', 'chat', 'financeiro', 'relatorios'];
+        let houveFalha = false;
+
+        r.forEach(function (res, i) {
+          if (res.status === 'rejected') {
+            houveFalha = true;
+            console.error('[RELATORIOS] Falha na requisição "' + labels[i] + '":', res.reason);
+          }
+        });
+
+        state.clientes = extrairArray(pega(0));
+        state.motoboys = extrairArray(pega(1));
+        state.pedidos = extrairArray(pega(2));
+        state.chat = extrairArray(pega(3));
+        state.financeiro = extrairArray(pega(4));
+
+        state.relatoriosSalvos = extrairArray(pega(5)).map(function (rel) {
+          let titulo = '';
+          let snapshot = null;
+          if (rel.descricao) {
+            try {
+              const obj = JSON.parse(rel.descricao);
+              if (obj && obj.titulo) titulo = obj.titulo;
+              if (obj && obj.snapshot) snapshot = obj.snapshot;
+              else if (obj && obj.bancos) snapshot = obj;
+            } catch (e) { }
+          }
+          rel.titulo = titulo || rel.tipo || 'Relatório';
+          rel.snapshot = snapshot;
+          rel.periodoLabel = rel.observacao || rel.data || '';
+          return rel;
+        });
+
+        popularSelectMotoboys();
+        popularSelectClientes();
+        renderizarListas();
+
+        if (houveFalha) {
+          relToast('Alguns dados não foram carregados. Clique em sincronizar para tentar novamente.', 'warning');
+        }
+      })
+      .catch(function (err) {
+        relToast('Erro ao carregar dados.', 'danger');
+        renderizarListas();
+      })
+      .finally(function () {
+        state.fetching = false;
+        spinOff();
+      });
   }
 
   window.RelatoriosDebug = {

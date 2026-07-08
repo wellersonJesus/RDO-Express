@@ -224,20 +224,27 @@
   </div>
 </div>
 
-<div id="modalRelatorioOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
-  <div id="modalRelatorioContainer" style="background:#fff;border-radius:16px;width:100%;max-width:880px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+<div id="modalRelatorioOverlay"
+  style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
+  <div id="modalRelatorioContainer"
+    style="background:#fff;border-radius:16px;width:100%;max-width:880px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
 
-    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
+    <div
+      style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
       <div class="d-flex align-items-center gap-3">
-        <div style="width:50px;height:50px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+        <div
+          style="width:50px;height:50px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
           <i id="modal-rel-icon" class="bi bi-file-earmark-bar-graph" style="color:#fff;font-size:1.4rem;"></i>
         </div>
         <div>
-          <div id="modal-rel-titulo" style="font-size:.95rem;font-weight:700;color:#fff;letter-spacing:.5px;">RELATÓRIO</div>
+          <div id="modal-rel-titulo" style="font-size:.95rem;font-weight:700;color:#fff;letter-spacing:.5px;">RELATÓRIO
+          </div>
           <div id="modal-rel-periodo" style="font-size:.68rem;color:rgba(255,255,255,.55);margin-top:2px;">—</div>
         </div>
       </div>
-      <button id="modal-rel-fechar" type="button" style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;" title="Fechar">
+      <button id="modal-rel-fechar" type="button"
+        style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;"
+        title="Fechar">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
@@ -249,7 +256,8 @@
       </div>
     </div>
 
-    <div style="padding:14px 20px;background:#fff;border-top:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div
+      style="padding:14px 20px;background:#fff;border-top:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div class="d-flex gap-2">
         <button id="modal-rel-btn-pdf" type="button" class="btn-modal-rel btn-modal-rel-secondary" title="Imprimir/PDF">
           <i class="bi bi-file-earmark-pdf"></i>
@@ -276,19 +284,19 @@
 </div>
 
 <script>
-(function () {
-  'use strict';
-  function _aguardar() {
-    if (typeof window.initRelatorios === 'function') {
-      window.initRelatorios();
-    } else {
-      setTimeout(_aguardar, 100);
+  (function () {
+    'use strict';
+    function _aguardar() {
+      if (typeof window.initRelatorios === 'function') {
+        window.initRelatorios();
+      } else {
+        setTimeout(_aguardar, 100);
+      }
     }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _aguardar);
-  } else {
-    _aguardar();
-  }
-})();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _aguardar);
+    } else {
+      _aguardar();
+    }
+  })();
 </script>
