@@ -643,6 +643,51 @@
     return valor;
   }
 
+  function agruparPorMotoboy(pedidos) {
+    const mapa = {};
+    pedidos.forEach(function (p) {
+      const nome = resolverValor('pedidos', 'motoboy', p) || 'Sem motoboy';
+      const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
+      const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
+
+      if (!mapa[nome]) mapa[nome] = { nome: nome, total: 0, qtd: 0, totalPendente: 0, qtdPendente: 0 };
+      mapa[nome].qtd++;
+      if (!isNaN(valor)) mapa[nome].total += valor;
+
+      if (status !== 'CONCLUIDO' && status !== 'CONCLUÍDO') {
+        mapa[nome].qtdPendente++;
+        if (!isNaN(valor)) mapa[nome].totalPendente += valor;
+      }
+    });
+    return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
+  }
+
+  function agruparPorCliente(pedidos) {
+    const mapa = {};
+    pedidos.forEach(function (p) {
+      let nome = resolverValor('pedidos', 'solicitante', p) || '';
+      const idCliente = resolverValor('pedidos', 'id_cliente', p);
+      if (!nome && idCliente) {
+        const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente); });
+        if (cli) nome = resolverValor('clientes', 'username', cli);
+      }
+      if (!nome) nome = 'Sem cliente';
+
+      const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
+      const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
+
+      if (!mapa[nome]) mapa[nome] = { nome: nome, total: 0, qtd: 0, totalPendente: 0, qtdPendente: 0 };
+      mapa[nome].qtd++;
+      if (!isNaN(valor)) mapa[nome].total += valor;
+
+      if (status !== 'CONCLUIDO' && status !== 'CONCLUÍDO') {
+        mapa[nome].qtdPendente++;
+        if (!isNaN(valor)) mapa[nome].totalPendente += valor;
+      }
+    });
+    return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
+  }
+
   function coletarDadosBanco(banco) {
     const p = state.builder.periodo;
     let dados = [];
@@ -721,7 +766,7 @@
   }
 
   function montarSnapshot() {
-    const snapshot = { bancos: {}, meta: {} };
+    const snapshot = { bancos: {}, meta: {}, resumos: {} };
     bancosDoBuilder().forEach(function (banco) {
       const camposSel = Object.keys(state.builder.selecionados[banco]).filter(function (c) { return state.builder.selecionados[banco][c]; });
       if (!camposSel.length) return;
@@ -745,6 +790,14 @@
         linhas: linhas
       };
     });
+
+    // ===== NOVO: Resumo de totais por Motoboy e Cliente =====
+    if (bancosDoBuilder().indexOf('pedidos') !== -1) {
+      const pedidosData = coletarDadosBanco('pedidos'); // já respeita filtro de período/motoboy/cliente
+      snapshot.resumos.motoboys = agruparPorMotoboy(pedidosData);
+      snapshot.resumos.clientes = agruparPorCliente(pedidosData);
+    }
+
     snapshot.meta.usuarioGerador = obterUsuarioLogado();
     snapshot.meta.horaGeracao = obterHoraAtualBR();
     return snapshot;
@@ -999,13 +1052,11 @@
           html += '<tr>';
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
-            // moeda: usa parseMoeda internamente via formatarMoeda -> corrige "R$ 48,00"
             if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') {
               valor = formatarMoeda(valor);
             } else if (c.chave === 'horario') {
               valor = extrairHora(valor);
             }
-            // "data" já vem formatada em DD/MM/YYYY pelo Apps Script - não reformatar
             html += '<td>' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
           });
           html += '</tr>';
@@ -1014,6 +1065,55 @@
       }
       html += '</div>';
     });
+
+    // ===== NOVO: Resumo de Totais (Motoboys e Clientes) =====
+    const resumos = snapshot && snapshot.resumos ? snapshot.resumos : {};
+
+    if (resumos.motoboys && resumos.motoboys.length) {
+      html += '<div class="rel-modal-divider"></div>';
+      html += '<div class="rel-modal-section">';
+      html += '<div class="rel-modal-section-title"><i class="bi bi-bicycle"></i> Resumo por Motoboy</div>';
+      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.75rem;background:#fff;">';
+      html += '<thead><tr><th>Motoboy</th><th>Qtd. Corridas</th><th>Total Recebido</th><th>Pendente (qtd)</th><th>Total Pendente</th></tr></thead><tbody>';
+      let totalGeralMB = 0, totalPendGeralMB = 0;
+      resumos.motoboys.forEach(function (m) {
+        totalGeralMB += m.total;
+        totalPendGeralMB += m.totalPendente;
+        html += '<tr>' +
+          '<td><strong>' + escapeHtml(m.nome) + '</strong></td>' +
+          '<td>' + m.qtd + '</td>' +
+          '<td>' + formatarMoeda(m.total) + '</td>' +
+          '<td>' + (m.qtdPendente || '-') + '</td>' +
+          '<td>' + (m.totalPendente ? formatarMoeda(m.totalPendente) : '-') + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
+        '<td>TOTAL GERAL</td><td>-</td><td>' + formatarMoeda(totalGeralMB) + '</td><td>-</td><td>' + formatarMoeda(totalPendGeralMB) + '</td>' +
+        '</tr></tfoot></table></div></div>';
+    }
+
+    if (resumos.clientes && resumos.clientes.length) {
+      html += '<div class="rel-modal-divider"></div>';
+      html += '<div class="rel-modal-section">';
+      html += '<div class="rel-modal-section-title"><i class="bi bi-people"></i> Resumo por Cliente</div>';
+      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.75rem;background:#fff;">';
+      html += '<thead><tr><th>Cliente</th><th>Qtd. Pedidos</th><th>Total Gasto</th><th>Pendente (qtd)</th><th>Total Pendente</th></tr></thead><tbody>';
+      let totalGeralCli = 0, totalPendGeralCli = 0;
+      resumos.clientes.forEach(function (c) {
+        totalGeralCli += c.total;
+        totalPendGeralCli += c.totalPendente;
+        html += '<tr>' +
+          '<td><strong>' + escapeHtml(c.nome) + '</strong></td>' +
+          '<td>' + c.qtd + '</td>' +
+          '<td>' + formatarMoeda(c.total) + '</td>' +
+          '<td>' + (c.qtdPendente || '-') + '</td>' +
+          '<td>' + (c.totalPendente ? formatarMoeda(c.totalPendente) : '-') + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
+        '<td>TOTAL GERAL</td><td>-</td><td>' + formatarMoeda(totalGeralCli) + '</td><td>-</td><td>' + formatarMoeda(totalPendGeralCli) + '</td>' +
+        '</tr></tfoot></table></div></div>';
+    }
 
     html += '</div>';
     return html;
