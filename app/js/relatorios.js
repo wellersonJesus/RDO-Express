@@ -908,7 +908,7 @@
     if (els.modalBtnCancelar) els.modalBtnCancelar.addEventListener('click', fecharModalRelatorio);
     if (els.modalBtnSalvar) els.modalBtnSalvar.addEventListener('click', salvarRelatorioModal);
     if (els.modalBtnCopiar) els.modalBtnCopiar.addEventListener('click', copiarRelatorioModal);
-    if (els.modalBtnPdf) els.modalBtnPdf.addEventListener('click', function () { window.print(); });
+    if (els.modalBtnPdf) els.modalBtnPdf.addEventListener('click', gerarPdfRelatorio);
 
     if (els.modalBtnVoltar) els.modalBtnVoltar.addEventListener('click', function () {
       if (!state.ultimoBuilderState) { relToast('Não há edição anterior disponível.', 'warning'); return; }
@@ -1462,4 +1462,51 @@
       relToast('Erro ao inicializar módulo de relatórios: ' + e.message, 'danger');
     }
   };
+
+  function gerarPdfRelatorio() {
+  if (!state.relatorioAtual) { relToast('Nenhum relatório para gerar PDF.', 'warning'); return; }
+
+  const rel = state.relatorioAtual;
+  const snapshot = rel.snapshot || { bancos: {} };
+  const conteudo = construirConteudoRelatorio(rel, snapshot);
+
+  const win = window.open('', '_blank');
+  if (!win) { relToast('Bloqueador de pop-up impediu a geração do PDF.', 'warning'); return; }
+
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>' + escapeHtml(rel.titulo || 'Relatório') + '</title>' +
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">' +
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">' +
+    '<style>' +
+    'html,body{height:auto;overflow:auto;background:#fff;margin:0;padding:0;}' +
+    'body{padding:24px;font-family:Arial,Helvetica,sans-serif;color:#212529;}' +
+    '.rel-pdf-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #dc3545;padding-bottom:12px;margin-bottom:20px;}' +
+    '.rel-pdf-header h1{font-size:1.1rem;margin:0;color:#dc3545;}' +
+    '.rel-pdf-header small{color:#666;font-size:.78rem;}' +
+    '.rel-modal-section{margin-bottom:18px;}' +
+    '.rel-modal-section-title{font-weight:700;font-size:.85rem;margin-bottom:10px;}' +
+    '.rel-modal-divider{border-top:1px solid #e2e2e2;margin:16px 0;}' +
+    '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}' +
+    '.rel-modal-card{background:#f8f9fa;border-radius:8px;padding:8px 12px;}' +
+    '.rel-modal-card-label{font-size:.68rem;color:#888;}' +
+    '.rel-modal-card-value{font-size:.8rem;font-weight:600;}' +
+    'table{width:100%;border-collapse:collapse;}' +
+    'table, th, td{border:1px solid #ccc !important;}' +
+    'th, td{padding:5px 8px;}' +
+    'thead{background:#f1f1f1;}' +
+    '@page{size:A4;margin:14mm;}' +
+    '@media print{body{padding:0;} table{page-break-inside:auto;} tr{page-break-inside:avoid;}}' +
+    '</style></head><body>' +
+    '<div class="rel-pdf-header"><div><h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
+    '<small>Período: ' + escapeHtml(rel.periodoLabel || '') + '</small></div>' +
+    '<div style="text-align:right;font-size:.72rem;color:#666;">Gerado em ' + escapeHtml(obterHoraAtualBR()) + '</div></div>' +
+    conteudo +
+    '<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},400);};<\/script>' +
+    '</body></html>';
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
 })();
