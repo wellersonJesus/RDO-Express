@@ -20,9 +20,9 @@
       motoboy: ['motoboy'], status: ['status'], observacao: ['observacao']
     },
     financeiro: {
-      id: ['id'], id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'], descricao: ['descricao'],
-      motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'], colaborador: ['colaborador'],
-      observacao: ['observacao'], situacao: ['situacao']
+      id: ['id'], colaborador_id: ['colaborador_id'], id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'],
+      descricao: ['descricao'], motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'],
+      colaborador: ['colaborador'], observacao: ['observacao'], situacao: ['situacao']
     },
     clientes: {
       id: ['id'], username: ['username'], responsavel: ['responsavel'], contato: ['contato'],
@@ -31,7 +31,7 @@
     colaborador: {
       id: ['id'], username: ['username'], colaborador: ['colaborador'], cpf_cnpj: ['cpf_cnpj'],
       placa: ['placa'], email: ['email'], endereco: ['endereco'], bairro: ['bairro'],
-      chave_pix: ['chave_pix'], status: ['status']
+      chave_pix: ['chave_pix'], comissao: ['comissao'], status: ['status']
     },
     chat: {
       id: ['id'], id_cliente: ['id_cliente'], pedido_id: ['pedido_id'], texto: ['texto'],
@@ -53,13 +53,12 @@
     if (v === null || v === undefined || v === '') return NaN;
     if (typeof v === 'number') return v;
     let s = String(v).trim();
-    s = s.replace(/r\$\s*/gi, ''); // remove "R$"
-    // se tem vírgula como decimal (padrão BR: 1.234,56)
+    s = s.replace(/r\$\s*/gi, '');
     if (s.indexOf(',') !== -1) {
-      s = s.replace(/\./g, '');   // remove separador de milhar
-      s = s.replace(',', '.');    // vírgula -> ponto decimal
+      s = s.replace(/\./g, '');
+      s = s.replace(',', '.');
     }
-    s = s.replace(/[^0-9.\-]/g, ''); // remove qualquer lixo remanescente
+    s = s.replace(/[^0-9.\-]/g, '');
     const n = parseFloat(s);
     return n;
   }
@@ -82,7 +81,8 @@
       label: 'Colaboradores', icon: 'bi-person-workspace', endpoint: 'getcolaboradores',
       campos: {
         username: 'Username', colaborador: 'Colaborador', cpf_cnpj: 'CPF/CNPJ', placa: 'Placa',
-        email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix', status: 'Status'
+        email: 'Email', endereco: 'Endereço', bairro: 'Bairro', chave_pix: 'Chave Pix',
+        comissao: 'Comissão', status: 'Status'
       }
     },
     clientes: {
@@ -114,7 +114,7 @@
     motoboys: {
       bancos: ['colaborador', 'pedidos', 'financeiro'],
       campos: {
-        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
@@ -147,14 +147,14 @@
     global: {
       bancos: ['colaborador', 'clientes', 'pedidos', 'financeiro', 'chat'],
       campos: {
-        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       },
       defaults: {
-        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'status'],
+        colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
@@ -676,7 +676,6 @@
     return Object.keys(mapa).map(function (k) {
       const m = mapa[k];
 
-      // ===== Lógica de divisão 80% Motoboy / 20% RDO =====
       const valorMotoboy = m.receitaTotal * PERCENTUAL_MOTOBOY;
       const valorRdo = m.receitaTotal * PERCENTUAL_RDO;
 
@@ -693,7 +692,6 @@
         valorRdo: valorRdo,
         valorMotoboyPendente: valorMotoboyPendente,
         valorRdoPendente: valorRdoPendente,
-        // Soma de conferência (deve ser igual à receitaTotal)
         valorTotalCalculado: valorMotoboy + valorRdo
       };
     }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
@@ -828,9 +826,8 @@
       };
     });
 
-    // ===== NOVO: Resumo de totais por Motoboy e Cliente =====
     if (bancosDoBuilder().indexOf('pedidos') !== -1) {
-      const pedidosData = coletarDadosBanco('pedidos'); // já respeita filtro de período/motoboy/cliente
+      const pedidosData = coletarDadosBanco('pedidos');
       snapshot.resumos.motoboys = agruparPorMotoboy(pedidosData);
       snapshot.resumos.clientes = agruparPorCliente(pedidosData);
     }
@@ -869,7 +866,7 @@
         snapshot: snapshot
       };
 
-      setTimeout(function () {
+       setTimeout(function () {
         els.builderBtnGerar.disabled = false;
         els.builderBtnGerar.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span>Gerar Relatório</span>';
         fecharBuilder();
@@ -1103,7 +1100,6 @@
       html += '</div>';
     });
 
-    // ===== NOVO: Resumo de Totais (Motoboys e Clientes) =====
     const resumos = snapshot && snapshot.resumos ? snapshot.resumos : {};
 
     if (resumos.motoboys && resumos.motoboys.length) {
@@ -1111,7 +1107,6 @@
       html += '<div class="rel-modal-section">';
       html += '<div class="rel-modal-section-title"><i class="bi bi-bicycle"></i> Resumo por Motoboy</div>';
 
-      // ===== Explicação da regra de divisão =====
       html += '<div style="background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.75rem;color:#1c3d5a;">';
       html += '<i class="bi bi-info-circle-fill" style="margin-right:6px;color:#0d6efd;"></i>';
       html += '<strong>Regra de divisão da corrida:</strong> do valor total de cada corrida, <strong>' +
@@ -1157,7 +1152,6 @@
         '<td>' + formatarMoeda(totalGeralCalculado) + '</td>' +
         '</tr></tfoot></table></div>';
 
-      // Bloco extra: pendentes (se existirem)
       const temPendentes = resumos.motoboys.some(function (m) { return m.qtdPendente > 0; });
       if (temPendentes) {
         html += '<div style="margin-top:12px;font-size:.72rem;color:#b02a37;background:#fff3f3;border:1px solid #f5c2c7;border-radius:8px;padding:8px 12px;">';
@@ -1445,7 +1439,7 @@
   window.RelatoriosDebug = {
     getState: function () { return state; },
     recarregar: carregarDados,
-    parseMoeda: parseMoeda // exposto para debug no console
+    parseMoeda: parseMoeda
   };
 
   window.initRelatorios = function () {
