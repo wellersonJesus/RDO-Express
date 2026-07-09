@@ -798,6 +798,29 @@
     return dados;
   }
 
+  function calcularTotaisBanco(banco, linhas, camposSel) {
+    const totais = { qtd: linhas.length, somaValor: 0, somaEmAto: 0, temValor: false, temSituacao: false };
+    const campoValor = banco === 'financeiro' ? 'vlr_servico' : (banco === 'pedidos' ? 'valor_corrida' : null);
+    if (campoValor && camposSel.indexOf(campoValor) !== -1) {
+      totais.temValor = true;
+      linhas.forEach(function (l) {
+        const v = parseMoeda(l[campoValor]);
+        if (!isNaN(v)) totais.somaValor += v;
+      });
+    }
+    if (banco === 'financeiro' && camposSel.indexOf('situacao') !== -1) {
+      totais.temSituacao = true;
+      linhas.forEach(function (l) {
+        const sit = normalizarComparacao(l.situacao);
+        const v = parseMoeda(l[campoValor]);
+        if (sit === 'PAGO' && !isNaN(v)) {
+          totais.somaEmAto += v;
+        }
+      });
+    }
+    return totais;
+  }
+
   function montarSnapshot() {
     const snapshot = { bancos: {}, meta: {}, resumos: {} };
 
@@ -821,58 +844,60 @@
       snapshot.bancos[banco] = {
         label: BANCOS[banco].label,
         campos: camposSel.map(function (c) { return { chave: c, label: BANCOS[banco].campos[c] }; }),
-        linhas: linhas
+        linhas: linhas,
+        totais: calcularTotaisBanco(banco, linhas, camposSel)
       };
     });
 
-    const pedidosData = coletarDadosBanco('pedidos');
-    const resumoMotoboys = agruparPorMotoboy(pedidosData);
-    const resumoClientes = agruparPorCliente(pedidosData);
-    snapshot.resumos.motoboys = resumoMotoboys;
-    snapshot.resumos.clientes = resumoClientes;
+    const pedidosSelecionado = !!snapshot.bancos.pedidos;
+    if (pedidosSelecionado) {
+      const pedidosData = coletarDadosBanco('pedidos');
+      const resumoMotoboys = agruparPorMotoboy(pedidosData);
+      const resumoClientes = agruparPorCliente(pedidosData);
+      snapshot.resumos.motoboys = resumoMotoboys;
+      snapshot.resumos.clientes = resumoClientes;
 
-    const datasPorMotoboy = {};
-    pedidosData.forEach(function (registro) {
-      const nomeMotoboy = obterValorCampoPedido('motoboy', registro);
-      if (!nomeMotoboy) return;
+      const datasPorMotoboy = {};
+      pedidosData.forEach(function (registro) {
+        const nomeMotoboy = obterValorCampoPedido('motoboy', registro);
+        if (!nomeMotoboy) return;
+        const dataBruta = obterDataPedidoComFallback(registro);
+        const dataISO = normalizarDataISO(dataBruta);
+        const dataFormatada = dataISO ? formatDateBR(dataISO) : null;
+        if (!dataFormatada) return;
+        if (!datasPorMotoboy[nomeMotoboy]) datasPorMotoboy[nomeMotoboy] = [];
+        if (datasPorMotoboy[nomeMotoboy].indexOf(dataFormatada) === -1) {
+          datasPorMotoboy[nomeMotoboy].push(dataFormatada);
+        }
+      });
 
-      const dataBruta = obterDataPedidoComFallback(registro);
-      const dataISO = normalizarDataISO(dataBruta);
-      const dataFormatada = dataISO ? formatDateBR(dataISO) : null;
-      if (!dataFormatada) return;
+      const totalChamados = pedidosData.length;
+      const totalMotoboysDistintos = resumoMotoboys.length;
+      const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
+      const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
+      const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
+      const totalPendentes = resumoMotoboys.reduce(function (acc, m) { return acc + m.qtdPendente; }, 0);
 
-      if (!datasPorMotoboy[nomeMotoboy]) datasPorMotoboy[nomeMotoboy] = [];
-      if (datasPorMotoboy[nomeMotoboy].indexOf(dataFormatada) === -1) {
-        datasPorMotoboy[nomeMotoboy].push(dataFormatada);
-      }
-    });
-
-    const totalChamados = pedidosData.length;
-    const totalMotoboysDistintos = resumoMotoboys.length;
-    const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
-    const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
-    const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
-    const totalPendentes = resumoMotoboys.reduce(function (acc, m) { return acc + m.qtdPendente; }, 0);
-
-    snapshot.resumos.geral = {
-      totalChamados: totalChamados,
-      totalMotoboysDistintos: totalMotoboysDistintos,
-      valorTotalGeral: valorTotalGeral,
-      valorTotalMotoboys: valorTotalMotoboys,
-      valorTotalRdo: valorTotalRdo,
-      totalPendentes: totalPendentes,
-      motoboys: resumoMotoboys.map(function (m) {
-        return {
-          nome: m.nome,
-          qtd: m.qtd,
-          receitaTotal: m.receitaTotal,
-          valorMotoboy: m.valorMotoboy,
-          datas: (datasPorMotoboy[m.nome] || []).sort(function (a, b) {
-            return new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-'));
-          })
-        };
-      })
-    };
+      snapshot.resumos.geral = {
+        totalChamados: totalChamados,
+        totalMotoboysDistintos: totalMotoboysDistintos,
+        valorTotalGeral: valorTotalGeral,
+        valorTotalMotoboys: valorTotalMotoboys,
+        valorTotalRdo: valorTotalRdo,
+        totalPendentes: totalPendentes,
+        motoboys: resumoMotoboys.map(function (m) {
+          return {
+            nome: m.nome,
+            qtd: m.qtd,
+            receitaTotal: m.receitaTotal,
+            valorMotoboy: m.valorMotoboy,
+            datas: (datasPorMotoboy[m.nome] || []).sort(function (a, b) {
+              return new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-'));
+            })
+          };
+        })
+      };
+    }
 
     snapshot.meta.usuarioGerador = obterUsuarioLogado();
     snapshot.meta.horaGeracao = obterHoraAtualBR();
@@ -1139,6 +1164,18 @@
           html += '</tr>';
         });
         html += '</tbody></table></div>';
+
+        if (info.totais && (info.totais.temValor || info.totais.temSituacao)) {
+          html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;">';
+          html += '<div class="rel-modal-card" style="background:#f0f7ff;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + info.totais.qtd + '</div></div>';
+          if (info.totais.temValor) {
+            html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
+          }
+          if (info.totais.temSituacao) {
+            html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Valores em Ato</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaEmAto) + '</div></div>';
+          }
+          html += '</div>';
+        }
       }
       html += '</div>';
     });
