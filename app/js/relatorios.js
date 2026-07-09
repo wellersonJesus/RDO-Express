@@ -211,8 +211,10 @@
     if (!valor) return '';
     let v = String(valor).trim();
     if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.substring(0, 10);
-    const mBR = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    const mBR = v.match(/(\d{2})\/(\d{2})\/(\d{4})/);
     if (mBR) return mBR[3] + '-' + mBR[2] + '-' + mBR[1];
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) return toISO(d);
     return '';
   }
 
@@ -620,6 +622,21 @@
     return lanc ? resolverValor('financeiro', 'data', lanc) : '';
   }
 
+  function buscarPedidoDoChat(registroChat) {
+    const idPedido = resolverValor('chat', 'pedido_id', registroChat);
+    if (!idPedido) return null;
+    return state.pedidos.find(function (p) {
+      return String(resolverValor('pedidos', 'id', p)) === String(idPedido);
+    });
+  }
+
+  function obterDataChatComFallback(registroChat) {
+    const dataPropria = resolverValor('chat', 'data', registroChat);
+    if (dataPropria) return dataPropria;
+    const pedido = buscarPedidoDoChat(registroChat);
+    return pedido ? obterDataPedidoComFallback(pedido) : '';
+  }
+
   function obterValorCampoPedido(campo, pedido) {
     let valor = resolverValor('pedidos', campo, pedido);
     if (campo === 'horario') return extrairHora(valor);
@@ -648,6 +665,11 @@
       if (pedido) valor = resolverValor('pedidos', 'data', pedido);
     }
     return valor;
+  }
+
+  function obterValorCampoChat(campo, registro) {
+    if (campo === 'data') return obterDataChatComFallback(registro);
+    return resolverValor('chat', campo, registro);
   }
 
   function agruparPorMotoboy(pedidos) {
@@ -731,7 +753,7 @@
       return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
     });
     else if (banco === 'chat') dados = state.chat.filter(function (r) {
-      return dentroPeriodo(resolverValor('chat', 'data', r), p.inicio, p.fim);
+      return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
     });
     else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
       const dataF = obterValorCampoFinanceiro('data', r);
@@ -799,7 +821,7 @@
   }
 
   function calcularTotaisBanco(banco, linhas, camposSel) {
-    const totais = { qtd: linhas.length, somaValor: 0, somaEmAto: 0, temValor: false, temSituacao: false };
+    const totais = { qtd: linhas.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false };
     const campoValor = banco === 'financeiro' ? 'vlr_servico' : (banco === 'pedidos' ? 'valor_corrida' : null);
     if (campoValor && camposSel.indexOf(campoValor) !== -1) {
       totais.temValor = true;
@@ -814,7 +836,7 @@
         const sit = normalizarComparacao(l.situacao);
         const v = parseMoeda(l[campoValor]);
         if (sit === 'PAGO' && !isNaN(v)) {
-          totais.somaEmAto += v;
+          totais.somaPagos += v;
         }
       });
     }
@@ -835,6 +857,8 @@
             linha[campo] = obterValorCampoPedido(campo, registro);
           } else if (banco === 'financeiro') {
             linha[campo] = obterValorCampoFinanceiro(campo, registro);
+          } else if (banco === 'chat') {
+            linha[campo] = obterValorCampoChat(campo, registro);
           } else {
             linha[campo] = resolverValor(banco, campo, registro);
           }
@@ -1172,7 +1196,7 @@
             html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
           }
           if (info.totais.temSituacao) {
-            html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Valores em Ato</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaEmAto) + '</div></div>';
+            html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaPagos) + '</div></div>';
           }
           html += '</div>';
         }
@@ -1589,38 +1613,36 @@
 
     const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
       '<title>' + escapeHtml(rel.titulo || 'Relatório') + '</title>' +
-      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">' +
-      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">' +
       '<style>' +
-      'html,body{height:auto;overflow:auto;background:#fff;margin:0;padding:0;}' +
-      'body{padding:24px;font-family:Arial,Helvetica,sans-serif;color:#212529;}' +
-      '.rel-pdf-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #dc3545;padding-bottom:12px;margin-bottom:20px;}' +
-      '.rel-pdf-header h1{font-size:1.1rem;margin:0;color:#dc3545;}' +
-      '.rel-pdf-header small{color:#666;font-size:.78rem;}' +
-      '.rel-modal-section{margin-bottom:18px;}' +
-      '.rel-modal-section-title{font-weight:700;font-size:.85rem;margin-bottom:10px;}' +
-      '.rel-modal-divider{border-top:1px solid #e2e2e2;margin:16px 0;}' +
-      '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}' +
-      '.rel-modal-card{background:#f8f9fa;border-radius:8px;padding:8px 12px;}' +
-      '.rel-modal-card-label{font-size:.68rem;color:#888;}' +
-      '.rel-modal-card-value{font-size:.8rem;font-weight:600;}' +
-      'table{width:100%;border-collapse:collapse;}' +
-      'table, th, td{border:1px solid #ccc !important;}' +
-      'th, td{padding:5px 8px;}' +
-      'thead{background:#f1f1f1;}' +
-      '@page{size:A4;margin:14mm;}' +
-      '@media print{body{padding:0;} table{page-break-inside:auto;} tr{page-break-inside:avoid;}}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#222;padding:24px;font-size:12px;}' +
+      'h1{font-size:18px;margin-bottom:4px;}' +
+      '.periodo{color:#666;font-size:12px;margin-bottom:16px;}' +
+      '.rel-modal-divider{border-top:1px solid #ddd;margin:18px 0;}' +
+      '.rel-modal-section-title{font-weight:700;font-size:13px;margin-bottom:10px;}' +
+      '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}' +
+      '.rel-modal-card{background:#f7f7f7;border-radius:8px;padding:8px 10px;}' +
+      '.rel-modal-card-label{font-size:10px;color:#777;}' +
+      '.rel-modal-card-value{font-weight:700;font-size:13px;}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:10px;}' +
+      'th,td{border:1px solid #ccc;padding:5px 7px;font-size:11px;text-align:left;}' +
+      'th{background:#f0f0f0;}' +
+      'tfoot tr{background:#f8f9fa;font-weight:700;}' +
+      '@media print{body{padding:0;}}' +
       '</style></head><body>' +
-      '<div class="rel-pdf-header"><div><h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
-      '<small>Período: ' + escapeHtml(rel.periodoLabel || '') + '</small></div>' +
-      '<div style="text-align:right;font-size:.72rem;color:#666;">Gerado em ' + escapeHtml(obterHoraAtualBR()) + '</div></div>' +
+      '<h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
+      '<div class="periodo">' + escapeHtml(rel.periodoLabel || '') + '</div>' +
       conteudo +
-      '<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},400);};<\/script>' +
       '</body></html>';
 
     win.document.open();
     win.document.write(html);
     win.document.close();
-  }
 
+    win.onload = function () {
+      setTimeout(function () {
+        win.focus();
+        win.print();
+      }, 300);
+    };
+  }
 })();
