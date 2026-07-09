@@ -65,9 +65,9 @@ RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
 # ================================================================
-ULTIMO_RDO_LANCADO = "RDO167"
-FILTRO_DATA_INICIO = "06/05/2026"
-FILTRO_DATA_FIM = "31/05/2026"
+ULTIMO_RDO_LANCADO = "RDO974"
+FILTRO_DATA_INICIO = "30/06/2026"
+FILTRO_DATA_FIM = "06/07/2026"
 # ================================================================
 
 PAGAMENTO_SEMANAL = [

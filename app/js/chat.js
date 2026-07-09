@@ -53,6 +53,32 @@ window.NotificationManager = (function () {
     var audioCtx = null;
     var isAberto = false;
 
+    // ===================== CONTROLE DE SOM (MUDO POR TIPO) =====================
+    var CHAVE_SOM = 'rdo_sound_settings';
+    var somPadrao = { criado: false, cancelado: false, concluido: false }; // false = ativo
+
+    function _lerConfigSom() {
+        try {
+            var salvo = JSON.parse(localStorage.getItem(CHAVE_SOM));
+            return Object.assign({}, somPadrao, salvo || {});
+        } catch (_) { return Object.assign({}, somPadrao); }
+    }
+
+    function _salvarConfigSom(cfg) {
+        try { localStorage.setItem(CHAVE_SOM, JSON.stringify(cfg)); } catch (_) { }
+    }
+
+    var configSom = _lerConfigSom();
+
+    function _somEstaMutado(tipo) { return !!configSom[tipo]; }
+
+    function _alternarMudo(tipo) {
+        configSom[tipo] = !configSom[tipo];
+        _salvarConfigSom(configSom);
+        _renderizarPainelSom();
+    }
+    // ============================================================================
+
     function _getCtx() {
         if (!audioCtx) {
             try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -83,9 +109,53 @@ window.NotificationManager = (function () {
         });
     }
 
-    function _tocarSomConcluido() { _tocarTom([1200, 1500, 1900, 2400], [0.09, 0.09, 0.09, 0.18], 'sine'); }
-    function _tocarSomCancelado() { _tocarTom([440, 330], [0.15, 0.28], 'sawtooth'); }
+    // 🟢 PEDIDO CRIADO — tom curto e "positivo", ascendente
+    function _tocarSomCriado() {
+        if (_somEstaMutado('criado')) return;
+        _tocarTom([700, 1000], [0.09, 0.14], 'triangle');
+    }
+
+    // 🔴 PEDIDO CANCELADO — tom grave, "queda"
+    function _tocarSomCancelado() {
+        if (_somEstaMutado('cancelado')) return;
+        _tocarTom([440, 330], [0.15, 0.28], 'sawtooth');
+    }
+
+    // 🟡 PEDIDO CONCLUÍDO — efeito "moedinhas caindo" (vários tons agudos rápidos e aleatórios)
+    function _tocarSomConcluido() {
+        if (_somEstaMutado('concluido')) return;
+        var ctx = _getCtx();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) { } }
+
+        var tempoAtual = ctx.currentTime;
+        var totalMoedas = 6;
+        for (var i = 0; i < totalMoedas; i++) {
+            (function (idx) {
+                var freqBase = 1800 + Math.random() * 900; // agudo, tipo "moeda"
+                var inicio = tempoAtual + idx * (0.06 + Math.random() * 0.03);
+                var dur = 0.12 + Math.random() * 0.05;
+
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freqBase, inicio);
+                osc.frequency.exponentialRampToValueAtTime(freqBase * 0.6, inicio + dur);
+
+                gain.gain.setValueAtTime(0, inicio);
+                gain.gain.linearRampToValueAtTime(0.28, inicio + 0.008);
+                gain.gain.exponentialRampToValueAtTime(0.001, inicio + dur);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(inicio);
+                osc.stop(inicio + dur + 0.02);
+            })(i);
+        }
+    }
+
     function _tocarSomExcluido() { _tocarTom([600, 400, 250], [0.1, 0.1, 0.22], 'triangle'); }
+    // ============================================================================
 
     function _escutarEventos() {
         if (!window.EventBus) return;
@@ -112,7 +182,9 @@ window.NotificationManager = (function () {
             _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'EXCLUÍDO', timestamp: new Date(), variant: 'danger' });
         });
 
+        // 🟢 Agora dispara o som de "pedido criado"
         window.EventBus.on('pedido:adicionado', function (data) {
+            _tocarSomCriado();
             _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'CRIADO', timestamp: new Date(), variant: 'success' });
         });
     }
@@ -268,6 +340,7 @@ window.NotificationManager = (function () {
         var menu = _getMenu();
         if (!menu) return;
         if (window.PedidosDropdown && typeof window.PedidosDropdown.close === 'function') window.PedidosDropdown.close();
+        _fecharPainelSom();
         _renderizarLista();
         menu.style.display = 'flex';
         menu.style.flexDirection = 'column';
@@ -295,6 +368,99 @@ window.NotificationManager = (function () {
         else _abrirDropdown();
     }
 
+    var somPainelAberto = false;
+
+    function _criarBotaoSom() {
+        if (document.getElementById('btn-sound-settings')) return;
+
+        var btnNotif = document.querySelector('.btn-notifications');
+        if (!btnNotif || !btnNotif.parentElement) {
+            setTimeout(_criarBotaoSom, 300);
+            return;
+        }
+
+        var pai = btnNotif.parentElement;
+
+        // Garante alinhamento horizontal consistente, independente do HTML original
+        pai.style.display = 'flex';
+        pai.style.alignItems = 'center';
+
+        var btn = document.createElement('button');
+        btn.id = 'btn-sound-settings';
+        btn.className = 'btn-notifications btn-sound-toggle';
+        btn.title = 'Configurar sons de notificação';
+        btn.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+
+        // Insere ANTES do ícone de notificações (fica à esquerda dele, na mesma linha)
+        pai.insertBefore(btn, btnNotif);
+
+        var painel = document.createElement('div');
+        painel.id = 'painel-sound-settings';
+        painel.className = 'painel-sound-settings';
+        document.body.appendChild(painel);
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (window.PedidosDropdown && typeof window.PedidosDropdown.close === 'function') window.PedidosDropdown.close();
+            _fecharDropdown();
+            somPainelAberto ? _fecharPainelSom() : _abrirPainelSom(btn);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!somPainelAberto) return;
+            if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) _fecharPainelSom();
+        });
+    }
+
+    function _abrirPainelSom(btn) {
+        var painel = document.getElementById('painel-sound-settings');
+        if (!painel) return;
+        var rect = btn.getBoundingClientRect();
+        painel.style.top = (rect.bottom + 8) + 'px';
+        var left = rect.left;
+        // Evita vazar pela direita da tela
+        var maxLeft = window.innerWidth - 236;
+        if (left > maxLeft) left = maxLeft;
+        if (left < 8) left = 8;
+        painel.style.left = left + 'px';
+        painel.style.display = 'block';
+        somPainelAberto = true;
+        _renderizarPainelSom();
+
+        window.addEventListener('resize', function _reposiciona() {
+            if (!somPainelAberto) { window.removeEventListener('resize', _reposiciona); return; }
+            _abrirPainelSom(btn);
+        });
+    }
+
+    function _fecharPainelSom() {
+        var painel = document.getElementById('painel-sound-settings');
+        if (!painel) return;
+        painel.style.display = 'none';
+        somPainelAberto = false;
+    }
+
+    function _renderizarPainelSom() {
+        var painel = document.getElementById('painel-sound-settings');
+        if (!painel) return;
+
+        var itens = [
+            { tipo: 'criado', label: 'Pedido Lançado', icone: 'bi-plus-circle-fill', cor: '#28a745' },
+            { tipo: 'cancelado', label: 'Pedido Cancelado', icone: 'bi-x-circle-fill', cor: '#dc3545' },
+            { tipo: 'concluido', label: 'Pedido Concluído', icone: 'bi-check-circle-fill', cor: '#ffc107' }
+        ];
+
+        painel.innerHTML =
+            '<div class="sound-panel-title">🔔 Sons de Notificação</div>' +
+            itens.map(function (item) {
+                var mutado = _somEstaMutado(item.tipo);
+                return '<div class="sound-item" onclick="window.NotificationManager.alternarMudo(\'' + item.tipo + '\')">' +
+                    '<span><i class="bi ' + item.icone + ' me-2" style="color:' + item.cor + ';"></i>' + item.label + '</span>' +
+                    '<i class="bi ' + (mutado ? 'bi-volume-mute-fill' : 'bi-volume-up-fill sound-active') + '"></i>' +
+                    '</div>';
+            }).join('');
+    }
+
     function _configurar() {
         document.addEventListener('click', function (e) {
             var btn = _getBtn();
@@ -316,6 +482,7 @@ window.NotificationManager = (function () {
         _escutarEventos();
         _atualizarBadge();
         _configurar();
+        _criarBotaoSom();
     }
 
     return {
@@ -329,7 +496,10 @@ window.NotificationManager = (function () {
         limparNotificacoes: _limparTodas,
         tocarSomConcluido: _tocarSomConcluido,
         tocarSomCancelado: _tocarSomCancelado,
-        tocarSomExcluido: _tocarSomExcluido
+        tocarSomCriado: _tocarSomCriado,
+        tocarSomExcluido: _tocarSomExcluido,
+        alternarMudo: _alternarMudo,
+        somEstaMutado: _somEstaMutado
     };
 })();
 
