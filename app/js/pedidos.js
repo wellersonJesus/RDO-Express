@@ -1018,23 +1018,42 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         window.EventBus.on('pedido:excluido', function (dados) {
             if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
-            var idStr = String(dados.id || '').trim();
+            var idStr = String((dados && dados.id) || '').trim();
             window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
                 return String(p.id || '').trim() !== idStr;
             });
+            if (Array.isArray(window.AppRDO.chatsCache)) {
+                window.AppRDO.chatsCache = window.AppRDO.chatsCache.filter(function (c) {
+                    return String(c.pedido_id || '').trim() !== idStr;
+                });
+            }
             _renderizarTabela(window.AppRDO.pedidosCache);
             _dispararSync();
         });
 
+        // 🔴 NOVO: exclusão lógica do chat (disparada ao cancelar um pedido)
+        window.EventBus.on('chat:excluidoLogico', function (dados) {
+            if (!window.AppRDO || !Array.isArray(window.AppRDO.chatsCache)) return;
+            var idStr = String((dados && dados.pedidoId) || '').trim();
+            if (!idStr) return;
+            window.AppRDO.chatsCache = window.AppRDO.chatsCache.filter(function (c) {
+                var cId = String(c.pedido_id || '').trim();
+                return cId.replace(/^RDO0*/i, '') !== idStr.replace(/^RDO0*/i, '');
+            });
+            _renderizarTabela(window.AppRDO.pedidosCache);
+        });
+
         window.EventBus.on('pedido:adicionado', function (novoPedido) {
-            if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
+            if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache) || !novoPedido) return;
             window.AppRDO.pedidosCache.push(novoPedido);
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
 
         window.EventBus.on('pedido:cancelado', function (dados) {
+            if (!dados) return;
+            var idStr = String(dados.id || '').trim();
             var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                return String(p.id || '').trim() === String(dados.id || '').trim();
+                return String(p.id || '').trim() === idStr;
             });
             if (pedido) {
                 pedido.status = 'CANCELADO';
@@ -1044,10 +1063,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         });
 
         window.EventBus.on('pedido:statusAtualizado', function (dados) {
+            if (!dados) return;
             var idStr = String(dados.id || '').trim();
+            var idNorm = idStr.replace(/^RDO0*/i, '');
             var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                return String(p.id || '').trim() === idStr ||
-                    String(p.id || '').trim().replace(/^RDO0*/i, '') === idStr.replace(/^RDO0*/i, '');
+                var pId = String(p.id || '').trim();
+                return pId === idStr || pId.replace(/^RDO0*/i, '') === idNorm;
             });
             if (pedido) {
                 pedido.status = dados.status || pedido.status;
@@ -1059,6 +1080,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         });
 
         window.EventBus.on('pedido:atualizado', function (dados) {
+            if (!dados) return;
             var idStr = String(dados.id || '').trim();
             var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
                 return String(p.id || '').trim() === idStr;

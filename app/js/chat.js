@@ -477,6 +477,26 @@ window.NotificationManager = (function () {
     }
 
     function _configurar() {
+        // 🔴 Clique no sino: abre/fecha o dropdown de notificações
+        var btnSino = _getBtn();
+        if (btnSino) {
+            btnSino.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                _toggleDropdown();
+            });
+        }
+
+        // Fecha ao clicar fora do dropdown
+        document.addEventListener('click', function (e) {
+            var menu = _getMenu();
+            if (!menu || !isAberto) return;
+            if (!menu.contains(e.target) && e.target !== btnSino && (!btnSino || !btnSino.contains(e.target))) {
+                _fecharDropdown();
+            }
+        });
+
+        // Botão "Silenciar" / "Ativar" dentro do dropdown
         document.addEventListener('click', function (e) {
             var target = e.target.closest('#btn-mute-notif');
             if (!target) return;
@@ -487,13 +507,23 @@ window.NotificationManager = (function () {
             localStorage.setItem('rdo_notif_muted', String(novo));
             aplicarEstadoMute(novo);
         });
+
+        // Botões "Marcar todas como lidas" e "Limpar", se existirem no HTML
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('#btn-marcar-lidas')) { e.preventDefault(); _marcarTodasComoLidas(); }
+            if (e.target.closest('#btn-limpar-notif')) { e.preventDefault(); _limparTodas(); }
+        });
     }
 
     function _init() {
         _escutarEventos();
         _atualizarBadge();
-        _configurar();
         _criarBotaoSom();
+        _configurar();
+        if (!_getBtn()) {
+            // fallback: tenta novamente caso o botão ainda não exista no DOM
+            setTimeout(_configurar, 300);
+        }
         if (typeof window._aplicarEstadoMuteNotif === 'function') {
             window._aplicarEstadoMuteNotif(localStorage.getItem('rdo_notif_muted') === 'true');
         }
@@ -1184,8 +1214,7 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
 function _resolverTextoMensagem(msg, pedido) {
     var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
     if (textoSalvo.length > 0) return textoSalvo;
-    if (!pedido) return '';
-
+    if (!pedido) return null;
     var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
     var tempo = String(pedido.tempo || pedido.tempoFormatado || '').trim();
     var tempoMin = 0;
@@ -1405,6 +1434,7 @@ window.renderizarMensagens = function (mensagens, pedidos) {
             : 'Alterar Status';
 
         var textoMensagem = _resolverTextoMensagem(msg, pedido);
+        if (textoMensagem === null) return;
 
         container.appendChild(
             _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
@@ -1602,6 +1632,48 @@ window.StatusModal = (function () {
         }
     }
 
+    async function _excluirChatLogicamente(pedidoIdRaw) {
+        var idNorm = _normalizarId(pedidoIdRaw);
+        try {
+            var respChat = await API.call('deletechat', { pedido_id: idNorm });
+            var erroChat = !respChat || respChat.status === 'error';
+
+            if (erroChat) {
+                console.warn('[StatusModal] Falha ao excluir logicamente o chat do pedido', idNorm, respChat);
+                return false;
+            }
+
+            // Remove do cache local de mensagens
+            if (Array.isArray(window.AppRDO.mensagensCache)) {
+                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                    return _normalizarId(String(m.pedido_id || '').trim()) !== idNorm;
+                });
+            }
+
+            // Remove visualmente a bolha de mensagem do chat (fade-out)
+            var msgEl = document.querySelector('[data-pedido-id="' + pedidoIdRaw + '"]');
+            if (msgEl) {
+                var wrapper = msgEl.closest('.message-wrapper');
+                if (wrapper) {
+                    wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'translateX(30px)';
+                    setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
+                }
+            }
+
+            // Notifica outros módulos (ex: pedidos.js) para sincronizar o cache de chat
+            if (typeof window.EventBus !== 'undefined') {
+                window.EventBus.emit('chat:excluidoLogico', { pedidoId: idNorm });
+            }
+
+            return true;
+        } catch (e) {
+            console.warn('[StatusModal] Erro ao excluir logicamente o chat:', e);
+            return false;
+        }
+    }
+
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
         var motoboyNome = '';
         var statusFmt = String(status || '');
@@ -1627,6 +1699,12 @@ window.StatusModal = (function () {
             if (resposta && resposta.status === 'success') {
                 _atualizarCache(_pedidoId, statusFmt, motoboyNome);
                 _setIconeFinal(_pedidoId, status, motoboyNome);
+
+                // 🔴 NOVO: quando o pedido é cancelado, exclui logicamente
+                // o registro correspondente no banco de dados CHAT também.
+                if (status === 'CANCELADO') {
+                    await _excluirChatLogicamente(_pedidoId);
+                }
 
                 if (window.RDO_PEDIDOS && typeof window.RDO_PEDIDOS.atualizarStatusLocal === 'function') {
                     window.RDO_PEDIDOS.atualizarStatusLocal(
@@ -1886,7 +1964,6 @@ window.abrirModalMensagemPadrao = function (config) {
     modal.show();
 };
 
-// --- Atalho para exibir qualquer erro reaproveitando o mesmo modal ---
 window.exibirErroModalPadrao = function (mensagemErro, titulo) {
     window.abrirModalMensagemPadrao({
         erro: mensagemErro || 'Algo deu errado. Tente novamente.',
@@ -1910,22 +1987,22 @@ window.excluirPedido = async function (pedidoId) {
     if (!pedidoId) return;
     var idStr = String(pedidoId).trim();
     try {
-        var resultados = await Promise.allSettled([
-            API.call('deletepedido', { id: idStr }),
-            API.call('deletechat', { pedido_id: idStr })
-        ]);
+        // 🔴 Sequencial (não paralelo) — evita concorrência no Apps Script/Sheets
+        var respChat = await API.call('deletechat', { pedido_id: idStr });
+        var erroChat = !respChat || respChat.status === 'error';
+        if (erroChat) {
+            throw new Error((respChat && respChat.message) || 'Falha ao excluir o chat do pedido');
+        }
 
-        var erroPedido = resultados[0].status === 'rejected' ||
-            (resultados[0].value && resultados[0].value.status === 'error');
-
+        var respPedido = await API.call('deletepedido', { id: idStr });
+        var erroPedido = !respPedido || respPedido.status === 'error';
         if (erroPedido) {
-            var msg = (resultados[0].reason && resultados[0].reason.message) ||
-                (resultados[0].value && resultados[0].value.message) || 'Falha ao excluir pedido';
-            throw new Error(msg);
+            throw new Error((respPedido && respPedido.message) || 'Falha ao excluir pedido');
         }
 
         if (typeof window.EventBus !== 'undefined')
             window.EventBus.emit('pedido:excluido', { id: idStr });
+
     } catch (e) {
         Swal.fire({
             icon: 'error', title: 'Erro ao excluir',
@@ -2498,28 +2575,41 @@ window.fecharParaChat = function (modalId) {
     function _registrarEventos() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventos, 300); return; }
 
-        window.EventBus.on('pedido:excluido', function (dados) {
-            var idStr = String(dados.id).trim();
-            if (Array.isArray(window.AppRDO.mensagensCache))
-                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
-                    return String(m.pedido_id).trim() !== idStr;
-                });
-            if (Array.isArray(window.AppRDO.pedidosCache))
-                window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                    return String(p.id).trim() !== idStr;
-                });
+        function _normId(id) {
+            return String(id || '').trim().replace(/^RDO0*/i, '').toUpperCase();
+        }
 
-            var msgEl = document.querySelector('[data-pedido-id="' + idStr + '"]');
-            if (msgEl) {
+        window.EventBus.on('pedido:excluido', function (dados) {
+            var idNorm = _normId(dados && dados.id);
+            if (!idNorm) return;
+
+            // Limpa caches
+            if (Array.isArray(window.AppRDO.mensagensCache)) {
+                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                    return _normId(m.pedido_id) !== idNorm;
+                });
+            }
+            if (Array.isArray(window.AppRDO.pedidosCache)) {
+                window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+                    return _normId(p.id) !== idNorm;
+                });
+            }
+
+            // 🔴 Remove a bolha do DOM comparando por ID normalizado (não mais exato)
+            document.querySelectorAll('[data-pedido-id]').forEach(function (msgEl) {
+                if (_normId(msgEl.getAttribute('data-pedido-id')) !== idNorm) return;
                 var wrapper = msgEl.closest('.message-wrapper');
                 if (wrapper) {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
                     wrapper.style.opacity = '0';
                     wrapper.style.transform = 'translateX(30px)';
                     setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
+                } else {
+                    try { msgEl.remove(); } catch (_) { }
                 }
-            }
+            });
 
+            // Ressincroniza com o backend por garantia
             var clienteId = window.AppRDO && window.AppRDO.clienteId;
             if (clienteId) {
                 setTimeout(function () {
@@ -2531,13 +2621,21 @@ window.fecharParaChat = function (modalId) {
             }
         });
 
+        // Mesmo tratamento para exclusão lógica (cancelamento)
+        window.EventBus.on('chat:excluidoLogico', function (dados) {
+            var idNorm = _normId(dados && dados.pedidoId);
+            if (!idNorm) return;
+            if (Array.isArray(window.AppRDO.mensagensCache)) {
+                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                    return _normId(m.pedido_id) !== idNorm;
+                });
+            }
+        });
+
         window.EventBus.on('pedido:statusAtualizado', function (dados) {
-            var idStr = String(dados.id || '').trim();
+            var idStr = _normId(dados && dados.id);
             var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            var pedido = cache.find(function (p) {
-                return String(p.id || '').trim() === idStr ||
-                    String(p.id || '').trim().replace(/^RDO0*/i, '') === idStr.replace(/^RDO0*/i, '');
-            });
+            var pedido = cache.find(function (p) { return _normId(p.id) === idStr; });
             if (pedido) {
                 pedido.status = dados.status || pedido.status;
                 if (dados.motoboy) pedido.motoboy = dados.motoboy;

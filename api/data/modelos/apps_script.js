@@ -11,7 +11,15 @@ var MODELO_PADRAO = [
 ].join('\n');
 
 function doPost(e) {
+  var lock = LockService.getScriptLock();
+  var temLock = false;
+
   try {
+    temLock = lock.tryLock(10000); // aguarda até 10s pelo lock
+    if (!temLock) {
+      return responder({ status: "error", message: "Sistema ocupado, tente novamente em alguns segundos." });
+    }
+
     if (!e || !e.postData || !e.postData.contents)
       return responder({ status: "error", message: "Payload vazio" });
 
@@ -70,6 +78,8 @@ function doPost(e) {
 
   } catch (err) {
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
+  } finally {
+    if (temLock) lock.releaseLock();
   }
 }
 
