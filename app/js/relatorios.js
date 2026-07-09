@@ -120,7 +120,7 @@
       },
       defaults: {
         colaborador: ['username'],
-        pedidos: ['solicitante', 'contato', 'de', 'para', 'valor_corrida'],
+        pedidos: ['solicitante', 'de', 'para', 'valor_corrida'],
         financeiro: ['id_pedido', 'data', 'descricao', 'motoboy', 'vlr_servico']
       }
     },
@@ -134,9 +134,9 @@
       },
       defaults: {
         clientes: ['username'],
-        pedidos: ['solicitante', 'contato', 'de', 'para', 'valor_corrida'],
-        chat: ['pedido_id', 'hora', 'data'],
-        financeiro: ['id_pedido', 'data', 'vlr_servico']
+        pedidos: [],
+        chat: [],
+        financeiro: ['data', 'descricao', 'vlr_servico']
       }
     },
     financeiro: {
@@ -744,117 +744,117 @@
   }
 
   function coletarDadosBanco(banco) {
-  const p = state.builder.periodo;
-  let dados = [];
+    const p = state.builder.periodo;
+    let dados = [];
 
-  if (banco === 'clientes') dados = state.clientes.slice();
-  else if (banco === 'colaborador') dados = state.motoboys.slice();
-  else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) {
-    return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
-  });
-  else if (banco === 'chat') dados = state.chat.filter(function (r) {
-    return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
-  });
-  else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
-    const dataF = obterValorCampoFinanceiro('data', r);
-    return dentroPeriodo(dataF, p.inicio, p.fim);
-  });
+    if (banco === 'clientes') dados = state.clientes.slice();
+    else if (banco === 'colaborador') dados = state.motoboys.slice();
+    else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) {
+      return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
+    });
+    else if (banco === 'chat') dados = state.chat.filter(function (r) {
+      return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
+    });
+    else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
+      const dataF = obterValorCampoFinanceiro('data', r);
+      return dentroPeriodo(dataF, p.inicio, p.fim);
+    });
 
-  const fx = state.builder.filtroExtra;
-  if (!fx || !fx.valor) return dados;
+    const fx = state.builder.filtroExtra;
+    if (!fx || !fx.valor) return dados;
 
-  const valoresBrutos = Array.isArray(fx.valor) ? fx.valor : [fx.valor];
-  const contemTodos = valoresBrutos.indexOf('__todos__') !== -1;
-  if (contemTodos || !valoresBrutos.length) return dados;
+    const valoresBrutos = Array.isArray(fx.valor) ? fx.valor : [fx.valor];
+    const contemTodos = valoresBrutos.indexOf('__todos__') !== -1;
+    if (contemTodos || !valoresBrutos.length) return dados;
 
-  // Normaliza TUDO para string, eliminando bug number vs string
-  const valoresStr = valoresBrutos.map(function (v) { return String(v).trim(); });
+    // Normaliza TUDO para string, eliminando bug number vs string
+    const valoresStr = valoresBrutos.map(function (v) { return String(v).trim(); });
 
-  function idBate(valorCampo) {
-    return valoresStr.indexOf(String(valorCampo).trim()) !== -1;
-  }
-
-  // ---------- FILTRO POR MOTOBOY ----------
-  if (fx.campo === 'motoboy_id') {
-    const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
-
-    if (banco === 'colaborador') {
-      dados = dados.filter(function (r) { return idBate(r.id); });
+    function idBate(valorCampo) {
+      return valoresStr.indexOf(String(valorCampo).trim()) !== -1;
     }
-    if (banco === 'pedidos') {
-      dados = dados.filter(function (r) {
-        const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
-        return nomesSelecionados.indexOf(mb) !== -1;
-      });
-    }
-    if (banco === 'financeiro') {
-      dados = dados.filter(function (r) {
-        const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
-        const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
-        return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
-      });
-    }
-    return dados;
-  }
 
-  // ---------- FILTRO POR CLIENTE ----------
-  if (fx.campo === 'cliente_id') {
+    // ---------- FILTRO POR MOTOBOY ----------
+    if (fx.campo === 'motoboy_id') {
+      const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
 
-    if (banco === 'clientes') {
-      dados = dados.filter(function (r) { return idBate(r.id); });
+      if (banco === 'colaborador') {
+        dados = dados.filter(function (r) { return idBate(r.id); });
+      }
+      if (banco === 'pedidos') {
+        dados = dados.filter(function (r) {
+          const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
+          return nomesSelecionados.indexOf(mb) !== -1;
+        });
+      }
+      if (banco === 'financeiro') {
+        dados = dados.filter(function (r) {
+          const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
+          const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
+          return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+        });
+      }
       return dados;
     }
 
-    if (banco === 'pedidos') {
-      dados = dados.filter(function (r) {
-        const v = resolverValor('pedidos', 'id_cliente', r);
-        return idBate(v);
-      });
-      return dados;
-    }
+    // ---------- FILTRO POR CLIENTE ----------
+    if (fx.campo === 'cliente_id') {
 
-    if (banco === 'chat') {
-      dados = dados.filter(function (r) {
-        const v = resolverValor('chat', 'id_cliente', r);
-        return idBate(v);
-      });
-      return dados;
-    }
-
-    // financeiro: precisa cruzar via pedidos, sem depender do que foi marcado nos checkboxes
-    if (banco === 'financeiro') {
-      const pedidosDoCliente = state.pedidos.filter(function (ped) {
-        const v = resolverValor('pedidos', 'id_cliente', ped);
-        return idBate(v);
-      });
-
-      const idsPedidosDoCliente = pedidosDoCliente.map(function (ped) {
-        return String(resolverValor('pedidos', 'id', ped)).trim();
-      });
-
-      // DEBUG opcional — remova em produção
-      if (!idsPedidosDoCliente.length) {
-        console.warn('[Relatorios] Nenhum pedido encontrado para o(s) cliente(s):', valoresStr,
-          '— verifique se pedidos.id_cliente está preenchido e com o mesmo tipo do id do cliente.');
+      if (banco === 'clientes') {
+        dados = dados.filter(function (r) { return idBate(r.id); });
+        return dados;
       }
 
-      dados = dados.filter(function (r) {
-        const idPed = String(resolverValor('financeiro', 'id_pedido', r)).trim();
-        return idsPedidosDoCliente.indexOf(idPed) !== -1;
-      });
-      return dados;
+      if (banco === 'pedidos') {
+        dados = dados.filter(function (r) {
+          const v = resolverValor('pedidos', 'id_cliente', r);
+          return idBate(v);
+        });
+        return dados;
+      }
+
+      if (banco === 'chat') {
+        dados = dados.filter(function (r) {
+          const v = resolverValor('chat', 'id_cliente', r);
+          return idBate(v);
+        });
+        return dados;
+      }
+
+      // financeiro: precisa cruzar via pedidos, sem depender do que foi marcado nos checkboxes
+      if (banco === 'financeiro') {
+        const pedidosDoCliente = state.pedidos.filter(function (ped) {
+          const v = resolverValor('pedidos', 'id_cliente', ped);
+          return idBate(v);
+        });
+
+        const idsPedidosDoCliente = pedidosDoCliente.map(function (ped) {
+          return String(resolverValor('pedidos', 'id', ped)).trim();
+        });
+
+        // DEBUG opcional — remova em produção
+        if (!idsPedidosDoCliente.length) {
+          console.warn('[Relatorios] Nenhum pedido encontrado para o(s) cliente(s):', valoresStr,
+            '— verifique se pedidos.id_cliente está preenchido e com o mesmo tipo do id do cliente.');
+        }
+
+        dados = dados.filter(function (r) {
+          const idPed = String(resolverValor('financeiro', 'id_pedido', r)).trim();
+          return idsPedidosDoCliente.indexOf(idPed) !== -1;
+        });
+        return dados;
+      }
     }
-  }
 
-  // ---------- FILTRO POR TIPO DE LANÇAMENTO ----------
-  if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
-    dados = dados.filter(function (r) {
-      return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
-    });
-  }
+    // ---------- FILTRO POR TIPO DE LANÇAMENTO ----------
+    if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
+      dados = dados.filter(function (r) {
+        return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
+      });
+    }
 
-  return dados;
-}
+    return dados;
+  }
 
   function calcularTotaisBanco(banco, linhas, camposSel) {
     const totais = { qtd: linhas.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false };

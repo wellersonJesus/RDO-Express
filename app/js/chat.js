@@ -1,3 +1,61 @@
+window._storageComExpiracao = (function () {
+    var VALIDADE_MS = 24 * 60 * 60 * 1000;
+
+    function set(chave, valor) {
+        var payload = { valor: valor, expiraEm: Date.now() + VALIDADE_MS };
+        try { localStorage.setItem(chave, JSON.stringify(payload)); } catch (e) { window._exibirErroGlobal(e, 'salvar configuração local'); }
+    }
+
+    function get(chave, valorPadrao) {
+        try {
+            var bruto = localStorage.getItem(chave);
+            if (!bruto) return valorPadrao;
+            var payload = JSON.parse(bruto);
+            if (!payload || typeof payload.expiraEm !== 'number') return valorPadrao;
+            if (Date.now() > payload.expiraEm) {
+                localStorage.removeItem(chave);
+                return valorPadrao;
+            }
+            return payload.valor;
+        } catch (e) { window._exibirErroGlobal(e, 'ler configuração local'); return valorPadrao; }
+    }
+
+    function remove(chave) {
+        try { localStorage.removeItem(chave); } catch (e) { window._exibirErroGlobal(e, 'remover configuração local'); }
+    }
+
+    return { set: set, get: get, remove: remove };
+})();
+
+window._exibirErroGlobal = function (erro, contexto) {
+    var msg = (erro && (erro.message || erro.reason || erro)) || 'Erro desconhecido';
+    var ctx = contexto || 'executar operação';
+    try { console.error('[ERRO][' + ctx + ']', erro); } catch (_) { }
+    try {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro: ' + ctx,
+                html: '<div style="font-size:.85rem;word-break:break-word;">' + String(msg) + '</div>',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4500,
+                timerProgressBar: true,
+                customClass: { popup: 'rounded-4 shadow' }
+            });
+        }
+    } catch (_) { }
+};
+
+window.addEventListener('error', function (e) {
+    window._exibirErroGlobal(e.error || e.message || e, 'Erro em tempo de execução');
+});
+
+window.addEventListener('unhandledrejection', function (e) {
+    window._exibirErroGlobal(e.reason, 'Promise não tratada');
+});
+
 window.marcarCampoInvalido = function () {
     var input = document.getElementById('msg-input');
     if (!input) return;
@@ -53,19 +111,16 @@ window.NotificationManager = (function () {
     var audioCtx = null;
     var isAberto = false;
 
-    // ===================== CONTROLE DE SOM (MUDO POR TIPO) =====================
     var CHAVE_SOM = 'rdo_sound_settings';
-    var somPadrao = { criado: false, cancelado: false, concluido: false }; // false = ativo
+    var somPadrao = { criado: false, cancelado: false, concluido: false };
 
     function _lerConfigSom() {
-        try {
-            var salvo = JSON.parse(localStorage.getItem(CHAVE_SOM));
-            return Object.assign({}, somPadrao, salvo || {});
-        } catch (_) { return Object.assign({}, somPadrao); }
+        var salvo = window._storageComExpiracao.get(CHAVE_SOM, null);
+        return Object.assign({}, somPadrao, salvo || {});
     }
 
     function _salvarConfigSom(cfg) {
-        try { localStorage.setItem(CHAVE_SOM, JSON.stringify(cfg)); } catch (_) { }
+        window._storageComExpiracao.set(CHAVE_SOM, cfg);
     }
 
     var configSom = _lerConfigSom();
@@ -77,85 +132,99 @@ window.NotificationManager = (function () {
         _salvarConfigSom(configSom);
         _renderizarPainelSom();
     }
-    // ============================================================================
 
     function _getCtx() {
         if (!audioCtx) {
             try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-            catch (e) { audioCtx = null; }
+            catch (e) { window._exibirErroGlobal(e, 'inicializar áudio'); audioCtx = null; }
         }
         return audioCtx;
     }
 
     function _tocarTom(freqs, duracoes, tipo) {
-        var ctx = _getCtx();
-        if (!ctx) return;
-        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) { } }
-        var tempoAtual = ctx.currentTime;
-        freqs.forEach(function (freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = tipo || 'sine';
-            osc.frequency.value = freq;
-            var inicio = tempoAtual + (i * (duracoes[i] || 0.12));
-            var dur = duracoes[i] || 0.12;
-            gain.gain.setValueAtTime(0, inicio);
-            gain.gain.linearRampToValueAtTime(0.35, inicio + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, inicio + dur);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(inicio);
-            osc.stop(inicio + dur + 0.02);
-        });
+        try {
+            var ctx = _getCtx();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { window._exibirErroGlobal(e, 'retomar áudio'); } }
+            var tempoAtual = ctx.currentTime;
+            freqs.forEach(function (freq, i) {
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.type = tipo || 'sine';
+                osc.frequency.value = freq;
+                var inicio = tempoAtual + (i * (duracoes[i] || 0.12));
+                var dur = duracoes[i] || 0.12;
+                gain.gain.setValueAtTime(0, inicio);
+                gain.gain.linearRampToValueAtTime(0.35, inicio + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, inicio + dur);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(inicio);
+                osc.stop(inicio + dur + 0.02);
+            });
+        } catch (e) { window._exibirErroGlobal(e, 'tocar som'); }
     }
 
-    // 🟢 PEDIDO CRIADO — tom curto e "positivo", ascendente
     function _tocarSomCriado() {
         if (_somEstaMutado('criado')) return;
         _tocarTom([700, 1000], [0.09, 0.14], 'triangle');
     }
 
-    // 🔴 PEDIDO CANCELADO — tom grave, "queda"
     function _tocarSomCancelado() {
         if (_somEstaMutado('cancelado')) return;
         _tocarTom([440, 330], [0.15, 0.28], 'sawtooth');
     }
 
-    // 🟡 PEDIDO CONCLUÍDO — efeito "moedinhas caindo" (vários tons agudos rápidos e aleatórios)
     function _tocarSomConcluido() {
         if (_somEstaMutado('concluido')) return;
-        var ctx = _getCtx();
-        if (!ctx) return;
-        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) { } }
+        try {
+            var ctx = _getCtx();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { window._exibirErroGlobal(e, 'retomar áudio'); } }
 
-        var tempoAtual = ctx.currentTime;
-        var totalMoedas = 6;
-        for (var i = 0; i < totalMoedas; i++) {
-            (function (idx) {
-                var freqBase = 1800 + Math.random() * 900; // agudo, tipo "moeda"
-                var inicio = tempoAtual + idx * (0.06 + Math.random() * 0.03);
-                var dur = 0.12 + Math.random() * 0.05;
+            var tempoAtual = ctx.currentTime;
+            var totalMoedas = 8;
 
-                var osc = ctx.createOscillator();
-                var gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freqBase, inicio);
-                osc.frequency.exponentialRampToValueAtTime(freqBase * 0.6, inicio + dur);
+            for (var i = 0; i < totalMoedas; i++) {
+                (function (idx) {
+                    var inicio = tempoAtual + idx * (0.045 + Math.random() * 0.05);
+                    var freqBase = 2200 + Math.random() * 1400;
 
-                gain.gain.setValueAtTime(0, inicio);
-                gain.gain.linearRampToValueAtTime(0.28, inicio + 0.008);
-                gain.gain.exponentialRampToValueAtTime(0.001, inicio + dur);
+                    var osc = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freqBase, inicio);
+                    osc.frequency.exponentialRampToValueAtTime(freqBase * 0.5, inicio + 0.09);
 
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(inicio);
-                osc.stop(inicio + dur + 0.02);
-            })(i);
-        }
+                    gain.gain.setValueAtTime(0, inicio);
+                    gain.gain.linearRampToValueAtTime(0.3, inicio + 0.005);
+                    gain.gain.exponentialRampToValueAtTime(0.001, inicio + 0.15);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(inicio);
+                    osc.stop(inicio + 0.18);
+
+                    var osc2 = ctx.createOscillator();
+                    var gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(freqBase * 2.4, inicio);
+                    osc2.frequency.exponentialRampToValueAtTime(freqBase * 1.2, inicio + 0.06);
+
+                    gain2.gain.setValueAtTime(0, inicio);
+                    gain2.gain.linearRampToValueAtTime(0.12, inicio + 0.004);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, inicio + 0.08);
+
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start(inicio);
+                    osc2.stop(inicio + 0.1);
+                })(i);
+            }
+        } catch (e) { window._exibirErroGlobal(e, 'tocar som de moedas'); }
     }
 
     function _tocarSomExcluido() { _tocarTom([600, 400, 250], [0.1, 0.1, 0.22], 'triangle'); }
-    // ============================================================================
 
     function _escutarEventos() {
         if (!window.EventBus) return;
@@ -182,7 +251,6 @@ window.NotificationManager = (function () {
             _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'EXCLUÍDO', timestamp: new Date(), variant: 'danger' });
         });
 
-        // 🟢 Agora dispara o som de "pedido criado"
         window.EventBus.on('pedido:adicionado', function (data) {
             _tocarSomCriado();
             _adicionarNotificacao({ pedidoId: data.pedidoId || data.id, tipo: 'CRIADO', timestamp: new Date(), variant: 'success' });
@@ -402,9 +470,8 @@ window.NotificationManager = (function () {
             somPainelAberto ? _fecharPainelSom() : _abrirPainelSom(btn);
         });
 
-        aplicarEstadoMute(localStorage.getItem('rdo_notif_muted') === 'true');
+        aplicarEstadoMute(window._storageComExpiracao.get('rdo_notif_muted', false) === true);
     }
-
 
     function aplicarEstadoMute(muted) {
         var bellBtn = document.getElementById('btn-notifications');
@@ -433,7 +500,6 @@ window.NotificationManager = (function () {
         var rect = btn.getBoundingClientRect();
         painel.style.top = (rect.bottom + 8) + 'px';
         var left = rect.left;
-        // Evita vazar pela direita da tela
         var maxLeft = window.innerWidth - 236;
         if (left > maxLeft) left = maxLeft;
         if (left < 8) left = 8;
@@ -477,7 +543,6 @@ window.NotificationManager = (function () {
     }
 
     function _configurar() {
-        // 🔴 Clique no sino: abre/fecha o dropdown de notificações
         var btnSino = _getBtn();
         if (btnSino) {
             btnSino.addEventListener('click', function (e) {
@@ -487,7 +552,6 @@ window.NotificationManager = (function () {
             });
         }
 
-        // Fecha ao clicar fora do dropdown
         document.addEventListener('click', function (e) {
             var menu = _getMenu();
             if (!menu || !isAberto) return;
@@ -496,19 +560,17 @@ window.NotificationManager = (function () {
             }
         });
 
-        // Botão "Silenciar" / "Ativar" dentro do dropdown
         document.addEventListener('click', function (e) {
             var target = e.target.closest('#btn-mute-notif');
             if (!target) return;
             e.preventDefault();
             e.stopPropagation();
-            var atual = localStorage.getItem('rdo_notif_muted') === 'true';
+            var atual = window._storageComExpiracao.get('rdo_notif_muted', false) === true;
             var novo = !atual;
-            localStorage.setItem('rdo_notif_muted', String(novo));
+            window._storageComExpiracao.set('rdo_notif_muted', novo);
             aplicarEstadoMute(novo);
         });
 
-        // Botões "Marcar todas como lidas" e "Limpar", se existirem no HTML
         document.addEventListener('click', function (e) {
             if (e.target.closest('#btn-marcar-lidas')) { e.preventDefault(); _marcarTodasComoLidas(); }
             if (e.target.closest('#btn-limpar-notif')) { e.preventDefault(); _limparTodas(); }
@@ -521,11 +583,10 @@ window.NotificationManager = (function () {
         _criarBotaoSom();
         _configurar();
         if (!_getBtn()) {
-            // fallback: tenta novamente caso o botão ainda não exista no DOM
             setTimeout(_configurar, 300);
         }
         if (typeof window._aplicarEstadoMuteNotif === 'function') {
-            window._aplicarEstadoMuteNotif(localStorage.getItem('rdo_notif_muted') === 'true');
+            window._aplicarEstadoMuteNotif(window._storageComExpiracao.get('rdo_notif_muted', false) === true);
         }
     }
 
@@ -711,7 +772,7 @@ function _limparModalContainer() {
     var container = document.getElementById('modal-container');
     if (!container) return;
     container.querySelectorAll('.modal').forEach(function (modalEl) {
-        try { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.dispose(); } catch (_) { }
+        try { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.dispose(); } catch (e) { window._exibirErroGlobal(e, 'limpar modal'); }
     });
     container.innerHTML = '';
 }
@@ -737,7 +798,7 @@ window.loadModal = function (arquivo) {
                     container.innerHTML = html;
                     setTimeout(function () { resolve(true); }, 80);
                 })
-                .catch(function () { resolve(false); });
+                .catch(function (e) { window._exibirErroGlobal(e, 'carregar modal ' + arquivo); resolve(false); });
         }
 
         if (pendentes === 0) { _limparBackdrop(); _limparModalContainer(); _carregarHtml(); return; }
@@ -745,17 +806,17 @@ window.loadModal = function (arquivo) {
         abertos.forEach(function (modalEl) {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (!inst) {
-                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (_) { }
+                try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (e) { window._exibirErroGlobal(e, 'fechar modal'); }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
                 return;
             }
             modalEl.addEventListener('hidden.bs.modal', function () {
-                try { inst.dispose(); } catch (_) { }
+                try { inst.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal'); }
                 pendentes--;
                 if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
             }, { once: true });
-            try { inst.hide(); } catch (_) { pendentes--; if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); } }
+            try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal'); pendentes--; if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); } }
         });
     });
 };
@@ -885,15 +946,16 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
 
     document.querySelectorAll('#modal-container .modal.show').forEach(function (m) {
         var inst = bootstrap.Modal.getInstance(m);
-        if (inst) { try { inst.hide(); } catch (_) { } }
+        if (inst) { try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de validação'); } }
     });
 
     try {
         var instExist = bootstrap.Modal.getInstance(modalEl);
-        if (instExist) { try { instExist.dispose(); } catch (_) { } }
+        if (instExist) { try { instExist.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal de validação'); } }
         var jaAberto = document.querySelectorAll('#modal-container .modal.show').length > 0;
         setTimeout(function () { _limparBackdrop(); new bootstrap.Modal(modalEl).show(); }, jaAberto ? 350 : 0);
-    } catch (_) {
+    } catch (e) {
+        window._exibirErroGlobal(e, 'exibir modal de validação');
         if (typeof Swal !== 'undefined') {
             Swal.fire({ icon: 'warning', title: 'Atenção', html: mensagem, confirmButtonColor: '#dc3545' });
         } else { alert(mensagem.replace(/<[^>]*>/g, '')); }
@@ -1004,6 +1066,7 @@ function _formatarNomeServico(idBruto) {
     if (!isNaN(num)) return 'RDO' + (num < 1000 ? String(num).padStart(3, '0') : String(num));
     return 'RDO' + s;
 }
+
 window._formatarNomeServico = _formatarNomeServico;
 
 window.formatarTelefone = function (tel) {
@@ -1079,6 +1142,7 @@ window.carregarPedidosDoCliente = async function (clienteId) {
 
         window.renderizarMensagens(mensagensCliente, pedidosCliente);
     } catch (err) {
+        window._exibirErroGlobal(err, 'carregar pedidos do cliente');
         _mostrarChatEmptyState('Erro ao carregar mensagens');
     }
 };
@@ -1135,7 +1199,8 @@ window.carregarDados = function () {
 
         window.AppRDO.listaCarregada = true;
         if (searchInput) searchInput.placeholder = 'Buscar cliente...';
-    }).catch(function () {
+    }).catch(function (e) {
+        window._exibirErroGlobal(e, 'carregar dados iniciais');
         _mostrarContatosEmptyState('Erro ao carregar dados');
         _mostrarChatEmptyState('Erro ao carregar mensagens');
     }).finally(function () {
@@ -1277,6 +1342,7 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 
     return div;
 }
+
 window._criarWrapperMensagem = _criarWrapperMensagem;
 
 window._copiarMensagemWrapper = function (pedidoId, botao) {
@@ -1324,7 +1390,8 @@ window._copiarMensagemWrapper = function (pedidoId, botao) {
         }
     }
 
-    function _feedbackErro() {
+    function _feedbackErro(e) {
+        window._exibirErroGlobal(e, 'copiar mensagem');
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
@@ -1336,16 +1403,13 @@ window._copiarMensagemWrapper = function (pedidoId, botao) {
         }
     }
 
-    // 1ª tentativa: Clipboard API moderna (requer HTTPS/contexto seguro)
     if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
         navigator.clipboard.writeText(texto)
             .then(_feedbackSucesso)
-            .catch(function () {
-                // Fallback caso a Permissions Policy bloqueie o clipboard-write
-                _copiarFallback(texto, _feedbackSucesso, _feedbackErro);
+            .catch(function (e) {
+                _copiarFallback(texto, _feedbackSucesso, function () { _feedbackErro(e); });
             });
     } else {
-        // Ambiente sem Clipboard API (http, iframe restrito, navegador antigo)
         _copiarFallback(texto, _feedbackSucesso, _feedbackErro);
     }
 };
@@ -1354,11 +1418,8 @@ function _copiarFallback(texto, callbackSucesso, callbackErro) {
     var sucesso = false;
     var temp = document.createElement('textarea');
 
-    // Configurações essenciais para funcionar em iOS/Android/WebViews:
-    // precisa estar "visível" o suficiente para o navegador permitir seleção real,
-    // mesmo que fora da área visível do usuário.
     temp.value = texto;
-    temp.setAttribute('readonly', ''); // evita abrir teclado virtual em mobile
+    temp.setAttribute('readonly', '');
     temp.style.position = 'fixed';
     temp.style.top = '0';
     temp.style.left = '0';
@@ -1369,7 +1430,7 @@ function _copiarFallback(texto, callbackSucesso, callbackErro) {
     temp.style.outline = 'none';
     temp.style.boxShadow = 'none';
     temp.style.background = 'transparent';
-    temp.style.fontSize = '16px'; // evita zoom automático em iOS
+    temp.style.fontSize = '16px';
     temp.style.opacity = '0';
     temp.style.zIndex = '-1';
 
@@ -1378,11 +1439,11 @@ function _copiarFallback(texto, callbackSucesso, callbackErro) {
     try {
         temp.focus({ preventScroll: true });
         temp.select();
-        // Necessário para iOS Safari: select() sozinho não é suficiente
         temp.setSelectionRange(0, temp.value.length);
 
         sucesso = document.execCommand('copy');
     } catch (err) {
+        window._exibirErroGlobal(err, 'copiar via fallback');
         sucesso = false;
     }
 
@@ -1554,7 +1615,7 @@ window.StatusModal = (function () {
             }
             document.querySelectorAll('#box-cancelamento .cancel-cb').forEach(function (cb) { cb.checked = false; });
             _safeClass(_el('cancel-error'), 'add', 'd-none');
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'resetar modal de status'); }
     }
 
     function _normalizarId(id) {
@@ -1575,7 +1636,7 @@ window.StatusModal = (function () {
             iconEl.classList.remove('status-updated');
             iconEl.classList.add('status-pending');
             iconEl.setAttribute('data-tooltip', 'Atualizando...');
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'exibir spinner de status'); }
     }
 
     function _setIconeFinal(id, status, motoboyNome) {
@@ -1591,7 +1652,7 @@ window.StatusModal = (function () {
             var tooltip = motoboyNome ? motoboyNome + ' • ' + label : label;
             iconEl.setAttribute('data-tooltip', tooltip);
             iconEl.setAttribute('title', tooltip);
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'atualizar ícone de status'); }
     }
 
     function _atualizarCache(id, statusFmt, motoboyNome) {
@@ -1604,7 +1665,7 @@ window.StatusModal = (function () {
             if (!pedido) return;
             pedido.status = statusFmt;
             if (motoboyNome) pedido.motoboy = motoboyNome;
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'atualizar cache de pedido'); }
     }
 
     async function _carregarMotoboys() {
@@ -1627,7 +1688,8 @@ window.StatusModal = (function () {
                         String(m.username || m.nome || 'Sem nome') + '</option>';
                 }).join('')
                 : '<option value="" disabled selected>Nenhum motoboy disponível</option>';
-        } catch (_) {
+        } catch (e) {
+            window._exibirErroGlobal(e, 'carregar motoboys');
             if (select) { select.disabled = false; select.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>'; }
         }
     }
@@ -1639,18 +1701,16 @@ window.StatusModal = (function () {
             var erroChat = !respChat || respChat.status === 'error';
 
             if (erroChat) {
-                console.warn('[StatusModal] Falha ao excluir logicamente o chat do pedido', idNorm, respChat);
+                window._exibirErroGlobal((respChat && respChat.message) || 'Falha ao excluir chat', 'excluir chat do pedido ' + idNorm);
                 return false;
             }
 
-            // Remove do cache local de mensagens
             if (Array.isArray(window.AppRDO.mensagensCache)) {
                 window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
                     return _normalizarId(String(m.pedido_id || '').trim()) !== idNorm;
                 });
             }
 
-            // Remove visualmente a bolha de mensagem do chat (fade-out)
             var msgEl = document.querySelector('[data-pedido-id="' + pedidoIdRaw + '"]');
             if (msgEl) {
                 var wrapper = msgEl.closest('.message-wrapper');
@@ -1658,18 +1718,17 @@ window.StatusModal = (function () {
                     wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
                     wrapper.style.opacity = '0';
                     wrapper.style.transform = 'translateX(30px)';
-                    setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
+                    setTimeout(function () { try { wrapper.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover bolha de mensagem'); } }, 300);
                 }
             }
 
-            // Notifica outros módulos (ex: pedidos.js) para sincronizar o cache de chat
             if (typeof window.EventBus !== 'undefined') {
                 window.EventBus.emit('chat:excluidoLogico', { pedidoId: idNorm });
             }
 
             return true;
         } catch (e) {
-            console.warn('[StatusModal] Erro ao excluir logicamente o chat:', e);
+            window._exibirErroGlobal(e, 'excluir chat logicamente');
             return false;
         }
     }
@@ -1683,12 +1742,12 @@ window.StatusModal = (function () {
                 var select = _el('select-motoboy');
                 if (select && select.selectedIndex >= 0)
                     motoboyNome = String(select.options[select.selectedIndex].text || '').trim();
-            } catch (_) { motoboyNome = ''; }
+            } catch (e) { window._exibirErroGlobal(e, 'obter nome do motoboy'); motoboyNome = ''; }
         }
         if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
-        try { if (_modalBS) _modalBS.hide(); } catch (_) { }
+        try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
 
         try {
             var payload = { id: _normalizarId(_pedidoId), status: statusFmt, motoboy: motoboyNome };
@@ -1700,8 +1759,6 @@ window.StatusModal = (function () {
                 _atualizarCache(_pedidoId, statusFmt, motoboyNome);
                 _setIconeFinal(_pedidoId, status, motoboyNome);
 
-                // 🔴 NOVO: quando o pedido é cancelado, exclui logicamente
-                // o registro correspondente no banco de dados CHAT também.
                 if (status === 'CANCELADO') {
                     await _excluirChatLogicamente(_pedidoId);
                 }
@@ -1724,6 +1781,7 @@ window.StatusModal = (function () {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
         } catch (e) {
+            window._exibirErroGlobal(e, 'atualizar status do pedido');
             _setSpinnerNoBotao(_pedidoId);
             var iconEl = _getIconEl(_pedidoId);
             if (iconEl) { iconEl.innerHTML = '<i class="bi bi-exclamation-circle-fill" style="color:#dc3545;"></i>'; iconEl.setAttribute('data-tooltip', 'Erro ao atualizar'); }
@@ -1740,20 +1798,17 @@ window.StatusModal = (function () {
 
     function abrir(pedidoId) {
         try {
-            // ... (validações existentes permanecem iguais) ...
-
             _pedidoId = String(pedidoId).trim();
             _resetar();
 
             var modalEl = _el('modalStatus');
             if (!modalEl) return;
 
-            try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (_) { }
+            try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal de status'); }
             if (typeof _limparBackdrop === 'function') _limparBackdrop();
 
             _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
 
-            // 🔧 Antes de ocultar, remove o foco de qualquer elemento dentro do modal
             modalEl.addEventListener('hide.bs.modal', function () {
                 if (document.activeElement && modalEl.contains(document.activeElement)) {
                     document.activeElement.blur();
@@ -1769,14 +1824,13 @@ window.StatusModal = (function () {
 
             modalEl.addEventListener('hidden.bs.modal', function () {
                 if (typeof _limparBackdrop === 'function') _limparBackdrop();
-                // 🔧 Garantia extra: reforça remoção do bloqueio de scroll
                 document.body.classList.remove('modal-open');
                 document.body.style.overflow = '';
                 document.body.style.paddingRight = '';
             }, { once: true });
 
             _modalBS.show();
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'abrir modal de status'); }
     }
 
     function processar(status) {
@@ -1801,7 +1855,7 @@ window.StatusModal = (function () {
                 return;
             }
             if (status === 'CONCLUIDO') {
-                try { if (_modalBS) _modalBS.hide(); } catch (_) { }
+                try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
                 setTimeout(function () {
                     Swal.fire({
                         icon: 'question', title: 'Concluir Pedido?',
@@ -1812,10 +1866,10 @@ window.StatusModal = (function () {
                         customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
                     }).then(function (result) {
                         if (result.isConfirmed) _executarAlteracao('CONCLUIDO');
-                    }).catch(function () { });
+                    }).catch(function (e) { window._exibirErroGlobal(e, 'confirmar conclusão'); });
                 }, 300);
             }
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'processar status'); }
     }
 
     async function confirmarMotoboy() {
@@ -1827,7 +1881,7 @@ window.StatusModal = (function () {
                 return;
             }
             await _executarAlteracao('EM_ROTA', motoboyId);
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'confirmar motoboy'); }
     }
 
     async function confirmarCancelamento() {
@@ -1846,7 +1900,7 @@ window.StatusModal = (function () {
             }
             _safeClass(_el('cancel-error'), 'add', 'd-none');
             await _executarAlteracao('CANCELADO', null, motivos);
-        } catch (_) { }
+        } catch (e) { window._exibirErroGlobal(e, 'confirmar cancelamento'); }
     }
 
     function voltar() { _resetar(); }
@@ -1870,14 +1924,12 @@ window.abrirModalEdicao = function (msgId) {
         buttonsStyling: false,
         allowOutsideClick: true
     }).then(function (result) {
-        // Garante que o Swal e seu backdrop foram completamente destruídos
-        // antes de abrir o próximo modal (evita conflito de z-index/backdrop).
         setTimeout(function () {
             _limparBackdrop();
             if (result.isConfirmed) window.abrirModalMensagemPadrao();
             else if (result.isDenied) window.MasterAuth.abrir(msgId);
         }, 150);
-    });
+    }).catch(function (e) { window._exibirErroGlobal(e, 'abrir modal de edição'); });
 };
 
 window.abrirModalMensagemPadrao = function (config) {
@@ -1887,19 +1939,16 @@ window.abrirModalMensagemPadrao = function (config) {
     var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
 
-    // Remove qualquer instância/backdrop residual antes de criar um novo modal
     var existing = bootstrap.Modal.getInstance(modalEl);
-    if (existing) { try { existing.dispose(); } catch (_) { } }
+    if (existing) { try { existing.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mensagem padrão'); } }
     if (typeof _limparBackdrop === 'function') _limparBackdrop();
 
-    // --- Elementos internos do modal (ajuste os IDs conforme seu HTML) ---
     var tituloEl = modalEl.querySelector('#modal-mensagem-titulo, .modal-title');
     var iconeEl = modalEl.querySelector('#modal-mensagem-icone');
     var textareaEl = modalEl.querySelector('#texto-modelo');
     var btnCopiar = modalEl.querySelector('#btn-copiar-modelo');
     var alertaErroEl = modalEl.querySelector('#modal-mensagem-erro-box');
 
-    // --- Modo ERRO: esconde textarea/copiar, mostra alerta ---
     if (isErro) {
         if (tituloEl) tituloEl.textContent = config.titulo || 'Ocorreu um erro';
         if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-exclamation-triangle-fill') + ' text-danger';
@@ -1916,7 +1965,6 @@ window.abrirModalMensagemPadrao = function (config) {
                 (config.erro || 'Algo deu errado. Tente novamente.');
         }
     } else {
-        // --- Modo PADRÃO: exibe textarea com o modelo de mensagem ---
         if (tituloEl) tituloEl.textContent = config.titulo || 'Mensagem Padrão';
         if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-chat-left-text-fill') + ' text-secondary';
 
@@ -1932,14 +1980,12 @@ window.abrirModalMensagemPadrao = function (config) {
 
     var modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
 
-    // Remove o foco de dentro do modal antes de ocultá-lo (evita bug de aria-hidden)
     modalEl.addEventListener('hide.bs.modal', function () {
         if (document.activeElement && modalEl.contains(document.activeElement)) {
             document.activeElement.blur();
         }
     });
 
-    // Força o z-index correto assim que o modal (e seu backdrop) forem inseridos no DOM
     modalEl.addEventListener('shown.bs.modal', function () {
         modalEl.style.zIndex = '1075';
         var backdrops = document.querySelectorAll('.modal-backdrop');
@@ -1953,7 +1999,6 @@ window.abrirModalMensagemPadrao = function (config) {
         }
     }, { once: true });
 
-    // Ao fechar: limpa backdrop e reforça liberação de scroll do body
     modalEl.addEventListener('hidden.bs.modal', function () {
         if (typeof _limparBackdrop === 'function') _limparBackdrop();
         document.body.classList.remove('modal-open');
@@ -1987,7 +2032,6 @@ window.excluirPedido = async function (pedidoId) {
     if (!pedidoId) return;
     var idStr = String(pedidoId).trim();
     try {
-        // 🔴 Sequencial (não paralelo) — evita concorrência no Apps Script/Sheets
         var respChat = await API.call('deletechat', { pedido_id: idStr });
         var erroChat = !respChat || respChat.status === 'error';
         if (erroChat) {
@@ -2004,6 +2048,7 @@ window.excluirPedido = async function (pedidoId) {
             window.EventBus.emit('pedido:excluido', { id: idStr });
 
     } catch (e) {
+        window._exibirErroGlobal(e, 'excluir pedido');
         Swal.fire({
             icon: 'error', title: 'Erro ao excluir',
             text: e.message || 'Não foi possível excluir o pedido.',
@@ -2036,12 +2081,13 @@ window.buscarCoordenadasEndereco = function (endereco) {
             .then(function (data) {
                 resolve(data && data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null);
             })
-            .catch(function () { resolve(null); });
+            .catch(function (e) { window._exibirErroGlobal(e, 'buscar coordenadas do endereço'); resolve(null); });
     });
 };
 
 window.exibirErro = function (erro, contexto) {
     contexto = contexto || 'Erro desconhecido';
+    window._exibirErroGlobal(erro, contexto);
     var container = document.getElementById('chat-messages-container');
     if (container) {
         container.innerHTML =
@@ -2061,7 +2107,7 @@ window.renderizarMapaUnificado = function () {
     var containerEl = document.getElementById('container-mapa-visual');
     if (!containerEl) return;
 
-    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
+    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover instância de mapa'); } window._leafletMapInstance = null; }
     containerEl.innerHTML = '';
     containerEl.style.display = 'none';
 
@@ -2102,8 +2148,8 @@ window.renderizarMapaUnificado = function () {
         caminho.forEach(function (p) { todosOsPontos.push(p); });
     });
 
-    if (todosOsPontos.length > 0) { try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (_) { } }
-    setTimeout(function () { try { mapa.invalidateSize(true); } catch (_) { } }, 300);
+    if (todosOsPontos.length > 0) { try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (e) { window._exibirErroGlobal(e, 'ajustar visualização do mapa'); } }
+    setTimeout(function () { try { mapa.invalidateSize(true); } catch (e) { window._exibirErroGlobal(e, 'redimensionar mapa'); } }, 300);
 };
 
 window._renderizarResumo = function (km, min, valor) {
@@ -2166,7 +2212,7 @@ window.iniciarFluxoCheckout = function () {
 
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.AppRDO._mapaModalAberto = false;
-            if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
+            if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); } window._leafletMapInstance = null; }
         }, { once: true });
 
         var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
@@ -2222,7 +2268,8 @@ window.iniciarFluxoCheckout = function () {
                     valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                 );
                 window.renderizarMapaUnificado();
-            }).catch(function () {
+            }).catch(function (e) {
+                window._exibirErroGlobal(e, 'calcular rotas do pedido');
                 var footer = document.getElementById('footer-resumo-dados');
                 if (footer) footer.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
             });
@@ -2237,7 +2284,7 @@ window.prosseguirParaFormulario = function () {
 
     var modalMapa = document.getElementById('modalMapa');
     var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
-    if (instMapa) { try { instMapa.hide(); } catch (_) { } }
+    if (instMapa) { try { instMapa.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de mapa'); } }
 
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
@@ -2380,7 +2427,7 @@ window.remitirPedido = async function () {
 
         var modalForm = document.getElementById('modalFormulario');
         var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-        if (instForm) { try { instForm.hide(); } catch (_) { } }
+        if (instForm) { try { instForm.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
 
         if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function')
             window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
@@ -2432,6 +2479,7 @@ window.remitirPedido = async function () {
         } catch (_) { }
 
     } catch (err) {
+        window._exibirErroGlobal(err, 'enviar pedido');
         if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
         try {
             Swal.fire({
@@ -2492,7 +2540,7 @@ window._preencherFormulario = function (dados) {
 window.voltarParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
     var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-    if (instForm) { try { instForm.hide(); } catch (_) { } }
+    if (instForm) { try { instForm.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
 
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
@@ -2521,7 +2569,7 @@ window.fecharParaMapa = function () {
     var modalForm = document.getElementById('modalFormulario');
     if (!modalForm) return;
     var inst = bootstrap.Modal.getInstance(modalForm);
-    if (inst) { try { inst.hide(); } catch (_) { } }
+    if (inst) { try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
     setTimeout(function () { window.voltarParaMapa(); }, 400);
 };
 
@@ -2531,12 +2579,12 @@ window.fecharParaChat = function (modalId) {
         var modalEl = document.getElementById(id);
         if (!modalEl) return;
         var inst = bootstrap.Modal.getInstance(modalEl);
-        if (inst) { try { inst.hide(); } catch (_) { } }
+        if (inst) { try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal ' + id); } }
     });
 
     window.AppRDO._mapaModalAberto = false;
     window.AppRDO.isProcessingCheckout = false;
-    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (_) { } window._leafletMapInstance = null; }
+    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover instância de mapa'); } window._leafletMapInstance = null; }
     window.dadosPedidoAtual = {};
 
     var input = document.getElementById('msg-input');
@@ -2559,14 +2607,18 @@ window.fecharParaChat = function (modalId) {
 
 (function () {
     function _tentarInit() {
-        if (window.AppRDO) {
-            window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
-            window.AppRDO.listaCarregada = false;
-            window.AppRDO._mapaModalAberto = false;
+        try {
+            if (window.AppRDO) {
+                window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
+                window.AppRDO.listaCarregada = false;
+                window.AppRDO._mapaModalAberto = false;
+            }
+            window.PedidosDropdown.init();
+            window.NotificationManager.init();
+            if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
+        } catch (e) {
+            window._exibirErroGlobal(e, 'inicializar aplicação');
         }
-        window.PedidosDropdown.init();
-        window.NotificationManager.init();
-        if (window.AppRDO && !window.AppRDO.isFetching) window.carregarDados();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _tentarInit);
@@ -2580,67 +2632,69 @@ window.fecharParaChat = function (modalId) {
         }
 
         window.EventBus.on('pedido:excluido', function (dados) {
-            var idNorm = _normId(dados && dados.id);
-            if (!idNorm) return;
+            try {
+                var idNorm = _normId(dados && dados.id);
+                if (!idNorm) return;
 
-            // Limpa caches
-            if (Array.isArray(window.AppRDO.mensagensCache)) {
-                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
-                    return _normId(m.pedido_id) !== idNorm;
-                });
-            }
-            if (Array.isArray(window.AppRDO.pedidosCache)) {
-                window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                    return _normId(p.id) !== idNorm;
-                });
-            }
-
-            // 🔴 Remove a bolha do DOM comparando por ID normalizado (não mais exato)
-            document.querySelectorAll('[data-pedido-id]').forEach(function (msgEl) {
-                if (_normId(msgEl.getAttribute('data-pedido-id')) !== idNorm) return;
-                var wrapper = msgEl.closest('.message-wrapper');
-                if (wrapper) {
-                    wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
-                    wrapper.style.opacity = '0';
-                    wrapper.style.transform = 'translateX(30px)';
-                    setTimeout(function () { try { wrapper.remove(); } catch (_) { } }, 300);
-                } else {
-                    try { msgEl.remove(); } catch (_) { }
+                if (Array.isArray(window.AppRDO.mensagensCache)) {
+                    window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                        return _normId(m.pedido_id) !== idNorm;
+                    });
                 }
-            });
+                if (Array.isArray(window.AppRDO.pedidosCache)) {
+                    window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+                        return _normId(p.id) !== idNorm;
+                    });
+                }
 
-            // Ressincroniza com o backend por garantia
-            var clienteId = window.AppRDO && window.AppRDO.clienteId;
-            if (clienteId) {
-                setTimeout(function () {
-                    if (!window.AppRDO.isFetching) {
-                        _spinChatOn();
-                        window.carregarPedidosDoCliente(clienteId).finally(function () { _spinChatOff(); });
+                document.querySelectorAll('[data-pedido-id]').forEach(function (msgEl) {
+                    if (_normId(msgEl.getAttribute('data-pedido-id')) !== idNorm) return;
+                    var wrapper = msgEl.closest('.message-wrapper');
+                    if (wrapper) {
+                        wrapper.style.transition = 'opacity .3s ease, transform .3s ease';
+                        wrapper.style.opacity = '0';
+                        wrapper.style.transform = 'translateX(30px)';
+                        setTimeout(function () { try { wrapper.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover bolha excluída'); } }, 300);
+                    } else {
+                        try { msgEl.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover elemento de mensagem'); }
                     }
-                }, 350);
-            }
+                });
+
+                var clienteId = window.AppRDO && window.AppRDO.clienteId;
+                if (clienteId) {
+                    setTimeout(function () {
+                        if (!window.AppRDO.isFetching) {
+                            _spinChatOn();
+                            window.carregarPedidosDoCliente(clienteId).finally(function () { _spinChatOff(); });
+                        }
+                    }, 350);
+                }
+            } catch (e) { window._exibirErroGlobal(e, 'processar evento de exclusão'); }
         });
 
-        // Mesmo tratamento para exclusão lógica (cancelamento)
         window.EventBus.on('chat:excluidoLogico', function (dados) {
-            var idNorm = _normId(dados && dados.pedidoId);
-            if (!idNorm) return;
-            if (Array.isArray(window.AppRDO.mensagensCache)) {
-                window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
-                    return _normId(m.pedido_id) !== idNorm;
-                });
-            }
+            try {
+                var idNorm = _normId(dados && dados.pedidoId);
+                if (!idNorm) return;
+                if (Array.isArray(window.AppRDO.mensagensCache)) {
+                    window.AppRDO.mensagensCache = window.AppRDO.mensagensCache.filter(function (m) {
+                        return _normId(m.pedido_id) !== idNorm;
+                    });
+                }
+            } catch (e) { window._exibirErroGlobal(e, 'processar exclusão lógica de chat'); }
         });
 
         window.EventBus.on('pedido:statusAtualizado', function (dados) {
-            var idStr = _normId(dados && dados.id);
-            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            var pedido = cache.find(function (p) { return _normId(p.id) === idStr; });
-            if (pedido) {
-                pedido.status = dados.status || pedido.status;
-                if (dados.motoboy) pedido.motoboy = dados.motoboy;
-                if (dados.motivo_cancelamento !== undefined) pedido.motivo_cancelamento = dados.motivo_cancelamento;
-            }
+            try {
+                var idStr = _normId(dados && dados.id);
+                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+                var pedido = cache.find(function (p) { return _normId(p.id) === idStr; });
+                if (pedido) {
+                    pedido.status = dados.status || pedido.status;
+                    if (dados.motoboy) pedido.motoboy = dados.motoboy;
+                    if (dados.motivo_cancelamento !== undefined) pedido.motivo_cancelamento = dados.motivo_cancelamento;
+                }
+            } catch (e) { window._exibirErroGlobal(e, 'processar atualização de status'); }
         });
     }
 
