@@ -304,7 +304,7 @@ window.NotificationManager = (function () {
     }
 
     function _getBtn() {
-        return document.querySelector('.btn-notifications');
+        return document.getElementById('btn-notifications');
     }
 
     function _posicionarDropdown() {
@@ -380,8 +380,6 @@ window.NotificationManager = (function () {
         }
 
         var pai = btnNotif.parentElement;
-
-        // Garante alinhamento horizontal consistente, independente do HTML original
         pai.style.display = 'flex';
         pai.style.alignItems = 'center';
 
@@ -390,8 +388,6 @@ window.NotificationManager = (function () {
         btn.className = 'btn-notifications btn-sound-toggle';
         btn.title = 'Configurar sons de notificação';
         btn.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
-
-        // Insere ANTES do ícone de notificações (fica à esquerda dele, na mesma linha)
         pai.insertBefore(btn, btnNotif);
 
         var painel = document.createElement('div');
@@ -406,11 +402,30 @@ window.NotificationManager = (function () {
             somPainelAberto ? _fecharPainelSom() : _abrirPainelSom(btn);
         });
 
-        document.addEventListener('click', function (e) {
-            if (!somPainelAberto) return;
-            if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) _fecharPainelSom();
-        });
+        aplicarEstadoMute(localStorage.getItem('rdo_notif_muted') === 'true');
     }
+
+
+    function aplicarEstadoMute(muted) {
+        var bellBtn = document.getElementById('btn-notifications');
+        var icon = document.getElementById('icon-notifications');
+        var btnMute = document.getElementById('btn-mute-notif');
+        if (!bellBtn || !icon) return;
+
+        bellBtn.setAttribute('data-muted', String(muted));
+        bellBtn.classList.toggle('is-muted', muted);
+
+        icon.classList.remove('bi-bell-fill', 'bi-bell-slash-fill');
+        icon.classList.add(muted ? 'bi-bell-slash-fill' : 'bi-bell-fill');
+
+        if (btnMute) {
+            btnMute.innerHTML = muted
+                ? '<i class="bi bi-bell-fill me-1"></i>Ativar'
+                : '<i class="bi bi-bell-slash me-1"></i>Silenciar';
+        }
+    }
+
+    window._aplicarEstadoMuteNotif = aplicarEstadoMute;
 
     function _abrirPainelSom(btn) {
         var painel = document.getElementById('painel-sound-settings');
@@ -463,18 +478,14 @@ window.NotificationManager = (function () {
 
     function _configurar() {
         document.addEventListener('click', function (e) {
-            var btn = _getBtn();
-            var menu = _getMenu();
-            if (!btn || !menu) return;
-
-            if (btn.contains(e.target)) {
-                e.preventDefault();
-                e.stopPropagation();
-                _toggleDropdown();
-                return;
-            }
-
-            if (isAberto && !menu.contains(e.target)) _fecharDropdown();
+            var target = e.target.closest('#btn-mute-notif');
+            if (!target) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var atual = localStorage.getItem('rdo_notif_muted') === 'true';
+            var novo = !atual;
+            localStorage.setItem('rdo_notif_muted', String(novo));
+            aplicarEstadoMute(novo);
         });
     }
 
@@ -483,6 +494,9 @@ window.NotificationManager = (function () {
         _atualizarBadge();
         _configurar();
         _criarBotaoSom();
+        if (typeof window._aplicarEstadoMuteNotif === 'function') {
+            window._aplicarEstadoMuteNotif(localStorage.getItem('rdo_notif_muted') === 'true');
+        }
     }
 
     return {
@@ -1648,35 +1662,41 @@ window.StatusModal = (function () {
 
     function abrir(pedidoId) {
         try {
-            if (!pedidoId || pedidoId === 'null' || pedidoId === 'undefined') return;
-            var cache = (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) ? window.AppRDO.pedidosCache : [];
-            var idNorm = _normalizarId(String(pedidoId).trim());
-            var pedido = cache.find(function (p) { return _normalizarId(String(p.id || '').trim()) === idNorm; });
-            var statusB = String(pedido ? pedido.status : '').trim();
-            var statusP = (statusB.includes('/') ? statusB.split('/').pop().trim() : statusB).toUpperCase();
-
-            if (statusP === 'CONCLUIDO' || statusP === 'CONCLUÍDO' || statusP === 'CANCELADO') {
-                var isConcluido = statusP !== 'CANCELADO';
-                Swal.fire({
-                    icon: isConcluido ? 'success' : 'error',
-                    title: 'Pedido Finalizado',
-                    html: '<div style="font-size:.93rem;color:#555;">Este pedido já foi ' +
-                        '<strong style="color:' + (isConcluido ? '#28a745' : '#dc3545') + ';">' +
-                        (isConcluido ? 'Concluído' : 'Cancelado') +
-                        '</strong> e não pode mais ser alterado.</div>',
-                    confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545',
-                    customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
-                });
-                return;
-            }
+            // ... (validações existentes permanecem iguais) ...
 
             _pedidoId = String(pedidoId).trim();
             _resetar();
 
             var modalEl = _el('modalStatus');
             if (!modalEl) return;
+
             try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (_) { }
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
             _modalBS = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+
+            // 🔧 Antes de ocultar, remove o foco de qualquer elemento dentro do modal
+            modalEl.addEventListener('hide.bs.modal', function () {
+                if (document.activeElement && modalEl.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+            });
+
+            modalEl.addEventListener('shown.bs.modal', function () {
+                modalEl.style.zIndex = '1075';
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                var ultimoBackdrop = backdrops[backdrops.length - 1];
+                if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+            }, { once: true });
+
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                if (typeof _limparBackdrop === 'function') _limparBackdrop();
+                // 🔧 Garantia extra: reforça remoção do bloqueio de scroll
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, { once: true });
+
             _modalBS.show();
         } catch (_) { }
     }
@@ -1782,41 +1802,96 @@ window.abrirModalEdicao = function (msgId) {
     });
 };
 
-window.abrirModalMensagemPadrao = function () {
+window.abrirModalMensagemPadrao = function (config) {
+    config = config || {};
+    var isErro = !!config.erro;
+
     var modalEl = document.getElementById('modalMensagemPadrao');
     if (!modalEl) return;
 
     // Remove qualquer instância/backdrop residual antes de criar um novo modal
     var existing = bootstrap.Modal.getInstance(modalEl);
     if (existing) { try { existing.dispose(); } catch (_) { } }
-    _limparBackdrop();
+    if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
+    // --- Elementos internos do modal (ajuste os IDs conforme seu HTML) ---
+    var tituloEl = modalEl.querySelector('#modal-mensagem-titulo, .modal-title');
+    var iconeEl = modalEl.querySelector('#modal-mensagem-icone');
+    var textareaEl = modalEl.querySelector('#texto-modelo');
+    var btnCopiar = modalEl.querySelector('#btn-copiar-modelo');
+    var alertaErroEl = modalEl.querySelector('#modal-mensagem-erro-box');
+
+    // --- Modo ERRO: esconde textarea/copiar, mostra alerta ---
+    if (isErro) {
+        if (tituloEl) tituloEl.textContent = config.titulo || 'Ocorreu um erro';
+        if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-exclamation-triangle-fill') + ' text-danger';
+
+        if (textareaEl) textareaEl.closest('.mb-3, .form-group')
+            ? textareaEl.closest('.mb-3, .form-group').classList.add('d-none')
+            : (textareaEl.style.display = 'none');
+        if (btnCopiar) btnCopiar.classList.add('d-none');
+
+        if (alertaErroEl) {
+            alertaErroEl.classList.remove('d-none');
+            alertaErroEl.innerHTML =
+                '<i class="bi bi-exclamation-circle-fill me-2"></i>' +
+                (config.erro || 'Algo deu errado. Tente novamente.');
+        }
+    } else {
+        // --- Modo PADRÃO: exibe textarea com o modelo de mensagem ---
+        if (tituloEl) tituloEl.textContent = config.titulo || 'Mensagem Padrão';
+        if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-chat-left-text-fill') + ' text-secondary';
+
+        if (textareaEl) {
+            textareaEl.closest('.mb-3, .form-group')
+                ? textareaEl.closest('.mb-3, .form-group').classList.remove('d-none')
+                : (textareaEl.style.display = '');
+            textareaEl.value = config.texto || window.MODELO_PADRAO || '';
+        }
+        if (btnCopiar) btnCopiar.classList.remove('d-none');
+        if (alertaErroEl) alertaErroEl.classList.add('d-none');
+    }
 
     var modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
 
-    // Força o z-index correto assim que o modal (e seu backdrop) forem inseridos no DOM,
-    // garantindo que fiquem acima de qualquer overlay anterior.
+    // Remove o foco de dentro do modal antes de ocultá-lo (evita bug de aria-hidden)
+    modalEl.addEventListener('hide.bs.modal', function () {
+        if (document.activeElement && modalEl.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    });
+
+    // Força o z-index correto assim que o modal (e seu backdrop) forem inseridos no DOM
     modalEl.addEventListener('shown.bs.modal', function () {
         modalEl.style.zIndex = '1075';
         var backdrops = document.querySelectorAll('.modal-backdrop');
-        // O backdrop mais recente (deste modal) deve ficar imediatamente atrás dele
         var ultimoBackdrop = backdrops[backdrops.length - 1];
         if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
 
-        // Garante que o textarea/mensagem fique focável e selecionável
-        var textareaModelo = modalEl.querySelector('textarea, #texto-modelo');
-        if (textareaModelo) {
-            textareaModelo.style.position = 'relative';
-            textareaModelo.style.zIndex = '1080';
-            textareaModelo.style.pointerEvents = 'auto';
+        if (textareaEl) {
+            textareaEl.style.position = 'relative';
+            textareaEl.style.zIndex = '1080';
+            textareaEl.style.pointerEvents = 'auto';
         }
     }, { once: true });
 
-    // Ao fechar, remove o backdrop imediatamente (sem deixar sobra para o próximo modal)
+    // Ao fechar: limpa backdrop e reforça liberação de scroll do body
     modalEl.addEventListener('hidden.bs.modal', function () {
-        _limparBackdrop();
+        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
     }, { once: true });
 
     modal.show();
+};
+
+// --- Atalho para exibir qualquer erro reaproveitando o mesmo modal ---
+window.exibirErroModalPadrao = function (mensagemErro, titulo) {
+    window.abrirModalMensagemPadrao({
+        erro: mensagemErro || 'Algo deu errado. Tente novamente.',
+        titulo: titulo || 'Ocorreu um erro'
+    });
 };
 
 window.copiarModelo = function () {

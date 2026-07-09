@@ -20,9 +20,9 @@
       motoboy: ['motoboy'], status: ['status'], observacao: ['observacao']
     },
     financeiro: {
-      id: ['id'], colaborador_id: ['colaborador_id'], id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'],
-      descricao: ['descricao'], motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'],
-      colaborador: ['colaborador'], observacao: ['observacao'], situacao: ['situacao']
+      id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'], descricao: ['descricao'],
+      motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'], colaborador: ['colaborador'],
+      observacao: ['observacao'], situacao: ['situacao']
     },
     clientes: {
       id: ['id'], username: ['username'], responsavel: ['responsavel'], contato: ['contato'],
@@ -140,9 +140,15 @@
       }
     },
     financeiro: {
-      bancos: ['financeiro'],
-      campos: { financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'] },
-      defaults: { financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'] }
+      bancos: ['financeiro', 'pedidos'],
+      campos: {
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'solicitante']
+      },
+      defaults: {
+        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        pedidos: ['motoboy', 'valor_corrida', 'status', 'data']
+      }
     },
     global: {
       bancos: ['colaborador', 'clientes', 'pedidos', 'financeiro', 'chat'],
@@ -655,13 +661,7 @@
       const concluido = (status === 'CONCLUIDO' || status === 'CONCLUÍDO');
 
       if (!mapa[nome]) {
-        mapa[nome] = {
-          nome: nome,
-          qtd: 0,
-          qtdPendente: 0,
-          receitaTotal: 0,
-          receitaPendente: 0
-        };
+        mapa[nome] = { nome: nome, qtd: 0, qtdPendente: 0, receitaTotal: 0, receitaPendente: 0 };
       }
 
       mapa[nome].qtd++;
@@ -675,10 +675,8 @@
 
     return Object.keys(mapa).map(function (k) {
       const m = mapa[k];
-
       const valorMotoboy = m.receitaTotal * PERCENTUAL_MOTOBOY;
       const valorRdo = m.receitaTotal * PERCENTUAL_RDO;
-
       const valorMotoboyPendente = m.receitaPendente * PERCENTUAL_MOTOBOY;
       const valorRdoPendente = m.receitaPendente * PERCENTUAL_RDO;
 
@@ -802,6 +800,7 @@
 
   function montarSnapshot() {
     const snapshot = { bancos: {}, meta: {}, resumos: {} };
+
     bancosDoBuilder().forEach(function (banco) {
       const camposSel = Object.keys(state.builder.selecionados[banco]).filter(function (c) { return state.builder.selecionados[banco][c]; });
       if (!camposSel.length) return;
@@ -826,11 +825,54 @@
       };
     });
 
-    if (bancosDoBuilder().indexOf('pedidos') !== -1) {
-      const pedidosData = coletarDadosBanco('pedidos');
-      snapshot.resumos.motoboys = agruparPorMotoboy(pedidosData);
-      snapshot.resumos.clientes = agruparPorCliente(pedidosData);
-    }
+    const pedidosData = coletarDadosBanco('pedidos');
+    const resumoMotoboys = agruparPorMotoboy(pedidosData);
+    const resumoClientes = agruparPorCliente(pedidosData);
+    snapshot.resumos.motoboys = resumoMotoboys;
+    snapshot.resumos.clientes = resumoClientes;
+
+    const datasPorMotoboy = {};
+    pedidosData.forEach(function (registro) {
+      const nomeMotoboy = obterValorCampoPedido('motoboy', registro);
+      if (!nomeMotoboy) return;
+
+      const dataBruta = obterDataPedidoComFallback(registro);
+      const dataISO = normalizarDataISO(dataBruta);
+      const dataFormatada = dataISO ? formatDateBR(dataISO) : null;
+      if (!dataFormatada) return;
+
+      if (!datasPorMotoboy[nomeMotoboy]) datasPorMotoboy[nomeMotoboy] = [];
+      if (datasPorMotoboy[nomeMotoboy].indexOf(dataFormatada) === -1) {
+        datasPorMotoboy[nomeMotoboy].push(dataFormatada);
+      }
+    });
+
+    const totalChamados = pedidosData.length;
+    const totalMotoboysDistintos = resumoMotoboys.length;
+    const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
+    const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
+    const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
+    const totalPendentes = resumoMotoboys.reduce(function (acc, m) { return acc + m.qtdPendente; }, 0);
+
+    snapshot.resumos.geral = {
+      totalChamados: totalChamados,
+      totalMotoboysDistintos: totalMotoboysDistintos,
+      valorTotalGeral: valorTotalGeral,
+      valorTotalMotoboys: valorTotalMotoboys,
+      valorTotalRdo: valorTotalRdo,
+      totalPendentes: totalPendentes,
+      motoboys: resumoMotoboys.map(function (m) {
+        return {
+          nome: m.nome,
+          qtd: m.qtd,
+          receitaTotal: m.receitaTotal,
+          valorMotoboy: m.valorMotoboy,
+          datas: (datasPorMotoboy[m.nome] || []).sort(function (a, b) {
+            return new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-'));
+          })
+        };
+      })
+    };
 
     snapshot.meta.usuarioGerador = obterUsuarioLogado();
     snapshot.meta.horaGeracao = obterHoraAtualBR();
@@ -866,7 +908,7 @@
         snapshot: snapshot
       };
 
-       setTimeout(function () {
+      setTimeout(function () {
         els.builderBtnGerar.disabled = false;
         els.builderBtnGerar.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span>Gerar Relatório</span>';
         fecharBuilder();
@@ -1071,6 +1113,7 @@
     const bancos = snapshot && snapshot.bancos ? snapshot.bancos : {};
     Object.keys(bancos).forEach(function (banco) {
       const info = bancos[banco];
+      if (!info || !info.campos || !info.campos.length) return;
       html += '<div class="rel-modal-divider"></div>';
       html += '<div class="rel-modal-section">';
       html += '<div class="rel-modal-section-title"><i class="bi bi-table"></i> ' + escapeHtml(info.label) + ' (' + info.linhas.length + ')</div>';
@@ -1184,6 +1227,40 @@
       html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
         '<td>TOTAL GERAL</td><td>-</td><td>' + formatarMoeda(totalGeralCli) + '</td><td>-</td><td>' + formatarMoeda(totalPendGeralCli) + '</td>' +
         '</tr></tfoot></table></div></div>';
+    }
+
+    if (resumos.geral) {
+      const g = resumos.geral;
+      html += '<div class="rel-modal-divider"></div>';
+      html += '<div class="rel-modal-section" style="background:#fff9f0;border:2px solid #ffc107;border-radius:12px;padding:16px 18px;">';
+      html += '<div class="rel-modal-section-title" style="font-size:.95rem;"><i class="bi bi-clipboard2-check-fill" style="color:#dc3545;"></i> Resumo Final do Relatório</div>';
+
+      html += '<div class="rel-modal-grid" style="margin-bottom:14px;grid-template-columns:repeat(3,1fr);">';
+      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Total de Corridas</div><div class="rel-modal-card-value" style="font-size:1rem;color:#dc3545;">' + g.totalChamados + '</div></div>';
+      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Total a Cobrar do Cliente</div><div class="rel-modal-card-value" style="font-size:1rem;color:#0d6efd;">' + formatarMoeda(g.valorTotalGeral) + '</div></div>';
+      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Corridas Pendentes</div><div class="rel-modal-card-value" style="font-size:1rem;color:#b02a37;">' + g.totalPendentes + '</div></div>';
+      html += '</div>';
+
+      html += '<div style="font-size:.8rem;font-weight:700;color:#444;margin-bottom:8px;">Corridas por Motoboy</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+      g.motoboys.forEach(function (m) {
+        const datasHtml = (m.datas && m.datas.length)
+          ? m.datas.map(function (d) {
+            return '<span style="display:inline-block;background:#f8f9fa;border:1px solid #dee2e6;border-radius:12px;padding:2px 8px;margin:2px;font-size:.68rem;color:#555;">' + escapeHtml(d) + '</span>';
+          }).join('')
+          : '<span style="font-size:.68rem;color:#999;">Sem datas registradas</span>';
+
+        html += '<div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 12px;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+        html += '<span style="font-size:.82rem;"><i class="bi bi-person-fill me-1" style="color:#dc3545;"></i><strong>' + escapeHtml(m.nome) + '</strong> — ' + m.qtd + (m.qtd === 1 ? ' corrida' : ' corridas') + '</span>';
+        html += '<span style="font-weight:600;color:#0a7d2c;font-size:.82rem;">' + formatarMoeda(m.receitaTotal) + '</span>';
+        html += '</div>';
+        html += '<div>' + datasHtml + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      html += '</div>';
     }
 
     html += '</div>';
@@ -1464,49 +1541,49 @@
   };
 
   function gerarPdfRelatorio() {
-  if (!state.relatorioAtual) { relToast('Nenhum relatório para gerar PDF.', 'warning'); return; }
+    if (!state.relatorioAtual) { relToast('Nenhum relatório para gerar PDF.', 'warning'); return; }
 
-  const rel = state.relatorioAtual;
-  const snapshot = rel.snapshot || { bancos: {} };
-  const conteudo = construirConteudoRelatorio(rel, snapshot);
+    const rel = state.relatorioAtual;
+    const snapshot = rel.snapshot || { bancos: {} };
+    const conteudo = construirConteudoRelatorio(rel, snapshot);
 
-  const win = window.open('', '_blank');
-  if (!win) { relToast('Bloqueador de pop-up impediu a geração do PDF.', 'warning'); return; }
+    const win = window.open('', '_blank');
+    if (!win) { relToast('Bloqueador de pop-up impediu a geração do PDF.', 'warning'); return; }
 
-  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
-    '<title>' + escapeHtml(rel.titulo || 'Relatório') + '</title>' +
-    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">' +
-    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">' +
-    '<style>' +
-    'html,body{height:auto;overflow:auto;background:#fff;margin:0;padding:0;}' +
-    'body{padding:24px;font-family:Arial,Helvetica,sans-serif;color:#212529;}' +
-    '.rel-pdf-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #dc3545;padding-bottom:12px;margin-bottom:20px;}' +
-    '.rel-pdf-header h1{font-size:1.1rem;margin:0;color:#dc3545;}' +
-    '.rel-pdf-header small{color:#666;font-size:.78rem;}' +
-    '.rel-modal-section{margin-bottom:18px;}' +
-    '.rel-modal-section-title{font-weight:700;font-size:.85rem;margin-bottom:10px;}' +
-    '.rel-modal-divider{border-top:1px solid #e2e2e2;margin:16px 0;}' +
-    '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}' +
-    '.rel-modal-card{background:#f8f9fa;border-radius:8px;padding:8px 12px;}' +
-    '.rel-modal-card-label{font-size:.68rem;color:#888;}' +
-    '.rel-modal-card-value{font-size:.8rem;font-weight:600;}' +
-    'table{width:100%;border-collapse:collapse;}' +
-    'table, th, td{border:1px solid #ccc !important;}' +
-    'th, td{padding:5px 8px;}' +
-    'thead{background:#f1f1f1;}' +
-    '@page{size:A4;margin:14mm;}' +
-    '@media print{body{padding:0;} table{page-break-inside:auto;} tr{page-break-inside:avoid;}}' +
-    '</style></head><body>' +
-    '<div class="rel-pdf-header"><div><h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
-    '<small>Período: ' + escapeHtml(rel.periodoLabel || '') + '</small></div>' +
-    '<div style="text-align:right;font-size:.72rem;color:#666;">Gerado em ' + escapeHtml(obterHoraAtualBR()) + '</div></div>' +
-    conteudo +
-    '<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},400);};<\/script>' +
-    '</body></html>';
+    const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>' + escapeHtml(rel.titulo || 'Relatório') + '</title>' +
+      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">' +
+      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">' +
+      '<style>' +
+      'html,body{height:auto;overflow:auto;background:#fff;margin:0;padding:0;}' +
+      'body{padding:24px;font-family:Arial,Helvetica,sans-serif;color:#212529;}' +
+      '.rel-pdf-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #dc3545;padding-bottom:12px;margin-bottom:20px;}' +
+      '.rel-pdf-header h1{font-size:1.1rem;margin:0;color:#dc3545;}' +
+      '.rel-pdf-header small{color:#666;font-size:.78rem;}' +
+      '.rel-modal-section{margin-bottom:18px;}' +
+      '.rel-modal-section-title{font-weight:700;font-size:.85rem;margin-bottom:10px;}' +
+      '.rel-modal-divider{border-top:1px solid #e2e2e2;margin:16px 0;}' +
+      '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}' +
+      '.rel-modal-card{background:#f8f9fa;border-radius:8px;padding:8px 12px;}' +
+      '.rel-modal-card-label{font-size:.68rem;color:#888;}' +
+      '.rel-modal-card-value{font-size:.8rem;font-weight:600;}' +
+      'table{width:100%;border-collapse:collapse;}' +
+      'table, th, td{border:1px solid #ccc !important;}' +
+      'th, td{padding:5px 8px;}' +
+      'thead{background:#f1f1f1;}' +
+      '@page{size:A4;margin:14mm;}' +
+      '@media print{body{padding:0;} table{page-break-inside:auto;} tr{page-break-inside:avoid;}}' +
+      '</style></head><body>' +
+      '<div class="rel-pdf-header"><div><h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
+      '<small>Período: ' + escapeHtml(rel.periodoLabel || '') + '</small></div>' +
+      '<div style="text-align:right;font-size:.72rem;color:#666;">Gerado em ' + escapeHtml(obterHoraAtualBR()) + '</div></div>' +
+      conteudo +
+      '<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},400);};<\/script>' +
+      '</body></html>';
 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
 
 })();
