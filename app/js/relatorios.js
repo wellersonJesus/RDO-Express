@@ -1294,7 +1294,8 @@
       vlr_servico: '',
       colaborador: '',
       observacao: atual.periodoLabel,
-      situacao: 'gerado'
+      situacao: 'gerado',
+      data_criacao: new Date().toISOString().slice(0, 10)
     };
 
     window.API.call('addrelatorio', payload)
@@ -1665,15 +1666,18 @@
     } else {
       let html = '';
       paginaLista.forEach(function (rel) {
-        const dataFormatada = new Date(rel.criadoEm).toLocaleDateString('pt-BR');
+        const dataValida = rel.criadoEm && !isNaN(rel.criadoEm);
+        const dataFormatada = dataValida ? new Date(rel.criadoEm).toLocaleDateString('pt-BR') : '';
+
         html += '<div class="rel-item-card" data-id="' + escapeHtml(rel.id) + '">' +
           '<div class="rel-item-info">' +
           '<div class="rel-item-titulo">' + escapeHtml(rel.titulo) + '</div>' +
-          '<div class="rel-item-meta"><i class="bi bi-calendar3"></i> ' + escapeHtml(rel.periodoLabel) + ' · Criado em ' + dataFormatada + '</div>' +
+          '<div class="rel-item-meta"><i class="bi bi-calendar3"></i> ' + escapeHtml(rel.periodoLabel) +
+          (dataValida ? ' · ' + dataFormatada : '') + '</div>' +
           '</div>' +
           '<div class="rel-item-acoes">' +
-          '<button type="button" class="btn-rel-visualizar" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
-          '<button type="button" class="btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash"></i></button>' +
+          '<button type="button" class="btn btn-light btn-sm me-1 btn-rel-visualizar" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
+          '<button type="button" class="btn btn-light btn-sm btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash text-danger"></i></button>' +
           '</div></div>';
       });
       c.el.innerHTML = html;
@@ -1733,12 +1737,16 @@
           snapshot = parsed.snapshot || {};
           titulo = parsed.titulo || titulo;
         } catch (e) { }
+
+        const dataCriacaoISO = normalizarDataISO(r.data_criacao || r.criadoEm || r.data);
+        const criadoEmTimestamp = dataCriacaoISO ? new Date(dataCriacaoISO).getTime() : Date.now();
+
         return {
           id: r.id,
           tipo: r.tipo,
           titulo: titulo,
           periodoLabel: r.observacao || r.data,
-          criadoEm: r.id ? parseInt(r.id, 36) || Date.now() : Date.now(),
+          criadoEm: isNaN(criadoEmTimestamp) ? Date.now() : criadoEmTimestamp,
           descricao: r.descricao,
           snapshot: snapshot,
           data: r.data

@@ -1078,3 +1078,33 @@
   text-align: right;
   white-space: nowrap;
 }
+
+.rel-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rel-item-titulo {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rel-item-meta {
+  font-size: .66rem;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rel-item-meta i {
+  font-size: .68rem;
+}
