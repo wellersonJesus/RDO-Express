@@ -41,16 +41,16 @@
               <div class="rel-filtros-linha">
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
                 </div>
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
                 <div class="rel-filtro-select-wrapper">
                   <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Motoboy</label>
                   <select id="rel-mb-select" class="form-select rel-filtro-select">
-                    <option value="__todos__">Carregando...</option>
+                    <option value="__todos__">Todos os motoboys</option>
                   </select>
                 </div>
                 <div class="rel-filtro-item-btn">
@@ -63,9 +63,26 @@
             </div>
 
             <div id="rel-motoboys-lista" class="rel-lista-salvos">
-              <div class="rel-lista-vazio">
-                <i class="bi bi-inbox"></i>
-                <span>Nenhum relatório salvo ainda.</span>
+              <div class="rel-item-salvo">
+                <div class="rel-item-header">
+                  <i class="bi bi-bicycle text-danger"></i>
+                  <div class="rel-item-titulo">Relatório Consolidado de Motoboys</div>
+                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
+                </div>
+                <div class="rel-item-corpo">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr><th>Motoboy / Rota</th><th>Corridas</th><th>Observação</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>EMERSON</td><td>Alto volume</td><td>Concentração em rotas Mauricio, Ammis, Opminas</td></tr>
+                      <tr><td>IGOR</td><td>Alto volume</td><td>Concentração em rotas Opminas, Elisa Athenienese, FF Fashion</td></tr>
+                      <tr><td>AUANDER</td><td>Alto volume</td><td>Concentração em rotas Mauricio, S Manoel, M Pitanga</td></tr>
+                      <tr><td>GRUPO</td><td>Volume predominante</td><td>Corridas rateadas entre a equipe (04/07 a 09/07)</td></tr>
+                      <tr><td>BRUNO</td><td>Pontual</td><td>Cliente Natalia (Escola Presidente Dutra)</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -89,16 +106,16 @@
               <div class="rel-filtros-linha">
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
                 </div>
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
                 <div class="rel-filtro-select-wrapper">
                   <label class="rel-filtro-label"><i class="bi bi-building me-1"></i> Cliente</label>
                   <select id="rel-cli-select" class="form-select rel-filtro-select">
-                    <option value="__todos__">Carregando...</option>
+                    <option value="__todos__">Todos os clientes</option>
                   </select>
                 </div>
                 <div class="rel-filtro-item-btn">
@@ -111,9 +128,31 @@
             </div>
 
             <div id="rel-clientes-lista" class="rel-lista-salvos">
-              <div class="rel-lista-vazio">
-                <i class="bi bi-inbox"></i>
-                <span>Nenhum relatório salvo ainda.</span>
+              <div class="rel-item-salvo">
+                <div class="rel-item-header">
+                  <i class="bi bi-people text-danger"></i>
+                  <div class="rel-item-titulo">Relatório Consolidado de Clientes</div>
+                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
+                </div>
+                <div class="rel-item-corpo">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr><th>Cliente</th><th>ID</th><th>Volume no período</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>OPMINAS</td><td>V72A5B0U5GR</td><td>Alto (rotas hospitalares/PACs)</td></tr>
+                      <tr><td>AMMIS</td><td>YT7JAJN3A6D</td><td>Alto</td></tr>
+                      <tr><td>MAURICIO</td><td>DXVO9FVLFZ5</td><td>Alto</td></tr>
+                      <tr><td>ELISA ATHENIENSE (geral)</td><td>BR463K2KU06 / MR34XBA3RKE / V70K6ETW0B3</td><td>Alto</td></tr>
+                      <tr><td>SÃO MANOEL INDUSTRIA</td><td>ATTZOHXOMVX</td><td>Médio (regularizado no período)</td></tr>
+                      <tr><td>FF FASHION</td><td>86N68UOG077</td><td>Médio</td></tr>
+                      <tr><td>M PITANGA</td><td>285E6BK4RD9</td><td>Médio</td></tr>
+                      <tr><td>PLURAL</td><td>O6DDMW3D7PX</td><td>Médio</td></tr>
+                      <tr><td>INCLOSET</td><td>RMX8GIY6TAV</td><td>Médio</td></tr>
+                      <tr><td>VAL</td><td>BVWVS4IHD5M</td><td>Baixo/Médio</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -137,11 +176,11 @@
               <div class="rel-filtros-linha">
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-fin-data-inicio" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-fin-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
                 </div>
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-fin-data-fim" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-fin-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
                 <div class="rel-filtro-select-wrapper">
                   <label class="rel-filtro-label"><i class="bi bi-filter me-1"></i> Tipo</label>
@@ -161,9 +200,26 @@
             </div>
 
             <div id="rel-financeiro-lista" class="rel-lista-salvos">
-              <div class="rel-lista-vazio">
-                <i class="bi bi-inbox"></i>
-                <span>Nenhum relatório salvo ainda.</span>
+              <div class="rel-item-salvo">
+                <div class="rel-item-header">
+                  <i class="bi bi-wallet2 text-danger"></i>
+                  <div class="rel-item-titulo">Relatório Consolidado Financeiro</div>
+                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
+                </div>
+                <div class="rel-item-corpo">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr><th>Categoria</th><th>Resumo</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Receitas (corridas)</td><td>Valores de R$ 15,00 a R$ 360,00 por corrida; destaque para rota TELECOM (R$ 360,00) e MAURICIO (R$ 130,00 / R$ 142,00)</td></tr>
+                      <tr><td>Maior ticket individual</td><td>R$ 360,00 – RDO2084/RDO2121 (TELECOM, múltiplos pontos)</td></tr>
+                      <tr><td>Menor ticket individual</td><td>R$ 15,00 – diversas corridas (AMMIS, Elisa Athenienese, Cacau Show)</td></tr>
+                      <tr><td>Corridas canceladas</td><td>RDO2040, RDO2042, RDO2082, RDO2120 – não geram receita</td></tr>
+                      <tr><td>Ocorrência de duplicidade</td><td>RDO1954 lançado em duplicidade (mesmo horário/valor) – requer verificação</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -187,11 +243,11 @@
               <div class="rel-filtros-linha">
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-glob-data-inicio" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-glob-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
                 </div>
                 <div class="rel-filtro-item">
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-glob-data-fim" class="form-control rel-filtro-input">
+                  <input type="date" id="rel-glob-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
                 <div class="rel-filtro-item-btn">
                   <button class="btn-rel-gerar" data-tab-tipo="global" type="button">
@@ -203,9 +259,28 @@
             </div>
 
             <div id="rel-global-lista" class="rel-lista-salvos">
-              <div class="rel-lista-vazio">
-                <i class="bi bi-inbox"></i>
-                <span>Nenhum relatório salvo ainda.</span>
+              <div class="rel-item-salvo">
+                <div class="rel-item-header">
+                  <i class="bi bi-globe2 text-danger"></i>
+                  <div class="rel-item-titulo">Relatório Global Consolidado</div>
+                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
+                </div>
+                <div class="rel-item-corpo">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr><th>Indicador</th><th>Resultado</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Período analisado</td><td>03/07/2026 a 09/07/2026 (7 dias)</td></tr>
+                      <tr><td>Total de RDOs registrados</td><td>Faixa RDO1947 a RDO2209 (RDO2046 ausente / RDO1954 duplicado)</td></tr>
+                      <tr><td>Clientes mais ativos</td><td>OPMINAS, AMMIS, MAURICIO, ELISA ATHENIENSE (grupo), FF FASHION</td></tr>
+                      <tr><td>Motoboys com maior atuação</td><td>GRUPO (rateio), EMERSON, IGOR, AUANDER</td></tr>
+                      <tr><td>Ocorrências e cancelamentos</td><td>RDO2040, RDO2042, RDO2082, RDO2120 cancelados</td></tr>
+                      <tr><td>Inconsistência de cadastro</td><td>Duplicidade de cadastro SÃO MANOEL corrigida, unificada em ATTZOHXOMVX</td></tr>
+                      <tr><td>Alerta de duplicidade de pedido</td><td>RDO1954 registrado duas vezes</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 

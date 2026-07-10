@@ -313,3 +313,29 @@
     padding: 5px 10px;
   }
 }
+
+.rel-lista-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 20px;
+  min-height: 220px;
+  width: 100%;
+  color: #bbb;
+}
+
+.rel-lista-vazia i {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+  color: #ced4da;
+}
+
+.rel-lista-vazia p {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #999;
+  margin: 0;
+}
+
