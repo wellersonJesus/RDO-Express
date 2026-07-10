@@ -110,6 +110,7 @@ window.NotificationManager = (function () {
     var maxNotificacoes = 50;
     var audioCtx = null;
     var isAberto = false;
+    var eventosRegistrados = false;
 
     var CHAVE_SOM = 'rdo_sound_settings';
     var CHAVE_NOTIF = 'rdo_notificacoes_persistidas';
@@ -229,7 +230,7 @@ window.NotificationManager = (function () {
     function _tocarSomExcluido() { _tocarTom([600, 400, 250], [0.1, 0.1, 0.22], 'triangle'); }
 
     function _tiposPersistidos() {
-        return ['CRIADO', 'CANCELADO', 'CONCLUÍDO'];
+        return ['CRIADO', 'CANCELADO', 'CONCLUÍDO', 'EXCLUÍDO'];
     }
 
     function _dentroDeVinteQuatroHoras(timestampISO) {
@@ -276,7 +277,9 @@ window.NotificationManager = (function () {
     }
 
     function _escutarEventos() {
-        if (!window.EventBus) return;
+        if (eventosRegistrados) return;
+        if (!window.EventBus) { setTimeout(_escutarEventos, 300); return; }
+        eventosRegistrados = true;
 
         window.EventBus.on('pedido:statusAtualizado', function (data) {
             var status = (data.status || '').toUpperCase();
