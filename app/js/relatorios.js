@@ -11,6 +11,7 @@
 
   const PERCENTUAL_MOTOBOY = 0.80;
   const PERCENTUAL_RDO = 0.20;
+  const LIMIAR_SIMILARIDADE = 0.55;
 
   const ALIASES = {
     pedidos: {
@@ -25,8 +26,14 @@
       observacao: ['observacao'], situacao: ['situacao']
     },
     clientes: {
-      id: ['id'], username: ['username'], responsavel: ['responsavel'], contato: ['contato'],
-      pagamento: ['pagamento'], status: ['status']
+      bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
+      campos: { /* ...igual... */ },
+      defaults: {
+        clientes: ['username'],
+        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'],
+        chat: [],
+        financeiro: ['data', 'descricao', 'vlr_servico']
+      }
     },
     colaborador: {
       id: ['id'], username: ['username'], colaborador: ['colaborador'], cpf_cnpj: ['cpf_cnpj'],
@@ -121,7 +128,7 @@
       defaults: {
         colaborador: ['username'],
         pedidos: [],
-        financeiro: ['data', 'descricao','vlr_servico']
+        financeiro: ['data', 'descricao', 'vlr_servico']
       }
     },
     clientes: {
@@ -182,6 +189,7 @@
   };
 
   const els = {};
+  let inicializado = false;
 
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -267,23 +275,35 @@
     els.btnSync = document.getElementById('btn-sync-relatorio');
     els.syncIcon = document.getElementById('sync-icon-relatorio');
 
-    els.mbDataInicio = document.getElementById('rel-mb-data-inicio');
-    els.mbDataFim = document.getElementById('rel-mb-data-fim');
-    els.mbSelect = document.getElementById('rel-mb-select');
+    els.filtrosPorTipo = {
+      motoboys: {
+        dataInicio: document.getElementById('rel-mb-data-inicio'),
+        dataFim: document.getElementById('rel-mb-data-fim'),
+        select: document.getElementById('rel-mb-select')
+      },
+      clientes: {
+        dataInicio: document.getElementById('rel-cli-data-inicio'),
+        dataFim: document.getElementById('rel-cli-data-fim'),
+        select: document.getElementById('rel-cli-select')
+      },
+      financeiro: {
+        dataInicio: document.getElementById('rel-fin-data-inicio'),
+        dataFim: document.getElementById('rel-fin-data-fim'),
+        select: document.getElementById('rel-fin-tipo')
+      },
+      global: {
+        dataInicio: document.getElementById('rel-glob-data-inicio'),
+        dataFim: document.getElementById('rel-glob-data-fim'),
+        select: null
+      }
+    };
+
+    els.formMotoboySelect = els.filtrosPorTipo.motoboys.select;
+    els.formClienteSelect = els.filtrosPorTipo.clientes.select;
+
     els.mbLista = document.getElementById('rel-motoboys-lista');
-
-    els.cliDataInicio = document.getElementById('rel-cli-data-inicio');
-    els.cliDataFim = document.getElementById('rel-cli-data-fim');
-    els.cliSelect = document.getElementById('rel-cli-select');
     els.cliLista = document.getElementById('rel-clientes-lista');
-
-    els.finDataInicio = document.getElementById('rel-fin-data-inicio');
-    els.finDataFim = document.getElementById('rel-fin-data-fim');
-    els.finTipo = document.getElementById('rel-fin-tipo');
     els.finLista = document.getElementById('rel-financeiro-lista');
-
-    els.globDataInicio = document.getElementById('rel-glob-data-inicio');
-    els.globDataFim = document.getElementById('rel-glob-data-fim');
     els.globLista = document.getElementById('rel-global-lista');
 
     els.modalOverlay = document.getElementById('modalRelatorioOverlay');
@@ -321,23 +341,23 @@
   }
 
   function popularSelectMotoboys() {
-    if (!els.mbSelect) return;
+    if (!els.formMotoboySelect) return;
     let html = '<option value="__todos__">Todos os motoboys</option>';
     state.motoboys.forEach(function (mb) {
       const nome = resolverValor('colaborador', 'username', mb) || 'Sem nome';
       html += '<option value="' + escapeHtml(mb.id) + '">' + escapeHtml(nome) + '</option>';
     });
-    els.mbSelect.innerHTML = html;
+    els.formMotoboySelect.innerHTML = html;
   }
 
   function popularSelectClientes() {
-    if (!els.cliSelect) return;
+    if (!els.formClienteSelect) return;
     let html = '<option value="__todos__">Todos os clientes</option>';
     state.clientes.forEach(function (cli) {
       const nome = resolverValor('clientes', 'username', cli) || 'Sem nome';
       html += '<option value="' + escapeHtml(cli.id) + '">' + escapeHtml(nome) + '</option>';
     });
-    els.cliSelect.innerHTML = html;
+    els.formClienteSelect.innerHTML = html;
   }
 
   function exibirLoadingListas() {
@@ -362,51 +382,41 @@
 
   function validarDatas(inicio, fim) {
     if (!inicio || !fim) { relToast('Informe o período completo.', 'warning'); return false; }
-    if (inicio > fim) { relToast('Data inicial maior que final.', 'warning'); return false; }
+    if (inicio > fim) { relToast('Data inicial maior que a final.', 'warning'); return false; }
     return true;
   }
 
-  function obterValoresSelecionados(selectEl) {
-    if (!selectEl) return ['__todos__'];
-    const opts = Array.from(selectEl.selectedOptions || []).map(function (o) { return o.value; });
-    if (!opts.length) return ['__todos__'];
-    return opts;
+  function coletarFiltrosInline(tipo) {
+    const f = els.filtrosPorTipo[tipo];
+    if (!f) {
+      relToast('Tipo de relatório inválido: ' + tipo, 'danger');
+      return null;
+    }
+
+    const inicio = f.dataInicio ? f.dataInicio.value : '';
+    const fim = f.dataFim ? f.dataFim.value : '';
+
+    if (!validarDatas(inicio, fim)) return null;
+
+    let filtroExtra = null;
+    if (tipo === 'motoboys') {
+      const v = f.select ? f.select.value : '__todos__';
+      filtroExtra = { campo: 'motoboy_id', valor: [v] };
+    } else if (tipo === 'clientes') {
+      const v = f.select ? f.select.value : '__todos__';
+      filtroExtra = { campo: 'cliente_id', valor: [v] };
+    } else if (tipo === 'financeiro') {
+      const v = f.select ? f.select.value : '__todos__';
+      filtroExtra = { campo: 'tipo_lancamento', valor: [v] };
+    }
+
+    return { periodo: { inicio: inicio, fim: fim }, filtroExtra: filtroExtra };
   }
 
-  function abrirBuilder(tipo, estadoPreservado) {
+  function iniciarBuilder(tipo, periodo, filtroExtra) {
     try {
-      if (estadoPreservado) {
-        state.builder = JSON.parse(JSON.stringify(estadoPreservado));
-        renderizarBuilderTabs();
-        renderizarBuilderPanels();
-        irParaStep(2);
-        if (els.builderNomeInput) els.builderNomeInput.value = state.builder.nome || '';
-        if (els.builderOverlay) { els.builderOverlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-        return;
-      }
-
-      let inicio = '', fim = '', filtroExtra = null;
-
-      if (tipo === 'motoboys') {
-        inicio = els.mbDataInicio.value; fim = els.mbDataFim.value;
-        filtroExtra = { campo: 'motoboy_id', valor: obterValoresSelecionados(els.mbSelect) };
-      } else if (tipo === 'clientes') {
-        inicio = els.cliDataInicio.value; fim = els.cliDataFim.value;
-        filtroExtra = { campo: 'cliente_id', valor: obterValoresSelecionados(els.cliSelect) };
-      } else if (tipo === 'financeiro') {
-        inicio = els.finDataInicio.value; fim = els.finDataFim.value;
-        filtroExtra = { campo: 'tipo_lancamento', valor: els.finTipo.value ? [els.finTipo.value] : ['__todos__'] };
-      } else if (tipo === 'global') {
-        inicio = els.globDataInicio.value; fim = els.globDataFim.value;
-      } else {
-        relToast('Tipo de relatório inválido.', 'danger');
-        return;
-      }
-
-      if (!validarDatas(inicio, fim)) return;
-
       state.builder.tipo = tipo;
-      state.builder.periodo = { inicio: inicio, fim: fim };
+      state.builder.periodo = periodo;
       state.builder.filtroExtra = filtroExtra;
       state.builder.step = 1;
       state.builder.nome = '';
@@ -430,10 +440,29 @@
       if (els.builderOverlay) {
         els.builderOverlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+      } else {
+        relToast('Construtor de relatório não encontrado no DOM.', 'danger');
       }
     } catch (e) {
       relToast('Erro ao abrir construtor de relatório: ' + e.message, 'danger');
     }
+  }
+
+  function abrirBuilder(tipo, estadoPreservado) {
+    if (estadoPreservado) {
+      state.builder = JSON.parse(JSON.stringify(estadoPreservado));
+      renderizarBuilderTabs();
+      renderizarBuilderPanels();
+      irParaStep(2);
+      if (els.builderNomeInput) els.builderNomeInput.value = state.builder.nome || '';
+      if (els.builderOverlay) { els.builderOverlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      return;
+    }
+
+    const filtros = coletarFiltrosInline(tipo);
+    if (!filtros) return;
+
+    iniciarBuilder(tipo, filtros.periodo, filtros.filtroExtra);
   }
 
   function fecharBuilder() {
@@ -536,9 +565,11 @@
     if (els.builderBtnAvancar) els.builderBtnAvancar.style.display = step === 1 ? 'inline-flex' : 'none';
     if (els.builderBtnGerar) els.builderBtnGerar.style.display = step === 2 ? 'inline-flex' : 'none';
 
-    els.builderStepDots.forEach(function (dot) {
-      dot.classList.toggle('active', parseInt(dot.dataset.step, 10) <= step);
-    });
+    if (els.builderStepDots) {
+      els.builderStepDots.forEach(function (dot) {
+        dot.classList.toggle('active', parseInt(dot.dataset.step, 10) <= step);
+      });
+    }
 
     if (step === 2) {
       montarResumoStep2();
@@ -563,9 +594,9 @@
     if (fx && Array.isArray(fx.valor) && fx.valor.indexOf('__todos__') === -1 && fx.valor.length) {
       let labels = [];
       if (fx.campo === 'motoboy_id') {
-        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(m.id) !== -1; }).map(function (m) { return resolverValor('colaborador', 'username', m); });
+        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(String(m.id)) !== -1; }).map(function (m) { return resolverValor('colaborador', 'username', m); });
       } else if (fx.campo === 'cliente_id') {
-        labels = state.clientes.filter(function (c) { return fx.valor.indexOf(c.id) !== -1; }).map(function (c) { return resolverValor('clientes', 'username', c); });
+        labels = state.clientes.filter(function (c) { return fx.valor.indexOf(String(c.id)) !== -1; }).map(function (c) { return resolverValor('clientes', 'username', c); });
       }
       if (labels.length) html += '<div><strong>Filtro:</strong> ' + escapeHtml(labels.join(', ')) + '</div>';
     }
@@ -587,18 +618,130 @@
   }
 
   function normalizarComparacao(v) {
-    return String(v == null ? '' : v).trim().toUpperCase();
+    return String(v == null ? '' : v)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
   }
 
-  function idsParaNomes(ids, lista, banco) {
-    const nomes = [];
-    lista.forEach(function (item) {
-      if (ids.indexOf(item.id) !== -1 || ids.indexOf(String(item.id)) !== -1) {
-        const nome = resolverValor(banco, 'username', item);
-        if (nome) nomes.push(normalizarComparacao(nome));
+  function tokenizar(v) {
+    return normalizarComparacao(v).split(' ').filter(function (t) { return t.length > 0; });
+  }
+
+  function levenshtein(a, b) {
+    a = a || '';
+    b = b || '';
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp = new Array(n + 1);
+    for (let j = 0; j <= n; j++) dp[j] = j;
+    for (let i = 1; i <= m; i++) {
+      let prev = dp[0];
+      dp[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const temp = dp[j];
+        dp[j] = a[i - 1] === b[j - 1]
+          ? prev
+          : Math.min(prev + 1, dp[j] + 1, dp[j - 1] + 1);
+        prev = temp;
       }
+    }
+    return dp[n];
+  }
+
+  function similaridade(a, b) {
+    const na = normalizarComparacao(a);
+    const nb = normalizarComparacao(b);
+    if (!na || !nb) return 0;
+    if (na === nb) return 1;
+    if (na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1) return 0.9;
+    const dist = levenshtein(na, nb);
+    const maxLen = Math.max(na.length, nb.length);
+    return maxLen === 0 ? 0 : 1 - (dist / maxLen);
+  }
+
+  function similaridadeTokens(a, b) {
+    const tokensA = tokenizar(a);
+    const tokensB = tokenizar(b);
+    if (!tokensA.length || !tokensB.length) return 0;
+    let melhores = 0;
+    tokensA.forEach(function (ta) {
+      let melhorLocal = 0;
+      tokensB.forEach(function (tb) {
+        const sim = similaridade(ta, tb);
+        if (sim > melhorLocal) melhorLocal = sim;
+      });
+      melhores += melhorLocal;
     });
-    return nomes;
+    return melhores / Math.max(tokensA.length, tokensB.length);
+  }
+
+  function nomesCorrespondem(a, b) {
+    if (!a || !b) return false;
+    const direta = similaridade(a, b);
+    if (direta >= LIMIAR_SIMILARIDADE) return true;
+    const porTokens = similaridadeTokens(a, b);
+    return porTokens >= LIMIAR_SIMILARIDADE;
+  }
+
+  function obterNomeClienteDoPedido(pedido) {
+    let valor = resolverValor('pedidos', 'id_cliente', pedido);
+    if (valor && /^\d+$/.test(String(valor).trim())) {
+      const cli = state.clientes.find(function (c) { return String(c.id) === String(valor); });
+      if (cli) return resolverValor('clientes', 'username', cli);
+    }
+    if (valor) return valor;
+    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+    if (solicitante) return solicitante;
+    const observacao = resolverValor('pedidos', 'observacao', pedido);
+    return observacao || '';
+  }
+
+  function idsParaClientesSelecionados(ids) {
+    const idsStr = ids.map(function (v) { return String(v).trim(); });
+    return state.clientes.filter(function (c) { return idsStr.indexOf(String(c.id).trim()) !== -1; });
+  }
+
+  function idsParaColaboradoresSelecionados(ids) {
+    const idsStr = ids.map(function (v) { return String(v).trim(); });
+    return state.motoboys.filter(function (m) { return idsStr.indexOf(String(m.id).trim()) !== -1; });
+  }
+
+  function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr) {
+    const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
+    if (idsStr.indexOf(idPed) !== -1) return true;
+    const nomePedido = obterNomeClienteDoPedido(pedido);
+    if (!nomePedido) return false;
+    return clientesSelecionados.some(function (c) {
+      const nomeCliente = resolverValor('clientes', 'username', c);
+      const responsavel = resolverValor('clientes', 'responsavel', c);
+      return nomesCorrespondem(nomePedido, nomeCliente) || nomesCorrespondem(nomePedido, responsavel);
+    });
+  }
+
+  function pedidoCorrespondeMotoboy(pedido, colaboradoresSelecionados, idsStr) {
+    const idPed = String(resolverValor('pedidos', 'motoboy', pedido)).trim();
+    if (idsStr.indexOf(idPed) !== -1) return true;
+    const nomePedido = resolverValor('pedidos', 'motoboy', pedido);
+    if (!nomePedido) return false;
+    return colaboradoresSelecionados.some(function (m) {
+      const nomeColab = resolverValor('colaborador', 'username', m);
+      const colaborador = resolverValor('colaborador', 'colaborador', m);
+      return nomesCorrespondem(nomePedido, nomeColab) || nomesCorrespondem(nomePedido, colaborador);
+    });
+  }
+
+  function registroFinanceiroCorrespondeMotoboy(registro, colaboradoresSelecionados, idsStr) {
+    const nomeMb = resolverValor('financeiro', 'motoboy', registro);
+    const nomeColab = resolverValor('financeiro', 'colaborador', registro);
+    return colaboradoresSelecionados.some(function (m) {
+      const nomeCadastro = resolverValor('colaborador', 'username', m);
+      const colaboradorCadastro = resolverValor('colaborador', 'colaborador', m);
+      return nomesCorrespondem(nomeMb, nomeCadastro) || nomesCorrespondem(nomeMb, colaboradorCadastro) ||
+        nomesCorrespondem(nomeColab, nomeCadastro) || nomesCorrespondem(nomeColab, colaboradorCadastro);
+    });
   }
 
   function buscarFinanceiroDoPedido(pedido) {
@@ -616,9 +759,9 @@
   }
 
   function obterDataPedidoComFallback(pedido) {
-    var data = resolverValor('pedidos', 'data', pedido);
+    const data = resolverValor('pedidos', 'data', pedido);
     if (data) return data;
-    var lanc = buscarFinanceiroDoPedido(pedido);
+    const lanc = buscarFinanceiroDoPedido(pedido);
     return lanc ? resolverValor('financeiro', 'data', lanc) : '';
   }
 
@@ -720,14 +863,7 @@
   function agruparPorCliente(pedidos) {
     const mapa = {};
     pedidos.forEach(function (p) {
-      let nome = resolverValor('pedidos', 'solicitante', p) || '';
-      const idCliente = resolverValor('pedidos', 'id_cliente', p);
-      if (!nome && idCliente) {
-        const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente); });
-        if (cli) nome = resolverValor('clientes', 'username', cli);
-      }
-      if (!nome) nome = 'Sem cliente';
-
+      let nome = obterNomeClienteDoPedido(p) || 'Sem cliente';
       const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
       const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
 
@@ -749,16 +885,22 @@
 
     if (banco === 'clientes') dados = state.clientes.slice();
     else if (banco === 'colaborador') dados = state.motoboys.slice();
-    else if (banco === 'pedidos') dados = state.pedidos.filter(function (r) {
-      return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
-    });
-    else if (banco === 'chat') dados = state.chat.filter(function (r) {
-      return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
-    });
-    else if (banco === 'financeiro') dados = state.financeiro.filter(function (r) {
-      const dataF = obterValorCampoFinanceiro('data', r);
-      return dentroPeriodo(dataF, p.inicio, p.fim);
-    });
+    else if (banco === 'pedidos') {
+      dados = state.pedidos.filter(function (r) {
+        return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
+      });
+    }
+    else if (banco === 'chat') {
+      dados = state.chat.filter(function (r) {
+        return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
+      });
+    }
+    else if (banco === 'financeiro') {
+      dados = state.financeiro.filter(function (r) {
+        const dataF = obterValorCampoFinanceiro('data', r);
+        return dentroPeriodo(dataF, p.inicio, p.fim);
+      });
+    }
 
     const fx = state.builder.filtroExtra;
     if (!fx || !fx.valor) return dados;
@@ -767,7 +909,6 @@
     const contemTodos = valoresBrutos.indexOf('__todos__') !== -1;
     if (contemTodos || !valoresBrutos.length) return dados;
 
-    // Normaliza TUDO para string, eliminando bug number vs string
     const valoresStr = valoresBrutos.map(function (v) { return String(v).trim(); });
 
     function idBate(valorCampo) {
@@ -779,16 +920,16 @@
       const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
 
       if (banco === 'colaborador') {
-        dados = dados.filter(function (r) { return idBate(r.id); });
+        return dados.filter(function (r) { return idBate(r.id); });
       }
       if (banco === 'pedidos') {
-        dados = dados.filter(function (r) {
+        return dados.filter(function (r) {
           const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
           return nomesSelecionados.indexOf(mb) !== -1;
         });
       }
       if (banco === 'financeiro') {
-        dados = dados.filter(function (r) {
+        return dados.filter(function (r) {
           const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
           const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
           return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
@@ -797,58 +938,43 @@
       return dados;
     }
 
-    // ---------- FILTRO POR CLIENTE ----------
+    // ---------- FILTRO POR CLIENTE (direto por id_cliente) ----------
     if (fx.campo === 'cliente_id') {
-
       if (banco === 'clientes') {
-        dados = dados.filter(function (r) { return idBate(r.id); });
-        return dados;
+        return dados.filter(function (r) { return idBate(r.id); });
       }
 
       if (banco === 'pedidos') {
-        dados = dados.filter(function (r) {
-          const v = resolverValor('pedidos', 'id_cliente', r);
-          return idBate(v);
+        return dados.filter(function (r) {
+          return idBate(resolverValor('pedidos', 'id_cliente', r));
         });
-        return dados;
       }
 
       if (banco === 'chat') {
-        dados = dados.filter(function (r) {
-          const v = resolverValor('chat', 'id_cliente', r);
-          return idBate(v);
+        return dados.filter(function (r) {
+          return idBate(resolverValor('chat', 'id_cliente', r));
         });
-        return dados;
       }
 
-      // financeiro: precisa cruzar via pedidos, sem depender do que foi marcado nos checkboxes
       if (banco === 'financeiro') {
-        const pedidosDoCliente = state.pedidos.filter(function (ped) {
-          const v = resolverValor('pedidos', 'id_cliente', ped);
-          return idBate(v);
-        });
+        const idsPedidosDoCliente = state.pedidos
+          .filter(function (ped) {
+            return idBate(resolverValor('pedidos', 'id_cliente', ped));
+          })
+          .map(function (ped) {
+            return String(resolverValor('pedidos', 'id', ped)).trim();
+          });
 
-        const idsPedidosDoCliente = pedidosDoCliente.map(function (ped) {
-          return String(resolverValor('pedidos', 'id', ped)).trim();
-        });
-
-        // DEBUG opcional — remova em produção
-        if (!idsPedidosDoCliente.length) {
-          console.warn('[Relatorios] Nenhum pedido encontrado para o(s) cliente(s):', valoresStr,
-            '— verifique se pedidos.id_cliente está preenchido e com o mesmo tipo do id do cliente.');
-        }
-
-        dados = dados.filter(function (r) {
+        return dados.filter(function (r) {
           const idPed = String(resolverValor('financeiro', 'id_pedido', r)).trim();
           return idsPedidosDoCliente.indexOf(idPed) !== -1;
         });
-        return dados;
       }
     }
 
     // ---------- FILTRO POR TIPO DE LANÇAMENTO ----------
     if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
-      dados = dados.filter(function (r) {
+      return dados.filter(function (r) {
         return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
       });
     }
@@ -856,26 +982,65 @@
     return dados;
   }
 
-  function calcularTotaisBanco(banco, linhas, camposSel) {
-    const totais = { qtd: linhas.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false };
-    const campoValor = banco === 'financeiro' ? 'vlr_servico' : (banco === 'pedidos' ? 'valor_corrida' : null);
-    if (campoValor && camposSel.indexOf(campoValor) !== -1) {
+  function obterIdClienteDoPedido(pedido) {
+    if (pedido.__idClienteResolvidoCache !== undefined) return pedido.__idClienteResolvidoCache;
+
+    const idRaw = resolverValor('pedidos', 'id_cliente', pedido);
+    let resultado = '';
+
+    if (idRaw && /^\d+$/.test(String(idRaw).trim())) {
+      const cli = state.clientes.find(function (c) { return String(c.id) === String(idRaw).trim(); });
+      if (cli) resultado = String(cli.id).trim();
+    }
+
+    if (!resultado) {
+      const nomePedido = obterNomeClienteDoPedido(pedido);
+      if (nomePedido) {
+        const cliPorNome = state.clientes.find(function (c) {
+          const username = resolverValor('clientes', 'username', c);
+          const responsavel = resolverValor('clientes', 'responsavel', c);
+          return nomesCorrespondem(nomePedido, username) || nomesCorrespondem(nomePedido, responsavel);
+        });
+        if (cliPorNome) resultado = String(cliPorNome.id).trim();
+      }
+    }
+
+    pedido.__idClienteResolvidoCache = resultado;
+    return resultado;
+  }
+
+  function idsParaNomes(ids, lista, banco) {
+    const idsStr = ids.map(function (v) { return String(v).trim(); });
+    const nomes = [];
+    lista.forEach(function (item) {
+      if (idsStr.indexOf(String(item.id).trim()) !== -1) {
+        const nome = resolverValor(banco, 'username', item);
+        if (nome) nomes.push(normalizarComparacao(nome));
+      }
+    });
+    return nomes;
+  }
+
+  function calcularTotaisBanco(banco, dadosOriginais) {
+    const totais = { qtd: dadosOriginais.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false };
+
+    if (banco === 'pedidos') {
       totais.temValor = true;
-      linhas.forEach(function (l) {
-        const v = parseMoeda(l[campoValor]);
+      dadosOriginais.forEach(function (r) {
+        const v = parseMoeda(obterValorCampoPedido('valor_corrida', r));
         if (!isNaN(v)) totais.somaValor += v;
       });
-    }
-    if (banco === 'financeiro' && camposSel.indexOf('situacao') !== -1) {
+    } else if (banco === 'financeiro') {
+      totais.temValor = true;
       totais.temSituacao = true;
-      linhas.forEach(function (l) {
-        const sit = normalizarComparacao(l.situacao);
-        const v = parseMoeda(l[campoValor]);
-        if (sit === 'PAGO' && !isNaN(v)) {
-          totais.somaPagos += v;
-        }
+      dadosOriginais.forEach(function (r) {
+        const v = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r));
+        if (!isNaN(v)) totais.somaValor += v;
+        const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
+        if (sit === 'PAGO' && !isNaN(v)) totais.somaPagos += v;
       });
     }
+
     return totais;
   }
 
@@ -905,7 +1070,7 @@
         label: BANCOS[banco].label,
         campos: camposSel.map(function (c) { return { chave: c, label: BANCOS[banco].campos[c] }; }),
         linhas: linhas,
-        totais: calcularTotaisBanco(banco, linhas, camposSel)
+        totais: calcularTotaisBanco(banco, dados)
       };
     });
 
@@ -1110,6 +1275,7 @@
 
   function salvarRelatorioModal() {
     if (!state.relatorioAtual) { relToast('Nenhum relatório para salvar.', 'warning'); return; }
+    if (!window.API || typeof window.API.call !== 'function') { relToast('API não disponível.', 'danger'); return; }
 
     const btnSalvar = els.modalBtnSalvar;
     btnSalvar.disabled = true;
@@ -1368,317 +1534,236 @@
     const OLD_ID = 'modalConfirmExclusaoRelDyn';
     const old = document.getElementById(OLD_ID);
     if (old) {
-      const oi = bootstrap.Modal.getInstance(old);
-      if (oi) oi.dispose();
+      if (window.bootstrap) {
+        const oi = bootstrap.Modal.getInstance(old);
+        if (oi) oi.dispose();
+      }
       old.remove();
     }
 
-    const html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered" style="max-width:380px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#dc3545 0%,#b02a37 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-trash-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Excluir Relatório</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Esta ação não pode ser desfeita</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-4 py-4"><p style="font-size:.82rem;color:#444;margin:0;">Tem certeza que deseja excluir este relatório?</p><div style="background:#f8f9fa;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.76rem;"><div><span class="text-muted">Título: </span><span class="fw-bold">' + escapeHtml(rel.titulo || '-') + '</span></div><div><span class="text-muted">Período: </span><span class="fw-bold">' + escapeHtml(rel.periodoLabel || '-') + '</span></div><div><span class="text-muted">Tipo: </span><span class="fw-bold">' + escapeHtml(rel.tipo || '-') + '</span></div></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">Cancelar</button><button type="button" class="btn btn-danger rounded-pill px-4" id="btn-confirm-excluir-rel-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-trash me-1"></i>Excluir</button></div></div></div></div>';
+    const html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
+      '<div class="modal-dialog modal-dialog-centered modal-sm">' +
+      '<div class="modal-content rounded-4 border-0 shadow-lg">' +
+      '<div class="modal-body text-center p-4">' +
+      '<i class="bi bi-exclamation-triangle-fill" style="font-size:2.2rem;color:#dc3545;"></i>' +
+      '<h6 class="fw-bold mt-3 mb-1">Excluir relatório?</h6>' +
+      '<p class="text-muted mb-4" style="font-size:.8rem;">Esta ação não pode ser desfeita.</p>' +
+      '<div class="d-flex gap-2 justify-content-center">' +
+      '<button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>' +
+      '<button type="button" id="btn-confirmar-excluir-rel" class="btn btn-danger btn-sm rounded-pill px-3">Excluir</button>' +
+      '</div></div></div></div></div>';
 
-    document.body.insertAdjacentHTML('beforeend', html);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper.firstElementChild);
+
     const modalEl = document.getElementById(OLD_ID);
-    const modalInst = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    if (!window.bootstrap) { relToast('Bootstrap não carregado.', 'danger'); modalEl.remove(); return; }
+    const modalInst = new bootstrap.Modal(modalEl);
+    modalInst.show();
 
-    document.getElementById('btn-confirm-excluir-rel-dyn').addEventListener('click', function () {
-      const btn = this;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      modalEl.remove();
+    });
 
-      window.API.call('deleterelatorio', { id: rel.id })
+    const btnConfirmar = document.getElementById('btn-confirmar-excluir-rel');
+    btnConfirmar.addEventListener('click', function () {
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+      window.API.call('delrelatorio', { id: rel.id })
         .then(function (res) {
           if (res && res.status === 'success') {
             state.relatoriosSalvos = state.relatoriosSalvos.filter(function (r) { return r.id !== rel.id; });
             renderizarListas();
-            relToast('Relatório excluído!', 'success');
+            relToast('Relatório excluído com sucesso!', 'success');
             modalInst.hide();
           } else {
-            throw new Error((res && res.message) || 'Erro desconhecido ao excluir');
+            throw new Error((res && res.message) || 'Erro ao excluir');
           }
         })
         .catch(function (err) {
-          relToast('Erro ao excluir: ' + err.message, 'danger');
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-trash me-1"></i>Excluir';
+          relToast('Erro ao excluir relatório: ' + err.message, 'danger');
+          btnConfirmar.disabled = false;
+          btnConfirmar.innerHTML = 'Excluir';
         });
     });
-
-    modalEl.addEventListener('hidden.bs.modal', function () {
-      modalInst.dispose();
-      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
-    });
-
-    modalInst.show();
   }
 
-  function renderizarListas() {
-    if (state.tabAtual === 'motoboys') renderizarListaGenerica(els.mbLista, 'motoboys', 'bi-bicycle', 'motoboys');
-    else if (state.tabAtual === 'clientes') renderizarListaGenerica(els.cliLista, 'clientes', 'bi-people', 'clientes');
-    else if (state.tabAtual === 'financeiro') renderizarListaGenerica(els.finLista, 'financeiro', 'bi-wallet2', 'financeiro');
-    else if (state.tabAtual === 'global') renderizarListaGenerica(els.globLista, 'global', 'bi-globe2', 'global');
+  function gerarPdfRelatorio() {
+    if (!state.relatorioAtual || !els.modalBody) { relToast('Nenhum relatório para exportar.', 'warning'); return; }
+    if (!window.html2pdf) { relToast('Biblioteca html2pdf não carregada.', 'danger'); return; }
+
+    const btn = els.modalBtnPdf;
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+
+    const container = document.createElement('div');
+    container.style.padding = '20px';
+    container.style.background = '#fff';
+    container.innerHTML = '<h4 style="margin-bottom:4px;">' + escapeHtml(state.relatorioAtual.titulo) + '</h4>' +
+      '<p style="font-size:.8rem;color:#666;margin-bottom:16px;">' + escapeHtml(state.relatorioAtual.periodoLabel) + '</p>' +
+      els.modalBody.innerHTML;
+
+    const opt = {
+      margin: 10,
+      filename: (state.relatorioAtual.titulo || 'relatorio').replace(/[^a-z0-9]+/gi, '_') + '.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    window.html2pdf().set(opt).from(container).save()
+      .then(function () {
+        relToast('PDF gerado com sucesso!', 'success');
+      })
+      .catch(function (err) {
+        relToast('Erro ao gerar PDF: ' + err.message, 'danger');
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      });
   }
 
   function obterUsuarioLogado() {
     try {
-      if (window.usuarioLogado && (window.usuarioLogado.username || window.usuarioLogado.nome)) {
-        return window.usuarioLogado.username || window.usuarioLogado.nome;
-      }
-      const username = localStorage.getItem('username');
-      if (username && username.trim() && username !== 'null' && username !== 'undefined') return username.trim();
-      const fontes = [sessionStorage, localStorage];
-      for (let i = 0; i < fontes.length; i++) {
-        const store = fontes[i];
-        const raw = store.getItem('usuarioLogado') || store.getItem('usuario') || store.getItem('user');
-        if (raw) {
-          try {
-            const obj = JSON.parse(raw);
-            if (obj && (obj.username || obj.nome)) return obj.username || obj.nome;
-          } catch (e) {
-            if (typeof raw === 'string' && raw.trim()) return raw.trim();
-          }
-        }
-      }
+      const sess = JSON.parse(sessionStorage.getItem('usuario') || localStorage.getItem('usuario') || 'null');
+      if (sess && sess.username) return sess.username;
+      if (sess && sess.nome) return sess.nome;
     } catch (e) { }
-    return 'Usuário não identificado';
+    return 'Não identificado';
   }
 
   function obterHoraAtualBR() {
-    return new Date().toLocaleString('pt-BR');
+    return new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
-  function renderizarListaGenerica(container, tipo, icone, tab) {
-    if (!container) return;
-    const relatorios = state.relatoriosSalvos.filter(function (r) { return r && r.tipo === tipo; });
-    renderizarListaPaginada(container, relatorios, icone, tab);
-  }
+  function renderizarListas() {
+    const config = {
+      motoboys: { el: els.mbLista, filtro: function (r) { return r.tipo === 'motoboys'; }, pag: els.paginacao.motoboys },
+      clientes: { el: els.cliLista, filtro: function (r) { return r.tipo === 'clientes'; }, pag: els.paginacao.clientes },
+      financeiro: { el: els.finLista, filtro: function (r) { return r.tipo === 'financeiro'; }, pag: els.paginacao.financeiro },
+      global: { el: els.globLista, filtro: function (r) { return r.tipo === 'global'; }, pag: els.paginacao.global }
+    };
 
-  function renderizarListaPaginada(container, relatorios, icone, tab) {
-    if (!container) return;
+    const c = config[state.tabAtual];
+    if (!c || !c.el) return;
 
-    if (!relatorios.length) {
-      container.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório salvo.</span></div>';
-      atualizarPaginacao(0, tab);
-      return;
+    const lista = state.relatoriosSalvos.filter(c.filtro).sort(function (a, b) { return b.criadoEm - a.criadoEm; });
+
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / state.itensPorPagina));
+    if (state.paginaAtual > totalPaginas) state.paginaAtual = totalPaginas;
+
+    const inicio = (state.paginaAtual - 1) * state.itensPorPagina;
+    const paginaLista = lista.slice(inicio, inicio + state.itensPorPagina);
+
+    if (!lista.length) {
+      c.el.innerHTML = '<div class="rel-lista-vazia"><i class="bi bi-inbox"></i><p>Nenhum relatório gerado ainda.</p></div>';
+    } else {
+      let html = '';
+      paginaLista.forEach(function (rel) {
+        const dataFormatada = new Date(rel.criadoEm).toLocaleDateString('pt-BR');
+        html += '<div class="rel-item-card" data-id="' + escapeHtml(rel.id) + '">' +
+          '<div class="rel-item-info">' +
+          '<div class="rel-item-titulo">' + escapeHtml(rel.titulo) + '</div>' +
+          '<div class="rel-item-meta"><i class="bi bi-calendar3"></i> ' + escapeHtml(rel.periodoLabel) + ' · Criado em ' + dataFormatada + '</div>' +
+          '</div>' +
+          '<div class="rel-item-acoes">' +
+          '<button type="button" class="btn-rel-visualizar" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
+          '<button type="button" class="btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash"></i></button>' +
+          '</div></div>';
+      });
+      c.el.innerHTML = html;
+
+      c.el.querySelectorAll('.btn-rel-visualizar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const rel = state.relatoriosSalvos.find(function (r) { return r.id === btn.dataset.id; });
+          if (rel) abrirModalRelatorio(rel, false);
+        });
+      });
+
+      c.el.querySelectorAll('.btn-rel-excluir').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const rel = state.relatoriosSalvos.find(function (r) { return r.id === btn.dataset.id; });
+          if (rel) confirmarExclusaoRelatorio(rel);
+        });
+      });
     }
 
-    const totalPag = Math.ceil(relatorios.length / state.itensPorPagina);
-    state.paginaAtual = Math.min(Math.max(1, state.paginaAtual), totalPag);
-    const inicio = (state.paginaAtual - 1) * state.itensPorPagina;
-    const paginado = relatorios.slice(inicio, inicio + state.itensPorPagina);
-
-    let html = '';
-    paginado.forEach(function (rel) {
-      const dtCriado = rel.criadoEm ? new Date(rel.criadoEm).toLocaleString('pt-BR') : 'Data não disponível';
-      html += '<div class="rel-item-card">' +
-        '<div class="rel-item-left">' +
-        '<div class="rel-item-icon"><i class="bi ' + icone + '"></i></div>' +
-        '<div class="rel-item-info">' +
-        '<div class="rel-item-titulo">' + escapeHtml(rel.titulo || 'Sem título') + '</div>' +
-        '<div class="rel-item-sub">' + escapeHtml(rel.periodoLabel || 'Sem período') + ' • ' + escapeHtml(dtCriado) + '</div>' +
-        '</div></div>' +
-        '<div class="rel-item-actions">' +
-        '<button class="rel-item-btn rel-btn-view" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
-        '<button class="rel-item-btn rel-btn-delete" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash"></i></button>' +
-        '</div></div>';
-    });
-    container.innerHTML = html;
-    atualizarPaginacao(totalPag, tab);
-    bindAcoesLista();
-  }
-
-  function atualizarPaginacao(totalPag, tab) {
-    const p = els.paginacao ? els.paginacao[tab] : null;
-    if (!p) return;
-    if (p.info) p.info.textContent = totalPag > 0 ? 'Pág ' + state.paginaAtual + ' de ' + totalPag : 'Pág 0 de 0';
-    if (p.prev) p.prev.disabled = (state.paginaAtual === 1);
-    if (p.next) p.next.disabled = (state.paginaAtual >= totalPag || totalPag === 0);
-  }
-
-  function bindAcoesLista() {
-    document.querySelectorAll('.rel-btn-view').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.stopPropagation();
-        const id = b.dataset.id;
-        const r = state.relatoriosSalvos.find(function (rel) { return rel.id === id; });
-        if (r) abrirModalRelatorio(r, false);
-      });
-    });
-
-    document.querySelectorAll('.rel-btn-delete').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.stopPropagation();
-        const id = b.dataset.id;
-        const r = state.relatoriosSalvos.find(function (rel) { return rel.id === id; });
-        if (r) confirmarExclusaoRelatorio(r);
-      });
-    });
-  }
-
-  function apiComRetry(endpoint, params, tentativas) {
-    tentativas = tentativas || 2;
-    return window.API.call(endpoint, params).catch(function (err) {
-      if (tentativas > 1) {
-        return new Promise(function (resolve) {
-          setTimeout(function () {
-            resolve(apiComRetry(endpoint, params, tentativas - 1));
-          }, 800);
-        });
-      }
-      throw err;
-    });
-  }
-
-  function executarSequencial(chamadas) {
-    const resultados = [];
-    return chamadas.reduce(function (promessaAnterior, fnChamada) {
-      return promessaAnterior.then(function () {
-        return fnChamada()
-          .then(function (res) { resultados.push({ status: 'fulfilled', value: res }); })
-          .catch(function (err) { resultados.push({ status: 'rejected', reason: err }); });
-      });
-    }, Promise.resolve()).then(function () { return resultados; });
+    if (c.pag) {
+      if (c.pag.info) c.pag.info.textContent = 'Página ' + state.paginaAtual + ' de ' + totalPaginas;
+      if (c.pag.prev) c.pag.prev.disabled = state.paginaAtual <= 1;
+      if (c.pag.next) c.pag.next.disabled = state.paginaAtual >= totalPaginas;
+    }
   }
 
   function carregarDados() {
     if (state.fetching) return;
+    if (!window.API || typeof window.API.call !== 'function') {
+      relToast('API não disponível.', 'danger');
+      return;
+    }
     state.fetching = true;
     spinOn();
     exibirLoadingListas();
 
-    const chamadas = [
-      function () { return apiComRetry('getclientes', {}); },
-      function () { return apiComRetry('getcolaboradores', {}); },
-      function () { return apiComRetry('getpedidos', {}); },
-      function () { return apiComRetry('getchat', {}); },
-      function () { return apiComRetry('getfinanceiro', {}); },
-      function () { return apiComRetry('getrelatorios', {}); }
-    ];
+    Promise.all([
+      window.API.call('getcolaboradores', {}),
+      window.API.call('getclientes', {}),
+      window.API.call('getpedidos', {}),
+      window.API.call('getchat', {}),
+      window.API.call('getfinanceiro', {}),
+      window.API.call('getrelatorios', {})
+    ]).then(function (resultados) {
+      state.motoboys = extrairArray(resultados[0]);
+      state.clientes = extrairArray(resultados[1]);
+      state.pedidos = extrairArray(resultados[2]);
+      state.chat = extrairArray(resultados[3]);
+      state.financeiro = extrairArray(resultados[4]);
 
-    executarSequencial(chamadas)
-      .then(function (r) {
-        function pega(idx) {
-          return r[idx].status === 'fulfilled' ? r[idx].value : null;
-        }
-
-        const labels = ['clientes', 'colaboradores', 'pedidos', 'chat', 'financeiro', 'relatorios'];
-        let houveFalha = false;
-
-        r.forEach(function (res, i) {
-          if (res.status === 'rejected') {
-            houveFalha = true;
-            relToast('Falha ao carregar "' + labels[i] + '": ' + (res.reason && res.reason.message ? res.reason.message : res.reason), 'danger');
-          }
-        });
-
-        state.clientes = extrairArray(pega(0));
-        state.motoboys = extrairArray(pega(1));
-        state.pedidos = extrairArray(pega(2));
-        state.chat = extrairArray(pega(3));
-        state.financeiro = extrairArray(pega(4));
-
-        state.relatoriosSalvos = extrairArray(pega(5)).map(function (rel) {
-          let titulo = '';
-          let snapshot = null;
-          if (rel.descricao) {
-            try {
-              const obj = JSON.parse(rel.descricao);
-              if (obj && obj.titulo) titulo = obj.titulo;
-              if (obj && obj.snapshot) snapshot = obj.snapshot;
-              else if (obj && obj.bancos) snapshot = obj;
-            } catch (e) { }
-          }
-          rel.titulo = titulo || rel.tipo || 'Relatório';
-          rel.snapshot = snapshot;
-          rel.periodoLabel = rel.observacao || rel.data || '';
-          return rel;
-        });
-
-        popularSelectMotoboys();
-        popularSelectClientes();
-        renderizarListas();
-
-        if (houveFalha) {
-          relToast('Alguns dados não foram carregados. Clique em sincronizar para tentar novamente.', 'warning');
-        }
-      })
-      .catch(function (err) {
-        relToast('Erro ao carregar dados: ' + err.message, 'danger');
-        renderizarListas();
-      })
-      .finally(function () {
-        state.fetching = false;
-        spinOff();
+      const relatoriosBrutos = extrairArray(resultados[5]);
+      state.relatoriosSalvos = relatoriosBrutos.map(function (r) {
+        let snapshot = {};
+        let titulo = r.tipo || 'Relatório';
+        try {
+          const parsed = JSON.parse(r.descricao);
+          snapshot = parsed.snapshot || {};
+          titulo = parsed.titulo || titulo;
+        } catch (e) { }
+        return {
+          id: r.id,
+          tipo: r.tipo,
+          titulo: titulo,
+          periodoLabel: r.observacao || r.data,
+          criadoEm: r.id ? parseInt(r.id, 36) || Date.now() : Date.now(),
+          descricao: r.descricao,
+          snapshot: snapshot,
+          data: r.data
+        };
       });
+
+      popularSelectMotoboys();
+      popularSelectClientes();
+      renderizarListas();
+      relToast('Dados atualizados com sucesso!', 'success');
+    }).catch(function (err) {
+      relToast('Erro ao carregar dados: ' + err.message, 'danger');
+    }).finally(function () {
+      state.fetching = false;
+      spinOff();
+    });
   }
 
-  window.RelatoriosDebug = {
-    getState: function () { return state; },
-    recarregar: carregarDados,
-    parseMoeda: parseMoeda
-  };
-
-  window.initRelatorios = function () {
-    try {
-      bind();
-      registrarEventos();
-
-      const hoje = toISO(new Date());
-      if (els.mbDataInicio) els.mbDataInicio.value = hoje;
-      if (els.mbDataFim) els.mbDataFim.value = hoje;
-      if (els.cliDataInicio) els.cliDataInicio.value = hoje;
-      if (els.cliDataFim) els.cliDataFim.value = hoje;
-      if (els.finDataInicio) els.finDataInicio.value = hoje;
-      if (els.finDataFim) els.finDataFim.value = hoje;
-      if (els.globDataInicio) els.globDataInicio.value = hoje;
-      if (els.globDataFim) els.globDataFim.value = hoje;
-
-      carregarDados();
-    } catch (e) {
-      relToast('Erro ao inicializar módulo de relatórios: ' + e.message, 'danger');
-    }
-  };
-
-  function gerarPdfRelatorio() {
-    if (!state.relatorioAtual) { relToast('Nenhum relatório para gerar PDF.', 'warning'); return; }
-
-    const rel = state.relatorioAtual;
-    const snapshot = rel.snapshot || { bancos: {} };
-    const conteudo = construirConteudoRelatorio(rel, snapshot);
-
-    const win = window.open('', '_blank');
-    if (!win) { relToast('Bloqueador de pop-up impediu a geração do PDF.', 'warning'); return; }
-
-    const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
-      '<title>' + escapeHtml(rel.titulo || 'Relatório') + '</title>' +
-      '<style>' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#222;padding:24px;font-size:12px;}' +
-      'h1{font-size:18px;margin-bottom:4px;}' +
-      '.periodo{color:#666;font-size:12px;margin-bottom:16px;}' +
-      '.rel-modal-divider{border-top:1px solid #ddd;margin:18px 0;}' +
-      '.rel-modal-section-title{font-weight:700;font-size:13px;margin-bottom:10px;}' +
-      '.rel-modal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}' +
-      '.rel-modal-card{background:#f7f7f7;border-radius:8px;padding:8px 10px;}' +
-      '.rel-modal-card-label{font-size:10px;color:#777;}' +
-      '.rel-modal-card-value{font-weight:700;font-size:13px;}' +
-      'table{width:100%;border-collapse:collapse;margin-bottom:10px;}' +
-      'th,td{border:1px solid #ccc;padding:5px 7px;font-size:11px;text-align:left;}' +
-      'th{background:#f0f0f0;}' +
-      'tfoot tr{background:#f8f9fa;font-weight:700;}' +
-      '@media print{body{padding:0;}}' +
-      '</style></head><body>' +
-      '<h1>' + escapeHtml(rel.titulo || 'Relatório') + '</h1>' +
-      '<div class="periodo">' + escapeHtml(rel.periodoLabel || '') + '</div>' +
-      conteudo +
-      '</body></html>';
-
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-
-    win.onload = function () {
-      setTimeout(function () {
-        win.focus();
-        win.print();
-      }, 300);
-    };
+  function initRelatorios() {
+    if (inicializado) return;
+    inicializado = true;
+    bind();
+    registrarEventos();
+    carregarDados();
   }
+
+  window.initRelatorios = initRelatorios;
 })();

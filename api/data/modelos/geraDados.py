@@ -62,11 +62,12 @@ STATUS_PEDIDO_PADRAO = "CONCLUIDO"
 TIPO_FINANCEIRO_PADRAO = "RECEITA"
 
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
+RDO_FIN_PATTERN = re.compile(r"^RDO0*(\d+)-FIN$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
 # ================================================================
-ULTIMO_RDO_LANCADO = "RDO2046"
-FILTRO_DATA_INICIO = "07/07/2026"
+ULTIMO_RDO_LANCADO = "RDO2301"
+FILTRO_DATA_INICIO = "08/07/2026"
 FILTRO_DATA_FIM = "09/07/2026"
 # ================================================================
 
@@ -197,6 +198,57 @@ def carregar_rdos_existentes():
 
     logger.info("Pedidos existentes localizados na API: %d.", len(ids))
     return ids
+
+
+def carregar_maior_rdo_financeiro():
+    maior = 0
+    maior_id_str = None
+    try:
+        resultado = post({"action": "getfinanceiro", "apiKey": API_KEY})
+        dados = _extrair_lista_dados(resultado, "getfinanceiro")
+        for item in dados:
+            fin_id = str(item.get("id", "")).strip().upper()
+            match = RDO_FIN_PATTERN.match(fin_id)
+            if match:
+                numero = int(match.group(1))
+                if numero > maior:
+                    maior = numero
+                    maior_id_str = fin_id
+    except ErroApi as exc:
+        logger.error("Falha ao buscar tabela financeiro na API: %s.", exc)
+    except ErroFatalGeracao as exc:
+        logger.error("Resposta inesperada ao buscar tabela financeiro: %s.", exc)
+
+    if maior_id_str:
+        logger.info("Maior RDO-FIN localizado na tabela financeiro: %s.", maior_id_str)
+    else:
+        logger.info("Nenhum RDO-FIN localizado na tabela financeiro.")
+
+    return maior
+
+
+def conferir_ultimo_rdo_com_financeiro(rdo_seq_base, maior_rdo_financeiro):
+    if maior_rdo_financeiro == 0:
+        logger.info("Sem RDO-FIN na tabela financeiro para comparação. Seguindo com valor manual (RDO%03d).", rdo_seq_base)
+        return
+
+    if maior_rdo_financeiro == rdo_seq_base:
+        logger.info(
+            "OK: ULTIMO_RDO_LANCADO (RDO%03d) confere com o maior RDO-FIN da tabela financeiro (RDO%03d).",
+            rdo_seq_base, maior_rdo_financeiro
+        )
+    elif maior_rdo_financeiro > rdo_seq_base:
+        logger.warning(
+            "ATENCAO: a tabela financeiro ja possui RDO%03d-FIN, mas ULTIMO_RDO_LANCADO esta definido como RDO%03d. "
+            "Ajuste para RDO%03d antes de continuar, para evitar duplicidade/colisao de IDs.",
+            maior_rdo_financeiro, rdo_seq_base, maior_rdo_financeiro
+        )
+    else:
+        logger.warning(
+            "ATENCAO: ULTIMO_RDO_LANCADO esta definido como RDO%03d, mas o maior RDO-FIN encontrado na tabela "
+            "financeiro e apenas RDO%03d. Confira se o valor manual nao esta avancado alem do que realmente foi lancado.",
+            rdo_seq_base, maior_rdo_financeiro
+        )
 
 
 def determinar_rdo_seq_inicial(rdos_existentes):
@@ -624,6 +676,9 @@ def main():
     RDOS_EXISTENTES = carregar_rdos_existentes()
     RDO_SEQ = determinar_rdo_seq_inicial(RDOS_EXISTENTES)
 
+    maior_rdo_financeiro = carregar_maior_rdo_financeiro()
+    conferir_ultimo_rdo_com_financeiro(RDO_SEQ, maior_rdo_financeiro)
+
     logger.info("Sequência RDO travada em %d. Primeiro pedido desta execução será RDO%03d.", RDO_SEQ, RDO_SEQ + 1)
     logger.info("Filtro de período ativo: início=%s | fim=%s", FILTRO_DATA_INICIO or "sem limite", FILTRO_DATA_FIM or "sem limite")
 
@@ -752,4 +807,3 @@ if __name__ == "__main__":
     except Exception as exc:
         logger.critical("Erro fatal não tratado: %s\n%s", exc, traceback.format_exc())
         sys.exit(1)
-    
