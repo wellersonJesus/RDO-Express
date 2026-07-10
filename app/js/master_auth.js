@@ -37,15 +37,14 @@ window.MasterAuth = (function () {
 
     async function _executarExclusao(id, senha) {
         var idNorm = String(id).replace(/^RDO0*/i, '').trim();
-        console.log('[MasterAuth] 🗑️ Excluindo:', idNorm);
 
         try {
-            var resposta = await window.API.call('deletepedido', { id: idNorm, senha_master: senha });
+            var resposta = await window.API.call('excluirpedidocompleto', {
+                id: idNorm,
+                senha_master: senha
+            });
 
             if (resposta && resposta.status === 'success') {
-                console.log('[MasterAuth] ✅ Excluído com sucesso');
-
-                // ✅ REMOVER DO CACHE GLOBAL
                 if (Array.isArray(window.AppRDO.pedidosCache)) {
                     window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
                         return String(p.id).trim() !== idNorm;
@@ -58,12 +57,10 @@ window.MasterAuth = (function () {
                     });
                 }
 
-                // ✅ EMITIR EVENTO GLOBAL
                 if (typeof window.EventBus !== 'undefined') {
                     window.EventBus.emit('pedido:excluido', { id: idNorm });
                 }
 
-                // ✅ REMOVER VISUALMENTE DO CHAT
                 var msgEl = document.querySelector('[data-pedido-id="' + idNorm + '"]');
                 if (msgEl) {
                     var wrapper = msgEl.closest('.message-wrapper');
@@ -75,7 +72,6 @@ window.MasterAuth = (function () {
                     }
                 }
 
-                // ✅ REMOVER DA LISTA DE PEDIDOS
                 var linhaTabela = document.querySelector('tr[data-pedido-id="' + idNorm + '"]');
                 if (linhaTabela) {
                     linhaTabela.style.transition = 'opacity .3s ease';
@@ -83,7 +79,7 @@ window.MasterAuth = (function () {
                     setTimeout(function () { linhaTabela.remove(); }, 300);
                 }
 
-                try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+                try { if (_modalBS) _modalBS.hide(); } catch (_) { }
                 _limparBackdrop();
 
                 if (typeof Swal !== 'undefined') {
@@ -100,7 +96,6 @@ window.MasterAuth = (function () {
             }
 
         } catch (err) {
-            console.error('[MasterAuth] ❌ Erro:', err);
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'error', title: 'Erro',
@@ -169,7 +164,7 @@ window.MasterAuth = (function () {
 
     function cancelar() {
         console.log('[MasterAuth] ❌ Cancelado');
-        if (_modalBS) { try { _modalBS.hide(); } catch (e) {} }
+        if (_modalBS) { try { _modalBS.hide(); } catch (e) { } }
         _resetar();
         _pedidoId = null;
         _origem = null;
@@ -211,7 +206,7 @@ window.MasterAuth = (function () {
             var senhaExcluir = senha;
             _pedidoId = null;
 
-            try { if (_modalBS) _modalBS.hide(); } catch (_) {}
+            try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             _resetar();
 
             await _executarExclusao(idExcluir, senhaExcluir);

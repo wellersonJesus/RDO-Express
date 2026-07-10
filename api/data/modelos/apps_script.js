@@ -1,4 +1,5 @@
-var SECRET_KEY = "aquieumakdjdddggjrtr";
+var SECRET_KEY = "";
+var MASTER_PASSWORD = "";
 
 var MODELO_PADRAO = [
   '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
@@ -15,7 +16,7 @@ function doPost(e) {
   var temLock = false;
 
   try {
-    temLock = lock.tryLock(10000); // aguarda até 10s pelo lock
+    temLock = lock.tryLock(10000);
     if (!temLock) {
       return responder({ status: "error", message: "Sistema ocupado, tente novamente em alguns segundos." });
     }
@@ -60,6 +61,9 @@ function doPost(e) {
     if (action === "deletechat")
       return responder(processarDeleteChat(ss, data));
 
+    if (action === "excluirpedidocompleto")
+      return responder(processarExclusaoCompleta(ss, data));
+
     var entidade = extrairEntidade(action);
     var nomeAba = mapearEntidade(entidade);
     var sheet = buscarAba(ss, nomeAba);
@@ -72,7 +76,12 @@ function doPost(e) {
       action.indexOf("save") === 0 ||
       action.indexOf("criar") === 0) return responder(processarAdd(sheet, data, nomeAba));
     if (action.indexOf("update") === 0) return responder(processarUpdate(sheet, data));
-    if (action.indexOf("delete") === 0) return responder(processarDelete(sheet, data.id));
+    if (action.indexOf("delete") === 0) {
+      if (nomeAba === "pedidos") {
+        return responder(processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" }));
+      }
+      return responder(processarDelete(sheet, data.id));
+    }
 
     return responder({ status: "error", message: "Acao nao suportada: " + action });
 
@@ -116,6 +125,97 @@ function processarDeleteChat(ss, data) {
     return { status: "success", message: "Chat excluido! Registros: " + deletados };
 
   return { status: "success", message: "Nenhum chat encontrado para pedido_id: " + pedidoId };
+}
+
+function processarExclusaoCompleta(ss, data) {
+  var idBruto = String(data.id || data.pedido_id || "").trim();
+  var senha = String(data.senha_master || "").trim();
+  var bypassInterno = senha === "SKIP";
+
+  if (!idBruto) {
+    return { status: "error", message: "ID do pedido nao informado." };
+  }
+
+  if (!bypassInterno) {
+    if (!senha) {
+      return { status: "error", message: "Senha master nao informada." };
+    }
+    var validacao = processarValidarSenhaMaster(senha);
+    if (!validacao || validacao.status !== "success" || validacao.valido !== true) {
+      return { status: "error", message: "Senha master invalida." };
+    }
+  }
+
+  var idNorm = idBruto.replace(/^RDO0*/i, "").trim();
+  var idBuscaFull = idBruto.toUpperCase();
+
+  var resultado = {
+    status: "success",
+    chat: { deletados: 0 },
+    pedido: { encontrado: false }
+  };
+
+  var sheetChat = buscarAba(ss, "chat");
+  var sheetPedidos = buscarAba(ss, "pedidos");
+
+  if (!sheetPedidos) {
+    return { status: "error", message: "Aba 'pedidos' nao encontrada." };
+  }
+
+  if (sheetChat) {
+    var rowsChat = sheetChat.getDataRange().getValues();
+    var headersChat = rowsChat[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var colPedidoId = headersChat.indexOf("pedido_id");
+
+    if (colPedidoId !== -1) {
+      for (var i = rowsChat.length - 1; i >= 1; i--) {
+        var valCelula = String(rowsChat[i][colPedidoId]).trim();
+        var valNorm = valCelula.replace(/^RDO0*/i, "").trim();
+
+        if (valCelula === idBruto || valNorm === idNorm || valCelula.toUpperCase() === idBuscaFull) {
+          sheetChat.deleteRow(i + 1);
+          resultado.chat.deletados++;
+        }
+      }
+    }
+  }
+
+  var rowsPed = sheetPedidos.getDataRange().getValues();
+  var headersPed = rowsPed[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var idIndexPed = headersPed.indexOf("id");
+
+  if (idIndexPed === -1) {
+    resultado.status = "error";
+    resultado.message = "Coluna 'id' nao encontrada na aba 'pedidos'.";
+    return resultado;
+  }
+
+  var apagouPedido = false;
+
+  for (var j = rowsPed.length - 1; j >= 1; j--) {
+    var idCelulaPed = String(rowsPed[j][idIndexPed]).trim();
+    var idCelulaPedNorm = idCelulaPed.replace(/^RDO0*/i, "").trim();
+
+    if (idCelulaPed === idBruto || idCelulaPedNorm === idNorm || idCelulaPed === idBuscaFull) {
+      sheetPedidos.deleteRow(j + 1);
+      apagouPedido = true;
+      break;
+    }
+  }
+
+  resultado.pedido.encontrado = apagouPedido;
+
+  if (!apagouPedido) {
+    resultado.status = "error";
+    resultado.message = "Pedido nao encontrado: " + idBruto +
+      " (chat removido: " + resultado.chat.deletados + " registro(s)).";
+    return resultado;
+  }
+
+  resultado.message = "Pedido e chat excluidos com sucesso. Chat removido: " +
+    resultado.chat.deletados + " registro(s).";
+
+  return resultado;
 }
 
 function chatJaExiste(sheetChat, idPedido) {
@@ -275,28 +375,11 @@ function processarValidarSenhaMaster(senha) {
   if (!senha || String(senha).trim() === "")
     return { status: "error", valido: false, message: "Senha nao informada." };
 
-  var sheet = buscarAba(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
-  if (!sheet)
-    return { status: "error", valido: false, message: "Aba 'usuarios' nao encontrada." };
-
-  var rows = sheet.getDataRange().getValues();
-  if (rows.length <= 1)
-    return { status: "error", valido: false, message: "Nenhum usuario cadastrado." };
-
-  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
-  var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
-  var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
-
-  if (colPass === -1)
-    return { status: "error", valido: false, message: "Coluna de senha nao encontrada." };
-
   var senhaTrim = String(senha).trim();
-  for (var i = 1; i < rows.length; i++) {
-    var tipo = colTipo !== -1 ? String(rows[i][colTipo]).trim().toLowerCase() : "";
-    var isMaster = tipo === "master" || tipo === "admin";
-    if (isMaster && String(rows[i][colPass]).trim() === senhaTrim)
-      return { status: "success", valido: true };
-  }
+
+  if (senhaTrim === MASTER_PASSWORD)
+    return { status: "success", valido: true };
+
   return { status: "success", valido: false };
 }
 
@@ -573,14 +656,12 @@ function converterValorCelula(val) {
   if (val instanceof Date) {
     var y = val.getFullYear();
 
-    // Se o ano for a data-base do Google Sheets (1899), é um valor de HORA pura
     if (y === 1899) {
       var h = val.getHours();
       var min = val.getMinutes();
       return (h < 10 ? "0" + h : h) + ":" + (min < 10 ? "0" + min : min);
     }
 
-    // Caso contrário, é uma data completa
     var d = val.getDate();
     var m = val.getMonth() + 1;
     return (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y;
