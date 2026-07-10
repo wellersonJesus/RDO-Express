@@ -120,8 +120,8 @@
       },
       defaults: {
         colaborador: ['username'],
-        pedidos: ['solicitante', 'de', 'para', 'valor_corrida'],
-        financeiro: ['id_pedido', 'data', 'descricao', 'motoboy', 'vlr_servico']
+        pedidos: [],
+        financeiro: ['data', 'descricao','vlr_servico']
       }
     },
     clientes: {
