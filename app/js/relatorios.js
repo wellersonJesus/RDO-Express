@@ -1075,18 +1075,36 @@
     });
 
     const pedidosSelecionado = !!snapshot.bancos.pedidos;
-    if (pedidosSelecionado) {
-      const pedidosData = coletarDadosBanco('pedidos');
-      const resumoMotoboys = agruparPorMotoboy(pedidosData);
-      const resumoClientes = agruparPorCliente(pedidosData);
+    const financeiroSelecionado = !!snapshot.bancos.financeiro;
+
+    if (pedidosSelecionado || financeiroSelecionado) {
+      let resumoMotoboys, baseDados;
+
+      if (pedidosSelecionado) {
+        baseDados = coletarDadosBanco('pedidos');
+        resumoMotoboys = agruparPorMotoboy(baseDados);
+      } else {
+        baseDados = coletarDadosBanco('financeiro');
+        resumoMotoboys = agruparPorMotoboyFinanceiro(baseDados);
+      }
+
       snapshot.resumos.motoboys = resumoMotoboys;
-      snapshot.resumos.clientes = resumoClientes;
+
+      if (pedidosSelecionado) {
+        snapshot.resumos.clientes = agruparPorCliente(baseDados);
+      }
 
       const datasPorMotoboy = {};
-      pedidosData.forEach(function (registro) {
-        const nomeMotoboy = obterValorCampoPedido('motoboy', registro);
+      baseDados.forEach(function (registro) {
+        const nomeMotoboy = pedidosSelecionado
+          ? obterValorCampoPedido('motoboy', registro)
+          : (resolverValor('financeiro', 'motoboy', registro) || resolverValor('financeiro', 'colaborador', registro));
         if (!nomeMotoboy) return;
-        const dataBruta = obterDataPedidoComFallback(registro);
+
+        const dataBruta = pedidosSelecionado
+          ? obterDataPedidoComFallback(registro)
+          : obterValorCampoFinanceiro('data', registro);
+
         const dataISO = normalizarDataISO(dataBruta);
         const dataFormatada = dataISO ? formatDateBR(dataISO) : null;
         if (!dataFormatada) return;
@@ -1096,8 +1114,7 @@
         }
       });
 
-      const totalChamados = pedidosData.length;
-      const totalMotoboysDistintos = resumoMotoboys.length;
+      const totalChamados = baseDados.length;
       const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
       const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
       const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
@@ -1105,7 +1122,7 @@
 
       snapshot.resumos.geral = {
         totalChamados: totalChamados,
-        totalMotoboysDistintos: totalMotoboysDistintos,
+        totalMotoboysDistintos: resumoMotoboys.length,
         valorTotalGeral: valorTotalGeral,
         valorTotalMotoboys: valorTotalMotoboys,
         valorTotalRdo: valorTotalRdo,
@@ -1771,6 +1788,48 @@
     bind();
     registrarEventos();
     carregarDados();
+  }
+
+  function agruparPorMotoboyFinanceiro(registrosFinanceiro) {
+    const mapa = {};
+
+    registrosFinanceiro.forEach(function (r) {
+      const nome = resolverValor('financeiro', 'motoboy', r) ||
+        resolverValor('financeiro', 'colaborador', r) ||
+        'Sem motoboy';
+      const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
+      const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r));
+      const valorValido = !isNaN(valor) ? valor : 0;
+      const pago = (sit === 'PAGO');
+
+      if (!mapa[nome]) {
+        mapa[nome] = { nome: nome, qtd: 0, qtdPendente: 0, receitaTotal: 0, receitaPendente: 0 };
+      }
+
+      mapa[nome].qtd++;
+      mapa[nome].receitaTotal += valorValido;
+
+      if (!pago) {
+        mapa[nome].qtdPendente++;
+        mapa[nome].receitaPendente += valorValido;
+      }
+    });
+
+    return Object.keys(mapa).map(function (k) {
+      const m = mapa[k];
+      return {
+        nome: m.nome,
+        qtd: m.qtd,
+        qtdPendente: m.qtdPendente,
+        receitaTotal: m.receitaTotal,
+        receitaPendente: m.receitaPendente,
+        valorMotoboy: m.receitaTotal * PERCENTUAL_MOTOBOY,
+        valorRdo: m.receitaTotal * PERCENTUAL_RDO,
+        valorMotoboyPendente: m.receitaPendente * PERCENTUAL_MOTOBOY,
+        valorRdoPendente: m.receitaPendente * PERCENTUAL_RDO,
+        valorTotalCalculado: (m.receitaTotal * PERCENTUAL_MOTOBOY) + (m.receitaTotal * PERCENTUAL_RDO)
+      };
+    }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
   }
 
   window.initRelatorios = initRelatorios;
