@@ -5,6 +5,8 @@ window.dashboardState = {
     charts: {}
 };
 
+var LIMITE_MINUTOS_ONLINE = 5;
+
 window.INDICADORES_CONFIG = [
     {
         chave: 'clientesAtivos', permissao: 'Pedidos', titulo: 'Clientes Ativos', icone: 'bi-building', cor: 'danger',
@@ -41,36 +43,147 @@ window.INDICADORES_CONFIG = [
     }
 ];
 
-const indicadoresDestaque = [
-    { id: 'usuarios-sistema', cor: 'primary', icone: 'bi-people-fill', valor: 12, label: 'Usuários do Sistema' },
-    { id: 'bot-ativo', cor: 'success', icone: 'bi-robot', valor: 'Online', label: 'Bot Ativo' }
-];
+function _calcularUsuariosOnline(usuarios) {
+    var agora = Date.now();
+    var temCampoPresenca = usuarios.some(function (u) {
+        return u.ultimo_acesso || u.ultimoAcesso || u.lastActivity || u.online !== undefined;
+    });
 
-const indicadoresChatPedidos = [
-    { id: 'pedidos-hoje', cor: 'danger', icone: 'bi-bag-check-fill', valor: 34, max: 60, label: 'Pedidos Hoje' },
-    { id: 'pedidos-pendentes', cor: 'warning', icone: 'bi-hourglass-split', valor: 8, max: 60, label: 'Pedidos Pendentes' },
-    { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: 21, max: 50, label: 'Chats Abertos' },
-    { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: 47, max: 50, label: 'Chats Encerrados' },
-    { id: 'tempo-medio-resposta', cor: 'dark', icone: 'bi-stopwatch-fill', valor: '2m 10s', max: 100, valorReal: 65, label: 'Tempo Médio de Resposta' }
-];
+    if (!temCampoPresenca) return null;
 
-const indicadoresVisaoGeral = [
-    { id: 'clientes-ativos', cor: 'success', icone: 'bi-person-check-fill', valor: 128, max: 200, label: 'Clientes Ativos' },
-    { id: 'clientes-inativos', cor: 'secondary', icone: 'bi-person-dash-fill', valor: 72, max: 200, label: 'Clientes Inativos' },
-    { id: 'faturamento-mensal', cor: 'purple', icone: 'bi-cash-coin', valor: 'R$ 18.450', max: 100, valorReal: 82, label: 'Faturamento Mensal' },
-    { id: 'ticket-medio', cor: 'primary', icone: 'bi-receipt', valor: 'R$ 56,30', max: 100, valorReal: 58, label: 'Ticket Médio' },
-    { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: '38%', max: 100, valorReal: 38, label: 'Taxa de Conversão' }
-];
+    return usuarios.filter(function (u) {
+        if (u.online !== undefined) {
+            return u.online === true || u.online === 'TRUE' || u.online === 1;
+        }
+        var raw = u.ultimo_acesso || u.ultimoAcesso || u.lastActivity;
+        var ts = new Date(raw).getTime();
+        if (isNaN(ts)) return false;
+        return (agora - ts) / 60000 <= LIMITE_MINUTOS_ONLINE;
+    }).length;
+}
 
-function renderizarBlocoAutomacao(dados) {
-    document.getElementById('automacao-total-clientes').textContent = dados.totalClientes || 0;
-    document.getElementById('automacao-usuarios-logados').textContent = dados.usuariosLogados || 0;
+function _calcularUsuariosAtivos(usuarios) {
+    return usuarios.filter(function (u) {
+        return String(u.status || '').toUpperCase() === 'TRUE';
+    }).length;
+}
 
-    var botAtivo = !!dados.botAtivo;
+function renderizarBlocoAutomacao() {
+    var clientes = _obterListaAPI('clientes', 'clientes');
+    var usuarios = _obterListaAPI('usuarios', 'usuarios');
+
+    var totalClientesAutomacao = clientes.filter(function (c) {
+        return String(c.status || '').toUpperCase() === 'TRUE';
+    }).length;
+
+    var totalUsuariosCadastrados = usuarios.length;
+    var totalUsuariosOnline = _calcularUsuariosOnline(usuarios);
+    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
+
+    _atualizarDOMAutomacao({
+        totalClientesAutomacao: totalClientesAutomacao,
+        totalUsuariosCadastrados: totalUsuariosCadastrados,
+        totalUsuariosOnline: totalUsuariosOnline,
+        botAtivo: botAtivo
+    });
+}
+
+function _atualizarDOMAutomacao(dados) {
+    var elClientes = document.getElementById('automacao-total-clientes');
+    var elCadastrados = document.getElementById('automacao-usuarios-cadastrados');
+    var elOnline = document.getElementById('automacao-usuarios-logados');
     var icone = document.getElementById('automacao-icone-bot');
     var statusEl = document.getElementById('automacao-status-bot');
     var descEl = document.getElementById('automacao-status-desc');
 
+    if (elClientes) elClientes.textContent = dados.totalClientesAutomacao;
+    if (elCadastrados) elCadastrados.textContent = dados.totalUsuariosCadastrados;
+
+    if (elOnline) {
+        if (dados.totalUsuariosOnline === null) {
+            elOnline.textContent = '—';
+            elOnline.title = 'Sem dado de presença disponível na API';
+        } else {
+            elOnline.textContent = dados.totalUsuariosOnline;
+            elOnline.removeAttribute('title');
+        }
+    }
+
+    _aplicarStatusBot(icone, statusEl, descEl, dados.botAtivo);
+}
+
+function renderizarBlocoVisaoGeral() {
+    var clientes = _obterListaAPI('clientes', 'clientes');
+    var usuarios = _obterListaAPI('usuarios', 'usuarios');
+
+    var totalClientesAutomacao = clientes.filter(function (c) {
+        return String(c.status || '').toUpperCase() === 'TRUE';
+    }).length;
+
+    var totalUsuariosCadastrados = usuarios.length;
+    var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
+    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
+
+    _atualizarDOMVisaoGeral({
+        totalClientesAutomacao: totalClientesAutomacao,
+        totalUsuariosCadastrados: totalUsuariosCadastrados,
+        totalUsuariosAtivos: totalUsuariosAtivos,
+        botAtivo: botAtivo
+    });
+
+    renderHBars('dashboard-visao-geral-hbars', indicadoresVisaoGeral);
+}
+
+function _atualizarDOMVisaoGeral(dados) {
+    var elClientes = document.getElementById('visao-geral-total-clientes');
+    var elCadastrados = document.getElementById('visao-geral-usuarios-cadastrados');
+    var elAtivos = document.getElementById('visao-geral-usuarios-ativos');
+    var icone = document.getElementById('visao-geral-icone-bot');
+    var statusEl = document.getElementById('visao-geral-status-bot');
+    var descEl = document.getElementById('visao-geral-status-desc');
+
+    if (elClientes) elClientes.textContent = dados.totalClientesAutomacao;
+    if (elCadastrados) elCadastrados.textContent = dados.totalUsuariosCadastrados;
+    if (elAtivos) elAtivos.textContent = dados.totalUsuariosAtivos;
+
+    _aplicarStatusBot(icone, statusEl, descEl, dados.botAtivo);
+}
+
+function renderizarBlocoGestao() {
+    var usuarios = _obterListaAPI('usuarios', 'usuarios');
+
+    var totalUsuariosCadastrados = usuarios.length;
+    var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
+    var totalUsuariosOnline = _calcularUsuariosOnline(usuarios);
+    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
+
+    _atualizarDOMGestao({
+        totalUsuariosCadastrados: totalUsuariosCadastrados,
+        totalUsuariosAtivos: totalUsuariosAtivos,
+        totalUsuariosOnline: totalUsuariosOnline,
+        botAtivo: botAtivo
+    });
+}
+
+function _atualizarDOMGestao(dados) {
+    var elAtivos = document.getElementById('visao-geral-usuarios-ativos');
+    var elLogados = document.getElementById('visao-geral-usuarios-logados');
+
+    if (elAtivos) elAtivos.textContent = dados.totalUsuariosAtivos;
+
+    if (elLogados) {
+        if (dados.totalUsuariosOnline === null) {
+            elLogados.textContent = '—/' + dados.totalUsuariosCadastrados;
+            elLogados.title = 'Sem dado de presença disponível na API (heartbeat não configurado)';
+        } else {
+            elLogados.textContent = dados.totalUsuariosOnline + '/' + dados.totalUsuariosCadastrados;
+            elLogados.removeAttribute('title');
+        }
+    }
+}
+
+function _aplicarStatusBot(icone, statusEl, descEl, botAtivo) {
+    if (!icone || !statusEl || !descEl) return;
     if (botAtivo) {
         icone.classList.remove('is-inactive');
         statusEl.classList.remove('is-inactive');
@@ -83,6 +196,22 @@ function renderizarBlocoAutomacao(dados) {
         descEl.textContent = 'Bot desativado no momento';
     }
 }
+
+var indicadoresChatPedidos = [
+    { id: 'pedidos-hoje', cor: 'danger', icone: 'bi-bag-check-fill', valor: 34, max: 60, label: 'Pedidos Hoje' },
+    { id: 'pedidos-pendentes', cor: 'warning', icone: 'bi-hourglass-split', valor: 8, max: 60, label: 'Pedidos Pendentes' },
+    { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: 21, max: 50, label: 'Chats Abertos' },
+    { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: 47, max: 50, label: 'Chats Encerrados' },
+    { id: 'tempo-medio-resposta', cor: 'dark', icone: 'bi-stopwatch-fill', valor: '2m 10s', max: 100, valorReal: 65, label: 'Tempo Médio de Resposta' }
+];
+
+var indicadoresVisaoGeral = [
+    { id: 'clientes-ativos', cor: 'success', icone: 'bi-person-check-fill', valor: 128, max: 200, label: 'Clientes Ativos' },
+    { id: 'clientes-inativos', cor: 'secondary', icone: 'bi-person-dash-fill', valor: 72, max: 200, label: 'Clientes Inativos' },
+    { id: 'faturamento-mensal', cor: 'purple', icone: 'bi-cash-coin', valor: 'R$ 18.450', max: 100, valorReal: 82, label: 'Faturamento Mensal' },
+    { id: 'ticket-medio', cor: 'primary', icone: 'bi-receipt', valor: 'R$ 56,30', max: 100, valorReal: 58, label: 'Ticket Médio' },
+    { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: '38%', max: 100, valorReal: 38, label: 'Taxa de Conversão' }
+];
 
 function obterUsuarioLogado() {
     var username = localStorage.getItem('username') || 'Usuário';
@@ -185,21 +314,6 @@ function renderIndicadorCard(cor, icone, valor, titulo) {
         '</div>';
 }
 
-function renderHighlight(lista) {
-    var container = document.getElementById('highlight-indicadores');
-    if (!container) return;
-    container.innerHTML = lista.map(function (item) {
-        return '' +
-            '<div class="highlight-card indicador-' + item.cor + '">' +
-            '<div class="indicador-icon"><i class="bi ' + item.icone + '"></i></div>' +
-            '<div class="indicador-info">' +
-            '<span class="indicador-valor">' + item.valor + '</span>' +
-            '<span class="highlight-label">' + item.label + '</span>' +
-            '</div>' +
-            '</div>';
-    }).join('');
-}
-
 function calcularPercentual(item) {
     var base = item.valorReal !== undefined ? item.valorReal : item.valor;
     var max = item.max || 100;
@@ -230,9 +344,7 @@ function renderBars(containerId, lista) {
     requestAnimationFrame(function () {
         container.querySelectorAll('.bar-item').forEach(function (el, index) {
             var fill = el.querySelector('.bar-fill');
-            setTimeout(function () {
-                fill.style.width = '100%';
-            }, index * 90);
+            setTimeout(function () { fill.style.width = '100%'; }, index * 90);
         });
     });
 }
@@ -273,9 +385,7 @@ function renderHBars(containerId, lista) {
         linha.appendChild(trilho);
         container.appendChild(linha);
 
-        requestAnimationFrame(function () {
-            preenchimento.style.width = percentual + '%';
-        });
+        requestAnimationFrame(function () { preenchimento.style.width = percentual + '%'; });
     });
 }
 
@@ -283,14 +393,9 @@ function renderizarBlocoChatPedidos(usuario, dados) {
     var bloco = document.getElementById('bloco-chat-pedidos');
     if (!bloco) return;
     bloco.classList.remove('d-none');
-    renderBars('dashboard-chat-pedidos-ranking', indicadoresChatPedidos);
-}
 
-function renderizarBlocoVisaoGeral(usuario, dados) {
-    var bloco = document.getElementById('bloco-visao-geral');
-    if (!bloco) return;
-    bloco.classList.remove('d-none');
-    renderHBars('dashboard-visao-geral-hbars', indicadoresVisaoGeral);
+    var ranking = calcularTopClientesPedidos(dados, 5);
+    renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
 }
 
 function renderizarBlocoAdministracao(usuario, dados) {
@@ -301,28 +406,24 @@ function renderizarBlocoAdministracao(usuario, dados) {
     var metaPedidos = dados.metaPedidosMes || 0;
     var percentual = metaPedidos > 0 ? Math.round((totalPedidos / metaPedidos) * 100) : 0;
 
-    document.getElementById('admin-total-pedidos').textContent = totalPedidos;
-    document.getElementById('admin-meta-info').textContent =
-        'Meta (Todas as vendas) - ' + (usuario.nome || 'Usuário') + ': ' +
+    var elTotalPedidos = document.getElementById('admin-total-pedidos');
+    var elMetaInfo = document.getElementById('admin-meta-info');
+    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidos;
+    if (elMetaInfo) elMetaInfo.textContent =
+        'Meta (Todas as vendas) - ' + (usuario.username || 'Usuário') + ': ' +
         metaPedidos + ' pedidos (' + percentual + '%)';
 
     var totalAtividades = (dados.atividades || []).length;
     var proximaData = dados.proximaAtividadeData ? new Date(dados.proximaAtividadeData) : null;
     var jaPassou = proximaData ? proximaData < new Date() : false;
 
-    document.getElementById('admin-atividade-status').textContent = jaPassou
-        ? 'A próxima data de atividade já passou'
-        : 'Nenhuma atividade pendente';
+    var elAtivStatus = document.getElementById('admin-atividade-status');
+    var elTotalAtiv = document.getElementById('admin-total-atividades');
+    var elMetaAtiv = document.getElementById('admin-meta-atividades');
 
-    document.getElementById('admin-total-atividades').textContent = totalAtividades;
-    document.getElementById('admin-meta-atividades').textContent = dados.metaAtividades || 0;
-}
-
-function formatarValorResumido(valor) {
-    valor = Number(valor) || 0;
-    if (valor >= 1000000) return (valor / 1000000).toFixed(valor % 1000000 === 0 ? 0 : 1) + 'M';
-    if (valor >= 1000) return (valor / 1000).toFixed(valor % 1000 === 0 ? 0 : 1) + 'K';
-    return String(valor);
+    if (elAtivStatus) elAtivStatus.textContent = jaPassou ? 'A próxima data de atividade já passou' : 'Nenhuma atividade pendente';
+    if (elTotalAtiv) elTotalAtiv.textContent = totalAtividades;
+    if (elMetaAtiv) elMetaAtiv.textContent = dados.metaAtividades || 0;
 }
 
 function _parseValor(v) {
@@ -416,10 +517,7 @@ function _renderChartFinanceiroPizza(qtdReceitas, qtdDespesas) {
 
     window.dashboardState.charts.pizza = new Chart(canvas, {
         type: 'doughnut',
-        data: {
-            labels: ['Receitas', 'Despesas'],
-            datasets: [{ data: [qtdReceitas, qtdDespesas], backgroundColor: ['#198754', '#dc3545'] }]
-        },
+        data: { labels: ['Receitas', 'Despesas'], datasets: [{ data: [qtdReceitas, qtdDespesas], backgroundColor: ['#198754', '#dc3545'] }] },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
 }
@@ -450,8 +548,7 @@ function renderizarBlocoRelatorio(usuario, dados) {
 
 function _mediaDiariaPedidos(pedidos) {
     if (!pedidos.length) return 0;
-    var dias = 7;
-    return (pedidos.length / dias).toFixed(1);
+    return (pedidos.length / 7).toFixed(1);
 }
 
 function _agruparPorDia(pedidos) {
@@ -491,7 +588,6 @@ function _renderChartVolumePedidos(pedidos) {
 }
 
 function _obterNomeCliente(pedido, dados) {
-    // ajuste os campos conforme sua estrutura real de pedido/cliente
     if (pedido.clienteNome) return pedido.clienteNome;
     var cliente = (dados.clientes || []).find(function (c) {
         return String(c.id) === String(pedido.clienteId) || c.nome === pedido.cliente;
@@ -513,14 +609,12 @@ function _iniciais(nome) {
 function calcularTopClientesPedidos(dados, limite) {
     var pedidos = dados.pedidos || [];
 
-    // Ordena pedidos do mais recente para o mais antigo
     var ordenados = pedidos.slice().sort(function (a, b) {
         var da = new Date(a.data || a.dataCriacao || a.createdAt || 0);
         var db = new Date(b.data || b.dataCriacao || b.createdAt || 0);
         return db - da;
     });
 
-    // Agrupa contagem de pedidos por cliente
     var contagem = {};
     ordenados.forEach(function (p) {
         var nome = _obterNomeCliente(p, dados);
@@ -528,7 +622,6 @@ function calcularTopClientesPedidos(dados, limite) {
         contagem[nome]++;
     });
 
-    // Transforma em array e ordena por quantidade de pedidos (desc)
     var ranking = Object.keys(contagem).map(function (nome) {
         return { nome: nome, total: contagem[nome] };
     }).sort(function (a, b) { return b.total - a.total; });
@@ -571,23 +664,43 @@ function renderizarRankingClientes(containerId, ranking) {
     });
 }
 
-function renderizarBlocoChatPedidos(usuario, dados) {
-    var bloco = document.getElementById('bloco-chat-pedidos');
-    if (!bloco) return;
-    bloco.classList.remove('d-none');
-
-    var ranking = calcularTopClientesPedidos(dados, 5);
-    renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
+function _obterListaAPI(chave, origem) {
+    var dados = window.dashboardState.dados;
+    if (dados && Array.isArray(dados[chave]) && dados[chave].length > 0) {
+        return dados[chave];
+    }
+    var cacheCompleto = (window.botState && window.botState.cacheCompleto) || [];
+    return cacheCompleto.filter(function (item) { return item.origem === origem; });
 }
 
 function renderizarDashboardCompleto(usuario, dados) {
-    renderHighlight(indicadoresDestaque);
     renderizarBlocoChatPedidos(usuario, dados);
-    renderizarBlocoVisaoGeral(usuario, dados);
+    renderizarBlocoVisaoGeral();
+    renderizarBlocoGestao();
+    renderizarBlocoAutomacao();
     renderizarBlocoAdministracao(usuario, dados);
     renderizarBlocoFinanceiro(usuario, dados);
     renderizarBlocoRelatorio(usuario, dados);
+    renderBars('dashboard-chat-pedidos-ranking-bars', indicadoresChatPedidos);
 }
+
+window.addEventListener('botCacheAtualizado', function () {
+    renderizarBlocoGestao();
+    renderizarBlocoVisaoGeral();
+    renderizarBlocoAutomacao();
+});
+
+window.addEventListener('masterStatusChanged', function () {
+    renderizarBlocoGestao();
+    renderizarBlocoVisaoGeral();
+    renderizarBlocoAutomacao();
+
+    if (window.dashboardState.dados) {
+        window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function'
+            ? window.checkMaster()
+            : window.dashboardState.dados.masterOn;
+    }
+});
 
 window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
@@ -611,13 +724,6 @@ window.initDashboard = function () {
             syncStopDashboard();
         });
 };
-
-window.addEventListener('masterStatusChanged', function () {
-    if (window.dashboardState.dados) {
-        window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function' ? window.checkMaster() : window.dashboardState.dados.masterOn;
-        renderizarDashboardCompleto(window.dashboardState.usuario, window.dashboardState.dados);
-    }
-});
 
 function _abreviarLabel(titulo) {
     var palavras = String(titulo || '').trim().split(/\s+/);

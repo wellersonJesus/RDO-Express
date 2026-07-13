@@ -43,6 +43,16 @@ function doPost(e) {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    if (action === "heartbeat") {
+      var sheetUsuariosHb = buscarAba(ss, "usuarios");
+      return responder(processarHeartbeat(sheetUsuariosHb, data.username));
+    }
+
+    if (action === "getusuariosonline") {
+      var sheetUsuariosOn = buscarAba(ss, "usuarios");
+      return responder(processarGetUsuariosOnline(sheetUsuariosOn));
+    }
+
     if (action === "criarpedido") {
       var sheetPedidos = buscarAba(ss, "pedidos");
       if (!sheetPedidos) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
@@ -90,6 +100,65 @@ function doPost(e) {
   } finally {
     if (temLock) lock.releaseLock();
   }
+}
+
+function processarHeartbeat(sheet, username) {
+  if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
+
+  var usernameTrim = String(username || "").trim();
+  if (!usernameTrim) return { status: "error", message: "Username nao informado" };
+
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return { status: "error", message: "Nenhum usuario cadastrado" };
+
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+  var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+
+  if (colUser === -1) return { status: "error", message: "Coluna 'username' nao encontrada" };
+  if (colUltimoAcesso === -1) return { status: "error", message: "Coluna 'ultimo_acesso' nao encontrada" };
+
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][colUser]).trim() === usernameTrim) {
+      sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+      return { status: "success", message: "Heartbeat registrado" };
+    }
+  }
+
+  return { status: "error", message: "Usuario '" + usernameTrim + "' nao encontrado" };
+}
+
+function processarGetUsuariosOnline(sheet) {
+  if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
+
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return { status: "success", total: 0, usuarios: [] };
+
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+  var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+
+  if (colUser === -1 || colUltimoAcesso === -1) {
+    return { status: "success", total: 0, usuarios: [] };
+  }
+
+  var LIMITE_MS = 2 * 60 * 1000;
+  var agora = new Date().getTime();
+  var online = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var valAcesso = rows[i][colUltimoAcesso];
+    if (!valAcesso) continue;
+
+    var timestamp = new Date(valAcesso).getTime();
+    if (isNaN(timestamp)) continue;
+
+    if (agora - timestamp <= LIMITE_MS) {
+      online.push(String(rows[i][colUser]).trim());
+    }
+  }
+
+  return { status: "success", total: online.length, usuarios: online };
 }
 
 function processarDeleteChat(ss, data) {
@@ -400,6 +469,7 @@ function processarLogin(user, pass) {
   var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
   var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
   var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+  var colUltimoAcesso = headers.indexOf("ultimo_acesso");
 
   if (colUser === -1 || colPass === -1)
     return { status: "error", message: "Colunas 'username' ou 'password' nao encontradas" };
@@ -410,6 +480,11 @@ function processarLogin(user, pass) {
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][colUser]).trim() === userTrim &&
       String(rows[i][colPass]).trim() === passTrim) {
+
+      if (colUltimoAcesso !== -1) {
+        sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+      }
+
       return {
         status: "success",
         user: {
