@@ -65,6 +65,54 @@
             { el: document.getElementById('adm-filter-quinzenal'), tipo: 'quinzenal' },
             { el: document.getElementById('adm-filter-mensal'), tipo: 'mensal' }
         ];
+
+        els.modalAviso = document.getElementById('modal-aviso-admin');
+        els.avisoTitulo = document.getElementById('aviso-admin-titulo');
+        els.avisoMensagem = document.getElementById('aviso-admin-mensagem');
+    }
+
+    function mostrarModalAviso(mensagem, tipo) {
+        // tipo: 'warning' (default), 'danger', 'success'
+        if (!els.modalAviso || !window.bootstrap) {
+            // Fallback caso o modal não exista no DOM
+            mostrarErro(mensagem, 'Validação');
+            return;
+        }
+
+        var icones = {
+            warning: 'bi-exclamation-circle text-warning',
+            danger: 'bi-x-circle text-danger',
+            success: 'bi-check-circle text-success'
+        };
+        var titulos = {
+            warning: 'Atenção',
+            danger: 'Erro',
+            success: 'Sucesso'
+        };
+        var classesBtn = {
+            warning: 'btn-warning',
+            danger: 'btn-danger',
+            success: 'btn-success'
+        };
+
+        var t = tipo || 'warning';
+        var icone = icones[t] || icones.warning;
+        var titulo = titulos[t] || titulos.warning;
+
+        if (els.avisoTitulo) {
+            els.avisoTitulo.innerHTML = '<i class="bi ' + icone + ' me-2"></i>' + titulo;
+        }
+        if (els.avisoMensagem) {
+            els.avisoMensagem.textContent = mensagem;
+        }
+
+        var btnFooter = els.modalAviso.querySelector('.modal-footer .btn');
+        if (btnFooter) {
+            btnFooter.className = 'btn ' + (classesBtn[t] || classesBtn.warning) + ' rounded-pill px-4 flex-fill';
+        }
+
+        var modal = window.bootstrap.Modal.getOrCreateInstance(els.modalAviso);
+        modal.show();
     }
 
     function getAction(tipo) {
@@ -547,23 +595,45 @@
     function registrarEventosForm() {
         var btnSalvar = document.getElementById('btn-salvar-form-admin');
         if (btnSalvar) btnSalvar.onclick = function () { salvar(); };
-        var fnMotoboy = document.getElementById('fn-motoboy');
-        if (fnMotoboy) {
-            fnMotoboy.onchange = function () {
+
+        document.querySelectorAll('.col-funcao').forEach(function (chk) {
+            chk.onchange = function () {
+                var motoboyMarcado = document.getElementById('fn-motoboy').checked;
                 var div = document.getElementById('div-comissao');
-                if (div) div.classList.toggle('d-none', !fnMotoboy.checked);
+                if (div) div.classList.toggle('d-none', !motoboyMarcado);
             };
-        }
+        });
+
         var modalEl = document.getElementById('modalFormAdmin');
-        if (modalEl) modalEl.addEventListener('hidden.bs.modal', function () { limparForm(); });
+        if (modalEl) modalEl.addEventListener('hidden.bs.modal', function () {
+            limparForm();
+            state.idEdicao = null;
+            state.modoVisualizar = false;
+        });
     }
 
     function limparForm() {
-        state.idEdicao = null; state.modoVisualizar = false;
         var form = document.getElementById('form-admin');
-        if (form) form.reset();
+        if (form) form.querySelectorAll('input, select, textarea').forEach(function (el) {
+            if (el.type === 'checkbox') el.checked = false; else el.value = '';
+        });
         var div = document.getElementById('div-comissao');
         if (div) div.classList.add('d-none');
+        var erroBox = document.getElementById('form-admin-erro');
+        if (erroBox) erroBox.classList.add('d-none');
+    }
+
+    function alternarBlocoForm() {
+        var isCliente = (state.origem === 'clientes');
+        var blocoCliente = document.getElementById('campos-cliente');
+        var blocoColab = document.getElementById('campos-colaborador');
+        if (blocoCliente) blocoCliente.classList.toggle('d-none', !isCliente);
+        if (blocoColab) blocoColab.classList.toggle('d-none', isCliente);
+
+        var icone = document.getElementById('form-admin-icone');
+        var subtitulo = document.getElementById('form-admin-subtitulo');
+        if (icone) icone.className = isCliente ? 'bi bi-building' : 'bi bi-person-badge-fill';
+        if (subtitulo) subtitulo.textContent = isCliente ? 'Dados da empresa cliente' : 'Dados do colaborador';
     }
 
     function preencherCampo(id, valor) {
@@ -580,32 +650,55 @@
         if (btn) btn.classList.toggle('d-none', v);
     }
 
+    function preencherClientes(it) {
+        preencherCampo('c-username', it.nome || it.username);
+        preencherCampo('c-responsavel', it.responsavel);
+        preencherCampo('c-contato', it.contato);
+        preencherCampo('c-pagamento', it.pagamento);
+        preencherCampo('c-imagem', it.imagem);
+        var st = document.getElementById('c-status');
+        if (st) st.value = String(it.status || '').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE';
+    }
+
+    function preencherColaboradores(it) {
+        preencherCampo('col-username', it.username);
+        preencherCampo('col-cpf_cnpj', it.cpf_cnpj);
+        preencherCampo('col-contato', it.contato);
+        preencherCampo('col-email', it.email);
+        preencherCampo('col-comissao', it.comissao);
+        preencherCampo('col-imagem', it.imagem);
+        var st = document.getElementById('col-status');
+        if (st) st.value = String(it.status || '').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE';
+
+        var funcoesSalvas = String(it.colaborador || '').split(',').map(function (f) { return f.trim(); });
+        document.querySelectorAll('.col-funcao').forEach(function (chk) {
+            chk.checked = funcoesSalvas.indexOf(chk.value) !== -1;
+        });
+
+        // Exibe campo comissão se "Motoboy" estiver entre as funções
+        var div = document.getElementById('div-comissao');
+        if (div) div.classList.toggle('d-none', funcoesSalvas.indexOf('Motoboy') === -1);
+    }
+
     function abrirForm(it, readOnly) {
         carregarFormHTML().then(function (ok) {
             if (!ok) return;
             try {
-                state.idEdicao = it ? it.id : null; state.modoVisualizar = !!readOnly;
                 limparForm();
-                var tituloEl = document.getElementById('titulo-form-admin');
-                if (tituloEl) tituloEl.textContent = readOnly ? 'Visualizar' : (it ? 'Editar' : 'Novo');
+                state.idEdicao = it ? it.id : null;
+                state.modoVisualizar = !!readOnly;
+                alternarBlocoForm();
+
+                var isCliente = (state.origem === 'clientes');
+                var tituloEl = document.getElementById('form-admin-titulo');
+                var tipoLabel = isCliente ? 'Cliente' : 'Colaborador';
+                if (tituloEl) tituloEl.textContent = readOnly ? ('Visualizar ' + tipoLabel) : (it ? ('Editar ' + tipoLabel) : ('Novo ' + tipoLabel));
+
                 if (it) {
-                    preencherCampo('fn-nome', it.nome || it.username);
-                    preencherCampo('fn-contato', it.contato);
-                    preencherCampo('fn-email', it.email);
-                    preencherCampo('fn-responsavel', it.responsavel);
-                    preencherCampo('fn-cpf-cnpj', it.cpf_cnpj);
-                    preencherCampo('fn-pagamento', it.pagamento);
-                    preencherCampo('fn-status', String(it.status || '').toUpperCase() === 'TRUE');
-                    preencherCampo('fn-imagem', it.imagem);
-                    var fnMotoboy = document.getElementById('fn-motoboy');
-                    var divComissao = document.getElementById('div-comissao');
-                    if (fnMotoboy && divComissao) {
-                        var isMotoboy = String(it.motoboy || '').toUpperCase() === 'TRUE';
-                        fnMotoboy.checked = isMotoboy;
-                        divComissao.classList.toggle('d-none', !isMotoboy);
-                        preencherCampo('fn-comissao', it.comissao);
-                    }
+                    if (isCliente) preencherClientes(it);
+                    else preencherColaboradores(it);
                 }
+
                 setCamposReadOnly(readOnly);
                 var modalEl = document.getElementById('modalFormAdmin');
                 if (modalEl && window.bootstrap) {
@@ -620,31 +713,65 @@
         });
     }
 
-    function coletarDadosForm() {
-        var dados = {
-            nome: (document.getElementById('fn-nome') || {}).value || '',
-            contato: (document.getElementById('fn-contato') || {}).value || '',
-            email: (document.getElementById('fn-email') || {}).value || '',
-            responsavel: (document.getElementById('fn-responsavel') || {}).value || '',
-            cpf_cnpj: (document.getElementById('fn-cpf-cnpj') || {}).value || '',
-            pagamento: (document.getElementById('fn-pagamento') || {}).value || '',
-            status: (document.getElementById('fn-status') || {}).checked ? 'TRUE' : 'FALSE',
-            imagem: (document.getElementById('fn-imagem') || {}).value || ''
+    function coletarDadosClientes() {
+        return {
+            nome: ((document.getElementById('c-username') || {}).value || '').trim(),
+            responsavel: ((document.getElementById('c-responsavel') || {}).value || '').trim(),
+            contato: ((document.getElementById('c-contato') || {}).value || '').trim(),
+            pagamento: (document.getElementById('c-pagamento') || {}).value || '',
+            imagem: ((document.getElementById('c-imagem') || {}).value || '').trim(),
+            status: (document.getElementById('c-status') || {}).value || 'FALSE'
         };
-        var fnMotoboy = document.getElementById('fn-motoboy');
-        if (fnMotoboy) {
-            dados.motoboy = fnMotoboy.checked ? 'TRUE' : 'FALSE';
-            dados.comissao = fnMotoboy.checked ? ((document.getElementById('fn-comissao') || {}).value || '') : '';
+    }
+
+    function coletarFuncoesSelecionadas() {
+        var checks = document.querySelectorAll('.col-funcao:checked');
+        var funcoes = [];
+        checks.forEach(function (el) {
+            funcoes.push(el.value);
+        });
+        return funcoes;
+    }
+
+    function coletarDadosColaboradores() {
+        var funcoesSelecionadas = coletarFuncoesSelecionadas();
+
+        var dados = {
+            username: ((document.getElementById('col-username') || {}).value || '').trim(),
+            colaborador: funcoesSelecionadas.join(', '),
+            cpf_cnpj: ((document.getElementById('col-cpf_cnpj') || {}).value || '').trim(),
+            contato: ((document.getElementById('col-contato') || {}).value || '').trim(),
+            email: ((document.getElementById('col-email') || {}).value || '').trim(),
+            comissao: ((document.getElementById('col-comissao') || {}).value || '').trim(),
+            imagem: ((document.getElementById('col-imagem') || {}).value || '').trim(),
+            status: (document.getElementById('col-status') || {}).value || 'FALSE'
+        };
+        dados._funcoesArray = funcoesSelecionadas;
+        return dados;
+    }
+
+    function coletarDadosForm() {
+        var dados = (state.origem === 'clientes') ? coletarDadosClientes() : coletarDadosColaboradores();
+        if (state.idEdicao !== null && state.idEdicao !== undefined) {
+            dados.id = String(state.idEdicao);
         }
-        if (state.idEdicao) dados.id = state.idEdicao;
         return dados;
     }
 
     function validarForm(dados) {
-        if (!dados.nome || !dados.nome.trim()) {
-            mostrarErro('O campo Nome é obrigatório.', 'Validação');
+        var isCliente = (state.origem === 'clientes');
+        var nomeCampo = isCliente ? dados.nome : dados.username;
+
+        if (!nomeCampo || !nomeCampo.trim()) {
+            mostrarModalAviso('O campo Nome é obrigatório.', 'warning');
             return false;
         }
+
+        if (!isCliente && (!dados._funcoesArray || dados._funcoesArray.length === 0)) {
+            mostrarModalAviso('Selecione ao menos uma função para o colaborador.', 'warning');
+            return false;
+        }
+
         return true;
     }
 
@@ -658,6 +785,9 @@
         }
         if (!validarForm(dados)) return;
 
+        // Remove campo auxiliar de validação antes de enviar
+        delete dados._funcoesArray;
+
         var acao;
         try {
             verificarAPI();
@@ -666,6 +796,8 @@
             tratarErro(err, 'Erro de inicialização');
             return;
         }
+
+        console.log('[Admin] Enviando payload para "' + acao + '":', JSON.stringify(dados));
 
         var btn = document.getElementById('btn-salvar-form-admin');
         if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; }
@@ -676,7 +808,12 @@
                     throw new Error(extrairMsgErro(res.message || res.error || res));
                 }
                 var el = document.getElementById('modalFormAdmin');
-                if (el && window.bootstrap) { var m = window.bootstrap.Modal.getInstance(el); if (m) m.hide(); }
+                if (el && window.bootstrap) {
+                    var m = window.bootstrap.Modal.getInstance(el);
+                    if (m) m.hide();
+                }
+                state.idEdicao = null;
+                state.modoVisualizar = false;
                 fetchDados();
             })
             .catch(function (err) { tratarErro(err, 'Erro ao salvar (' + acao + ')'); })

@@ -154,6 +154,27 @@
 
     <div id="admin-modal-container"></div>
 
+    <div class="modal fade" id="modal-aviso-admin" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h6 class="fw-bold mb-0 text-dark" id="aviso-admin-titulo">
+                        <i class="bi bi-exclamation-circle text-warning me-2"></i>Atenção
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <p class="mb-0 text-muted" id="aviso-admin-mensagem">Mensagem aqui.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex flex-row flex-nowrap justify-content-center gap-2 w-100">
+                    <button type="button" class="btn btn-warning rounded-pill px-4 flex-fill" id="btn-fechar-aviso-admin" data-bs-dismiss="modal">
+                        Entendi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="modal-excluir-admin" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -166,9 +187,9 @@
                         Deseja realmente excluir <strong id="excluir-admin-nome" class="text-dark">este registro</strong>?
                     </p>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger rounded-pill px-4" id="btn-confirmar-excluir-admin">
+                <div class="modal-footer border-0 pt-0 d-flex flex-row flex-nowrap justify-content-center gap-2 w-100">
+                    <button type="button" class="btn btn-light rounded-pill px-4 flex-fill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4 flex-fill" id="btn-confirmar-excluir-admin">
                         <i class="bi bi-trash"></i> Excluir
                     </button>
                 </div>
