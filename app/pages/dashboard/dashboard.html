@@ -9,33 +9,41 @@
         </div>
     </div>
 
-    <div class="dash-block">
-        <div class="dash-block-header">
-            <i class="bi bi-grid-1x2-fill"></i>
-            <h6>Visão Geral</h6>
-        </div>
-        <div id="dashboard-indicadores-grid" class="indicadores-row"></div>
-        <div id="dashboard-sem-permissao" class="text-center py-5 d-none">
-            <i class="bi bi-shield-lock fs-1 text-secondary opacity-50"></i>
-            <h5 class="mt-3 text-secondary">Nenhum indicador disponível</h5>
-            <p class="text-muted small">Seu perfil não possui permissões para visualizar indicadores.</p>
+    <div class="row g-3 mt-3">
+        <div class="col-md-12">
+            <div class="dash-block dash-bars-block" id="bloco-visao-geral">
+                <div class="dash-block-header">
+                    <i class="bi bi-eye-fill"></i>
+                    <h6>Visão Geral</h6>
+                </div>
+                <div class="hbars-list" id="dashboard-visao-geral-hbars"></div>
+            </div>
         </div>
     </div>
 
-    <div class="dash-block" id="bloco-chat-pedidos">
-        <div class="dash-block-header">
-            <i class="bi bi-chat-dots-fill"></i>
-            <h6>Chat & Pedidos</h6>
+    <div class="row g-3 dash-row-top">
+        <div class="col-md-6">
+            <div class="dash-block dash-bars-block" id="bloco-chat-pedidos">
+                <div class="dash-block-header">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <h6>Chat e Pedidos</h6>
+                </div>
+                <div class="bars-list" id="dashboard-chat-pedidos-ranking"></div>
+            </div>
         </div>
-        <div id="dashboard-chat-grid" class="indicadores-row"></div>
-    </div>
 
-    <div class="dash-block" id="bloco-administracao">
-        <div class="dash-block-header">
-            <i class="bi bi-bank"></i>
-            <h6>Administração</h6>
+        <div class="col-md-6">
+            <div class="dash-block dash-chart-block" id="bloco-administracao">
+                <div class="dash-block-header">
+                    <i class="bi bi-gear-fill"></i>
+                    <h6>Administração</h6>
+                </div>
+                <div class="admin-chart-legend" id="dashboard-admin-legend"></div>
+                <div class="admin-chart-wrapper">
+                    <canvas id="chart-admin-bars" height="130"></canvas>
+                </div>
+            </div>
         </div>
-        <div id="dashboard-admin-grid" class="indicadores-row"></div>
     </div>
 
     <div class="dash-block" id="bloco-financeiro">

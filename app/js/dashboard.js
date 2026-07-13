@@ -41,6 +41,27 @@ window.INDICADORES_CONFIG = [
     }
 ];
 
+const indicadoresDestaque = [
+    { id: 'usuarios-sistema', cor: 'primary', icone: 'bi-people-fill', valor: 12, label: 'Usuários do Sistema' },
+    { id: 'bot-ativo', cor: 'success', icone: 'bi-robot', valor: 'Online', label: 'Bot Ativo' }
+];
+
+const indicadoresChatPedidos = [
+    { id: 'pedidos-hoje', cor: 'danger', icone: 'bi-bag-check-fill', valor: 34, max: 60, label: 'Pedidos Hoje' },
+    { id: 'pedidos-pendentes', cor: 'warning', icone: 'bi-hourglass-split', valor: 8, max: 60, label: 'Pedidos Pendentes' },
+    { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: 21, max: 50, label: 'Chats Abertos' },
+    { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: 47, max: 50, label: 'Chats Encerrados' },
+    { id: 'tempo-medio-resposta', cor: 'dark', icone: 'bi-stopwatch-fill', valor: '2m 10s', max: 100, valorReal: 65, label: 'Tempo Médio de Resposta' }
+];
+
+const indicadoresVisaoGeral = [
+    { id: 'clientes-ativos', cor: 'success', icone: 'bi-person-check-fill', valor: 128, max: 200, label: 'Clientes Ativos' },
+    { id: 'clientes-inativos', cor: 'secondary', icone: 'bi-person-dash-fill', valor: 72, max: 200, label: 'Clientes Inativos' },
+    { id: 'faturamento-mensal', cor: 'purple', icone: 'bi-cash-coin', valor: 'R$ 18.450', max: 100, valorReal: 82, label: 'Faturamento Mensal' },
+    { id: 'ticket-medio', cor: 'primary', icone: 'bi-receipt', valor: 'R$ 56,30', max: 100, valorReal: 58, label: 'Ticket Médio' },
+    { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: '38%', max: 100, valorReal: 38, label: 'Taxa de Conversão' }
+];
+
 function obterUsuarioLogado() {
     var username = localStorage.getItem('username') || 'Usuário';
     var cargo = localStorage.getItem('tipo') || '';
@@ -130,94 +151,131 @@ function carregarDadosDashboard() {
 }
 
 function renderIndicadorCard(cor, icone, valor, titulo) {
+    var abreviado = _abreviarLabel(titulo);
     return '' +
         '<div class="indicador-card indicador-' + cor + '">' +
         '<div class="indicador-icon"><i class="bi ' + icone + '"></i></div>' +
         '<div class="indicador-info">' +
         '<div class="indicador-valor">' + valor + '</div>' +
-        '<div class="indicador-label">' + titulo + '</div>' +
+        '<div class="indicador-label">' + abreviado + '</div>' +
         '</div>' +
+        '<span class="indicador-tooltip">' + titulo + '</span>' +
         '</div>';
 }
 
-function renderizarIndicadoresPrincipais(usuario, dados) {
-    var grid = document.getElementById('dashboard-indicadores-grid');
-    var semPermissao = document.getElementById('dashboard-sem-permissao');
-    if (!grid) return;
-
-    var permitidos = window.INDICADORES_CONFIG.filter(function (cfg) {
-        return usuarioTemPermissao(usuario, cfg.permissao);
-    });
-
-    if (permitidos.length === 0) {
-        grid.innerHTML = '';
-        if (semPermissao) semPermissao.classList.remove('d-none');
-        return;
-    }
-    if (semPermissao) semPermissao.classList.add('d-none');
-
-    var html = '';
-    for (var i = 0; i < permitidos.length; i++) {
-        var cfg = permitidos[i];
-        var valor;
-        try { valor = cfg.calcular(dados, usuario); } catch (e) { valor = '-'; }
-        html += renderIndicadorCard(cfg.cor, cfg.icone, valor, cfg.titulo);
-    }
-    grid.innerHTML = html;
+function renderHighlight(lista) {
+    var container = document.getElementById('highlight-indicadores');
+    if (!container) return;
+    container.innerHTML = lista.map(function (item) {
+        return '' +
+            '<div class="highlight-card indicador-' + item.cor + '">' +
+            '<div class="indicador-icon"><i class="bi ' + item.icone + '"></i></div>' +
+            '<div class="indicador-info">' +
+            '<span class="indicador-valor">' + item.valor + '</span>' +
+            '<span class="highlight-label">' + item.label + '</span>' +
+            '</div>' +
+            '</div>';
+    }).join('');
 }
 
-function _statusPedido(p) {
-    return String(p.status || p.situacao || '').toUpperCase().trim();
+function calcularPercentual(item) {
+    var base = item.valorReal !== undefined ? item.valorReal : item.valor;
+    var max = item.max || 100;
+    var percentual = Math.min(100, Math.round((Number(base) / max) * 100));
+    return isNaN(percentual) ? 0 : percentual;
+}
+
+function renderBars(containerId, lista) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = lista.map(function (item) {
+        var percentual = calcularPercentual(item);
+        return '' +
+            '<div class="bar-item indicador-' + item.cor + '" data-percentual="' + percentual + '">' +
+            '<div class="bar-item-icon"><i class="bi ' + item.icone + '"></i></div>' +
+            '<div class="bar-item-body">' +
+            '<div class="bar-item-top">' +
+            '<span class="bar-item-label">' + item.label + '</span>' +
+            '<span class="bar-item-valor">' + item.valor + '</span>' +
+            '</div>' +
+            '<div class="bar-track"><div class="bar-fill"></div></div>' +
+            '</div>' +
+            '<span class="bar-tooltip">' + item.valor + ' • ' + percentual + '% comparativo</span>' +
+            '</div>';
+    }).join('');
+
+    requestAnimationFrame(function () {
+        container.querySelectorAll('.bar-item').forEach(function (el, index) {
+            var fill = el.querySelector('.bar-fill');
+            setTimeout(function () {
+                fill.style.width = '100%';
+            }, index * 90);
+        });
+    });
+}
+
+function renderHBars(containerId, lista) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    var maxValor = Math.max.apply(null, lista.map(function (item) {
+        return item.valorReal !== undefined ? item.valorReal : Number(item.valor) || 0;
+    }));
+
+    lista.forEach(function (item) {
+        var base = item.valorReal !== undefined ? item.valorReal : (Number(item.valor) || 0);
+        var percentual = maxValor > 0 ? (base / maxValor) * 100 : 0;
+
+        var linha = document.createElement('div');
+        linha.className = 'hbar-item';
+
+        var label = document.createElement('span');
+        label.className = 'hbar-label';
+        label.textContent = item.label;
+
+        var trilho = document.createElement('div');
+        trilho.className = 'hbar-track';
+
+        var preenchimento = document.createElement('div');
+        preenchimento.className = 'hbar-fill';
+
+        var valor = document.createElement('span');
+        valor.className = 'hbar-value';
+        valor.textContent = item.valor;
+
+        preenchimento.appendChild(valor);
+        trilho.appendChild(preenchimento);
+        linha.appendChild(label);
+        linha.appendChild(trilho);
+        container.appendChild(linha);
+
+        requestAnimationFrame(function () {
+            preenchimento.style.width = percentual + '%';
+        });
+    });
 }
 
 function renderizarBlocoChatPedidos(usuario, dados) {
     var bloco = document.getElementById('bloco-chat-pedidos');
-    var grid = document.getElementById('dashboard-chat-grid');
-    if (!bloco || !grid) return;
-
-    var temChat = usuarioTemPermissao(usuario, 'Chat');
-    var temPedidos = usuarioTemPermissao(usuario, 'Pedidos');
-
-    if (!temChat && !temPedidos) {
-        bloco.classList.add('d-none');
-        return;
-    }
+    if (!bloco) return;
     bloco.classList.remove('d-none');
+    renderBars('dashboard-chat-pedidos-ranking', indicadoresChatPedidos);
+}
 
-    var html = '';
-
-    if (temChat) {
-        var mensagens = dados.mensagens || [];
-        var naoLidas = mensagens.filter(function (m) { return m.lida === false || String(m.lida).toUpperCase() === 'FALSE'; }).length;
-        var totalConversas = window.AppRDO && Array.isArray(window.AppRDO.clientesCache) ? window.AppRDO.clientesCache.length : 0;
-
-        html += renderIndicadorCard('info', 'bi-envelope-fill', naoLidas, 'Mensagens Não Lidas');
-        html += renderIndicadorCard('primary', 'bi-chat-square-text-fill', totalConversas, 'Conversas Ativas');
-        html += renderIndicadorCard('warning', 'bi-bell-fill', naoLidas, 'Notificações Pendentes');
-    }
-
-    if (temPedidos) {
-        var pedidos = dados.pedidos || [];
-        var novos = pedidos.filter(function (p) { var s = _statusPedido(p); return s === 'NOVO' || s === 'PENDENTE'; }).length;
-        var abertos = pedidos.filter(function (p) { var s = _statusPedido(p); return s === 'ABERTO' || s === 'EM ANDAMENTO' || s === 'ANDAMENTO'; }).length;
-        var cancelados = pedidos.filter(function (p) { return _statusPedido(p) === 'CANCELADO'; }).length;
-        var concluidos = pedidos.filter(function (p) { var s = _statusPedido(p); return s === 'CONCLUIDO' || s === 'CONCLUÍDO' || s === 'FINALIZADO'; }).length;
-        var excluidos = pedidos.filter(function (p) { return _statusPedido(p) === 'EXCLUIDO' || _statusPedido(p) === 'EXCLUÍDO'; }).length;
-
-        html += renderIndicadorCard('success', 'bi-bag-plus-fill', novos, 'Pedidos Novos');
-        html += renderIndicadorCard('primary', 'bi-truck', abertos, 'Pedidos Abertos');
-        html += renderIndicadorCard('danger', 'bi-x-circle-fill', cancelados, 'Pedidos Cancelados');
-        html += renderIndicadorCard('success', 'bi-check-circle-fill', concluidos, 'Pedidos Concluídos');
-        html += renderIndicadorCard('secondary', 'bi-trash-fill', excluidos, 'Pedidos Excluídos');
-    }
-
-    grid.innerHTML = html;
+function renderizarBlocoVisaoGeral(usuario, dados) {
+    var bloco = document.getElementById('bloco-visao-geral');
+    if (!bloco) return;
+    bloco.classList.remove('d-none');
+    renderHBars('dashboard-visao-geral-hbars', indicadoresVisaoGeral);
 }
 
 function renderizarBlocoAdministracao(usuario, dados) {
     var bloco = document.getElementById('bloco-administracao');
-    var grid = document.getElementById('dashboard-admin-grid');
-    if (!bloco || !grid) return;
+    var legendEl = document.getElementById('dashboard-admin-legend');
+    var canvas = document.getElementById('chart-admin-bars');
+    if (!bloco || !canvas) return;
 
     if (!usuarioTemPermissao(usuario, 'Administração')) {
         bloco.classList.add('d-none');
@@ -232,15 +290,47 @@ function renderizarBlocoAdministracao(usuario, dados) {
     var clientesAtivos = clientes.filter(function (c) { return String(c.status || '').toUpperCase() === 'TRUE'; }).length;
     var clientesInativos = clientes.length - clientesAtivos;
 
-    var html = '';
-    html += renderIndicadorCard('primary', 'bi-person-fill', colaboradores.length, 'Total de Colaboradores');
-    html += renderIndicadorCard('success', 'bi-person-check-fill', colabAtivos, 'Colaboradores Ativos');
-    html += renderIndicadorCard('secondary', 'bi-person-dash-fill', colabInativos, 'Colaboradores Inativos');
-    html += renderIndicadorCard('danger', 'bi-building', clientes.length, 'Total de Clientes');
-    html += renderIndicadorCard('success', 'bi-building-check', clientesAtivos, 'Clientes Ativos');
-    html += renderIndicadorCard('secondary', 'bi-building-dash', clientesInativos, 'Clientes Inativos');
+    var dadosGrafico = [
+        { label: 'Colab. Ativos', valor: colabAtivos, cor: '#198754' },
+        { label: 'Colab. Inativos', valor: colabInativos, cor: '#6c757d' },
+        { label: 'Clientes Ativos', valor: clientesAtivos, cor: '#0aa8c7' },
+        { label: 'Clientes Inativos', valor: clientesInativos, cor: '#dc3545' }
+    ];
 
-    grid.innerHTML = html;
+    legendEl.innerHTML = dadosGrafico.map(function (d) {
+        return (
+            '<div class="admin-legend-item">' +
+                '<span class="admin-legend-dot" style="background:' + d.cor + '"></span>' +
+                d.label +
+            '</div>'
+        );
+    }).join('');
+
+    if (window.chartAdminBarsInstance) {
+        window.chartAdminBarsInstance.destroy();
+    }
+
+    window.chartAdminBarsInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: dadosGrafico.map(function (d) { return d.label; }),
+            datasets: [{
+                data: dadosGrafico.map(function (d) { return d.valor; }),
+                backgroundColor: dadosGrafico.map(function (d) { return d.cor; }),
+                borderRadius: 6,
+                maxBarThickness: 40
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { display: false } },
+                y: { display: false, beginAtZero: true }
+            }
+        }
+    });
 }
 
 function _parseValor(v) {
@@ -409,8 +499,9 @@ function _renderChartVolumePedidos(pedidos) {
 }
 
 function renderizarDashboardCompleto(usuario, dados) {
-    renderizarIndicadoresPrincipais(usuario, dados);
+    renderHighlight(indicadoresDestaque);
     renderizarBlocoChatPedidos(usuario, dados);
+    renderizarBlocoVisaoGeral(usuario, dados);
     renderizarBlocoAdministracao(usuario, dados);
     renderizarBlocoFinanceiro(usuario, dados);
     renderizarBlocoRelatorio(usuario, dados);
@@ -446,24 +537,8 @@ window.addEventListener('masterStatusChanged', function () {
     }
 });
 
-function renderIndicadores(containerId, lista) {
-    const grid = document.getElementById(containerId);
-    if (!grid) return;
-
-    if (!lista || lista.length === 0) {
-        grid.innerHTML = '';
-        return;
-    }
-
-    grid.innerHTML = lista.map(item => `
-        <div class="indicador-card indicador-${item.cor}">
-            <div class="indicador-icon">
-                <i class="bi ${item.icone}"></i>
-            </div>
-            <div class="indicador-info">
-                <span class="indicador-valor">${item.valor}</span>
-                <span class="indicador-label">${item.label}</span>
-            </div>
-        </div>
-    `).join('');
+function _abreviarLabel(titulo) {
+    var palavras = String(titulo || '').trim().split(/\s+/);
+    if (palavras.length === 1) return palavras[0].slice(0, 8);
+    return palavras[0].slice(0, 6) + '. ' + palavras.slice(1).map(function (p) { return p.slice(0, 3) + '.'; }).join(' ');
 }
