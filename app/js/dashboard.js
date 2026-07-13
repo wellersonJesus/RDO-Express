@@ -2,7 +2,8 @@ window.dashboardState = {
     usuario: null,
     dados: null,
     isFetching: false,
-    charts: {}
+    charts: {},
+    heartbeatIntervalId: null // 👈 adicione
 };
 
 var LIMITE_MINUTOS_ONLINE = 5;
@@ -77,15 +78,28 @@ function renderizarBlocoAutomacao() {
     }).length;
 
     var totalUsuariosCadastrados = usuarios.length;
-    var totalUsuariosOnline = _calcularUsuariosOnline(usuarios);
     var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
 
-    _atualizarDOMAutomacao({
-        totalClientesAutomacao: totalClientesAutomacao,
-        totalUsuariosCadastrados: totalUsuariosCadastrados,
-        totalUsuariosOnline: totalUsuariosOnline,
-        botAtivo: botAtivo
-    });
+    function montarDOM(totalOnline) {
+        _atualizarDOMAutomacao({
+            totalClientesAutomacao: totalClientesAutomacao,
+            totalUsuariosCadastrados: totalUsuariosCadastrados,
+            totalUsuariosOnline: totalOnline,
+            botAtivo: botAtivo
+        });
+    }
+
+    if (!window.API || typeof window.API.call !== 'function') {
+        montarDOM(null);
+        return;
+    }
+
+    window.API.call('getusuariosonline')
+        .then(function (resp) {
+            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number') ? resp.total : null;
+            montarDOM(totalOnline);
+        })
+        .catch(function () { montarDOM(null); });
 }
 
 function _atualizarDOMAutomacao(dados) {
@@ -151,18 +165,41 @@ function _atualizarDOMVisaoGeral(dados) {
 
 function renderizarBlocoGestao() {
     var usuarios = _obterListaAPI('usuarios', 'usuarios');
-
     var totalUsuariosCadastrados = usuarios.length;
     var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
-    var totalUsuariosOnline = _calcularUsuariosOnline(usuarios);
     var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
 
-    _atualizarDOMGestao({
-        totalUsuariosCadastrados: totalUsuariosCadastrados,
-        totalUsuariosAtivos: totalUsuariosAtivos,
-        totalUsuariosOnline: totalUsuariosOnline,
-        botAtivo: botAtivo
-    });
+    if (!window.API || typeof window.API.call !== 'function') {
+        _atualizarDOMGestao({
+            totalUsuariosCadastrados: totalUsuariosCadastrados,
+            totalUsuariosAtivos: totalUsuariosAtivos,
+            totalUsuariosOnline: null,
+            botAtivo: botAtivo
+        });
+        return;
+    }
+
+    window.API.call('getusuariosonline')
+        .then(function (resp) {
+            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number')
+                ? resp.total
+                : null;
+
+            _atualizarDOMGestao({
+                totalUsuariosCadastrados: totalUsuariosCadastrados,
+                totalUsuariosAtivos: totalUsuariosAtivos,
+                totalUsuariosOnline: totalOnline,
+                botAtivo: botAtivo
+            });
+        })
+        .catch(function () {
+            _atualizarDOMGestao({
+                totalUsuariosCadastrados: totalUsuariosCadastrados,
+                totalUsuariosAtivos: totalUsuariosAtivos,
+                totalUsuariosOnline: null,
+                botAtivo: botAtivo
+            });
+        });
 }
 
 function _atualizarDOMGestao(dados) {
@@ -595,6 +632,23 @@ function _obterNomeCliente(pedido, dados) {
     return cliente ? cliente.nome : (pedido.cliente || 'Cliente');
 }
 
+function iniciarHeartbeat() {
+    var username = localStorage.getItem('username');
+    if (!username || !window.API) return;
+
+    if (window.dashboardState.heartbeatIntervalId) {
+        clearInterval(window.dashboardState.heartbeatIntervalId);
+    }
+
+    function enviar() {
+        window.API.call('heartbeat', { username: username }).catch(function () { });
+        renderizarBlocoGestao(); // só isso é necessário para o "1/2"
+    }
+
+    enviar();
+    window.dashboardState.heartbeatIntervalId = setInterval(enviar, 60000);
+}
+
 function _corPorIndice(i) {
     var cores = ['primary', 'info', 'warning', 'success', 'secondary'];
     return cores[i % cores.length];
@@ -710,6 +764,8 @@ window.initDashboard = function () {
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
     syncStartDashboard();
+
+    iniciarHeartbeat(); // 👈 adicione esta linha
 
     var btnRefresh = document.getElementById('btn-refresh-dashboard');
     if (btnRefresh) btnRefresh.onclick = function () { window.initDashboard(); };
