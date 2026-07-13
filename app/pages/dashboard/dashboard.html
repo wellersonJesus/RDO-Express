@@ -23,24 +23,50 @@
 
     <div class="row g-3 dash-row-top">
         <div class="col-md-6">
-            <div class="dash-block dash-bars-block" id="bloco-chat-pedidos">
+            <div class="dash-block dash-ranking-block" id="bloco-chat-pedidos">
                 <div class="dash-block-header">
                     <i class="bi bi-chat-dots-fill"></i>
                     <h6>Chat e Pedidos</h6>
                 </div>
-                <div class="bars-list" id="dashboard-chat-pedidos-ranking"></div>
+                <div class="ranking-list" id="dashboard-chat-pedidos-ranking"></div>
             </div>
         </div>
 
         <div class="col-md-6">
-            <div class="dash-block dash-chart-block" id="bloco-administracao">
+            <div class="dash-block dash-admin-block" id="bloco-administracao">
                 <div class="dash-block-header">
                     <i class="bi bi-gear-fill"></i>
                     <h6>Administração</h6>
                 </div>
-                <div class="admin-chart-legend" id="dashboard-admin-legend"></div>
-                <div class="admin-chart-wrapper">
-                    <canvas id="chart-admin-bars" height="130"></canvas>
+
+                <div class="admin-cards-row">
+
+                    <div class="admin-card admin-card-clean-red" id="card-total-pedidos">
+                        <div class="admin-card-header">
+                            <span class="admin-card-title">Total de pedidos no mês</span>
+                            <i class="bi bi-three-dots-vertical admin-card-menu"></i>
+                        </div>
+                        <span class="admin-card-subtitle">Mês até hoje</span>
+                        <h2 class="admin-card-value" id="admin-total-pedidos">0</h2>
+                        <span class="admin-card-target" id="admin-meta-info">
+                            Meta (Todas as vendas) - Usuário: 0 pedidos (0%)
+                        </span>
+                    </div>
+
+                    <div class="admin-card admin-card-clean-red-alt" id="card-atividades">
+                        <div class="admin-card-header">
+                            <span class="admin-card-title">Atividades em vendas</span>
+                            <i class="bi bi-three-dots-vertical admin-card-menu"></i>
+                        </div>
+                        <span class="admin-card-subtitle" id="admin-atividade-status">
+                            Nenhuma atividade pendente
+                        </span>
+                        <h2 class="admin-card-value admin-card-value-danger" id="admin-total-atividades">0</h2>
+                        <span class="admin-card-target">
+                            Deveria ser: <span id="admin-meta-atividades">0</span>
+                        </span>
+                    </div>
+
                 </div>
             </div>
         </div>

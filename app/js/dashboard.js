@@ -273,64 +273,34 @@ function renderizarBlocoVisaoGeral(usuario, dados) {
 
 function renderizarBlocoAdministracao(usuario, dados) {
     var bloco = document.getElementById('bloco-administracao');
-    var legendEl = document.getElementById('dashboard-admin-legend');
-    var canvas = document.getElementById('chart-admin-bars');
-    if (!bloco || !canvas) return;
+    if (!bloco) return;
 
-    if (!usuarioTemPermissao(usuario, 'Administração')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
+    var totalPedidos = (dados.pedidos || []).length;
+    var metaPedidos = dados.metaPedidosMes || 0;
+    var percentual = metaPedidos > 0 ? Math.round((totalPedidos / metaPedidos) * 100) : 0;
 
-    var colaboradores = dados.colaboradores || [];
-    var clientes = dados.clientes || [];
-    var colabAtivos = colaboradores.filter(function (c) { return String(c.status || '').toUpperCase() === 'TRUE'; }).length;
-    var colabInativos = colaboradores.length - colabAtivos;
-    var clientesAtivos = clientes.filter(function (c) { return String(c.status || '').toUpperCase() === 'TRUE'; }).length;
-    var clientesInativos = clientes.length - clientesAtivos;
+    document.getElementById('admin-total-pedidos').textContent = totalPedidos;
+    document.getElementById('admin-meta-info').textContent =
+        'Meta (Todas as vendas) - ' + (usuario.nome || 'Usuário') + ': ' +
+        metaPedidos + ' pedidos (' + percentual + '%)';
 
-    var dadosGrafico = [
-        { label: 'Colab. Ativos', valor: colabAtivos, cor: '#198754' },
-        { label: 'Colab. Inativos', valor: colabInativos, cor: '#6c757d' },
-        { label: 'Clientes Ativos', valor: clientesAtivos, cor: '#0aa8c7' },
-        { label: 'Clientes Inativos', valor: clientesInativos, cor: '#dc3545' }
-    ];
+    var totalAtividades = (dados.atividades || []).length;
+    var proximaData = dados.proximaAtividadeData ? new Date(dados.proximaAtividadeData) : null;
+    var jaPassou = proximaData ? proximaData < new Date() : false;
 
-    legendEl.innerHTML = dadosGrafico.map(function (d) {
-        return (
-            '<div class="admin-legend-item">' +
-                '<span class="admin-legend-dot" style="background:' + d.cor + '"></span>' +
-                d.label +
-            '</div>'
-        );
-    }).join('');
+    document.getElementById('admin-atividade-status').textContent = jaPassou
+        ? 'A próxima data de atividade já passou'
+        : 'Nenhuma atividade pendente';
 
-    if (window.chartAdminBarsInstance) {
-        window.chartAdminBarsInstance.destroy();
-    }
+    document.getElementById('admin-total-atividades').textContent = totalAtividades;
+    document.getElementById('admin-meta-atividades').textContent = dados.metaAtividades || 0;
+}
 
-    window.chartAdminBarsInstance = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: dadosGrafico.map(function (d) { return d.label; }),
-            datasets: [{
-                data: dadosGrafico.map(function (d) { return d.valor; }),
-                backgroundColor: dadosGrafico.map(function (d) { return d.cor; }),
-                borderRadius: 6,
-                maxBarThickness: 40
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false }, ticks: { display: false } },
-                y: { display: false, beginAtZero: true }
-            }
-        }
-    });
+function formatarValorResumido(valor) {
+    valor = Number(valor) || 0;
+    if (valor >= 1000000) return (valor / 1000000).toFixed(valor % 1000000 === 0 ? 0 : 1) + 'M';
+    if (valor >= 1000) return (valor / 1000).toFixed(valor % 1000 === 0 ? 0 : 1) + 'K';
+    return String(valor);
 }
 
 function _parseValor(v) {
@@ -496,6 +466,96 @@ function _renderChartVolumePedidos(pedidos) {
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
+}
+
+function _obterNomeCliente(pedido, dados) {
+    // ajuste os campos conforme sua estrutura real de pedido/cliente
+    if (pedido.clienteNome) return pedido.clienteNome;
+    var cliente = (dados.clientes || []).find(function (c) {
+        return String(c.id) === String(pedido.clienteId) || c.nome === pedido.cliente;
+    });
+    return cliente ? cliente.nome : (pedido.cliente || 'Cliente');
+}
+
+function _corPorIndice(i) {
+    var cores = ['primary', 'info', 'warning', 'success', 'secondary'];
+    return cores[i % cores.length];
+}
+
+function _iniciais(nome) {
+    var partes = String(nome || '').trim().split(/\s+/);
+    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+    return (partes[0][0] + partes[1][0]).toUpperCase();
+}
+
+function calcularTopClientesPedidos(dados, limite) {
+    var pedidos = dados.pedidos || [];
+
+    // Ordena pedidos do mais recente para o mais antigo
+    var ordenados = pedidos.slice().sort(function (a, b) {
+        var da = new Date(a.data || a.dataCriacao || a.createdAt || 0);
+        var db = new Date(b.data || b.dataCriacao || b.createdAt || 0);
+        return db - da;
+    });
+
+    // Agrupa contagem de pedidos por cliente
+    var contagem = {};
+    ordenados.forEach(function (p) {
+        var nome = _obterNomeCliente(p, dados);
+        if (!contagem[nome]) contagem[nome] = 0;
+        contagem[nome]++;
+    });
+
+    // Transforma em array e ordena por quantidade de pedidos (desc)
+    var ranking = Object.keys(contagem).map(function (nome) {
+        return { nome: nome, total: contagem[nome] };
+    }).sort(function (a, b) { return b.total - a.total; });
+
+    return ranking.slice(0, limite || 5);
+}
+
+function renderizarRankingClientes(containerId, ranking) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    ranking.forEach(function (item, index) {
+        var cor = _corPorIndice(index);
+
+        var linha = document.createElement('div');
+        linha.className = 'ranking-item';
+
+        var esquerda = document.createElement('div');
+        esquerda.className = 'ranking-item-left';
+
+        var avatar = document.createElement('div');
+        avatar.className = 'ranking-avatar indicador-' + cor;
+        avatar.textContent = _iniciais(item.nome);
+
+        var nomeSpan = document.createElement('span');
+        nomeSpan.className = 'ranking-name';
+        nomeSpan.textContent = item.nome;
+
+        esquerda.appendChild(avatar);
+        esquerda.appendChild(nomeSpan);
+
+        var valorSpan = document.createElement('span');
+        valorSpan.className = 'ranking-value';
+        valorSpan.textContent = item.total + (item.total === 1 ? ' pedido' : ' pedidos');
+
+        linha.appendChild(esquerda);
+        linha.appendChild(valorSpan);
+        container.appendChild(linha);
+    });
+}
+
+function renderizarBlocoChatPedidos(usuario, dados) {
+    var bloco = document.getElementById('bloco-chat-pedidos');
+    if (!bloco) return;
+    bloco.classList.remove('d-none');
+
+    var ranking = calcularTopClientesPedidos(dados, 5);
+    renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
 }
 
 function renderizarDashboardCompleto(usuario, dados) {
