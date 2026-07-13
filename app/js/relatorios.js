@@ -1369,6 +1369,7 @@
 
     const usuarioGerador = relatorio.usuarioGerador || (snapshot && snapshot.meta && snapshot.meta.usuarioGerador) || 'Não identificado';
     const horaGeracao = relatorio.horaGeracao || (snapshot && snapshot.meta && snapshot.meta.horaGeracao) || '-';
+    const isRelatorioCliente = relatorio.tipo === 'clientes';
 
     html += '<div class="rel-modal-section">';
     html += '<div class="rel-modal-section-title"><i class="bi bi-info-circle"></i> Informações</div>';
@@ -1431,23 +1432,27 @@
       html += '<div class="rel-modal-section">';
       html += '<div class="rel-modal-section-title"><i class="bi bi-bicycle"></i> Resumo por Motoboy</div>';
 
-      html += '<div style="background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.75rem;color:#1c3d5a;">';
-      html += '<i class="bi bi-info-circle-fill" style="margin-right:6px;color:#0d6efd;"></i>';
-      html += '<strong>Regra de divisão da corrida:</strong> do valor total de cada corrida, <strong>' +
-        (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%</strong> é destinado ao motoboy e <strong>' +
-        (PERCENTUAL_RDO * 100).toFixed(0) + '%</strong> é retido pela RDO (empresa). ' +
-        'O "Valor Total Receita" representa a soma bruta das corridas; "Valor Motoboy" e "Valor RDO" são os valores já calculados conforme essa divisão.';
-      html += '</div>';
+      if (!isRelatorioCliente) {
+        html += '<div style="background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.75rem;color:#1c3d5a;">';
+        html += '<i class="bi bi-info-circle-fill" style="margin-right:6px;color:#0d6efd;"></i>';
+        html += '<strong>Regra de divisão da corrida:</strong> do valor total de cada corrida, <strong>' +
+          (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%</strong> é destinado ao motoboy e <strong>' +
+          (PERCENTUAL_RDO * 100).toFixed(0) + '%</strong> é retido pela RDO (empresa). ' +
+          'O "Valor Total Receita" representa a soma bruta das corridas; "Valor Motoboy" e "Valor RDO" são os valores já calculados conforme essa divisão.';
+        html += '</div>';
+      }
 
       html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
       html += '<thead><tr>' +
         '<th>Motoboy</th>' +
         '<th>Qtd. Corridas</th>' +
-        '<th>Valor Total Receita</th>' +
-        '<th>Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</th>' +
-        '<th>Valor RDO (' + (PERCENTUAL_RDO * 100).toFixed(0) + '%)</th>' +
-        '<th>Total Calculado</th>' +
-        '</tr></thead><tbody>';
+        '<th>Valor Total Receita</th>';
+      if (!isRelatorioCliente) {
+        html += '<th>Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</th>' +
+          '<th>Valor RDO (' + (PERCENTUAL_RDO * 100).toFixed(0) + '%)</th>' +
+          '<th>Total Calculado</th>';
+      }
+      html += '</tr></thead><tbody>';
 
       let totalGeralReceita = 0, totalGeralMotoboy = 0, totalGeralRdo = 0, totalGeralCalculado = 0;
 
@@ -1460,21 +1465,25 @@
         html += '<tr>' +
           '<td><strong>' + escapeHtml(m.nome) + '</strong></td>' +
           '<td>' + m.qtd + '</td>' +
-          '<td>' + formatarMoeda(m.receitaTotal) + '</td>' +
-          '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(m.valorMotoboy) + '</td>' +
-          '<td style="color:#0d6efd;font-weight:600;">' + formatarMoeda(m.valorRdo) + '</td>' +
-          '<td>' + formatarMoeda(m.valorTotalCalculado) + '</td>' +
-          '</tr>';
+          '<td>' + formatarMoeda(m.receitaTotal) + '</td>';
+        if (!isRelatorioCliente) {
+          html += '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(m.valorMotoboy) + '</td>' +
+            '<td style="color:#0d6efd;font-weight:600;">' + formatarMoeda(m.valorRdo) + '</td>' +
+            '<td>' + formatarMoeda(m.valorTotalCalculado) + '</td>';
+        }
+        html += '</tr>';
       });
 
       html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
         '<td>TOTAL GERAL</td>' +
         '<td>-</td>' +
-        '<td>' + formatarMoeda(totalGeralReceita) + '</td>' +
-        '<td style="color:#0a7d2c;">' + formatarMoeda(totalGeralMotoboy) + '</td>' +
-        '<td style="color:#0d6efd;">' + formatarMoeda(totalGeralRdo) + '</td>' +
-        '<td>' + formatarMoeda(totalGeralCalculado) + '</td>' +
-        '</tr></tfoot></table></div>';
+        '<td>' + formatarMoeda(totalGeralReceita) + '</td>';
+      if (!isRelatorioCliente) {
+        html += '<td style="color:#0a7d2c;">' + formatarMoeda(totalGeralMotoboy) + '</td>' +
+          '<td style="color:#0d6efd;">' + formatarMoeda(totalGeralRdo) + '</td>' +
+          '<td>' + formatarMoeda(totalGeralCalculado) + '</td>';
+      }
+      html += '</tr></tfoot></table></div>';
 
       const temPendentes = resumos.motoboys.some(function (m) { return m.qtdPendente > 0; });
       if (temPendentes) {
