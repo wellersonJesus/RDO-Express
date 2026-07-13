@@ -76,6 +76,7 @@ var PAGE_CSS = {
 };
 
 var MODULE_SCRIPTS = {
+    dashboard: '/js/dashboard.js',
     chat: '/js/chat.js',
     pedidos: '/js/pedidos.js',
     bot: '/js/bot.js',
@@ -91,6 +92,17 @@ var GLOBAL_SCRIPTS_PRELOAD = [
 ];
 
 var MODULE_INITS = {
+    dashboard: function () {
+        function _tentarCarregarDashboard(tentativas) {
+            tentativas = tentativas || 0;
+            if (typeof window.initDashboard === 'function') {
+                window.initDashboard();
+            } else if (tentativas < 20) {
+                setTimeout(function () { _tentarCarregarDashboard(tentativas + 1); }, 50);
+            }
+        }
+        _tentarCarregarDashboard();
+    },
     chat: function () {
         if (window.AppRDO) {
             window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';

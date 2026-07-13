@@ -7,25 +7,20 @@
                     <h3 class="mb-0 fw-bold">Dashboard</h3>
                     <small class="text-muted">
                         Bem-vindo(a), <span id="user-display-name">...</span>
+                        <span class="badge-cargo ms-2" id="user-display-cargo"></span>
                     </small>
                 </div>
+                <button class="btn btn-light ms-auto" id="btn-refresh-dashboard" title="Atualizar">
+                    <i class="bi bi-arrow-repeat" id="icon-refresh-dashboard"></i>
+                </button>
             </div>
             <hr>
-            <div class="text-center py-5">
-                <i class="bi bi-tools fs-1 text-secondary opacity-50"></i>
-                <h5 class="mt-3 text-secondary">Funcionalidade em desenvolvimento</h5>
-                <p class="text-muted small">Estamos trabalhando para trazer os melhores dados para você.</p>
+            <div id="dashboard-indicadores-grid" class="dashboard-grid"></div>
+            <div id="dashboard-sem-permissao" class="text-center py-5 d-none">
+                <i class="bi bi-shield-lock fs-1 text-secondary opacity-50"></i>
+                <h5 class="mt-3 text-secondary">Nenhum indicador disponível</h5>
+                <p class="text-muted small">Seu perfil não possui permissões para visualizar indicadores.</p>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    (function () {
-        // ✅ Corrigido: 'username' (igual ao que login.js salva)
-        var userName = localStorage.getItem('username') || 'Usuário';
-        var el = document.getElementById('user-display-name');
-        if (el) el.textContent = userName;
-        console.log('Dashboard carregado com sucesso.');
-    })();
-</script>
