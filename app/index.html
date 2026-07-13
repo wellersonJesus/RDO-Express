@@ -123,8 +123,14 @@
                 </button>
                 <div>
                     <h1 id="page-title" class="h6 mb-0 fw-bold">Dashboard</h1>
-                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size:0.7rem;">Carregando...</p>
+                    <p id="page-subtitle" class="small text-muted mb-0" style="font-size:0.7rem;">
+                        <span id="header-loading-wrap" class="header-loading-inline">
+                            Carregando<span class="rdo-loading-dots"></span>
+                        </span>
+                        <span id="header-subtitle-text" class="d-none">Visão geral operacional</span>
+                    </p>
                 </div>
+
             </div>
             <div class="user-area d-flex align-items-center gap-3">
                 <div class="text-end d-none d-md-block">
@@ -170,6 +176,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -221,9 +228,9 @@
 
             function _aguardarPermissoesCarregadas(callback) {
                 var tentativas = 0;
-                var intervalo = setInterval(function() {
+                var intervalo = setInterval(function () {
                     tentativas++;
-                    
+
                     if (window.AppRDO && window.AppRDO.permissoesCarregadas) {
                         clearInterval(intervalo);
                         console.log('[INDEX] Permissões confirmadas, aplicando bloqueios');
@@ -236,7 +243,7 @@
                 }, 100);
             }
 
-            _aguardarPermissoesCarregadas(function() {
+            _aguardarPermissoesCarregadas(function () {
                 document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
                     link.addEventListener('click', function (e) {
                         e.preventDefault();
@@ -265,6 +272,24 @@
                 }
             });
         });
+
+        window.mostrarHeaderLoading = function () {
+            var wrap = document.getElementById('header-loading-wrap');
+            var texto = document.getElementById('header-subtitle-text');
+            if (wrap) wrap.classList.remove('d-none');
+            if (texto) texto.classList.add('d-none');
+        };
+
+        window.ocultarHeaderLoading = function (subtitulo) {
+            var wrap = document.getElementById('header-loading-wrap');
+            var texto = document.getElementById('header-subtitle-text');
+            if (wrap) wrap.classList.add('d-none');
+            if (texto) {
+                texto.textContent = subtitulo || texto.textContent;
+                texto.classList.remove('d-none');
+            }
+        };
+
     </script>
 
 </body>
