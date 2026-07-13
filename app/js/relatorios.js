@@ -112,7 +112,7 @@
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
       campos: {
         id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
-        vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
+        vlr_servico: 'Valor', colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
       }
     }
   };
@@ -153,8 +153,8 @@
         pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'solicitante']
       },
       defaults: {
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
-        pedidos: ['motoboy', 'valor_corrida', 'status', 'data']
+        financeiro: ['data', 'tipo', 'descricao', 'vlr_servico', 'situacao'],
+        pedidos: []
       }
     },
     global: {
@@ -972,10 +972,17 @@
       }
     }
 
-    // ---------- FILTRO POR TIPO DE LANÇAMENTO ----------
     if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
+      // mapeia o value do select ('entrada'/'saida') para a classificação real
+      const MAPA_TIPO = { entrada: 'receita', saida: 'despesa' };
+
       return dados.filter(function (r) {
-        return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
+        const classificacao = classificarTipoFinanceiro(resolverValor('financeiro', 'tipo', r));
+        return valoresStr.some(function (v) {
+          const vNorm = v.trim().toLowerCase();
+          const classificacaoEsperada = MAPA_TIPO[vNorm] || vNorm;
+          return classificacaoEsperada === classificacao;
+        });
       });
     }
 
@@ -1021,8 +1028,18 @@
     return nomes;
   }
 
+  function classificarTipoFinanceiro(tipoRaw) {
+    const t = normalizarComparacao(tipoRaw);
+    if (t.indexOf('ENTRADA') !== -1 || t.indexOf('RECEITA') !== -1 || t.indexOf('CREDITO') !== -1) return 'receita';
+    if (t.indexOf('SAIDA') !== -1 || t.indexOf('DESPESA') !== -1 || t.indexOf('DEBITO') !== -1) return 'despesa';
+    return 'outro';
+  }
+
   function calcularTotaisBanco(banco, dadosOriginais) {
-    const totais = { qtd: dadosOriginais.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false };
+    const totais = {
+      qtd: dadosOriginais.length, somaValor: 0, somaPagos: 0, temValor: false, temSituacao: false,
+      somaReceitas: 0, somaDespesas: 0, qtdReceitas: 0, qtdDespesas: 0, saldo: 0, temFluxo: false
+    };
 
     if (banco === 'pedidos') {
       totais.temValor = true;
@@ -1033,12 +1050,25 @@
     } else if (banco === 'financeiro') {
       totais.temValor = true;
       totais.temSituacao = true;
+      totais.temFluxo = true;
       dadosOriginais.forEach(function (r) {
         const v = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r));
+        const vValido = !isNaN(v) ? v : 0;
         if (!isNaN(v)) totais.somaValor += v;
+
         const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
         if (sit === 'PAGO' && !isNaN(v)) totais.somaPagos += v;
+
+        const classificacao = classificarTipoFinanceiro(resolverValor('financeiro', 'tipo', r));
+        if (classificacao === 'receita') {
+          totais.somaReceitas += vValido;
+          totais.qtdReceitas++;
+        } else if (classificacao === 'despesa') {
+          totais.somaDespesas += vValido;
+          totais.qtdDespesas++;
+        }
       });
+      totais.saldo = totais.somaReceitas - totais.somaDespesas;
     }
 
     return totais;
@@ -1399,23 +1429,47 @@
           html += '<tr>';
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
+
             if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') {
-              valor = formatarMoeda(valor);
-            } else if (c.chave === 'horario') {
-              valor = extrairHora(valor);
+              const valorNumerico = Math.abs(parseMoeda(valor));
+              const valorFormatado = formatarMoeda(valorNumerico);
+              if (banco === 'financeiro') {
+                const classificacao = classificarTipoFinanceiro(linha.tipo);
+                if (classificacao === 'receita') {
+                  valor = '<span style="color:#0a7d2c;font-weight:600;">+ ' + valorFormatado + '</span>';
+                } else if (classificacao === 'despesa') {
+                  valor = '<span style="color:#dc3545;font-weight:600;">- ' + valorFormatado + '</span>';
+                } else {
+                  valor = valorFormatado;
+                }
+              } else {
+                valor = valorFormatado;
+              }
+              html += '<td>' + valor + '</td>';
+              return;
             }
+
+            if (c.chave === 'horario') valor = extrairHora(valor);
+
             html += '<td>' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
           });
           html += '</tr>';
         });
+
         html += '</tbody></table></div>';
 
         if (info.totais && (info.totais.temValor || info.totais.temSituacao)) {
           html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;">';
           html += '<div class="rel-modal-card" style="background:#f0f7ff;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + info.totais.qtd + '</div></div>';
-          if (info.totais.temValor) {
+
+          if (info.totais.temFluxo) {
+            html += '<div class="rel-modal-card" style="background:#eafaf0;border:1px solid #a3d9b1;"><div class="rel-modal-card-label">Total Receitas (' + info.totais.qtdReceitas + ')</div><div class="rel-modal-card-value" style="color:#0a7d2c;">+ ' + formatarMoeda(info.totais.somaReceitas) + '</div></div>';
+            html += '<div class="rel-modal-card" style="background:#fdeaea;border:1px solid #f0aaaa;"><div class="rel-modal-card-label">Total Despesas (' + info.totais.qtdDespesas + ')</div><div class="rel-modal-card-value" style="color:#dc3545;">- ' + formatarMoeda(info.totais.somaDespesas) + '</div></div>';
+            html += '<div class="rel-modal-card" style="background:' + (info.totais.saldo >= 0 ? '#eafaf0' : '#fdeaea') + ';border:2px solid ' + (info.totais.saldo >= 0 ? '#0a7d2c' : '#dc3545') + ';"><div class="rel-modal-card-label">Saldo</div><div class="rel-modal-card-value" style="color:' + (info.totais.saldo >= 0 ? '#0a7d2c' : '#dc3545') + ';font-weight:700;">' + (info.totais.saldo >= 0 ? '+ ' : '- ') + formatarMoeda(Math.abs(info.totais.saldo)) + '</div></div>';
+          } else if (info.totais.temValor) {
             html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
           }
+
           if (info.totais.temSituacao) {
             html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaPagos) + '</div></div>';
           }
@@ -1657,9 +1711,8 @@
 
   function obterUsuarioLogado() {
     try {
-      const sess = JSON.parse(sessionStorage.getItem('usuario') || localStorage.getItem('usuario') || 'null');
-      if (sess && sess.username) return sess.username;
-      if (sess && sess.nome) return sess.nome;
+      const username = localStorage.getItem('username');
+      if (username && username.trim()) return username.trim();
     } catch (e) { }
     return 'Não identificado';
   }
