@@ -11,6 +11,53 @@
 
     <div class="row g-3 mt-3">
         <div class="col-md-12">
+            <div class="dash-block dash-automation-block" id="bloco-automacao">
+                <div class="dash-block-header">
+                    <i class="bi bi-robot"></i>
+                    <h6>Automação</h6>
+                </div>
+                <div class="automation-cards-row">
+
+                    <div class="automation-card">
+                        <div class="automation-icon automation-icon-danger">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="automation-info">
+                            <span class="automation-title">Clientes Cadastrados</span>
+                            <span class="automation-value" id="automacao-total-clientes">0</span>
+                            <span class="automation-subtitle">Total de usuários cadastrados</span>
+                        </div>
+                    </div>
+
+                    <div class="automation-card">
+                        <div class="automation-icon automation-icon-danger-soft">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                        <div class="automation-info">
+                            <span class="automation-title">Usuários Online</span>
+                            <span class="automation-value" id="automacao-usuarios-logados">0</span>
+                            <span class="automation-subtitle">Logados agora na plataforma</span>
+                        </div>
+                    </div>
+
+                    <div class="automation-card" id="automacao-card-bot">
+                        <div class="automation-icon automation-icon-bot" id="automacao-icone-bot">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="automation-info">
+                            <span class="automation-title">Status do Bot</span>
+                            <span class="automation-value automation-value-status" id="automacao-status-bot">Ativo</span>
+                            <span class="automation-subtitle" id="automacao-status-desc">Bot em execução normal</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+        <div class="col-md-12">
             <div class="dash-block dash-bars-block" id="bloco-visao-geral">
                 <div class="dash-block-header">
                     <i class="bi bi-eye-fill"></i>

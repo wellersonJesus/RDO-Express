@@ -62,6 +62,28 @@ const indicadoresVisaoGeral = [
     { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: '38%', max: 100, valorReal: 38, label: 'Taxa de Conversão' }
 ];
 
+function renderizarBlocoAutomacao(dados) {
+    document.getElementById('automacao-total-clientes').textContent = dados.totalClientes || 0;
+    document.getElementById('automacao-usuarios-logados').textContent = dados.usuariosLogados || 0;
+
+    var botAtivo = !!dados.botAtivo;
+    var icone = document.getElementById('automacao-icone-bot');
+    var statusEl = document.getElementById('automacao-status-bot');
+    var descEl = document.getElementById('automacao-status-desc');
+
+    if (botAtivo) {
+        icone.classList.remove('is-inactive');
+        statusEl.classList.remove('is-inactive');
+        statusEl.textContent = 'Ativo';
+        descEl.textContent = 'Bot em execução normal';
+    } else {
+        icone.classList.add('is-inactive');
+        statusEl.classList.add('is-inactive');
+        statusEl.textContent = 'Inativo';
+        descEl.textContent = 'Bot desativado no momento';
+    }
+}
+
 function obterUsuarioLogado() {
     var username = localStorage.getItem('username') || 'Usuário';
     var cargo = localStorage.getItem('tipo') || '';
