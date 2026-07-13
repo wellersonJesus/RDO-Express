@@ -54,6 +54,10 @@
         els.btnLoopHeader = document.getElementById('btn-loop-admin');
         els.iconLoopHeader = document.getElementById('icon-loop-admin');
 
+        els.modalExcluir = document.getElementById('modal-excluir-admin');
+        els.excluirNome = document.getElementById('excluir-admin-nome');
+        els.btnConfirmarExcluir = document.getElementById('btn-confirmar-excluir-admin');
+
         els.blocosStatus = [
             { el: document.getElementById('adm-filter-todos'), tipo: 'todos' },
             { el: document.getElementById('adm-filter-diario'), tipo: 'diario' },
@@ -223,7 +227,7 @@
         if (els.syncIcon) els.syncIcon.classList.add('spinner-rotate');
         if (els.btnLoopHeader) els.btnLoopHeader.classList.add('syncing');
     }
-    
+
     function spinOff() {
         if (els.btnSync) els.btnSync.classList.remove('syncing');
         if (els.syncIcon) els.syncIcon.classList.remove('spinner-rotate');
@@ -315,10 +319,15 @@
     function contarPagamento(dados, tipo) {
         return dados.filter(function (i) {
             return String(i.pagamento || '').trim().toUpperCase() === tipo;
-        }).length;
+        }).length; // .length = contagem de registros, não soma de valores
+    }
+
+    function contarTotalCadastrados(dados) {
+        return Array.isArray(dados) ? dados.length : 0;
     }
 
     function atualizarContadores(dados) {
+        // Quantidade total de clientes cadastrados = número de linhas (ids) do array
         var total = dados.length;
         var diario = contarPagamento(dados, 'DIÁRIO');
         var semanal = contarPagamento(dados, 'SEMANAL');
@@ -336,7 +345,8 @@
             if (elP) elP.textContent = pctTexto;
         }
 
-        set('todos', total, 'de ' + total);
+        // "Todos" = quantidade total de clientes cadastrados no sistema (contagem de ids)
+        set('todos', total, total);
         set('diario', diario, pct(diario));
         set('semanal', semanal, pct(semanal));
         set('quinzenal', quinzenal, pct(quinzenal));
@@ -675,9 +685,19 @@
 
     function confirmarExclusao(id, nome) {
         if (!id) { mostrarErro('ID inválido.', 'Erro ao excluir'); return; }
-        var conf = window.confirm('Deseja excluir: "' + nome + '"?');
-        if (!conf) return;
+        if (!els.modalExcluir || !window.bootstrap) {
+            mostrarErro('Modal de exclusão não disponível.', 'Erro ao excluir');
+            return;
+        }
+        if (els.excluirNome) els.excluirNome.textContent = nome || 'este registro';
+        if (els.btnConfirmarExcluir) {
+            els.btnConfirmarExcluir.onclick = function () { executarExclusao(id); };
+        }
+        var modal = window.bootstrap.Modal.getOrCreateInstance(els.modalExcluir);
+        modal.show();
+    }
 
+    function executarExclusao(id) {
         var acao;
         try {
             verificarAPI();
@@ -686,6 +706,10 @@
             tratarErro(err, 'Erro de inicialização');
             return;
         }
+
+        var btn = els.btnConfirmarExcluir;
+        var textoOriginal = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Excluindo...'; }
 
         window.API.call(acao, { id: id })
             .then(function (res) {
@@ -696,8 +720,13 @@
                     return String(x.id) !== String(id);
                 });
                 renderTabela();
+                if (els.modalExcluir && window.bootstrap) {
+                    var m = window.bootstrap.Modal.getInstance(els.modalExcluir);
+                    if (m) m.hide();
+                }
             })
-            .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); });
+            .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); })
+            .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; } });
     }
 
     function init() {
