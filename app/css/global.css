@@ -260,6 +260,31 @@ img.avatar:not([src]) {
     font-weight: 500;
 }
 
+.rdo-wave-text span {
+    display: inline-block;
+    animation: rdo-wave 1.4s ease-in-out infinite;
+}
+
+.rdo-wave-text span:nth-child(1)  { animation-delay: 0.00s; }
+.rdo-wave-text span:nth-child(2)  { animation-delay: 0.05s; }
+.rdo-wave-text span:nth-child(3)  { animation-delay: 0.10s; }
+.rdo-wave-text span:nth-child(4)  { animation-delay: 0.15s; }
+.rdo-wave-text span:nth-child(5)  { animation-delay: 0.20s; }
+.rdo-wave-text span:nth-child(6)  { animation-delay: 0.25s; }
+.rdo-wave-text span:nth-child(7)  { animation-delay: 0.30s; }
+.rdo-wave-text span:nth-child(8)  { animation-delay: 0.35s; }
+.rdo-wave-text span:nth-child(9)  { animation-delay: 0.40s; }
+.rdo-wave-text span:nth-child(10) { animation-delay: 0.45s; }
+
+.rdo-wave-text {
+    display: inline-flex;
+}
+
+@keyframes rdo-wave {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-3px); color: var(--primary); }
+}
+
 .header-loading-inline i {
     font-size: .8rem;
     color: var(--primary);
