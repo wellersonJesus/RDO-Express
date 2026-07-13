@@ -28,9 +28,6 @@
       <a href="#" class="rel-tab" data-tab="financeiro">
         <i class="bi bi-wallet2 me-1"></i> Financeiro
       </a>
-      <a href="#" class="rel-tab" data-tab="global">
-        <i class="bi bi-globe2 me-1"></i> Global
-      </a>
     </div>
 
     <div id="rel-tab-content-motoboys" class="rel-tab-content active">
@@ -228,67 +225,6 @@
                 <button class="btn btn-light" id="btn-pag-prev-financeiro"><i class="bi bi-chevron-left"></i></button>
                 <button class="btn btn-light" id="info-paginacao-financeiro" disabled>Pág 1</button>
                 <button class="btn btn-light" id="btn-pag-next-financeiro"><i class="bi bi-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="rel-tab-content-global" class="rel-tab-content">
-      <div class="row g-3 mt-0">
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="rel-filtros-linha">
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-glob-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
-                </div>
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-glob-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
-                </div>
-                <div class="rel-filtro-item-btn">
-                  <button class="btn-rel-gerar" data-tab-tipo="global" type="button">
-                    <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
-                    <span class="btn-rel-label">Gerar Global</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div id="rel-global-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-globe2 text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Global Consolidado</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr><th>Indicador</th><th>Resultado</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>Período analisado</td><td>03/07/2026 a 09/07/2026 (7 dias)</td></tr>
-                      <tr><td>Total de RDOs registrados</td><td>Faixa RDO1947 a RDO2209 (RDO2046 ausente / RDO1954 duplicado)</td></tr>
-                      <tr><td>Clientes mais ativos</td><td>OPMINAS, AMMIS, MAURICIO, ELISA ATHENIENSE (grupo), FF FASHION</td></tr>
-                      <tr><td>Motoboys com maior atuação</td><td>GRUPO (rateio), EMERSON, IGOR, AUANDER</td></tr>
-                      <tr><td>Ocorrências e cancelamentos</td><td>RDO2040, RDO2042, RDO2082, RDO2120 cancelados</td></tr>
-                      <tr><td>Inconsistência de cadastro</td><td>Duplicidade de cadastro SÃO MANOEL corrigida, unificada em ATTZOHXOMVX</td></tr>
-                      <tr><td>Alerta de duplicidade de pedido</td><td>RDO1954 registrado duas vezes</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
-              <div class="btn-group shadow-sm">
-                <button class="btn btn-light" id="btn-pag-prev-global"><i class="bi bi-chevron-left"></i></button>
-                <button class="btn btn-light" id="info-paginacao-global" disabled>Pág 1</button>
-                <button class="btn btn-light" id="btn-pag-next-global"><i class="bi bi-chevron-right"></i></button>
               </div>
             </div>
           </div>
