@@ -1,5 +1,5 @@
-var SECRET_KEY = "";
-var MASTER_PASSWORD = "";
+var SECRET_KEY = "aquieumakdjdddggjrtr";
+var MASTER_PASSWORD = "$2a$10$noUJTl/XSRvWXH5z4Y3uvuna9hRr9ouRFFRBlGuQLNx6G9bhuHp.m";
 
 var MODELO_PADRAO = [
   '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',

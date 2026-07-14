@@ -1,48 +1,24 @@
-window.dashboardState = {
-    usuario: null,
+window.dashboardState = window.dashboardState || {
     dados: null,
+    usuario: null,
     isFetching: false,
-    charts: {},
-    heartbeatIntervalId: null // 👈 adicione
+    heartbeatIntervalId: null,
+    charts: {}
 };
 
-var LIMITE_MINUTOS_ONLINE = 5;
+function ocultarLoadingDashboard() {
+    var overlay = document.getElementById('dashboard-loading-overlay');
+    var conteudo = document.getElementById('dashboard-conteudo-real');
+    if (overlay) overlay.classList.add('d-none');
+    if (conteudo) conteudo.style.display = '';
+}
 
-window.INDICADORES_CONFIG = [
-    {
-        chave: 'clientesAtivos', permissao: 'Pedidos', titulo: 'Clientes Ativos', icone: 'bi-building', cor: 'danger',
-        calcular: function (d) { return d.clientes.filter(function (c) { return String(c.status || '').toUpperCase() === 'TRUE'; }).length; }
-    },
-    {
-        chave: 'colaboradoresAtivos', permissao: 'Administração', titulo: 'Colaboradores Ativos', icone: 'bi-people-fill', cor: 'primary',
-        calcular: function (d) { return d.colaboradores.filter(function (c) { return String(c.status || '').toUpperCase() === 'TRUE'; }).length; }
-    },
-    {
-        chave: 'usuariosCadastrados', permissao: 'Administração', titulo: 'Usuários do Sistema', icone: 'bi-person-badge', cor: 'info',
-        calcular: function (d) { return d.usuarios.length; }
-    },
-    {
-        chave: 'comissaoMedia', permissao: 'Financeiro', titulo: 'Comissão Média', icone: 'bi-cash-coin', cor: 'success',
-        calcular: function (d) {
-            var comColab = d.colaboradores.filter(function (c) { return c.comissao && !isNaN(parseFloat(c.comissao)); });
-            if (comColab.length === 0) return '0%';
-            var soma = comColab.reduce(function (acc, c) { return acc + parseFloat(c.comissao); }, 0);
-            return (soma / comColab.length).toFixed(1) + '%';
-        }
-    },
-    {
-        chave: 'statusBot', permissao: 'Bot', titulo: 'Status do Bot', icone: 'bi-robot', cor: 'warning',
-        calcular: function (d) { return d.masterOn ? 'Ativo' : 'Inativo'; }
-    },
-    {
-        chave: 'totalRegistros', permissao: 'Relatórios', titulo: 'Total de Registros', icone: 'bi-bar-chart-fill', cor: 'secondary',
-        calcular: function (d) { return d.clientes.length + d.colaboradores.length + d.usuarios.length; }
-    },
-    {
-        chave: 'meuAcesso', permissao: 'Dashboard', titulo: 'Módulos Liberados', icone: 'bi-unlock-fill', cor: 'dark',
-        calcular: function (d, usuario) { return usuario.permissoes.length; }
-    }
-];
+function mostrarLoadingDashboard() {
+    var overlay = document.getElementById('dashboard-loading-overlay');
+    var conteudo = document.getElementById('dashboard-conteudo-real');
+    if (overlay) overlay.classList.remove('d-none');
+    if (conteudo) conteudo.style.display = 'none';
+}
 
 function _calcularUsuariosOnline(usuarios) {
     var agora = Date.now();
@@ -431,7 +407,9 @@ function renderizarBlocoChatPedidos(usuario, dados) {
     if (!bloco) return;
     bloco.classList.remove('d-none');
 
-    var ranking = calcularTopClientesPedidos(dados, 5);
+    dados = dados || window.dashboardState.dados || {};
+
+    var ranking = calcularTopClientesPedidos(dados, 5, 30);
     renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
 }
 
@@ -625,11 +603,44 @@ function _renderChartVolumePedidos(pedidos) {
 }
 
 function _obterNomeCliente(pedido, dados) {
-    if (pedido.clienteNome) return pedido.clienteNome;
     var cliente = (dados.clientes || []).find(function (c) {
-        return String(c.id) === String(pedido.clienteId) || c.nome === pedido.cliente;
+        return String(c.id) === String(pedido.id_cliente);
     });
-    return cliente ? cliente.nome : (pedido.cliente || 'Cliente');
+    if (cliente && cliente.nome) return cliente.nome;
+    return pedido.solicitante || 'Cliente não identificado';
+}
+
+function calcularTopClientesPedidos(dados, limite, diasJanela) {
+    var pedidos = dados.pedidos || [];
+    var janela = diasJanela || 30;
+
+    var limiteData = new Date();
+    limiteData.setDate(limiteData.getDate() - janela);
+
+    // Filtra apenas pedidos dos últimos N dias
+    var pedidosFiltrados = pedidos.filter(function (p) {
+        var dataPedido = new Date(p.data);
+        if (isNaN(dataPedido.getTime())) return false;
+        return dataPedido >= limiteData;
+    });
+
+    // Agrupa por id_cliente (chave estável), mantendo o nome de exibição
+    var contagem = {};
+    pedidosFiltrados.forEach(function (p) {
+        var chave = p.id_cliente || p.solicitante || 'desconhecido';
+        var nome = _obterNomeCliente(p, dados);
+
+        if (!contagem[chave]) {
+            contagem[chave] = { nome: nome, total: 0 };
+        }
+        contagem[chave].total++;
+    });
+
+    var ranking = Object.keys(contagem).map(function (chave) {
+        return contagem[chave];
+    }).sort(function (a, b) { return b.total - a.total; });
+
+    return ranking.slice(0, limite || 5);
 }
 
 function iniciarHeartbeat() {
@@ -658,29 +669,6 @@ function _iniciais(nome) {
     var partes = String(nome || '').trim().split(/\s+/);
     if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
     return (partes[0][0] + partes[1][0]).toUpperCase();
-}
-
-function calcularTopClientesPedidos(dados, limite) {
-    var pedidos = dados.pedidos || [];
-
-    var ordenados = pedidos.slice().sort(function (a, b) {
-        var da = new Date(a.data || a.dataCriacao || a.createdAt || 0);
-        var db = new Date(b.data || b.dataCriacao || b.createdAt || 0);
-        return db - da;
-    });
-
-    var contagem = {};
-    ordenados.forEach(function (p) {
-        var nome = _obterNomeCliente(p, dados);
-        if (!contagem[nome]) contagem[nome] = 0;
-        contagem[nome]++;
-    });
-
-    var ranking = Object.keys(contagem).map(function (nome) {
-        return { nome: nome, total: contagem[nome] };
-    }).sort(function (a, b) { return b.total - a.total; });
-
-    return ranking.slice(0, limite || 5);
 }
 
 function renderizarRankingClientes(containerId, ranking) {
@@ -760,12 +748,14 @@ window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
     window.dashboardState.isFetching = true;
 
+    mostrarLoadingDashboard(); // 👈 exibe loading antes de tudo
+
     var usuario = obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
     syncStartDashboard();
 
-    iniciarHeartbeat(); // 👈 adicione esta linha
+    iniciarHeartbeat();
 
     var btnRefresh = document.getElementById('btn-refresh-dashboard');
     if (btnRefresh) btnRefresh.onclick = function () { window.initDashboard(); };
@@ -775,9 +765,13 @@ window.initDashboard = function () {
             window.dashboardState.dados = dados;
             renderizarDashboardCompleto(usuario, dados);
         })
+        .catch(function (erro) {
+            console.error('Erro ao carregar dashboard:', erro);
+        })
         .finally(function () {
             window.dashboardState.isFetching = false;
             syncStopDashboard();
+            ocultarLoadingDashboard(); // 👈 só esconde quando tudo (dados + render) terminar
         });
 };
 

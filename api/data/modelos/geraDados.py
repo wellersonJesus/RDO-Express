@@ -34,6 +34,10 @@ logger = logging.getLogger("geraDados")
 
 URL = os.getenv("API_URL")
 API_KEY = os.getenv("SECRET_KEY")
+MASTER_LOGIN = os.getenv("MASTER_LOGIN")
+MASTER_CARGO = os.getenv("MASTER_CARGO")
+MASTER_PASS = os.getenv("MASTER_PASS")
+MASTER_PASS_HASH = os.getenv("MASTER_PASS_HASH")
 
 if not URL or not API_KEY:
     logger.critical("API_URL ou SECRET_KEY ausentes no .env (%s).", ENV_PATH)
@@ -67,7 +71,7 @@ HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
 ULTIMO_RDO_LANCADO = "RDO2395"
 FILTRO_DATA_INICIO = "10/07/2026"
-FILTRO_DATA_FIM = "11/07/2026"
+FILTRO_DATA_FIM = "13/07/2026"
 
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS",
@@ -526,12 +530,6 @@ def montar_descricao_financeiro(dados):
     return " ".join(partes).strip()
 
 
-def montar_rotas_texto(dados):
-    origem = dados["cliente_nome"] or "N/D"
-    destino = dados["endereco"] or "N/D"
-    return f"1. De: {origem} | Para: {destino}."
-
-
 def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observacao):
     data_str, hora_str = separar_data_hora(dados)
     hora_str = somente_hora(hora_str)
@@ -545,11 +543,6 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observac
     endereco_para = dados["endereco"] or ""
     solicitante = dados["solicitante"] or ""
 
-    status_final = STATUS_PEDIDO_PADRAO
-    descricao_final = montar_descricao_financeiro(dados)
-    rotas_texto = montar_rotas_texto(dados)
-    valor_rs = formatar_valor_rs(dados["valor_corrida"])
-
     return {
         "rdo_id": rdo_id,
         "id_cliente": id_cliente,
@@ -559,15 +552,12 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observac
         "observacao": observacao or dados["observacao_bruta"],
         "data_str": data_str,
         "hora_str": hora_str,
-        "status_final": status_final,
-        "descricao_final": descricao_final,
+        "status_final": STATUS_PEDIDO_PADRAO,
+        "descricao_final": montar_descricao_financeiro(dados),
         "tipo_servico": tipo_servico,
         "endereco_para": endereco_para,
-        "rotas_texto": rotas_texto,
-        "valor_rs": valor_rs,
+        "valor_rs": formatar_valor_rs(dados["valor_corrida"]),
         "telefone": dados.get("telefone") or "",
-        "distancia_km": dados.get("distancia_km") or "",
-        "tempo_min": dados.get("tempo_min") or "",
     }
 
 
@@ -581,21 +571,17 @@ def criar_pedido(consolidado):
         "id_cliente": consolidado["id_cliente"],
         "solicitante": consolidado["solicitante"],
         "contato": consolidado["telefone"],
+        "data": consolidado["data_str"],
         "horario": consolidado["hora_str"],
         "mercadoria": consolidado["tipo_servico"],
         "de": consolidado["cliente_nome"],
         "para": consolidado["endereco_para"],
-        "rotas_texto": consolidado["rotas_texto"],
         "retorno": "NÃO",
         "prioridade": definir_prioridade(consolidado["endereco_para"]),
         "valor_corrida": consolidado["valor_rs"],
-        "distancia": consolidado["distancia_km"],
-        "tempo": consolidado["tempo_min"],
         "motoboy": consolidado["motoboy_final"],
         "status": consolidado["status_final"],
         "observacao": consolidado["observacao"],
-        "data_chat": consolidado["data_str"],
-        "hora": consolidado["hora_str"],
     }
     try:
         resultado = post(payload)
@@ -625,7 +611,7 @@ def criar_financeiro(consolidado):
         logger.warning("Financeiro %s: colaborador '%s' não encontrado no mapa.", rdo_id, motoboy_final)
 
     payload = {
-        "action": "addfinanceiro",
+        "action": "criarfinanceiro",
         "apiKey": API_KEY,
         "id": rdo_id + "-FIN",
         "colaborador_id": colaborador_id or "",
@@ -633,7 +619,6 @@ def criar_financeiro(consolidado):
         "data": consolidado["data_str"],
         "tipo": TIPO_FINANCEIRO_PADRAO,
         "descricao": consolidado["descricao_final"],
-        "motoboy": motoboy_final,
         "vlr_servico": consolidado["valor_rs"],
         "colaborador": motoboy_final,
         "observacao": consolidado["observacao"],
@@ -652,7 +637,7 @@ def criar_financeiro(consolidado):
         return False, detalhe
 
     logger.info(
-        "Financeiro lançado: %s | data=%s | motoboy=%s | tipo=%s | valor=%s",
+        "Financeiro lançado: %s | data=%s | colaborador=%s | tipo=%s | valor=%s",
         rdo_id, consolidado["data_str"], motoboy_final, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"]
     )
     return True, None
