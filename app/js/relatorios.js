@@ -717,46 +717,142 @@
     return state.clientes.filter(function (c) { return idsStr.indexOf(String(c.id).trim()) !== -1; });
   }
 
-  function idsParaColaboradoresSelecionados(ids) {
-    const idsStr = ids.map(function (v) { return String(v).trim(); });
-    return state.motoboys.filter(function (m) { return idsStr.indexOf(String(m.id).trim()) !== -1; });
+  function extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados) {
+    const nomesTexto = [];
+    valoresBrutos.forEach(function (v) {
+      const vStr = String(v).trim();
+      if (!vStr) return;
+      if (/^\d+$/.test(vStr)) return;
+      nomesTexto.push(vStr);
+    });
+    clientesSelecionados.forEach(function (c) {
+      const username = resolverValor('clientes', 'username', c);
+      const responsavel = resolverValor('clientes', 'responsavel', c);
+      if (username) nomesTexto.push(username);
+      if (responsavel) nomesTexto.push(responsavel);
+    });
+    return nomesTexto;
   }
 
-  function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr) {
+  function valorCorrespondeNomesAlvo(valor, nomesAlvo) {
+    if (!valor) return false;
+    return nomesAlvo.some(function (nome) { return nomesCorrespondem(valor, nome); });
+  }
+  
+  function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
     if (idsStr.indexOf(idPed) !== -1) return true;
+    const destino = resolverValor('pedidos', 'para', pedido);
+    if (valorCorrespondeNomesAlvo(destino, nomesAlvo)) return true;
     const nomePedido = obterNomeClienteDoPedido(pedido);
     if (!nomePedido) return false;
-    return clientesSelecionados.some(function (c) {
-      const nomeCliente = resolverValor('clientes', 'username', c);
-      const responsavel = resolverValor('clientes', 'responsavel', c);
-      return nomesCorrespondem(nomePedido, nomeCliente) || nomesCorrespondem(nomePedido, responsavel);
-    });
+    return valorCorrespondeNomesAlvo(nomePedido, nomesAlvo);
   }
 
-  function pedidoCorrespondeMotoboy(pedido, colaboradoresSelecionados, idsStr) {
-    const idPed = String(resolverValor('pedidos', 'motoboy', pedido)).trim();
-    if (idsStr.indexOf(idPed) !== -1) return true;
-    const nomePedido = resolverValor('pedidos', 'motoboy', pedido);
-    if (!nomePedido) return false;
-    return colaboradoresSelecionados.some(function (m) {
-      const nomeColab = resolverValor('colaborador', 'username', m);
-      const colaborador = resolverValor('colaborador', 'colaborador', m);
-      return nomesCorrespondem(nomePedido, nomeColab) || nomesCorrespondem(nomePedido, colaborador);
-    });
+  function chatCorrespondeCliente(registroChat, idsStr, nomesAlvo) {
+    const idChat = String(resolverValor('chat', 'id_cliente', registroChat)).trim();
+    if (idsStr.indexOf(idChat) !== -1) return true;
+    const pedidoVinculado = buscarPedidoDoChat(registroChat);
+    if (!pedidoVinculado) return false;
+    return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
   }
 
-  function registroFinanceiroCorrespondeMotoboy(registro, colaboradoresSelecionados, idsStr) {
-    const nomeMb = resolverValor('financeiro', 'motoboy', registro);
-    const nomeColab = resolverValor('financeiro', 'colaborador', registro);
-    return colaboradoresSelecionados.some(function (m) {
-      const nomeCadastro = resolverValor('colaborador', 'username', m);
-      const colaboradorCadastro = resolverValor('colaborador', 'colaborador', m);
-      return nomesCorrespondem(nomeMb, nomeCadastro) || nomesCorrespondem(nomeMb, colaboradorCadastro) ||
-        nomesCorrespondem(nomeColab, nomeCadastro) || nomesCorrespondem(nomeColab, colaboradorCadastro);
-    });
+  function financeiroCorrespondeCliente(registro, nomesAlvo) {
+    const nomeFin = obterValorCampoFinanceiro('cliente', registro);
+    if (valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
+    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+    if (!pedidoVinculado) return false;
+    const destino = resolverValor('pedidos', 'para', pedidoVinculado);
+    return valorCorrespondeNomesAlvo(destino, nomesAlvo) || valorCorrespondeNomesAlvo(obterNomeClienteDoPedido(pedidoVinculado), nomesAlvo);
   }
 
+  function coletarDadosBanco(banco) {
+    const p = state.builder.periodo;
+    let dados = [];
+
+    if (banco === 'clientes') dados = state.clientes.slice();
+    else if (banco === 'colaborador') dados = state.motoboys.slice();
+    else if (banco === 'pedidos') {
+      dados = state.pedidos.filter(function (r) {
+        return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
+      });
+    }
+    else if (banco === 'chat') {
+      dados = state.chat.filter(function (r) {
+        return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
+      });
+    }
+    else if (banco === 'financeiro') {
+      dados = state.financeiro.filter(function (r) {
+        return dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
+      });
+    }
+
+    const fx = state.builder.filtroExtra;
+    if (!fx || !fx.valor) return dados;
+
+    const valoresBrutos = Array.isArray(fx.valor) ? fx.valor : [fx.valor];
+    const contemTodos = valoresBrutos.indexOf('__todos__') !== -1;
+    if (contemTodos || !valoresBrutos.length) return dados;
+
+    const valoresStr = valoresBrutos.map(function (v) { return String(v).trim(); });
+
+    function idBate(valorCampo) {
+      return valoresStr.indexOf(String(valorCampo).trim()) !== -1;
+    }
+
+    if (fx.campo === 'motoboy_id') {
+      const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
+
+      if (banco === 'colaborador') {
+        return dados.filter(function (r) { return idBate(r.id); });
+      }
+      if (banco === 'pedidos') {
+        return dados.filter(function (r) {
+          const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
+          return nomesSelecionados.indexOf(mb) !== -1;
+        });
+      }
+      if (banco === 'financeiro') {
+        return dados.filter(function (r) {
+          const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
+          const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
+          return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+        });
+      }
+      return dados;
+    }
+
+    if (fx.campo === 'cliente_id') {
+      const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
+      const nomesAlvo = extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados);
+
+      if (banco === 'clientes') {
+        return dados.filter(function (r) { return idBate(r.id); });
+      }
+
+      if (banco === 'pedidos') {
+        return dados.filter(function (r) { return pedidoCorrespondeCliente(r, clientesSelecionados, valoresStr, nomesAlvo); });
+      }
+
+      if (banco === 'chat') {
+        return dados.filter(function (r) { return chatCorrespondeCliente(r, valoresStr, nomesAlvo); });
+      }
+
+      if (banco === 'financeiro') {
+        return dados.filter(function (r) { return financeiroCorrespondeCliente(r, nomesAlvo); });
+      }
+    }
+
+    if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
+      return dados.filter(function (r) {
+        return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
+      });
+    }
+
+    return dados;
+  }
+    
   function buscarFinanceiroDoPedido(pedido) {
     const idPedido = pedido.id;
     return state.financeiro.find(function (f) {
@@ -819,14 +915,6 @@
       const m = texto.match(padroes[i]);
       if (m && m[1]) return m[1].trim();
     }
-    return '';
-  }
-
-  function obterNomeClienteDoFinanceiro(registro) {
-    const direto = resolverValor('financeiro', 'cliente', registro);
-    if (direto) return direto;
-    const pedido = buscarPedidoDoFinanceiro(registro);
-    if (pedido) return obterNomeClienteDoPedido(pedido);
     return '';
   }
 
@@ -930,139 +1018,7 @@
     });
     return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
   }
-
-  function coletarDadosBanco(banco) {
-    const p = state.builder.periodo;
-    let dados = [];
-
-    if (banco === 'clientes') dados = state.clientes.slice();
-    else if (banco === 'colaborador') dados = state.motoboys.slice();
-    else if (banco === 'pedidos') {
-      dados = state.pedidos.filter(function (r) {
-        return dentroPeriodo(obterDataPedidoComFallback(r), p.inicio, p.fim);
-      });
-    }
-    else if (banco === 'chat') {
-      dados = state.chat.filter(function (r) {
-        return dentroPeriodo(obterDataChatComFallback(r), p.inicio, p.fim);
-      });
-    }
-    else if (banco === 'financeiro') {
-      dados = state.financeiro.filter(function (r) {
-        return dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
-      });
-    }
-
-    const fx = state.builder.filtroExtra;
-    if (!fx || !fx.valor) return dados;
-
-    const valoresBrutos = Array.isArray(fx.valor) ? fx.valor : [fx.valor];
-    const contemTodos = valoresBrutos.indexOf('__todos__') !== -1;
-    if (contemTodos || !valoresBrutos.length) return dados;
-
-    const valoresStr = valoresBrutos.map(function (v) { return String(v).trim(); });
-
-    function idBate(valorCampo) {
-      return valoresStr.indexOf(String(valorCampo).trim()) !== -1;
-    }
-
-    if (fx.campo === 'motoboy_id') {
-      const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
-
-      if (banco === 'colaborador') {
-        return dados.filter(function (r) { return idBate(r.id); });
-      }
-      if (banco === 'pedidos') {
-        return dados.filter(function (r) {
-          const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
-          return nomesSelecionados.indexOf(mb) !== -1;
-        });
-      }
-      if (banco === 'financeiro') {
-        return dados.filter(function (r) {
-          const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
-          const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
-          return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
-        });
-      }
-      return dados;
-    }
-
-    if (fx.campo === 'cliente_id') {
-      const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
-
-      if (banco === 'clientes') {
-        return dados.filter(function (r) { return idBate(r.id); });
-      }
-
-      if (banco === 'pedidos') {
-        return dados.filter(function (r) {
-          if (idBate(resolverValor('pedidos', 'id_cliente', r))) return true;
-          const nomePedido = obterNomeClienteDoPedido(r);
-          if (!nomePedido) return false;
-          return clientesSelecionados.some(function (c) {
-            const nomeCliente = resolverValor('clientes', 'username', c);
-            const responsavel = resolverValor('clientes', 'responsavel', c);
-            return nomesCorrespondem(nomePedido, nomeCliente) || nomesCorrespondem(nomePedido, responsavel);
-          });
-        });
-      }
-
-      if (banco === 'chat') {
-        return dados.filter(function (r) {
-          return idBate(resolverValor('chat', 'id_cliente', r));
-        });
-      }
-
-      if (banco === 'financeiro') {
-        return dados.filter(function (r) {
-          const nomeFin = obterValorCampoFinanceiro('cliente', r);
-          if (!nomeFin) return false;
-          return clientesSelecionados.some(function (c) {
-            const nomeCliente = resolverValor('clientes', 'username', c);
-            const responsavel = resolverValor('clientes', 'responsavel', c);
-            return nomesCorrespondem(nomeFin, nomeCliente) || nomesCorrespondem(nomeFin, responsavel);
-          });
-        });
-      }
-    }
-
-    if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
-      return dados.filter(function (r) {
-        return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
-      });
-    }
-
-    return dados;
-  }
-
-  function obterIdClienteDoPedido(pedido) {
-    if (pedido.__idClienteResolvidoCache !== undefined) return pedido.__idClienteResolvidoCache;
-
-    const idRaw = resolverValor('pedidos', 'id_cliente', pedido);
-    let resultado = '';
-
-    if (idRaw && /^\d+$/.test(String(idRaw).trim())) {
-      const cli = state.clientes.find(function (c) { return String(c.id) === String(idRaw).trim(); });
-      if (cli) resultado = String(cli.id).trim();
-    }
-
-    if (!resultado) {
-      const nomePedido = obterNomeClienteDoPedido(pedido);
-      if (nomePedido) {
-        const cliPorNome = state.clientes.find(function (c) {
-          const username = resolverValor('clientes', 'username', c);
-          const responsavel = resolverValor('clientes', 'responsavel', c);
-          return nomesCorrespondem(nomePedido, username) || nomesCorrespondem(nomePedido, responsavel);
-        });
-        if (cliPorNome) resultado = String(cliPorNome.id).trim();
-      }
-    }
-
-    pedido.__idClienteResolvidoCache = resultado;
-    return resultado;
-  }
-
+    
   function idsParaNomes(ids, lista, banco) {
     const idsStr = ids.map(function (v) { return String(v).trim(); });
     const nomes = [];
