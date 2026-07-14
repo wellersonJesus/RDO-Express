@@ -23,7 +23,8 @@
     financeiro: {
       id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'], descricao: ['descricao'],
       motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'], colaborador: ['colaborador'],
-      observacao: ['observacao'], situacao: ['situacao']
+      colaborador_id: ['colaborador_id'], observacao: ['observacao'], situacao: ['situacao'],
+      cliente: ['cliente']
     },
     clientes: {
       username: ['username'], responsavel: ['responsavel'], contato: ['contato'],
@@ -75,6 +76,38 @@
     const mCompleto = v.match(/(\d{2}:\d{2}(:\d{2})?)/);
     if (mCompleto) return mCompleto[1].substring(0, 5);
     return v;
+  }
+
+  function extrairClienteDescricaoFinanceiro(descricao) {
+    if (!descricao) return '';
+    const m = String(descricao).match(/\bde\s+(.+?)\s+para\s+/i);
+    if (m && m[1]) return m[1].trim();
+    return '';
+  }
+
+  function obterNomeClienteDoFinanceiro(registro) {
+    const direto = resolverValor('financeiro', 'cliente', registro);
+    if (direto) return direto;
+    return extrairClienteDescricaoFinanceiro(resolverValor('financeiro', 'descricao', registro));
+  }
+
+  function ehLancamentoOperacional(registro) {
+    const colabId = String(resolverValor('financeiro', 'colaborador_id', registro)).trim();
+    return !!colabId && colabId !== '-' && colabId.toUpperCase() !== 'N/A';
+  }
+
+  function obterNomeMotoboyFinanceiro(registro) {
+    const idColab = String(resolverValor('financeiro', 'colaborador_id', registro)).trim();
+    if (idColab && idColab !== '-' && idColab.toUpperCase() !== 'N/A') {
+      const mb = state.motoboys.find(function (m) { return String(m.id).trim() === idColab; });
+      if (mb) {
+        const nome = resolverValor('colaborador', 'username', mb) || resolverValor('colaborador', 'colaborador', mb);
+        if (nome) return nome;
+      }
+    }
+    const nomeCampo = resolverValor('financeiro', 'motoboy', registro) || resolverValor('financeiro', 'colaborador', registro);
+    if (nomeCampo && normalizarComparacao(nomeCampo) !== 'GRUPO') return nomeCampo;
+    return 'Sem motoboy identificado';
   }
 
   const BANCOS = {
@@ -162,6 +195,7 @@
     ultimoBuilderState: null,
     paginaAtual: 1,
     itensPorPagina: 10,
+    sortDesc: true,
     builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
   };
 
@@ -276,6 +310,12 @@
     els.mbLista = document.getElementById('rel-motoboys-lista');
     els.cliLista = document.getElementById('rel-clientes-lista');
     els.finLista = document.getElementById('rel-financeiro-lista');
+
+    els.sortHeaders = {
+      motoboys: { btn: document.getElementById('btn-sort-data-motoboys'), icon: document.getElementById('icon-sort-data-motoboys') },
+      clientes: { btn: document.getElementById('btn-sort-data-clientes'), icon: document.getElementById('icon-sort-data-clientes') },
+      financeiro: { btn: document.getElementById('btn-sort-data-financeiro'), icon: document.getElementById('icon-sort-data-financeiro') }
+    };
 
     els.modalOverlay = document.getElementById('modalRelatorioOverlay');
     els.modalBody = document.getElementById('modal-rel-body');
@@ -708,6 +748,9 @@
   }
 
   function registroFinanceiroCorrespondeMotoboy(registro, colaboradoresSelecionados, idsStr) {
+    const idColab = String(resolverValor('financeiro', 'colaborador_id', registro)).trim();
+    if (idColab && idColab !== '-' && idColab.toUpperCase() !== 'N/A' && idsStr.indexOf(idColab) !== -1) return true;
+
     const nomeMb = resolverValor('financeiro', 'motoboy', registro);
     const nomeColab = resolverValor('financeiro', 'colaborador', registro);
     return colaboradoresSelecionados.some(function (m) {
@@ -853,6 +896,27 @@
     return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
   }
 
+  function agruparPorClienteFinanceiro(registrosFinanceiro) {
+    const mapa = {};
+    registrosFinanceiro.forEach(function (r) {
+      const nome = obterNomeClienteDoFinanceiro(r) || 'Sem cliente';
+      const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r));
+      const valorValido = !isNaN(valor) ? valor : 0;
+      const situacao = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
+      const pago = situacao === 'PAGO';
+
+      if (!mapa[nome]) mapa[nome] = { nome: nome, total: 0, qtd: 0, totalPendente: 0, qtdPendente: 0 };
+      mapa[nome].qtd++;
+      mapa[nome].total += valorValido;
+
+      if (!pago) {
+        mapa[nome].qtdPendente++;
+        mapa[nome].totalPendente += valorValido;
+      }
+    });
+    return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
+  }
+
   function coletarDadosBanco(banco) {
     const p = state.builder.periodo;
     let dados = [];
@@ -891,21 +955,19 @@
 
     if (fx.campo === 'motoboy_id') {
       const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
+      const colaboradoresSelecionados = idsParaColaboradoresSelecionados(valoresBrutos);
 
       if (banco === 'colaborador') {
         return dados.filter(function (r) { return idBate(r.id); });
       }
       if (banco === 'pedidos') {
         return dados.filter(function (r) {
-          const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
-          return nomesSelecionados.indexOf(mb) !== -1;
+          return pedidoCorrespondeMotoboy(r, colaboradoresSelecionados, valoresStr);
         });
       }
       if (banco === 'financeiro') {
         return dados.filter(function (r) {
-          const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
-          const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
-          return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+          return registroFinanceiroCorrespondeMotoboy(r, colaboradoresSelecionados, valoresStr);
         });
       }
       return dados;
@@ -917,8 +979,9 @@
       }
 
       if (banco === 'pedidos') {
+        const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
         return dados.filter(function (r) {
-          return idBate(resolverValor('pedidos', 'id_cliente', r));
+          return pedidoCorrespondeCliente(r, clientesSelecionados, valoresStr);
         });
       }
 
@@ -929,17 +992,15 @@
       }
 
       if (banco === 'financeiro') {
-        const idsPedidosDoCliente = state.pedidos
-          .filter(function (ped) {
-            return idBate(resolverValor('pedidos', 'id_cliente', ped));
-          })
-          .map(function (ped) {
-            return String(resolverValor('pedidos', 'id', ped)).trim();
-          });
-
+        const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
         return dados.filter(function (r) {
-          const idPed = String(resolverValor('financeiro', 'id_pedido', r)).trim();
-          return idsPedidosDoCliente.indexOf(idPed) !== -1;
+          const nomeCliente = obterNomeClienteDoFinanceiro(r);
+          if (!nomeCliente) return false;
+          return clientesSelecionados.some(function (c) {
+            const username = resolverValor('clientes', 'username', c);
+            const responsavel = resolverValor('clientes', 'responsavel', c);
+            return nomesCorrespondem(nomeCliente, username) || nomesCorrespondem(nomeCliente, responsavel);
+          });
         });
       }
     }
@@ -1079,27 +1140,32 @@
     const financeiroSelecionado = !!snapshot.bancos.financeiro;
 
     if (pedidosSelecionado || financeiroSelecionado) {
-      let resumoMotoboys, baseDados;
+      let resumoMotoboys, baseDados, baseOperacional;
 
       if (pedidosSelecionado) {
         baseDados = coletarDadosBanco('pedidos');
         resumoMotoboys = agruparPorMotoboy(baseDados);
       } else {
         baseDados = coletarDadosBanco('financeiro');
-        resumoMotoboys = agruparPorMotoboyFinanceiro(baseDados);
+        baseOperacional = baseDados.filter(ehLancamentoOperacional);
+        resumoMotoboys = agruparPorMotoboyFinanceiro(baseOperacional);
       }
 
       snapshot.resumos.motoboys = resumoMotoboys;
 
       if (pedidosSelecionado) {
         snapshot.resumos.clientes = agruparPorCliente(baseDados);
+      } else if (financeiroSelecionado) {
+        snapshot.resumos.clientes = agruparPorClienteFinanceiro(baseOperacional);
       }
 
+      const baseParaDatas = pedidosSelecionado ? baseDados : baseOperacional;
+
       const datasPorMotoboy = {};
-      baseDados.forEach(function (registro) {
+      baseParaDatas.forEach(function (registro) {
         const nomeMotoboy = pedidosSelecionado
           ? obterValorCampoPedido('motoboy', registro)
-          : (resolverValor('financeiro', 'motoboy', registro) || resolverValor('financeiro', 'colaborador', registro));
+          : obterNomeMotoboyFinanceiro(registro);
         if (!nomeMotoboy) return;
 
         const dataBruta = pedidosSelecionado
@@ -1115,7 +1181,7 @@
         }
       });
 
-      const totalChamados = baseDados.length;
+      const totalChamados = baseParaDatas.length;
       const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
       const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
       const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
@@ -1213,6 +1279,13 @@
     document.querySelectorAll('.btn-rel-gerar').forEach(function (btn) {
       btn.addEventListener('click', function () { abrirBuilder(btn.dataset.tabTipo); });
     });
+
+    if (els.sortHeaders) {
+      Object.keys(els.sortHeaders).forEach(function (tab) {
+        const h = els.sortHeaders[tab];
+        if (h && h.btn) h.btn.addEventListener('click', _toggleSortRelatorios);
+      });
+    }
 
     if (els.modalBtnFechar) els.modalBtnFechar.addEventListener('click', fecharModalRelatorio);
     if (els.modalBtnCancelar) els.modalBtnCancelar.addEventListener('click', fecharModalRelatorio);
@@ -1643,33 +1716,150 @@
     });
   }
 
-  function gerarPdfRelatorio() {
-    if (!state.relatorioAtual || !els.modalBody) { relToast('Nenhum relatório para exportar.', 'warning'); return; }
-    if (!window.html2pdf) { relToast('Biblioteca html2pdf não carregada.', 'danger'); return; }
+  function carregarHtml2Pdf() {
+    if (window.html2pdf) return Promise.resolve();
+    if (window.__html2pdfLoadingPromise) return window.__html2pdfLoadingPromise;
 
-    const btn = els.modalBtnPdf;
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+    window.__html2pdfLoadingPromise = new Promise(function (resolve, reject) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.async = true;
+      script.onload = function () {
+        if (window.html2pdf) resolve();
+        else reject(new Error('html2pdf.js carregado mas indisponível.'));
+      };
+      script.onerror = function () {
+        window.__html2pdfLoadingPromise = null;
+        reject(new Error('Falha ao carregar html2pdf.js pela CDN.'));
+      };
+      document.head.appendChild(script);
+    });
 
+    return window.__html2pdfLoadingPromise;
+  }
+
+  function montarContainerPdf() {
     const container = document.createElement('div');
     container.style.padding = '20px';
     container.style.background = '#fff';
     container.innerHTML = '<h4 style="margin-bottom:4px;">' + escapeHtml(state.relatorioAtual.titulo) + '</h4>' +
       '<p style="font-size:.8rem;color:#666;margin-bottom:16px;">' + escapeHtml(state.relatorioAtual.periodoLabel) + '</p>' +
       els.modalBody.innerHTML;
+    return container;
+  }
 
-    const opt = {
+  function nomeArquivoPdf() {
+    const titulo = (state.relatorioAtual.titulo || 'Relatorio')
+      .toString()
+      .trim();
+
+    const periodo = formatarPeriodoParaArquivo(state.relatorioAtual);
+
+    return periodo ? titulo + '(' + periodo + ')' + '.pdf' : titulo + '.pdf';
+  }
+
+  function formatarPeriodoParaArquivo(rel) {
+    if (rel.data_inicio && rel.data_fim) {
+      const ini = formatarDataArquivo(rel.data_inicio);
+      const fim = formatarDataArquivo(rel.data_fim);
+      if (ini && fim) {
+        return ini === fim ? ini : ini + ' a ' + fim;
+      }
+    }
+
+    // Fallback: tenta extrair duas datas do periodoLabel (ex: "01/07/2026 a 14/07/2026")
+    if (rel.periodoLabel) {
+      const datasEncontradas = extrairDatasDoTexto(rel.periodoLabel);
+      if (datasEncontradas.length === 2) {
+        return formatarDataArquivo(datasEncontradas[0]) + ' a ' + formatarDataArquivo(datasEncontradas[1]);
+      }
+      if (datasEncontradas.length === 1) {
+        return formatarDataArquivo(datasEncontradas[0]);
+      }
+    }
+
+    if (rel.criadoEm) {
+      return formatarDataArquivo(rel.criadoEm);
+    }
+
+    return '';
+  }
+
+  function extrairDatasDoTexto(texto) {
+    const regex = /(\d{2})\/(\d{2})\/(\d{4})/g;
+    const resultados = [];
+    let match;
+    while ((match = regex.exec(texto)) !== null) {
+      resultados.push(match[3] + '-' + match[2] + '-' + match[1]); // yyyy-mm-dd para o Date()
+    }
+    return resultados;
+  }
+
+  function formatarDataArquivo(valor) {
+    const d = new Date(valor);
+    if (isNaN(d.getTime())) return '';
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const ano = String(d.getFullYear()).slice(-2);
+    return dia + '/' + mes + '/' + ano;
+  }
+
+  function opcoesPdf() {
+    return {
       margin: 10,
-      filename: (state.relatorioAtual.titulo || 'relatorio').replace(/[^a-z0-9]+/gi, '_') + '.pdf',
+      filename: nomeArquivoPdf(),
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
+  }
 
-    window.html2pdf().set(opt).from(container).save()
+  function baixarPdfFallback(builder) {
+    return builder.save().then(function () {
+      relToast('PDF baixado (cópia direta não suportada neste navegador).', 'warning');
+    });
+  }
+
+  function gerarPdfRelatorio() {
+    if (!state.relatorioAtual || !els.modalBody) {
+      relToast('Nenhum relatório para exportar.', 'warning');
+      return;
+    }
+
+    const btn = els.modalBtnPdf;
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Preparando...';
+
+    carregarHtml2Pdf()
       .then(function () {
-        relToast('PDF gerado com sucesso!', 'success');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+        const container = montarContainerPdf();
+        const opt = opcoesPdf();
+        const builder = window.html2pdf().set(opt).from(container);
+
+        const suportaClipboardPdf = !!(
+          navigator.clipboard &&
+          window.ClipboardItem &&
+          navigator.clipboard.write
+        );
+
+        if (!suportaClipboardPdf) {
+          return baixarPdfFallback(builder);
+        }
+
+        return builder.outputPdf('blob')
+          .then(function (blob) {
+            const item = new ClipboardItem({ 'application/pdf': blob });
+            return navigator.clipboard.write([item]).then(function () {
+              relToast('PDF copiado! Use Ctrl+V para colar.', 'success');
+            });
+          })
+          .catch(function () {
+            // Navegador recusou copiar PDF (ex: Firefox) -> baixa como alternativa
+            const builderNovo = window.html2pdf().set(opt).from(montarContainerPdf());
+            return baixarPdfFallback(builderNovo);
+          });
       })
       .catch(function (err) {
         relToast('Erro ao gerar PDF: ' + err.message, 'danger');
@@ -1692,6 +1882,34 @@
     return new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
+  function _extrairPrimeiraDataTexto(texto) {
+    if (!texto) return null;
+    const regex = /(\d{2})\/(\d{2})\/(\d{4})/;
+    const match = String(texto).match(regex);
+    if (!match) return null;
+    const iso = match[3] + '-' + match[2] + '-' + match[1];
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  function _obterDataOrdenacao(rel) {
+    if (rel.data_inicio) {
+      const isoDireto = normalizarDataISO(rel.data_inicio);
+      if (isoDireto) {
+        const d = new Date(isoDireto);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+    }
+
+    const dataPeriodoLabel = _extrairPrimeiraDataTexto(rel.periodoLabel);
+    if (dataPeriodoLabel !== null) return dataPeriodoLabel;
+
+    const dataCampoData = _extrairPrimeiraDataTexto(rel.data);
+    if (dataCampoData !== null) return dataCampoData;
+
+    return rel.criadoEm || 0;
+  }
+
   function renderizarListas() {
     const config = {
       motoboys: { el: els.mbLista, pag: els.paginacao.motoboys },
@@ -1703,7 +1921,13 @@
     const cfg = config[tab];
     if (!cfg || !cfg.el) return;
 
-    const lista = state.relatoriosSalvos.filter(function (r) { return r.tipo === tab; });
+    let lista = state.relatoriosSalvos.filter(function (r) { return r.tipo === tab; });
+
+    lista = lista.slice().sort(function (a, b) {
+      const da = _obterDataOrdenacao(a);
+      const db = _obterDataOrdenacao(b);
+      return state.sortDesc ? (db - da) : (da - db);
+    });
 
     if (!lista.length) {
       cfg.el.innerHTML = '<div class="rel-lista-vazia text-center py-5" style="color:#999;font-size:.85rem;">' +
@@ -1728,6 +1952,7 @@
     let html = '<div class="rel-lista-itens">';
     paginaItens.forEach(function (rel) {
       const dataFormatada = rel.criadoEm ? new Date(rel.criadoEm).toLocaleDateString('pt-BR') : '';
+      const descricaoRel = gerarDescricaoRelatorio(rel);
 
       html += '<div class="rel-item-card" data-id="' + escapeHtml(rel.id) + '">' +
         '<div class="rel-item-left">' +
@@ -1736,11 +1961,12 @@
         '<div class="rel-item-titulo">' + escapeHtml(rel.titulo) + '</div>' +
         '<div class="rel-item-sub">' + escapeHtml(rel.periodoLabel || rel.data || '') +
         (dataFormatada ? ' · ' + dataFormatada : '') + '</div>' +
+        '<div class="rel-item-descricao"><i class="bi bi-info-circle"></i>' + escapeHtml(descricaoRel) + '</div>' +
         '</div>' +
         '</div>' +
         '<div class="rel-item-actions">' +
-        '<button class="rel-item-btn rel-btn-view btn-rel-ver" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
-        '<button class="rel-item-btn rel-btn-delete btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash"></i></button>' +
+        '<button class="rel-item-btn rel-btn-view btn-rel-ver" data-id="' + escapeHtml(rel.id) + '" title="Visualizar"><i class="bi bi-eye"></i></button>' +
+        '<button class="rel-item-btn rel-btn-delete btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
         '</div>' +
         '</div>';
     });
@@ -1753,26 +1979,16 @@
         const id = btn.getAttribute('data-id');
         const rel = state.relatoriosSalvos.find(function (r) { return String(r.id) === String(id); });
         if (!rel) { relToast('Relatório não encontrado.', 'danger'); return; }
-
         let snapshot = rel.snapshot;
         if (!snapshot && rel.descricao) {
-          try {
-            const parsed = JSON.parse(rel.descricao);
-            snapshot = parsed.snapshot;
-          } catch (e) { }
+          try { snapshot = JSON.parse(rel.descricao).snapshot; } catch (e) { }
         }
-
         abrirModalRelatorio({
-          id: rel.id,
-          tipo: rel.tipo,
-          titulo: rel.titulo,
+          id: rel.id, tipo: rel.tipo, titulo: rel.titulo,
           periodoLabel: rel.periodoLabel || rel.data,
-          data_inicio: rel.data_inicio,
-          data_fim: rel.data_fim,
-          criadoEm: rel.criadoEm,
-          usuarioGerador: rel.usuarioGerador,
-          horaGeracao: rel.horaGeracao,
-          snapshot: snapshot
+          data_inicio: rel.data_inicio, data_fim: rel.data_fim,
+          criadoEm: rel.criadoEm, usuarioGerador: rel.usuarioGerador,
+          horaGeracao: rel.horaGeracao, snapshot: snapshot
         }, false);
       };
     });
@@ -1790,6 +2006,31 @@
       if (cfg.pag.prev) cfg.pag.prev.disabled = state.paginaAtual <= 1;
       if (cfg.pag.next) cfg.pag.next.disabled = state.paginaAtual >= totalPaginas;
     }
+  }
+
+  function _toggleSortRelatorios() {
+    state.sortDesc = !state.sortDesc;
+    const h = els.sortHeaders[state.tabAtual];
+    if (h && h.icon) h.icon.className = state.sortDesc ? 'bi bi-arrow-down' : 'bi bi-arrow-up';
+    state.paginaAtual = 1;
+    renderizarListas();
+  }
+
+  function gerarDescricaoRelatorio(rel) {
+    const snap = rel.snapshot;
+    if (!snap) return 'Sem dados de resumo disponíveis';
+
+    if (snap.resumos && snap.resumos.geral) {
+      const g = snap.resumos.geral;
+      return g.totalChamados + ' corrida(s) · ' + g.totalMotoboysDistintos + ' motoboy(s) · ' + formatarMoeda(g.valorTotalGeral);
+    }
+
+    const bancos = snap.bancos || {};
+    const partes = [];
+    Object.keys(bancos).forEach(function (b) {
+      if (bancos[b] && bancos[b].linhas) partes.push(bancos[b].linhas.length + ' ' + bancos[b].label.toLowerCase());
+    });
+    return partes.length ? partes.join(' · ') : 'Relatório sem registros no período';
   }
 
   function carregarDados() {
@@ -1866,7 +2107,7 @@
     const mapa = {};
 
     registrosFinanceiro.forEach(function (r) {
-      const nome = resolverValor('financeiro', 'motoboy', r) || resolverValor('financeiro', 'colaborador', r) || 'Sem motoboy';
+      const nome = obterNomeMotoboyFinanceiro(r);
       const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r));
       const valorValido = !isNaN(valor) ? valor : 0;
       const situacao = normalizarComparacao(resolverValor('financeiro', 'situacao', r));

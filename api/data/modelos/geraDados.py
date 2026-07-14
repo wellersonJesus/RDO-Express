@@ -1,6 +1,5 @@
 import os
 import time
-import uuid
 import re
 import logging
 import signal
@@ -34,10 +33,6 @@ logger = logging.getLogger("geraDados")
 
 URL = os.getenv("API_URL")
 API_KEY = os.getenv("SECRET_KEY")
-MASTER_LOGIN = os.getenv("MASTER_LOGIN")
-MASTER_CARGO = os.getenv("MASTER_CARGO")
-MASTER_PASS = os.getenv("MASTER_PASS")
-MASTER_PASS_HASH = os.getenv("MASTER_PASS_HASH")
 
 if not URL or not API_KEY:
     logger.critical("API_URL ou SECRET_KEY ausentes no .env (%s).", ENV_PATH)
@@ -52,11 +47,10 @@ TIMEOUT_CONEXAO = (10, 45)
 INTERVALO_ENTRE_REQUISICOES = 0.4
 MAX_TENTATIVAS_POST = 3
 
-MOTOBOYS_FIXOS = {"AUANDER", "IGOR", "EMERSON"}
-
 CLIENTES = {}
 COLABORADORES = {}
 CLIENTES_PENDENTES = set()
+COLABORADORES_PENDENTES = set()
 
 RDOS_EXISTENTES = set()
 RDO_SEQ = 0
@@ -69,9 +63,17 @@ RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 RDO_FIN_PATTERN = re.compile(r"^RDO0*(\d+)-FIN$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
+DATA_BR_PATTERN = re.compile(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})")
+DATA_ISO_PATTERN = re.compile(r"(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})")
+
+PADRAO_SOLICITANTE = re.compile(
+    r"(?:SOLICITANTE|SOLICITOU|SOL\.?|RESPONS[ÁA]VEL|CONTATO)\s*[:\-]\s*([A-ZÀ-Ú0-9\s\.]{2,60})",
+    re.IGNORECASE
+)
+
 ULTIMO_RDO_LANCADO = "RDO2395"
-FILTRO_DATA_INICIO = "10/07/2026"
-FILTRO_DATA_FIM = "13/07/2026"
+FILTRO_DATA_INICIO = "07/07/2026"
+FILTRO_DATA_FIM = "14/07/2026"
 
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS",
@@ -80,8 +82,7 @@ PAGAMENTO_SEMANAL = [
 PAGAMENTO_QUINZENAL = ["TELECOM", "AMMI BELVEDERE", "ROSA DALIA"]
 PAGAMENTO_MENSAL = ["BASIQUE", "BETE PLURAL", "FFASHION", "ELISA STHANIS"]
 
-CAMPOS_LINHA_MINIMO = 9
-CAMPOS_LINHA_TOTAL = 13
+CAMPOS_LINHA_TOTAL = 8
 
 
 class ErroFatalGeracao(Exception):
@@ -241,14 +242,12 @@ def conferir_ultimo_rdo_com_financeiro(rdo_seq_base, maior_rdo_financeiro):
         )
     elif maior_rdo_financeiro > rdo_seq_base:
         logger.warning(
-            "ATENCAO: a tabela financeiro ja possui RDO%03d-FIN, mas ULTIMO_RDO_LANCADO esta definido como RDO%03d. "
-            "Ajuste para RDO%03d antes de continuar, para evitar duplicidade/colisao de IDs.",
-            maior_rdo_financeiro, rdo_seq_base, maior_rdo_financeiro
+            "ATENCAO: a tabela financeiro ja possui RDO%03d-FIN, mas ULTIMO_RDO_LANCADO esta definido como RDO%03d.",
+            maior_rdo_financeiro, rdo_seq_base
         )
     else:
         logger.warning(
-            "ATENCAO: ULTIMO_RDO_LANCADO esta definido como RDO%03d, mas o maior RDO-FIN encontrado na tabela "
-            "financeiro e apenas RDO%03d. Confira se o valor manual nao esta avancado alem do que realmente foi lancado.",
+            "ATENCAO: ULTIMO_RDO_LANCADO esta definido como RDO%03d, mas o maior RDO-FIN encontrado e RDO%03d.",
             rdo_seq_base, maior_rdo_financeiro
         )
 
@@ -334,7 +333,7 @@ def carregar_clientes():
     return mapa
 
 
-def garantir_cliente(nome_cliente, solicitante=""):
+def garantir_cliente(nome_cliente, responsavel=""):
     nome_upper = (nome_cliente or "").strip().upper()
     if not nome_upper:
         logger.error("Nome de cliente vazio recebido em garantir_cliente().")
@@ -346,7 +345,7 @@ def garantir_cliente(nome_cliente, solicitante=""):
         return None
 
     pagamento_identificado = determinar_pagamento_cliente(nome_upper)
-    responsavel_final = (solicitante or "").strip()
+    responsavel_final = (responsavel or "").strip()
 
     payload = {
         "action": "criarcliente",
@@ -379,9 +378,9 @@ def garantir_cliente(nome_cliente, solicitante=""):
     return None
 
 
-def definir_prioridade(endereco):
-    end = (endereco or "").upper()
-    if "URGENTE" in end or "PRIORIDADE" in end:
+def definir_prioridade(endereco, observacao):
+    texto = f"{endereco or ''} {observacao or ''}".upper()
+    if "URGENTE" in texto or "PRIORIDADE" in texto:
         return "Urgente"
     return "Normal"
 
@@ -406,86 +405,116 @@ def formatar_valor_rs(valor_str):
     return f"R$ {formatar_valor(valor_str)}"
 
 
+def extrair_telefone(observacao_bruta):
+    if not observacao_bruta:
+        return ""
+    match = re.search(r"(\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4})", str(observacao_bruta))
+    return match.group(1).strip() if match else ""
+
+
+def extrair_solicitante(observacao_bruta, cliente_nome):
+    if observacao_bruta:
+        match = PADRAO_SOLICITANTE.search(str(observacao_bruta))
+        if match:
+            nome_extraido = match.group(1).strip().rstrip(".")
+            nome_extraido = re.sub(r"\s{2,}", " ", nome_extraido)
+            if nome_extraido:
+                return nome_extraido.upper()
+
+    if cliente_nome and cliente_nome != "-":
+        return cliente_nome.upper()
+
+    logger.warning("Solicitante não identificado (observacao=%r, cliente=%r).", observacao_bruta, cliente_nome)
+    return "N/A"
+
+
 def definir_colaborador(motoboy_raw):
     nome = (motoboy_raw or "").strip().upper()
-    if nome in MOTOBOYS_FIXOS:
-        return nome, ""
-    if nome:
-        return "GRUPO", f"Grupo - {nome}"
-    return "GRUPO", ""
+    if not nome or nome == "-":
+        logger.warning("Campo 'colaborador' vazio na linha bruta. Motoboy será registrado como 'N/A'.")
+        return "N/A"
+
+    if nome not in COLABORADORES:
+        COLABORADORES_PENDENTES.add(nome)
+        logger.warning(
+            "Colaborador '%s' não encontrado no cadastro (getcolaboradores). "
+            "O nome será gravado normalmente no pedido, mas o financeiro pode ficar sem colaborador_id vinculado.",
+            nome
+        )
+
+    return nome
 
 
 def parse_linha(linha):
     campos = [c.strip() for c in linha.rstrip("\n").split("\t")]
-    if not campos:
-        logger.error("Linha vazia após split: %r", linha)
-        return None
-    if campos[0] == "" or campos[0].isdigit():
-        campos = campos[1:]
-    if len(campos) < CAMPOS_LINHA_MINIMO:
-        logger.error("Linha com campos insuficientes (%d < %d): %r", len(campos), CAMPOS_LINHA_MINIMO, linha)
+    if len(campos) < CAMPOS_LINHA_TOTAL:
+        logger.error("Linha com campos insuficientes (%d < %d): %r", len(campos), CAMPOS_LINHA_TOTAL, linha)
         return None
     while len(campos) < CAMPOS_LINHA_TOTAL:
         campos.append("")
-    return {
-        "carimbo_data_hora": campos[0],
-        "email": campos[1],
-        "data_servico": campos[2],
-        "cliente_nome": campos[3].upper(),
-        "solicitante": campos[4],
-        "tipo_servico": campos[5].upper(),
-        "endereco": campos[6],
-        "valor_corrida": campos[7],
-        "motoboy": campos[8],
-        "observacao_bruta": campos[9],
-        "telefone": campos[10],
-        "distancia_km": campos[11],
-        "tempo_min": campos[12],
+
+    hora_bruta = campos[0]
+    data_bruta = campos[1]
+    cliente_nome = campos[2].upper() if campos[2] and campos[2] != "-" else "-"
+    motoboy_raw = campos[3]
+    tipo_servico = campos[4].upper()
+    endereco_para = campos[5]
+    valor_corrida = campos[6]
+    observacao_bruta = campos[7]
+
+    dados = {
+        "hora_bruta": hora_bruta,
+        "data_bruta": data_bruta,
+        "cliente_nome": cliente_nome,
+        "motoboy_raw": motoboy_raw,
+        "tipo_servico": tipo_servico,
+        "endereco_para": endereco_para,
+        "valor_corrida": valor_corrida,
+        "observacao_bruta": observacao_bruta,
+        "telefone": extrair_telefone(observacao_bruta),
     }
+    dados["solicitante"] = extrair_solicitante(observacao_bruta, cliente_nome)
+    return dados
 
 
-def normalizar_data(parte_data):
-    if not parte_data:
+def extrair_data(campo_bruto):
+    if not campo_bruto:
         return ""
-    for formato in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+    texto = str(campo_bruto).strip()
+
+    match_br = DATA_BR_PATTERN.search(texto)
+    if match_br:
+        dia, mes, ano = match_br.groups()
+        ano = int(ano)
+        if ano < 100:
+            ano += 2000
         try:
-            return datetime.strptime(parte_data, formato).strftime("%d/%m/%Y")
+            return datetime(ano, int(mes), int(dia)).strftime("%d/%m/%Y")
         except ValueError:
-            continue
-    logger.warning("Data em formato não reconhecido: '%s'", parte_data)
-    return parte_data
+            pass
 
+    match_iso = DATA_ISO_PATTERN.search(texto)
+    if match_iso:
+        ano, mes, dia = match_iso.groups()
+        try:
+            return datetime(int(ano), int(mes), int(dia)).strftime("%d/%m/%Y")
+        except ValueError:
+            pass
 
-def normalizar_hora(parte_hora):
-    if not parte_hora:
-        return ""
-    return somente_hora(parte_hora) if HORA_STRICT_PATTERN.search(parte_hora) else ""
-
-
-def extrair_data_hora(campo_bruto):
-    campo = (campo_bruto or "").strip()
-    if not campo:
-        return "", ""
-    partes = campo.split(" ")
-    data_str = normalizar_data(partes[0].strip())
-    hora_str = normalizar_hora(partes[1].strip()) if len(partes) > 1 else ""
-    return data_str, hora_str
+    logger.warning("Nenhum padrão de data reconhecido em: '%s'", texto)
+    return ""
 
 
 def separar_data_hora(dados):
-    data_servico, hora_servico = extrair_data_hora(dados["data_servico"])
-    _, hora_carimbo = extrair_data_hora(dados["carimbo_data_hora"])
+    data_servico = extrair_data(dados["data_bruta"])
+    hora_final = somente_hora(dados["hora_bruta"])
 
     if not data_servico:
-        logger.warning("Campo 'Data do serviço' vazio ou inválido nos dados: %s", dados)
-        return "", "00:00"
-
-    if hora_servico and hora_servico != "00:00":
-        hora_final = hora_servico
-    elif hora_carimbo and hora_carimbo != "00:00":
-        hora_final = hora_carimbo
-    else:
-        hora_final = hora_servico or hora_carimbo or "00:00"
+        logger.warning(
+            "Campo 'data' sem valor reconhecível (bruto: %r). Registro será marcado sem data.",
+            dados["data_bruta"]
+        )
+        return "", hora_final
 
     return data_servico, hora_final
 
@@ -519,29 +548,31 @@ def linha_dentro_do_filtro(dados):
 def montar_descricao_financeiro(dados):
     tipo_servico = dados["tipo_servico"] or "ENTREGA"
     cliente_nome = dados["cliente_nome"] or ""
-    endereco = dados["endereco"] or ""
+    endereco_para = dados["endereco_para"] or ""
 
     partes = [tipo_servico]
-    if cliente_nome:
+    if cliente_nome and cliente_nome != "-":
         partes.append(f"de {cliente_nome}")
-    if endereco:
-        partes.append(f"para {endereco}")
+    if endereco_para:
+        partes.append(f"para {endereco_para}")
 
     return " ".join(partes).strip()
 
 
-def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observacao):
+def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
     data_str, hora_str = separar_data_hora(dados)
-    hora_str = somente_hora(hora_str)
 
     if not data_str:
-        data_str = datetime.now().strftime("%d/%m/%Y")
-        logger.warning("RDO %s: 'Data do serviço' não encontrada nos dados brutos. Usando data atual: %s", rdo_id, data_str)
+        logger.error(
+            "RDO %s: 'data' não pôde ser extraída do valor bruto %r. Pedido será lançado SEM DATA.",
+            rdo_id, dados["data_bruta"]
+        )
 
     tipo_servico = dados["tipo_servico"] or "ENTREGA"
     cliente_nome = dados["cliente_nome"] or ""
-    endereco_para = dados["endereco"] or ""
-    solicitante = dados["solicitante"] or ""
+    endereco_para = dados["endereco_para"] or ""
+    observacao = dados["observacao_bruta"] or ""
+    solicitante = dados["solicitante"] or "N/A"
 
     return {
         "rdo_id": rdo_id,
@@ -549,7 +580,7 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observac
         "cliente_nome": cliente_nome,
         "solicitante": solicitante,
         "motoboy_final": motoboy_final,
-        "observacao": observacao or dados["observacao_bruta"],
+        "observacao": observacao,
         "data_str": data_str,
         "hora_str": hora_str,
         "status_final": STATUS_PEDIDO_PADRAO,
@@ -577,7 +608,7 @@ def criar_pedido(consolidado):
         "de": consolidado["cliente_nome"],
         "para": consolidado["endereco_para"],
         "retorno": "NÃO",
-        "prioridade": definir_prioridade(consolidado["endereco_para"]),
+        "prioridade": definir_prioridade(consolidado["endereco_para"], consolidado["observacao"]),
         "valor_corrida": consolidado["valor_rs"],
         "motoboy": consolidado["motoboy_final"],
         "status": consolidado["status_final"],
@@ -595,9 +626,9 @@ def criar_pedido(consolidado):
         return False, detalhe
 
     logger.info(
-        "Pedido criado: %s | cliente=%s | data=%s | hora=%s | status=%s | motoboy=%s",
+        "Pedido criado: %s | cliente=%s | data=%s | hora=%s | status=%s | motoboy=%s | solicitante=%s",
         rdo_id, consolidado["cliente_nome"], consolidado["data_str"], consolidado["hora_str"],
-        consolidado["status_final"], consolidado["motoboy_final"]
+        consolidado["status_final"], consolidado["motoboy_final"], consolidado["solicitante"]
     )
     return True, None
 
@@ -695,6 +726,7 @@ def main():
     ignorados = 0
     clientes_criados = 0
     pedidos_sem_financeiro = 0
+    pedidos_sem_data = 0
     erros_detalhados = []
 
     total_linhas = len(linhas_filtradas)
@@ -709,6 +741,10 @@ def main():
                 continue
 
             nome_cliente = dados["cliente_nome"]
+            if nome_cliente == "-":
+                nome_cliente = dados["tipo_servico"] or "N/A"
+                dados["cliente_nome"] = nome_cliente
+
             existia = nome_cliente in CLIENTES
             try:
                 id_cliente = garantir_cliente(nome_cliente, dados["solicitante"])
@@ -726,10 +762,14 @@ def main():
             if not existia:
                 clientes_criados += 1
 
-            motoboy_final, observacao = definir_colaborador(dados["motoboy"])
+            motoboy_final = definir_colaborador(dados["motoboy_raw"])
             rdo_id = proximo_rdo_id()
 
-            consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final, observacao)
+            consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final)
+
+            if not consolidado["data_str"]:
+                pedidos_sem_data += 1
+                erros_detalhados.append((indice, "SEM_DATA_SERVICO", f"{rdo_id} | bruto={dados['data_bruta']!r}"))
 
             try:
                 pedido_ok, erro_pedido = criar_pedido(consolidado)
@@ -768,8 +808,8 @@ def main():
             logger.info("Progresso: %d/%d", indice, total_linhas)
 
     logger.info(
-        "Concluído. Pedidos: %d | Clientes novos: %d | Ignorados: %d | Sem financeiro: %d",
-        inseridos, clientes_criados, ignorados, pedidos_sem_financeiro,
+        "Concluído. Pedidos: %d | Clientes novos: %d | Ignorados: %d | Sem financeiro: %d | Sem data reconhecida: %d",
+        inseridos, clientes_criados, ignorados, pedidos_sem_financeiro, pedidos_sem_data,
     )
 
     if erros_detalhados:
@@ -779,6 +819,9 @@ def main():
 
     if CLIENTES_PENDENTES:
         logger.warning("Clientes pendentes de CADASTRO MANUAL: %s", sorted(CLIENTES_PENDENTES))
+
+    if COLABORADORES_PENDENTES:
+        logger.warning("Colaboradores presentes no bruto mas AUSENTES no cadastro (getcolaboradores): %s", sorted(COLABORADORES_PENDENTES))
 
 
 if __name__ == "__main__":

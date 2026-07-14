@@ -59,28 +59,17 @@
               </div>
             </div>
 
-            <div id="rel-motoboys-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-bicycle text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Consolidado de Motoboys</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr><th>Motoboy / Rota</th><th>Corridas</th><th>Observação</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>EMERSON</td><td>Alto volume</td><td>Concentração em rotas Mauricio, Ammis, Opminas</td></tr>
-                      <tr><td>IGOR</td><td>Alto volume</td><td>Concentração em rotas Opminas, Elisa Athenienese, FF Fashion</td></tr>
-                      <tr><td>AUANDER</td><td>Alto volume</td><td>Concentração em rotas Mauricio, S Manoel, M Pitanga</td></tr>
-                      <tr><td>GRUPO</td><td>Volume predominante</td><td>Corridas rateadas entre a equipe (04/07 a 09/07)</td></tr>
-                      <tr><td>BRUNO</td><td>Pontual</td><td>Cliente Natalia (Escola Presidente Dutra)</td></tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="rel-lista-container">
+              <div class="rel-lista-header">
+                <span class="rel-lista-header-col rel-col-nome">
+                  Relatório
+                  <button class="btn-sort-data" id="btn-sort-data-motoboys" type="button" title="Ordenar por data">
+                    <i class="bi bi-arrow-down" id="icon-sort-data-motoboys"></i>
+                  </button>
+                </span>
+                <span class="rel-lista-header-col rel-col-acoes">Ações</span>
               </div>
+              <div id="rel-motoboys-lista" class="rel-lista-salvos"></div>
             </div>
 
             <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
@@ -124,33 +113,17 @@
               </div>
             </div>
 
-            <div id="rel-clientes-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-people text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Consolidado de Clientes</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr><th>Cliente</th><th>ID</th><th>Volume no período</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>OPMINAS</td><td>V72A5B0U5GR</td><td>Alto (rotas hospitalares/PACs)</td></tr>
-                      <tr><td>AMMIS</td><td>YT7JAJN3A6D</td><td>Alto</td></tr>
-                      <tr><td>MAURICIO</td><td>DXVO9FVLFZ5</td><td>Alto</td></tr>
-                      <tr><td>ELISA ATHENIENSE (geral)</td><td>BR463K2KU06 / MR34XBA3RKE / V70K6ETW0B3</td><td>Alto</td></tr>
-                      <tr><td>SÃO MANOEL INDUSTRIA</td><td>ATTZOHXOMVX</td><td>Médio (regularizado no período)</td></tr>
-                      <tr><td>FF FASHION</td><td>86N68UOG077</td><td>Médio</td></tr>
-                      <tr><td>M PITANGA</td><td>285E6BK4RD9</td><td>Médio</td></tr>
-                      <tr><td>PLURAL</td><td>O6DDMW3D7PX</td><td>Médio</td></tr>
-                      <tr><td>INCLOSET</td><td>RMX8GIY6TAV</td><td>Médio</td></tr>
-                      <tr><td>VAL</td><td>BVWVS4IHD5M</td><td>Baixo/Médio</td></tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="rel-lista-container">
+              <div class="rel-lista-header">
+                <span class="rel-lista-header-col rel-col-nome">
+                  Relatório
+                  <button class="btn-sort-data" id="btn-sort-data-clientes" type="button" title="Ordenar por data">
+                    <i class="bi bi-arrow-down" id="icon-sort-data-clientes"></i>
+                  </button>
+                </span>
+                <span class="rel-lista-header-col rel-col-acoes">Ações</span>
               </div>
+              <div id="rel-clientes-lista" class="rel-lista-salvos"></div>
             </div>
 
             <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
@@ -196,28 +169,17 @@
               </div>
             </div>
 
-            <div id="rel-financeiro-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-wallet2 text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Consolidado Financeiro</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr><th>Categoria</th><th>Resumo</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td>Receitas (corridas)</td><td>Valores de R$ 15,00 a R$ 360,00 por corrida; destaque para rota TELECOM (R$ 360,00) e MAURICIO (R$ 130,00 / R$ 142,00)</td></tr>
-                      <tr><td>Maior ticket individual</td><td>R$ 360,00 – RDO2084/RDO2121 (TELECOM, múltiplos pontos)</td></tr>
-                      <tr><td>Menor ticket individual</td><td>R$ 15,00 – diversas corridas (AMMIS, Elisa Athenienese, Cacau Show)</td></tr>
-                      <tr><td>Corridas canceladas</td><td>RDO2040, RDO2042, RDO2082, RDO2120 – não geram receita</td></tr>
-                      <tr><td>Ocorrência de duplicidade</td><td>RDO1954 lançado em duplicidade (mesmo horário/valor) – requer verificação</td></tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="rel-lista-container">
+              <div class="rel-lista-header">
+                <span class="rel-lista-header-col rel-col-nome">
+                  Relatório
+                  <button class="btn-sort-data" id="btn-sort-data-financeiro" type="button" title="Ordenar por data">
+                    <i class="bi bi-arrow-down" id="icon-sort-data-financeiro"></i>
+                  </button>
+                </span>
+                <span class="rel-lista-header-col rel-col-acoes">Ações</span>
               </div>
+              <div id="rel-financeiro-lista" class="rel-lista-salvos"></div>
             </div>
 
             <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
@@ -280,6 +242,10 @@
         </button>
       </div>
       <div class="d-flex gap-2">
+        <button id="modal-rel-btn-voltar" type="button" class="btn-modal-rel btn-modal-rel-light" style="display:none;">
+          <i class="bi bi-arrow-left"></i>
+          <span>Voltar</span>
+        </button>
         <button id="modal-rel-btn-cancelar" type="button" class="btn-modal-rel btn-modal-rel-light">
           <i class="bi bi-x-circle"></i>
           <span>Cancelar</span>
@@ -287,6 +253,70 @@
         <button id="modal-rel-btn-salvar" type="button" class="btn-modal-rel btn-modal-rel-primary">
           <i class="bi bi-save"></i>
           <span>Salvar Relatório</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="modalBuilderOverlay"
+  style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
+  <div id="modalBuilderContainer"
+    style="background:#fff;border-radius:16px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+
+    <div
+      style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:.95rem;font-weight:700;color:#fff;letter-spacing:.5px;">
+          <i class="bi bi-sliders me-2"></i>Construtor de Relatório
+        </div>
+        <div id="rb-header-step" style="font-size:.68rem;color:rgba(255,255,255,.55);margin-top:2px;">
+          Etapa 1 de 2 - Selecione os campos
+        </div>
+      </div>
+      <button id="rb-btn-fechar" type="button"
+        style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;"
+        title="Fechar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:8px;padding:14px 0;background:#f8f9fa;border-bottom:1px solid #eee;">
+      <span class="rb-step-dot active" data-step="1" style="width:10px;height:10px;border-radius:50%;background:#dee2e6;"></span>
+      <span class="rb-step-dot" data-step="2" style="width:10px;height:10px;border-radius:50%;background:#dee2e6;"></span>
+    </div>
+
+    <div id="rb-step-1" class="rb-builder-step active" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+      <div id="rb-banco-tabs" style="display:flex;gap:8px;padding:14px 20px;border-bottom:1px solid #eee;flex-wrap:wrap;"></div>
+      <div id="rb-banco-panels" style="padding:20px;flex:1;"></div>
+    </div>
+
+    <div id="rb-step-2" class="rb-builder-step" style="flex:1;overflow-y:auto;padding:24px;">
+      <label style="font-size:.72rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">
+        Nome do Relatório
+      </label>
+      <input type="text" id="rb-nome-relatorio" class="form-control mb-4" placeholder="Ex: Relatório Semanal Motoboys">
+      <div style="font-size:.72rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+        Resumo da Seleção
+      </div>
+      <div id="rb-step2-resumo" style="background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:14px 16px;font-size:.78rem;color:#444;"></div>
+    </div>
+
+    <div
+      style="padding:14px 20px;background:#fff;border-top:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <button id="rb-btn-voltar" type="button" class="btn-modal-rel btn-modal-rel-light" style="display:none;">
+        <i class="bi bi-arrow-left"></i>
+        <span>Voltar</span>
+      </button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button id="rb-btn-avancar" type="button" class="btn-modal-rel btn-modal-rel-primary">
+          <i class="bi bi-arrow-right"></i>
+          <span>Avançar</span>
+        </button>
+        <button id="rb-btn-gerar-final" type="button" class="btn-modal-rel btn-modal-rel-primary" style="display:none;">
+          <i class="bi bi-file-earmark-bar-graph"></i>
+          <span>Gerar Relatório</span>
         </button>
       </div>
     </div>

@@ -35,6 +35,12 @@ function doPost(e) {
     if (!action)
       return responder({ status: "error", message: "Nenhuma acao informada" });
 
+    // 🔧 Normaliza alias "del..." -> "delete..." (ex: delrelatorio -> deleterelatorio)
+    // Evita duplicar caso já comece com "delete" (ex: deletechat)
+    if (action.indexOf("del") === 0 && action.indexOf("delete") !== 0) {
+      action = "delete" + action.substring(3);
+    }
+
     if (action === "login")
       return responder(processarLogin(data.username, data.password));
 
@@ -352,6 +358,44 @@ function montarTextoChat(idPedido, data) {
   return linhas.join("\n");
 }
 
+function normalizarDataStr(bruto) {
+  if (bruto === null || bruto === undefined) return "";
+
+  if (bruto instanceof Date) {
+    var d = bruto.getDate();
+    var m = bruto.getMonth() + 1;
+    var y = bruto.getFullYear();
+    return (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y;
+  }
+
+  var texto = String(bruto).trim();
+  if (!texto) return "";
+
+  var match = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (match) {
+    var dia = ("0" + match[1]).slice(-2);
+    var mes = ("0" + match[2]).slice(-2);
+    var ano = match[3];
+    if (ano.length === 2) ano = "20" + ano;
+    return dia + "/" + mes + "/" + ano;
+  }
+
+  var matchIso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (matchIso) {
+    var ano2 = matchIso[1];
+    var mes2 = ("0" + matchIso[2]).slice(-2);
+    var dia2 = ("0" + matchIso[3]).slice(-2);
+    return dia2 + "/" + mes2 + "/" + ano2;
+  }
+
+  return texto;
+}
+
+function escreverComoTexto(sheet, linha, coluna, valorTexto) {
+  sheet.getRange(linha, coluna).setNumberFormat("@");
+  sheet.getRange(linha, coluna).setValue(valorTexto);
+}
+
 function processarCriarPedido(sheetPedidos, data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetChat = buscarAba(ss, "chat");
@@ -373,18 +417,27 @@ function processarCriarPedido(sheetPedidos, data) {
   if (!deStr) deStr = String(data.de || "");
   if (!paraStr) paraStr = String(data.para || "");
 
-  var agora = new Date();
-  var horaStr = String(data.hora || data.horario_chat || agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })).trim();
-  var dataStr = String(data.data_chat || agora.toLocaleDateString("pt-BR")).trim();
+  var horaStr = String(data.hora || data.horario_chat || "").trim();
+  if (!horaStr) {
+    horaStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm");
+  }
+
+  var dataBrutaRecebida = data.data || data.data_servico || data.data_chat || "";
+  var dataStr = normalizarDataStr(dataBrutaRecebida);
+  if (!dataStr) {
+    dataStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
 
   if (sheetChat && idCliente && !chatJaExiste(sheetChat, idPedido)) {
     var textoChat = montarTextoChat(idPedido, data);
     var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
     sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
+    escreverComoTexto(sheetChat, sheetChat.getLastRow(), 6, dataStr);
   }
 
   var headers = obterHeaders(sheetPedidos);
   var idIndex = headers.indexOf("id");
+  var colDataIndex = headers.indexOf("data");
 
   if (headers.length > 1 && idIndex !== -1) {
     var rowData = {};
@@ -417,6 +470,10 @@ function processarCriarPedido(sheetPedidos, data) {
       row.push(rowData[headers[i]] !== undefined ? rowData[headers[i]] : "");
     }
     sheetPedidos.appendRow(row);
+
+    if (colDataIndex !== -1) {
+      escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataIndex + 1, dataStr);
+    }
   } else {
     sheetPedidos.appendRow([
       idPedido, idCliente,
@@ -435,6 +492,7 @@ function processarCriarPedido(sheetPedidos, data) {
       String(data.observacao || data.obs || ""),
       dataStr, horaStr
     ]);
+    escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), 16, dataStr);
   }
 
   return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
@@ -595,6 +653,7 @@ function processarGetFinanceiroCompleto() {
 function processarAdd(sheet, data, entity) {
   var headers = obterHeaders(sheet);
   var idIndex = headers.indexOf("id");
+  var colDataIndex = headers.indexOf("data");
 
   if (idIndex !== -1) {
     var idAtual = data.id !== undefined && data.id !== null ? String(data.id).trim() : "";
@@ -610,6 +669,8 @@ function processarAdd(sheet, data, entity) {
       valor = String(data.telefone).trim();
     } else if (campo === "data_criacao" && !data.data_criacao) {
       valor = new Date().toISOString();
+    } else if (campo === "data" && data[campo] !== undefined && data[campo] !== null) {
+      valor = normalizarDataStr(data[campo]);
     } else if (data[campo] !== undefined && data[campo] !== null) {
       valor = String(data[campo]).trim();
     }
@@ -618,6 +679,10 @@ function processarAdd(sheet, data, entity) {
   }
 
   sheet.appendRow(row);
+
+  if (colDataIndex !== -1 && row[colDataIndex]) {
+    escreverComoTexto(sheet, sheet.getLastRow(), colDataIndex + 1, row[colDataIndex]);
+  }
 
   var idIndexRetorno = headers.indexOf("id");
   return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? data.id : undefined };
@@ -641,9 +706,15 @@ function processarUpdate(sheet, data) {
     if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
       var keys = Object.keys(data);
       for (var k = 0; k < keys.length; k++) {
-        var colIndex = headers.indexOf(String(keys[k]).toLowerCase().trim());
-        if (colIndex !== -1)
-          sheet.getRange(i + 1, colIndex + 1).setValue(data[keys[k]]);
+        var chaveNorm = String(keys[k]).toLowerCase().trim();
+        var colIndex = headers.indexOf(chaveNorm);
+        if (colIndex !== -1) {
+          if (chaveNorm === "data") {
+            escreverComoTexto(sheet, i + 1, colIndex + 1, normalizarDataStr(data[keys[k]]));
+          } else {
+            sheet.getRange(i + 1, colIndex + 1).setValue(data[keys[k]]);
+          }
+        }
       }
       return { status: "success", message: "Atualizado!" };
     }

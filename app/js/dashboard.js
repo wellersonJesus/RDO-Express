@@ -6,6 +6,8 @@ window.dashboardState = window.dashboardState || {
     charts: {}
 };
 
+var LIMITE_MINUTOS_ONLINE = 2;
+
 function ocultarLoadingDashboard() {
     var overlay = document.getElementById('dashboard-loading-overlay');
     var conteudo = document.getElementById('dashboard-conteudo-real');
@@ -20,211 +22,39 @@ function mostrarLoadingDashboard() {
     if (conteudo) conteudo.style.display = 'none';
 }
 
-function _calcularUsuariosOnline(usuarios) {
-    var agora = Date.now();
-    var temCampoPresenca = usuarios.some(function (u) {
-        return u.ultimo_acesso || u.ultimoAcesso || u.lastActivity || u.online !== undefined;
-    });
-
-    if (!temCampoPresenca) return null;
-
-    return usuarios.filter(function (u) {
-        if (u.online !== undefined) {
-            return u.online === true || u.online === 'TRUE' || u.online === 1;
-        }
-        var raw = u.ultimo_acesso || u.ultimoAcesso || u.lastActivity;
-        var ts = new Date(raw).getTime();
-        if (isNaN(ts)) return false;
-        return (agora - ts) / 60000 <= LIMITE_MINUTOS_ONLINE;
-    }).length;
-}
-
-function _calcularUsuariosAtivos(usuarios) {
-    return usuarios.filter(function (u) {
-        return String(u.status || '').toUpperCase() === 'TRUE';
-    }).length;
-}
-
-function renderizarBlocoAutomacao() {
-    var clientes = _obterListaAPI('clientes', 'clientes');
-    var usuarios = _obterListaAPI('usuarios', 'usuarios');
-
-    var totalClientesAutomacao = clientes.filter(function (c) {
-        return String(c.status || '').toUpperCase() === 'TRUE';
-    }).length;
-
-    var totalUsuariosCadastrados = usuarios.length;
-    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
-
-    function montarDOM(totalOnline) {
-        _atualizarDOMAutomacao({
-            totalClientesAutomacao: totalClientesAutomacao,
-            totalUsuariosCadastrados: totalUsuariosCadastrados,
-            totalUsuariosOnline: totalOnline,
-            botAtivo: botAtivo
-        });
+function _parseDataBR(str) {
+    if (!str) return new Date(NaN);
+    if (str instanceof Date) return str;
+    var texto = String(str).trim();
+    var m = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) {
+        var ano = m[3].length === 2 ? '20' + m[3] : m[3];
+        return new Date(Number(ano), Number(m[2]) - 1, Number(m[1]));
     }
+    var iso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    var d = new Date(texto);
+    return d;
+}
 
-    if (!window.API || typeof window.API.call !== 'function') {
-        montarDOM(null);
-        return;
+function _parseValor(v) {
+    if (typeof v === 'number') return v;
+    var n = parseFloat(String(v || '0').replace(/[^\d,.-]/g, '').replace(',', '.'));
+    return isNaN(n) ? 0 : n;
+}
+
+function _tipoLancamento(f) {
+    return String(f.tipo || f.categoria || '').toUpperCase();
+}
+
+function _normalizarCargo(cargo) {
+    if (!window.PERMISSOES_PADRAO) return cargo;
+    var chaves = Object.keys(window.PERMISSOES_PADRAO);
+    for (var i = 0; i < chaves.length; i++) {
+        if (chaves[i].toLowerCase() === String(cargo || '').toLowerCase()) return chaves[i];
     }
-
-    window.API.call('getusuariosonline')
-        .then(function (resp) {
-            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number') ? resp.total : null;
-            montarDOM(totalOnline);
-        })
-        .catch(function () { montarDOM(null); });
+    return cargo;
 }
-
-function _atualizarDOMAutomacao(dados) {
-    var elClientes = document.getElementById('automacao-total-clientes');
-    var elCadastrados = document.getElementById('automacao-usuarios-cadastrados');
-    var elOnline = document.getElementById('automacao-usuarios-logados');
-    var icone = document.getElementById('automacao-icone-bot');
-    var statusEl = document.getElementById('automacao-status-bot');
-    var descEl = document.getElementById('automacao-status-desc');
-
-    if (elClientes) elClientes.textContent = dados.totalClientesAutomacao;
-    if (elCadastrados) elCadastrados.textContent = dados.totalUsuariosCadastrados;
-
-    if (elOnline) {
-        if (dados.totalUsuariosOnline === null) {
-            elOnline.textContent = '—';
-            elOnline.title = 'Sem dado de presença disponível na API';
-        } else {
-            elOnline.textContent = dados.totalUsuariosOnline;
-            elOnline.removeAttribute('title');
-        }
-    }
-
-    _aplicarStatusBot(icone, statusEl, descEl, dados.botAtivo);
-}
-
-function renderizarBlocoVisaoGeral() {
-    var clientes = _obterListaAPI('clientes', 'clientes');
-    var usuarios = _obterListaAPI('usuarios', 'usuarios');
-
-    var totalClientesAutomacao = clientes.filter(function (c) {
-        return String(c.status || '').toUpperCase() === 'TRUE';
-    }).length;
-
-    var totalUsuariosCadastrados = usuarios.length;
-    var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
-    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
-
-    _atualizarDOMVisaoGeral({
-        totalClientesAutomacao: totalClientesAutomacao,
-        totalUsuariosCadastrados: totalUsuariosCadastrados,
-        totalUsuariosAtivos: totalUsuariosAtivos,
-        botAtivo: botAtivo
-    });
-
-    renderHBars('dashboard-visao-geral-hbars', indicadoresVisaoGeral);
-}
-
-function _atualizarDOMVisaoGeral(dados) {
-    var elClientes = document.getElementById('visao-geral-total-clientes');
-    var elCadastrados = document.getElementById('visao-geral-usuarios-cadastrados');
-    var elAtivos = document.getElementById('visao-geral-usuarios-ativos');
-    var icone = document.getElementById('visao-geral-icone-bot');
-    var statusEl = document.getElementById('visao-geral-status-bot');
-    var descEl = document.getElementById('visao-geral-status-desc');
-
-    if (elClientes) elClientes.textContent = dados.totalClientesAutomacao;
-    if (elCadastrados) elCadastrados.textContent = dados.totalUsuariosCadastrados;
-    if (elAtivos) elAtivos.textContent = dados.totalUsuariosAtivos;
-
-    _aplicarStatusBot(icone, statusEl, descEl, dados.botAtivo);
-}
-
-function renderizarBlocoGestao() {
-    var usuarios = _obterListaAPI('usuarios', 'usuarios');
-    var totalUsuariosCadastrados = usuarios.length;
-    var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
-    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
-
-    if (!window.API || typeof window.API.call !== 'function') {
-        _atualizarDOMGestao({
-            totalUsuariosCadastrados: totalUsuariosCadastrados,
-            totalUsuariosAtivos: totalUsuariosAtivos,
-            totalUsuariosOnline: null,
-            botAtivo: botAtivo
-        });
-        return;
-    }
-
-    window.API.call('getusuariosonline')
-        .then(function (resp) {
-            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number')
-                ? resp.total
-                : null;
-
-            _atualizarDOMGestao({
-                totalUsuariosCadastrados: totalUsuariosCadastrados,
-                totalUsuariosAtivos: totalUsuariosAtivos,
-                totalUsuariosOnline: totalOnline,
-                botAtivo: botAtivo
-            });
-        })
-        .catch(function () {
-            _atualizarDOMGestao({
-                totalUsuariosCadastrados: totalUsuariosCadastrados,
-                totalUsuariosAtivos: totalUsuariosAtivos,
-                totalUsuariosOnline: null,
-                botAtivo: botAtivo
-            });
-        });
-}
-
-function _atualizarDOMGestao(dados) {
-    var elAtivos = document.getElementById('visao-geral-usuarios-ativos');
-    var elLogados = document.getElementById('visao-geral-usuarios-logados');
-
-    if (elAtivos) elAtivos.textContent = dados.totalUsuariosAtivos;
-
-    if (elLogados) {
-        if (dados.totalUsuariosOnline === null) {
-            elLogados.textContent = '—/' + dados.totalUsuariosCadastrados;
-            elLogados.title = 'Sem dado de presença disponível na API (heartbeat não configurado)';
-        } else {
-            elLogados.textContent = dados.totalUsuariosOnline + '/' + dados.totalUsuariosCadastrados;
-            elLogados.removeAttribute('title');
-        }
-    }
-}
-
-function _aplicarStatusBot(icone, statusEl, descEl, botAtivo) {
-    if (!icone || !statusEl || !descEl) return;
-    if (botAtivo) {
-        icone.classList.remove('is-inactive');
-        statusEl.classList.remove('is-inactive');
-        statusEl.textContent = 'Ativo';
-        descEl.textContent = 'Bot em execução normal';
-    } else {
-        icone.classList.add('is-inactive');
-        statusEl.classList.add('is-inactive');
-        statusEl.textContent = 'Inativo';
-        descEl.textContent = 'Bot desativado no momento';
-    }
-}
-
-var indicadoresChatPedidos = [
-    { id: 'pedidos-hoje', cor: 'danger', icone: 'bi-bag-check-fill', valor: 34, max: 60, label: 'Pedidos Hoje' },
-    { id: 'pedidos-pendentes', cor: 'warning', icone: 'bi-hourglass-split', valor: 8, max: 60, label: 'Pedidos Pendentes' },
-    { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: 21, max: 50, label: 'Chats Abertos' },
-    { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: 47, max: 50, label: 'Chats Encerrados' },
-    { id: 'tempo-medio-resposta', cor: 'dark', icone: 'bi-stopwatch-fill', valor: '2m 10s', max: 100, valorReal: 65, label: 'Tempo Médio de Resposta' }
-];
-
-var indicadoresVisaoGeral = [
-    { id: 'clientes-ativos', cor: 'success', icone: 'bi-person-check-fill', valor: 128, max: 200, label: 'Clientes Ativos' },
-    { id: 'clientes-inativos', cor: 'secondary', icone: 'bi-person-dash-fill', valor: 72, max: 200, label: 'Clientes Inativos' },
-    { id: 'faturamento-mensal', cor: 'purple', icone: 'bi-cash-coin', valor: 'R$ 18.450', max: 100, valorReal: 82, label: 'Faturamento Mensal' },
-    { id: 'ticket-medio', cor: 'primary', icone: 'bi-receipt', valor: 'R$ 56,30', max: 100, valorReal: 58, label: 'Ticket Médio' },
-    { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: '38%', max: 100, valorReal: 38, label: 'Taxa de Conversão' }
-];
 
 function obterUsuarioLogado() {
     var username = localStorage.getItem('username') || 'Usuário';
@@ -235,28 +65,24 @@ function obterUsuarioLogado() {
     try {
         if (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[cargoNormalizado]) {
             permissoes = window.PERMISSOES_PADRAO[cargoNormalizado];
-        } else if (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[cargo]) {
-            permissoes = window.PERMISSOES_PADRAO[cargo];
         }
-    } catch (e) { permissoes = []; }
+    } catch (e) {
+        permissoes = [];
+    }
 
     if (!Array.isArray(permissoes) || permissoes.length === 0) {
-        var isMaster = localStorage.getItem('rdo_auth') && (cargo.toLowerCase().indexOf('admin') !== -1);
-        if (isMaster && window.PERMISSOES_PADRAO) {
-            permissoes = window.PERMISSOES_PADRAO['SRE Tecnologia'] || [];
+        var rdoAuth = localStorage.getItem('rdo_auth');
+        var isMaster = rdoAuth && cargo.toLowerCase().indexOf('admin') !== -1;
+        if (isMaster && window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO['SRE Tecnologia']) {
+            permissoes = window.PERMISSOES_PADRAO['SRE Tecnologia'];
         }
+    }
+
+    if (!Array.isArray(permissoes) || permissoes.length === 0) {
+        permissoes = ['Financeiro', 'Relatórios'];
     }
 
     return { username: username, cargo: cargo, permissoes: Array.isArray(permissoes) ? permissoes : [] };
-}
-
-function _normalizarCargo(cargo) {
-    if (!window.PERMISSOES_PADRAO) return cargo;
-    var chaves = Object.keys(window.PERMISSOES_PADRAO);
-    for (var i = 0; i < chaves.length; i++) {
-        if (chaves[i].toLowerCase() === String(cargo || '').toLowerCase()) return chaves[i];
-    }
-    return cargo;
 }
 
 function usuarioTemPermissao(usuario, permissao) {
@@ -298,8 +124,12 @@ function carregarDadosDashboard() {
         _chamarApi('getfinanceiro'),
         _chamarApi('getrelatorios')
     ]).then(function (results) {
-        var masterOn = typeof window.checkMaster === 'function' ? window.checkMaster() : (localStorage.getItem('bot_master_active') === 'true');
-        var mensagensCache = (window.AppRDO && Array.isArray(window.AppRDO.mensagensCache)) ? window.AppRDO.mensagensCache : [];
+        var masterOn = typeof window.checkMaster === 'function'
+            ? window.checkMaster()
+            : (localStorage.getItem('bot_master_active') === 'true');
+        var mensagensCache = (window.AppRDO && Array.isArray(window.AppRDO.mensagensCache))
+            ? window.AppRDO.mensagensCache
+            : [];
 
         return {
             clientes: results[0],
@@ -312,6 +142,27 @@ function carregarDadosDashboard() {
             masterOn: masterOn
         };
     });
+}
+
+function _obterListaAPI(chave, origem) {
+    var dados = window.dashboardState.dados;
+    if (dados && Array.isArray(dados[chave]) && dados[chave].length > 0) {
+        return dados[chave];
+    }
+    var cacheCompleto = (window.botState && window.botState.cacheCompleto) || [];
+    return cacheCompleto.filter(function (item) { return item.origem === origem; });
+}
+
+function _calcularUsuariosAtivos(usuarios) {
+    return usuarios.filter(function (u) {
+        return String(u.status || '').toUpperCase() === 'TRUE';
+    }).length;
+}
+
+function _abreviarLabel(titulo) {
+    var palavras = String(titulo || '').trim().split(/\s+/);
+    if (palavras.length === 1) return palavras[0].slice(0, 8);
+    return palavras[0].slice(0, 6) + '. ' + palavras.slice(1).map(function (p) { return p.slice(0, 3) + '.'; }).join(' ');
 }
 
 function renderIndicadorCard(cor, icone, valor, titulo) {
@@ -357,6 +208,7 @@ function renderBars(containerId, lista) {
     requestAnimationFrame(function () {
         container.querySelectorAll('.bar-item').forEach(function (el, index) {
             var fill = el.querySelector('.bar-fill');
+            if (!fill) return;
             setTimeout(function () { fill.style.width = '100%'; }, index * 90);
         });
     });
@@ -369,7 +221,7 @@ function renderHBars(containerId, lista) {
 
     var maxValor = Math.max.apply(null, lista.map(function (item) {
         return item.valorReal !== undefined ? item.valorReal : Number(item.valor) || 0;
-    }));
+    }).concat(1));
 
     lista.forEach(function (item) {
         var base = item.valorReal !== undefined ? item.valorReal : (Number(item.valor) || 0);
@@ -402,6 +254,144 @@ function renderHBars(containerId, lista) {
     });
 }
 
+function _aplicarStatusBot(icone, statusEl, descEl, botAtivo) {
+    if (!icone || !statusEl || !descEl) return;
+    if (botAtivo) {
+        icone.classList.remove('is-inactive');
+        statusEl.classList.remove('is-inactive');
+        statusEl.textContent = 'Ativo';
+        descEl.textContent = 'Bot em execução normal';
+    } else {
+        icone.classList.add('is-inactive');
+        statusEl.classList.add('is-inactive');
+        statusEl.textContent = 'Inativo';
+        descEl.textContent = 'Bot desativado no momento';
+    }
+}
+
+function renderizarBlocoAutomacao() {
+    var usuarios = _obterListaAPI('usuarios', 'usuarios');
+    var totalUsuariosAtivos = _calcularUsuariosAtivos(usuarios);
+    var totalUsuariosCadastrados = usuarios.length;
+    var botAtivo = typeof window.checkMaster === 'function' ? window.checkMaster() : false;
+
+    var icone = document.getElementById('automacao-icone-bot');
+    var statusEl = document.getElementById('automacao-status-bot');
+    var descEl = document.getElementById('automacao-status-desc');
+    _aplicarStatusBot(icone, statusEl, descEl, botAtivo);
+
+    var elAtivos = document.getElementById('visao-geral-usuarios-ativos');
+    var elLogados = document.getElementById('visao-geral-usuarios-logados');
+    if (elAtivos) elAtivos.textContent = totalUsuariosAtivos;
+
+    if (!window.API || typeof window.API.call !== 'function') {
+        if (elLogados) elLogados.textContent = '—/' + totalUsuariosCadastrados;
+        return;
+    }
+
+    window.API.call('getusuariosonline')
+        .then(function (resp) {
+            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number') ? resp.total : null;
+            if (elLogados) {
+                if (totalOnline === null) {
+                    elLogados.textContent = '—/' + totalUsuariosCadastrados;
+                    elLogados.title = 'Sem dado de presença disponível na API';
+                } else {
+                    elLogados.textContent = totalOnline + '/' + totalUsuariosCadastrados;
+                    elLogados.removeAttribute('title');
+                }
+            }
+        })
+        .catch(function () {
+            if (elLogados) elLogados.textContent = '—/' + totalUsuariosCadastrados;
+        });
+}
+
+function _construirIndicadoresVisaoGeral(dados) {
+    var clientes = dados.clientes || [];
+    var financeiro = dados.financeiro || [];
+
+    var clientesAtivos = clientes.filter(function (c) {
+        return String(c.status || '').toUpperCase() === 'TRUE';
+    }).length;
+    var clientesInativos = clientes.length - clientesAtivos;
+
+    var receitas = financeiro.filter(function (f) {
+        return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1;
+    });
+    var faturamentoTotal = receitas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
+    var ticketMedio = receitas.length > 0 ? faturamentoTotal / receitas.length : 0;
+
+    var pedidos = dados.pedidos || [];
+    var totalPedidos = pedidos.length;
+    var pedidosFinalizados = pedidos.filter(function (p) {
+        return String(p.status || '').toUpperCase() === 'FINALIZADO' || String(p.status || '').toUpperCase() === 'CONCLUIDO';
+    }).length;
+    var taxaConversao = totalPedidos > 0 ? Math.round((pedidosFinalizados / totalPedidos) * 100) : 0;
+
+    var fmt = function (n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+
+    return [
+        { id: 'clientes-ativos', cor: 'success', icone: 'bi-person-check-fill', valor: clientesAtivos, max: Math.max(clientes.length, 1), label: 'Clientes Ativos' },
+        { id: 'clientes-inativos', cor: 'secondary', icone: 'bi-person-dash-fill', valor: clientesInativos, max: Math.max(clientes.length, 1), label: 'Clientes Inativos' },
+        { id: 'faturamento-mensal', cor: 'purple', icone: 'bi-cash-coin', valor: fmt(faturamentoTotal), max: 100, valorReal: Math.min(100, Math.round(faturamentoTotal / 1000)), label: 'Faturamento Mensal' },
+        { id: 'ticket-medio', cor: 'primary', icone: 'bi-receipt', valor: fmt(ticketMedio), max: 100, valorReal: Math.min(100, Math.round(ticketMedio)), label: 'Ticket Médio' },
+        { id: 'taxa-conversao', cor: 'danger', icone: 'bi-graph-up-arrow', valor: taxaConversao + '%', max: 100, valorReal: taxaConversao, label: 'Taxa de Conversão' }
+    ];
+}
+
+function renderizarBlocoVisaoGeral() {
+    var dados = window.dashboardState.dados || { clientes: [], financeiro: [], pedidos: [] };
+    var indicadores = _construirIndicadoresVisaoGeral(dados);
+    renderHBars('dashboard-visao-geral-hbars', indicadores);
+}
+
+function renderizarBlocoGestao() {
+    renderizarBlocoAutomacao();
+}
+
+function _mensagensPorDia(mensagens, dias) {
+    return mensagens.filter(function (m) {
+        var data = _parseDataBR(m.data || m.dataEnvio || m.timestamp);
+        if (isNaN(data.getTime())) return false;
+        var limite = new Date();
+        limite.setDate(limite.getDate() - dias);
+        return data >= limite;
+    }).length;
+}
+
+function _construirIndicadoresChatPedidos(dados) {
+    var pedidos = dados.pedidos || [];
+    var mensagens = dados.mensagens || [];
+    var hoje = new Date();
+
+    var pedidosHoje = pedidos.filter(function (p) {
+        var data = _parseDataBR(p.data);
+        return !isNaN(data.getTime()) && data.toDateString() === hoje.toDateString();
+    }).length;
+
+    var pedidosPendentes = pedidos.filter(function (p) {
+        return String(p.status || '').toUpperCase() === 'PENDENTE';
+    }).length;
+
+    var chatsAbertos = mensagens.filter(function (m) {
+        return String(m.status || m.finalizado || '').toUpperCase() !== 'TRUE';
+    }).length;
+
+    var chatsEncerrados = mensagens.filter(function (m) {
+        return String(m.status || m.finalizado || '').toUpperCase() === 'TRUE';
+    }).length;
+
+    var totalPedidos = pedidos.length || 1;
+
+    return [
+        { id: 'pedidos-hoje', cor: 'danger', icone: 'bi-bag-check-fill', valor: pedidosHoje, max: Math.max(totalPedidos, 1), label: 'Pedidos Hoje' },
+        { id: 'pedidos-pendentes', cor: 'warning', icone: 'bi-hourglass-split', valor: pedidosPendentes, max: Math.max(totalPedidos, 1), label: 'Pedidos Pendentes' },
+        { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: chatsAbertos, max: Math.max(mensagens.length, 1), label: 'Chats Abertos' },
+        { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: chatsEncerrados, max: Math.max(mensagens.length, 1), label: 'Chats Encerrados' }
+    ];
+}
+
 function renderizarBlocoChatPedidos(usuario, dados) {
     var bloco = document.getElementById('bloco-chat-pedidos');
     if (!bloco) return;
@@ -411,14 +401,24 @@ function renderizarBlocoChatPedidos(usuario, dados) {
 
     var ranking = calcularTopClientesPedidos(dados, 5, 30);
     renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
+
+    var indicadores = _construirIndicadoresChatPedidos(dados);
+    renderBars('dashboard-chat-pedidos-ranking-bars', indicadores);
 }
 
 function renderizarBlocoAdministracao(usuario, dados) {
     var bloco = document.getElementById('bloco-administracao');
     if (!bloco) return;
 
-    var totalPedidos = (dados.pedidos || []).length;
-    var metaPedidos = dados.metaPedidosMes || 0;
+    var pedidos = dados.pedidos || [];
+    var hoje = new Date();
+    var pedidosMes = pedidos.filter(function (p) {
+        var data = _parseDataBR(p.data);
+        return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
+    });
+
+    var totalPedidos = pedidosMes.length;
+    var metaPedidos = dados.metaPedidosMes || Math.max(totalPedidos + 10, 20);
     var percentual = metaPedidos > 0 ? Math.round((totalPedidos / metaPedidos) * 100) : 0;
 
     var elTotalPedidos = document.getElementById('admin-total-pedidos');
@@ -428,27 +428,20 @@ function renderizarBlocoAdministracao(usuario, dados) {
         'Meta (Todas as vendas) - ' + (usuario.username || 'Usuário') + ': ' +
         metaPedidos + ' pedidos (' + percentual + '%)';
 
-    var totalAtividades = (dados.atividades || []).length;
-    var proximaData = dados.proximaAtividadeData ? new Date(dados.proximaAtividadeData) : null;
-    var jaPassou = proximaData ? proximaData < new Date() : false;
+    var pedidosPendentes = pedidos.filter(function (p) {
+        return String(p.status || '').toUpperCase() === 'PENDENTE';
+    });
+    var totalAtividades = pedidosPendentes.length;
 
     var elAtivStatus = document.getElementById('admin-atividade-status');
     var elTotalAtiv = document.getElementById('admin-total-atividades');
     var elMetaAtiv = document.getElementById('admin-meta-atividades');
 
-    if (elAtivStatus) elAtivStatus.textContent = jaPassou ? 'A próxima data de atividade já passou' : 'Nenhuma atividade pendente';
+    if (elAtivStatus) elAtivStatus.textContent = totalAtividades > 0
+        ? totalAtividades + ' pedido(s) pendente(s) de atendimento'
+        : 'Nenhuma atividade pendente';
     if (elTotalAtiv) elTotalAtiv.textContent = totalAtividades;
-    if (elMetaAtiv) elMetaAtiv.textContent = dados.metaAtividades || 0;
-}
-
-function _parseValor(v) {
-    if (typeof v === 'number') return v;
-    var n = parseFloat(String(v || '0').replace(/[^\d,.-]/g, '').replace(',', '.'));
-    return isNaN(n) ? 0 : n;
-}
-
-function _tipoLancamento(f) {
-    return String(f.tipo || f.categoria || '').toUpperCase();
+    if (elMetaAtiv) elMetaAtiv.textContent = 0;
 }
 
 function renderizarBlocoFinanceiro(usuario, dados) {
@@ -463,8 +456,12 @@ function renderizarBlocoFinanceiro(usuario, dados) {
     bloco.classList.remove('d-none');
 
     var financeiro = dados.financeiro || [];
-    var receitas = financeiro.filter(function (f) { return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1; });
-    var despesas = financeiro.filter(function (f) { return _tipoLancamento(f).indexOf('DESPESA') !== -1 || _tipoLancamento(f).indexOf('SAIDA') !== -1 || _tipoLancamento(f).indexOf('SAÍDA') !== -1; });
+    var receitas = financeiro.filter(function (f) {
+        return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1;
+    });
+    var despesas = financeiro.filter(function (f) {
+        return _tipoLancamento(f).indexOf('DESPESA') !== -1 || _tipoLancamento(f).indexOf('SAIDA') !== -1 || _tipoLancamento(f).indexOf('SAÍDA') !== -1;
+    });
 
     var totalReceita = receitas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
     var totalDespesa = despesas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
@@ -486,19 +483,22 @@ function renderizarBlocoFinanceiro(usuario, dados) {
 
 function _agruparPorMes(lista) {
     var meses = {};
+    var ordem = [];
     var hoje = new Date();
     for (var i = 5; i >= 0; i--) {
         var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        var chave = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
-        meses[chave] = { label: chave, total: 0, ref: new Date(d) };
+        var chave = d.getFullYear() + '-' + d.getMonth();
+        var label = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+        meses[chave] = { label: label, total: 0, ano: d.getFullYear(), mes: d.getMonth() };
+        ordem.push(chave);
     }
     lista.forEach(function (item) {
-        var data = new Date(item.data || item.dataLancamento || Date.now());
+        var data = _parseDataBR(item.data || item.dataLancamento);
         if (isNaN(data.getTime())) return;
-        var chave = data.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+        var chave = data.getFullYear() + '-' + data.getMonth();
         if (meses[chave]) meses[chave].total += _parseValor(item.valor);
     });
-    return Object.keys(meses).map(function (k) { return meses[k]; });
+    return ordem.map(function (k) { return meses[k]; });
 }
 
 function _renderChartFinanceiroLinha(receitas, despesas) {
@@ -572,10 +572,11 @@ function _agruparPorDia(pedidos) {
     for (var i = 6; i >= 0; i--) {
         var d = new Date(hoje);
         d.setDate(hoje.getDate() - i);
+        d.setHours(0, 0, 0, 0);
         dias.push({ label: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''), ref: d, total: 0 });
     }
     pedidos.forEach(function (p) {
-        var data = new Date(p.data || p.dataCriacao || p.createdAt || Date.now());
+        var data = _parseDataBR(p.data);
         if (isNaN(data.getTime())) return;
         dias.forEach(function (dia) {
             if (data.toDateString() === dia.ref.toDateString()) dia.total++;
@@ -616,15 +617,14 @@ function calcularTopClientesPedidos(dados, limite, diasJanela) {
 
     var limiteData = new Date();
     limiteData.setDate(limiteData.getDate() - janela);
+    limiteData.setHours(0, 0, 0, 0);
 
-    // Filtra apenas pedidos dos últimos N dias
     var pedidosFiltrados = pedidos.filter(function (p) {
-        var dataPedido = new Date(p.data);
+        var dataPedido = _parseDataBR(p.data);
         if (isNaN(dataPedido.getTime())) return false;
         return dataPedido >= limiteData;
     });
 
-    // Agrupa por id_cliente (chave estável), mantendo o nome de exibição
     var contagem = {};
     pedidosFiltrados.forEach(function (p) {
         var chave = p.id_cliente || p.solicitante || 'desconhecido';
@@ -643,23 +643,6 @@ function calcularTopClientesPedidos(dados, limite, diasJanela) {
     return ranking.slice(0, limite || 5);
 }
 
-function iniciarHeartbeat() {
-    var username = localStorage.getItem('username');
-    if (!username || !window.API) return;
-
-    if (window.dashboardState.heartbeatIntervalId) {
-        clearInterval(window.dashboardState.heartbeatIntervalId);
-    }
-
-    function enviar() {
-        window.API.call('heartbeat', { username: username }).catch(function () { });
-        renderizarBlocoGestao(); // só isso é necessário para o "1/2"
-    }
-
-    enviar();
-    window.dashboardState.heartbeatIntervalId = setInterval(enviar, 60000);
-}
-
 function _corPorIndice(i) {
     var cores = ['primary', 'info', 'warning', 'success', 'secondary'];
     return cores[i % cores.length];
@@ -675,6 +658,11 @@ function renderizarRankingClientes(containerId, ranking) {
     var container = document.getElementById(containerId);
     if (!container) return;
     container.innerHTML = '';
+
+    if (!ranking.length) {
+        container.innerHTML = '<div class="text-center py-3" style="color:#999;font-size:.82rem;">Nenhum pedido no período.</div>';
+        return;
+    }
 
     ranking.forEach(function (item, index) {
         var cor = _corPorIndice(index);
@@ -706,36 +694,46 @@ function renderizarRankingClientes(containerId, ranking) {
     });
 }
 
-function _obterListaAPI(chave, origem) {
-    var dados = window.dashboardState.dados;
-    if (dados && Array.isArray(dados[chave]) && dados[chave].length > 0) {
-        return dados[chave];
+function iniciarHeartbeat() {
+    var username = localStorage.getItem('username');
+    if (!username || !window.API) return;
+
+    if (window.dashboardState.heartbeatIntervalId) {
+        clearInterval(window.dashboardState.heartbeatIntervalId);
     }
-    var cacheCompleto = (window.botState && window.botState.cacheCompleto) || [];
-    return cacheCompleto.filter(function (item) { return item.origem === origem; });
+
+    function enviar() {
+        window.API.call('heartbeat', { username: username }).catch(function () { });
+        renderizarBlocoGestao();
+    }
+
+    enviar();
+    window.dashboardState.heartbeatIntervalId = setInterval(enviar, 60000);
 }
 
 function renderizarDashboardCompleto(usuario, dados) {
-    renderizarBlocoChatPedidos(usuario, dados);
-    renderizarBlocoVisaoGeral();
-    renderizarBlocoGestao();
-    renderizarBlocoAutomacao();
-    renderizarBlocoAdministracao(usuario, dados);
-    renderizarBlocoFinanceiro(usuario, dados);
-    renderizarBlocoRelatorio(usuario, dados);
-    renderBars('dashboard-chat-pedidos-ranking-bars', indicadoresChatPedidos);
+    var blocos = [
+        function () { renderizarBlocoChatPedidos(usuario, dados); },
+        function () { renderizarBlocoVisaoGeral(); },
+        function () { renderizarBlocoGestao(); },
+        function () { renderizarBlocoAdministracao(usuario, dados); },
+        function () { renderizarBlocoFinanceiro(usuario, dados); },
+        function () { renderizarBlocoRelatorio(usuario, dados); }
+    ];
+
+    blocos.forEach(function (fn) {
+        try { fn(); } catch (e) { console.error('Erro ao renderizar bloco:', e); }
+    });
 }
 
 window.addEventListener('botCacheAtualizado', function () {
     renderizarBlocoGestao();
     renderizarBlocoVisaoGeral();
-    renderizarBlocoAutomacao();
 });
 
 window.addEventListener('masterStatusChanged', function () {
     renderizarBlocoGestao();
     renderizarBlocoVisaoGeral();
-    renderizarBlocoAutomacao();
 
     if (window.dashboardState.dados) {
         window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function'
@@ -748,13 +746,12 @@ window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
     window.dashboardState.isFetching = true;
 
-    mostrarLoadingDashboard(); // 👈 exibe loading antes de tudo
+    mostrarLoadingDashboard();
 
     var usuario = obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
     syncStartDashboard();
-
     iniciarHeartbeat();
 
     var btnRefresh = document.getElementById('btn-refresh-dashboard');
@@ -764,19 +761,25 @@ window.initDashboard = function () {
         .then(function (dados) {
             window.dashboardState.dados = dados;
             renderizarDashboardCompleto(usuario, dados);
+            ocultarLoadingDashboard();
         })
         .catch(function (erro) {
             console.error('Erro ao carregar dashboard:', erro);
+            _exibirErroDashboard();
         })
         .finally(function () {
             window.dashboardState.isFetching = false;
             syncStopDashboard();
-            ocultarLoadingDashboard(); // 👈 só esconde quando tudo (dados + render) terminar
         });
 };
 
-function _abreviarLabel(titulo) {
-    var palavras = String(titulo || '').trim().split(/\s+/);
-    if (palavras.length === 1) return palavras[0].slice(0, 8);
-    return palavras[0].slice(0, 6) + '. ' + palavras.slice(1).map(function (p) { return p.slice(0, 3) + '.'; }).join(' ');
+function _exibirErroDashboard() {
+    var overlay = document.getElementById('dashboard-loading-overlay');
+    if (!overlay) return;
+    overlay.innerHTML =
+        '<div class="text-center py-5">' +
+        '<i class="bi bi-exclamation-triangle text-danger" style="font-size:2rem;"></i>' +
+        '<p class="mt-2 mb-0 text-muted">Não foi possível carregar o dashboard.</p>' +
+        '<button class="btn btn-sm btn-outline-danger mt-3" onclick="window.initDashboard()">Tentar novamente</button>' +
+        '</div>';
 }
