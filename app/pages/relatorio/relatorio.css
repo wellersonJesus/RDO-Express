@@ -301,7 +301,8 @@
 }
 
 .rel-col-acoes {
-  padding-right: 6px;
+  min-width: 76px;
+  text-align: right;
 }
 
 .btn-sort-data {

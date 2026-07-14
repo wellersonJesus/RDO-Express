@@ -185,6 +185,7 @@
     ultimoBuilderState: null,
     paginaAtual: 1,
     itensPorPagina: 10,
+    ordenacao: { motoboys: 'desc', clientes: 'desc', financeiro: 'desc', global: 'desc' },
     builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
   };
 
@@ -338,6 +339,7 @@
       financeiro: { prev: document.getElementById('btn-pag-prev-financeiro'), next: document.getElementById('btn-pag-next-financeiro'), info: document.getElementById('info-paginacao-financeiro') },
       global: { prev: document.getElementById('btn-pag-prev-global'), next: document.getElementById('btn-pag-next-global'), info: document.getElementById('info-paginacao-global') }
     };
+    els.btnsOrdenar = document.querySelectorAll('.btn-sort-data');
   }
 
   function popularSelectMotoboys() {
@@ -1243,6 +1245,18 @@
       btn.addEventListener('click', function () { abrirBuilder(btn.dataset.tabTipo); });
     });
 
+    if (els.btnsOrdenar) {
+      els.btnsOrdenar.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const tab = btn.dataset.tab;
+          if (!tab) return;
+          state.ordenacao[tab] = state.ordenacao[tab] === 'desc' ? 'asc' : 'desc';
+          state.paginaAtual = 1;
+          renderizarListas();
+        });
+      });
+    }
+
     if (els.modalBtnFechar) els.modalBtnFechar.addEventListener('click', fecharModalRelatorio);
     if (els.modalBtnCancelar) els.modalBtnCancelar.addEventListener('click', fecharModalRelatorio);
     if (els.modalBtnSalvar) els.modalBtnSalvar.addEventListener('click', salvarRelatorioModal);
@@ -1719,7 +1733,17 @@
     const c = config[state.tabAtual];
     if (!c || !c.el) return;
 
-    const lista = state.relatoriosSalvos.filter(c.filtro).sort(function (a, b) { return b.criadoEm - a.criadoEm; });
+    const direcao = state.ordenacao[state.tabAtual] || 'desc';
+    const lista = state.relatoriosSalvos.filter(c.filtro).sort(function (a, b) {
+      return direcao === 'desc' ? (b.criadoEm - a.criadoEm) : (a.criadoEm - b.criadoEm);
+    });
+
+    const btnOrdenar = document.querySelector('.rel-btn-ordenar[data-tab="' + state.tabAtual + '"]');
+    if (btnOrdenar) {
+      const icon = btnOrdenar.querySelector('i');
+      if (icon) icon.className = direcao === 'desc' ? 'bi bi-sort-down' : 'bi bi-sort-up';
+      btnOrdenar.title = direcao === 'desc' ? 'Mais recentes primeiro' : 'Mais antigos primeiro';
+    }
 
     const totalPaginas = Math.max(1, Math.ceil(lista.length / state.itensPorPagina));
     if (state.paginaAtual > totalPaginas) state.paginaAtual = totalPaginas;
@@ -1727,35 +1751,43 @@
     const inicio = (state.paginaAtual - 1) * state.itensPorPagina;
     const paginaLista = lista.slice(inicio, inicio + state.itensPorPagina);
 
+    const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
+
     if (!lista.length) {
-      c.el.innerHTML = '<div class="rel-lista-vazia"><i class="bi bi-inbox"></i><p>Nenhum relatório gerado ainda.</p></div>';
+      c.el.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório gerado ainda.</span></div>';
     } else {
       let html = '';
       paginaLista.forEach(function (rel) {
         const dataValida = rel.criadoEm && !isNaN(rel.criadoEm);
         const dataFormatada = dataValida ? new Date(rel.criadoEm).toLocaleDateString('pt-BR') : '';
+        const iconClass = icons[rel.tipo] || 'bi-file-earmark-bar-graph';
 
         html += '<div class="rel-item-card" data-id="' + escapeHtml(rel.id) + '">' +
+          '<div class="rel-item-left">' +
+          '<div class="rel-item-icon"><i class="bi ' + iconClass + '"></i></div>' +
           '<div class="rel-item-info">' +
           '<div class="rel-item-titulo">' + escapeHtml(rel.titulo) + '</div>' +
-          '<div class="rel-item-meta"><i class="bi bi-calendar3"></i> ' + escapeHtml(rel.periodoLabel) +
-          (dataValida ? ' · ' + dataFormatada : '') + '</div>' +
+          '<div class="rel-item-descricao"><i class="bi bi-calendar3"></i> ' + escapeHtml(rel.periodoLabel) +
+          (dataValida ? ' · Gerado em ' + dataFormatada : '') + '</div>' +
           '</div>' +
-          '<div class="rel-item-acoes">' +
-          '<button type="button" class="btn btn-light btn-sm me-1 btn-rel-visualizar" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-eye"></i></button>' +
-          '<button type="button" class="btn btn-light btn-sm btn-rel-excluir" data-id="' + escapeHtml(rel.id) + '"><i class="bi bi-trash text-danger"></i></button>' +
+          '</div>' +
+          '<div class="rel-item-actions">' +
+          '<button type="button" class="rel-item-btn rel-btn-view" data-id="' + escapeHtml(rel.id) + '" title="Visualizar">' +
+          '<i class="bi bi-eye"></i></button>' +
+          '<button type="button" class="rel-item-btn rel-btn-delete" data-id="' + escapeHtml(rel.id) + '" title="Excluir">' +
+          '<i class="bi bi-trash"></i></button>' +
           '</div></div>';
       });
       c.el.innerHTML = html;
 
-      c.el.querySelectorAll('.btn-rel-visualizar').forEach(function (btn) {
+      c.el.querySelectorAll('.rel-btn-view').forEach(function (btn) {
         btn.addEventListener('click', function () {
           const rel = state.relatoriosSalvos.find(function (r) { return r.id === btn.dataset.id; });
           if (rel) abrirModalRelatorio(rel, false);
         });
       });
 
-      c.el.querySelectorAll('.btn-rel-excluir').forEach(function (btn) {
+      c.el.querySelectorAll('.rel-btn-delete').forEach(function (btn) {
         btn.addEventListener('click', function () {
           const rel = state.relatoriosSalvos.find(function (r) { return r.id === btn.dataset.id; });
           if (rel) confirmarExclusaoRelatorio(rel);
