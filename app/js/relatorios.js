@@ -21,9 +21,12 @@
       motoboy: ['motoboy'], status: ['status'], observacao: ['observacao']
     },
     financeiro: {
-      id_pedido: ['id_pedido'], data: ['data'], tipo: ['tipo'], descricao: ['descricao'],
-      motoboy: ['motoboy'], vlr_servico: ['vlr_servico', 'valor_corrida'], colaborador: ['colaborador'],
-      observacao: ['observacao'], situacao: ['situacao']
+      label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceirocompleto',
+      campos: {
+        id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', cliente: 'Cliente', descricao: 'Descrição',
+        motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador',
+        observacao: 'Observação', situacao: 'Situação'
+      }
     },
     clientes: {
       bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
@@ -111,10 +114,12 @@
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceiro',
       campos: {
-        id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', descricao: 'Descrição', motoboy: 'Motoboy',
-        vlr_servico: 'Valor Serviço', colaborador: 'Colaborador', observacao: 'Observação', situacao: 'Situação'
+        id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', cliente: 'Cliente', descricao: 'Descrição',
+        motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador',
+        observacao: 'Observação', situacao: 'Situação'
       }
-    }
+    },
+
   };
 
   const PRESETS = {
@@ -123,12 +128,12 @@
       campos: {
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
       defaults: {
         colaborador: ['username'],
         pedidos: [],
-        financeiro: ['data', 'descricao', 'vlr_servico']
+        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
       }
     },
     clientes: {
@@ -137,23 +142,23 @@
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado'],
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
       defaults: {
         clientes: ['username'],
         pedidos: [],
         chat: [],
-        financeiro: ['data', 'descricao', 'vlr_servico']
+        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
       }
     },
     financeiro: {
       bancos: ['financeiro', 'pedidos'],
       campos: {
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'solicitante']
       },
       defaults: {
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         pedidos: ['motoboy', 'valor_corrida', 'status', 'data']
       }
     },
@@ -163,14 +168,14 @@
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       },
       defaults: {
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
         pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
-        financeiro: ['id_pedido', 'data', 'tipo', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       }
     }
@@ -689,14 +694,20 @@
   }
 
   function obterNomeClienteDoPedido(pedido) {
-    let valor = resolverValor('pedidos', 'id_cliente', pedido);
-    if (valor && /^\d+$/.test(String(valor).trim())) {
-      const cli = state.clientes.find(function (c) { return String(c.id) === String(valor); });
+    const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
+    if (idCliente && /^\d+$/.test(String(idCliente).trim())) {
+      const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente).trim(); });
       if (cli) return resolverValor('clientes', 'username', cli);
     }
-    if (valor) return valor;
+
+    const destino = resolverValor('pedidos', 'para', pedido);
+    if (destino) return destino;
+
+    if (idCliente) return idCliente;
+
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
     if (solicitante) return solicitante;
+
     const observacao = resolverValor('pedidos', 'observacao', pedido);
     return observacao || '';
   }
@@ -812,7 +823,7 @@
   }
 
   function obterNomeClienteDoFinanceiro(registro) {
-    const direto = extrairNomeClienteDescricao(resolverValor('financeiro', 'descricao', registro));
+    const direto = resolverValor('financeiro', 'cliente', registro);
     if (direto) return direto;
     const pedido = buscarPedidoDoFinanceiro(registro);
     if (pedido) return obterNomeClienteDoPedido(pedido);
@@ -821,6 +832,20 @@
 
   function obterValorCampoFinanceiro(campo, registro) {
     let valor = resolverValor('financeiro', campo, registro);
+
+    if (campo === 'cliente') {
+      if (valor) return valor; // já vem resolvido do backend (getfinanceirocompleto)
+
+      const descricao = resolverValor('financeiro', 'descricao', registro);
+      const nomeDaDescricao = extrairNomeClienteDescricao(descricao);
+      if (nomeDaDescricao) return nomeDaDescricao;
+
+      const pedido = buscarPedidoDoFinanceiro(registro);
+      if (pedido) return obterNomeClienteDoPedido(pedido);
+
+      return '';
+    }
+
     if (campo === 'vlr_servico' && !valorNumericoValido(valor)) {
       const pedido = buscarPedidoDoFinanceiro(registro);
       if (pedido) {
@@ -828,17 +853,12 @@
         if (valorNumericoValido(vPed)) valor = vPed;
       }
     }
+
     if (campo === 'data' && !valor) {
       const pedido = buscarPedidoDoFinanceiro(registro);
       if (pedido) valor = resolverValor('pedidos', 'data', pedido);
     }
-    if (campo === 'descricao' && state.builder && state.builder.tipo === 'clientes') {
-      const nomeCliente = obterNomeClienteDoFinanceiro(registro);
-      if (nomeCliente) {
-        const jaContem = normalizarComparacao(valor).indexOf(normalizarComparacao(nomeCliente)) !== -1;
-        if (!jaContem) valor = (valor ? valor + ' - ' : '') + 'Cliente: ' + nomeCliente;
-      }
-    }
+
     return valor;
   }
 
@@ -929,8 +949,7 @@
     }
     else if (banco === 'financeiro') {
       dados = state.financeiro.filter(function (r) {
-        const dataF = obterValorCampoFinanceiro('data', r);
-        return dentroPeriodo(dataF, p.inicio, p.fim);
+        return dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
       });
     }
 
@@ -947,7 +966,6 @@
       return valoresStr.indexOf(String(valorCampo).trim()) !== -1;
     }
 
-    // ---------- FILTRO POR MOTOBOY ----------
     if (fx.campo === 'motoboy_id') {
       const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
 
@@ -970,15 +988,23 @@
       return dados;
     }
 
-    // ---------- FILTRO POR CLIENTE (direto por id_cliente) ----------
     if (fx.campo === 'cliente_id') {
+      const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
+
       if (banco === 'clientes') {
         return dados.filter(function (r) { return idBate(r.id); });
       }
 
       if (banco === 'pedidos') {
         return dados.filter(function (r) {
-          return idBate(resolverValor('pedidos', 'id_cliente', r));
+          if (idBate(resolverValor('pedidos', 'id_cliente', r))) return true;
+          const nomePedido = obterNomeClienteDoPedido(r);
+          if (!nomePedido) return false;
+          return clientesSelecionados.some(function (c) {
+            const nomeCliente = resolverValor('clientes', 'username', c);
+            const responsavel = resolverValor('clientes', 'responsavel', c);
+            return nomesCorrespondem(nomePedido, nomeCliente) || nomesCorrespondem(nomePedido, responsavel);
+          });
         });
       }
 
@@ -989,22 +1015,18 @@
       }
 
       if (banco === 'financeiro') {
-        const idsPedidosDoCliente = state.pedidos
-          .filter(function (ped) {
-            return idBate(resolverValor('pedidos', 'id_cliente', ped));
-          })
-          .map(function (ped) {
-            return String(resolverValor('pedidos', 'id', ped)).trim();
-          });
-
         return dados.filter(function (r) {
-          const idPed = String(resolverValor('financeiro', 'id_pedido', r)).trim();
-          return idsPedidosDoCliente.indexOf(idPed) !== -1;
+          const nomeFin = obterValorCampoFinanceiro('cliente', r);
+          if (!nomeFin) return false;
+          return clientesSelecionados.some(function (c) {
+            const nomeCliente = resolverValor('clientes', 'username', c);
+            const responsavel = resolverValor('clientes', 'responsavel', c);
+            return nomesCorrespondem(nomeFin, nomeCliente) || nomesCorrespondem(nomeFin, responsavel);
+          });
         });
       }
     }
 
-    // ---------- FILTRO POR TIPO DE LANÇAMENTO ----------
     if (fx.campo === 'tipo_lancamento' && banco === 'financeiro') {
       return dados.filter(function (r) {
         return valoresStr.indexOf(String(resolverValor('financeiro', 'tipo', r)).trim()) !== -1;
@@ -1817,7 +1839,7 @@
       window.API.call('getclientes', {}),
       window.API.call('getpedidos', {}),
       window.API.call('getchat', {}),
-      window.API.call('getfinanceiro', {}),
+      window.API.call('getfinanceirocompleto', {}),
       window.API.call('getrelatorios', {})
     ]).then(function (resultados) {
       state.motoboys = extrairArray(resultados[0]);
