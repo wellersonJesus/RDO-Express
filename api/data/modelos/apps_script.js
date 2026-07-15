@@ -11,6 +11,14 @@ var MODELO_PADRAO = [
   'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
 ].join('\n');
 
+function normalizarChave(str) {
+  return String(str || "")
+    .toLowerCase()
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s\/]+/g, '_');
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   var temLock = false;
@@ -35,8 +43,6 @@ function doPost(e) {
     if (!action)
       return responder({ status: "error", message: "Nenhuma acao informada" });
 
-    // 🔧 Normaliza alias "del..." -> "delete..." (ex: delrelatorio -> deleterelatorio)
-    // Evita duplicar caso já comece com "delete" (ex: deletechat)
     if (action.indexOf("del") === 0 && action.indexOf("delete") !== 0) {
       action = "delete" + action.substring(3);
     }
@@ -655,24 +661,35 @@ function processarAdd(sheet, data, entity) {
   var idIndex = headers.indexOf("id");
   var colDataIndex = headers.indexOf("data");
 
+  var dataNorm = {};
+  var chavesRecebidas = Object.keys(data || {});
+  for (var c = 0; c < chavesRecebidas.length; c++) {
+    var chaveOriginal = chavesRecebidas[c];
+    dataNorm[normalizarChave(chaveOriginal)] = data[chaveOriginal];
+  }
+
   if (idIndex !== -1) {
-    var idAtual = data.id !== undefined && data.id !== null ? String(data.id).trim() : "";
-    if (!idAtual) data.id = gerarId(sheet, entity);
+    var idAtual = dataNorm.id !== undefined && dataNorm.id !== null ? String(dataNorm.id).trim() : "";
+    if (!idAtual) dataNorm.id = gerarId(sheet, entity);
+    data.id = dataNorm.id;
   }
 
   var row = [];
   for (var i = 0; i < headers.length; i++) {
-    var campo = headers[i];
+    var campo = normalizarChave(headers[i]);
     var valor = "";
 
-    if (campo === "contato" && data.telefone && !data.contato) {
-      valor = String(data.telefone).trim();
-    } else if (campo === "data_criacao" && !data.data_criacao) {
+    if (campo === "status" && dataNorm[campo] !== undefined && dataNorm[campo] !== null && dataNorm[campo] !== "") {
+      var statusVal = String(dataNorm[campo]).trim().toUpperCase();
+      valor = (statusVal === "TRUE" || statusVal === "FALSE") ? statusVal : String(dataNorm[campo]).trim();
+    } else if (campo === "contato" && dataNorm.telefone && !dataNorm.contato) {
+      valor = String(dataNorm.telefone).trim();
+    } else if (campo === "data_criacao" && !dataNorm.data_criacao) {
       valor = new Date().toISOString();
-    } else if (campo === "data" && data[campo] !== undefined && data[campo] !== null) {
-      valor = normalizarDataStr(data[campo]);
-    } else if (data[campo] !== undefined && data[campo] !== null) {
-      valor = String(data[campo]).trim();
+    } else if (campo === "data" && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
+      valor = normalizarDataStr(dataNorm[campo]);
+    } else if (dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
+      valor = String(dataNorm[campo]).trim();
     }
 
     row.push(valor);
@@ -685,7 +702,7 @@ function processarAdd(sheet, data, entity) {
   }
 
   var idIndexRetorno = headers.indexOf("id");
-  return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? data.id : undefined };
+  return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? dataNorm.id : undefined };
 }
 
 function processarUpdate(sheet, data) {
@@ -706,7 +723,7 @@ function processarUpdate(sheet, data) {
     if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
       var keys = Object.keys(data);
       for (var k = 0; k < keys.length; k++) {
-        var chaveNorm = String(keys[k]).toLowerCase().trim();
+        var chaveNorm = normalizarChave(keys[k]);
         var colIndex = headers.indexOf(chaveNorm);
         if (colIndex !== -1) {
           if (chaveNorm === "data") {

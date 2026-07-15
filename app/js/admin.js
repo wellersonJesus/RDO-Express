@@ -29,6 +29,7 @@
         formCarregado: false,
         sortDesc: false
     };
+    
     window.adminState = state;
 
     var els = {};
@@ -163,11 +164,14 @@
         e.preventDefault();
         var origem = e.currentTarget.getAttribute('data-origem');
         if (!origem || origem === state.origem || !ACTIONS[origem]) return;
+
         state.origem = origem;
         state.pagina = 1;
         state.filtro = '';
         state.blocoAtivo = 'todos';
         state.filtroStatus = 'todos';
+        state.cache = []; // limpa cache antigo para não "vazar" dados da aba anterior
+
         if (els.filtro) els.filtro.value = '';
         if (els.labelFiltro) els.labelFiltro.textContent = 'Status';
         if (els.menuFiltro) {
@@ -178,6 +182,7 @@
         els.blocosStatus.forEach(function (b) {
             if (b.el) b.el.classList.toggle('active', b.tipo === 'todos');
         });
+
         atualizarTabsAtivas();
         atualizarColunaPagamento();
         fetchDados();
@@ -285,11 +290,17 @@
     function mostrarLoading() {
         if (!els.tbody) return;
         els.tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center text-muted py-4">' +
-            '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
-            '<div class="mt-2 admin-loading-text">Buscando dados<span class="admin-dots"></span></div>' +
+            '<tr><td colspan="5" class="text-center py-4">' +
+            '<div class="admin-lista-loading">' +
+            '<i class="bi bi-search admin-loading-spin"></i>' +
+            '<span>Buscando informações' +
+            '<span class="admin-dots-anim"><span>.</span><span>.</span><span>.</span></span>' +
+            '</span>' +
+            '</div>' +
             '</td></tr>';
     }
+
+    var _reqToken = 0;
 
     function atualizarTabsAtivas() {
         document.querySelectorAll('.admin-tab').forEach(function (btn) {
@@ -323,8 +334,13 @@
     function fetchDados() {
         if (state.fetching) return Promise.resolve();
         state.fetching = true;
+
+        var meuToken = ++_reqToken;
+        var origemNoDisparo = state.origem;
+
         mostrarLoading();
         spinOn();
+
         var action;
         try {
             verificarAPI();
@@ -336,8 +352,12 @@
             state.fetching = false;
             return Promise.reject(err);
         }
+
         return window.API.call(action)
             .then(function (res) {
+                // Descarta resposta obsoleta (usuário já trocou de aba)
+                if (meuToken !== _reqToken || origemNoDisparo !== state.origem) return;
+
                 if (res && res.status === 'error') {
                     throw new Error(extrairMsgErro(res.message || res.error || res));
                 }
@@ -350,13 +370,16 @@
                 renderTabela();
             })
             .catch(function (err) {
+                if (meuToken !== _reqToken || origemNoDisparo !== state.origem) return;
                 var msg = tratarErro(err, 'Erro ao carregar dados (' + action + ')');
                 state.cache = [];
                 mostrarErroTabela(msg);
             })
             .finally(function () {
-                state.fetching = false;
-                spinOff();
+                if (meuToken === _reqToken) {
+                    state.fetching = false;
+                    spinOff();
+                }
             });
     }
 
@@ -845,8 +868,12 @@
         }
 
         var btn = els.btnConfirmarExcluir;
-        var textoOriginal = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Excluindo...'; }
+        var htmlOriginal = btn ? btn.innerHTML : '';
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
 
         window.API.call(acao, { id: id })
             .then(function (res) {
@@ -863,7 +890,9 @@
                 }
             })
             .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); })
-            .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal; } });
+            .finally(function () {
+                if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
+            });
     }
 
     function init() {

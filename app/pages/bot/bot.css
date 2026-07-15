@@ -505,3 +505,21 @@
         height: 12px;
     }
 }
+
+.modulo-bloqueado {
+    position: relative;
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+
+.icone-cadeado-modulo {
+    margin-left: 6px;
+    color: #dc3545;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.modulo-bloqueado:hover .icone-cadeado-modulo {
+    opacity: 1;
+}

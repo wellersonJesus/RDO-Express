@@ -26,13 +26,10 @@ function normalizeStatus(val, fallback) {
     fallback = fallback || 'FALSE';
     if (val === true || val === 1) return 'TRUE';
     if (val === false || val === 0) return 'FALSE';
-
     var s = String(val || '').trim().toUpperCase();
-
     if (s === '') return fallback;
     if (s === 'TRUE' || s === '1' || s === 'ATIVO' || s === 'ON' || s === 'SIM' || s === 'YES') return 'TRUE';
     if (s === 'FALSE' || s === '0' || s === 'INATIVO' || s === 'OFF' || s === 'NÃO' || s === 'NAO' || s === 'NO') return 'FALSE';
-
     return fallback;
 }
 
@@ -59,6 +56,21 @@ function applyMasterVisual(isOn) {
     }
 }
 
+function _usuarioLogadoBot() {
+    if (window.dashboardState && window.dashboardState.usuario) {
+        return window.dashboardState.usuario;
+    }
+    if (typeof obterUsuarioLogado === 'function') {
+        return obterUsuarioLogado();
+    }
+    return { username: 'Usuário', cargo: '', permissoes: [] };
+}
+
+function _botTemPermissao(permissao) {
+    var usuario = _usuarioLogadoBot();
+    return Array.isArray(usuario.permissoes) && usuario.permissoes.indexOf(permissao) !== -1;
+}
+
 window.checkMaster = function () {
     return localStorage.getItem('bot_master_active') === 'true';
 };
@@ -71,6 +83,10 @@ window.setMaster = function (value) {
 };
 
 window.toggleMaster = function () {
+    if (!_botTemPermissao('Bot') && !_botTemPermissao('Administração')) {
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para alterar o Master.', confirmButtonColor: '#dc3545' });
+        return;
+    }
     window.setMaster(!window.checkMaster());
 };
 
@@ -89,7 +105,7 @@ function atualizarSeletorGlobal() {
     var comStatus = window.botState.cacheCompleto.filter(function (i) {
         return String(i.id).trim() !== '';
     });
-    seletor.disabled = !isMasterOn || comStatus.length === 0 || window.botState.isTogglingAll;
+    seletor.disabled = !isMasterOn || comStatus.length === 0 || window.botState.isTogglingAll || !_botTemPermissao('Administração');
     if (comStatus.length === 0) { seletor.checked = false; return; }
     var totalAtivos = 0;
     for (var k = 0; k < comStatus.length; k++) {
@@ -99,6 +115,12 @@ function atualizarSeletorGlobal() {
 }
 
 window.alternarTodosStatus = async function (ativar) {
+    if (!_botTemPermissao('Administração')) {
+        var seletorP = document.getElementById('seletor-global-status');
+        if (seletorP) seletorP.checked = !ativar;
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para essa ação.', confirmButtonColor: '#dc3545' });
+        return;
+    }
     if (!window.checkMaster()) {
         var seletor = document.getElementById('seletor-global-status');
         if (seletor) seletor.checked = !ativar;
@@ -150,6 +172,16 @@ window.mudarPagina = function (dir) {
 window.initBot = function () {
     if (window.botState.isFetching) return Promise.resolve();
 
+    if (!_botTemPermissao('Bot') && !_botTemPermissao('Administração')) {
+        var tbodyBloq = document.getElementById('bot-list');
+        if (tbodyBloq) {
+            tbodyBloq.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-lock-fill me-2"></i>Você não tem permissão para acessar este módulo.</td></tr>';
+        }
+        var btnMasterBloq = document.getElementById('btn-status-bot');
+        if (btnMasterBloq) btnMasterBloq.disabled = true;
+        return Promise.resolve();
+    }
+
     var raw = localStorage.getItem('bot_master_active');
     if (raw === null) {
         localStorage.setItem('bot_master_active', 'false');
@@ -187,6 +219,7 @@ window.initBot = function () {
 window.reloadBot = function () {
     var tbody = document.getElementById('bot-list');
     if (window.botState.isFetching) return Promise.resolve();
+    if (!_botTemPermissao('Bot') && !_botTemPermissao('Administração')) return Promise.resolve();
 
     window.botState.isFetching = true;
     window.botState._cacheCarregado = false;
@@ -213,7 +246,8 @@ window.reloadBot = function () {
                     var storageKey = 'permissoes_usuario_' + usr.id;
                     var storedPerms = localStorage.getItem(storageKey);
                     if (storedPerms) {
-                        usr.permissoes = JSON.parse(storedPerms);
+                        var parsed = JSON.parse(storedPerms);
+                        usr.permissoes = Array.isArray(parsed) && parsed.length > 0 ? parsed : (window.PERMISSOES_PADRAO[usr.cargo] || []);
                     } else {
                         usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
                     }
@@ -326,11 +360,77 @@ function _resolverAvatar(item) {
     return null;
 }
 
+function _preencherCargoDisplay(cargo) {
+    var display = document.getElementById('cargo-selecionado-display');
+    if (!display) return;
+    var nomeEl = display.querySelector('.cargo-display-nome');
+    var hintEl = display.querySelector('.cargo-display-hint');
+    if (nomeEl) nomeEl.textContent = cargo || 'Nenhum cargo selecionado';
+    if (hintEl) hintEl.textContent = cargo ? 'Clique para alterar' : 'Clique para selecionar';
+    display.classList.toggle('cargo-selected', !!cargo);
+}
+
+function _marcarPermissoesCheckbox(permissoes) {
+    var lista = Array.isArray(permissoes) ? permissoes : [];
+    document.querySelectorAll('.permissao-checkbox').forEach(function (cb) {
+        cb.checked = lista.indexOf(cb.value) !== -1;
+    });
+}
+
+function _abrirModalUsuario(item) {
+    var idEl = document.getElementById('usuario-bot-id');
+    var userEl = document.getElementById('usuario-bot-username');
+    var contatoEl = document.getElementById('usuario-bot-contato');
+    var passEl = document.getElementById('usuario-bot-password');
+    var imgEl = document.getElementById('usuario-bot-imagem');
+    var cargoEl = document.getElementById('usuario-bot-cargo');
+
+    if (idEl) idEl.value = item.id || '';
+    if (userEl) userEl.value = item.username || item.nome || '';
+    if (contatoEl) contatoEl.value = item.contato || item.telefone || '';
+    if (passEl) passEl.value = '';
+    if (imgEl) imgEl.value = item.imagem || '';
+    if (cargoEl) cargoEl.value = item.cargo || '';
+
+    _preencherCargoDisplay(item.cargo);
+
+    var permissoesAtuais = item.permissoes || (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[item.cargo]) || [];
+    _marcarPermissoesCheckbox(permissoesAtuais);
+
+    var modalUsuario = document.getElementById('modalUsuarioBot') || document.getElementById('modalSelecionarCargo');
+    if (modalUsuario) {
+        var existingInstance = bootstrap.Modal.getInstance(modalUsuario);
+        if (existingInstance) existingInstance.dispose();
+        new bootstrap.Modal(modalUsuario, { backdrop: 'static' }).show();
+    }
+}
+
+async function _abrirFormAdminBot(item, origem) {
+    var nome = item.username || item.nome || item.responsavel || item.colaborador || 'N/A';
+    var camposHtml = '' +
+        '<div class="text-start">' +
+        '<p><strong>Nome:</strong> ' + nome + '</p>' +
+        '<p><strong>ID:</strong> ' + (item.id || '—') + '</p>' +
+        '<p><strong>Contato:</strong> ' + (item.contato || item.telefone || '—') + '</p>' +
+        '<p><strong>Status:</strong> ' + (item.status === 'TRUE' ? 'Ativo' : 'Inativo') + '</p>' +
+        '<p><strong>Origem:</strong> ' + _labelOrigem(origem) + '</p>' +
+        '</div>';
+
+    await Swal.fire({
+        title: 'Detalhes do registro',
+        html: camposHtml,
+        icon: 'info',
+        confirmButtonText: 'Fechar',
+        confirmButtonColor: '#0d6efd'
+    });
+}
+
 function renderizarTabela() {
     var tbody = document.getElementById('bot-list');
     var infoPag = document.getElementById('info-paginacao');
     var infoTotal = document.getElementById('info-total');
     var isMasterOn = window.checkMaster();
+    var podeAdministrar = _botTemPermissao('Administração');
     var dados = window.botState.cache;
     if (!tbody) return;
 
@@ -369,7 +469,7 @@ function renderizarTabela() {
         chk.className = 'form-check-input';
         chk.type = 'checkbox';
         chk.checked = i.status === 'TRUE';
-        chk.disabled = !isMasterOn;
+        chk.disabled = !isMasterOn || !podeAdministrar;
         (function (cId, cOrigem) {
             chk.addEventListener('change', function () {
                 window.alterarStatusDireto(cId, this.checked, cOrigem);
@@ -416,17 +516,19 @@ function renderizarTabela() {
         tdAcoes.className = 'text-end pe-3';
 
         if (itemOrigem === 'usuarios') {
-            var btnEditar = document.createElement('button');
-            btnEditar.className = 'btn btn-light btn-action-bot shadow-sm';
-            btnEditar.title = 'Editar';
-            btnEditar.disabled = !isMasterOn;
-            btnEditar.innerHTML = '<i class="bi bi-pencil-square"></i>';
-            (function (eId, eOrigem) {
-                btnEditar.addEventListener('click', function () {
-                    window.editarBot(eId, eOrigem);
-                });
-            })(itemId, itemOrigem);
-            tdAcoes.appendChild(btnEditar);
+            if (podeAdministrar) {
+                var btnEditar = document.createElement('button');
+                btnEditar.className = 'btn btn-light btn-action-bot shadow-sm';
+                btnEditar.title = 'Editar';
+                btnEditar.disabled = !isMasterOn;
+                btnEditar.innerHTML = '<i class="bi bi-pencil-square"></i>';
+                (function (eId, eOrigem) {
+                    btnEditar.addEventListener('click', function () {
+                        window.editarBot(eId, eOrigem);
+                    });
+                })(itemId, itemOrigem);
+                tdAcoes.appendChild(btnEditar);
+            }
         } else {
             var btnVisualizar = document.createElement('button');
             btnVisualizar.className = 'btn btn-light btn-action-bot shadow-sm';
@@ -440,7 +542,7 @@ function renderizarTabela() {
             tdAcoes.appendChild(btnVisualizar);
         }
 
-        if (isMasterOn) {
+        if (isMasterOn && podeAdministrar) {
             var btnRemover = document.createElement('button');
             btnRemover.className = 'btn btn-light btn-action-bot shadow-sm text-danger ms-1';
             btnRemover.title = 'Excluir';
@@ -465,6 +567,10 @@ function renderizarTabela() {
 }
 
 window.abrirModalCadastro = function () {
+    if (!_botTemPermissao('Administração')) {
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para cadastrar registros.', confirmButtonColor: '#dc3545' });
+        return;
+    }
     if (!window.checkMaster()) {
         Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado.', confirmButtonColor: '#dc3545' });
         return;
@@ -500,6 +606,10 @@ window.abrirModalCadastro = function () {
 };
 
 window.editarBot = async function (id, origem) {
+    if (!_botTemPermissao('Administração')) {
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para editar registros.', confirmButtonColor: '#dc3545' });
+        return;
+    }
     if (!window.checkMaster()) {
         Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado. Edição bloqueada.', confirmButtonColor: '#dc3545' });
         return;
@@ -526,3 +636,144 @@ window.visualizarBot = async function (id, origem) {
     }
     await _abrirFormAdminBot(item, origemStr);
 };
+
+window.alterarStatusDireto = async function (id, novoValor, origem) {
+    if (!window.checkMaster()) {
+        Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado.', confirmButtonColor: '#dc3545' });
+        window.reloadBot();
+        return;
+    }
+    if (!_botTemPermissao('Administração')) {
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para alterar status.', confirmButtonColor: '#dc3545' });
+        window.reloadBot();
+        return;
+    }
+
+    var idStr = String(id || '').trim();
+    var origemStr = String(origem || '').trim();
+    var novoStatus = novoValor ? 'TRUE' : 'FALSE';
+    var item = _buscarItemCompleto(idStr, origemStr);
+    if (!item) return;
+
+    item.status = novoStatus;
+
+    try {
+        await window.API.call('update' + origemStr, { id: idStr, status: novoStatus });
+        if (origemStr === 'clientes' && window.AppRDO && Array.isArray(window.AppRDO.clientesCache)) {
+            var cliente = window.AppRDO.clientesCache.find(function (c) { return String(c.id).trim() === idStr; });
+            if (cliente) cliente.status = novoStatus;
+        }
+        atualizarSeletorGlobal();
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível atualizar o status.', confirmButtonColor: '#dc3545' });
+        window.reloadBot();
+    }
+};
+
+window.confirmarExclusao = async function (id, origem, nome) {
+    if (!_botTemPermissao('Administração')) {
+        Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para excluir registros.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+    if (!window.checkMaster()) {
+        Swal.fire({ icon: 'warning', title: 'Master desligado', text: 'Sistema Master RDO está desligado.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+
+    var idStr = String(id || '').trim();
+    var origemStr = String(origem || '').trim();
+
+    var confirmacao = await Swal.fire({
+        icon: 'warning',
+        title: 'Confirmar exclusão',
+        text: 'Deseja excluir "' + (nome || idStr) + '"? Essa ação não pode ser desfeita.',
+        showCancelButton: true,
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc3545'
+    });
+
+    if (!confirmacao.isConfirmed) return;
+
+    syncStart();
+    try {
+        await window.API.call('delete' + origemStr, { id: idStr });
+        await window.reloadBot();
+        Swal.fire({ icon: 'success', title: 'Excluído', text: 'Registro removido com sucesso.', confirmButtonColor: '#198754' });
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível excluir o registro.', confirmButtonColor: '#dc3545' });
+    } finally {
+        syncStop();
+    }
+};
+
+function _usuarioAtualPermissoes() {
+    var usuario = _usuarioLogadoBot();
+    return Array.isArray(usuario.permissoes) ? usuario.permissoes : [];
+}
+
+window.aplicarControleAcessoModulos = function () {
+    var permissoes = _usuarioAtualPermissoes();
+    var itensModulo = document.querySelectorAll('[data-modulo]');
+
+    itensModulo.forEach(function (item) {
+        var modulo = item.getAttribute('data-modulo');
+        var permitido = permissoes.indexOf(modulo) !== -1;
+
+        item.classList.remove('modulo-bloqueado');
+        var cadeadoExistente = item.querySelector('.icone-cadeado-modulo');
+        if (cadeadoExistente) cadeadoExistente.remove();
+
+        if (!permitido) {
+            item.classList.add('modulo-bloqueado');
+            var cadeado = document.createElement('i');
+            cadeado.className = 'bi bi-lock-fill icone-cadeado-modulo';
+            item.appendChild(cadeado);
+        }
+    });
+};
+
+window.aplicarControleWidgetsDashboard = function () {
+    var permissoes = _usuarioAtualPermissoes();
+    var widgets = document.querySelectorAll('[data-modulo-restrito]');
+
+    widgets.forEach(function (widget) {
+        var modulo = widget.getAttribute('data-modulo-restrito');
+        var permitido = permissoes.indexOf(modulo) !== -1;
+        widget.style.display = permitido ? '' : 'none';
+    });
+};
+
+window.aplicarPermissoesUsuario = function () {
+    window.aplicarControleAcessoModulos();
+    window.aplicarControleWidgetsDashboard();
+};
+
+if (!window._bloqueioModuloDelegado) {
+    document.addEventListener('click', function (e) {
+        var itemBloqueado = e.target.closest('[data-modulo].modulo-bloqueado');
+        if (!itemBloqueado) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acesso restrito',
+            text: 'Você não tem acesso a esse módulo. Entre em contato com seu gestor.',
+            confirmButtonColor: '#dc3545'
+        });
+    }, true);
+    window._bloqueioModuloDelegado = true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    window.aplicarPermissoesUsuario();
+});
+
+window.addEventListener('usuarioLogado', function () {
+    window.aplicarPermissoesUsuario();
+});
+
+
+
+

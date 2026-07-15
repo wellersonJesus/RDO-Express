@@ -59,30 +59,36 @@ function _normalizarCargo(cargo) {
 function obterUsuarioLogado() {
     var username = localStorage.getItem('username') || 'Usuário';
     var cargo = localStorage.getItem('tipo') || '';
-    var permissoes = [];
+    var idUsuario = localStorage.getItem('id_usuario') || localStorage.getItem('userId') || '';
     var cargoNormalizado = _normalizarCargo(cargo);
+    var permissoes = [];
 
+    // 1º: tenta permissões customizadas salvas por usuário (igual ao bot.js)
     try {
-        if (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[cargoNormalizado]) {
-            permissoes = window.PERMISSOES_PADRAO[cargoNormalizado];
+        if (idUsuario) {
+            var storedPerms = localStorage.getItem('permissoes_usuario_' + idUsuario);
+            if (storedPerms) {
+                var parsed = JSON.parse(storedPerms);
+                if (Array.isArray(parsed) && parsed.length > 0) permissoes = parsed;
+            }
         }
     } catch (e) {
         permissoes = [];
     }
 
+    // 2º: fallback para permissões padrão do cargo
     if (!Array.isArray(permissoes) || permissoes.length === 0) {
-        var rdoAuth = localStorage.getItem('rdo_auth');
-        var isMaster = rdoAuth && cargo.toLowerCase().indexOf('admin') !== -1;
-        if (isMaster && window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO['SRE Tecnologia']) {
-            permissoes = window.PERMISSOES_PADRAO['SRE Tecnologia'];
+        if (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[cargoNormalizado]) {
+            permissoes = window.PERMISSOES_PADRAO[cargoNormalizado];
         }
     }
 
-    if (!Array.isArray(permissoes) || permissoes.length === 0) {
-        permissoes = ['Financeiro', 'Relatórios'];
+    // 3º: SEM fallback genérico perigoso — cargo desconhecido = sem permissões
+    if (!Array.isArray(permissoes)) {
+        permissoes = [];
     }
 
-    return { username: username, cargo: cargo, permissoes: Array.isArray(permissoes) ? permissoes : [] };
+    return { username: username, cargo: cargo, permissoes: permissoes };
 }
 
 function usuarioTemPermissao(usuario, permissao) {
@@ -341,12 +347,32 @@ function _construirIndicadoresVisaoGeral(dados) {
 }
 
 function renderizarBlocoVisaoGeral() {
+    var bloco = document.getElementById('bloco-visao-geral');
+    var usuario = window.dashboardState.usuario || obterUsuarioLogado();
+
+    if (!bloco) return;
+    if (!usuarioTemPermissao(usuario, 'Dashboard')) {
+        bloco.classList.add('d-none');
+        return;
+    }
+    bloco.classList.remove('d-none');
+
     var dados = window.dashboardState.dados || { clientes: [], financeiro: [], pedidos: [] };
     var indicadores = _construirIndicadoresVisaoGeral(dados);
     renderHBars('dashboard-visao-geral-hbars', indicadores);
 }
 
 function renderizarBlocoGestao() {
+    var bloco = document.getElementById('bloco-automacao');
+    var usuario = window.dashboardState.usuario || obterUsuarioLogado();
+
+    if (!bloco) { renderizarBlocoAutomacao(); return; }
+
+    if (!usuarioTemPermissao(usuario, 'Administração') && !usuarioTemPermissao(usuario, 'Bot')) {
+        bloco.classList.add('d-none');
+        return;
+    }
+    bloco.classList.remove('d-none');
     renderizarBlocoAutomacao();
 }
 
@@ -395,6 +421,11 @@ function _construirIndicadoresChatPedidos(dados) {
 function renderizarBlocoChatPedidos(usuario, dados) {
     var bloco = document.getElementById('bloco-chat-pedidos');
     if (!bloco) return;
+
+    if (!usuarioTemPermissao(usuario, 'Chat') && !usuarioTemPermissao(usuario, 'Pedidos')) {
+        bloco.classList.add('d-none');
+        return;
+    }
     bloco.classList.remove('d-none');
 
     dados = dados || window.dashboardState.dados || {};
@@ -409,6 +440,12 @@ function renderizarBlocoChatPedidos(usuario, dados) {
 function renderizarBlocoAdministracao(usuario, dados) {
     var bloco = document.getElementById('bloco-administracao');
     if (!bloco) return;
+
+    if (!usuarioTemPermissao(usuario, 'Administração')) {
+        bloco.classList.add('d-none');
+        return;
+    }
+    bloco.classList.remove('d-none');
 
     var pedidos = dados.pedidos || [];
     var hoje = new Date();

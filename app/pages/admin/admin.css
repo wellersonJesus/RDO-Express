@@ -312,3 +312,40 @@
 @media (max-width: 576px) {
     .admin-input-busca { width: 130px; }
 }
+
+.admin-lista-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px 10px;
+  color: #444;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.admin-loading-spin {
+  font-size: 1.5rem;
+  color: #dc3545;
+  animation: admin-girar 1.2s ease-in-out infinite;
+}
+
+@keyframes admin-girar {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(15deg) scale(1.1); }
+}
+
+.admin-dots-anim span {
+  animation: admin-piscar 1.4s infinite;
+  opacity: 0;
+}
+.admin-dots-anim span:nth-child(1) { animation-delay: 0s; }
+.admin-dots-anim span:nth-child(2) { animation-delay: .2s; }
+.admin-dots-anim span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes admin-piscar {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
