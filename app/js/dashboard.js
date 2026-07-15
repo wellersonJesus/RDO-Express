@@ -417,32 +417,31 @@ function renderizarBlocoAdministracao(usuario, dados) {
         return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
     });
 
+    // Card 1: Total de Pedidos no mês
     var totalPedidosMes = pedidosMes.length;
+
+    var elTotalPedidos = document.getElementById('admin-total-pedidos');
+    var elPedidosInfo = document.getElementById('admin-pedidos-info');
+    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidosMes;
+    if (elPedidosInfo) elPedidosInfo.textContent =
+        totalPedidosMes + (totalPedidosMes === 1 ? ' pedido registrado no período' : ' pedidos registrados no período');
+
+    // Card 2: Pedidos Cancelados no mês
     var pedidosCancelados = pedidosMes.filter(function (p) {
         return String(p.status || '').toUpperCase() === 'CANCELADO';
     });
     var totalCancelados = pedidosCancelados.length;
     var percentualCancelados = totalPedidosMes > 0 ? Math.round((totalCancelados / totalPedidosMes) * 100) : 0;
 
+    var elCanceladosStatus = document.getElementById('admin-cancelados-status');
     var elTotalCancelados = document.getElementById('admin-total-cancelados');
     var elCanceladosInfo = document.getElementById('admin-cancelados-info');
+
+    if (elCanceladosStatus) elCanceladosStatus.textContent = totalCancelados > 0
+        ? totalCancelados + ' cancelamento(s) no período'
+        : 'Nenhum cancelamento no período';
     if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
     if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
-
-    var pedidosPendentes = pedidos.filter(function (p) {
-        return String(p.status || '').toUpperCase() === 'PENDENTE';
-    });
-    var totalAtividades = pedidosPendentes.length;
-
-    var elAtivStatus = document.getElementById('admin-atividade-status');
-    var elTotalAtiv = document.getElementById('admin-total-atividades');
-    var elMetaAtiv = document.getElementById('admin-meta-atividades');
-
-    if (elAtivStatus) elAtivStatus.textContent = totalAtividades > 0
-        ? totalAtividades + ' pedido(s) pendente(s) de atendimento'
-        : 'Nenhuma atividade pendente';
-    if (elTotalAtiv) elTotalAtiv.textContent = totalAtividades;
-    if (elMetaAtiv) elMetaAtiv.textContent = 0;
 }
 
 function renderizarBlocoFinanceiro(usuario, dados) {
