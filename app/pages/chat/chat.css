@@ -47,37 +47,41 @@
 }
 
 .chat-coluna-contatos {
-  flex: 0 0 220px;
-  width: 220px;
-  min-width: 190px;
-  max-width: 220px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  border-right: 1px solid #e9ecef;
-  padding: 8px;
-  gap: 4px;
+    flex: 0 0 220px;
+    width: 220px;
+    min-width: 190px;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    border-right: 1px solid #e9ecef;
+    padding: 8px;
+    gap: 4px
 }
 
 .chat-coluna-mensagens {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0
+}
+
+.min-w-0 {
+    min-width: 0
 }
 
 .btn-notifications.is-muted {
-  color: var(--vermelho-rdo);
-  opacity: .75;
+    color: var(--vermelho-rdo);
+    opacity: .75
 }
 
 .btn-notifications.is-muted #notif-badge {
-  display: none !important;
+    display: none !important
 }
 
 .btn-notifications.is-muted i.bi-bell-fill::before {
-  content: "\f5f3";
+    content: "\f5f3"
 }
 
 .chat-header-mensagens {
@@ -174,10 +178,6 @@
 .btn-dropdown-pedidos:active,
 .btn-sound-toggle:active {
     transform: scale(1)
-}
-
-.btn-sound-toggle {
-    margin-right: 4px
 }
 
 .painel-sound-settings {
@@ -445,15 +445,6 @@
 #notifications-list .p-4 small {
     font-size: .7rem;
     font-weight: 300
-}
-
-#busca-pedido-id {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
-}
-
-#busca-pedido-id:focus {
-    border-color: #dc3545;
-    box-shadow: none
 }
 
 .input-group-text {
@@ -1173,18 +1164,85 @@
     }
 }
 
+/* ===== Drawer de contatos mobile (consolidado) ===== */
+.btn-menu-contatos-mobile {
+    display: none;
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 1.3rem;
+    color: #495057;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0
+}
+
+.btn-menu-contatos-mobile:hover {
+    color: var(--vermelho-rdo)
+}
+
+.drawer-overlay-mobile {
+    display: none
+}
+
 @media (max-width:768px) {
-    .chat-coluna-contatos {
-        width: 100%;
-        max-width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #e9ecef;
-        max-height: 40%
+    #chat {
+        height: 100%;
+        overflow: hidden
+    }
+
+    .chat-header-titulo-texto {
+        display: none
     }
 
     .chat-wrapper {
-        flex-direction: column;
-        min-height: 0
+        position: relative;
+        overflow: hidden
+    }
+
+    .chat-coluna-contatos {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1200;
+        width: 82%;
+        max-width: 320px;
+        min-width: 0;
+        height: 100%;
+        max-height: none;
+        background: #fff;
+        box-shadow: 2px 0 12px rgba(0, 0, 0, .15);
+        transform: translateX(-100%);
+        transition: transform .28s ease;
+        border-right: none
+    }
+
+    #chat.mostrar-contatos-mobile .chat-coluna-contatos {
+        transform: translateX(0)
+    }
+
+    .chat-coluna-mensagens {
+        width: 100%;
+        max-width: 100%;
+        flex: 1 1 auto
+    }
+
+    .btn-menu-contatos-mobile {
+        display: flex
+    }
+
+    .drawer-overlay-mobile {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, .35);
+        z-index: 1100
+    }
+
+    #chat.mostrar-contatos-mobile .drawer-overlay-mobile {
+        display: block
     }
 
     .card-contatos,
@@ -1217,8 +1275,86 @@
         font-size: .72rem
     }
 
-    #dropdown-notifications .dropdown-menu {
+    #dropdown-notifications .dropdown-menu,
+    #dropdown-pedidos .dropdown-menu,
+    #dropdown-pedidos-lista {
         min-width: 300px;
         max-width: calc(100vw - 24px)
     }
+}
+
+.btn-icon-chat {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1.3rem;
+    line-height: 1;
+    transition: color .2s ease, transform .15s ease;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.btn-icon-chat:hover {
+    color: var(--vermelho-rdo);
+    background: rgba(220, 53, 69, .08);
+    transform: scale(1.08);
+}
+
+.btn-icon-chat:active {
+    transform: scale(1);
+}
+
+/* Garante que o Swal (usado no menu do cabeçalho e modal mensagem padrão) fique sempre por cima */
+.swal2-container {
+    z-index: 20000 !important;
+}
+
+#modalMensagemPadrao {
+    z-index: 20050 !important;
+}
+
+#modalMensagemPadrao+.modal-backdrop,
+.modal-backdrop.show~#modalMensagemPadrao {
+    z-index: 20049 !important;
+}
+
+body.modal-open .modal-backdrop {
+    z-index: 20049 !important;
+}
+
+.modal-prioridade-maxima {
+    z-index: 20050 !important;
+}
+
+.modal-prioridade-maxima ~ .modal-backdrop,
+body.modal-open .modal-backdrop {
+    z-index: 20049 !important;
+}
+
+.swal2-styled.btn-outline-secondary,
+.swal2-styled.btn-outline-primary,
+.swal2-styled.btn-outline-dark {
+    color: var(--vermelho-rdo) !important;
+    border-color: var(--vermelho-rdo) !important;
+    background: transparent !important;
+}
+
+.swal2-styled.btn-outline-secondary:hover,
+.swal2-styled.btn-outline-primary:hover,
+.swal2-styled.btn-outline-dark:hover {
+    background: var(--vermelho-rdo) !important;
+    color: #fff !important;
+}
+
+.contact-status,
+#chat-header-status {
+    font-size: 0.68rem !important;
+    color: #b0b6bb !important;
+    font-weight: 400;
 }

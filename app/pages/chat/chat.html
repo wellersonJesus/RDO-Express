@@ -12,15 +12,15 @@
         <div class="card-body p-3 d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center gap-3">
             <i class="bi bi-whatsapp fs-3 text-danger"></i>
-            <div>
+            <div class="chat-header-titulo-texto">
               <h5 class="fw-bold mb-0 text-dark"><span class="text-danger">RDO</span> Express - Chat</h5>
               <small class="text-muted chat-subtitle">Central de Pedidos</small>
             </div>
           </div>
+
           <div class="d-flex align-items-center gap-2">
             <div class="dropdown" id="dropdown-notifications">
-              <button class="btn-notifications" type="button" title="Notificações" id="btn-notifications"
-                data-muted="false">
+              <button class="btn-notifications" type="button" title="Notificações" id="btn-notifications" data-muted="false">
                 <i class="bi bi-bell-fill" id="icon-notifications"></i>
                 <span id="notif-badge" class="d-none">0</span>
               </button>
@@ -32,20 +32,16 @@
                       <button type="button" class="notif-action-btn" id="btn-mute-notif">
                         <i class="bi bi-bell-slash me-1"></i>Silenciar
                       </button>
-                      <button type="button" class="notif-action-btn"
-                        onclick="window.NotificationManager.marcarTodasComoLidas()">
+                      <button type="button" class="notif-action-btn" id="btn-marcar-lidas">
                         <i class="bi bi-check-all me-1"></i>Ler todas
                       </button>
-                      <button type="button" class="notif-action-btn"
-                        onclick="window.NotificationManager.limparNotificacoes()">
+                      <button type="button" class="notif-action-btn" id="btn-limpar-notif">
                         <i class="bi bi-trash3 me-1"></i>Limpar
                       </button>
                     </div>
                   </div>
                 </li>
-                <li>
-                  <hr class="dropdown-divider m-0">
-                </li>
+                <li><hr class="dropdown-divider m-0"></li>
                 <li id="notifications-list">
                   <div class="p-4 text-center text-muted">
                     <i class="bi bi-bell-slash me-2"></i><small>Nenhuma notificação</small>
@@ -63,13 +59,14 @@
   </div>
 
   <div class="chat-wrapper flex-grow-1">
+    <div id="drawer-overlay-mobile" class="drawer-overlay-mobile"></div>
+
     <div class="chat-coluna-contatos card-contatos">
       <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden mb-2 flex-shrink-0">
         <div class="card-body p-2">
           <div class="input-group bg-light rounded-pill px-2">
             <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
-            <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none"
-              placeholder="Buscar cliente..." autocomplete="off">
+            <input type="text" id="chat-search" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar cliente..." autocomplete="off">
           </div>
         </div>
       </div>
@@ -83,37 +80,23 @@
 
     <div class="chat-coluna-mensagens card-chat">
       <div class="chat-header-mensagens d-flex align-items-center justify-content-between gap-2">
-        <div class="d-flex align-items-center gap-2">
-          <div class="position-relative flex-shrink-0 d-none" id="chat-header-avatar-wrapper">
-            <img id="chat-header-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-              class="rounded-circle" width="36" height="36" alt="Avatar">
-            <span id="chat-header-status-dot"
-              class="contact-status-dot position-absolute bottom-0 end-0 rounded-circle border border-white"
-              style="background-color:#adb5bd;"></span>
-          </div>
-          <div class="ms-1">
-            <h6 id="chat-header-name" class="fw-bold mb-0 text-dark">Selecione um contato</h6>
-          </div>
+        <button type="button" id="btn-menu-contatos-mobile" class="btn-menu-contatos-mobile" title="Contatos">
+          <i class="bi bi-list"></i>
+        </button>
+
+        <div class="position-relative flex-shrink-0 d-none" id="chat-header-avatar-wrapper">
+          <img id="chat-header-avatar" src="" alt="" class="contact-avatar rounded-circle">
+          <span class="contact-status-dot position-absolute bottom-0 end-0 rounded-circle"></span>
         </div>
-        <div class="dropdown" id="dropdown-pedidos">
-          <button id="btn-dropdown-pedidos" class="btn-dropdown-pedidos" type="button"
-            title="Ver pedidos deste cliente">
-            <i class="bi bi-three-dots-vertical"></i>
-          </button>
-          <div class="dropdown-menu dropdown-menu-end shadow-sm p-0" id="dropdown-pedidos-lista">
-            <div class="p-2 border-bottom bg-white sticky-top">
-              <div class="input-group input-group-sm bg-light rounded-pill px-2">
-                <span class="input-group-text bg-transparent border-0"><i
-                    class="bi bi-search text-secondary"></i></span>
-                <input type="text" id="busca-pedido-id" class="form-control border-0 bg-transparent shadow-none"
-                  placeholder="Buscar por ID do pedido..." autocomplete="off">
-              </div>
-            </div>
-            <div id="lista-pedidos-itens" class="overflow-auto">
-              <div class="px-3 py-3 text-muted text-center"><small>Selecione um cliente</small></div>
-            </div>
-          </div>
+
+        <div class="min-w-0 flex-grow-1" id="chat-header-info">
+          <div id="chat-header-name" class="contact-name text-truncate fw-bold text-dark"></div>
+          <div id="chat-header-status" class="contact-status text-muted small"></div>
         </div>
+
+        <button id="btn-header-menu" class="btn-icon-chat" title="Opções" onclick="window.abrirMenuHeaderCliente()">
+          <i class="bi bi-three-dots-vertical"></i>
+        </button>
       </div>
 
       <div id="chat-messages-container" class="whatsapp-bg">
@@ -124,194 +107,169 @@
 
       <div class="chat-input-area">
         <div class="input-group bg-light rounded-pill p-1 align-items-end">
-          <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea" rows="1"
-            placeholder="Digite o pedido..." autocomplete="off" style="max-height:120px;overflow-y:auto;"></textarea>
-          <button type="button" id="btn-enviar-mensagem" class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0"
-            title="Enviar pedido" onclick="window.enviarMensagemGeral()">
+          <textarea id="msg-input" class="form-control border-0 bg-transparent px-3 shadow-none chat-textarea" rows="1" placeholder="Digite o pedido..." autocomplete="off" style="max-height:120px;overflow-y:auto;"></textarea>
+          <button type="button" id="btn-enviar-mensagem" class="btn btn-danger rounded-pill px-3 ms-1 flex-shrink-0" title="Enviar pedido" onclick="window.enviarMensagemGeral()">
             <i class="bi bi-send-fill"></i>
           </button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
-    <div class="modal-content modal-status-content border-0 shadow-lg">
-      <div class="modal-status-header modal-header border-0 px-4 pt-4 pb-2 align-items-start">
-        <div class="d-flex align-items-center gap-2">
-          <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger bg-opacity-10"
-            style="width:36px;height:36px;flex-shrink:0;">
-            <i id="modal-status-icone" class="bi bi-arrow-repeat text-danger" style="font-size:1.1rem;"></i>
-          </span>
-          <div>
-            <h6 id="modal-status-texto" class="modal-status-title fw-bold mb-0">Alterar Status</h6>
-            <small class="text-muted" style="font-size:.75rem;">Selecione a ação desejada</small>
-          </div>
-        </div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"
-          style="font-size:.7rem;margin-top:2px;"></button>
-      </div>
-      <div class="modal-body px-4 pb-4 pt-2">
-        <div id="box-botoes-status">
-          <div class="d-flex flex-column gap-2 mt-1">
-            <button type="button"
-              class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
-              onclick="window.StatusModal.processar('EM_ROTA')">
-              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-                style="width:34px;height:34px;background:#e7f1ff;flex-shrink:0;">
-                <i class="bi bi-bicycle text-primary" style="font-size:1rem;"></i>
-              </span>
-              <div>
-                <div class="fw-semibold text-dark" style="font-size:.84rem;">Em Rota</div>
-                <div class="text-muted" style="font-size:.73rem;">Vincular motoboy e despachar pedido</div>
+      <div class="modal fade" id="modalStatus" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+          <div class="modal-content modal-status-content border-0 shadow-lg">
+            <div class="modal-status-header modal-header border-0 px-4 pt-4 pb-2 align-items-start">
+              <div class="d-flex align-items-center gap-2">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger bg-opacity-10" style="width:36px;height:36px;flex-shrink:0;">
+                  <i id="modal-status-icone" class="bi bi-arrow-repeat text-danger" style="font-size:1.1rem;"></i>
+                </span>
+                <div>
+                  <h6 id="modal-status-texto" class="modal-status-title fw-bold mb-0">Alterar Status</h6>
+                  <small class="text-muted" style="font-size:.75rem;">Selecione a ação desejada</small>
+                </div>
               </div>
-            </button>
-            <button type="button"
-              class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
-              onclick="window.StatusModal.processar('CONCLUIDO')">
-              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-                style="width:34px;height:34px;background:#e6f9f0;flex-shrink:0;">
-                <i class="bi bi-check-circle-fill text-success" style="font-size:1rem;"></i>
-              </span>
-              <div>
-                <div class="fw-semibold text-dark" style="font-size:.84rem;">Concluído</div>
-                <div class="text-muted" style="font-size:.73rem;">Marcar entrega como finalizada</div>
+              <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" style="font-size:.7rem;margin-top:2px;"></button>
+            </div>
+            <div class="modal-body px-4 pb-4 pt-2">
+              <div id="box-botoes-status">
+                <div class="d-flex flex-column gap-2 mt-1">
+                  <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action" onclick="window.StatusModal.processar('EM_ROTA')">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:34px;height:34px;background:#e7f1ff;flex-shrink:0;">
+                      <i class="bi bi-bicycle text-primary" style="font-size:1rem;"></i>
+                    </span>
+                    <div>
+                      <div class="fw-semibold text-dark" style="font-size:.84rem;">Em Rota</div>
+                      <div class="text-muted" style="font-size:.73rem;">Vincular motoboy e despachar pedido</div>
+                    </div>
+                  </button>
+                  <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action" onclick="window.StatusModal.processar('CONCLUIDO')">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:34px;height:34px;background:#e6f9f0;flex-shrink:0;">
+                      <i class="bi bi-check-circle-fill text-success" style="font-size:1rem;"></i>
+                    </span>
+                    <div>
+                      <div class="fw-semibold text-dark" style="font-size:.84rem;">Concluído</div>
+                      <div class="text-muted" style="font-size:.73rem;">Marcar entrega como finalizada</div>
+                    </div>
+                  </button>
+                  <button type="button" class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action" onclick="window.StatusModal.processar('CANCELADO')">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:34px;height:34px;background:#fff0f0;flex-shrink:0;">
+                      <i class="bi bi-x-circle-fill text-danger" style="font-size:1rem;"></i>
+                    </span>
+                    <div>
+                      <div class="fw-semibold text-dark" style="font-size:.84rem;">Cancelado</div>
+                      <div class="text-muted" style="font-size:.73rem;">Registrar motivo e cancelar pedido</div>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </button>
-            <button type="button"
-              class="btn btn-light border rounded-3 d-flex align-items-center gap-3 px-3 py-2 text-start w-100 status-btn-action"
-              onclick="window.StatusModal.processar('CANCELADO')">
-              <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-                style="width:34px;height:34px;background:#fff0f0;flex-shrink:0;">
-                <i class="bi bi-x-circle-fill text-danger" style="font-size:1rem;"></i>
-              </span>
-              <div>
-                <div class="fw-semibold text-dark" style="font-size:.84rem;">Cancelado</div>
-                <div class="text-muted" style="font-size:.73rem;">Registrar motivo e cancelar pedido</div>
-              </div>
-            </button>
-          </div>
-        </div>
 
-        <div id="box-selecao-motoboy" class="d-none">
-          <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione o motoboy
-            responsável por esta entrega.</p>
-          <label class="form-label fw-semibold text-dark mb-1" style="font-size:.8rem;" for="select-motoboy">
-            <i class="bi bi-person-badge me-1 text-primary"></i>Motoboy
-          </label>
-          <select id="select-motoboy" class="form-select form-select-sm rounded-3 mb-3 shadow-none border"
-            style="font-size:.83rem;">
-            <option value="" disabled selected>Selecione o motoboy...</option>
-          </select>
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;"
-              onclick="window.StatusModal.voltar()">
-              <i class="bi bi-chevron-left me-1"></i>Voltar
-            </button>
-            <button type="button" class="btn btn-sm btn-primary rounded-3 flex-fill fw-semibold"
-              style="font-size:.8rem;" onclick="window.StatusModal.confirmarMotoboy()">
-              <i class="bi bi-check2 me-1"></i>Confirmar
-            </button>
-          </div>
-        </div>
+              <div id="box-selecao-motoboy" class="d-none">
+                <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione o motoboy responsável por esta entrega.</p>
+                <label class="form-label fw-semibold text-dark mb-1" style="font-size:.8rem;" for="select-motoboy">
+                  <i class="bi bi-person-badge me-1 text-primary"></i>Motoboy
+                </label>
+                <select id="select-motoboy" class="form-select form-select-sm rounded-3 mb-3 shadow-none border" style="font-size:.83rem;">
+                  <option value="" disabled selected>Selecione o motoboy...</option>
+                </select>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
+                    <i class="bi bi-chevron-left me-1"></i>Voltar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-primary rounded-3 flex-fill fw-semibold" style="font-size:.8rem;" onclick="window.StatusModal.confirmarMotoboy()">
+                    <i class="bi bi-check2 me-1"></i>Confirmar
+                  </button>
+                </div>
+              </div>
 
-        <div id="box-cancelamento" class="d-none">
-          <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione um ou
-            mais motivos para registrar o cancelamento.</p>
-          <div class="mb-2">
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <span class="badge rounded-pill text-bg-secondary"
-                style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">CLIENTE</span>
-              <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
+              <div id="box-cancelamento" class="d-none">
+                <p class="text-muted mb-3" style="font-size:.78rem;"><i class="bi bi-info-circle me-1"></i>Selecione um ou mais motivos para registrar o cancelamento.</p>
+                <div class="mb-2">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge rounded-pill text-bg-secondary" style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">CLIENTE</span>
+                    <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
+                  </div>
+                  <div class="d-flex flex-column gap-1">
+                    <label class="cancel-check-item" title="O cliente desistiu devido à demora superior ao tempo estimado.">
+                      <input type="checkbox" class="cancel-cb" value="Tempo de espera excessivo">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Tempo de espera excessivo</div>
+                        <div class="cancel-check-desc">Desistiu por demora além do tempo estimado</div>
+                      </div>
+                    </label>
+                    <label class="cancel-check-item" title="Não precisa mais do produto ou cancelou por motivos pessoais.">
+                      <input type="checkbox" class="cancel-cb" value="Mudança de planos ou arrependimento">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Mudança de planos ou arrependimento</div>
+                        <div class="cancel-check-desc">Cancelou por decisão própria após o pedido</div>
+                      </div>
+                    </label>
+                    <label class="cancel-check-item" title="Informou endereço errado e optou por cancelar para corrigir.">
+                      <input type="checkbox" class="cancel-cb" value="Endereço ou dados incorretos">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Endereço ou dados incorretos</div>
+                        <div class="cancel-check-desc">Local de entrega informado incorretamente</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge rounded-pill text-bg-secondary" style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">MOTOBOY</span>
+                    <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
+                  </div>
+                  <div class="d-flex flex-column gap-1">
+                    <label class="cancel-check-item" title="Pneu furado, falha mecânica ou outro problema que impede a entrega.">
+                      <input type="checkbox" class="cancel-cb" value="Problemas técnicos ou mecânicos">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Problemas técnicos ou mecânicos</div>
+                        <div class="cancel-check-desc">Falha na moto ou equipamento durante a rota</div>
+                      </div>
+                    </label>
+                    <label class="cancel-check-item" title="Não localizou o endereço ou avaliou risco de segurança na região.">
+                      <input type="checkbox" class="cancel-cb" value="Local de difícil acesso ou inseguro">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Local de difícil acesso ou inseguro</div>
+                        <div class="cancel-check-desc">Endereço inacessível ou região de risco</div>
+                      </div>
+                    </label>
+                    <label class="cancel-check-item" title="Chegou ao local mas não obteve retorno do cliente após as tentativas padrão.">
+                      <input type="checkbox" class="cancel-cb" value="Impossibilidade de contato com o cliente">
+                      <div class="cancel-check-body">
+                        <div class="cancel-check-title">Impossibilidade de contato</div>
+                        <div class="cancel-check-desc">Cliente não atendeu após tentativas no local</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <div id="cancel-error" class="d-none mb-2 d-flex align-items-center gap-1 text-danger rounded-3 px-2 py-1" style="font-size:.78rem;background:#fff0f0;border:1px solid #f5c6cb;">
+                  <i class="bi bi-exclamation-circle-fill"></i><span>Selecione ao menos um motivo antes de confirmar.</span>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;" onclick="window.StatusModal.voltar()">
+                    <i class="bi bi-chevron-left me-1"></i>Voltar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger rounded-3 flex-fill fw-semibold" style="font-size:.8rem;" onclick="window.StatusModal.confirmarCancelamento()">
+                    <i class="bi bi-x-circle me-1"></i>Confirmar
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="d-flex flex-column gap-1">
-              <label class="cancel-check-item" title="O cliente desistiu devido à demora superior ao tempo estimado.">
-                <input type="checkbox" class="cancel-cb" value="Tempo de espera excessivo">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Tempo de espera excessivo</div>
-                  <div class="cancel-check-desc">Desistiu por demora além do tempo estimado</div>
-                </div>
-              </label>
-              <label class="cancel-check-item" title="Não precisa mais do produto ou cancelou por motivos pessoais.">
-                <input type="checkbox" class="cancel-cb" value="Mudança de planos ou arrependimento">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Mudança de planos ou arrependimento</div>
-                  <div class="cancel-check-desc">Cancelou por decisão própria após o pedido</div>
-                </div>
-              </label>
-              <label class="cancel-check-item" title="Informou endereço errado e optou por cancelar para corrigir.">
-                <input type="checkbox" class="cancel-cb" value="Endereço ou dados incorretos">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Endereço ou dados incorretos</div>
-                  <div class="cancel-check-desc">Local de entrega informado incorretamente</div>
-                </div>
-              </label>
-            </div>
-          </div>
-          <div class="mb-3">
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <span class="badge rounded-pill text-bg-secondary"
-                style="font-size:.67rem;font-weight:600;letter-spacing:.04em;">MOTOBOY</span>
-              <div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>
-            </div>
-            <div class="d-flex flex-column gap-1">
-              <label class="cancel-check-item"
-                title="Pneu furado, falha mecânica ou outro problema que impede a entrega.">
-                <input type="checkbox" class="cancel-cb" value="Problemas técnicos ou mecânicos">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Problemas técnicos ou mecânicos</div>
-                  <div class="cancel-check-desc">Falha na moto ou equipamento durante a rota</div>
-                </div>
-              </label>
-              <label class="cancel-check-item"
-                title="Não localizou o endereço ou avaliou risco de segurança na região.">
-                <input type="checkbox" class="cancel-cb" value="Local de difícil acesso ou inseguro">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Local de difícil acesso ou inseguro</div>
-                  <div class="cancel-check-desc">Endereço inacessível ou região de risco</div>
-                </div>
-              </label>
-              <label class="cancel-check-item"
-                title="Chegou ao local mas não obteve retorno do cliente após as tentativas padrão.">
-                <input type="checkbox" class="cancel-cb" value="Impossibilidade de contato com o cliente">
-                <div class="cancel-check-body">
-                  <div class="cancel-check-title">Impossibilidade de contato</div>
-                  <div class="cancel-check-desc">Cliente não atendeu após tentativas no local</div>
-                </div>
-              </label>
-            </div>
-          </div>
-          <div id="cancel-error" class="d-none mb-2 d-flex align-items-center gap-1 text-danger rounded-3 px-2 py-1"
-            style="font-size:.78rem;background:#fff0f0;border:1px solid #f5c6cb;">
-            <i class="bi bi-exclamation-circle-fill"></i><span>Selecione ao menos um motivo antes de confirmar.</span>
-          </div>
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-light border rounded-3 flex-fill" style="font-size:.8rem;"
-              onclick="window.StatusModal.voltar()">
-              <i class="bi bi-chevron-left me-1"></i>Voltar
-            </button>
-            <button type="button" class="btn btn-sm btn-danger rounded-3 flex-fill fw-semibold" style="font-size:.8rem;"
-              onclick="window.StatusModal.confirmarCancelamento()">
-              <i class="bi bi-x-circle me-1"></i>Confirmar
-            </button>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-4 border-0 shadow">
-      <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold">MODELO MENSAGENS</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly>📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
+      <div class="modal fade" id="modalMensagemPadrao" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+              <div class="d-flex align-items-center gap-2">
+                <i id="modal-mensagem-icone" class="bi bi-chat-left-text-fill text-secondary"></i>
+                <h5 id="modal-mensagem-titulo" class="modal-title fw-bold mb-0">MODELO MENSAGENS</h5>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div id="modal-mensagem-erro-box" class="alert alert-danger d-none rounded-3" style="font-size:.85rem;"></div>
+              <textarea id="texto-modelo" class="form-control bg-light mb-3 textarea-modelo" rows="12" readonly>📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:
 
 SOLICITANTE: 
 CONTATO: 
@@ -327,40 +285,41 @@ OBSERVAÇÃO: Descreva a observação aqui se necessario
 
 Assim que enviar esta mensagem preenchida, 
 calcularemos á sua taxa! 🏁</textarea>
-        <button type="button" class="btn btn-outline-danger w-100 rounded-pill" onclick="window.copiarModelo()">
-          <i class="bi bi-clipboard me-1"></i> Copiar Modelo
-        </button>
+              <button type="button" id="btn-copiar-modelo" class="btn btn-outline-danger w-100 rounded-pill" onclick="window.copiarModelo()">
+                <i class="bi bi-clipboard me-1"></i> Copiar Modelo
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div class="modal fade" id="modalValidacao" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+              <div class="d-flex align-items-center gap-2">
+                <i id="modal-validacao-icone" class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                <h6 id="modal-validacao-titulo" class="modal-title fw-bold mb-0">Atenção</h6>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+              <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size:.9rem;"></p>
+              <div id="modal-validacao-modelo" class="d-none mt-3">
+                <textarea id="modal-validacao-textarea" class="form-control bg-light textarea-modelo" rows="12" readonly></textarea>
+                <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2" onclick="window.copiarModeloValidacao()">
+                  <i class="bi bi-clipboard me-1"></i> Copiar Modelo
+                </button>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-danger rounded-pill px-4 w-100" data-bs-dismiss="modal">Entendi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modal-container"></div>
     </div>
   </div>
 </div>
-
-<div class="modal fade" id="modalValidacao" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content border-0 shadow rounded-4">
-      <div class="modal-header border-0 pb-0">
-        <div class="d-flex align-items-center gap-2">
-          <i id="modal-validacao-icone" class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
-          <h6 class="modal-title fw-bold mb-0">Atenção</h6>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body pt-2">
-        <p id="modal-validacao-mensagem" class="mb-0 text-muted" style="font-size:.9rem;"></p>
-        <div id="modal-validacao-modelo" class="d-none mt-3">
-          <textarea id="modal-validacao-textarea" class="form-control bg-light textarea-modelo" rows="12"
-            readonly></textarea>
-          <button type="button" class="btn btn-outline-danger w-100 rounded-pill mt-2"
-            onclick="window.copiarModeloValidacao()">
-            <i class="bi bi-clipboard me-1"></i> Copiar Modelo
-          </button>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-danger rounded-pill px-4 w-100" data-bs-dismiss="modal">Entendi</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="modal-container"></div>
