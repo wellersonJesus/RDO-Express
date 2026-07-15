@@ -278,11 +278,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         return '<tr data-pedido-id="' + idSafe + '">' +
             '<td class="ps-3"><span class="fw-semibold text-danger">' + _escHtml(idFmt) + '</span></td>' +
-            '<td>' + _escHtml(dataPedido) + '</td>' +
+            '<td class="td-mobile-hide">' + _escHtml(dataPedido) + '</td>' +
             '<td>' + _escHtml(solicitante) + '</td>' +
-            '<td><span class="badge bg-' + corStatus + '">' + _escHtml(statusLabel) + '</span></td>' +
-            '<td class="text-muted small">' + (motoboyNome ? _escHtml(motoboyNome) : '<span class="text-muted">—</span>') + '</td>' +
+            '<td class="td-mobile-hide"><span class="badge bg-' + corStatus + '">' + _escHtml(statusLabel) + '</span></td>' +
+            '<td class="text-muted small td-mobile-hide">' + (motoboyNome ? _escHtml(motoboyNome) : '<span class="text-muted">—</span>') + '</td>' +
             '<td class="text-end pe-3">' + acoes + '</td></tr>';
+
     }
 
     function _matchFiltros(p, termo, categoria, statusFiltro, dataFiltro) {

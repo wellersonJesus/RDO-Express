@@ -121,11 +121,16 @@
                         <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
                             <thead class="text-uppercase tabela-pedidos-head">
                                 <tr>
-                                    <th class="border-0 fw-normal">N.Serviço <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço"><i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i></button></th>
-                                    <th class="border-0 fw-normal">Data</th>
+                                    <th class="border-0 fw-normal">
+                                        N.Serviço
+                                        <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço">
+                                            <i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i>
+                                        </button>
+                                    </th>
+                                    <th class="border-0 fw-normal td-mobile-hide">Data</th>
                                     <th class="border-0 fw-normal">Cliente</th>
-                                    <th class="border-0 fw-normal">Status</th>
-                                    <th class="border-0 fw-normal">Motoboy</th>
+                                    <th class="border-0 fw-normal td-mobile-hide">Status</th>
+                                    <th class="border-0 fw-normal td-mobile-hide">Motoboy</th>
                                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                                 </tr>
                             </thead>
@@ -166,7 +171,7 @@
 </div>
 
 <script>
-(function() {
+(function () {
     'use strict';
 
     function _aguardarPedidosJs() {
