@@ -266,10 +266,16 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
                 title: opcoes.titulo || 'Atenção',
                 html: mensagem,
                 confirmButtonColor: '#dc3545',
-                confirmButtonText: 'Entendi'
+                confirmButtonText: 'Entendi',
+                customClass: { container: 'swal-prioridade-maxima' } // 🔑 força CSS acima
             });
         } else { alert(mensagem.replace(/<[^>]*>/g, '')); }
         return;
+    }
+
+    // 🔑 PORTAL: garante que o modal esteja direto no body
+    if (modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
     }
 
     var msgEl = document.getElementById('modal-validacao-mensagem');
@@ -298,9 +304,19 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     try {
         var instExist = bootstrap.Modal.getInstance(modalEl);
         if (instExist) { try { instExist.dispose(); } catch (_) { } }
+
+        // 🔑 força z-index diretamente no elemento
+        modalEl.style.zIndex = '20050';
+
         setTimeout(function () {
             _limparBackdrop();
-            new bootstrap.Modal(modalEl).show();
+            var modal = new bootstrap.Modal(modalEl);
+            modalEl.addEventListener('shown.bs.modal', function () {
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                var ultimo = backdrops[backdrops.length - 1];
+                if (ultimo) ultimo.style.zIndex = '20049';
+            }, { once: true });
+            modal.show();
         }, modaisAbertos.length > 0 ? 350 : 0);
     } catch (_) {
         if (typeof Swal !== 'undefined') {

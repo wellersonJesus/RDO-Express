@@ -2333,14 +2333,33 @@ window.iniciarFluxoCheckout = function () {
         var modalEl = document.getElementById('modalMapa');
         if (!modalEl) { window.AppRDO._mapaModalAberto = false; return; }
 
+        // 🔑 PORTAL: escapa do stacking context do #chat / #modal-container
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        try {
+            var existente = bootstrap.Modal.getInstance(modalEl);
+            if (existente) existente.dispose();
+        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
+        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
         modalEl.addEventListener('hidden.bs.modal', function () {
             window.AppRDO._mapaModalAberto = false;
-            if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); } window._leafletMapInstance = null; }
+            if (window._leafletMapInstance) {
+                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
+                window._leafletMapInstance = null;
+            }
         }, { once: true });
 
         var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
 
         modalEl.addEventListener('shown.bs.modal', function () {
+            modalEl.style.zIndex = '1075';
+            var backdrops = document.querySelectorAll('.modal-backdrop');
+            var ultimoBackdrop = backdrops[backdrops.length - 1];
+            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
             var elSolicitante = document.getElementById('header-nome-solicitante');
             var loaderEl = document.getElementById('mapa-loader');
             if (elSolicitante) elSolicitante.innerText = solicitante;
@@ -2398,12 +2417,22 @@ window.iniciarFluxoCheckout = function () {
             });
         }, { once: true });
 
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, { once: true });
+
         modal.show();
     });
 };
 
 window.prosseguirParaFormulario = function () {
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.distanciaTotal) { alert('Dados do pedido não foram calculados corretamente.'); return; }
+    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.distanciaTotal) {
+        alert('Dados do pedido não foram calculados corretamente.');
+        return;
+    }
 
     var modalMapa = document.getElementById('modalMapa');
     var instMapa = modalMapa ? bootstrap.Modal.getInstance(modalMapa) : null;
@@ -2412,12 +2441,39 @@ window.prosseguirParaFormulario = function () {
     setTimeout(function () {
         window.loadModal('form_clientes.html').then(function (ok) {
             if (!ok) return;
+
             var modalForm = document.getElementById('modalFormulario');
             if (!modalForm) return;
+
+            // 🔑 PORTAL: escapa do stacking context
+            if (modalForm.parentElement !== document.body) {
+                document.body.appendChild(modalForm);
+            }
+
+            try {
+                var existente = bootstrap.Modal.getInstance(modalForm);
+                if (existente) existente.dispose();
+            } catch (e) { window._exibirErroGlobal(e, 'liberar modal de formulário'); }
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
             var bsModalForm = new bootstrap.Modal(modalForm, { backdrop: 'static', keyboard: false });
+
             modalForm.addEventListener('shown.bs.modal', function () {
+                modalForm.style.zIndex = '1075';
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                var ultimoBackdrop = backdrops[backdrops.length - 1];
+                if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
                 window._preencherFormulario(window.dadosPedidoAtual);
             }, { once: true });
+
+            modalForm.addEventListener('hidden.bs.modal', function () {
+                if (typeof _limparBackdrop === 'function') _limparBackdrop();
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, { once: true });
+
             bsModalForm.show();
         });
     }, 400);
@@ -2668,10 +2724,29 @@ window.voltarParaMapa = function () {
     setTimeout(function () {
         window.loadModal('mapa_clientes.html').then(function (ok) {
             if (!ok) return;
+
             var modalMapa = document.getElementById('modalMapa');
             if (!modalMapa) return;
+
+            // 🔑 PORTAL: escapa do stacking context
+            if (modalMapa.parentElement !== document.body) {
+                document.body.appendChild(modalMapa);
+            }
+
+            try {
+                var existente = bootstrap.Modal.getInstance(modalMapa);
+                if (existente) existente.dispose();
+            } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
             var bsModalMapa = new bootstrap.Modal(modalMapa, { backdrop: 'static', keyboard: false });
+
             modalMapa.addEventListener('shown.bs.modal', function () {
+                modalMapa.style.zIndex = '1075';
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                var ultimoBackdrop = backdrops[backdrops.length - 1];
+                if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
                 var elSolicitante = document.getElementById('header-nome-solicitante');
                 if (elSolicitante && window.dadosPedidoAtual) elSolicitante.innerText = window.dadosPedidoAtual.solicitante || 'N/A';
                 if (window.dadosPedidoAtual && window.dadosPedidoAtual.distanciaTotal) {
@@ -2683,6 +2758,14 @@ window.voltarParaMapa = function () {
                 }
                 window.renderizarMapaUnificado();
             }, { once: true });
+
+            modalMapa.addEventListener('hidden.bs.modal', function () {
+                if (typeof _limparBackdrop === 'function') _limparBackdrop();
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, { once: true });
+
             bsModalMapa.show();
         });
     }, 400);
