@@ -188,21 +188,21 @@
         if (!footerEl) return;
 
         footerEl.innerHTML =
-            '<div class="d-flex align-items-center justify-content-center gap-4 py-3">' +
+            '<div class="d-flex align-items-center justify-content-center gap-3 py-2 flex-wrap">' +
             '<div class="d-flex align-items-center gap-2">' +
-            '<i class="bi bi-signpost-split-fill text-danger" style="font-size:1.5rem;"></i>' +
-            '<div><div class="small text-muted mb-1">Distância</div>' +
-            '<div class="fw-bold text-dark fs-5">' + km + ' km</div></div></div>' +
-            '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+            '<i class="bi bi-signpost-split-fill text-danger resumo-icone"></i>' +
+            '<div><div class="small text-muted mb-0 resumo-label">Distância</div>' +
+            '<div class="fw-bold text-dark resumo-valor-num">' + km + ' km</div></div></div>' +
+            '<div class="vr" style="height:34px;opacity:0.3;"></div>' +
             '<div class="d-flex align-items-center gap-2">' +
-            '<i class="bi bi-clock-fill text-primary" style="font-size:1.5rem;"></i>' +
-            '<div><div class="small text-muted mb-1">Tempo</div>' +
-            '<div class="fw-bold text-dark fs-5">' + formatarTempo(min) + '</div></div></div>' +
-            '<div class="vr" style="height:50px;opacity:0.3;"></div>' +
+            '<i class="bi bi-clock-fill text-primary resumo-icone"></i>' +
+            '<div><div class="small text-muted mb-0 resumo-label">Tempo</div>' +
+            '<div class="fw-bold text-dark resumo-valor-num">' + formatarTempo(min) + '</div></div></div>' +
+            '<div class="vr" style="height:34px;opacity:0.3;"></div>' +
             '<div class="d-flex align-items-center gap-2">' +
-            '<i class="bi bi-cash-stack text-success" style="font-size:1.5rem;"></i>' +
-            '<div><div class="small text-muted mb-1">Valor</div>' +
-            '<div class="fw-bold text-success" style="font-size:1.8rem;">' + moeda(valor) + '</div></div></div>' +
+            '<i class="bi bi-cash-stack text-success resumo-icone"></i>' +
+            '<div><div class="small text-muted mb-0 resumo-label">Valor</div>' +
+            '<div class="fw-bold text-success resumo-valor-preco">' + moeda(valor) + '</div></div></div>' +
             '</div>';
     }
 

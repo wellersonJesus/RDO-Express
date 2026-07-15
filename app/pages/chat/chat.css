@@ -1293,3 +1293,19 @@ body.modal-open .modal-backdrop {
 .swal2-container {
     z-index: var(--z-swal) !important;
 }
+
+.resumo-icone {
+    font-size: .85rem !important;
+}
+
+.resumo-label {
+    font-size: .62rem;
+}
+
+.resumo-valor-num {
+    font-size: .75rem !important;
+}
+
+.resumo-valor-preco {
+    font-size: 1rem !important;
+}
