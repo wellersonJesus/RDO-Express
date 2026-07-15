@@ -216,6 +216,20 @@ window.initBot = function () {
     return window.reloadBot();
 };
 
+function exibirLoadingBot() {
+    var tbody = document.getElementById('bot-list');
+    if (!tbody) return;
+    tbody.innerHTML =
+        '<tr><td colspan="5" class="p-0">' +
+        '<div class="bot-lista-loading">' +
+        '<i class="bi bi-search bot-loading-spin"></i>' +
+        '<span>Buscando informações' +
+        '<span class="bot-dots-anim"><span>.</span><span>.</span><span>.</span></span>' +
+        '</span>' +
+        '</div>' +
+        '</td></tr>';
+}
+
 window.reloadBot = function () {
     var tbody = document.getElementById('bot-list');
     if (window.botState.isFetching) return Promise.resolve();
@@ -224,6 +238,7 @@ window.reloadBot = function () {
     window.botState.isFetching = true;
     window.botState._cacheCarregado = false;
     syncStart();
+    exibirLoadingBot();
 
     return Promise.all([
         window.API.call('getusuarios').catch(function () { return []; }),
@@ -836,6 +851,7 @@ window.addEventListener('storage', function (e) {
         window.aplicarPermissoesUsuario();
     }
 });
+
 
 
 

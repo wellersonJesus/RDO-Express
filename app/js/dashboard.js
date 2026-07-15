@@ -95,6 +95,40 @@ function usuarioTemPermissao(usuario, permissao) {
     return usuario.permissoes.indexOf(permissao) !== -1;
 }
 
+var MAPA_BLOCO_PERMISSOES = {
+    'bloco-visao-geral': ['Dashboard'],
+    'bloco-automacao': ['Administração', 'Bot'],   // basta 1 destes (uso especial abaixo)
+    'bloco-chat-pedidos': ['Chat', 'Pedidos'],      // exige AMBOS
+    'bloco-administracao': ['Administração'],
+    'bloco-financeiro': ['Financeiro'],
+    'bloco-relatorio': ['Relatórios']
+};
+
+/**
+ * Verifica se o usuário possui TODAS as permissões exigidas para o bloco.
+ * @param {object} usuario
+ * @param {string[]} permissoesRequeridas
+ * @param {boolean} modoOu - se true, basta 1 permissão (usado só no bloco-automacao)
+ */
+function usuarioTemAcessoBloco(usuario, permissoesRequeridas, modoOu) {
+    if (!Array.isArray(permissoesRequeridas) || permissoesRequeridas.length === 0) return true;
+    if (modoOu) {
+        return permissoesRequeridas.some(function (p) { return usuarioTemPermissao(usuario, p); });
+    }
+    return permissoesRequeridas.every(function (p) { return usuarioTemPermissao(usuario, p); });
+}
+
+function _aplicarVisibilidadeBloco(blocoId, usuario, modoOu) {
+    var bloco = document.getElementById(blocoId);
+    if (!bloco) return false;
+
+    var permissoesRequeridas = MAPA_BLOCO_PERMISSOES[blocoId] || [];
+    var temAcesso = usuarioTemAcessoBloco(usuario, permissoesRequeridas, modoOu);
+
+    bloco.classList.toggle('d-none', !temAcesso);
+    return temAcesso;
+}
+
 function atualizarHeaderUsuario(usuario) {
     var elNome = document.getElementById('user-display-name');
     var elCargo = document.getElementById('user-display-cargo');
@@ -347,15 +381,8 @@ function _construirIndicadoresVisaoGeral(dados) {
 }
 
 function renderizarBlocoVisaoGeral() {
-    var bloco = document.getElementById('bloco-visao-geral');
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
-
-    if (!bloco) return;
-    if (!usuarioTemPermissao(usuario, 'Dashboard')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
+    if (!_aplicarVisibilidadeBloco('bloco-visao-geral', usuario)) return;
 
     var dados = window.dashboardState.dados || { clientes: [], financeiro: [], pedidos: [] };
     var indicadores = _construirIndicadoresVisaoGeral(dados);
@@ -363,17 +390,99 @@ function renderizarBlocoVisaoGeral() {
 }
 
 function renderizarBlocoGestao() {
-    var bloco = document.getElementById('bloco-automacao');
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
-
-    if (!bloco) { renderizarBlocoAutomacao(); return; }
-
-    if (!usuarioTemPermissao(usuario, 'Administração') && !usuarioTemPermissao(usuario, 'Bot')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
+    if (!_aplicarVisibilidadeBloco('bloco-automacao', usuario, true)) return; // OU: Administração ou Bot
     renderizarBlocoAutomacao();
+}
+
+function renderizarBlocoChatPedidos(usuario, dados) {
+    if (!_aplicarVisibilidadeBloco('bloco-chat-pedidos', usuario)) return; // AND: Chat e Pedidos
+
+    dados = dados || window.dashboardState.dados || {};
+    var ranking = calcularTopClientesPedidos(dados, 5, 30);
+    renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
+
+    var indicadores = _construirIndicadoresChatPedidos(dados);
+    renderBars('dashboard-chat-pedidos-ranking-bars', indicadores);
+}
+
+function renderizarBlocoAdministracao(usuario, dados) {
+    if (!_aplicarVisibilidadeBloco('bloco-administracao', usuario)) return;
+
+    var pedidos = dados.pedidos || [];
+    var hoje = new Date();
+    var pedidosMes = pedidos.filter(function (p) {
+        var data = _parseDataBR(p.data);
+        return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
+    });
+
+    var totalPedidosMes = pedidosMes.length;
+    var elTotalPedidos = document.getElementById('admin-total-pedidos');
+    var elPedidosInfo = document.getElementById('admin-pedidos-info');
+    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidosMes;
+    if (elPedidosInfo) elPedidosInfo.textContent =
+        totalPedidosMes + (totalPedidosMes === 1 ? ' pedido registrado no período' : ' pedidos registrados no período');
+
+    var pedidosCancelados = pedidosMes.filter(function (p) {
+        return String(p.status || '').toUpperCase() === 'CANCELADO';
+    });
+    var totalCancelados = pedidosCancelados.length;
+    var percentualCancelados = totalPedidosMes > 0 ? Math.round((totalCancelados / totalPedidosMes) * 100) : 0;
+
+    var elCanceladosStatus = document.getElementById('admin-cancelados-status');
+    var elTotalCancelados = document.getElementById('admin-total-cancelados');
+    var elCanceladosInfo = document.getElementById('admin-cancelados-info');
+
+    if (elCanceladosStatus) elCanceladosStatus.textContent = totalCancelados > 0
+        ? totalCancelados + ' cancelamento(s) no período'
+        : 'Nenhum cancelamento no período';
+    if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
+    if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
+}
+
+function renderizarBlocoFinanceiro(usuario, dados) {
+    var cards = document.getElementById('dashboard-fin-cards');
+    if (!_aplicarVisibilidadeBloco('bloco-financeiro', usuario) || !cards) return;
+
+    var financeiro = dados.financeiro || [];
+    var receitas = financeiro.filter(function (f) {
+        return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1;
+    });
+    var despesas = financeiro.filter(function (f) {
+        return _tipoLancamento(f).indexOf('DESPESA') !== -1 || _tipoLancamento(f).indexOf('SAIDA') !== -1 || _tipoLancamento(f).indexOf('SAÍDA') !== -1;
+    });
+
+    var totalReceita = receitas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
+    var totalDespesa = despesas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
+    var saldo = totalReceita - totalDespesa;
+    var fmt = function (n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+
+    var html = '';
+    html += renderIndicadorCard('success', 'bi-graph-up-arrow', fmt(totalReceita), 'Total de Receitas');
+    html += renderIndicadorCard('danger', 'bi-graph-down-arrow', fmt(totalDespesa), 'Total de Despesas');
+    html += renderIndicadorCard(saldo >= 0 ? 'primary' : 'warning', 'bi-piggy-bank-fill', fmt(saldo), 'Saldo Atual');
+    html += renderIndicadorCard('secondary', 'bi-receipt', financeiro.length, 'Lançamentos no Período');
+
+    cards.innerHTML = html;
+
+    _renderChartFinanceiroLinha(receitas, despesas);
+    _renderChartFinanceiroPizza(receitas.length, despesas.length);
+}
+
+function renderizarBlocoRelatorio(usuario, dados) {
+    var grid = document.getElementById('dashboard-relatorio-grid');
+    if (!_aplicarVisibilidadeBloco('bloco-relatorio', usuario) || !grid) return;
+
+    var relatorios = dados.relatorios || [];
+    var pedidos = dados.pedidos || [];
+
+    var html = '';
+    html += renderIndicadorCard('secondary', 'bi-file-earmark-text-fill', relatorios.length, 'Relatórios Gerados');
+    html += renderIndicadorCard('primary', 'bi-graph-up', pedidos.length, 'Pedidos no Período');
+    html += renderIndicadorCard('purple', 'bi-clock-history', _mediaDiariaPedidos(pedidos), 'Média Diária de Pedidos');
+
+    grid.innerHTML = html;
+    _renderChartVolumePedidos(pedidos);
 }
 
 function _mensagensPorDia(mensagens, dias) {
@@ -416,106 +525,6 @@ function _construirIndicadoresChatPedidos(dados) {
         { id: 'chats-abertos', cor: 'info', icone: 'bi-chat-left-text-fill', valor: chatsAbertos, max: Math.max(mensagens.length, 1), label: 'Chats Abertos' },
         { id: 'chats-encerrados', cor: 'secondary', icone: 'bi-chat-square-dots-fill', valor: chatsEncerrados, max: Math.max(mensagens.length, 1), label: 'Chats Encerrados' }
     ];
-}
-
-function renderizarBlocoChatPedidos(usuario, dados) {
-    var bloco = document.getElementById('bloco-chat-pedidos');
-    if (!bloco) return;
-
-    if (!usuarioTemPermissao(usuario, 'Chat') && !usuarioTemPermissao(usuario, 'Pedidos')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
-
-    dados = dados || window.dashboardState.dados || {};
-
-    var ranking = calcularTopClientesPedidos(dados, 5, 30);
-    renderizarRankingClientes('dashboard-chat-pedidos-ranking', ranking);
-
-    var indicadores = _construirIndicadoresChatPedidos(dados);
-    renderBars('dashboard-chat-pedidos-ranking-bars', indicadores);
-}
-
-function renderizarBlocoAdministracao(usuario, dados) {
-    var bloco = document.getElementById('bloco-administracao');
-    if (!bloco) return;
-
-    if (!usuarioTemPermissao(usuario, 'Administração')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
-
-    var pedidos = dados.pedidos || [];
-    var hoje = new Date();
-    var pedidosMes = pedidos.filter(function (p) {
-        var data = _parseDataBR(p.data);
-        return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
-    });
-
-    // Card 1: Total de Pedidos no mês
-    var totalPedidosMes = pedidosMes.length;
-
-    var elTotalPedidos = document.getElementById('admin-total-pedidos');
-    var elPedidosInfo = document.getElementById('admin-pedidos-info');
-    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidosMes;
-    if (elPedidosInfo) elPedidosInfo.textContent =
-        totalPedidosMes + (totalPedidosMes === 1 ? ' pedido registrado no período' : ' pedidos registrados no período');
-
-    // Card 2: Pedidos Cancelados no mês
-    var pedidosCancelados = pedidosMes.filter(function (p) {
-        return String(p.status || '').toUpperCase() === 'CANCELADO';
-    });
-    var totalCancelados = pedidosCancelados.length;
-    var percentualCancelados = totalPedidosMes > 0 ? Math.round((totalCancelados / totalPedidosMes) * 100) : 0;
-
-    var elCanceladosStatus = document.getElementById('admin-cancelados-status');
-    var elTotalCancelados = document.getElementById('admin-total-cancelados');
-    var elCanceladosInfo = document.getElementById('admin-cancelados-info');
-
-    if (elCanceladosStatus) elCanceladosStatus.textContent = totalCancelados > 0
-        ? totalCancelados + ' cancelamento(s) no período'
-        : 'Nenhum cancelamento no período';
-    if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
-    if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
-}
-
-function renderizarBlocoFinanceiro(usuario, dados) {
-    var bloco = document.getElementById('bloco-financeiro');
-    var cards = document.getElementById('dashboard-fin-cards');
-    if (!bloco || !cards) return;
-
-    if (!usuarioTemPermissao(usuario, 'Financeiro')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
-
-    var financeiro = dados.financeiro || [];
-    var receitas = financeiro.filter(function (f) {
-        return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1;
-    });
-    var despesas = financeiro.filter(function (f) {
-        return _tipoLancamento(f).indexOf('DESPESA') !== -1 || _tipoLancamento(f).indexOf('SAIDA') !== -1 || _tipoLancamento(f).indexOf('SAÍDA') !== -1;
-    });
-
-    var totalReceita = receitas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
-    var totalDespesa = despesas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
-    var saldo = totalReceita - totalDespesa;
-
-    var fmt = function (n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
-
-    var html = '';
-    html += renderIndicadorCard('success', 'bi-graph-up-arrow', fmt(totalReceita), 'Total de Receitas');
-    html += renderIndicadorCard('danger', 'bi-graph-down-arrow', fmt(totalDespesa), 'Total de Despesas');
-    html += renderIndicadorCard(saldo >= 0 ? 'primary' : 'warning', 'bi-piggy-bank-fill', fmt(saldo), 'Saldo Atual');
-    html += renderIndicadorCard('secondary', 'bi-receipt', financeiro.length, 'Lançamentos no Período');
-
-    cards.innerHTML = html;
-
-    _renderChartFinanceiroLinha(receitas, despesas);
-    _renderChartFinanceiroPizza(receitas.length, despesas.length);
 }
 
 function _agruparPorMes(lista) {
@@ -572,30 +581,6 @@ function _renderChartFinanceiroPizza(qtdReceitas, qtdDespesas) {
         data: { labels: ['Receitas', 'Despesas'], datasets: [{ data: [qtdReceitas, qtdDespesas], backgroundColor: ['#198754', '#dc3545'] }] },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
-}
-
-function renderizarBlocoRelatorio(usuario, dados) {
-    var bloco = document.getElementById('bloco-relatorio');
-    var grid = document.getElementById('dashboard-relatorio-grid');
-    if (!bloco || !grid) return;
-
-    if (!usuarioTemPermissao(usuario, 'Relatórios')) {
-        bloco.classList.add('d-none');
-        return;
-    }
-    bloco.classList.remove('d-none');
-
-    var relatorios = dados.relatorios || [];
-    var pedidos = dados.pedidos || [];
-
-    var html = '';
-    html += renderIndicadorCard('secondary', 'bi-file-earmark-text-fill', relatorios.length, 'Relatórios Gerados');
-    html += renderIndicadorCard('primary', 'bi-graph-up', pedidos.length, 'Pedidos no Período');
-    html += renderIndicadorCard('purple', 'bi-clock-history', _mediaDiariaPedidos(pedidos), 'Média Diária de Pedidos');
-
-    grid.innerHTML = html;
-
-    _renderChartVolumePedidos(pedidos);
 }
 
 function _mediaDiariaPedidos(pedidos) {
@@ -820,3 +805,4 @@ function _exibirErroDashboard() {
         '<button class="btn btn-sm btn-outline-danger mt-3" onclick="window.initDashboard()">Tentar novamente</button>' +
         '</div>';
 }
+

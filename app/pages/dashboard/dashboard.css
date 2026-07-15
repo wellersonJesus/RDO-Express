@@ -1074,3 +1074,38 @@ img.avatar:not([src]) {
     .bar-tooltip { left: 0; top: calc(100% + 4px); transform: translateY(-4px); }
     .hbar-label { width: 80px; }
 }
+
+.dashboard-blocos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.bloco-dashboard {
+  flex: 1 1 300px; /* cresce, encolhe, base de 300px */
+  min-width: 280px;
+}
+
+.d-none {
+  display: none !important;
+}
+
+.dashboard-blocos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.bloco-dashboard {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
+.bloco-dashboard[style*="flex-basis:100%"] {
+    flex: 1 1 100%;
+}
+
+.d-none {
+    display: none !important;
+}
