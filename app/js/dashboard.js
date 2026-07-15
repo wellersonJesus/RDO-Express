@@ -417,16 +417,17 @@ function renderizarBlocoAdministracao(usuario, dados) {
         return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
     });
 
-    var totalPedidos = pedidosMes.length;
-    var metaPedidos = dados.metaPedidosMes || Math.max(totalPedidos + 10, 20);
-    var percentual = metaPedidos > 0 ? Math.round((totalPedidos / metaPedidos) * 100) : 0;
+    var totalPedidosMes = pedidosMes.length;
+    var pedidosCancelados = pedidosMes.filter(function (p) {
+        return String(p.status || '').toUpperCase() === 'CANCELADO';
+    });
+    var totalCancelados = pedidosCancelados.length;
+    var percentualCancelados = totalPedidosMes > 0 ? Math.round((totalCancelados / totalPedidosMes) * 100) : 0;
 
-    var elTotalPedidos = document.getElementById('admin-total-pedidos');
-    var elMetaInfo = document.getElementById('admin-meta-info');
-    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidos;
-    if (elMetaInfo) elMetaInfo.textContent =
-        'Meta (Todas as vendas) - ' + (usuario.username || 'Usuário') + ': ' +
-        metaPedidos + ' pedidos (' + percentual + '%)';
+    var elTotalCancelados = document.getElementById('admin-total-cancelados');
+    var elCanceladosInfo = document.getElementById('admin-cancelados-info');
+    if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
+    if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
 
     var pedidosPendentes = pedidos.filter(function (p) {
         return String(p.status || '').toUpperCase() === 'PENDENTE';

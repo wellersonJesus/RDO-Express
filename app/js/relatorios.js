@@ -368,7 +368,14 @@
   }
 
   function exibirLoadingListas() {
-    const loadingHtml = '<div class="rel-lista-loading"><div class="spinner-border text-danger" role="status"></div><div class="mt-3" style="font-size:.85rem;color:#999;font-weight:500;">Buscando relatórios<span class="rel-dots"></span></div></div>';
+    const loadingHtml =
+      '<div class="rel-lista-loading">' +
+      '<i class="bi bi-search rel-loading-spin"></i>' +
+      '<span>Buscando informações' +
+      '<span class="rel-dots-anim"><span>.</span><span>.</span><span>.</span></span>' +
+      '</span>' +
+      '</div>';
+
     if (els.mbLista) els.mbLista.innerHTML = loadingHtml;
     if (els.cliLista) els.cliLista.innerHTML = loadingHtml;
     if (els.finLista) els.finLista.innerHTML = loadingHtml;
@@ -738,7 +745,7 @@
     if (!valor) return false;
     return nomesAlvo.some(function (nome) { return nomesCorrespondem(valor, nome); });
   }
-  
+
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
     if (idsStr.indexOf(idPed) !== -1) return true;
@@ -852,7 +859,7 @@
 
     return dados;
   }
-    
+
   function buscarFinanceiroDoPedido(pedido) {
     const idPedido = pedido.id;
     return state.financeiro.find(function (f) {
@@ -1018,7 +1025,7 @@
     });
     return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
   }
-    
+
   function idsParaNomes(ids, lista, banco) {
     const idsStr = ids.map(function (v) { return String(v).trim(); });
     const nomes = [];
