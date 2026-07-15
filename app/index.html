@@ -43,11 +43,12 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-speedometer2"></i> <span class="menu-text">Painel</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="dashboard" data-title="Dashboard"
+                <a class="nav-link" href="#" data-page="dashboard" data-modulo="Dashboard" data-title="Dashboard"
                     data-subtitle="Visão geral operacional">
                     <span class="menu-text">Dashboard</span>
                 </a>
-                <a class="nav-link" href="#" data-page="chat" data-title="Chat" data-subtitle="Comunicação interna">
+                <a class="nav-link" href="#" data-page="chat" data-modulo="Chat" data-title="Chat"
+                    data-subtitle="Comunicação interna">
                     <span class="menu-text">Chat</span>
                 </a>
             </div>
@@ -56,7 +57,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-people"></i> <span class="menu-text">Gestão</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="pedidos" data-title="Pedidos"
+                <a class="nav-link" href="#" data-page="pedidos" data-modulo="Pedidos" data-title="Pedidos"
                     data-subtitle="Gestão de solicitações">
                     <span class="menu-text">Pedidos</span>
                 </a>
@@ -66,7 +67,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-bank"></i> <span class="menu-text">Administração</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="admin" data-title="Administração"
+                <a class="nav-link" href="#" data-page="admin" data-modulo="Administração" data-title="Administração"
                     data-subtitle="Controle de Cadastro RDO interno">
                     <span class="menu-text">Administração</span>
                 </a>
@@ -76,7 +77,7 @@
         <div class="menu-group">
             <div class="menu-title"><i class="bi bi-wallet2"></i> <span class="menu-text">Financeiro</span></div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="fin" data-title="Financeiro"
+                <a class="nav-link" href="#" data-page="fin" data-modulo="Financeiro" data-title="Financeiro"
                     data-subtitle="Controle de fluxo financeiro">
                     <span class="menu-text">Financeiro</span>
                 </a>
@@ -88,7 +89,7 @@
                 <span class="menu-text">Relatório</span>
             </div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="relatorio" data-title="Relatórios"
+                <a class="nav-link" href="#" data-page="relatorio" data-modulo="Relatórios" data-title="Relatórios"
                     data-subtitle="Relatórios gerais">
                     <span class="menu-text">Relatórios</span>
                 </a>
@@ -100,7 +101,7 @@
                 <span class="menu-text">Automatização</span>
             </div>
             <div class="submenu">
-                <a class="nav-link" href="#" data-page="bot" data-title="Configuração Bot"
+                <a class="nav-link" href="#" data-page="bot" data-modulo="Bot" data-title="Configuração Bot"
                     data-subtitle="Monitoramento WhatsApp">
                     <span class="menu-text">Bot</span>
                 </a>
@@ -246,11 +247,15 @@
             }
 
             _aguardarPermissoesCarregadas(function () {
+                if (typeof window.aplicarPermissoesUsuario === 'function') {
+                    window.aplicarPermissoesUsuario();
+                }
+
                 document.querySelectorAll('.sidebar .nav-link[data-page]').forEach(function (link) {
                     link.addEventListener('click', function (e) {
                         e.preventDefault();
 
-                        if (this.getAttribute('data-bloqueado') === 'true') {
+                        if (this.classList.contains('modulo-bloqueado')) {
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Acesso Negado',
@@ -291,7 +296,6 @@
                 texto.classList.remove('d-none');
             }
         };
-
     </script>
 
 </body>

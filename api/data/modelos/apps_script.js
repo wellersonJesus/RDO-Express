@@ -131,9 +131,25 @@ function processarHeartbeat(sheet, username) {
   if (colUltimoAcesso === -1) return { status: "error", message: "Coluna 'ultimo_acesso' nao encontrada" };
 
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][colUser]).trim() === usernameTrim) {
-      sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
-      return { status: "success", message: "Heartbeat registrado" };
+    if (String(rows[i][colUser]).trim() === userTrim &&
+      String(rows[i][colPass]).trim() === passTrim) {
+
+      if (colUltimoAcesso !== -1) {
+        sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+      }
+
+      var colId = headers.indexOf("id"); // pega o índice da coluna id
+
+      return {
+        status: "success",
+        user: {
+          id: colId !== -1 ? String(rows[i][colId]).trim() : "",   // ✅ agora envia o id
+          username: String(rows[i][colUser]).trim(),
+          tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+          cargo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "", // ✅ alias para compatibilidade com bot.js
+          imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
+        }
+      };
     }
   }
 

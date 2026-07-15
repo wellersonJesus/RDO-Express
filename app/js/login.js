@@ -51,21 +51,20 @@
 
     function salvarSessao(userData) {
         var username = String(userData.username || userData.user || '').trim();
-        var tipo = String(userData.tipo || userData.role || '').trim();
+        var tipo = String(userData.tipo || userData.cargo || userData.role || '').trim();
+        var idUsuario = String(userData.id || userData.id_usuario || userData.userId || '').trim();
+        var cargo = String(userData.cargo || userData.role || tipo || '').trim();
         var imagem = String(
-            userData.imagem ||
-            userData.foto ||
-            userData.avatar ||
-            userData.image ||
-            userData.picture ||
-            userData.photo ||
-            userData.profile_image ||
-            ''
+            userData.imagem || userData.foto || userData.avatar || userData.image ||
+            userData.picture || userData.photo || userData.profile_image || ''
         ).trim();
 
         localStorage.setItem('rdo_auth', 'true');
         localStorage.setItem('username', username);
         localStorage.setItem('tipo', tipo);
+        localStorage.setItem('id_usuario', idUsuario);
+        localStorage.setItem('user_id', idUsuario);
+        localStorage.setItem('user_cargo', cargo);
 
         if (imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.length >= 10) {
             localStorage.setItem('imagem', imagem);
@@ -97,7 +96,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'login', username: user, password: pass })
         })
-
             .then(function (response) {
                 return response.json().then(function (data) {
                     return { ok: response.ok, data: data };
@@ -108,16 +106,12 @@
                     throw new Error(result.data.message || 'Usuário ou senha incorretos.');
                 }
 
-                // ← DEBUG TEMPORÁRIO
-                console.log('user retornado pela API:', JSON.stringify(result.data.user));
-
                 salvarSessao(result.data.user);
                 showMsg('Autenticado! Redirecionando...', 'success');
                 setTimeout(function () {
                     window.location.replace('/');
                 }, 800);
             })
-
             .catch(function (err) {
                 var isOffline = err instanceof TypeError && err.message === 'Failed to fetch';
                 showMsg(isOffline

@@ -12,13 +12,23 @@ window.botState = {
     _formAdminCarregado: false
 };
 
+var MAPA_MODULO_PAGE = {
+    'Dashboard': 'dashboard',
+    'Chat': 'chat',
+    'Pedidos': 'pedidos',
+    'Administração': 'admin',
+    'Financeiro': 'fin',
+    'Relatórios': 'relatorio',
+    'Bot': 'bot'
+};
+
 var CARGOS_DISPONIVEIS = ['Atendente', 'Financeiro', 'Gestor', 'Administrativo', 'SRE Tecnologia'];
 
 window.PERMISSOES_PADRAO = {
     'Atendente': ['Dashboard', 'Chat', 'Pedidos'],
     'Financeiro': ['Dashboard', 'Pedidos', 'Financeiro', 'Relatórios'],
     'Gestor': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios'],
-    'Administrativo': ['Dashboard', 'Pedidos', 'Administração', 'Relatórios', 'Bot'],
+    'Administrativo': ['Dashboard', 'Pedidos', 'Administração', 'Relatórios'],
     'SRE Tecnologia': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios', 'Bot']
 };
 
@@ -54,16 +64,6 @@ function applyMasterVisual(isOn) {
         btn.classList.add('btn-master-off');
         btn.textContent = 'MASTER OFF';
     }
-}
-
-function _usuarioLogadoBot() {
-    if (window.dashboardState && window.dashboardState.usuario) {
-        return window.dashboardState.usuario;
-    }
-    if (typeof obterUsuarioLogado === 'function') {
-        return obterUsuarioLogado();
-    }
-    return { username: 'Usuário', cargo: '', permissoes: [] };
 }
 
 function _botTemPermissao(permissao) {
@@ -566,6 +566,57 @@ function renderizarTabela() {
     atualizarSeletorGlobal();
 }
 
+function _obterPermissoesEfetivas(usuario) {
+    if (!usuario) return [];
+
+    var padraoCargo = window.PERMISSOES_PADRAO[usuario.cargo] || [];
+
+    if (usuario.id) {
+        try {
+            var storageKey = 'permissoes_usuario_' + usuario.id;
+            var storedPerms = localStorage.getItem(storageKey);
+            if (storedPerms) {
+                var parsed = JSON.parse(storedPerms);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) { /* ignora e cai no fallback */ }
+    }
+
+    return padraoCargo;
+}
+
+function _usuarioLogadoBot() {
+    var usuario = null;
+
+    if (window.dashboardState && window.dashboardState.usuario) {
+        usuario = window.dashboardState.usuario;
+    } else if (typeof obterUsuarioLogado === 'function') {
+        usuario = obterUsuarioLogado();
+    }
+
+    if (!usuario || !usuario.cargo) {
+        usuario = {
+            id: localStorage.getItem('user_id') || localStorage.getItem('id_usuario') || '',
+            username: localStorage.getItem('username') || 'Usuário',
+            cargo: localStorage.getItem('user_cargo') || localStorage.getItem('tipo') || ''
+        };
+    }
+
+    usuario = Object.assign({}, usuario);
+    usuario.permissoes = _obterPermissoesEfetivas(usuario);
+    return usuario;
+}
+
+function _botTemPermissao(permissao) {
+    var usuario = _usuarioLogadoBot();
+    return Array.isArray(usuario.permissoes) && usuario.permissoes.indexOf(permissao) !== -1;
+}
+
+function _usuarioAtualPermissoes() {
+    var usuario = _usuarioLogadoBot();
+    return Array.isArray(usuario.permissoes) ? usuario.permissoes : [];
+}
+
 window.abrirModalCadastro = function () {
     if (!_botTemPermissao('Administração')) {
         Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para cadastrar registros.', confirmButtonColor: '#dc3545' });
@@ -707,14 +758,10 @@ window.confirmarExclusao = async function (id, origem, nome) {
     }
 };
 
-function _usuarioAtualPermissoes() {
-    var usuario = _usuarioLogadoBot();
-    return Array.isArray(usuario.permissoes) ? usuario.permissoes : [];
-}
-
 window.aplicarControleAcessoModulos = function () {
     var permissoes = _usuarioAtualPermissoes();
     var itensModulo = document.querySelectorAll('[data-modulo]');
+    var paginasBloqueadas = [];
 
     itensModulo.forEach(function (item) {
         var modulo = item.getAttribute('data-modulo');
@@ -729,8 +776,14 @@ window.aplicarControleAcessoModulos = function () {
             var cadeado = document.createElement('i');
             cadeado.className = 'bi bi-lock-fill icone-cadeado-modulo';
             item.appendChild(cadeado);
+
+            var page = MAPA_MODULO_PAGE[modulo];
+            if (page) paginasBloqueadas.push(page);
         }
     });
+
+    // 👇 sincroniza com o guard de rota do app.js
+    localStorage.setItem('paginas_bloqueadas', JSON.stringify(paginasBloqueadas));
 };
 
 window.aplicarControleWidgetsDashboard = function () {
@@ -774,6 +827,15 @@ window.addEventListener('usuarioLogado', function () {
     window.aplicarPermissoesUsuario();
 });
 
+window.addEventListener('botCacheAtualizado', function () {
+    window.aplicarPermissoesUsuario();
+});
+
+window.addEventListener('storage', function (e) {
+    if (e.key && e.key.indexOf('permissoes_usuario_') === 0) {
+        window.aplicarPermissoesUsuario();
+    }
+});
 
 
 
