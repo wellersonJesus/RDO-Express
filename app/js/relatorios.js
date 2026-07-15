@@ -345,256 +345,26 @@
       global: { prev: document.getElementById('btn-pag-prev-global'), next: document.getElementById('btn-pag-next-global'), info: document.getElementById('info-paginacao-global') }
     };
     els.btnsOrdenar = document.querySelectorAll('.btn-sort-data');
-
-    inicializarCombosBase();
-  }
-
-  function inicializarCombosBase() {
-    if (els.formMotoboySelect) transformarSelectEmComboBusca(els.formMotoboySelect);
-    if (els.formClienteSelect) transformarSelectEmComboBusca(els.formClienteSelect);
-    if (els.filtrosPorTipo.financeiro.select) transformarSelectEmComboBusca(els.filtrosPorTipo.financeiro.select);
-  }
-
-  function normalizarBusca(v) {
-    return String(v || '')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase().trim();
-  }
-
-  const ComboBuscaManager = (function () {
-    let dropdownAtivo = null;
-
-    function fecharTodos() {
-      document.querySelectorAll('.rel-combo-dropdown').forEach(function (d) {
-        d.style.display = 'none';
-      });
-      dropdownAtivo = null;
-    }
-
-    // Único listener global — fecha qualquer dropdown aberto se o clique
-    // não for dentro de um wrapper de combo ou do próprio dropdown
-    document.addEventListener('mousedown', function (e) {
-      if (e.target.closest('.rel-combo-busca') || e.target.closest('.rel-combo-dropdown')) return;
-      fecharTodos();
-    });
-
-    window.addEventListener('scroll', function () {
-      if (dropdownAtivo && dropdownAtivo._reposicionar) dropdownAtivo._reposicionar();
-    }, true);
-    window.addEventListener('resize', function () {
-      if (dropdownAtivo && dropdownAtivo._reposicionar) dropdownAtivo._reposicionar();
-    });
-
-    return {
-      fecharTodos: fecharTodos,
-      setAtivo: function (dropdown) { dropdownAtivo = dropdown; }
-    };
-  })();
-
-  function transformarSelectEmComboBusca(selectEl) {
-    if (!selectEl) return;
-    if (selectEl.dataset.comboInit === '1') return;
-    selectEl.dataset.comboInit = '1';
-
-    let opcoes = Array.from(selectEl.options).map(function (o) {
-      return { value: o.value, label: o.textContent };
-    });
-
-    const classesOriginais = selectEl.className;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'rel-combo-busca';
-    wrapper.style.cssText = 'position:relative;display:block;width:100%;';
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = classesOriginais + ' rel-combo-input';
-    input.style.cssText = 'display:block;width:100%;cursor:pointer;background:#fff !important;';
-    input.placeholder = 'Digite para buscar...';
-    input.autocomplete = 'off';
-
-    const dropdown = document.createElement('div');
-    dropdown.className = 'rel-combo-dropdown';
-    dropdown.style.setProperty('position', 'fixed', 'important');
-    dropdown.style.setProperty('max-height', '240px', 'important');
-    dropdown.style.setProperty('overflow-y', 'auto', 'important');
-    dropdown.style.setProperty('background', '#ffffff', 'important');
-    dropdown.style.setProperty('border', '1px solid #ddd', 'important');
-    dropdown.style.setProperty('border-radius', '8px', 'important');
-    dropdown.style.setProperty('box-shadow', '0 6px 18px rgba(0,0,0,.25)', 'important');
-    dropdown.style.setProperty('z-index', '2147483647', 'important');
-    dropdown.style.setProperty('display', 'none', 'important');
-    dropdown.style.setProperty('margin', '0', 'important');
-    dropdown.style.setProperty('padding', '4px 0', 'important');
-    dropdown.style.setProperty('list-style', 'none', 'important');
-
-    selectEl.style.display = 'none';
-    selectEl.parentNode.insertBefore(wrapper, selectEl);
-    wrapper.appendChild(input);
-    wrapper.appendChild(selectEl);
-    document.body.appendChild(dropdown);
-
-    let digitando = false;
-
-    function reposicionar() {
-      const rect = input.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
-        requestAnimationFrame(reposicionar);
-        return;
-      }
-      dropdown.style.top = (rect.bottom + 4) + 'px';
-      dropdown.style.left = rect.left + 'px';
-      dropdown.style.width = Math.max(rect.width, 200) + 'px';
-    }
-    dropdown._reposicionar = reposicionar;
-
-    function abrir(lista) {
-      if (!lista.length) {
-        dropdown.innerHTML = '<div style="padding:10px 12px;font-size:.78rem;color:#999;">Nenhum resultado</div>';
-      } else {
-        dropdown.innerHTML = lista.map(function (o) {
-          return '<div class="rel-combo-item" data-value="' + escapeHtml(o.value) + '" style="padding:8px 12px;font-size:.8rem;cursor:pointer;color:#222;">' + escapeHtml(o.label) + '</div>';
-        }).join('');
-      }
-
-      reposicionar();
-      dropdown.style.setProperty('display', 'block', 'important');
-      ComboBuscaManager.setAtivo(dropdown);
-
-      dropdown.querySelectorAll('.rel-combo-item').forEach(function (item) {
-        item.addEventListener('mousedown', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          const val = item.dataset.value;
-          const opt = opcoes.find(function (o) { return o.value === val; });
-          selectEl.value = val;
-          input.value = opt ? opt.label : '';
-          digitando = false;
-          dropdown.style.setProperty('display', 'none', 'important');
-          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        item.addEventListener('mouseenter', function () {
-          dropdown.querySelectorAll('.rel-combo-item').forEach(function (i2) { i2.style.background = ''; });
-          item.style.background = '#f4f4f4';
-        });
-      });
-    }
-
-    function filtrar(texto) {
-      const t = normalizarBusca(texto);
-      if (!t) { abrir(opcoes); return; }
-      const filtrado = opcoes.filter(function (o) {
-        return normalizarBusca(o.label).indexOf(t) !== -1;
-      });
-      abrir(filtrado);
-    }
-
-    input.addEventListener('mousedown', function (e) {
-      e.stopPropagation();
-      digitando = false;
-      abrir(opcoes);
-    });
-
-    input.addEventListener('focus', function () {
-      input.select();
-    });
-
-    input.addEventListener('input', function () {
-      digitando = true;
-      filtrar(input.value);
-    });
-
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') dropdown.style.setProperty('display', 'none', 'important');
-      if (e.key === 'ArrowDown') abrir(digitando ? opcoes.filter(function (o) { return normalizarBusca(o.label).indexOf(normalizarBusca(input.value)) !== -1; }) : opcoes);
-    });
-
-    const selecionado = opcoes.find(function (o) { return o.value === selectEl.value; }) || opcoes[0];
-    if (selecionado) {
-      input.value = selecionado.label;
-      selectEl.value = selecionado.value;
-    }
-
-    selectEl._comboBuscaRefresh = function (novasOpcoes) {
-      opcoes = novasOpcoes;
-      const sel = opcoes.find(function (o) { return o.value === selectEl.value; }) || opcoes[0];
-      if (sel) {
-        selectEl.value = sel.value;
-        input.value = sel.label;
-      } else {
-        input.value = '';
-        selectEl.value = '';
-      }
-    };
   }
 
   function popularSelectMotoboys() {
     if (!els.formMotoboySelect) return;
-    const opcoes = [{ value: '__todos__', label: 'Todos os motoboys' }];
-    state.motoboys
-      .map(function (mb) { return { id: mb.id, nome: resolverValor('colaborador', 'username', mb) || resolverValor('colaborador', 'colaborador', mb) || 'Sem nome' }; })
-      .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); })
-      .forEach(function (mb) { opcoes.push({ value: String(mb.id), label: mb.nome }); });
-
-    els.formMotoboySelect.innerHTML = opcoes.map(function (o) {
-      return '<option value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + '</option>';
-    }).join('');
-
-    if (els.formMotoboySelect._comboBuscaRefresh) {
-      els.formMotoboySelect._comboBuscaRefresh(opcoes);
-    } else {
-      transformarSelectEmComboBusca(els.formMotoboySelect);
-    }
+    let html = '<option value="__todos__">Todos os motoboys</option>';
+    state.motoboys.forEach(function (mb) {
+      const nome = resolverValor('colaborador', 'username', mb) || 'Sem nome';
+      html += '<option value="' + escapeHtml(mb.id) + '">' + escapeHtml(nome) + '</option>';
+    });
+    els.formMotoboySelect.innerHTML = html;
   }
 
   function popularSelectClientes() {
     if (!els.formClienteSelect) return;
-    const opcoes = [{ value: '__todos__', label: 'Todos os clientes' }];
-    state.clientes
-      .map(function (cli) { return { id: cli.id, nome: resolverValor('clientes', 'username', cli) || resolverValor('clientes', 'responsavel', cli) || 'Sem nome' }; })
-      .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); })
-      .forEach(function (cli) { opcoes.push({ value: String(cli.id), label: cli.nome }); });
-
-    els.formClienteSelect.innerHTML = opcoes.map(function (o) {
-      return '<option value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + '</option>';
-    }).join('');
-
-    if (els.formClienteSelect._comboBuscaRefresh) {
-      els.formClienteSelect._comboBuscaRefresh(opcoes);
-    } else {
-      transformarSelectEmComboBusca(els.formClienteSelect);
-    }
-  }
-
-  function popularSelectFinanceiro() {
-    const selFin = els.filtrosPorTipo.financeiro.select;
-    if (!selFin) return;
-
-    const tiposEncontrados = {};
-    state.financeiro.forEach(function (r) {
-      const tipo = String(resolverValor('financeiro', 'tipo', r) || '').trim();
-      if (tipo) tiposEncontrados[tipo.toUpperCase()] = tipo;
+    let html = '<option value="__todos__">Todos os clientes</option>';
+    state.clientes.forEach(function (cli) {
+      const nome = resolverValor('clientes', 'username', cli) || 'Sem nome';
+      html += '<option value="' + escapeHtml(cli.id) + '">' + escapeHtml(nome) + '</option>';
     });
-
-    const opcoes = [{ value: '__todos__', label: 'Todos os lançamentos' }];
-    Object.keys(tiposEncontrados).sort().forEach(function (chave) {
-      opcoes.push({ value: tiposEncontrados[chave], label: tiposEncontrados[chave] });
-    });
-
-    if (!Object.keys(tiposEncontrados).length) {
-      opcoes.push({ value: 'Receita', label: 'Receita' });
-      opcoes.push({ value: 'Despesa', label: 'Despesa' });
-    }
-
-    selFin.innerHTML = opcoes.map(function (o) {
-      return '<option value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + '</option>';
-    }).join('');
-
-    if (selFin._comboBuscaRefresh) {
-      selFin._comboBuscaRefresh(opcoes);
-    } else {
-      transformarSelectEmComboBusca(selFin);
-    }
+    els.formClienteSelect.innerHTML = html;
   }
 
   function exibirLoadingListas() {
@@ -652,7 +422,6 @@
 
   function iniciarBuilder(tipo, periodo, filtroExtra) {
     try {
-      ComboBuscaManager.fecharTodos();
       state.builder.tipo = tipo;
       state.builder.periodo = periodo;
       state.builder.filtroExtra = filtroExtra;
@@ -969,7 +738,7 @@
     if (!valor) return false;
     return nomesAlvo.some(function (nome) { return nomesCorrespondem(valor, nome); });
   }
-
+  
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
     if (idsStr.indexOf(idPed) !== -1) return true;
@@ -1083,7 +852,7 @@
 
     return dados;
   }
-
+    
   function buscarFinanceiroDoPedido(pedido) {
     const idPedido = pedido.id;
     return state.financeiro.find(function (f) {
@@ -1249,7 +1018,7 @@
     });
     return Object.keys(mapa).map(function (k) { return mapa[k]; }).sort(function (a, b) { return b.total - a.total; });
   }
-
+    
   function idsParaNomes(ids, lista, banco) {
     const idsStr = ids.map(function (v) { return String(v).trim(); });
     const nomes = [];
@@ -1510,7 +1279,6 @@
 
   function abrirModalRelatorio(relatorio, novoGerado) {
     try {
-      ComboBuscaManager.fecharTodos();
       const modal = els.modalOverlay;
       if (!modal) { relToast('Modal não encontrado no DOM!', 'danger'); return; }
 
@@ -2063,7 +1831,6 @@
 
       popularSelectMotoboys();
       popularSelectClientes();
-      popularSelectFinanceiro();
       renderizarListas();
       relToast('Dados atualizados com sucesso!', 'success');
     }).catch(function (err) {

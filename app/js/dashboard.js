@@ -12,7 +12,7 @@ function ocultarLoadingDashboard() {
     var overlay = document.getElementById('dashboard-loading-overlay');
     var conteudo = document.getElementById('dashboard-conteudo-real');
     if (overlay) overlay.classList.add('d-none');
-    if (conteudo) conteudo.style.display = '';
+    if (conteudo) conteudo.style.display = 'block';
 }
 
 function mostrarLoadingDashboard() {

@@ -1,12 +1,56 @@
-.rb-header {
+/* =========================================================
+   OVERLAYS BASE (comuns aos 3 modais)
+========================================================= */
+.rb-overlay,
+.rel-overlay,
+.pdf-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, .6);
+}
+
+.rb-overlay { z-index: 10000; }
+.rel-overlay { z-index: 10000; }
+.pdf-overlay { z-index: 10001; }
+
+.rb-container,
+.rel-container,
+.pdf-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, .28);
+}
+
+.rb-container { max-width: 820px; }
+.rel-container { max-width: 900px; }
+.pdf-container { max-width: 900px; }
+
+/* =========================================================
+   HEADER (padrão dos 3 modais)
+========================================================= */
+.rb-header,
+.rel-header,
+.pdf-header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   padding: 18px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
-.rb-header-icon {
+.rb-header-icon,
+.rel-header-icon,
+.pdf-header-icon {
   width: 46px;
   height: 46px;
   border-radius: 12px;
@@ -19,14 +63,18 @@
   flex-shrink: 0;
 }
 
-.rb-header-title {
+.rb-header-title,
+.rel-header-title,
+.pdf-header-title {
   font-size: .92rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: .3px;
 }
 
-.rb-header-sub {
+.rb-header-sub,
+.rel-header-sub,
+.pdf-header-sub {
   font-size: .68rem;
   color: rgba(255, 255, 255, .55);
   margin-top: 2px;
@@ -42,8 +90,70 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
+.rb-btn-close:hover {
+  opacity: .75;
+}
+
+/* =========================================================
+   BOTÕES DO RODAPÉ (padrão usado nos 3 modais)
+========================================================= */
+.btn-modal-rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .76rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+
+.btn-modal-rel-primary {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: #fff;
+}
+
+.btn-modal-rel-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-modal-rel-primary:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.btn-modal-rel-light {
+  background: #f1f3f5;
+  color: #444;
+}
+
+.btn-modal-rel-light:hover {
+  background: #e9ecef;
+}
+
+.btn-modal-rel-outline {
+  background: #fff;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.btn-modal-rel-outline:hover {
+  background: rgba(220, 53, 69, .06);
+}
+
+.rb-footer-spacer {
+  flex: 1;
+}
+
+/* =========================================================
+   MODAL 1 — CONSTRUTOR DE RELATÓRIO
+========================================================= */
 .rb-steps-track {
   display: flex;
   align-items: center;
@@ -51,6 +161,7 @@
   padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
 
 .rb-step-dot {
@@ -220,9 +331,11 @@
   border-color: rgba(220, 53, 69, .25);
 }
 
-.rb-campo-item input {
-  cursor: pointer;
-  accent-color: #dc3545;
+.rb-campo-checkicon {
+  font-size: .95rem;
+  color: #dc3545;
+  display: flex;
+  align-items: center;
 }
 
 .rb-campo-item label {
@@ -274,6 +387,7 @@
 .rb-nome-input:focus {
   border-color: #dc3545;
   box-shadow: 0 0 0 .15rem rgba(220, 53, 69, .1);
+  outline: none;
 }
 
 .rb-step2-resumo {
@@ -291,18 +405,192 @@
   color: #333;
 }
 
-.rb-footer {
+.rb-footer,
+.rel-footer,
+.pdf-footer {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 14px 20px;
   background: #fff;
   border-top: 1px solid #e9ecef;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-.rb-footer-spacer {
+.rel-body {
   flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  background: #f8f9fa;
 }
 
+.rel-footer {
+  justify-content: flex-end;
+}
+
+.rel-modal-content-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rel-modal-section {
+  padding: 4px 0;
+}
+
+.rel-modal-section-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rel-modal-divider {
+  height: 1px;
+  background: #eaeaea;
+  margin: 18px 0;
+}
+
+.rel-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.rel-modal-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.rel-modal-card-label {
+  font-size: .65rem;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 4px;
+}
+
+.rel-modal-card-value {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #222;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .rel-modal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pdf-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #e9ecef;
+  display: flex;
+  justify-content: center;
+}
+
+.pdf-footer {
+  justify-content: space-between;
+}
+
+.pdf-footer-hint {
+  font-size: .7rem;
+  color: #999;
+  flex: 1;
+  min-width: 180px;
+}
+
+.pdf-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pdf-preview-page {
+  background: #fff;
+  width: 100%;
+  max-width: 760px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .18);
+  border-radius: 6px;
+  overflow: hidden;
+  height: fit-content;
+}
+
+.pdf-preview-header {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pdf-preview-header-icon {
+  width: 50px; height: 50px; border-radius: 12px;
+  background: rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1.4rem;
+}
+
+.pdf-preview-header-title {
+  font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: .5px;
+}
+
+.pdf-preview-header-sub {
+  font-size: .72rem; color: rgba(255,255,255,.6); margin-top: 2px;
+}
+
+.pdf-preview-content {
+  padding: 20px 24px;
+  background: #f8f9fa;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #pdf-preview-body,
+  #pdf-preview-body * {
+    visibility: visible !important;
+  }
+
+  #pdf-preview-body {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    padding: 0 !important;
+    background: #fff !important;
+    display: block !important;
+  }
+
+  .pdf-preview-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  #modalBuilderOverlay,
+  #modalRelatorioOverlay,
+  .pdf-footer,
+  .pdf-header {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   RESPONSIVO GERAL
+========================================================= */
 @media (max-width: 576px) {
   .rb-campos-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -311,6 +599,14 @@
   .rb-banco-tab {
     font-size: .66rem;
     padding: 5px 10px;
+  }
+
+  .btn-modal-rel span {
+    display: none;
+  }
+
+  .btn-modal-rel {
+    padding: 9px 12px;
   }
 }
 
@@ -339,3 +635,8 @@
   margin: 0;
 }
 
+.rb-overlay.show,
+.rel-overlay.show,
+.pdf-overlay.show {
+  display: flex;
+}
