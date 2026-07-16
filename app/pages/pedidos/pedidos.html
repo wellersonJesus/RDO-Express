@@ -26,7 +26,8 @@
                         <div class="d-flex flex-column gap-2">
                             <div class="ped-status-card">
                                 <div class="ped-status-card-inner">
-                                    <div class="ped-status-action-item active" data-ped-status="todos" id="ped-filter-todos">
+                                    <div class="ped-status-action-item active" data-ped-status="todos"
+                                        id="ped-filter-todos">
                                         <div class="ped-status-action-icon ped-icon-todos">
                                             <i class="bi bi-grid-3x3-gap"></i>
                                         </div>
@@ -37,7 +38,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="ped-status-action-item" data-ped-status="pendente" id="ped-filter-pendente">
+                                    <div class="ped-status-action-item" data-ped-status="pendente"
+                                        id="ped-filter-pendente">
                                         <div class="ped-status-action-icon ped-icon-pendente">
                                             <i class="bi bi-clock"></i>
                                         </div>
@@ -48,7 +50,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="ped-status-action-item" data-ped-status="em_rota" id="ped-filter-em_rota">
+                                    <div class="ped-status-action-item" data-ped-status="em_rota"
+                                        id="ped-filter-em_rota">
                                         <div class="ped-status-action-icon ped-icon-em-rota">
                                             <i class="bi bi-bicycle"></i>
                                         </div>
@@ -59,7 +62,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="ped-status-action-item" data-ped-status="concluido" id="ped-filter-concluido">
+                                    <div class="ped-status-action-item" data-ped-status="concluido"
+                                        id="ped-filter-concluido">
                                         <div class="ped-status-action-icon ped-icon-concluido">
                                             <i class="bi bi-check-circle"></i>
                                         </div>
@@ -70,7 +74,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="ped-status-action-item" data-ped-status="cancelado" id="ped-filter-cancelado">
+                                    <div class="ped-status-action-item" data-ped-status="cancelado"
+                                        id="ped-filter-cancelado">
                                         <div class="ped-status-action-icon ped-icon-cancelado">
                                             <i class="bi bi-x-circle"></i>
                                         </div>
@@ -103,16 +108,13 @@
                                     </div>
                                 </div>
 
-                                <input type="text"
-                                       id="filtro-pedidos"
-                                       class="form-control form-control-sm rounded-pill input-filtro-pedidos"
-                                       placeholder="Buscar..."
-                                       autocomplete="off">
+                                <input type="text" id="filtro-pedidos"
+                                    class="form-control form-control-sm rounded-pill input-filtro-pedidos"
+                                    placeholder="Buscar..." autocomplete="off">
 
-                                <input type="date"
-                                       id="filtro-data-pedidos"
-                                       class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
-                                       title="Filtrar por data">
+                                <input type="date" id="filtro-data-pedidos"
+                                    class="form-control form-control-sm rounded-pill input-filtro-data-pedidos"
+                                    title="Filtrar por data">
                             </div>
                         </div>
                     </div>
@@ -123,22 +125,26 @@
                                 <tr>
                                     <th class="border-0 fw-normal">
                                         N.Serviço
-                                        <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço">
+                                        <button class="btn-sort-data" id="btn-sort-data-pedidos"
+                                            title="Ordenar por N.Serviço">
                                             <i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i>
                                         </button>
                                     </th>
-                                    <th class="border-0 fw-normal td-mobile-hide">Data</th>
-                                    <th class="border-0 fw-normal">Cliente</th>
+                                    <th class="border-0 fw-normal">Data</th> <!-- ✅ removido td-mobile-hide -->
+                                    <th class="border-0 fw-normal td-mobile-hide">Cliente</th>
+                                    <!-- ✅ adicionado td-mobile-hide -->
                                     <th class="border-0 fw-normal td-mobile-hide">Status</th>
                                     <th class="border-0 fw-normal td-mobile-hide">Motoboy</th>
                                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                                 </tr>
                             </thead>
+
                             <tbody id="corpo-tabela-pedidos">
                                 <tr>
                                     <td colspan="6" class="text-center text-muted py-4">
                                         <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                                        <div class="mt-2 pedidos-loading-text">Buscando pedidos<span class="pedidos-dots"></span></div>
+                                        <div class="mt-2 pedidos-loading-text">Buscando pedidos<span
+                                                class="pedidos-dots"></span></div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -171,25 +177,25 @@
 </div>
 
 <script>
-(function () {
-    'use strict';
+    (function () {
+        'use strict';
 
-    function _aguardarPedidosJs() {
-        if (typeof window.initPedidos === 'function') {
-            window.initPedidos();
-        } else {
-            setTimeout(_aguardarPedidosJs, 100);
+        function _aguardarPedidosJs() {
+            if (typeof window.initPedidos === 'function') {
+                window.initPedidos();
+            } else {
+                setTimeout(_aguardarPedidosJs, 100);
+            }
         }
-    }
 
-    function _inicializar() {
-        _aguardarPedidosJs();
-    }
+        function _inicializar() {
+            _aguardarPedidosJs();
+        }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _inicializar);
-    } else {
-        _inicializar();
-    }
-})();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', _inicializar);
+        } else {
+            _inicializar();
+        }
+    })();
 </script>
