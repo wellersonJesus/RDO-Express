@@ -158,8 +158,8 @@
         pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'solicitante']
       },
       defaults: {
-        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
-        pedidos: ['motoboy', 'valor_corrida', 'status', 'data']
+        financeiro: ['data', 'tipo', 'descricao', 'vlr_servico'],
+        pedidos: []
       }
     },
     global: {
