@@ -89,6 +89,7 @@
 .btn-master-on,
 .btn-master-off {
     font-weight: 600;
+    white-space: nowrap;
     transition: all 0.3s ease;
 }
 
@@ -534,6 +535,7 @@
     #btn-novo-bot {
         padding: 3px 8px !important;
         font-size: 0.62rem !important;
+        white-space: nowrap !important;
     }
 
     #icon-novo-bot {
@@ -546,6 +548,7 @@
 
     .bot-header-actions {
         gap: 6px !important;
+        flex-wrap: nowrap !important;
     }
 
     .status-label-text {
@@ -580,3 +583,5 @@
         font-size: 0.72rem;
     }
 }
+
+
