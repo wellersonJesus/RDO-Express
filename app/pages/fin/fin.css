@@ -1720,6 +1720,11 @@
 }
 
 @media (max-width: 576px) {
+  .extrato-toolbar-row:first-child > div {
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
   .fin-tabs-nav {
     gap: 16px;
   }
