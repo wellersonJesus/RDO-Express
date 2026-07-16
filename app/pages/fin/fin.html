@@ -28,7 +28,9 @@
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
               <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                <input type="search" id="filtro-busca-fin" class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..." autocomplete="off">
+                <input type="search" id="filtro-busca-fin"
+                  class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..."
+                  autocomplete="off">
                 <div class="dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-fin">
                   <button class="btn-filtro-inteligente" id="btn-filtro-fin">
                     <i class="bi bi-funnel-fill"></i>
@@ -36,20 +38,28 @@
                     <i class="bi bi-chevron-down chevron-filtro"></i>
                   </button>
                   <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-fin">
-                    <div class="dropdown-filtro-item active" data-filtro-tipo="todos"><i class="bi bi-grid-3x3-gap"></i> Todos</div>
-                    <div class="dropdown-filtro-item" data-filtro-tipo="entrada"><i class="bi bi-arrow-down-circle text-success"></i> Receitas</div>
-                    <div class="dropdown-filtro-item" data-filtro-tipo="saida"><i class="bi bi-arrow-up-circle text-danger"></i> Despesas</div>
+                    <div class="dropdown-filtro-item active" data-filtro-tipo="todos"><i class="bi bi-grid-3x3-gap"></i>
+                      Todos</div>
+                    <div class="dropdown-filtro-item" data-filtro-tipo="entrada"><i
+                        class="bi bi-arrow-down-circle text-success"></i> Receitas</div>
+                    <div class="dropdown-filtro-item" data-filtro-tipo="saida"><i
+                        class="bi bi-arrow-up-circle text-danger"></i> Despesas</div>
                     <div class="dropdown-filtro-item-has-sub" id="dropdown-item-situacao-fin">
                       <div class="dropdown-filtro-item-label" id="btn-sub-situacao-fin">
                         <i class="bi bi-circle-half"></i> Situação
                         <i class="bi bi-chevron-right chevron-sub"></i>
                       </div>
                       <div class="dropdown-filtro-submenu" id="submenu-situacao-fin">
-                        <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos"><i class="bi bi-dash-circle"></i> Todas</div>
-                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pago"><i class="bi bi-check-circle text-success"></i> Pago</div>
-                        <div class="dropdown-filtro-subitem" data-filtro-situacao="recebido"><i class="bi bi-check-circle text-primary"></i> Recebido</div>
-                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pendente"><i class="bi bi-clock text-warning"></i> Pendente</div>
-                        <div class="dropdown-filtro-subitem" data-filtro-situacao="cancelado"><i class="bi bi-x-circle text-secondary"></i> Cancelado</div>
+                        <div class="dropdown-filtro-subitem active" data-filtro-situacao="todos"><i
+                            class="bi bi-dash-circle"></i> Todas</div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pago"><i
+                            class="bi bi-check-circle text-success"></i> Pago</div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="recebido"><i
+                            class="bi bi-check-circle text-primary"></i> Recebido</div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="pendente"><i
+                            class="bi bi-clock text-warning"></i> Pendente</div>
+                        <div class="dropdown-filtro-subitem" data-filtro-situacao="cancelado"><i
+                            class="bi bi-x-circle text-secondary"></i> Cancelado</div>
                       </div>
                     </div>
                   </div>
@@ -63,7 +73,9 @@
               <table class="table table-hover align-middle border-0 mb-0 fin-table-todos" id="tabela-fin-todos">
                 <thead class="tabela-fin-head text-uppercase">
                   <tr>
-                    <th class="ps-3 border-0 fw-normal">Data <button class="btn-sort-data" id="btn-sort-data-todos" title="Ordenar por data"><i class="bi bi-arrow-down" id="icon-sort-data-todos"></i></button></th>
+                    <th class="ps-3 border-0 fw-normal">Data <button class="btn-sort-data" id="btn-sort-data-todos"
+                        title="Ordenar por data"><i class="bi bi-arrow-down" id="icon-sort-data-todos"></i></button>
+                    </th>
                     <th class="border-0 fw-normal">Descrição</th>
                     <th class="border-0 fw-normal">Cliente</th>
                     <th class="border-0 fw-normal">Motoboy</th>
@@ -84,9 +96,11 @@
             <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-todos">0 registros</span>
               <div class="btn-group shadow-sm">
-                <button class="btn btn-light" id="fin-pag-prev-todos" disabled><i class="bi bi-chevron-left"></i></button>
+                <button class="btn btn-light" id="fin-pag-prev-todos" disabled><i
+                    class="bi bi-chevron-left"></i></button>
                 <button class="btn btn-light" id="fin-pag-label-todos" disabled>Pág 1</button>
-                <button class="btn btn-light" id="fin-pag-next-todos" disabled><i class="bi bi-chevron-right"></i></button>
+                <button class="btn btn-light" id="fin-pag-next-todos" disabled><i
+                    class="bi bi-chevron-right"></i></button>
               </div>
             </div>
           </div>
@@ -112,7 +126,8 @@
           <div class="rdo-pay-saldo-label">Saldo disponível (empresa)</div>
           <div class="rdo-pay-saldo-valor fin-valor-caixa" id="rdo-pay-saldo" data-valor-real="R$ 0,00">R$ ****</div>
           <div style="font-size:.58rem;color:rgba(255,255,255,.45);margin-top:2px;">
-            Colaboradores: <span class="fin-valor-caixa fw-bold" id="rdo-pay-saldo-colaboradores" data-valor-real="R$ 0,00">R$ ****</span>
+            Colaboradores: <span class="fin-valor-caixa fw-bold" id="rdo-pay-saldo-colaboradores"
+              data-valor-real="R$ 0,00">R$ ****</span>
           </div>
         </div>
         <div class="rdo-pay-actions">
@@ -139,7 +154,8 @@
         <div class="col-6 col-sm-4 col-md">
           <div class="caixa-mini-card caixa-mini-entrada">
             <div class="caixa-mini-label">Receitas</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****
+            </div>
           </div>
         </div>
         <div class="col-6 col-sm-4 col-md">
@@ -149,19 +165,23 @@
           </div>
         </div>
         <div class="col-6 col-sm-4 col-md">
-          <div class="caixa-mini-card caixa-mini-saldo" style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
+          <div class="caixa-mini-card caixa-mini-saldo"
+            style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
             <div class="caixa-mini-label">Empresa (20%)</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00" style="color:#6f42c1;">R$ ****</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
+              style="color:#6f42c1;">R$ ****</div>
           </div>
         </div>
         <div class="col-6 col-sm-4 col-md">
           <div class="caixa-mini-card caixa-mini-saldo">
             <div class="caixa-mini-label">Colaborador (80%)</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</div>
+            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
+              style="color:#0d6efd;">R$ ****</div>
           </div>
         </div>
         <div class="col-6 col-sm-4 col-md">
-          <div class="caixa-mini-card" style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);">
+          <div class="caixa-mini-card"
+            style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);">
             <div class="caixa-mini-label">Registros</div>
             <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
           </div>
@@ -172,36 +192,63 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-              <div class="d-flex align-items-center gap-2 flex-wrap">
-                <div style="flex:1;min-width:120px;">
-                  <label style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">De</label>
-                  <input type="date" id="caixa-data-inicio" class="form-control form-control-sm rounded-pill" style="font-size:.72rem;height:32px;">
+
+              <div class="caixa-filtro-row">
+                <div class="caixa-filtro-campo">
+                  <label class="caixa-filtro-label">De</label>
+                  <input type="date" id="caixa-data-inicio"
+                    class="form-control form-control-sm rounded-pill caixa-filtro-input">
                 </div>
-                <div style="flex:1;min-width:120px;">
-                  <label style="font-size:.6rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Até</label>
-                  <input type="date" id="caixa-data-fim" class="form-control form-control-sm rounded-pill" style="font-size:.72rem;height:32px;">
+                <div class="caixa-filtro-campo">
+                  <label class="caixa-filtro-label">Até</label>
+                  <input type="date" id="caixa-data-fim"
+                    class="form-control form-control-sm rounded-pill caixa-filtro-input">
                 </div>
-                <div style="padding-top:16px;">
-                  <button class="btn btn-danger btn-sm rounded-pill px-3" id="btn-filtrar-caixa" style="font-size:.7rem;height:32px;white-space:nowrap;">
-                    <i class="bi bi-search me-1"></i> Filtrar
+                <div class="caixa-btn-filtrar-wrap dropdown-filtro-wrapper" id="dropdown-filtro-wrapper-caixa">
+                  <button class="btn btn-danger btn-sm rounded-pill px-3 caixa-btn-filtrar" id="btn-filtrar-caixa"
+                    type="button">
+                    <i class="bi bi-funnel-fill me-1"></i> Filtrar
                   </button>
+                  <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-caixa" style="min-width:240px;">
+                    <div class="px-3 py-2">
+                      <label class="caixa-filtro-label mb-1">Descrição</label>
+                      <input type="text" id="caixa-filtro-descricao"
+                        class="form-control form-control-sm rounded-pill mb-2" placeholder="Ex: Pix, entrega..."
+                        style="font-size:.72rem;height:30px;">
+                      <label class="caixa-filtro-label mb-1">Valor</label>
+                      <input type="text" id="caixa-filtro-valor" class="form-control form-control-sm rounded-pill mb-2"
+                        placeholder="Ex: 150,00" style="font-size:.72rem;height:30px;">
+                      <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill flex-fill"
+                          id="btn-caixa-filtro-limpar" style="font-size:.68rem;">Limpar</button>
+                        <button type="button" class="btn btn-danger btn-sm rounded-pill flex-fill"
+                          id="btn-caixa-filtro-aplicar" style="font-size:.68rem;">Aplicar</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="caixa-lista-diaria-wrapper p-3">
-              <div id="caixa-lista-diaria">
-                <div class="text-center text-muted py-4" style="font-size:.8rem;">
-                  <i class="bi bi-inbox" style="font-size:1.2rem;display:block;opacity:.4;margin-bottom:4px;"></i>
-                  Selecione o período e clique em Filtrar.
+
+              <!-- CONTAINER DA LISTA DIÁRIA (estava faltando) -->
+              <div class="caixa-lista-diaria-wrapper mt-3">
+                <div id="caixa-lista-diaria">
+                  <div class="fin-lista-loading">
+                    <i class="bi bi-search fin-loading-spin"></i>
+                    <span>Buscando informações<span
+                        class="fin-dots-anim"><span>.</span><span>.</span><span>.</span></span></span>
+                  </div>
                 </div>
               </div>
+
             </div>
             <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
               <div class="btn-group shadow-sm">
-                <button class="btn btn-light" id="fin-pag-prev-caixa" disabled><i class="bi bi-chevron-left"></i></button>
+                <button class="btn btn-light" id="fin-pag-prev-caixa" disabled><i
+                    class="bi bi-chevron-left"></i></button>
                 <button class="btn btn-light" id="fin-pag-label-caixa" disabled>Pág 1</button>
-                <button class="btn btn-light" id="fin-pag-next-caixa" disabled><i class="bi bi-chevron-right"></i></button>
+                <button class="btn btn-light" id="fin-pag-next-caixa" disabled><i
+                    class="bi bi-chevron-right"></i></button>
               </div>
             </div>
           </div>
@@ -271,7 +318,8 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body px-4 py-3">
-        <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>
+        <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3"
+          style="font-size:.74rem;border-radius:10px;"></div>
         <input type="hidden" id="fin-edit-id">
         <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
           <div class="fin-form-section">
@@ -302,21 +350,25 @@
               </div>
               <div class="col-6">
                 <label class="fin-field-label">Colaborador</label>
-                <select id="fin-colaborador-id" class="form-select form-select-sm rounded-pill fin-field-input"></select>
+                <select id="fin-colaborador-id"
+                  class="form-select form-select-sm rounded-pill fin-field-input"></select>
               </div>
             </div>
             <div class="mb-2">
               <label class="fin-field-label">Descrição</label>
-              <input type="text" id="fin-descricao" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Entrega #123">
+              <input type="text" id="fin-descricao" class="form-control form-control-sm rounded-pill fin-field-input"
+                placeholder="Ex: Entrega #123">
             </div>
           </div>
           <div class="fin-form-section">
             <div class="fin-form-section-label">Valor</div>
             <div class="mb-2">
               <label class="fin-field-label">Valor (R$)</label>
-              <input type="text" id="fin-valor" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="0,00" inputmode="decimal">
+              <input type="text" id="fin-valor" class="form-control form-control-sm rounded-pill fin-field-input"
+                placeholder="0,00" inputmode="decimal">
             </div>
-            <div id="fin-preview-comissao" class="d-none mt-2 p-2 rounded-3" style="background:#f8f9fa;font-size:.72rem;">
+            <div id="fin-preview-comissao" class="d-none mt-2 p-2 rounded-3"
+              style="background:#f8f9fa;font-size:.72rem;">
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Total</span>
                 <span id="preview-valor-total" class="fw-semibold"></span>
@@ -333,13 +385,16 @@
           </div>
           <div class="fin-form-section">
             <div class="fin-form-section-label">Observação</div>
-            <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2" placeholder="Observações opcionais..." style="border-radius:12px;resize:none;"></textarea>
+            <textarea id="fin-obs" class="form-control form-control-sm fin-field-input" rows="2"
+              placeholder="Observações opcionais..." style="border-radius:12px;resize:none;"></textarea>
           </div>
         </form>
       </div>
       <div class="fin-form-footer justify-content-end">
-        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Cancelar</button>
-        <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-novo-fin" style="font-size:.72rem;">
+        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
+          style="font-size:.72rem;">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-novo-fin"
+          style="font-size:.72rem;">
           <span id="spinner-salvar-fin" class="spinner-border spinner-border-sm me-1 d-none"></span>
           <span id="txt-salvar-fin"><i class="bi bi-check-lg me-1"></i>Salvar</span>
         </button>
@@ -377,20 +432,24 @@
             </div>
           </div>
           <div class="col-6">
-            <div class="caixa-mini-card" style="padding:8px 12px;background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);">
+            <div class="caixa-mini-card"
+              style="padding:8px 12px;background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);">
               <div class="caixa-mini-label">Empresa (20%)</div>
-              <div class="caixa-mini-valor" id="modal-detalhe-dia-empresa" style="font-size:.82rem;color:#6f42c1;">R$ 0,00</div>
+              <div class="caixa-mini-valor" id="modal-detalhe-dia-empresa" style="font-size:.82rem;color:#6f42c1;">R$
+                0,00</div>
             </div>
           </div>
           <div class="col-6">
             <div class="caixa-mini-card caixa-mini-saldo" style="padding:8px 12px;">
               <div class="caixa-mini-label">Colaboradores (80%)</div>
-              <div class="caixa-mini-valor" id="modal-detalhe-dia-colaboradores" style="font-size:.82rem;color:#0d6efd;">R$ 0,00</div>
+              <div class="caixa-mini-valor" id="modal-detalhe-dia-colaboradores"
+                style="font-size:.82rem;color:#0d6efd;">R$ 0,00</div>
             </div>
           </div>
         </div>
         <div class="d-flex justify-content-between align-items-center px-1 mb-2">
-          <span style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">Saldo do dia</span>
+          <span style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">Saldo
+            do dia</span>
           <span id="modal-detalhe-dia-saldo" style="font-size:.95rem;font-weight:700;">R$ 0,00</span>
         </div>
         <div class="table-responsive">
@@ -409,33 +468,43 @@
         </div>
       </div>
       <div class="modal-footer border-0 px-3 pb-3 pt-0 justify-content-end">
-        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.74rem;">Fechar</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal"
+          style="font-size:.74rem;">Fechar</button>
       </div>
     </div>
   </div>
 </div>
 
 
-<div id="extrato-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
-    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
+<div id="extrato-modal-overlay"
+  style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
+  <div
+    style="background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+    <div
+      style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
       <div class="d-flex align-items-center gap-3">
-        <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+        <div
+          style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
           <i class="bi bi-file-earmark-bar-graph" style="color:#fff;font-size:1rem;"></i>
         </div>
         <div>
-          <div id="extrato-modal-titulo" style="font-size:.82rem;font-weight:700;color:#fff;letter-spacing:.5px;">EXTRATO</div>
+          <div id="extrato-modal-titulo" style="font-size:.82rem;font-weight:700;color:#fff;letter-spacing:.5px;">
+            EXTRATO</div>
           <div style="font-size:.6rem;color:rgba(255,255,255,.45);">Relatório financeiro</div>
         </div>
       </div>
       <div class="d-flex gap-2">
-        <button id="extrato-modal-pdf" style="background:rgba(220,80,50,0.85);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Gerar PDF">
+        <button id="extrato-modal-pdf"
+          style="background:rgba(220,80,50,0.85);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;"
+          title="Gerar PDF">
           <i class="bi bi-file-earmark-pdf-fill"></i> PDF
         </button>
-        <button id="extrato-modal-copiar" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;">
+        <button id="extrato-modal-copiar"
+          style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;">
           <i class="bi bi-clipboard"></i> Copiar
         </button>
-        <button id="extrato-modal-fechar" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;">
+        <button id="extrato-modal-fechar"
+          style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;">
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
@@ -446,19 +515,19 @@
 
 
 <script>
-(function () {
-  'use strict';
-  function _aguardarFinJs() {
-    if (typeof window.initFinanceiro === 'function') {
-      window.initFinanceiro();
-    } else {
-      setTimeout(_aguardarFinJs, 100);
+  (function () {
+    'use strict';
+    function _aguardarFinJs() {
+      if (typeof window.initFinanceiro === 'function') {
+        window.initFinanceiro();
+      } else {
+        setTimeout(_aguardarFinJs, 100);
+      }
     }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _aguardarFinJs);
-  } else {
-    _aguardarFinJs();
-  }
-})();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _aguardarFinJs);
+    } else {
+      _aguardarFinJs();
+    }
+  })();
 </script>
