@@ -1,19 +1,20 @@
 window.API = (function () {
 
     var ENDPOINT = '/api/proxy';
-    var TIMEOUT_MS = 20000; // 20s — Apps Script pode ter cold start
+    var TIMEOUT_MS = 20000;
+    var MAX_RETRIES = 3;
+    var RETRY_DELAY_MS = 1500;
 
-    /**
-     * Executa uma chamada à API (proxy -> Google Apps Script).
-     * @param {string} action - Nome da ação (ex: 'addcolaboradores').
-     * @param {object} [data] - Dados adicionais a enviar no payload.
-     * @returns {Promise<object>} Resolve com o JSON de resposta ou rejeita com Error.
-     */
-    function call(action, data) {
-        if (!action || typeof action !== 'string') {
-            return Promise.reject(new Error('API.call: "action" é obrigatório e deve ser string.'));
-        }
+    function sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
 
+    function isBusyError(err) {
+        return err && err.message && err.message.indexOf('Sistema ocupado') !== -1;
+    }
+
+    function doCall(action, data) {
+        // ... (todo o corpo original da função call, sem alteração)
         var payload = { action: action };
         if (data && typeof data === 'object') {
             Object.keys(data).forEach(function (k) {
@@ -41,12 +42,10 @@ window.API = (function () {
             return res.text().then(function (rawText) {
                 var parsed = null;
 
-                // Tenta parsear o corpo como JSON de forma segura
                 if (rawText && rawText.trim() !== '') {
                     try {
                         parsed = JSON.parse(rawText);
                     } catch (parseErr) {
-                        // Resposta não é JSON válido (ex: HTML de erro, 502, etc.)
                         throw new Error(
                             'Resposta inválida do servidor (HTTP ' + res.status + '): ' +
                             rawText.substring(0, 150)
@@ -84,6 +83,25 @@ window.API = (function () {
             }
 
             console.error('[API] Erro em "' + action + '":', err);
+            throw err;
+        });
+    }
+
+    // Wrapper com retry automático para erro de concorrência
+    function call(action, data, attempt) {
+        attempt = attempt || 1;
+
+        if (!action || typeof action !== 'string') {
+            return Promise.reject(new Error('API.call: "action" é obrigatório e deve ser string.'));
+        }
+
+        return doCall(action, data).catch(function (err) {
+            if (isBusyError(err) && attempt < MAX_RETRIES) {
+                console.warn('[API] "' + action + '" ocupado. Tentativa ' + attempt + '/' + MAX_RETRIES + '...');
+                return sleep(RETRY_DELAY_MS * attempt).then(function () {
+                    return call(action, data, attempt + 1);
+                });
+            }
             throw err;
         });
     }

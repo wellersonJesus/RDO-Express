@@ -1,4 +1,165 @@
 DADOS_BRUTOS = """
+09:21	02/07/2026	Juliana Almeida	AUANDER	ENTREGA	VAL — R.Matipó,299/102,Santo Antônio	R$18,00	-
+09:31	02/07/2026	Juliana Borges	IGOR	ENTREGA	M PITANGA — R.Santa Rita,221,Olhos D'água,Geosol,DHO Ramal225	R$22,00	Até 12h
+09:44	02/07/2026	Ana Adalgisa	IGOR	COLETA	AMMIS — R.Agostinho Bretas,436/701,Caiçara	R$30,00	Até 12h; secretária entrega sacola
+09:48	02/07/2026	CPAP Minas/Cesar	AUANDER	COM RETORNO	MAURICIO — Av.Brasil,283/903-904→R.Manaus,445,São Lucas	R$24,00	Máscara CPAP; troca; Cesar (31)8977-1198
+09:57	02/07/2026	Costureira Raquel	IGOR	ENTREGA	VAL — R.Pedro Natalício,275/403,Buritis	R$20,00	Mudou endereço
+10:21	02/07/2026	Marcia Cardoso	AUANDER	ENTREGA	PLURAL — R.Equador,264/604,São Pedro	R$17,00	Até 13h30
+10:46	02/07/2026	Leidiane Vieira	AUANDER	ENTREGA	OPMINAS — INSTITUTO	R$20,00	Mala G+Sacola
+10:46	02/07/2026	Maria Bernardes	AUANDER	ENTREGA	OPMINAS — FELÍCIO ROCHO	R$22,00	01 Sacola
+10:53	02/07/2026	Áurea/Jaque	IGOR	ENTREGA	AMMIS — Av.Raja Gabaglia,2708/315,Estoril	R$16,00	Até 12h30
+10:55	02/07/2026	Virgínia	EMERSON	ENTREGA	AMMIS — Praça N.Sra.Abadia,157/1200,Ed.Apogee	R$16,00	-
+11:12	02/07/2026	Cida	EMERSON	ENTREGA	S MANOEL — R.Ana Teresa,40,B.Indústrias	R$28,00	Até 12h40
+11:12	02/07/2026	Regina Celi	EMERSON	COLETA	OPMINAS — INSTITUTO	R$20,00	Mala P+Sacola
+11:36	02/07/2026	Tatyane Andrade	EMERSON	ENTREGA	M PITANGA — R.Washington,886/402,Sion	R$20,00	Até 15h
+11:39	02/07/2026	Tatiane	EMERSON	ENTREGA	AMMIS — R.Rodrigo O.Coutinho,500/2800,Belvedere	R$15,00	-
+11:42	02/07/2026	Pedal Linvatec	EMERSON	COLETA	OPMINAS — SURGICAL	R$22,00	-
+11:49	02/07/2026	Camila/Angela-Tiago	EMERSON	COLETA/ENTREGA	ELISA ATHENIENSE CEARA — Botânico→R.Ceará,1332	R$15,00	-
+12:03	02/07/2026	Carolina	EMERSON	ENTREGA	NATUPET — R.Henrique F.Portugal,181/602,Buritis	R$31,00	Pedido múltiplo (2 entregas)
+12:03	02/07/2026	Rafael	IGOR	ENTREGA	NATUPET — R.São João Evangelista,644/202,Santo Antônio	R$31,00	Pedido múltiplo (2 entregas)
+12:17	02/07/2026	—	IGOR	ENTREGA	TELECOM — Del Rey	R$36,67	9 pontos
+12:17	02/07/2026	—	IGOR	ENTREGA	TELECOM — Shopping Contagem	R$36,67	9 pontos
+12:17	02/07/2026	—	EMERSON	ENTREGA	TELECOM — Estação 1	R$36,67	9 pontos
+12:17	02/07/2026	—	EMERSON	ENTREGA	TELECOM — Shopping Partage	R$36,67	9 pontos
+12:17	02/07/2026	—	AUANDER	ENTREGA	TELECOM — Minas Shopping	R$36,67	9 pontos
+12:17	02/07/2026	—	IGOR	ENTREGA	TELECOM — Estação 2	R$36,67	9 pontos
+12:17	02/07/2026	—	EMERSON	ENTREGA	TELECOM — Via Barreiro	R$36,67	9 pontos
+12:17	02/07/2026	—	EMERSON	ENTREGA	TELECOM — Shopping Itaú Power	R$36,67	9 pontos
+12:17	02/07/2026	—	IGOR	ENTREGA	TELECOM — Big Shopping	R$36,66	9 pontos
+12:24	02/07/2026	William	EMERSON	ENTREGA	DELUZA — R.Santa Marta,85,São Gabriel	R$20,00	2 entregas
+12:24	02/07/2026	Carlinhos	GRUPO	ENTREGA	DELUZA — R.Soledade Minas,9,São Gabriel	R$20,00	2 entregas
+12:42	02/07/2026	Costureira Luiza	AUANDER	ENTREGA	VAL — Av.Prof.Mário Werneck,2900,L-20,Buritis	R$20,00	Urgente
+13:01	02/07/2026	Fabiola Taranto	EMERSON	COLETA	VAL — R.dos Aimorés,2450/1102,Lourdes	R$18,00	-
+13:08	02/07/2026	Camila	AUANDER	COLETA	FF FASHION — R.Abadessa Gertrudes Prado,201,São Bento	R$17,00	-
+13:15	02/07/2026	Adriana	IGOR	ENTREGA	FF FASHION — R.João Carlos,1486/501,Sagrada Família	R$23,00	-
+13:27	02/07/2026	Sara Santos/Jane	IGOR	COLETA	VAL — R.Brumadinho,438,Prado	R$18,00	-
+13:27	02/07/2026	Luciana Almeida	IGOR	ENTREGA	M PITANGA — Cond.Village Terrasse,Nova Lima	R$24,00	-
+13:29	02/07/2026	Leticia	IGOR	ENTREGA	ELISA ATHENIENSE BOTÂNICO — R.Ludgero Dolabela,857/602,Gutierrez	R$18,00	-
+13:41	02/07/2026	Marlimara Meneghi Hallak	EMERSON	ENTREGA	M PITANGA — R.Des.Jorge Fontana,250/1903,Belvedere	R$16,00	Até 16h
+13:56	02/07/2026	Glacilene	EMERSON	COLETA	AMMIS — R.Roma,145/801,Santa Lúcia	R$17,00	Depois das 14h
+13:56	02/07/2026	Kassinha/Costureira Raquel	AUANDER	COLETA/ENTREGA	VAL — Bernardino de Lima,321,Gutierrez→R.Pedro Natalício,275/403,Buritis	R$22,00	LN Kassinha
+14:40	02/07/2026	Karla	AUANDER	ENTREGA	VAL — R.Espírito Santo,2568/1201,Lourdes	R$18,00	-
+14:44	02/07/2026	M.S.B	AUANDER	ENTREGA	OPMINAS — MATER DEI SANTO AGOSTINHO	R$22,00	01 Sacola
+14:45	02/07/2026	Sara Santos/Jane	IGOR	COLETA/ENTREGA	JACIRA — R.Brumadinho,438,Prado→R.Alessandra Salum Cadar,960,Buritis,casa2	R$22,00	-
+14:53	02/07/2026	Fabiana	IGOR	COLETA	AMMIS — R.Eng.Amaro Lanari,66/1400,Anchieta	R$18,00	-
+15:02	02/07/2026	Marcy	AUANDER	ENTREGA	VAL — R.Bernardo Guimarães,2272/601,Lourdes	R$18,00	Entre Olegário e Sta.Catarina
+15:10	02/07/2026	Maria Teresa	AUANDER	COLETA	M PITANGA — R.Vicente Guimarães,35/1302,Belvedere	R$16,00	-
+15:17	02/07/2026	Camila	IGOR	ENTREGA	JOSI FRAGA — R.Jeferson,60/601,Bairro União	R$22,00	-
+15:42	02/07/2026	Tatiane Duarte	GRUPO	COLETA	BASIQUE — R.Des.Jorge Fontana,50/12,Belvedere	R$16,00	-
+16:40	02/07/2026	Diego Alves	IGOR	ENTREGA	OPMINAS — VERA CRUZ	R$22,00	Mala G+01 Sacola
+17:00	02/07/2026	Paola	AUANDER	COLETA	INCLOSET — Alameda Davos,569,Vila Alpina	R$30,00	-
+17:13	02/07/2026	Felipe	IGOR	COLETA	MAURICIO — R.Guaicuí,222/202,Coração de Jesus	R$18,00	CPAP; horário 12h
+17:14	02/07/2026	Felipe	AUANDER	ENTREGA	MAURICIO — R.Guaicuí,222/202,Coração de Jesus	R$18,00	-
+17:17	02/07/2026	Margareth	EMERSON	COLETA	MAURICIO — R.Federico Campos,72,Industrial,Contagem	R$40,00	-
+17:17	02/07/2026	Margareth	AUANDER	ENTREGA	MAURICIO — R.Federico Campos,72,Industrial,Contagem	R$40,00	-
+17:19	02/07/2026	Tobias	EMERSON	COLETA	MAURICIO — R.Júlio de Castilho,774/201,Cinquentenário	R$27,00	-
+17:19	02/07/2026	Tobias	EMERSON	ENTREGA	MAURICIO — R.Júlio de Castilho,774/201,Cinquentenário	R$27,00	-
+17:20	02/07/2026	Marcos Aurélio	EMERSON	COLETA	MAURICIO — R.Dr.Ouvido de Abreu,2200,casa3,Satélite,Juatuba	R$120,00	Coleta às 9h
+17:21	02/07/2026	Marcos Aurélio	AUANDER	ENTREGA	MAURICIO — R.Dr.Ouvido de Abreu,2200,casa3,Satélite,Juatuba	R$120,00	-
+17:22	02/07/2026	Marina Hermont	EMERSON	ENTREGA	MAURICIO — Av.Brasil,283→R.Califórnia,689/601	R$17,00	Filtros de barreira
+17:23	02/07/2026	Ana Quadros	EMERSON	COLETA/ENTREGA	ANA — CHARTH(Sara)→R.Monsenhor Horta Calafate,212	R$27,00	Corretora
+17:25	02/07/2026	Angela	AUANDER	COM RETORNO	ELISA ATHENIENSE CEARA — R.São Romão,369,Santo Antônio	R$27,00	-
+17:25	02/07/2026	Jessica Costa Rodrigues	GRUPO	COLETA	OPMINAS — MADRE TERESA/POLITEC	R$22,00	Mala P vermelha+Sacola
+17:25	02/07/2026	Erika/Giovana	IGOR	COLETA/ENTREGA	ERIKA — Av.Bandeirantes,665,Anchieta→R.Ouro Preto,1523,Santo Agostinho	R$20,00	-
+17:29	02/07/2026	Mari (lojista)	GRUPO	COLETA/ENTREGA	FF FASHION — Coleta FF→R.Romualdo Lopes Cançado,88/03,Castelo	R$35,00	Urgente
+09:08	03/07/2026	Áurea/Jaque	GRUPO	ENTREGA	AMMIS — Av.Raja Gabaglia,2708/315,Estoril	R$16,00	Até 10h
+09:09	03/07/2026	Lindaura	EMERSON	COLETA	AMMIS — R.Rodrigo Otaviano Coutinho,320/700,Belvedere	R$15,00	-
+09:10	03/07/2026	Elcy	EMERSON	COLETA	MAURICIO — R.Tito Guimarães,128/1202,Buritis→Av.Brasil,283	R$22,00	Coleta 9h30; entrega até 18h
+09:13	03/07/2026	Rubens	EMERSON	ENTREGA	MAURICIO — Av.Brasil,283→R.Padre Faustino,145,Boa Vista	R$18,00	Horário comercial
+09:47	03/07/2026	Ana Luiza	EMERSON	ENTREGA	KOPENHAGEN — R.Tomaz Gonzaga,271/1601,Lourdes	R$17,00	Até 11h30
+10:47	03/07/2026	Virgínia	EMERSON	COM RETORNO	AMMIS — Praça N.Sra.Abadia,157/1200,Ed.Apogee	R$26,00	-
+11:01	03/07/2026	Costureira Isabel	EMERSON	COM RETORNO	PLURAL — R.Miguel Gomes da Costa,52,Mantiqueira	R$60,00	Até 15h
+11:02	03/07/2026	Isabela/Loja Ma Ville	IGOR	ENTREGA	ROSA DÁLIA — R.Juvenal de Melo Senra,317,Belvedere	R$23,00	-
+11:23	03/07/2026	Kauan Ramos	EMERSON	ENTREGA	OPMINAS — INSTITUTO DE OTORRINO	R$27,00	02 Malas P+Sacola
+11:24	03/07/2026	T.Z.D.E.C.L	IGOR	ENTREGA	OPMINAS — MATER DEI CONTORNO	R$22,00	01 Sacola
+11:24	03/07/2026	J.R.D	IGOR	ENTREGA	OPMINAS — MATER DEI SANTO AGOSTINHO	R$22,00	01 Sacola
+11:25	03/07/2026	Lara Haneul	IGOR	ENTREGA	OPMINAS — MATER DEI BETIM	R$55,00	01 Sacola
+11:26	03/07/2026	O.F.M.D.A	IGOR	ENTREGA	OPMINAS — MATER DEI NOVA LIMA	R$25,00	Mala G+Sacola
+11:28	03/07/2026	Dona Lucia	IGOR	ENTREGA	MAURICIO — Al.Flamboyant,1231,Vila Maria Regina,Juatuba	R$120,00	-
+11:38	03/07/2026	Reinaldo/Lidyane	EMERSON	COM RETORNO	MAURICIO — Av.Brasil,283→R.Brasópolis,182,Floresta	R$26,00	Vedação; casa verde; crédito R$150
+11:40	03/07/2026	Isabela Menezes	AUANDER	ENTREGA	M PITANGA — R.Tito Guimarães,12/1401,Buritis	R$15,00	Até 13h
+11:44	03/07/2026	Roberto	EMERSON	COM RETORNO	MAURICIO — Av.Brasil,283→R.Angra dos Reis,336,casa4,São Pedro,Esmeraldas	R$142,00	Troca CPAP; entregar 16h
+12:03	03/07/2026	Escritório Incloset	EMERSON	ENTREGA	IN CLOSET — R.Herculano de Freitas,1567,Gutierrez	R$18,00	Até 14h
+12:05	03/07/2026	Vanessa	IGOR	ENTREGA	INCLOSET — R.João Antônio Cardoso,580/901,Ouro Preto	R$55,00	Até 13h30
+12:06	03/07/2026	Costureira Luiza	IGOR	COM RETORNO	VAL — Av.Prof.Mário Werneck,2900/L-20,Buritis	R$32,00	Até 13h30
+12:09	03/07/2026	Maria Eliza	EMERSON	ENTREGA	MAURICIO — Av.Brasil,283→R.Sergipe,472/704,Boa Viagem	R$18,00	Liberado
+12:14	03/07/2026	Angélica	EMERSON	COLETA	MAURICIO — R.Tamarindos,50,Eldorado→Av.Brasil,283	R$35,00	2 máscaras+3 traquéias; urgente
+12:24	03/07/2026	Graça	GRUPO	ENTREGA	CACAU SHOW — Av.Francisco Sá,220/03,Prado	R$15,00	-
+12:25	03/07/2026	Sara Santos/Jane	GRUPO	COLETA	VAL — R.Brumadinho,438,Prado	R$18,00	-
+12:37	03/07/2026	Lindaura	GRUPO	ENTREGA	AMMIS — R.Rodrigo Otaviano Coutinho,320/700,Belvedere	R$15,00	Malinha pequena
+12:48	03/07/2026	Fernanda	EMERSON	ENTREGA	ELISA ATHENIENSE BOTÂNICO — R.Flavita Bretas,609/901,Luxemburgo	R$17,00	-
+12:49	03/07/2026	Camila/Angela-Tiago	GRUPO	COLETA/ENTREGA	ELISA ATHENIENSE — R.Ceará,1332→Botânico Belvedere	R$15,00	-
+12:49	03/07/2026	Camila/Angela-Tiago	GRUPO	COLETA/ENTREGA	ELISA ATHENIENSE CEARA — Botânico→R.Ceará,1332	R$15,00	-
+12:51	03/07/2026	Fernanda	GRUPO	COLETA	MAURICIO — Av.Brasil,283→R.Portugal,102,Glória,Contagem	R$40,00	4 caixas pequenas
+12:54	03/07/2026	Antônio	EMERSON	ENTREGA	BRENO — R.Laranjal,323/1500,Anchieta	R$18,00	Coletar Brug
+12:57	03/07/2026	Flavia Ottoni	GRUPO	ENTREGA	M PITANGA — R.Costa Machado,367/202,Universitário	R$33,00	Entre 15h-17h30
+12:59	03/07/2026	Pamela	AUANDER	ENTREGA	ROSA DÁLIA — R.Marco Aurélio de Miranda,170,Buritis	R$20,00	-
+13:38	03/07/2026	—	EMERSON	ENTREGA	VAL — R.Francisco Deslandes,1072/1003,Anchieta	R$18,00	-
+13:39	03/07/2026	Lerida	EMERSON	ENTREGA	INCLOSET — R.Santa Rita Durão,1056/300,T1,Funcionários	R$19,00	-
+13:48	03/07/2026	Juliana	AUANDER	COLETA	ELISA ATHENIENSE BOTÂNICO — R.das Acácias,310/1002,Vale do Sereno	R$20,00	-
+14:21	03/07/2026	Ilca Loureiro	GRUPO	ENTREGA	CESTA — R.Vitório Marçola,383/301	R$18,00	-
+14:24	03/07/2026	Costureira Raquel	AUANDER	COLETA	VAL — R.Pedro Natalício,275/403,Buritis	R$20,00	-
+14:57	03/07/2026	Otávio/Matheus	AUANDER	COLETA/ENTREGA	LERIDA — Hosp.Lifecenter,1106→R.São Paulo,409/1408,Centro	R$25,00	-
+14:59	03/07/2026	Raquel Maria/Sheila Machado	AUANDER	ENTREGA	OPMINAS — FELÍCIO ROCHO	R$29,00	02 Malas P+2 Sacolas
+15:04	03/07/2026	Áurea/Jaque	IGOR	COLETA	AMMIS — Av.Raja Gabaglia,2708/315,Estoril	R$16,00	-
+15:10	03/07/2026	Elisangela	GRUPO	ENTREGA	VAL — R.Benedito Nogueira Vilela,47,Heliópolis	R$36,00	-
+15:13	03/07/2026	Juliana	IGOR	ENTREGA	ELISA ATHENIENSE BOTÂNICO — R.Oriente,617,Serra	R$18,00	-
+15:14	03/07/2026	Maria Teresa	GRUPO	COLETA	M PITANGA — R.Vicente Guimarães,35/1302,Belvedere	R$16,00	-
+15:27	03/07/2026	Linvatec008	AUANDER	COLETA	OPMINAS — SURGICAL	R$22,00	Mala G
+15:33	03/07/2026	NSK 0026	IGOR	COLETA	OPMINAS — SURGICAL	R$22,00	Mala P
+15:38	03/07/2026	Costureira Luiza	IGOR	COLETA	VAL — Av.Prof.Mário Werneck,2900/L-10,Buritis	R$20,00	-
+15:58	03/07/2026	Lindaura	AUANDER	COLETA	AMMIS — R.Rodrigo Otaviano Coutinho,320/700,Belvedere	R$15,00	Malinha pequena
+16:27	03/07/2026	Marisa	GRUPO	ENTREGA	AMMIS — R.Fausto Nunes Vieira,120/2301,Belvedere	R$15,00	-
+16:31	03/07/2026	Lara Haneul	GRUPO	COLETA	OPMINAS — MATER DEI BETIM	R$55,00	01 Sacola
+16:34	03/07/2026	Carolina Guimarães	IGOR	ENTREGA	AMMIS — Mares de Montanhas,1265,Vale dos Cristais	R$25,00	-
+16:35	03/07/2026	Elcy	GRUPO	COM RETORNO	MAURICIO — R.Tito Guimarães,128/1202,Buritis→Av.Brasil,283	R$34,00	18h30; cartão R$300/350
+17:10	03/07/2026	Grazi	AUANDER	COLETA/ENTREGA	FF FASHION — R.Jacarandá,449/1301,Vale do Sereno	R$23,00	Urgente; até 18h
+17:12	03/07/2026	Tutu	GRUPO	COLETA/ENTREGA	FF FASHION — R.João Antônio Azeredo,90/1201,Belvedere	R$22,00	-
+17:12	03/07/2026	Dani Braga	GRUPO	ENTREGA	FF FASHION — R.Des.Jorge Fontana,335/1503,Belvedere	R$22,00	✅ Confirmado
+11:00	04/07/2026	Gildo	GRUPO	COLETA/ENTREGA	CESTA — R.Duartina,1207,Ana Lúcia→Praça Padre José Luiz,Salgado Filho	R$38,00	Retirada de pizzas
+11:02	04/07/2026	Gisele	GRUPO	ENTREGA	FF FASHION — R.Lua,500/801,Santa Lúcia	R$17,00	-
+11:02	04/07/2026	Viviane	GRUPO	ENTREGA	FF FASHION — R.Sílvio Menicucci,64/902,Bl2,Buritis	R$22,00	-
+11:52	04/07/2026	Gilmar	GRUPO	COLETA	VAL — R.Flor de Fogo,65/202,Bl8,Liberdade,Pampulha	R$35,00	-
+11:56	04/07/2026	Claudia	GRUPO	ENTREGA	ELISA ATHENIENSE — R.Jornalista Moacyr Andrade,257,São Bento	R$17,00	-
+12:29	04/07/2026	Gislaine	GRUPO	ENTREGA	M PITANGA — Av.do Contorno,6777/loja9,Santo Antônio	R$22,00	-
+13:14	04/07/2026	Nádia Rodrigues	GRUPO	ENTREGA	FF FASHION — R.Benjamin Jacob,210,Gutierrez	R$18,00	-
+08:36	06/07/2026	Cida	GRUPO	COLETA	MAURICIO — R.Exp.José A.dos Anjos,250,São Luiz→Av.Brasil,283	R$32,00	Máquina de tosse; liberado
+09:50	06/07/2026	Newton	GRUPO	COM RETORNO	MAURICIO — Av.Brasil,283→Av.Paulo Camilo Pena,602/801,Belvedere	R$34,00	CPAP; retornar c/outro equip.
+09:52	06/07/2026	Maria/Vanessa	GRUPO	ENTREGA	MAURICIO — Av.Brasil,283→R.Soares de Araújo,31/401,Santa Cruz	R$20,00	CPAP
+11:13	06/07/2026	Giovanna Ribeiro	GRUPO	COLETA/ENTREGA	ROSA DALIA — R.Turfa,389→Av.Prudente de Morais,507/403A	R$18,00	-
+11:13	06/07/2026	Angela/Tiago→Camila	IGOR	COLETA/ENTREGA	ELISA ATHENIENSE CEARA — Botânico Belvedere→R.Ceará,1332	R$15,00	Até 12h30
+11:14	06/07/2026	Patricia Rolla Fernandes	AUANDER	ENTREGA	M PITANGA — R.Frederico Bracher Jr,200/205A,Pd.Eustáquio	R$24,00	Até 15h
+11:15	06/07/2026	Vivian Lucia	AUANDER	ENTREGA	AMMIS — R.República Argentina,795/502,Sion	R$20,00	-
+11:16	06/07/2026	Tatiane	AUANDER	ENTREGA	AMMIS — R.Rodrigo O.Coutinho,500/2800,Belvedere	R$15,00	-
+11:21	06/07/2026	Fayga	AUANDER	COLETA	AMMIS — R.Almirante Alexandrino,750/1301,Gutierrez	R$18,00	Já na portaria
+11:42	06/07/2026	Débora/Vanessa	AUANDER	COLETA	MAURICIO — R.Domingos Vieira,273,sl1001,Sta Efigênia	R$15,00	CPAP
+11:43	06/07/2026	Guilherme Machado	AUANDER	ENTREGA	OPMINAS — MATER DEI SANTO AGOSTINHO	R$22,00	Malas G+Sacola
+11:43	06/07/2026	Theo Henrique	IGOR	ENTREGA	OPMINAS — VILA DA SERRA	R$25,00	01 Sacola
+11:43	06/07/2026	M.V.M.P/Guilherme Machado	IGOR	ENTREGA	OPMINAS — MATER DEI CONTORNO	R$22,00	Sacola+CME
+11:59	06/07/2026	J.R.D.L/M.S.B	IGOR	COLETA	OPMINAS — MATER DEI SANTO AGOSTINHO	R$22,00	02 Sacolas
+12:00	06/07/2026	T.Z.D.E.C.L/F.F.M.B	IGOR	COLETA	OPMINAS — MATER DEI CONTORNO	R$22,00	02 Sacolas
+12:00	06/07/2026	Diego Alves	IGOR	COLETA	OPMINAS — VERA CRUZ	R$22,00	Mala G+Sacola
+12:02	06/07/2026	Barbara	IGOR	COLETA	BASIQUE — R.Cláudio Manoel,1018/1102,Funcionários	R$21,00	-
+12:26	06/07/2026	Leidiane Vieira	IGOR	COLETA	OPMINAS — INSTITUTO	R$20,00	Mala G+Sacola
+12:38	06/07/2026	Erika Tristão	IGOR	ENTREGA	MIMAME — R.Paraíba,1287/901,Savassi	R$21,00	Corrida paga p/RDO
+13:02	06/07/2026	Camila/Angela-Tiago	IGOR	COLETA/ENTREGA	ELISA ATHENIENSE — R.Ceará→Botânico Belvedere	R$15,00	-
+13:21	06/07/2026	Tatiane	AUANDER	COLETA	AMMIS — R.Rodrigo O.Coutinho,500/2800,Belvedere	R$15,00	-
+13:47	06/07/2026	Otavia Pongelupi	AUANDER	ENTREGA	M PITANGA — R.Benjamim Jacob,40/04,Grajaú	R$18,00	Até 15h30
+13:55	06/07/2026	Maria	AUANDER	COM RETORNO	INCLOSET — R.Prof.Bartira Mourão,364/602,Buritis	R$28,00	-
+14:00	06/07/2026	Alessandra Alves	AUANDER	ENTREGA	VANDA — Av.Cristiano Machado,4000	R$35,00	-
+14:03	06/07/2026	Barbara	AUANDER	ENTREGA	MIMAME — R.das Cores,700,apto101,torre3,Vale dos Cristais	R$20,00	-
+14:14	06/07/2026	Cliente (experimentação)	IGOR	COM RETORNO	FF FASHION — R.Des.Paulo Mota,1660/1201-2,Ouro Preto	R$62,00	Aguardar experimentar
+14:16	06/07/2026	Valeria Machado	AUANDER	ENTREGA	INCLOSET — Av.Ressaca,330/102,Coração Eucarístico	R$24,00	Coleta escritório Incloset
+14:54	06/07/2026	Áster Gráfica	AUANDER	COLETA	ELISA ATHENIENSE CEARA — R.José de Alencar,700,Nova Suíça→R.Ceará,1332	R$20,00	-
+14:59	06/07/2026	Fernanda	GRUPO	ENTREGA	FF FASHION — R.Prof.Júlio Mourão,163,Luxemburgo	R$17,00	-
+15:16	06/07/2026	Marlimara Meneghi Hallak	AUANDER	ENTREGA	M PITANGA — R.Des.Jorge Fontana,250/1903,Belvedere	R$16,00	Até 18h
+15:20	06/07/2026	Camila/Angela-Tiago	AUANDER	COLETA/ENTREGA	ELISA ATHENIENSE — R.Ceará→Botânico Belvedere	R$15,00	-
+16:58	06/07/2026	Anne Fernandes/Flávia	GRUPO	COM RETORNO	INCLOSET — R.Cuiabá,1077	R$32,00	-
+16:59	06/07/2026	Seide	—	ENTREGA	MIMAME — R.Oriente,685/500,Serra	R$18,00	🚫 CANCELADO
+17:05	06/07/2026	Márcia Andrade	AUANDER	ENTREGA	M PITANGA — Dr.Marco Paulo Simão,150/1402,Belvedere	R$16,00	Até 20h ou amanhã 9-13h
+17:32	06/07/2026	Ian Reis	—	ENTREGA	OPMINAS — MATER DEI CONTORNO	R$22,00	🚫 CANCELADO
+17:34	06/07/2026	Lerida	IGOR	COLETA	INCLOSET — R.Santa Rita Durão,1056/300,Funcionários	R$19,00	-
+17:39	06/07/2026	Ana Beatriz Assunção	AUANDER	ENTREGA	PLURAL — R.Rio de Janeiro,2300/1400	R$18,00	-
 08:48	07/07/2026	Márcia Andrade	EMERSON	ENTREGA	M PITANGA — Dr.Marco Paulo Simão,150/1402,Belvedere	R$18,00	Até 20h/amanhã 9-13h
 08:49	07/07/2026	Postagem Correios	EMERSON	ENTREGA	P&P — Contagem→Correios Pedra Azul	R$25,00	PG no P&P
 09:09	07/07/2026	Maria/Vanessa	EMERSON	ENTREGA	MAURICIO — Av.Brasil,283→R.Soares de Araújo,31/401,Sta Cruz	R$18,00	Máscara

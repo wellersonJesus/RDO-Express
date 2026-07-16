@@ -345,33 +345,59 @@
 }
 
 .fin-table-todos thead th:nth-child(1) {
-  width: 12%;
+  width: 10%; /* Data - largura justa, texto não quebra */
+}
+
+.fin-table-todos tbody td:nth-child(1),
+.fin-table-todos thead th:nth-child(1) {
+  white-space: nowrap;
 }
 
 .fin-table-todos thead th:nth-child(2) {
-  width: 13%;
+  width: 14%; /* Descrição */
 }
 
 .fin-table-todos thead th:nth-child(3) {
-  width: 18%;
+  width: 20%; /* Cliente - mais largura + deslocada */
+  padding-left: 18px;
+}
+
+.fin-table-todos tbody td:nth-child(3) {
+  padding-left: 18px;
 }
 
 .fin-table-todos thead th:nth-child(4) {
-  width: 16%;
+  width: 15%; /* Motoboy */
 }
 
 .fin-table-todos thead th:nth-child(5) {
-  width: 12%;
+  width: 12%; /* Tipo */
 }
 
 .fin-table-todos thead th:nth-child(6) {
-  width: 29%;
+  width: 29%; /* Ações */
 }
 
 .fin-table-todos td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fin-table-todos th:nth-child(1),
+.fin-table-todos td:nth-child(1) {
+  width: 13%;
+  min-width: 78px;       /* espaço mínimo garantido para dd/mm/aa */
+  white-space: nowrap;
+  overflow: visible;      /* remove corte por overflow */
+  text-overflow: unset;   /* remove "..." se houver */
+}
+
+.fin-table-todos th:nth-child(3),
+.fin-table-todos td:nth-child(3) {
+  width: 20%;
+  padding-left: 24px;     /* empurra o conteúdo para a direita */
+  text-align: left;
 }
 
 #tabela-fin-todos td {
