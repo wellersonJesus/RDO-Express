@@ -389,8 +389,8 @@
 
     function contarPagamento(dados, tipo) {
         return dados.filter(function (i) {
-            return String(i.pagamento || '').trim().toUpperCase() === tipo;
-        }).length; // .length = contagem de registros, não soma de valores
+            return String(i.pagamento || '').trim().toUpperCase().indexOf(tipo) !== -1;
+        }).length;
     }
 
     function contarTotalCadastrados(dados) {
@@ -518,13 +518,11 @@
     function badgePagamento(pagamento) {
         var val = String(pagamento || '').toUpperCase();
         if (!val) return '<span class="text-muted">-</span>';
-        var classes = {
-            'DIÁRIO': 'badge-soft-red',
-            'SEMANAL': 'badge-soft-blue',
-            'QUINZENAL': 'badge-soft-yellow',
-            'MENSAL': 'badge-soft-green'
-        };
-        var classe = classes[val] || 'badge-soft-gray';
+        var classe = 'badge-soft-gray';
+        if (val.indexOf('DIÁRIO') !== -1) classe = 'badge-soft-red';
+        else if (val.indexOf('SEMANAL') !== -1) classe = 'badge-soft-blue';
+        else if (val.indexOf('QUINZENAL') !== -1) classe = 'badge-soft-yellow';
+        else if (val.indexOf('MENSAL') !== -1) classe = 'badge-soft-green';
         return '<span class="badge-soft ' + classe + '">' + pagamento + '</span>';
     }
 
@@ -688,6 +686,7 @@
         preencherCampo('c-responsavel', it.responsavel);
         preencherCampo('c-contato', it.contato);
         preencherCampo('c-pagamento', it.pagamento);
+        preencherCampo('c-dia_fechamento', it.dia_fechamento);
         preencherCampo('c-imagem', it.imagem);
         var st = document.getElementById('c-status');
         if (st) st.value = String(it.status || '').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE';
@@ -752,6 +751,7 @@
             responsavel: ((document.getElementById('c-responsavel') || {}).value || '').trim(),
             contato: ((document.getElementById('c-contato') || {}).value || '').trim(),
             pagamento: (document.getElementById('c-pagamento') || {}).value || '',
+            dia_fechamento: ((document.getElementById('c-dia_fechamento') || {}).value || '').trim(),
             imagem: ((document.getElementById('c-imagem') || {}).value || '').trim(),
             status: (document.getElementById('c-status') || {}).value || 'FALSE'
         };

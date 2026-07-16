@@ -20,6 +20,8 @@
                     style="font-size:0.8rem;"></div>
 
                 <div id="campos-cliente">
+                    <input type="hidden" id="c-id">
+
                     <div class="modal-pedido-section-label">
                         <i class="bi bi-building me-1 text-danger"></i>Dados da Empresa
                     </div>
@@ -37,7 +39,7 @@
                     </div>
 
                     <div class="modal-pedido-section-label">
-                        <i class="bi bi-telephone-fill me-1 text-danger"></i>Contato & Pagamento
+                        <i class="bi bi-telephone-fill me-1 text-danger"></i>Contato & Mídia
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-sm-6">
@@ -46,27 +48,38 @@
                                 placeholder="(31) 99999-0000">
                         </div>
                         <div class="col-12 col-sm-6">
-                            <label class="modal-pedido-field-label">Pagamento</label>
-                            <select class="form-select form-select-sm modal-pedido-input" id="c-pagamento">
-                                <option value="">Selecione...</option>
-                                <option value="DIÁRIO">Diário</option>
-                                <option value="SEMANAL">Semanal</option>
-                                <option value="QUINZENAL">Quinzenal</option>
-                                <option value="MENSAL">Mensal</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="modal-pedido-section-label">
-                        <i class="bi bi-image-fill me-1 text-danger"></i>Mídia & Status
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12 col-sm-8">
                             <label class="modal-pedido-field-label">URL da Imagem</label>
                             <input type="text" class="form-control form-control-sm modal-pedido-input" id="c-imagem"
                                 placeholder="https://exemplo.com/avatar.png">
                         </div>
-                        <div class="col-12 col-sm-4">
+                    </div>
+
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-cash-coin me-1 text-danger"></i>Pagamento & Fechamento
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Pagamento</label>
+                            <select class="form-select form-select-sm modal-pedido-input" id="c-pagamento">
+                                <option value="">Selecione...</option>
+                                <option value="DIÁRIO IMEDIATO">Diário Imediato</option>
+                                <option value="SEMANAL (SEGUNDA - FINAL DO DIA)">Semanal (Segunda - Final do Dia)</option>
+                                <option value="QUINZENAL (QUINTA, SEXTA E SEGUNDA)">Quinzenal (Quinta, Sexta e Segunda)</option>
+                                <option value="MENSAL">Mensal</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Dia de Fechamento</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input" id="c-dia_fechamento"
+                                placeholder="Ex: Dia 05" readonly>
+                        </div>
+                    </div>
+
+                    <div class="modal-pedido-section-label">
+                        <i class="bi bi-toggle-on me-1 text-danger"></i>Status
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
                             <label class="modal-pedido-field-label">Status</label>
                             <select class="form-select form-select-sm modal-pedido-input" id="c-status">
                                 <option value="TRUE">Ativo</option>
