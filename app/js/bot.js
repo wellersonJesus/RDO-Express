@@ -12,6 +12,58 @@ window.botState = {
     _formAdminCarregado: false
 };
 
+var ICONES_CARGO = {
+    'Atendente': 'bi-headset',
+    'Financeiro': 'bi-currency-dollar',
+    'Gestor': 'bi-award',
+    'Administrativo': 'bi-building',
+    'SRE Tecnologia': 'bi-shield-lock'
+};
+
+function _trocarModal(idFechar, idAbrir) {
+    var modalFechar = document.getElementById(idFechar);
+    var modalAbrir = document.getElementById(idAbrir);
+    if (modalFechar) {
+        var instFechar = bootstrap.Modal.getInstance(modalFechar);
+        if (instFechar) instFechar.hide();
+    }
+    if (modalAbrir) {
+        setTimeout(function () {
+            var existente = bootstrap.Modal.getInstance(modalAbrir);
+            if (existente) existente.dispose();
+            new bootstrap.Modal(modalAbrir, { backdrop: 'static' }).show();
+        }, 200);
+    }
+}
+
+window.selecionarCargo = function (cargo) {
+    var cargoEl = document.getElementById('usuario-bot-cargo');
+    if (cargoEl) cargoEl.value = cargo;
+
+    var display = document.getElementById('cargo-selecionado-display');
+    if (display) {
+        var iconEl = display.querySelector('.cargo-display-icon i');
+        var nomeEl = display.querySelector('.cargo-display-nome');
+        var hintEl = display.querySelector('.cargo-display-hint');
+        if (iconEl) iconEl.className = 'bi ' + (ICONES_CARGO[cargo] || 'bi-briefcase');
+        if (nomeEl) nomeEl.textContent = cargo;
+        if (hintEl) hintEl.textContent = 'Clique para alterar';
+        display.classList.add('cargo-selected');
+    }
+
+    var permissoesPadrao = window.PERMISSOES_PADRAO[cargo] || [];
+    _marcarPermissoesCheckbox(permissoesPadrao);
+
+    var titulo = document.getElementById('modal-usuario-bot-titulo');
+    if (titulo) titulo.textContent = 'Novo Usuário — ' + cargo;
+
+    _trocarModal('modalSelecionarCargo', 'modalUsuarioBot');
+};
+
+window.reabrirModalCargo = function () {
+    _trocarModal('modalUsuarioBot', 'modalSelecionarCargo');
+};
+
 var MAPA_MODULO_PAGE = {
     'Dashboard': 'dashboard',
     'Chat': 'chat',
@@ -777,7 +829,7 @@ window.salvarUsuarioBot = async function () {
             payload.id = id;
             resultado = await window.API.call('updateusuarios', payload);
         } else {
-            resultado = await window.API.call('createusuarios', payload);
+            resultado = await window.API.call('addusuarios', payload); 
         }
 
         var idFinal = id || (resultado && (resultado.id || (resultado.data && resultado.data.id))) || '';
