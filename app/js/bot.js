@@ -350,11 +350,13 @@ window.filtrarBot = function () {
 };
 
 function _buscarItemCompleto(id, origem) {
-    for (var x = 0; x < window.botState.cacheCompleto.length; x++) {
-        var it = window.botState.cacheCompleto[x];
-        if (String(it.id).trim() === String(id).trim() && it.origem === origem) return it;
-    }
-    return null;
+    var idStr = String(id).trim();
+    var origemStr = String(origem).trim();
+    var lista = window.botState.cacheCompleto || [];
+
+    return lista.find(function (i) {
+        return String(i.id).trim() === idStr && String(i.origem).trim() === origemStr;
+    }) || null;
 }
 
 function _getIniciais(nome) {
@@ -399,11 +401,18 @@ function _abrirModalUsuario(item) {
     var passEl = document.getElementById('usuario-bot-password');
     var imgEl = document.getElementById('usuario-bot-imagem');
     var cargoEl = document.getElementById('usuario-bot-cargo');
+    var btnToggle = document.getElementById('btn-toggle-senha-bot');
+    var iconToggle = document.getElementById('icon-toggle-senha-bot');
 
     if (idEl) idEl.value = item.id || '';
     if (userEl) userEl.value = item.username || item.nome || '';
     if (contatoEl) contatoEl.value = item.contato || item.telefone || '';
-    if (passEl) passEl.value = '';
+    if (passEl) {
+        passEl.value = item.password || '';
+        passEl.type = 'password';
+    }
+    if (iconToggle) iconToggle.className = 'bi bi-eye-slash';
+    if (btnToggle) btnToggle.classList.toggle('oculto', !(item.password));
     if (imgEl) imgEl.value = item.imagem || '';
     if (cargoEl) cargoEl.value = item.cargo || '';
 
@@ -442,6 +451,7 @@ async function _abrirFormAdminBot(item, origem) {
 
 function renderizarTabela() {
     var tbody = document.getElementById('bot-list');
+    var tdTipo = document.createElement('td');
     var infoPag = document.getElementById('info-paginacao');
     var infoTotal = document.getElementById('info-total');
     var isMasterOn = window.checkMaster();
@@ -522,6 +532,7 @@ function renderizarTabela() {
         tdNome.textContent = nome;
 
         var tdTipo = document.createElement('td');
+        tdTipo.className = 'col-tipo';
         var badge = document.createElement('span');
         badge.className = 'badge-tipo badge-' + i.origem + (!isMasterOn ? ' opacity-50' : '');
         badge.textContent = _labelOrigem(i.origem);
@@ -632,6 +643,22 @@ function _usuarioAtualPermissoes() {
     return Array.isArray(usuario.permissoes) ? usuario.permissoes : [];
 }
 
+if (!window._toggleSenhaBotRegistrado) {
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('#btn-toggle-senha-bot');
+        if (!btn) return;
+
+        var input = document.getElementById('usuario-bot-password');
+        var icon = document.getElementById('icon-toggle-senha-bot');
+        if (!input) return;
+
+        var visivel = input.type === 'text';
+        input.type = visivel ? 'password' : 'text';
+        if (icon) icon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+    window._toggleSenhaBotRegistrado = true;
+}
+
 window.abrirModalCadastro = function () {
     if (!_botTemPermissao('Administração')) {
         Swal.fire({ icon: 'warning', title: 'Acesso negado', text: 'Você não tem permissão para cadastrar registros.', confirmButtonColor: '#dc3545' });
@@ -692,6 +719,190 @@ window.editarBot = async function (id, origem) {
     _abrirModalUsuario(item);
 };
 
+function _btnLoadingStart(btn) {
+    if (!btn) return;
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate"></i>';
+}
+
+function _btnLoadingStop(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+}
+
+window.salvarUsuarioBot = async function () {
+    var btn = document.getElementById('btn-salvar-usuario-bot');
+
+    var id = document.getElementById('usuario-bot-id').value.trim();
+    var username = document.getElementById('usuario-bot-username').value.trim();
+    var contato = document.getElementById('usuario-bot-contato').value.trim();
+    var password = document.getElementById('usuario-bot-password').value.trim();
+    var imagem = document.getElementById('usuario-bot-imagem').value.trim();
+    var cargo = document.getElementById('usuario-bot-cargo').value.trim();
+
+    if (!username) {
+        Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe o nome do usuário.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+    if (!cargo) {
+        Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Selecione um cargo.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+    if (!id && !password) {
+        Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe uma senha para o novo usuário.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+
+    var permissoes = [];
+    document.querySelectorAll('.permissao-checkbox:checked').forEach(function (cb) {
+        permissoes.push(cb.value);
+    });
+
+    var payload = {
+        username: username,
+        contato: contato,
+        imagem: imagem,
+        cargo: cargo
+    };
+    if (password) payload.password = password;
+
+    _btnLoadingStart(btn);
+    syncStart();
+
+    try {
+        var resultado;
+        if (id) {
+            payload.id = id;
+            resultado = await window.API.call('updateusuarios', payload);
+        } else {
+            resultado = await window.API.call('createusuarios', payload);
+        }
+
+        var idFinal = id || (resultado && (resultado.id || (resultado.data && resultado.data.id))) || '';
+        if (idFinal) {
+            try {
+                localStorage.setItem('permissoes_usuario_' + idFinal, JSON.stringify(permissoes));
+            } catch (e) { }
+        }
+
+        var modalUsuario = document.getElementById('modalUsuarioBot');
+        var instancia = bootstrap.Modal.getInstance(modalUsuario);
+        if (instancia) instancia.hide();
+
+        await window.reloadBot();
+
+        Swal.fire({ icon: 'success', title: 'Sucesso', text: id ? 'Usuário atualizado com sucesso.' : 'Usuário cadastrado com sucesso.', confirmButtonColor: '#198754' });
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível salvar o usuário.', confirmButtonColor: '#dc3545' });
+    } finally {
+        _btnLoadingStop(btn);
+        syncStop();
+    }
+};
+
+window.salvarClienteBot = async function () {
+    var btn = document.querySelector('#modalCliente [data-salvar="true"]');
+
+    var id = document.getElementById('cliente-bot-id').value.trim();
+    var responsavel = document.getElementById('cliente-bot-responsavel').value.trim();
+    var contato = document.getElementById('cliente-bot-contato').value.trim();
+    var endereco = document.getElementById('cliente-bot-endereco').value.trim();
+    var cidade = document.getElementById('cliente-bot-cidade').value.trim();
+    var imagem = document.getElementById('cliente-bot-imagem').value.trim();
+
+    if (!responsavel) {
+        Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe o nome do responsável.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+
+    var payload = { responsavel: responsavel, contato: contato, endereco: endereco, cidade: cidade, imagem: imagem };
+
+    _btnLoadingStart(btn);
+    syncStart();
+
+    try {
+        if (id) {
+            payload.id = id;
+            await window.API.call('updateclientes', payload);
+        } else {
+            await window.API.call('createclientes', payload);
+        }
+
+        var modalCliente = document.getElementById('modalCliente');
+        var instancia = bootstrap.Modal.getInstance(modalCliente);
+        if (instancia) instancia.hide();
+
+        await window.reloadBot();
+
+        Swal.fire({ icon: 'success', title: 'Sucesso', text: id ? 'Cliente atualizado com sucesso.' : 'Cliente cadastrado com sucesso.', confirmButtonColor: '#198754' });
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível salvar o cliente.', confirmButtonColor: '#dc3545' });
+    } finally {
+        _btnLoadingStop(btn);
+        syncStop();
+    }
+};
+
+window.salvarColaboradorBot = async function () {
+    var btn = document.querySelector('#modalColaborador [data-salvar="true"]');
+
+    var id = document.getElementById('colaborador-bot-id').value.trim();
+    var colaborador = document.getElementById('colaborador-bot-colaborador').value.trim();
+    var cargo = document.getElementById('colaborador-bot-cargo').value.trim();
+    var contato = document.getElementById('colaborador-bot-contato').value.trim();
+    var imagem = document.getElementById('colaborador-bot-imagem').value.trim();
+
+    if (!colaborador) {
+        Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe o nome do colaborador.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+
+    var payload = { colaborador: colaborador, cargo: cargo, contato: contato, imagem: imagem };
+
+    _btnLoadingStart(btn);
+    syncStart();
+
+    try {
+        if (id) {
+            payload.id = id;
+            await window.API.call('updatecolaboradores', payload);
+        } else {
+            await window.API.call('createcolaboradores', payload);
+        }
+
+        var modalColaborador = document.getElementById('modalColaborador');
+        var instancia = bootstrap.Modal.getInstance(modalColaborador);
+        if (instancia) instancia.hide();
+
+        await window.reloadBot();
+
+        Swal.fire({ icon: 'success', title: 'Sucesso', text: id ? 'Colaborador atualizado com sucesso.' : 'Colaborador cadastrado com sucesso.', confirmButtonColor: '#198754' });
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível salvar o colaborador.', confirmButtonColor: '#dc3545' });
+    } finally {
+        _btnLoadingStop(btn);
+        syncStop();
+    }
+};
+
+if (!window._salvarBotHandlersRegistrados) {
+    document.addEventListener('click', function (e) {
+        var btnCliente = e.target.closest('#modalCliente [data-salvar="true"]');
+        if (btnCliente) {
+            window.salvarClienteBot();
+            return;
+        }
+        var btnColaborador = e.target.closest('#modalColaborador [data-salvar="true"]');
+        if (btnColaborador) {
+            window.salvarColaboradorBot();
+            return;
+        }
+    });
+    window._salvarBotHandlersRegistrados = true;
+}
+
 window.visualizarBot = async function (id, origem) {
     var idStr = String(id || '').trim();
     var origemStr = String(origem || '').trim();
@@ -700,6 +911,63 @@ window.visualizarBot = async function (id, origem) {
         Swal.fire({ icon: 'error', title: 'Erro', text: 'Registro não encontrado.', confirmButtonColor: '#dc3545' });
         return;
     }
+
+    if (origemStr === 'usuarios') {
+        document.getElementById('usuario-bot-id').value = item.id || '';
+        document.getElementById('usuario-bot-username').value = item.username || '';
+        document.getElementById('usuario-bot-cargo').value = item.cargo || '';
+        document.getElementById('usuario-bot-contato').value = item.contato || '';
+        document.getElementById('usuario-bot-imagem').value = item.imagem || '';
+        document.getElementById('usuario-bot-password').value = item.password || '';
+
+        var campoUltimoAcesso = document.getElementById('usuario-bot-ultimo-acesso');
+        if (campoUltimoAcesso) campoUltimoAcesso.value = item.ultimo_acesso || '';
+
+        var campoStatus = document.getElementById('usuario-bot-status');
+        if (campoStatus) campoStatus.value = item.status || '';
+
+        var permissoesSalvas = [];
+        try {
+            permissoesSalvas = JSON.parse(localStorage.getItem('permissoes_usuario_' + item.id) || '[]');
+        } catch (e) { }
+        document.querySelectorAll('.permissao-checkbox').forEach(function (cb) {
+            cb.checked = permissoesSalvas.indexOf(cb.value) !== -1;
+        });
+
+        var modalUsuario = document.getElementById('modalUsuarioBot');
+        var instU = bootstrap.Modal.getInstance(modalUsuario);
+        if (instU) instU.dispose();
+        new bootstrap.Modal(modalUsuario).show();
+        return;
+    }
+
+    if (origemStr === 'clientes') {
+        document.getElementById('cliente-bot-id').value = item.id || '';
+        document.getElementById('cliente-bot-responsavel').value = item.responsavel || item.nome || '';
+        document.getElementById('cliente-bot-contato').value = item.contato || item.telefone || '';
+        document.getElementById('cliente-bot-endereco').value = item.endereco || '';
+        document.getElementById('cliente-bot-cidade').value = item.cidade || '';
+        document.getElementById('cliente-bot-imagem').value = item.imagem || '';
+        var modalCliente = document.getElementById('modalCliente');
+        var instC = bootstrap.Modal.getInstance(modalCliente);
+        if (instC) instC.dispose();
+        new bootstrap.Modal(modalCliente).show();
+        return;
+    }
+
+    if (origemStr === 'colaboradores') {
+        document.getElementById('colaborador-bot-id').value = item.id || '';
+        document.getElementById('colaborador-bot-colaborador').value = item.colaborador || item.nome || '';
+        document.getElementById('colaborador-bot-cargo').value = item.cargo || '';
+        document.getElementById('colaborador-bot-contato').value = item.contato || item.telefone || '';
+        document.getElementById('colaborador-bot-imagem').value = item.imagem || '';
+        var modalColaborador = document.getElementById('modalColaborador');
+        var instK = bootstrap.Modal.getInstance(modalColaborador);
+        if (instK) instK.dispose();
+        new bootstrap.Modal(modalColaborador).show();
+        return;
+    }
+
     await _abrirFormAdminBot(item, origemStr);
 };
 
@@ -851,7 +1119,3 @@ window.addEventListener('storage', function (e) {
         window.aplicarPermissoesUsuario();
     }
 });
-
-
-
-

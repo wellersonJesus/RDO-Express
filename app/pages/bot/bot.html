@@ -6,20 +6,22 @@
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div id="bot-logo-container" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                    <div id="bot-logo-container"
+                        style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
                         <i class="bi bi-gear-wide-connected" style="font-size:1.5rem;color:#FF0000;"></i>
                     </div>
                     <div>
                         <h5 class="fw-bold mb-0"><span style="color:#FF0000;">RDO</span> Express</h5>
-                        <small class="text-muted" style="font-size:0.72rem;">Painel de Gestão e Automatização</small>
+                        <small id="bot-subtitulo" class="text-muted" style="font-size:0.72rem;">Painel de Gestão e Automatização</small>
                     </div>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <button id="btn-status-bot" class="btn btn-master-off btn-sm rounded-pill px-3" onclick="window.toggleMaster()">
+                <div class="d-flex gap-2 align-items-center bot-header-actions">
+                    <button id="btn-status-bot" class="btn btn-master-off btn-sm rounded-pill px-3"
+                        onclick="window.toggleMaster()">
                         MASTER OFF
                     </button>
-                    <button class="btn btn-danger btn-sm rounded-pill px-3" onclick="window.abrirModalCadastro()">
-                        <i class="bi bi-plus-lg"></i> Novo
+                    <button id="btn-novo-bot" class="btn btn-danger btn-sm rounded-pill px-3" onclick="window.abrirModalCadastro()">
+                        <i class="bi bi-plus-lg" id="icon-novo-bot"></i> <span>Novo</span>
                     </button>
                     <button class="btn-sync-bot" onclick="window.reloadBot()" title="Atualizar">
                         <i id="sync-icon-bot" class="bi bi-arrow-repeat"></i>
@@ -28,7 +30,8 @@
             </div>
 
             <div class="d-flex gap-2 align-items-center">
-                <select id="filtro-tipo" class="form-select form-select-sm rounded-pill" style="width:150px;font-size:0.78rem;">
+                <select id="filtro-tipo" class="form-select form-select-sm rounded-pill"
+                    style="width:150px;font-size:0.78rem;">
                     <option value="TODOS">Todos</option>
                     <option value="usuarios">Usuários</option>
                     <option value="clientes">Clientes</option>
@@ -38,7 +41,8 @@
                     <span class="input-group-text bg-white border-end-0 rounded-start-pill">
                         <i class="bi bi-search text-muted" style="font-size:0.8rem;"></i>
                     </span>
-                    <input id="busca-nome" type="text" class="form-control border-start-0 rounded-end-pill" placeholder="Buscar por nome..." style="font-size:0.78rem;">
+                    <input id="busca-nome" type="text" class="form-control border-start-0 rounded-end-pill"
+                        placeholder="Buscar por nome..." style="font-size:0.78rem;">
                 </div>
             </div>
 
@@ -52,13 +56,14 @@
                     <tr>
                         <th class="ps-3" style="width:60px;">
                             <div class="d-flex align-items-center gap-2">
-                                <input type="checkbox" id="seletor-global-status" class="seletor-global-checkbox" title="Ativar/Desativar todos" disabled>
-                                <span>Status</span>
+                                <input type="checkbox" id="seletor-global-status" class="seletor-global-checkbox"
+                                    title="Ativar/Desativar todos" disabled>
+                                <span class="status-label-text">Status</span>
                             </div>
                         </th>
                         <th style="width:50px;">Avatar</th>
                         <th>Nome</th>
-                        <th style="width:100px;">Tipo</th>
+                        <th class="col-tipo" style="width:100px;">Tipo</th>
                         <th class="text-end pe-3" style="width:110px;">Ações</th>
                     </tr>
                 </thead>
@@ -71,7 +76,8 @@
                 <button class="btn btn-light btn-sm" onclick="window.mudarPagina(-1)">
                     <i class="bi bi-chevron-left"></i>
                 </button>
-                <button class="btn btn-light btn-sm" id="info-paginacao" disabled style="min-width:100px;font-size:0.75rem;">Pág 1</button>
+                <button class="btn btn-light btn-sm" id="info-paginacao" disabled
+                    style="min-width:100px;font-size:0.75rem;">Pág 1</button>
                 <button class="btn btn-light btn-sm" onclick="window.mudarPagina(1)">
                     <i class="bi bi-chevron-right"></i>
                 </button>
@@ -90,10 +96,12 @@
                     <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem;"></i>
                 </div>
                 <h6 class="fw-bold mb-2">Confirmar Exclusão</h6>
-                <p class="text-muted mb-0" style="font-size:0.82rem;" id="texto-exclusao">Deseja remover este registro?</p>
+                <p class="text-muted mb-0" style="font-size:0.82rem;" id="texto-exclusao">Deseja remover este registro?
+                </p>
             </div>
             <div class="modal-footer border-0 justify-content-center gap-2 pb-4 pt-0">
-                <button type="button" class="btn btn-light btn-sm rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-light btn-sm rounded-pill px-4"
+                    data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-confirmar-exclusao">
                     <i class="bi bi-trash me-1"></i> Excluir
                 </button>
@@ -161,7 +169,8 @@
                 <div class="d-flex align-items-center gap-3">
                     <div class="bot-form-header-icon"><i class="bi bi-person-gear"></i></div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-white" id="modal-usuario-bot-titulo" style="font-size:.88rem;">Novo Usuário</h6>
+                        <h6 class="fw-bold mb-0 text-white" id="modal-usuario-bot-titulo" style="font-size:.88rem;">Novo
+                            Usuário</h6>
                         <small class="bot-form-subtitle">Preencha os dados e defina as permissões</small>
                     </div>
                 </div>
@@ -177,15 +186,19 @@
                             <div class="bot-form-section-label">Identificação</div>
                             <div class="mb-3">
                                 <label class="bot-field-label">Nome</label>
-                                <input type="text" id="usuario-bot-username" class="form-control form-control-sm bot-field-input" placeholder="Nome do usuário">
+                                <input type="text" id="usuario-bot-username"
+                                    class="form-control form-control-sm bot-field-input" placeholder="Nome do usuário">
                             </div>
                             <div class="mb-3">
                                 <label class="bot-field-label">Contato</label>
-                                <input type="text" id="usuario-bot-contato" class="form-control form-control-sm bot-field-input" placeholder="+55 11 99999-9999">
+                                <input type="text" id="usuario-bot-contato"
+                                    class="form-control form-control-sm bot-field-input"
+                                    placeholder="+55 11 99999-9999">
                             </div>
                             <div class="mb-3">
                                 <label class="bot-field-label">Cargo</label>
-                                <div class="cargo-display" id="cargo-selecionado-display" onclick="window.reabrirModalCargo()">
+                                <div class="cargo-display" id="cargo-selecionado-display"
+                                    onclick="window.reabrirModalCargo()">
                                     <div class="cargo-display-icon"><i class="bi bi-briefcase"></i></div>
                                     <div class="cargo-display-info">
                                         <div class="cargo-display-nome">Nenhum cargo selecionado</div>
@@ -202,15 +215,19 @@
                             <div class="mb-3">
                                 <label class="bot-field-label">Senha</label>
                                 <div class="input-group input-group-sm">
-                                    <input type="password" id="usuario-bot-password" class="form-control bot-field-input" style="border-radius:10px 0 0 10px !important;" placeholder="Senha">
-                                    <button type="button" class="btn-olhinho-clean oculto" id="btn-toggle-senha-bot" style="border:1px solid #e9ecef;border-left:none;border-radius:0 10px 10px 0;padding:0 10px;">
+                                    <input type="password" id="usuario-bot-password"
+                                        class="form-control bot-field-input"
+                                        style="border-radius:10px 0 0 10px !important;" placeholder="Senha">
+                                    <button type="button" class="btn-olhinho-clean oculto" id="btn-toggle-senha-bot"
+                                        style="border:1px solid #e9ecef;border-left:none;border-radius:0 10px 10px 0;padding:0 10px;">
                                         <i class="bi bi-eye-slash" id="icon-toggle-senha-bot"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="mb-2">
                                 <label class="bot-field-label">URL da Imagem (opcional)</label>
-                                <input type="text" id="usuario-bot-imagem" class="form-control form-control-sm bot-field-input" placeholder="https://...">
+                                <input type="text" id="usuario-bot-imagem"
+                                    class="form-control form-control-sm bot-field-input" placeholder="https://...">
                             </div>
                         </div>
                     </div>
@@ -219,50 +236,66 @@
                         <div class="bot-form-section">
                             <div class="bot-form-section-label">
                                 Permissões de Acesso
-                                <i class="bi bi-info-circle text-muted ms-1" title="Permissões pré-definidas pelo cargo, personalize se necessário" style="font-size:.7rem;cursor:help;"></i>
+                                <i class="bi bi-info-circle text-muted ms-1"
+                                    title="Permissões pré-definidas pelo cargo, personalize se necessário"
+                                    style="font-size:.7rem;cursor:help;"></i>
                             </div>
 
                             <div class="permissoes-container">
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-dashboard" value="Dashboard">
-                                        <label class="form-check-label permissao-label" for="perm-dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-dashboard" value="Dashboard">
+                                        <label class="form-check-label permissao-label" for="perm-dashboard"><i
+                                                class="bi bi-speedometer2 me-2"></i>Dashboard</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-chat" value="Chat">
-                                        <label class="form-check-label permissao-label" for="perm-chat"><i class="bi bi-chat-dots me-2"></i>Chat</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-chat" value="Chat">
+                                        <label class="form-check-label permissao-label" for="perm-chat"><i
+                                                class="bi bi-chat-dots me-2"></i>Chat</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-pedidos" value="Pedidos">
-                                        <label class="form-check-label permissao-label" for="perm-pedidos"><i class="bi bi-cart3 me-2"></i>Pedidos</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-pedidos" value="Pedidos">
+                                        <label class="form-check-label permissao-label" for="perm-pedidos"><i
+                                                class="bi bi-cart3 me-2"></i>Pedidos</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-administracao" value="Administração">
-                                        <label class="form-check-label permissao-label" for="perm-administracao"><i class="bi bi-people me-2"></i>Administração</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-administracao" value="Administração">
+                                        <label class="form-check-label permissao-label" for="perm-administracao"><i
+                                                class="bi bi-people me-2"></i>Administração</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-financeiro" value="Financeiro">
-                                        <label class="form-check-label permissao-label" for="perm-financeiro"><i class="bi bi-currency-dollar me-2"></i>Financeiro</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-financeiro" value="Financeiro">
+                                        <label class="form-check-label permissao-label" for="perm-financeiro"><i
+                                                class="bi bi-currency-dollar me-2"></i>Financeiro</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-relatorios" value="Relatórios">
-                                        <label class="form-check-label permissao-label" for="perm-relatorios"><i class="bi bi-file-earmark-bar-graph me-2"></i>Relatórios</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox"
+                                            id="perm-relatorios" value="Relatórios">
+                                        <label class="form-check-label permissao-label" for="perm-relatorios"><i
+                                                class="bi bi-file-earmark-bar-graph me-2"></i>Relatórios</label>
                                     </div>
                                 </div>
                                 <div class="permissao-item">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-bot" value="Bot">
-                                        <label class="form-check-label permissao-label" for="perm-bot"><i class="bi bi-gear-wide-connected me-2"></i>Bot</label>
+                                        <input class="form-check-input permissao-checkbox" type="checkbox" id="perm-bot"
+                                            value="Bot">
+                                        <label class="form-check-label permissao-label" for="perm-bot"><i
+                                                class="bi bi-gear-wide-connected me-2"></i>Bot</label>
                                     </div>
                                 </div>
                             </div>
@@ -277,8 +310,10 @@
             </div>
 
             <div class="bot-form-footer">
-                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-usuario-bot" onclick="window.salvarUsuarioBot()" style="font-size:.72rem;">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
+                    style="font-size:.72rem;">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" id="btn-salvar-usuario-bot"
+                    onclick="window.salvarUsuarioBot()" style="font-size:.72rem;">
                     <i class="bi bi-check-lg me-1"></i> Salvar
                 </button>
             </div>
@@ -307,29 +342,36 @@
                 <input type="hidden" id="cliente-bot-id">
                 <div class="mb-3">
                     <label class="bot-field-label">Nome do Responsável</label>
-                    <input type="text" id="cliente-bot-responsavel" class="form-control form-control-sm bot-field-input" placeholder="Nome do cliente">
+                    <input type="text" id="cliente-bot-responsavel" class="form-control form-control-sm bot-field-input"
+                        placeholder="Nome do cliente">
                 </div>
                 <div class="mb-3">
                     <label class="bot-field-label">Contato</label>
-                    <input type="text" id="cliente-bot-contato" class="form-control form-control-sm bot-field-input" placeholder="+55 11 99999-9999">
+                    <input type="text" id="cliente-bot-contato" class="form-control form-control-sm bot-field-input"
+                        placeholder="+55 11 99999-9999">
                 </div>
                 <div class="mb-3">
                     <label class="bot-field-label">Endereço</label>
-                    <input type="text" id="cliente-bot-endereco" class="form-control form-control-sm bot-field-input" placeholder="Endereço completo">
+                    <input type="text" id="cliente-bot-endereco" class="form-control form-control-sm bot-field-input"
+                        placeholder="Endereço completo">
                 </div>
                 <div class="mb-3">
                     <label class="bot-field-label">Cidade</label>
-                    <input type="text" id="cliente-bot-cidade" class="form-control form-control-sm bot-field-input" placeholder="Cidade">
+                    <input type="text" id="cliente-bot-cidade" class="form-control form-control-sm bot-field-input"
+                        placeholder="Cidade">
                 </div>
                 <div class="mb-2">
                     <label class="bot-field-label">URL da Imagem (opcional)</label>
-                    <input type="text" id="cliente-bot-imagem" class="form-control form-control-sm bot-field-input" placeholder="https://...">
+                    <input type="text" id="cliente-bot-imagem" class="form-control form-control-sm bot-field-input"
+                        placeholder="https://...">
                 </div>
             </div>
 
             <div class="bot-form-footer">
-                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" data-salvar="true" style="font-size:.72rem;">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
+                    style="font-size:.72rem;">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" data-salvar="true"
+                    style="font-size:.72rem;">
                     <i class="bi bi-check-lg me-1"></i> Salvar
                 </button>
             </div>
@@ -358,25 +400,31 @@
                 <input type="hidden" id="colaborador-bot-id">
                 <div class="mb-3">
                     <label class="bot-field-label">Nome</label>
-                    <input type="text" id="colaborador-bot-colaborador" class="form-control form-control-sm bot-field-input" placeholder="Nome do colaborador">
+                    <input type="text" id="colaborador-bot-colaborador"
+                        class="form-control form-control-sm bot-field-input" placeholder="Nome do colaborador">
                 </div>
                 <div class="mb-3">
                     <label class="bot-field-label">Cargo</label>
-                    <input type="text" id="colaborador-bot-cargo" class="form-control form-control-sm bot-field-input" placeholder="Cargo do colaborador">
+                    <input type="text" id="colaborador-bot-cargo" class="form-control form-control-sm bot-field-input"
+                        placeholder="Cargo do colaborador">
                 </div>
                 <div class="mb-3">
                     <label class="bot-field-label">Contato</label>
-                    <input type="text" id="colaborador-bot-contato" class="form-control form-control-sm bot-field-input" placeholder="+55 11 99999-9999">
+                    <input type="text" id="colaborador-bot-contato" class="form-control form-control-sm bot-field-input"
+                        placeholder="+55 11 99999-9999">
                 </div>
                 <div class="mb-2">
                     <label class="bot-field-label">URL da Imagem (opcional)</label>
-                    <input type="text" id="colaborador-bot-imagem" class="form-control form-control-sm bot-field-input" placeholder="https://...">
+                    <input type="text" id="colaborador-bot-imagem" class="form-control form-control-sm bot-field-input"
+                        placeholder="https://...">
                 </div>
             </div>
 
             <div class="bot-form-footer">
-                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" style="font-size:.72rem;">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" data-salvar="true" style="font-size:.72rem;">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal"
+                    style="font-size:.72rem;">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4" data-salvar="true"
+                    style="font-size:.72rem;">
                     <i class="bi bi-check-lg me-1"></i> Salvar
                 </button>
             </div>
@@ -387,40 +435,24 @@
 
 
 <script>
-(function () {
-    'use strict';
+    (function () {
+        'use strict';
 
-    var initBotHTML = function () {
-        var seletorGlobal = document.getElementById('seletor-global-status');
-        if (seletorGlobal) {
-            seletorGlobal.addEventListener('change', function () {
-                if (window.alternarTodosStatus) window.alternarTodosStatus(this.checked);
-            });
+        var initBotHTML = function () {
+            var seletorGlobal = document.getElementById('seletor-global-status');
+            if (seletorGlobal) {
+                seletorGlobal.addEventListener('change', function () {
+                    if (window.alternarTodosStatus) window.alternarTodosStatus(this.checked);
+                });
+            }
+
+            if (window.initBot) window.initBot();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initBotHTML);
+        } else {
+            initBotHTML();
         }
-
-        var btnToggle = document.getElementById('btn-toggle-senha-bot');
-        var inputSenha = document.getElementById('usuario-bot-password');
-        var iconToggle = document.getElementById('icon-toggle-senha-bot');
-
-        if (btnToggle && inputSenha && iconToggle) {
-            var newBtn = btnToggle.cloneNode(true);
-            btnToggle.parentNode.replaceChild(newBtn, btnToggle);
-            var newIcon = newBtn.querySelector('i');
-            newBtn.addEventListener('click', function () {
-                var visivel = inputSenha.type === 'text';
-                inputSenha.type = visivel ? 'password' : 'text';
-                newIcon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
-                newBtn.classList.toggle('oculto', visivel);
-            });
-        }
-
-        if (window.initBot) window.initBot();
-    };
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initBotHTML);
-    } else {
-        initBotHTML();
-    }
-})();
+    })();
 </script>
