@@ -29,7 +29,7 @@
         formCarregado: false,
         sortDesc: false
     };
-    
+
     window.adminState = state;
 
     var els = {};
@@ -528,24 +528,34 @@
         return '<span class="badge-soft ' + classe + '">' + pagamento + '</span>';
     }
 
+    function _primeiroNome(nomeCompleto) {
+        var n = String(nomeCompleto || '').trim();
+        if (!n) return 'N/A';
+        return n.split(' ')[0];
+    }
+
     function renderLinha(it) {
         var ativo = String(it.status || '').toUpperCase() === 'TRUE';
         var avatar = it.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var nome = it.nome || it.username || 'N/A';
         var nomeSafe = nome.replace(/"/g, '&quot;');
+        var primeiroNome = _primeiroNome(nome);
         var isCliente = (state.origem === 'clientes');
         var pag = isCliente
-            ? '<td>' + badgePagamento(it.pagamento) + '</td>'
+            ? '<td class="td-mobile-hide-admin">' + badgePagamento(it.pagamento) + '</td>'
             : '<td class="d-none"></td>';
         var statusClasse = ativo ? 'badge-soft-green' : 'badge-soft-gray';
         var statusTexto = ativo ? 'Ativo' : 'Inativo';
         return '<tr>' +
             '<td class="ps-3">' +
-            '<img src="' + avatar + '" width="26" height="26" class="rounded-circle" style="object-fit:cover;" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
+            '<img src="' + avatar + '" width="26" height="26" class="rounded-circle admin-avatar-img" style="object-fit:cover;" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
             '</td>' +
-            '<td>' + nome + '</td>' +
+            '<td>' +
+            '<span class="admin-nome-completo">' + nome + '</span>' +
+            '<span class="admin-nome-mobile">' + primeiroNome + '</span>' +
+            '</td>' +
             pag +
-            '<td><span class="badge-soft ' + statusClasse + '">' + statusTexto + '</span></td>' +
+            '<td class="td-mobile-hide-admin"><span class="badge-soft ' + statusClasse + '">' + statusTexto + '</span></td>' +
             '<td class="text-end pe-3">' +
             '<button class="btn btn-light btn-sm me-1 btn-admin-edit" data-id="' + it.id + '"><i class="bi bi-pencil-square"></i></button>' +
             '<button class="btn btn-light btn-sm me-1 btn-admin-view" data-id="' + it.id + '"><i class="bi bi-eye"></i></button>' +

@@ -24,6 +24,7 @@
     padding-bottom: 0;
     margin-bottom: 14px;
 }
+
 .admin-tab {
     position: relative;
     font-size: 0.72rem;
@@ -36,14 +37,17 @@
     align-items: center;
     text-decoration: none;
 }
+
 .admin-tab:hover {
     color: #555;
     text-decoration: none;
 }
+
 .admin-tab.active {
     color: #dc3545;
     font-weight: 600;
 }
+
 .admin-tab::after {
     content: '';
     position: absolute;
@@ -55,6 +59,7 @@
     border-radius: 2px;
     transition: width 0.25s ease;
 }
+
 .admin-tab.active::after {
     width: 100%;
 }
@@ -75,19 +80,22 @@
 }
 
 .btn-rel-voltar {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffe69c;
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: .78rem;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: .2s;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffe69c;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: .78rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: .2s;
 }
-.btn-rel-voltar:hover { background: #ffe69c; }
+
+.btn-rel-voltar:hover {
+    background: #ffe69c;
+}
 
 #tabela-admin thead th {
     color: #212529;
@@ -106,24 +114,31 @@
 }
 
 @keyframes admin-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+    from {
+        transform: rotate(0deg);
+    }
 
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 .admin-status-card {
     width: 100%;
     padding-bottom: 12px;
 }
+
 .admin-status-card-inner {
     display: flex;
     gap: 8px;
     overflow-x: auto;
     scrollbar-width: none;
 }
+
 .admin-status-card-inner::-webkit-scrollbar {
     display: none;
 }
+
 .admin-status-action-item {
     flex: 1;
     min-width: 100px;
@@ -137,18 +152,22 @@
     cursor: pointer;
     transition: all 0.2s ease;
 }
+
 .admin-status-action-item:hover {
     border-color: #dc3545;
     background: #fdf2f3;
 }
+
 .admin-status-action-item.active {
     border-color: #dc3545;
     background: #fdf2f3;
     box-shadow: 0 2px 10px rgba(220, 53, 69, 0.1);
 }
+
 .admin-status-action-item.d-none {
     display: none !important;
 }
+
 .admin-status-action-icon {
     width: 28px;
     height: 28px;
@@ -160,20 +179,24 @@
     font-size: 0.78rem;
     transition: all 0.2s ease;
 }
+
 .admin-status-action-info {
     display: flex;
     flex-direction: column;
     line-height: 1.15;
 }
+
 .admin-status-action-label {
     font-size: 0.62rem;
     color: #6c757d;
 }
+
 .admin-status-action-count {
     font-size: 0.82rem;
     font-weight: 700;
     color: #212529;
 }
+
 .admin-status-action-pct {
     font-size: 0.6rem;
     color: #adb5bd;
@@ -183,6 +206,7 @@
     background: rgba(220, 53, 69, 0.08);
     color: #dc3545;
 }
+
 .admin-status-action-item.active .admin-icon-todos,
 .admin-status-action-item:hover .admin-icon-todos {
     background: rgba(220, 53, 69, 0.16);
@@ -193,6 +217,7 @@
     background: rgba(220, 53, 69, 0.08);
     color: #dc3545;
 }
+
 .admin-status-action-item.active .admin-icon-diario,
 .admin-status-action-item:hover .admin-icon-diario {
     background: rgba(220, 53, 69, 0.16);
@@ -203,6 +228,7 @@
     background: rgba(13, 110, 253, 0.07);
     color: #5b9bfa;
 }
+
 .admin-status-action-item.active .admin-icon-semanal,
 .admin-status-action-item:hover .admin-icon-semanal {
     background: rgba(13, 110, 253, 0.14);
@@ -213,6 +239,7 @@
     background: rgba(255, 193, 7, 0.1);
     color: #e0b429;
 }
+
 .admin-status-action-item.active .admin-icon-quinzenal,
 .admin-status-action-item:hover .admin-icon-quinzenal {
     background: rgba(255, 193, 7, 0.2);
@@ -223,6 +250,7 @@
     background: rgba(25, 135, 84, 0.07);
     color: #4fa87c;
 }
+
 .admin-status-action-item.active .admin-icon-mensal,
 .admin-status-action-item:hover .admin-icon-mensal {
     background: rgba(25, 135, 84, 0.14);
@@ -234,6 +262,7 @@
     width: 180px;
     font-size: 0.72rem;
 }
+
 .admin-input-busca:focus {
     box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
     border-color: #e4606d;
@@ -266,6 +295,7 @@
     cursor: pointer;
     font-size: 0.7rem;
 }
+
 .btn-sort-data:hover {
     color: #dc3545;
 }
@@ -273,9 +303,11 @@
 #tabela-admin tbody tr {
     transition: background-color 0.15s ease;
 }
+
 #tabela-admin tbody tr:hover {
     background-color: #fbfbfc;
 }
+
 #tabela-admin tbody td {
     font-size: 0.76rem;
     border-color: #f4f4f5;
@@ -288,64 +320,168 @@
     padding: 3px 9px;
     border-radius: 20px;
 }
+
 .badge-soft-red {
     background: rgba(220, 53, 69, 0.08);
     color: #d5495a;
 }
+
 .badge-soft-blue {
     background: rgba(13, 110, 253, 0.08);
     color: #5b8bd8;
 }
+
 .badge-soft-yellow {
     background: rgba(255, 193, 7, 0.12);
     color: #c99b12;
 }
+
 .badge-soft-green {
     background: rgba(25, 135, 84, 0.08);
     color: #3f9c6b;
 }
+
 .badge-soft-gray {
     background: rgba(108, 117, 125, 0.08);
     color: #8a929a;
 }
 
-@media (max-width: 576px) {
-    .admin-input-busca { width: 130px; }
-}
-
 .admin-lista-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 30px 10px;
-  color: #444;
-  font-size: 0.85rem;
-  font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px 10px;
+    color: #444;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
 .admin-loading-spin {
-  font-size: 1.5rem;
-  color: #dc3545;
-  animation: admin-girar 1.2s ease-in-out infinite;
+    font-size: 1.5rem;
+    color: #dc3545;
+    animation: admin-girar 1.2s ease-in-out infinite;
 }
 
 @keyframes admin-girar {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(15deg) scale(1.1); }
+
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(15deg) scale(1.1);
+    }
 }
 
 .admin-dots-anim span {
-  animation: admin-piscar 1.4s infinite;
-  opacity: 0;
+    animation: admin-piscar 1.4s infinite;
+    opacity: 0;
 }
-.admin-dots-anim span:nth-child(1) { animation-delay: 0s; }
-.admin-dots-anim span:nth-child(2) { animation-delay: .2s; }
-.admin-dots-anim span:nth-child(3) { animation-delay: .4s; }
+
+.admin-dots-anim span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.admin-dots-anim span:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.admin-dots-anim span:nth-child(3) {
+    animation-delay: .4s;
+}
 
 @keyframes admin-piscar {
-  0%, 20% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0; }
+
+    0%,
+    20% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+.admin-avatar-img {
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.admin-avatar-img:hover {
+    transform: scale(1.8);
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.admin-nome-mobile {
+    display: none;
+}
+
+@media (max-width: 576px) {
+    .admin-input-busca {
+        width: 130px;
+    }
+
+    .td-mobile-hide-admin {
+        display: none !important;
+    }
+
+    /* Dropdown de filtro: bloco compacto, do tamanho do texto,
+       com respiro (padding) apenas do lado esquerdo dos itens */
+    #dropdown-filtro-wrapper-admin {
+        position: relative;
+    }
+
+    #dropdown-filtro-menu-admin {
+        left: auto;
+        right: 0;
+        width: max-content;
+        min-width: 0;
+        max-width: calc(100vw - 24px);
+        padding: 4px;
+    }
+
+    #dropdown-filtro-menu-admin .dropdown-filtro-item {
+        white-space: nowrap;
+        padding: 6px 10px 6px 20px;
+        font-size: 0.72rem;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .admin-nome-completo {
+        display: none;
+    }
+
+    .admin-nome-mobile {
+        display: inline;
+    }
+
+    #tabela-admin .text-end.pe-3 .btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    #tabela-admin .text-end.pe-3 .btn i {
+        font-size: 0.85rem;
+    }
+
+    #tabela-admin .text-end.pe-3 .btn.me-1 {
+        margin-right: 0.15rem !important;
+    }
+
+    #tabela-admin .text-end.pe-3 {
+        white-space: nowrap;
+        padding-right: 0.5rem !important;
+    }
 }

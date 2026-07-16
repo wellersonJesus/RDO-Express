@@ -31,7 +31,8 @@
                         <div class="d-flex flex-column gap-2">
                             <div class="admin-status-card">
                                 <div class="admin-status-card-inner">
-                                    <div class="admin-status-action-item active" data-adm-status="todos" id="adm-filter-todos">
+                                    <div class="admin-status-action-item active" data-adm-status="todos"
+                                        id="adm-filter-todos">
                                         <div class="admin-status-action-icon admin-icon-todos">
                                             <i class="bi bi-grid-3x3-gap"></i>
                                         </div>
@@ -41,7 +42,8 @@
                                             <span class="admin-status-action-pct" id="adm-pct-todos">de 0</span>
                                         </div>
                                     </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="diario" id="adm-filter-diario">
+                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="diario"
+                                        id="adm-filter-diario">
                                         <div class="admin-status-action-icon admin-icon-diario">
                                             <i class="bi bi-calendar-day"></i>
                                         </div>
@@ -51,7 +53,8 @@
                                             <span class="admin-status-action-pct" id="adm-pct-diario">0%</span>
                                         </div>
                                     </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="semanal" id="adm-filter-semanal">
+                                    <div class="admin-status-action-item admin-bloco-pagamento"
+                                        data-adm-status="semanal" id="adm-filter-semanal">
                                         <div class="admin-status-action-icon admin-icon-semanal">
                                             <i class="bi bi-calendar-week"></i>
                                         </div>
@@ -61,7 +64,8 @@
                                             <span class="admin-status-action-pct" id="adm-pct-semanal">0%</span>
                                         </div>
                                     </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="quinzenal" id="adm-filter-quinzenal">
+                                    <div class="admin-status-action-item admin-bloco-pagamento"
+                                        data-adm-status="quinzenal" id="adm-filter-quinzenal">
                                         <div class="admin-status-action-icon admin-icon-quinzenal">
                                             <i class="bi bi-calendar2-range"></i>
                                         </div>
@@ -71,7 +75,8 @@
                                             <span class="admin-status-action-pct" id="adm-pct-quinzenal">0%</span>
                                         </div>
                                     </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="mensal" id="adm-filter-mensal">
+                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="mensal"
+                                        id="adm-filter-mensal">
                                         <div class="admin-status-action-icon admin-icon-mensal">
                                             <i class="bi bi-calendar-month"></i>
                                         </div>
@@ -92,13 +97,18 @@
                                         <i class="bi bi-chevron-down chevron-filtro"></i>
                                     </button>
                                     <div class="dropdown-filtro-menu" id="dropdown-filtro-menu-admin">
-                                        <div class="dropdown-filtro-item active" data-filtro-status="todos"><i class="bi bi-dash-circle"></i> Todos</div>
-                                        <div class="dropdown-filtro-item" data-filtro-status="ativo"><i class="bi bi-check-circle text-success"></i> Ativo</div>
-                                        <div class="dropdown-filtro-item" data-filtro-status="inativo"><i class="bi bi-x-circle text-secondary"></i> Inativo</div>
+                                        <div class="dropdown-filtro-item active" data-filtro-status="todos"><i
+                                                class="bi bi-dash-circle"></i> Todos</div>
+                                        <div class="dropdown-filtro-item" data-filtro-status="ativo"><i
+                                                class="bi bi-check-circle text-success"></i> Ativo</div>
+                                        <div class="dropdown-filtro-item" data-filtro-status="inativo"><i
+                                                class="bi bi-x-circle text-secondary"></i> Inativo</div>
                                     </div>
                                 </div>
 
-                                <input type="text" id="filtro-admin" class="form-control form-control-sm rounded-pill admin-input-busca" placeholder="Buscar..." autocomplete="off">
+                                <input type="text" id="filtro-admin"
+                                    class="form-control form-control-sm rounded-pill admin-input-busca"
+                                    placeholder="Buscar..." autocomplete="off">
 
                                 <button class="btn btn-danger btn-novo-admin" id="btn-novo-admin">
                                     <i class="bi bi-plus-lg me-1"></i> Novo
@@ -118,16 +128,19 @@
                                             <i class="bi bi-arrow-up" id="icon-sort-nome-admin"></i>
                                         </button>
                                     </th>
-                                    <th class="border-0 fw-normal" id="th-pagamento-admin">Pagamento</th>
-                                    <th class="border-0 fw-normal">Status</th>
+                                    <th class="border-0 fw-normal td-mobile-hide-admin" id="th-pagamento-admin">
+                                        Pagamento</th>
+                                    <th class="border-0 fw-normal td-mobile-hide-admin">Status</th>
                                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                                 </tr>
                             </thead>
+
                             <tbody id="admin-list">
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-4">
                                         <div class="spinner-border spinner-border-sm text-danger opacity-50"></div>
-                                        <div class="mt-2 admin-loading-text">Buscando dados<span class="admin-dots"></span></div>
+                                        <div class="mt-2 admin-loading-text">Buscando dados<span
+                                                class="admin-dots"></span></div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -167,7 +180,8 @@
                     <p class="mb-0 text-muted" id="aviso-admin-mensagem">Mensagem aqui.</p>
                 </div>
                 <div class="modal-footer border-0 pt-0 d-flex flex-row flex-nowrap justify-content-center gap-2 w-100">
-                    <button type="button" class="btn btn-warning rounded-pill px-4 flex-fill" id="btn-fechar-aviso-admin" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-warning rounded-pill px-4 flex-fill"
+                        id="btn-fechar-aviso-admin" data-bs-dismiss="modal">
                         Entendi
                     </button>
                 </div>
@@ -184,12 +198,15 @@
                 </div>
                 <div class="modal-body pt-2">
                     <p class="mb-0 text-muted">
-                        Deseja realmente excluir <strong id="excluir-admin-nome" class="text-dark">este registro</strong>?
+                        Deseja realmente excluir <strong id="excluir-admin-nome" class="text-dark">este
+                            registro</strong>?
                     </p>
                 </div>
                 <div class="modal-footer border-0 pt-0 d-flex flex-row flex-nowrap justify-content-center gap-2 w-100">
-                    <button type="button" class="btn btn-light rounded-pill px-4 flex-fill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger rounded-pill px-4 flex-fill" id="btn-confirmar-excluir-admin">
+                    <button type="button" class="btn btn-light rounded-pill px-4 flex-fill"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4 flex-fill"
+                        id="btn-confirmar-excluir-admin">
                         <i class="bi bi-trash"></i> Excluir
                     </button>
                 </div>
