@@ -126,27 +126,25 @@ function processarHeartbeat(sheet, username) {
   var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
   var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+  var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+  var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+  var colId = headers.indexOf("id");
 
   if (colUser === -1) return { status: "error", message: "Coluna 'username' nao encontrada" };
   if (colUltimoAcesso === -1) return { status: "error", message: "Coluna 'ultimo_acesso' nao encontrada" };
 
   for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][colUser]).trim() === userTrim &&
-      String(rows[i][colPass]).trim() === passTrim) {
+    if (String(rows[i][colUser]).trim() === usernameTrim) {
 
-      if (colUltimoAcesso !== -1) {
-        sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
-      }
-
-      var colId = headers.indexOf("id"); // pega o índice da coluna id
+      sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
 
       return {
         status: "success",
         user: {
-          id: colId !== -1 ? String(rows[i][colId]).trim() : "",   // ✅ agora envia o id
+          id: colId !== -1 ? String(rows[i][colId]).trim() : "",
           username: String(rows[i][colUser]).trim(),
           tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
-          cargo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "", // ✅ alias para compatibilidade com bot.js
+          cargo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
           imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
         }
       };
@@ -154,7 +152,7 @@ function processarHeartbeat(sheet, username) {
   }
 
   return { status: "error", message: "Usuario '" + usernameTrim + "' nao encontrado" };
-}
+} // ✅ agora só tem uma única linha de return + uma única chave de fechamento
 
 function processarGetUsuariosOnline(sheet) {
   if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
