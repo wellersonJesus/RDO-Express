@@ -437,7 +437,7 @@ function processarCriarPedido(sheetPedidos, data) {
   if (!deStr) deStr = String(data.de || "");
   if (!paraStr) paraStr = String(data.para || "");
 
-  var horaStr = String(data.hora || data.horario_chat || "").trim();
+  var horaStr = String(data.hora || data.horario_chat || data.horario || "").trim();
   if (!horaStr) {
     horaStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm");
   }
@@ -465,7 +465,7 @@ function processarCriarPedido(sheetPedidos, data) {
     rowData.id_cliente = idCliente;
     rowData.solicitante = String(data.solicitante || "");
     rowData.contato = String(data.contato || "");
-    rowData.horario = String(data.horario || "");
+    rowData.horario = horaStr;
     rowData.mercadoria = String(data.mercadoria || "");
     rowData.de = deStr;
     rowData.para = paraStr;
@@ -499,7 +499,7 @@ function processarCriarPedido(sheetPedidos, data) {
       idPedido, idCliente,
       String(data.solicitante || ""),
       String(data.contato || ""),
-      String(data.horario || ""),
+      horaStr,
       String(data.mercadoria || ""),
       deStr, paraStr,
       String(data.retorno || ""),

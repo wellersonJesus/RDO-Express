@@ -71,8 +71,8 @@ PADRAO_SOLICITANTE = re.compile(
     re.IGNORECASE
 )
 
-ULTIMO_RDO_LANCADO = "RDO2851"
-FILTRO_DATA_INICIO = "16/07/2026"
+ULTIMO_RDO_LANCADO = "RDO2395"
+FILTRO_DATA_INICIO = "02/07/2026"
 FILTRO_DATA_FIM = "16/07/2026"
 
 PAGAMENTO_SEMANAL = [
@@ -388,9 +388,24 @@ def definir_prioridade(endereco, observacao):
 def parse_valor(valor_str):
     if not valor_str:
         return 0.0
-    limpo = str(valor_str).replace("R$", "").strip().replace(".", "").replace(",", ".")
+    texto = str(valor_str).replace("R$", "").replace("$", "").strip()
+
+    tem_virgula = "," in texto
+    tem_ponto = "." in texto
+
+    if tem_virgula and tem_ponto:
+        texto = texto.replace(".", "").replace(",", ".")
+    elif tem_virgula and not tem_ponto:
+        texto = texto.replace(",", ".")
+    elif tem_ponto and not tem_virgula:
+        partes = texto.split(".")
+        if len(partes[-1]) == 2:
+            pass
+        else:
+            texto = texto.replace(".", "")
+
     try:
-        return float(limpo)
+        return float(texto)
     except ValueError as exc:
         logger.error("Valor inválido não pôde ser convertido: '%s' -> %s", valor_str, exc)
         return 0.0
@@ -545,7 +560,7 @@ def linha_dentro_do_filtro(dados):
     return True
 
 
-def montar_descricao_financeiro(dados):
+def montar_descricao_financeiro(dados, hora_str, valor_rs):
     tipo_servico = dados["tipo_servico"] or "ENTREGA"
     cliente_nome = dados["cliente_nome"] or ""
     endereco_para = dados["endereco_para"] or ""
@@ -555,6 +570,7 @@ def montar_descricao_financeiro(dados):
         partes.append(f"de {cliente_nome}")
     if endereco_para:
         partes.append(f"para {endereco_para}")
+    partes.append(f"[{hora_str} | {valor_rs}]")
 
     return " ".join(partes).strip()
 
@@ -573,6 +589,7 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
     endereco_para = dados["endereco_para"] or ""
     observacao = dados["observacao_bruta"] or ""
     solicitante = dados["solicitante"] or "N/A"
+    valor_rs = formatar_valor_rs(dados["valor_corrida"])
 
     return {
         "rdo_id": rdo_id,
@@ -584,10 +601,10 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
         "data_str": data_str,
         "hora_str": hora_str,
         "status_final": STATUS_PEDIDO_PADRAO,
-        "descricao_final": montar_descricao_financeiro(dados),
+        "descricao_final": montar_descricao_financeiro(dados, hora_str, valor_rs),
         "tipo_servico": tipo_servico,
         "endereco_para": endereco_para,
-        "valor_rs": formatar_valor_rs(dados["valor_corrida"]),
+        "valor_rs": valor_rs,
         "telefone": dados.get("telefone") or "",
     }
 
@@ -604,6 +621,7 @@ def criar_pedido(consolidado):
         "contato": consolidado["telefone"],
         "data": consolidado["data_str"],
         "horario": consolidado["hora_str"],
+        "hora": consolidado["hora_str"],
         "mercadoria": consolidado["tipo_servico"],
         "de": consolidado["cliente_nome"],
         "para": consolidado["endereco_para"],
@@ -614,21 +632,82 @@ def criar_pedido(consolidado):
         "status": consolidado["status_final"],
         "observacao": consolidado["observacao"],
     }
+
     try:
         resultado = post(payload)
     except ErroApi as exc:
-        logger.error("Exceção ao criar pedido %s: %s", rdo_id, exc)
+        return False, str(exc)
+
+    if not resultado or resultado.get("status") != "success":
+        return False, f"resposta={resultado!r}"
+
+    return True, None
+
+
+def criar_financeiro(consolidado):
+    rdo_id = consolidado["rdo_id"]
+    motoboy_final = consolidado["motoboy_final"]
+
+    colaborador_id = COLABORADORES.get(motoboy_final)
+
+    payload = {
+        "action": "criarfinanceiro",
+        "apiKey": API_KEY,
+        "id": rdo_id + "-FIN",
+        "colaborador_id": colaborador_id or "",
+        "id_pedido": rdo_id,
+        "data": consolidado["data_str"],
+        "horario": consolidado["hora_str"],
+        "hora": consolidado["hora_str"],
+        "tipo": TIPO_FINANCEIRO_PADRAO,
+        "descricao": consolidado["descricao_final"],
+        "vlr_servico": consolidado["valor_rs"],
+        "colaborador": motoboy_final,
+        "observacao": consolidado["observacao"],
+        "situacao": "PAGO",
+    }
+
+    try:
+        resultado = post(payload)
+    except ErroApi as exc:
+        return False, str(exc)
+
+    if not resultado or resultado.get("status") != "success":
+        return False, f"resposta={resultado!r}"
+
+    return True, None
+
+
+def criar_chat(consolidado):
+    rdo_id = consolidado["rdo_id"]
+
+    payload = {
+        "action": "criarchat",
+        "apiKey": API_KEY,
+        "id": rdo_id + "-CHAT",
+        "id_pedido": rdo_id,
+        "data": consolidado["data_str"],
+        "hora": consolidado["hora_str"],
+        "cliente": consolidado["cliente_nome"],
+        "colaborador": consolidado["motoboy_final"],
+        "valor_corrida": consolidado["valor_rs"],
+        "mensagem": consolidado["observacao"],
+    }
+
+    try:
+        resultado = post(payload)
+    except ErroApi as exc:
+        logger.error("Exceção ao criar chat do pedido %s: %s", rdo_id, exc)
         return False, str(exc)
 
     if not resultado or resultado.get("status") != "success":
         detalhe = f"resposta={resultado!r}"
-        logger.error("Falha ao criar pedido %s: %s", rdo_id, detalhe)
+        logger.error("Falha ao criar chat do pedido %s: %s", rdo_id, detalhe)
         return False, detalhe
 
     logger.info(
-        "Pedido criado: %s | cliente=%s | data=%s | hora=%s | status=%s | motoboy=%s | solicitante=%s",
-        rdo_id, consolidado["cliente_nome"], consolidado["data_str"], consolidado["hora_str"],
-        consolidado["status_final"], consolidado["motoboy_final"], consolidado["solicitante"]
+        "Chat lançado: %s | hora=%s | valor=%s",
+        rdo_id, consolidado["hora_str"], consolidado["valor_rs"]
     )
     return True, None
 
@@ -693,12 +772,8 @@ def main():
     maior_rdo_financeiro = carregar_maior_rdo_financeiro()
     conferir_ultimo_rdo_com_financeiro(RDO_SEQ, maior_rdo_financeiro)
 
-    logger.info("Sequência RDO travada em %d. Primeiro pedido desta execução será RDO%03d.", RDO_SEQ, RDO_SEQ + 1)
-    logger.info("Filtro de período ativo: início=%s | fim=%s", FILTRO_DATA_INICIO or "sem limite", FILTRO_DATA_FIM or "sem limite")
-
     todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
     if not todas_linhas:
-        logger.critical("DADOS_BRUTOS está vazio. Nada a processar.")
         raise SystemExit(1)
 
     linhas_filtradas = []
@@ -713,13 +788,7 @@ def main():
         else:
             fora_do_filtro += 1
 
-    logger.info(
-        "Linhas totais na base: %d | Dentro do filtro: %d | Fora do filtro (ignoradas): %d",
-        len(todas_linhas), len(linhas_filtradas), fora_do_filtro
-    )
-
     if not linhas_filtradas:
-        logger.critical("Nenhuma linha dentro do período informado (%s a %s). Verifique o filtro.", FILTRO_DATA_INICIO, FILTRO_DATA_FIM)
         raise SystemExit(1)
 
     inseridos = 0
@@ -751,7 +820,6 @@ def main():
             except Exception as exc:
                 id_cliente = None
                 erros_detalhados.append((indice, "EXCECAO_GARANTIR_CLIENTE", f"{nome_cliente} | {exc}"))
-                logger.error("Exceção não tratada ao garantir cliente '%s': %s", nome_cliente, exc)
             time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
             if not id_cliente:
@@ -775,7 +843,6 @@ def main():
                 pedido_ok, erro_pedido = criar_pedido(consolidado)
             except Exception as exc:
                 pedido_ok, erro_pedido = False, str(exc)
-                logger.error("Exceção não tratada ao criar pedido %s: %s", rdo_id, exc)
 
             if not pedido_ok:
                 ignorados += 1
@@ -788,7 +855,6 @@ def main():
                 financeiro_ok, erro_financeiro = criar_financeiro(consolidado)
             except Exception as exc:
                 financeiro_ok, erro_financeiro = False, str(exc)
-                logger.error("Exceção não tratada ao criar financeiro do pedido %s: %s", rdo_id, exc)
             time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
             if not financeiro_ok:
@@ -801,7 +867,6 @@ def main():
             ignorados += 1
             trace = traceback.format_exc()
             erros_detalhados.append((indice, "EXCECAO_NAO_TRATADA", f"rdo={rdo_id} | {exc} | {trace}"))
-            logger.critical("Erro não tratado na linha %d (rdo=%s): %s\n%s", indice, rdo_id, exc, trace)
             continue
 
         if indice % 20 == 0 or indice == total_linhas:
@@ -813,7 +878,6 @@ def main():
     )
 
     if erros_detalhados:
-        logger.error("=== RELATÓRIO DETALHADO DE ERROS (%d) ===", len(erros_detalhados))
         for idx, tipo, detalhe in erros_detalhados:
             logger.error("Linha %d | %s | %s", idx, tipo, detalhe)
 
@@ -821,7 +885,7 @@ def main():
         logger.warning("Clientes pendentes de CADASTRO MANUAL: %s", sorted(CLIENTES_PENDENTES))
 
     if COLABORADORES_PENDENTES:
-        logger.warning("Colaboradores presentes no bruto mas AUSENTES no cadastro (getcolaboradores): %s", sorted(COLABORADORES_PENDENTES))
+        logger.warning("Colaboradores presentes no bruto mas AUSENTES no cadastro: %s", sorted(COLABORADORES_PENDENTES))
 
 
 if __name__ == "__main__":
