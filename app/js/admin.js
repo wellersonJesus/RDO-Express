@@ -148,7 +148,7 @@
     function mostrarErroTabela(msg) {
         if (!els.tbody) return;
         els.tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center text-danger py-4">' +
+            '<tr><td colspan="4" class="text-center text-danger py-4">' +
             '<i class="bi bi-exclamation-triangle" style="font-size:1.3rem;display:block;margin-bottom:6px;"></i>' +
             '<strong>' + (msg || 'Erro ao carregar dados') + '</strong>' +
             '</td></tr>';
@@ -290,7 +290,7 @@
     function mostrarLoading() {
         if (!els.tbody) return;
         els.tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center py-4">' +
+            '<tr><td colspan="4" class="text-center py-4">' +
             '<div class="admin-lista-loading">' +
             '<i class="bi bi-search admin-loading-spin"></i>' +
             '<span>Buscando informações' +
@@ -502,7 +502,7 @@
         var inicio = (state.pagina - 1) * state.porPagina;
         var pagina = dados.slice(inicio, inicio + state.porPagina);
         if (pagina.length === 0) {
-            els.tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Nenhum registro encontrado.</td></tr>';
+            els.tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">Nenhum registro encontrado.</td></tr>';
         } else {
             try {
                 els.tbody.innerHTML = pagina.map(renderLinha).join('');
@@ -533,7 +533,6 @@
     }
 
     function renderLinha(it) {
-        var ativo = String(it.status || '').toUpperCase() === 'TRUE';
         var avatar = it.imagem || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         var nome = it.nome || it.username || 'N/A';
         var nomeSafe = nome.replace(/"/g, '&quot;');
@@ -542,8 +541,6 @@
         var pag = isCliente
             ? '<td class="td-mobile-hide-admin">' + badgePagamento(it.pagamento) + '</td>'
             : '<td class="d-none"></td>';
-        var statusClasse = ativo ? 'badge-soft-green' : 'badge-soft-gray';
-        var statusTexto = ativo ? 'Ativo' : 'Inativo';
         return '<tr>' +
             '<td class="ps-3">' +
             '<img src="' + avatar + '" width="26" height="26" class="rounded-circle admin-avatar-img" style="object-fit:cover;" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/149/149071.png\'">' +
@@ -553,7 +550,6 @@
             '<span class="admin-nome-mobile">' + primeiroNome + '</span>' +
             '</td>' +
             pag +
-            '<td class="td-mobile-hide-admin"><span class="badge-soft ' + statusClasse + '">' + statusTexto + '</span></td>' +
             '<td class="text-end pe-3">' +
             '<button class="btn btn-light btn-sm me-1 btn-admin-edit" data-id="' + it.id + '"><i class="bi bi-pencil-square"></i></button>' +
             '<button class="btn btn-light btn-sm me-1 btn-admin-view" data-id="' + it.id + '"><i class="bi bi-eye"></i></button>' +
@@ -623,6 +619,22 @@
             });
     }
 
+    function alternarCampoFechamento() {
+        var pagamento = String((document.getElementById('c-pagamento') || {}).value || '').toUpperCase();
+        var div = document.getElementById('div-dia-fechamento');
+        var mapaFechamento = {
+            'DIÁRIO IMEDIATO': '',
+            'SEMANAL (SEGUNDA - FINAL DO DIA)': '',
+            'QUINZENAL (QUINTA, SEXTA E SEGUNDA)': 'Dia 15 e Dia 30',
+            'MENSAL': 'Dia 30'
+        };
+        var valorCalculado = mapaFechamento.hasOwnProperty(pagamento) ? mapaFechamento[pagamento] : '';
+        var precisaFechamento = pagamento === 'QUINZENAL (QUINTA, SEXTA E SEGUNDA)' || pagamento === 'MENSAL';
+
+        if (div) div.classList.toggle('d-none', !precisaFechamento);
+        preencherCampo('c-dia_fechamento', valorCalculado);
+    }
+
     function registrarEventosForm() {
         var btnSalvar = document.getElementById('btn-salvar-form-admin');
         if (btnSalvar) btnSalvar.onclick = function () { salvar(); };
@@ -634,6 +646,9 @@
                 if (div) div.classList.toggle('d-none', !motoboyMarcado);
             };
         });
+
+        var selPagamento = document.getElementById('c-pagamento');
+        if (selPagamento) selPagamento.onchange = alternarCampoFechamento;
 
         var modalEl = document.getElementById('modalFormAdmin');
         if (modalEl) modalEl.addEventListener('hidden.bs.modal', function () {
@@ -690,6 +705,7 @@
         preencherCampo('c-imagem', it.imagem);
         var st = document.getElementById('c-status');
         if (st) st.value = String(it.status || '').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE';
+        alternarCampoFechamento();
     }
 
     function preencherColaboradores(it) {

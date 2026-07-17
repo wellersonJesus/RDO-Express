@@ -222,6 +222,7 @@ img.avatar:not([src]) {
 .router-view-default {
     padding: 1.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1;
     min-height: 0;
 }
@@ -307,6 +308,7 @@ img.avatar:not([src]) {
     gap: 1rem;
     padding-bottom: .75rem;
     position: relative;
+    overflow: visible;
 }
 
 .dash-title-row {
@@ -673,6 +675,75 @@ img.avatar:not([src]) {
     font-size: .78rem;
     color: #6c757d;
     font-weight: 500;
+}
+
+.dash-notificacao-block {
+    padding: .8rem 1rem;
+    border: 1px solid #ffe0a3;
+    background: linear-gradient(135deg, #fff8ec, #fff3d9);
+    display: flex;
+}
+
+.notificacao-pagamento-inner {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.notificacao-pagamento-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 193, 7, .2);
+    color: #a37a00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.notificacao-pagamento-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.notificacao-pagamento-title {
+    font-size: .85rem;
+    font-weight: 800;
+    color: #7a5a00;
+    line-height: 1.2;
+}
+
+.notificacao-pagamento-subtitle {
+    font-size: .74rem;
+    color: #8a6a1a;
+    font-weight: 500;
+}
+
+.btn-notificacao-pagamento {
+    background: #a37a00;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: .74rem;
+    font-weight: 700;
+    padding: .45rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    white-space: nowrap;
+    transition: background .2s ease, transform .15s ease;
+    flex-shrink: 0;
+}
+
+.btn-notificacao-pagamento:hover {
+    background: #8a6600;
+    transform: translateY(-1px);
 }
 
 .ranking-list {
@@ -1059,6 +1130,56 @@ img.avatar:not([src]) {
     display: none !important;
 }
 
+.modal-notif-pagamento-lista {
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.modal-notif-pagamento-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    background: #fff8ec;
+    border: 1px solid #ffe0a3;
+    border-radius: .6rem;
+    padding: .55rem .8rem;
+}
+
+.modal-notif-pagamento-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.modal-notif-pagamento-item-nome {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #212529;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-notif-pagamento-item-detalhe {
+    font-size: .72rem;
+    color: #8a6a1a;
+}
+
+.modal-notif-pagamento-item-badge {
+    font-size: .68rem;
+    font-weight: 700;
+    padding: .25rem .6rem;
+    border-radius: 999px;
+    background: rgba(220,53,69,.12);
+    color: #dc3545;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 @media (max-width: 992px) {
     .dash-split-row { grid-template-columns: 1fr; }
 }
@@ -1111,6 +1232,21 @@ img.avatar:not([src]) {
 
     .dash-hero-subtitle {
         font-size: .74rem;
+    }
+
+    .dash-notificacao-block {
+        padding: .75rem .85rem;
+    }
+
+    .notificacao-pagamento-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .6rem;
+    }
+
+    .btn-notificacao-pagamento {
+        width: 100%;
+        justify-content: center;
     }
 
     .automation-cards-row {

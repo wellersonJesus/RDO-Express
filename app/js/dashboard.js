@@ -733,8 +733,117 @@ function iniciarHeartbeat() {
     window.dashboardState.heartbeatIntervalId = setInterval(enviar, 60000);
 }
 
+function _statusPedidoAbertoPagamento(status) {
+    var s = String(status || '').toUpperCase();
+    return s === 'PENDENTE' || s === 'ABERTO' || s === 'AGUARDANDO PAGAMENTO' || s === 'AGUARDANDO_PAGAMENTO';
+}
+
+function _formatarDataPedido(str) {
+    var data = _parseDataBR(str);
+    if (isNaN(data.getTime())) return '';
+    return data.toLocaleDateString('pt-BR');
+}
+
+function preencherModalNotifPagamento(pedidosAbertos) {
+    var resumoEl = document.getElementById('modal-notif-pagamento-resumo');
+    var listaEl = document.getElementById('modal-notif-pagamento-lista');
+    if (!listaEl) return;
+
+    var total = pedidosAbertos.length;
+    if (resumoEl) {
+        resumoEl.textContent = total === 1 ? '1 pedido aguardando pagamento' : total + ' pedido(s) aguardando pagamento';
+    }
+
+    listaEl.innerHTML = '';
+
+    if (total === 0) {
+        listaEl.innerHTML = '<div class="text-center py-3" style="color:#999;font-size:.82rem;">Nenhum pedido em aberto.</div>';
+        return;
+    }
+
+    var dados = window.dashboardState.dados || {};
+
+    pedidosAbertos.forEach(function (pedido) {
+        var item = document.createElement('div');
+        item.className = 'modal-notif-pagamento-item';
+
+        var info = document.createElement('div');
+        info.className = 'modal-notif-pagamento-item-info';
+
+        var nome = document.createElement('span');
+        nome.className = 'modal-notif-pagamento-item-nome';
+        nome.textContent = _obterNomeCliente(pedido, dados);
+
+        var detalhe = document.createElement('span');
+        detalhe.className = 'modal-notif-pagamento-item-detalhe';
+        var dataFormatada = _formatarDataPedido(pedido.data);
+        detalhe.textContent = 'Pedido #' + (pedido.id || pedido.id_pedido || '—') + (dataFormatada ? ' • ' + dataFormatada : '');
+
+        info.appendChild(nome);
+        info.appendChild(detalhe);
+
+        var badge = document.createElement('span');
+        badge.className = 'modal-notif-pagamento-item-badge';
+        badge.textContent = pedido.status || 'Pendente';
+
+        item.appendChild(info);
+        item.appendChild(badge);
+        listaEl.appendChild(item);
+    });
+}
+
+function abrirModalNotifPagamento() {
+    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+    if (!modalEl || typeof bootstrap === 'undefined') return;
+
+    var pedidosAbertos = window.dashboardState.pedidosAbertosPagamento || [];
+    preencherModalNotifPagamento(pedidosAbertos);
+
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+function navegarParaPedidos() {
+    if (window.router && typeof window.router.navigate === 'function') {
+        window.router.navigate('pedidos');
+    } else {
+        window.location.hash = '#pedidos';
+    }
+}
+
+function renderizarBlocoNotificacaoPagamento(dados) {
+    var bloco = document.getElementById('bloco-notificacao-pagamento');
+    if (!bloco) return;
+
+    var pedidos = (dados && dados.pedidos) || [];
+    var pedidosAbertos = pedidos.filter(function (p) {
+        return _statusPedidoAbertoPagamento(p.status);
+    });
+    var total = pedidosAbertos.length;
+
+    window.dashboardState.pedidosAbertosPagamento = pedidosAbertos;
+
+    if (total === 0) {
+        bloco.classList.add('d-none');
+        return;
+    }
+
+    var titleEl = document.getElementById('notif-pagamento-title');
+    var subtitleEl = document.getElementById('notif-pagamento-subtitle');
+
+    if (titleEl) {
+        titleEl.textContent = total === 1 ? 'Você possui 1 pedido em aberto' : 'Você possui ' + total + ' pedidos em aberto';
+    }
+    if (subtitleEl) {
+        subtitleEl.textContent = total === 1 ? '1 pedido aguardando pagamento' : total + ' pedidos aguardando pagamento';
+    }
+
+    bloco.classList.remove('d-none');
+}
+
 function renderizarDashboardCompleto(usuario, dados) {
     var blocos = [
+        function () { renderizarBlocoNotificacaoPagamento(dados); },
         function () { renderizarBlocoChatPedidos(usuario, dados); },
         function () { renderizarBlocoVisaoGeral(); },
         function () { renderizarBlocoGestao(); },
@@ -747,22 +856,6 @@ function renderizarDashboardCompleto(usuario, dados) {
         try { fn(); } catch (e) { console.error('Erro ao renderizar bloco:', e); }
     });
 }
-
-window.addEventListener('botCacheAtualizado', function () {
-    renderizarBlocoGestao();
-    renderizarBlocoVisaoGeral();
-});
-
-window.addEventListener('masterStatusChanged', function () {
-    renderizarBlocoGestao();
-    renderizarBlocoVisaoGeral();
-
-    if (window.dashboardState.dados) {
-        window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function'
-            ? window.checkMaster()
-            : window.dashboardState.dados.masterOn;
-    }
-});
 
 window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
@@ -779,6 +872,16 @@ window.initDashboard = function () {
     var btnRefresh = document.getElementById('btn-refresh-dashboard');
     if (btnRefresh) btnRefresh.onclick = function () { window.initDashboard(); };
 
+    var btnVerPedidos = document.getElementById('btn-notif-pagamento-ver');
+    if (btnVerPedidos) {
+        btnVerPedidos.onclick = abrirModalNotifPagamento;
+    }
+
+    var btnModalVerPedidos = document.getElementById('btn-modal-notif-pagamento-ver');
+    if (btnModalVerPedidos) {
+        btnModalVerPedidos.onclick = navegarParaPedidos;
+    }
+
     return carregarDadosDashboard()
         .then(function (dados) {
             window.dashboardState.dados = dados;
@@ -794,6 +897,22 @@ window.initDashboard = function () {
             syncStopDashboard();
         });
 };
+
+window.addEventListener('botCacheAtualizado', function () {
+    renderizarBlocoGestao();
+    renderizarBlocoVisaoGeral();
+});
+
+window.addEventListener('masterStatusChanged', function () {
+    renderizarBlocoGestao();
+    renderizarBlocoVisaoGeral();
+
+    if (window.dashboardState.dados) {
+        window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function'
+            ? window.checkMaster()
+            : window.dashboardState.dados.masterOn;
+    }
+});
 
 function _exibirErroDashboard() {
     var overlay = document.getElementById('dashboard-loading-overlay');

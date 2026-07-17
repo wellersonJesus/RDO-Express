@@ -39,7 +39,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         tbody: null, btnSync: null, iconSync: null, inputBusca: null,
         filtroData: null, btnFiltroTipo: null, dropdownFiltroMenu: null,
         labelFiltroTipo: null, btnPrev: null, btnNext: null,
-        infoPaginacao: null, filtrosStatus: [], thead: null, iconSortData: null
+        infoPaginacao: null, filtrosStatus: [], thead: null, iconSortData: null,
+        loadingOverlay: null
     };
 
     window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
@@ -58,6 +59,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         els.infoPaginacao = document.getElementById('info-paginacao-pedidos');
         els.thead = document.querySelector('#tabela-pedidos thead');
         els.iconSortData = document.getElementById('icon-sort-data-pedidos');
+        els.loadingOverlay = document.getElementById('pedidos-loading-overlay');
         els.filtrosStatus = [
             { el: document.getElementById('ped-filter-todos'), status: 'todos' },
             { el: document.getElementById('ped-filter-pendente'), status: 'pendente' },
@@ -244,12 +246,11 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     }
 
     function _mostrarLoading() {
-        if (!els.tbody) return;
-        els.tbody.innerHTML =
-            '<tr><td colspan="6" class="text-center text-muted py-4">' +
-            '<div class="spinner-border spinner-border-sm text-danger opacity-50"></div>' +
-            '<div class="mt-2 pedidos-loading-text">Carregando<span class="pedidos-dots"></span></div>' +
-            '</td></tr>';
+        if (els.loadingOverlay) els.loadingOverlay.classList.remove('d-none');
+    }
+
+    function _esconderLoading() {
+        if (els.loadingOverlay) els.loadingOverlay.classList.add('d-none');
     }
 
     function _criarLinhaTabela(pedido) {
@@ -874,6 +875,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
                     'Erro: ' + _escHtml(e.message) + '</td></tr>';
         } finally {
             window.pedidosState.isFetching = false;
+            _esconderLoading();
             _spinOff();
         }
     }

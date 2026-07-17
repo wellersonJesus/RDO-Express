@@ -40,23 +40,62 @@
     cursor: not-allowed;
 }
 
+.pedidos-tabela-wrapper {
+    position: relative;
+    min-height: 220px;
+}
+
+.pedidos-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    z-index: 5;
+    border-radius: 12px;
+}
+
+.pedidos-loading-overlay.d-none {
+    display: none;
+}
+
+.pedidos-loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.pedidos-loading-spin {
+    font-size: 1.8rem;
+    color: #dc3545;
+    animation: pedidosLoadingSpin 1.4s ease-in-out infinite;
+}
+
+@keyframes pedidosLoadingSpin {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
 .pedidos-loading-text {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: #999;
 }
 
-.pedidos-dots::after {
-    content: '';
-    animation: pedidosDots 1.5s steps(4, end) infinite;
+.pedidos-loading-dots span {
+    animation: pedidosLoadingDots 1.4s infinite;
+    opacity: 0;
 }
 
-@keyframes pedidosDots {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-    100% { content: ''; }
+.pedidos-loading-dots span:nth-child(1) { animation-delay: 0s; }
+.pedidos-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.pedidos-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pedidosLoadingDots {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
 }
 
 .tabela-pedidos-head {

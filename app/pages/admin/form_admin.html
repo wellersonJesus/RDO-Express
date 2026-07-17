@@ -27,14 +27,21 @@
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-sm-6">
-                            <label class="modal-pedido-field-label">Nome / Empresa <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm modal-pedido-input" id="c-username"
-                                placeholder="Ex: Empresa XYZ Ltda">
+                            <label class="modal-pedido-field-label">Pagamento</label>
+                            <select class="form-select form-select-sm modal-pedido-input" id="c-pagamento">
+                                <option value="">Selecione...</option>
+                                <option value="DIÁRIO IMEDIATO">Diário Imediato</option>
+                                <option value="SEMANAL (SEGUNDA - FINAL DO DIA)">Semanal (Segunda - Final do Dia)
+                                </option>
+                                <option value="QUINZENAL (QUINTA, SEXTA E SEGUNDA)">Quinzenal (Quinta, Sexta e Segunda)
+                                </option>
+                                <option value="MENSAL">Mensal</option>
+                            </select>
                         </div>
-                        <div class="col-12 col-sm-6">
-                            <label class="modal-pedido-field-label">Responsável <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm modal-pedido-input" id="c-responsavel"
-                                placeholder="Ex: João Silva">
+                        <div class="col-12 col-sm-6 d-none" id="div-dia-fechamento">
+                            <label class="modal-pedido-field-label">Dia de Fechamento</label>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-dia_fechamento" placeholder="Ex: Dia 05" readonly>
                         </div>
                     </div>
 
@@ -63,15 +70,17 @@
                             <select class="form-select form-select-sm modal-pedido-input" id="c-pagamento">
                                 <option value="">Selecione...</option>
                                 <option value="DIÁRIO IMEDIATO">Diário Imediato</option>
-                                <option value="SEMANAL (SEGUNDA - FINAL DO DIA)">Semanal (Segunda - Final do Dia)</option>
-                                <option value="QUINZENAL (QUINTA, SEXTA E SEGUNDA)">Quinzenal (Quinta, Sexta e Segunda)</option>
+                                <option value="SEMANAL (SEGUNDA - FINAL DO DIA)">Semanal (Segunda - Final do Dia)
+                                </option>
+                                <option value="QUINZENAL (QUINTA, SEXTA E SEGUNDA)">Quinzenal (Quinta, Sexta e Segunda)
+                                </option>
                                 <option value="MENSAL">Mensal</option>
                             </select>
                         </div>
                         <div class="col-12 col-sm-6">
                             <label class="modal-pedido-field-label">Dia de Fechamento</label>
-                            <input type="text" class="form-control form-control-sm modal-pedido-input" id="c-dia_fechamento"
-                                placeholder="Ex: Dia 05" readonly>
+                            <input type="text" class="form-control form-control-sm modal-pedido-input"
+                                id="c-dia_fechamento" placeholder="Ex: Dia 05" readonly>
                         </div>
                     </div>
 
@@ -95,12 +104,14 @@
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-sm-6">
-                            <label class="modal-pedido-field-label">Nome Completo <span class="text-danger">*</span></label>
+                            <label class="modal-pedido-field-label">Nome Completo <span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm modal-pedido-input" id="col-username"
                                 placeholder="Nome do colaborador">
                         </div>
                         <div class="col-12 col-sm-6">
-                            <label class="modal-pedido-field-label">CPF / CNPJ <span class="text-danger">*</span></label>
+                            <label class="modal-pedido-field-label">CPF / CNPJ <span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm modal-pedido-input" id="col-cpf_cnpj"
                                 placeholder="000.000.000-00">
                         </div>

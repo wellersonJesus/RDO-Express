@@ -17,6 +17,21 @@
                 </div>
             </div>
 
+            <div class="dash-block dash-notificacao-block d-none" id="bloco-notificacao-pagamento">
+                <div class="notificacao-pagamento-inner">
+                    <div class="notificacao-pagamento-icon">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="notificacao-pagamento-info">
+                        <span class="notificacao-pagamento-title" id="notif-pagamento-title">Você possui pedidos em aberto</span>
+                        <span class="notificacao-pagamento-subtitle" id="notif-pagamento-subtitle">0 pedido(s) aguardando pagamento</span>
+                    </div>
+                    <button class="btn-notificacao-pagamento" id="btn-notif-pagamento-ver">
+                        Ver pedidos <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
             <div class="dashboard-blocos mt-3">
 
                 <div class="dash-block dash-automation-block bloco-dashboard" id="bloco-automacao">
@@ -115,4 +130,29 @@
         </div>
 
     </div>
+
+    <div class="modal fade" id="modalNotifPagamentoDashboard" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        Pedidos aguardando pagamento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body pt-1">
+                    <p class="text-muted mb-3" id="modal-notif-pagamento-resumo">0 pedido(s) aguardando pagamento</p>
+                    <div id="modal-notif-pagamento-lista" class="modal-notif-pagamento-lista"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4" id="btn-modal-notif-pagamento-ver">
+                        Ver pedidos <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
