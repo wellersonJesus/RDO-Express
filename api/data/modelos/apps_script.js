@@ -65,6 +65,9 @@ function doPost(e) {
       return responder(processarGetUsuariosOnline(sheetUsuariosOn));
     }
 
+    if (action === "getdashboarddata")
+      return responder(processarGetDashboardData(ss));
+
     if (action === "criarpedido") {
       var sheetPedidos = buscarAba(ss, "pedidos");
       if (!sheetPedidos) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
@@ -114,6 +117,27 @@ function doPost(e) {
   }
 }
 
+function processarGetDashboardData(ss) {
+  var sheetClientes = buscarAba(ss, "clientes");
+  var sheetColaboradores = buscarAba(ss, "colaboradores");
+  var sheetUsuarios = buscarAba(ss, "usuarios");
+  var sheetPedidos = buscarAba(ss, "pedidos");
+  var sheetFinanceiro = buscarAba(ss, "financeiro");
+  var sheetRelatorios = buscarAba(ss, "relatorios");
+
+  return {
+    status: "success",
+    data: {
+      clientes: sheetClientes ? processarGet(sheetClientes) : [],
+      colaboradores: sheetColaboradores ? processarGet(sheetColaboradores) : [],
+      usuarios: sheetUsuarios ? processarGet(sheetUsuarios) : [],
+      pedidos: sheetPedidos ? processarGet(sheetPedidos) : [],
+      financeiro: sheetFinanceiro ? processarGet(sheetFinanceiro) : [],
+      relatorios: sheetRelatorios ? processarGet(sheetRelatorios) : []
+    }
+  };
+}
+
 function processarHeartbeat(sheet, username) {
   if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
 
@@ -152,7 +176,7 @@ function processarHeartbeat(sheet, username) {
   }
 
   return { status: "error", message: "Usuario '" + usernameTrim + "' nao encontrado" };
-} // ✅ agora só tem uma única linha de return + uma única chave de fechamento
+}
 
 function processarGetUsuariosOnline(sheet) {
   if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
@@ -903,3 +927,4 @@ function responder(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+

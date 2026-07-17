@@ -1076,7 +1076,7 @@
     if (f.id) f.id.value = '';
     if (f.tipo) f.tipo.value = '';
     if (f.data) f.data.value = toISO(new Date());
-    if (f.situacao) f.situacao.value = 'pendente';
+    if (f.situacao) f.situacao.value = 'pago';
     if (f.colaborador) f.colaborador.value = '';
     if (f.descricao) f.descricao.value = '';
     if (f.valor) f.valor.value = '';
@@ -1095,7 +1095,7 @@
     var inst = bootstrap.Modal.getInstance(modalEl);
     if (inst) inst.dispose();
     new bootstrap.Modal(modalEl).show();
-  }
+}
 
   function abrirModalEditar(d) {
     var f = _getModalFinIds();

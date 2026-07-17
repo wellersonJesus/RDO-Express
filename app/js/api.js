@@ -87,7 +87,6 @@ window.API = (function () {
         });
     }
 
-    // Wrapper com retry automático para erro de concorrência
     function call(action, data, attempt) {
         attempt = attempt || 1;
 

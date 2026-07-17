@@ -52,7 +52,7 @@ body {
     overflow: hidden;
 }
 
-.sidebar.collapsed + .main-content {
+body.sidebar-collapsed .main-content {
     margin-left: var(--sidebar-c);
     width: calc(100% - var(--sidebar-c));
 }

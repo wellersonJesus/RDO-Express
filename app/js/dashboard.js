@@ -22,6 +22,16 @@ function mostrarLoadingDashboard() {
     if (conteudo) conteudo.style.display = 'none';
 }
 
+function _exibirErroDashboard() {
+    var overlay = document.getElementById('dashboard-loading-overlay');
+    var conteudo = document.getElementById('dashboard-conteudo-real');
+    if (overlay) {
+        overlay.classList.remove('d-none');
+        overlay.innerHTML = '<div class="text-center py-5" style="color:#c00;"><i class="bi bi-exclamation-triangle-fill" style="font-size:2rem;"></i><p class="mt-2">Não foi possível carregar os dados do dashboard. Tente novamente em instantes.</p></div>';
+    }
+    if (conteudo) conteudo.style.display = 'none';
+}
+
 function _parseDataBR(str) {
     if (!str) return new Date(NaN);
     if (str instanceof Date) return str;
@@ -63,7 +73,6 @@ function obterUsuarioLogado() {
     var cargoNormalizado = _normalizarCargo(cargo);
     var permissoes = [];
 
-    // 1º: tenta permissões customizadas salvas por usuário (igual ao bot.js)
     try {
         if (idUsuario) {
             var storedPerms = localStorage.getItem('permissoes_usuario_' + idUsuario);
@@ -76,14 +85,12 @@ function obterUsuarioLogado() {
         permissoes = [];
     }
 
-    // 2º: fallback para permissões padrão do cargo
     if (!Array.isArray(permissoes) || permissoes.length === 0) {
         if (window.PERMISSOES_PADRAO && window.PERMISSOES_PADRAO[cargoNormalizado]) {
             permissoes = window.PERMISSOES_PADRAO[cargoNormalizado];
         }
     }
 
-    // 3º: SEM fallback genérico perigoso — cargo desconhecido = sem permissões
     if (!Array.isArray(permissoes)) {
         permissoes = [];
     }
@@ -97,19 +104,13 @@ function usuarioTemPermissao(usuario, permissao) {
 
 var MAPA_BLOCO_PERMISSOES = {
     'bloco-visao-geral': ['Dashboard'],
-    'bloco-automacao': ['Administração', 'Bot'],   // basta 1 destes (uso especial abaixo)
-    'bloco-chat-pedidos': ['Chat', 'Pedidos'],      // exige AMBOS
+    'bloco-automacao': ['Administração', 'Bot'],
+    'bloco-chat-pedidos': ['Chat', 'Pedidos'],
     'bloco-administracao': ['Administração'],
     'bloco-financeiro': ['Financeiro'],
     'bloco-relatorio': ['Relatórios']
 };
 
-/**
- * Verifica se o usuário possui TODAS as permissões exigidas para o bloco.
- * @param {object} usuario
- * @param {string[]} permissoesRequeridas
- * @param {boolean} modoOu - se true, basta 1 permissão (usado só no bloco-automacao)
- */
 function usuarioTemAcessoBloco(usuario, permissoesRequeridas, modoOu) {
     if (!Array.isArray(permissoesRequeridas) || permissoesRequeridas.length === 0) return true;
     if (modoOu) {
@@ -146,41 +147,42 @@ function syncStopDashboard() {
     if (icon) icon.classList.remove('spinner-rotate');
 }
 
-function _chamarApi(action) {
-    if (!window.API || typeof window.API.call !== 'function') return Promise.resolve([]);
-    return window.API.call(action).then(function (r) {
-        if (Array.isArray(r)) return r;
-        if (r && Array.isArray(r.data)) return r.data;
-        return [];
-    }).catch(function () { return []; });
-}
+function carregarDadosDashboard(forcar) {
+    var agora = Date.now();
+    var cacheValido = window.dashboardState.dados &&
+        window.dashboardState._ultimaBusca &&
+        (agora - window.dashboardState._ultimaBusca < 60000);
 
-function carregarDadosDashboard() {
-    return Promise.all([
-        _chamarApi('getclientes'),
-        _chamarApi('getcolaboradores'),
-        _chamarApi('getusuarios'),
-        _chamarApi('getpedidos'),
-        _chamarApi('getfinanceiro'),
-        _chamarApi('getrelatorios')
-    ]).then(function (results) {
+    if (cacheValido && !forcar) {
+        return Promise.resolve(window.dashboardState.dados);
+    }
+
+    if (!window.API || typeof window.API.call !== 'function') {
+        return Promise.reject(new Error('API indisponível'));
+    }
+
+    return window.API.call('getdashboarddata').then(function (resp) {
+        window.dashboardState._ultimaBusca = Date.now();
+        var d = (resp && resp.data) || {};
         var masterOn = typeof window.checkMaster === 'function'
             ? window.checkMaster()
             : (localStorage.getItem('bot_master_active') === 'true');
         var mensagensCache = (window.AppRDO && Array.isArray(window.AppRDO.mensagensCache))
-            ? window.AppRDO.mensagensCache
-            : [];
+            ? window.AppRDO.mensagensCache : [];
 
         return {
-            clientes: results[0],
-            colaboradores: results[1],
-            usuarios: results[2],
-            pedidos: results[3],
-            financeiro: results[4],
-            relatorios: results[5],
+            clientes: d.clientes || [],
+            colaboradores: d.colaboradores || [],
+            usuarios: d.usuarios || [],
+            pedidos: d.pedidos || [],
+            financeiro: d.financeiro || [],
+            relatorios: d.relatorios || [],
             mensagens: mensagensCache,
             masterOn: masterOn
         };
+    }).catch(function (erro) {
+        if (window.dashboardState.dados) return window.dashboardState.dados;
+        throw erro;
     });
 }
 
@@ -391,12 +393,12 @@ function renderizarBlocoVisaoGeral() {
 
 function renderizarBlocoGestao() {
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
-    if (!_aplicarVisibilidadeBloco('bloco-automacao', usuario, true)) return; // OU: Administração ou Bot
+    if (!_aplicarVisibilidadeBloco('bloco-automacao', usuario, true)) return;
     renderizarBlocoAutomacao();
 }
 
 function renderizarBlocoChatPedidos(usuario, dados) {
-    if (!_aplicarVisibilidadeBloco('bloco-chat-pedidos', usuario)) return; // AND: Chat e Pedidos
+    if (!_aplicarVisibilidadeBloco('bloco-chat-pedidos', usuario)) return;
 
     dados = dados || window.dashboardState.dados || {};
     var ranking = calcularTopClientesPedidos(dados, 5, 30);
@@ -734,8 +736,13 @@ function iniciarHeartbeat() {
 }
 
 function _statusPedidoAbertoPagamento(status) {
-    var s = String(status || '').toUpperCase();
-    return s === 'PENDENTE' || s === 'ABERTO' || s === 'AGUARDANDO PAGAMENTO' || s === 'AGUARDANDO_PAGAMENTO';
+    var raw = String(status || 'PENDENTE').trim();
+    if (raw.includes('/')) raw = raw.split('/').pop().trim();
+    var s = raw.toUpperCase();
+    if (['EM_ANDAMENTO', 'ANDAMENTO', 'EM ROTA', 'EM_ROTA'].includes(s)) return false;
+    if (['FINALIZADO', 'CONCLUIDO', 'CONCLUÍDO'].includes(s)) return false;
+    if (s === 'CANCELADO') return false;
+    return true;
 }
 
 function _formatarDataPedido(str) {
@@ -777,30 +784,65 @@ function preencherModalNotifPagamento(pedidosAbertos) {
         var detalhe = document.createElement('span');
         detalhe.className = 'modal-notif-pagamento-item-detalhe';
         var dataFormatada = _formatarDataPedido(pedido.data);
-        detalhe.textContent = 'Pedido #' + (pedido.id || pedido.id_pedido || '—') + (dataFormatada ? ' • ' + dataFormatada : '');
+        var idPedido = pedido.id || pedido.id_pedido || '—';
+        detalhe.textContent = 'Pedido #' + idPedido + (dataFormatada ? ' • ' + dataFormatada : '');
 
         info.appendChild(nome);
         info.appendChild(detalhe);
 
+        var acoes = document.createElement('div');
+        acoes.className = 'modal-notif-pagamento-item-acoes';
+        acoes.style.display = 'flex';
+        acoes.style.alignItems = 'center';
+        acoes.style.gap = '8px';
+
         var badge = document.createElement('span');
         badge.className = 'modal-notif-pagamento-item-badge';
-        badge.textContent = pedido.status || 'Pendente';
+        badge.textContent = 'Pendente';
+
+        var btnVer = document.createElement('button');
+        btnVer.type = 'button';
+        btnVer.className = 'modal-notif-pagamento-item-btn-ver';
+        btnVer.innerHTML = '<i class="bi bi-eye"></i> Ver Pedido';
+        btnVer.style.cssText = 'border:none;background:#0d6efd;color:#fff;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+        btnVer.addEventListener('click', function () {
+            abrirPedidoDaNotificacao(idPedido);
+        });
+
+        acoes.appendChild(badge);
+        acoes.appendChild(btnVer);
 
         item.appendChild(info);
-        item.appendChild(badge);
+        item.appendChild(acoes);
         listaEl.appendChild(item);
     });
 }
 
 function abrirModalNotifPagamento() {
     var modalEl = document.getElementById('modalNotifPagamentoDashboard');
-    if (!modalEl || typeof bootstrap === 'undefined') return;
+    if (!modalEl || typeof bootstrap === 'undefined') {
+        window.dashboardState.modalNotifJaExibido = false;
+        return;
+    }
 
     var pedidosAbertos = window.dashboardState.pedidosAbertosPagamento || [];
     preencherModalNotifPagamento(pedidosAbertos);
 
     var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
+}
+
+function abrirPedidoDaNotificacao(pedidoId) {
+    window.AppRDO = window.AppRDO || {};
+    window.AppRDO._pedidoAlvoNotificacao = String(pedidoId || '').trim();
+
+    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+    }
+
+    navegarParaPedidos();
 }
 
 function navegarParaPedidos() {
@@ -815,12 +857,16 @@ function renderizarBlocoNotificacaoPagamento(dados) {
     var bloco = document.getElementById('bloco-notificacao-pagamento');
     if (!bloco) return;
 
-    var pedidos = (dados && dados.pedidos) || [];
-    var pedidosAbertos = pedidos.filter(function (p) {
-        return _statusPedidoAbertoPagamento(p.status);
-    });
-    var total = pedidosAbertos.length;
+    window.dashboardState = window.dashboardState || {};
 
+    var pedidos = (dados && dados.pedidos) || [];
+    var financeiro = (dados && dados.financeiro) || [];
+
+    var pedidosAbertos = pedidos.filter(function (p) {
+        return _pedidoAguardandoPagamento(p, financeiro);
+    });
+
+    var total = pedidosAbertos.length;
     window.dashboardState.pedidosAbertosPagamento = pedidosAbertos;
 
     if (total === 0) {
@@ -839,6 +885,13 @@ function renderizarBlocoNotificacaoPagamento(dados) {
     }
 
     bloco.classList.remove('d-none');
+
+    if (!window.dashboardState.modalNotifJaExibido) {
+        window.dashboardState.modalNotifJaExibido = true;
+        setTimeout(function () {
+            abrirModalNotifPagamento();
+        }, 400);
+    }
 }
 
 function renderizarDashboardCompleto(usuario, dados) {
@@ -857,40 +910,65 @@ function renderizarDashboardCompleto(usuario, dados) {
     });
 }
 
+function _situacaoFinanceiroDoPedido(pedido, financeiro) {
+    var idPedido = String(pedido.id || pedido.id_pedido || '').trim();
+    if (!idPedido) return null;
+    var lancamento = financeiro.find(function (f) {
+        return String(f.id_pedido || '').trim() === idPedido;
+    });
+    if (!lancamento) return null;
+    return String(lancamento.situacao || '').trim().toLowerCase();
+}
+
+function _statusPedidoCancelado(status) {
+    var raw = String(status || '').trim();
+    if (raw.includes('/')) raw = raw.split('/').pop().trim();
+    return raw.toUpperCase() === 'CANCELADO';
+}
+
+function _pedidoAguardandoPagamento(pedido, financeiro) {
+    // Pedido cancelado nunca entra na lista de pagamento pendente
+    if (_statusPedidoCancelado(pedido.status)) return false;
+
+    var situacao = _situacaoFinanceiroDoPedido(pedido, financeiro);
+
+    // Sem lançamento financeiro ainda = nasceu pendente, precisa aparecer
+    if (situacao === null) return true;
+
+    // Se já existe lançamento, só conta se estiver marcado como pendente
+    return situacao === 'pendente';
+}
+
 window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
     window.dashboardState.isFetching = true;
 
-    mostrarLoadingDashboard();
+    window.dashboardState.modalNotifJaExibido = false;
 
-    var usuario = obterUsuarioLogado();
+    var usuario = window.dashboardState.usuario || obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
+
+    if (window.dashboardState.dados) {
+        renderizarDashboardCompleto(usuario, window.dashboardState.dados);
+        ocultarLoadingDashboard();
+    } else {
+        mostrarLoadingDashboard();
+    }
+
     syncStartDashboard();
-    iniciarHeartbeat();
-
-    var btnRefresh = document.getElementById('btn-refresh-dashboard');
-    if (btnRefresh) btnRefresh.onclick = function () { window.initDashboard(); };
-
-    var btnVerPedidos = document.getElementById('btn-notif-pagamento-ver');
-    if (btnVerPedidos) {
-        btnVerPedidos.onclick = abrirModalNotifPagamento;
-    }
-
-    var btnModalVerPedidos = document.getElementById('btn-modal-notif-pagamento-ver');
-    if (btnModalVerPedidos) {
-        btnModalVerPedidos.onclick = navegarParaPedidos;
-    }
+    var meuToken = window.AppRDO ? window.AppRDO._navToken : null;
 
     return carregarDadosDashboard()
         .then(function (dados) {
+            if (window.AppRDO && window.AppRDO._navToken !== meuToken) return;
             window.dashboardState.dados = dados;
             renderizarDashboardCompleto(usuario, dados);
             ocultarLoadingDashboard();
         })
         .catch(function (erro) {
             console.error('Erro ao carregar dashboard:', erro);
-            _exibirErroDashboard();
+            if (!window.dashboardState.dados) _exibirErroDashboard();
         })
         .finally(function () {
             window.dashboardState.isFetching = false;
@@ -906,22 +984,9 @@ window.addEventListener('botCacheAtualizado', function () {
 window.addEventListener('masterStatusChanged', function () {
     renderizarBlocoGestao();
     renderizarBlocoVisaoGeral();
-
     if (window.dashboardState.dados) {
         window.dashboardState.dados.masterOn = typeof window.checkMaster === 'function'
             ? window.checkMaster()
             : window.dashboardState.dados.masterOn;
     }
 });
-
-function _exibirErroDashboard() {
-    var overlay = document.getElementById('dashboard-loading-overlay');
-    if (!overlay) return;
-    overlay.innerHTML =
-        '<div class="text-center py-5">' +
-        '<i class="bi bi-exclamation-triangle text-danger" style="font-size:2rem;"></i>' +
-        '<p class="mt-2 mb-0 text-muted">Não foi possível carregar o dashboard.</p>' +
-        '<button class="btn btn-sm btn-outline-danger mt-3" onclick="window.initDashboard()">Tentar novamente</button>' +
-        '</div>';
-}
-

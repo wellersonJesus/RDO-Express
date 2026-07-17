@@ -1101,6 +1101,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             console.warn('[pedidos.js] Tabela não encontrada — abortando init');
             return;
         }
+
         window.pedidosState.paginaAtual = 1;
         window.pedidosState.isFetching = false;
         window.pedidosState.dadosCarregados = false;
@@ -1110,12 +1111,21 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
 
         if (!_bind()) return;
+
+        if (window.AppRDO && window.AppRDO._pedidoAlvoNotificacao) {
+            var idAlvo = window.AppRDO._pedidoAlvoNotificacao;
+            window.pedidosState.busca = idAlvo;
+            if (els.inputBusca) els.inputBusca.value = idAlvo;
+            window.AppRDO._pedidoAlvoNotificacao = null;
+        }
+
         _registrarEventos();
         _registrarEventosEventBus();
         _fetchPedidos();
 
         console.log('[pedidos.js] Pronto!');
     };
+
 
     console.log('[pedidos.js] Script carregado e pronto.');
 })();
