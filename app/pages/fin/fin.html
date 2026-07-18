@@ -318,9 +318,11 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body px-4 py-3">
+
         <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3"
           style="font-size:.74rem;border-radius:10px;"></div>
         <input type="hidden" id="fin-edit-id">
+        <input type="hidden" id="fin-id-pedido"> <!-- 🔗 NOVO: vínculo com o pedido -->
         <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
           <div class="fin-form-section">
             <div class="fin-form-section-label">Dados principais</div>

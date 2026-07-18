@@ -43,9 +43,16 @@ function doPost(e) {
     if (!action)
       return responder({ status: "error", message: "Nenhuma acao informada" });
 
+    // ---- NORMALIZAÇÃO DE SINÔNIMOS DE AÇÃO (evita "Acao nao suportada") ----
+    // delX -> deleteX
     if (action.indexOf("del") === 0 && action.indexOf("delete") !== 0) {
       action = "delete" + action.substring(3);
     }
+    // createX -> criarX  (resolve o bug do createpedido)
+    if (action.indexOf("create") === 0) {
+      action = "criar" + action.substring(6);
+    }
+    // ------------------------------------------------------------------------
 
     if (action === "login")
       return responder(processarLogin(data.username, data.password));
@@ -111,6 +118,8 @@ function doPost(e) {
     return responder({ status: "error", message: "Acao nao suportada: " + action });
 
   } catch (err) {
+    // Loga no Apps Script (Ver > Registros de execução) para você debugar
+    console.error("[doPost] Erro interno: " + err.toString() + " | Stack: " + (err.stack || "n/a"));
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
   } finally {
     if (temLock) lock.releaseLock();

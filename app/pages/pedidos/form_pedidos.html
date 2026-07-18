@@ -391,11 +391,11 @@
                 </div>
                 <div class="d-flex gap-2 mt-4">
                     <button type="button" class="btn btn-cancelar-pedido flex-fill" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                        <i class="bi bi-x-lg me-1"></i>Fechar
                     </button>
-                    <button type="button" id="btn-salvar-novo" class="btn btn-salvar-pedido flex-fill"
-                        onclick="window.RDO_PEDIDOS.salvarNovo()">
-                        <i class="bi bi-plus-lg me-1"></i>CRIAR PEDIDO
+                    <button type="button" id="btn-reabrir-pedido" class="btn btn-salvar-pedido flex-fill d-none"
+                        data-id="" onclick="window.RDO_PEDIDOS.reabrirPedido()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Pedido
                     </button>
                 </div>
             </div>

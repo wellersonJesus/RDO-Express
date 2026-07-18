@@ -26,58 +26,66 @@
                         <div class="d-flex flex-column gap-2">
                             <div class="ped-status-card">
                                 <div class="ped-status-card-inner">
-                                    <div class="ped-status-action-item active" data-ped-status="todos" id="ped-filter-todos">
-                                        <div class="ped-status-action-icon ped-icon-todos">
-                                            <i class="bi bi-grid-3x3-gap"></i>
-                                        </div>
+                                    <div class="ped-status-action-item active" id="ped-filter-todos"
+                                        data-status-filter="todos">
+                                        <div class="ped-status-action-icon ped-icon-todos"><i
+                                                class="bi bi-grid-3x3-gap-fill"></i></div>
                                         <div class="ped-status-action-info">
                                             <span class="ped-status-action-label">Todos</span>
                                             <span class="ped-status-action-count" id="ped-count-todos">0</span>
                                             <span class="ped-status-action-pct" id="ped-pct-todos">de 0</span>
                                         </div>
                                     </div>
-
-                                    <div class="ped-status-action-item" data-ped-status="pendente" id="ped-filter-pendente">
-                                        <div class="ped-status-action-icon ped-icon-pendente">
-                                            <i class="bi bi-clock"></i>
-                                        </div>
+                                    <div class="ped-status-action-item" id="ped-filter-pendente"
+                                        data-status-filter="pendente">
+                                        <div class="ped-status-action-icon ped-icon-pendente"><i
+                                                class="bi bi-hourglass-split"></i></div>
                                         <div class="ped-status-action-info">
                                             <span class="ped-status-action-label">Pendentes</span>
                                             <span class="ped-status-action-count" id="ped-count-pendente">0</span>
                                             <span class="ped-status-action-pct" id="ped-pct-pendente">0%</span>
                                         </div>
                                     </div>
-
-                                    <div class="ped-status-action-item" data-ped-status="em_rota" id="ped-filter-em_rota">
-                                        <div class="ped-status-action-icon ped-icon-em-rota">
-                                            <i class="bi bi-bicycle"></i>
-                                        </div>
+                                    <div class="ped-status-action-item" id="ped-filter-em_rota"
+                                        data-status-filter="em_rota">
+                                        <div class="ped-status-action-icon ped-icon-em-rota"><i
+                                                class="bi bi-signpost-split-fill"></i></div>
                                         <div class="ped-status-action-info">
                                             <span class="ped-status-action-label">Em Rota</span>
                                             <span class="ped-status-action-count" id="ped-count-em_rota">0</span>
                                             <span class="ped-status-action-pct" id="ped-pct-em_rota">0%</span>
                                         </div>
                                     </div>
-
-                                    <div class="ped-status-action-item" data-ped-status="concluido" id="ped-filter-concluido">
-                                        <div class="ped-status-action-icon ped-icon-concluido">
-                                            <i class="bi bi-check-circle"></i>
-                                        </div>
+                                    <div class="ped-status-action-item" id="ped-filter-concluido"
+                                        data-status-filter="concluido">
+                                        <div class="ped-status-action-icon ped-icon-concluido"><i
+                                                class="bi bi-check-circle-fill"></i></div>
                                         <div class="ped-status-action-info">
-                                            <span class="ped-status-action-label">Concluído</span>
+                                            <span class="ped-status-action-label">Concluídos</span>
                                             <span class="ped-status-action-count" id="ped-count-concluido">0</span>
                                             <span class="ped-status-action-pct" id="ped-pct-concluido">0%</span>
                                         </div>
                                     </div>
-
-                                    <div class="ped-status-action-item" data-ped-status="cancelado" id="ped-filter-cancelado">
-                                        <div class="ped-status-action-icon ped-icon-cancelado">
-                                            <i class="bi bi-x-circle"></i>
-                                        </div>
+                                    <div class="ped-status-action-item" id="ped-filter-cancelado"
+                                        data-status-filter="cancelado">
+                                        <div class="ped-status-action-icon ped-icon-cancelado"><i
+                                                class="bi bi-x-circle-fill"></i></div>
                                         <div class="ped-status-action-info">
-                                            <span class="ped-status-action-label">Cancelado</span>
+                                            <span class="ped-status-action-label">Cancelados</span>
                                             <span class="ped-status-action-count" id="ped-count-cancelado">0</span>
                                             <span class="ped-status-action-pct" id="ped-pct-cancelado">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="ped-status-action-item ped-item-financeiro-desktop"
+                                        id="ped-filter-pendente_financeiro" data-status-filter="pendente_financeiro">
+                                        <div class="ped-status-action-icon ped-icon-financeiro"><i
+                                                class="bi bi-cash-coin"></i></div>
+                                        <div class="ped-status-action-info">
+                                            <span class="ped-status-action-label">A Receber</span>
+                                            <span class="ped-status-action-count"
+                                                id="ped-count-pendente_financeiro">0</span>
+                                            <span class="ped-status-action-pct"
+                                                id="ped-pct-pendente_financeiro">0%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -118,23 +126,25 @@
                         <div id="pedidos-loading-overlay" class="pedidos-loading-overlay">
                             <div class="pedidos-loading-content">
                                 <i class="bi bi-search pedidos-loading-spin"></i>
-                                <span class="pedidos-loading-text">Buscando pedidos<span class="pedidos-loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                <span class="pedidos-loading-text">Buscando pedidos<span
+                                        class="pedidos-loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
                             </div>
                         </div>
 
                         <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
                             <thead class="text-uppercase tabela-pedidos-head">
                                 <tr>
-                                    <th class="border-0 fw-normal">
-                                        N.Serviço
-                                        <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço">
+                                    <th class="border-0 fw-normal td-mobile-hide">
+                                        <button class="btn-sort-data" id="btn-sort-data-pedidos"
+                                            title="Ordenar por N.Serviço">
                                             <i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i>
                                         </button>
+                                        N.Serviço
                                     </th>
                                     <th class="border-0 fw-normal">Data</th>
-                                    <th class="border-0 fw-normal td-mobile-hide">Cliente</th>
-                                    <th class="border-0 fw-normal td-mobile-hide">Status</th>
+                                    <th class="border-0 fw-normal">Cliente</th>
                                     <th class="border-0 fw-normal td-mobile-hide">Motoboy</th>
+                                    <th class="border-0 fw-normal td-mobile-hide">Status</th>
                                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                                 </tr>
                             </thead>

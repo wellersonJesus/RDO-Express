@@ -1,9 +1,12 @@
 window.API = (function () {
 
     var ENDPOINT = '/api/proxy';
-    var TIMEOUT_MS = 20000;
+    var TIMEOUT_MS = 20000; // mantido igual
     var MAX_RETRIES = 3;
     var RETRY_DELAY_MS = 1500;
+
+    var _cache = {};          // cache simples por action+params
+    var CACHE_TTL_MS = 30000; // 30s — ajuste conforme necessidade
 
     function sleep(ms) {
         return new Promise(function (resolve) { setTimeout(resolve, ms); });
@@ -13,8 +16,11 @@ window.API = (function () {
         return err && err.message && err.message.indexOf('Sistema ocupado') !== -1;
     }
 
+    function cacheKey(action, data) {
+        return action + '::' + JSON.stringify(data || {});
+    }
+
     function doCall(action, data) {
-        // ... (todo o corpo original da função call, sem alteração)
         var payload = { action: action };
         if (data && typeof data === 'object') {
             Object.keys(data).forEach(function (k) {
@@ -87,23 +93,37 @@ window.API = (function () {
         });
     }
 
-    function call(action, data, attempt) {
+    function call(action, data, attempt, useCache) {
         attempt = attempt || 1;
 
         if (!action || typeof action !== 'string') {
             return Promise.reject(new Error('API.call: "action" é obrigatório e deve ser string.'));
         }
 
-        return doCall(action, data).catch(function (err) {
+        var key = cacheKey(action, data);
+
+        // Se pedir cache e existir cache válido, retorna sem nova requisição
+        if (useCache && _cache[key] && (Date.now() - _cache[key].time < CACHE_TTL_MS)) {
+            console.log('[API] (cache) ←', action);
+            return Promise.resolve(_cache[key].value);
+        }
+
+        return doCall(action, data).then(function (result) {
+            _cache[key] = { value: result, time: Date.now() };
+            return result;
+        }).catch(function (err) {
             if (isBusyError(err) && attempt < MAX_RETRIES) {
                 console.warn('[API] "' + action + '" ocupado. Tentativa ' + attempt + '/' + MAX_RETRIES + '...');
                 return sleep(RETRY_DELAY_MS * attempt).then(function () {
-                    return call(action, data, attempt + 1);
+                    return call(action, data, attempt + 1, useCache);
                 });
             }
             throw err;
         });
     }
 
-    return { call: call };
+    return {
+        call: call,
+        clearCache: function () { _cache = {}; }
+    };
 })();

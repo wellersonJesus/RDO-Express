@@ -65,7 +65,8 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             { el: document.getElementById('ped-filter-pendente'), status: 'pendente' },
             { el: document.getElementById('ped-filter-em_rota'), status: 'em_rota' },
             { el: document.getElementById('ped-filter-concluido'), status: 'concluido' },
-            { el: document.getElementById('ped-filter-cancelado'), status: 'cancelado' }
+            { el: document.getElementById('ped-filter-cancelado'), status: 'cancelado' },
+            { el: document.getElementById('ped-filter-pendente_financeiro'), status: 'pendente_financeiro' }
         ];
         if (!els.tbody) { console.error('[pedidos.js] ❌ tbody não encontrado'); return false; }
         return true;
@@ -262,13 +263,30 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             statusNorm === 'CONCLUIDO' ? 'Concluído' :
                 statusNorm === 'CANCELADO' ? 'Cancelado' : 'Pendente';
 
+        var badgeStatusHtml = '<span class="badge bg-' + corStatus + '">' + _escHtml(statusLabel) + '</span>';
+
+        var badgeFinanceiroHtml = '';
+        if (statusNorm !== 'CANCELADO') {
+            var sitFin = String(pedido.situacao_financeira || 'pendente').trim().toLowerCase();
+            if (sitFin === 'pago' || sitFin === 'recebido') {
+                badgeFinanceiroHtml = '<span class="badge bg-success ms-1"><i class="bi bi-cash-coin"></i> Pago</span>';
+            } else if (sitFin === 'cancelado') {
+                badgeFinanceiroHtml = '<span class="badge bg-secondary ms-1">Financ. Cancelado</span>';
+            } else {
+                badgeFinanceiroHtml = '<span class="badge bg-warning text-dark ms-1"><i class="bi bi-clock"></i> Pendente</span>';
+            }
+        }
+
+        // Bloco de badges: Status (principal) + situação financeira -> pertence à coluna "Status"
+        var badgeCombinadoHtml = '<div class="d-flex flex-nowrap gap-1 status-badges-row">' + badgeStatusHtml + badgeFinanceiroHtml + '</div>';
+
         var idPedido = String(pedido.id || pedido._id || 'S/N');
         var idFmt = _formatarIdServico(idPedido);
         var solicitante = _resolverNomeCliente(pedido);
         var dataPedido = _formatarDataExibicao(_extrairDataPedido(pedido));
         var finalizado = ['CONCLUIDO', 'CANCELADO'].includes(statusNorm);
         var idSafe = _escAttr(idPedido);
-        var motoboyNome = _resolverMotoboy(pedido);
+        var motoboyNome = _resolverMotoboy(pedido); // pertence à coluna "Motoboy"
 
         var acoes = finalizado
             ? '<button class="btn-pedido-view" data-id="' + idSafe + '" title="Visualizar"><i class="bi bi-eye"></i></button>'
@@ -277,22 +295,29 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             '<button class="btn-pedido-delete" data-id="' + idSafe + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
             '</div>';
 
+        // Ordem das colunas conforme HTML: N.Serviço | Data | Cliente | Motoboy | Status | Ações
         return '<tr data-pedido-id="' + idSafe + '">' +
-            '<td class="ps-3"><span class="fw-semibold text-danger">' + _escHtml(idFmt) + '</span></td>' +
-            '<td>' + _escHtml(dataPedido) + '</td>' +                                    // ✅ sem td-mobile-hide
-            '<td class="td-mobile-hide">' + _escHtml(solicitante) + '</td>' +            // ✅ agora com td-mobile-hide
-            '<td class="td-mobile-hide"><span class="badge bg-' + corStatus + '">' + _escHtml(statusLabel) + '</span></td>' +
+            '<td class="ps-3 td-mobile-hide"><span class="fw-semibold text-danger">' + _escHtml(idFmt) + '</span></td>' +
+            '<td>' + _escHtml(dataPedido) + '</td>' +
+            '<td>' + _escHtml(solicitante) + '</td>' +
             '<td class="text-muted small td-mobile-hide">' + (motoboyNome ? _escHtml(motoboyNome) : '<span class="text-muted">—</span>') + '</td>' +
+            '<td class="td-mobile-hide">' + badgeCombinadoHtml + '</td>' +
             '<td class="text-end pe-3">' + acoes + '</td></tr>';
     }
 
     function _matchFiltros(p, termo, categoria, statusFiltro, dataFiltro) {
         var s = _normalizarStatus(p.status);
+        var sitFin = String(p.situacao_financeira || 'pendente').trim().toLowerCase();
+
         if (statusFiltro !== 'todos') {
             if (statusFiltro === 'pendente' && s !== 'PENDENTE') return false;
             if (statusFiltro === 'em_rota' && s !== 'EM_ROTA') return false;
             if (statusFiltro === 'concluido' && s !== 'CONCLUIDO') return false;
             if (statusFiltro === 'cancelado' && s !== 'CANCELADO') return false;
+            if (statusFiltro === 'pendente_financeiro') {
+                if (s === 'CANCELADO') return false;
+                if (sitFin === 'pago' || sitFin === 'recebido') return false;
+            }
         }
         if (dataFiltro && _extrairDataPedido(p) !== dataFiltro) return false;
         if (termo) {
@@ -323,6 +348,12 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         var rotas = pedidos.filter(function (p) { return _normalizarStatus(p.status) === 'EM_ROTA'; }).length;
         var concl = pedidos.filter(function (p) { return _normalizarStatus(p.status) === 'CONCLUIDO'; }).length;
         var canc = pedidos.filter(function (p) { return _normalizarStatus(p.status) === 'CANCELADO'; }).length;
+        var pendFin = pedidos.filter(function (p) {
+            var s = _normalizarStatus(p.status);
+            if (s === 'CANCELADO') return false;
+            var sf = String(p.situacao_financeira || 'pendente').trim().toLowerCase();
+            return sf !== 'pago' && sf !== 'recebido';
+        }).length;
 
         function _set(id, count, pct) {
             var elC = document.getElementById('ped-count-' + id);
@@ -335,6 +366,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _set('em_rota', rotas, total > 0 ? Math.round((rotas / total) * 100) + '%' : '0%');
         _set('concluido', concl, total > 0 ? Math.round((concl / total) * 100) + '%' : '0%');
         _set('cancelado', canc, total > 0 ? Math.round((canc / total) * 100) + '%' : '0%');
+        _set('pendente_financeiro', pendFin, total > 0 ? Math.round((pendFin / total) * 100) + '%' : '0%');
     }
 
     function _renderizarTabela(pedidos) {
@@ -360,7 +392,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         if (filtrados.length === 0) {
             els.tbody.innerHTML =
-                '<tr><td colspan="6" class="text-center text-muted py-4">' +
+                '<tr><td colspan="4" class="text-center text-muted py-4">' +
                 '<i class="bi bi-inbox d-block mb-2" style="font-size:2rem;"></i>' +
                 'Nenhum pedido encontrado</td></tr>';
             if (els.infoPaginacao) els.infoPaginacao.textContent = 'Pág 0 de 0';
@@ -394,13 +426,89 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     }
 
+    window.RDO_PEDIDOS.reabrirPedido = function () {
+        var btn = document.getElementById('btn-reabrir-pedido');
+        var id = btn ? btn.getAttribute('data-id') : '';
+        if (!id) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reabrindo...';
+
+        API.call('updatepedidos', { id: id, status: 'PENDENTE', situacao_financeira: 'pendente' })
+            .then(function (res) {
+                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao reabrir');
+
+                var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+                    return String(p.id || '').trim() === String(id).trim();
+                });
+                if (pedido) {
+                    pedido.status = 'PENDENTE';
+                    pedido.situacao_financeira = 'pendente';
+                    pedido._financeiroJaCriado = false;
+                }
+
+                _renderizarTabela(window.AppRDO.pedidosCache);
+
+                var modalEl = document.getElementById('modalPedidoDetalhes');
+                if (modalEl) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+
+                if (typeof Swal !== 'undefined')
+                    Swal.fire({ icon: 'success', title: 'Pedido reaberto!', toast: true, timer: 2000, position: 'top-end', showConfirmButton: false });
+            })
+            .catch(function (err) {
+                console.error('[pedidos.js] ❌ reabrirPedido:', err);
+                if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro', text: err.message || 'Falha ao reabrir pedido.' });
+            })
+            .finally(function () {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Pedido';
+            });
+    };
+
+    function _aguardarElemento(id, callback, tentativas) {
+        tentativas = tentativas || 10;
+        var el = document.getElementById(id);
+        if (el) { callback(el); return; }
+        if (tentativas <= 0) {
+            console.warn('[pedidos.js] ⚠️ Elemento não encontrado após tentativas:', id);
+            return;
+        }
+        setTimeout(function () { _aguardarElemento(id, callback, tentativas - 1); }, 100);
+    }
+
+    function _configurarBotaoReabrir(id) {
+        _aguardarElemento('btn-reabrir-pedido', function (btnReabrir) {
+            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+                return String(p.id || p._id || '').trim() === String(id).trim();
+            });
+            if (!pedido) { btnReabrir.classList.add('d-none'); return; }
+
+            var statusAtual = _normalizarStatus(pedido.status);
+            if (statusAtual === 'CONCLUIDO' || statusAtual === 'CANCELADO') {
+                btnReabrir.classList.remove('d-none');
+                btnReabrir.setAttribute('data-id', id);
+            } else {
+                btnReabrir.classList.add('d-none');
+            }
+        });
+    }
+
     function _registrarEventosLinhas() {
         document.querySelectorAll('.btn-pedido-view').forEach(function (btn) {
-            btn.onclick = function () { window.visualizarPedido(btn.getAttribute('data-id')); };
+            btn.onclick = function () {
+                var id = btn.getAttribute('data-id');
+                window.visualizarPedido(id);
+                _configurarBotaoReabrir(id);
+            };
         });
+
         document.querySelectorAll('.btn-pedido-edit').forEach(function (btn) {
             btn.onclick = function () { window.editarPedido(btn.getAttribute('data-id')); };
         });
+
         document.querySelectorAll('.btn-pedido-delete').forEach(function (btn) {
             btn.onclick = function () {
                 if (typeof window.MasterAuth !== 'undefined' && typeof window.MasterAuth.abrir === 'function')
@@ -488,11 +596,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         window.pedidosState.dadosCarregados = false;
         window.pedidosState.emAcao = true;
         window.pedidosState.isFetching = false;
-        if (els.btnSync) {
-            els.btnSync.click();
-        } else {
-            _fetchPedidos();
-        }
+        _fetchPedidos();
     }
 
     window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
@@ -883,10 +987,7 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
     function _registrarEventos() {
         if (els.btnSync) {
             els.btnSync.onclick = function () {
-                window.pedidosState.dadosCarregados = false;
-                window.pedidosState.emAcao = true;
-                window.pedidosState.isFetching = false;
-                _fetchPedidos();
+                _dispararSync();
             };
         }
 
@@ -936,12 +1037,53 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
         if (els.btnFiltroTipo) {
             var menu = document.getElementById('dropdown-filtro-menu');
 
+            function _posicionarMenuMobile() {
+                if (!menu) return;
+                var isMobile = window.innerWidth <= 576;
+                if (!isMobile) {
+                    // Desktop: limpa estilos inline, volta ao comportamento normal do CSS (absolute)
+                    menu.style.position = '';
+                    menu.style.top = '';
+                    menu.style.left = '';
+                    menu.style.right = '';
+                    menu.style.transform = '';
+                    return;
+                }
+
+                var rectBtn = els.btnFiltroTipo.getBoundingClientRect();
+                var menuWidth = Math.min(window.innerWidth * 0.92, 260);
+                var margem = 8;
+
+                var left = rectBtn.left; // tenta alinhar à esquerda do botão
+                // Clampa para não sair da tela nem à direita nem à esquerda
+                if (left + menuWidth > window.innerWidth - margem) {
+                    left = window.innerWidth - menuWidth - margem;
+                }
+                if (left < margem) left = margem;
+
+                var top = rectBtn.bottom + 6;
+
+                menu.style.position = 'fixed';
+                menu.style.top = top + 'px';
+                menu.style.left = left + 'px';
+                menu.style.right = 'auto';
+                menu.style.width = menuWidth + 'px';
+                menu.style.transform = 'none';
+            }
+
             els.btnFiltroTipo.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if (!menu) return;
                 var aberto = menu.classList.contains('show');
+                if (!aberto) {
+                    _posicionarMenuMobile();
+                }
                 menu.classList.toggle('show', !aberto);
                 els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
+            });
+
+            window.addEventListener('resize', function () {
+                if (menu && menu.classList.contains('show')) _posicionarMenuMobile();
             });
 
             document.addEventListener('click', function (e) {
@@ -1017,6 +1159,24 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
+
+        // 🔗 Ouve a baixa/atualização feita no financeiro e reflete no pedido
+        window.EventBus.on('financeiro:situacaoAtualizada', function (dados) {
+            if (!dados || !dados.idPedido) return;
+            var idStr = String(dados.idPedido).trim();
+            var idNorm = idStr.replace(/^RDO0*/i, '');
+
+            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+                var pId = String(p.id || '').trim();
+                return pId === idStr || pId.replace(/^RDO0*/i, '') === idNorm;
+            });
+            if (!pedido) return;
+
+            pedido.situacao_financeira = dados.situacaoFinanceira;
+            pedido.status = dados.statusPedido;   // ESSA LINHA é obrigatória
+
+            _renderizarTabela(window.AppRDO.pedidosCache);
+        });
 
         window.EventBus.on('pedido:excluido', function (dados) {
             if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
@@ -1125,7 +1285,6 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         console.log('[pedidos.js] Pronto!');
     };
-
 
     console.log('[pedidos.js] Script carregado e pronto.');
 })();
