@@ -23,7 +23,82 @@
     </div>
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
-      <div class="row g-3 mt-0">
+
+      <div class="row g-2 mb-2 mt-2">
+        <div class="col-4">
+          <div class="caixa-mini-card caixa-mini-entrada" data-filtro-tipo="entrada" data-filtro-situacao="todos"
+            style="cursor:pointer;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(25,135,84,.12);color:#198754;">
+                <i class="bi bi-arrow-down-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Receitas</div>
+                <div class="caixa-mini-valor" id="fin-status-count-receitas">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="caixa-mini-card caixa-mini-saida" data-filtro-tipo="saida" data-filtro-situacao="todos"
+            style="cursor:pointer;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(220,53,69,.12);color:#dc3545;">
+                <i class="bi bi-arrow-up-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Despesas</div>
+                <div class="caixa-mini-valor" id="fin-status-count-despesas">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="pago"
+            style="background:linear-gradient(135deg,#d1e7dd 0%,#e8f5ee 100%);box-shadow:0 2px 10px rgba(25,135,84,.12);cursor:pointer;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(25,135,84,.18);color:#146c43;">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Pago</div>
+                <div class="caixa-mini-valor" id="fin-status-count-pago" style="color:#146c43;">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="caixa-mini-card"
+            style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);cursor:pointer;"
+            data-filtro-tipo="todos" data-filtro-situacao="pendente">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(255,193,7,.2);color:#856404;">
+                <i class="bi bi-exclamation-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Pendentes</div>
+                <div class="caixa-mini-valor" id="fin-status-count-pendente" style="color:#856404;">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="cancelado"
+            style="background:linear-gradient(135deg,#e2e3e5 0%,#f1f2f3 100%);box-shadow:0 2px 10px rgba(108,117,125,.12);cursor:pointer;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(108,117,125,.18);color:#6c757d;">
+                <i class="bi bi-x-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Cancelados</div>
+                <div class="caixa-mini-valor" id="fin-status-count-cancelado" style="color:#6c757d;">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
@@ -77,8 +152,6 @@
                         title="Ordenar por data"><i class="bi bi-arrow-down" id="icon-sort-data-todos"></i></button>
                     </th>
                     <th class="border-0 fw-normal">Descrição</th>
-                    <th class="border-0 fw-normal">Cliente</th>
-                    <th class="border-0 fw-normal">Motoboy</th>
                     <th class="border-0 fw-normal">Tipo</th>
                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                   </tr>
@@ -151,39 +224,90 @@
       </div>
 
       <div class="row g-2 mb-3">
-        <div class="col-6 col-sm-4 col-md">
+        <div class="col-4">
           <div class="caixa-mini-card caixa-mini-entrada">
-            <div class="caixa-mini-label">Receitas</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(25,135,84,.12);color:#198754;">
+                <i class="bi bi-arrow-down-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Receitas</div>
+                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$
+                  ****</div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="col-6 col-sm-4 col-md">
+        <div class="col-4">
           <div class="caixa-mini-card caixa-mini-saida">
-            <div class="caixa-mini-label">Despesas</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****</div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(220,53,69,.12);color:#dc3545;">
+                <i class="bi bi-arrow-up-circle-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Despesas</div>
+                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$
+                  ****</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="col-6 col-sm-4 col-md">
+        <div class="col-4">
           <div class="caixa-mini-card caixa-mini-saldo"
             style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
-            <div class="caixa-mini-label">Empresa (20%)</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
-              style="color:#6f42c1;">R$ ****</div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(111,66,193,.15);color:#6f42c1;">
+                <i class="bi bi-building"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Empresa (20%)</div>
+                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
+                  style="color:#6f42c1;">R$ ****</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="col-6 col-sm-4 col-md">
+
+        <div class="col-4">
           <div class="caixa-mini-card caixa-mini-saldo">
-            <div class="caixa-mini-label">Colaborador (80%)</div>
-            <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
-              style="color:#0d6efd;">R$ ****</div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;">
+                <i class="bi bi-person-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Colaborador (80%)</div>
+                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
+                  style="color:#0d6efd;">R$ ****</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="col-6 col-sm-4 col-md">
+        <div class="col-4">
           <div class="caixa-mini-card"
             style="background:linear-gradient(135deg,#fff3cd 0%,#fffbeb 100%);box-shadow:0 2px 10px rgba(255,193,7,.12);">
-            <div class="caixa-mini-label">Registros</div>
-            <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(255,193,7,.2);color:#856404;">
+                <i class="bi bi-list-check"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Registros</div>
+                <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="caixa-mini-card">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fin-mini-icon" style="background:rgba(108,117,125,.12);color:#6c757d;">
+                <i class="bi bi-piggy-bank-fill"></i>
+              </div>
+              <div>
+                <div class="caixa-mini-label">Saldo Total</div>
+                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$
+                  ****</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -229,7 +353,6 @@
                 </div>
               </div>
 
-              <!-- CONTAINER DA LISTA DIÁRIA (estava faltando) -->
               <div class="caixa-lista-diaria-wrapper mt-3">
                 <div id="caixa-lista-diaria">
                   <div class="fin-lista-loading">
@@ -322,24 +445,54 @@
         <div id="form-novo-fin-erro" class="alert alert-danger d-none py-2 px-3"
           style="font-size:.74rem;border-radius:10px;"></div>
         <input type="hidden" id="fin-edit-id">
-        <input type="hidden" id="fin-id-pedido"> <!-- 🔗 NOVO: vínculo com o pedido -->
+        <input type="hidden" id="fin-id-pedido">
         <form id="form-novo-financeiro" autocomplete="off" onsubmit="return false;">
           <div class="fin-form-section">
             <div class="fin-form-section-label">Dados principais</div>
+
             <div class="row g-2 mb-2">
-              <div class="col-6">
-                <label class="fin-field-label">Tipo</label>
-                <select id="fin-tipo" class="form-select form-select-sm rounded-pill fin-field-input">
-                  <option value="">Selecione...</option>
-                  <option value="entrada">Receita</option>
-                  <option value="saida">Despesa</option>
-                </select>
+              <div class="col-4">
+                <div class="caixa-mini-card caixa-mini-saldo"
+                  style="background:linear-gradient(135deg,#e2d9f3 0%,#f0ecf8 100%);box-shadow:0 2px 10px rgba(111,66,193,.12);">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="fin-mini-icon" style="background:rgba(111,66,193,.15);color:#6f42c1;">
+                      <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div>
+                      <div class="caixa-mini-label">A Receber</div>
+                      <div class="caixa-mini-valor" id="caixa-status-count-receber" style="color:#6f42c1;">0</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="col-6">
-                <label class="fin-field-label">Data</label>
-                <input type="date" id="fin-data" class="form-control form-control-sm rounded-pill fin-field-input">
+              <div class="col-4">
+                <div class="caixa-mini-card caixa-mini-saldo">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="fin-mini-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;">
+                      <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                      <div class="caixa-mini-label">A Pagar</div>
+                      <div class="caixa-mini-valor" id="caixa-status-count-pagar" style="color:#0d6efd;">0</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="caixa-mini-card">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="fin-mini-icon" style="background:rgba(108,117,125,.12);color:#6c757d;">
+                      <i class="bi bi-grid-3x3-gap-fill"></i>
+                    </div>
+                    <div>
+                      <div class="caixa-mini-label">Total de Registros</div>
+                      <div class="caixa-mini-valor" id="caixa-status-count-todos">0</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+
             <div class="row g-2 mb-2">
               <div class="col-6">
                 <label class="fin-field-label">Situação</label>

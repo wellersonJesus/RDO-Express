@@ -43,16 +43,18 @@ function doPost(e) {
     if (!action)
       return responder({ status: "error", message: "Nenhuma acao informada" });
 
-    // ---- NORMALIZAÇÃO DE SINÔNIMOS DE AÇÃO (evita "Acao nao suportada") ----
-    // delX -> deleteX
     if (action.indexOf("del") === 0 && action.indexOf("delete") !== 0) {
       action = "delete" + action.substring(3);
     }
-    // createX -> criarX  (resolve o bug do createpedido)
     if (action.indexOf("create") === 0) {
       action = "criar" + action.substring(6);
     }
-    // ------------------------------------------------------------------------
+    if (action.indexOf("list") === 0) {
+      action = "get" + action.substring(4);
+    }
+    if (action.indexOf("edit") === 0) {
+      action = "update" + action.substring(4);
+    }
 
     if (action === "login")
       return responder(processarLogin(data.username, data.password));
@@ -118,7 +120,6 @@ function doPost(e) {
     return responder({ status: "error", message: "Acao nao suportada: " + action });
 
   } catch (err) {
-    // Loga no Apps Script (Ver > Registros de execução) para você debugar
     console.error("[doPost] Erro interno: " + err.toString() + " | Stack: " + (err.stack || "n/a"));
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
   } finally {
@@ -892,10 +893,19 @@ function buscarColuna(headers, nomesPossiveis) {
 
 function gerarId(sheet, entity) {
   var data = sheet.getDataRange().getValues();
+  if (!data || data.length === 0) {
+    var chars0 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    var id0 = "";
+    for (var z = 0; z < 11; z++) {
+      id0 += chars0.charAt(Math.floor(Math.random() * chars0.length));
+    }
+    return id0;
+  }
+
   var headers = data[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
 
-  if (entity.indexOf("pedido") !== -1) {
+  if (entity.indexOf("pedido") !== -1 && idIndex !== -1) {
     var maxId = 0;
     for (var i = 1; i < data.length; i++) {
       var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ""), 10);
@@ -907,7 +917,7 @@ function gerarId(sheet, entity) {
     return "RDO" + padded;
   }
 
-  if (entity.indexOf("financeiro") !== -1) {
+  if (entity.indexOf("financeiro") !== -1 && idIndex !== -1) {
     var maxFin = 0;
     for (var j = 1; j < data.length; j++) {
       var num = parseInt(String(data[j][idIndex]).replace(/[^0-9]/g, ""), 10);
@@ -936,4 +946,3 @@ function responder(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
-
