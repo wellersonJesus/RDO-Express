@@ -13,7 +13,7 @@
     colaboradores: [],
     caixaValoresVisiveis: false,
     tabAtual: 'todos',
-    filtroTipo: 'todos',
+    filtroTipo: 'entrada',
     filtroSituacao: 'todos',
     filtroBusca: '',
     fetching: false,
@@ -888,48 +888,6 @@
       });
     }
 
-    var wrapperFiltro = document.getElementById('dropdown-filtro-wrapper-fin');
-    var btnFiltro = document.getElementById('btn-filtro-fin');
-    var menuFiltro = document.getElementById('dropdown-filtro-menu-fin');
-    var labelFiltro = document.getElementById('label-filtro-fin');
-
-    if (btnFiltro && menuFiltro && wrapperFiltro) {
-      btnFiltro.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        wrapperFiltro.classList.toggle('open');
-      });
-      document.addEventListener('click', function (e) {
-        if (wrapperFiltro && !wrapperFiltro.contains(e.target)) wrapperFiltro.classList.remove('open');
-      });
-
-      menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro]').forEach(function (item) {
-        item.addEventListener('click', function (e) {
-          e.preventDefault(); e.stopPropagation();
-          var valor = this.getAttribute('data-filtro') || 'todos';
-
-          state.filtroTipo = 'todos';
-          state.filtroSituacao = 'todos';
-
-          var labelMap = { todos: 'Todos', entrada: 'Receitas', saida: 'Despesas', pendente: 'Pendentes', cancelado: 'Cancelados' };
-
-          if (valor === 'entrada' || valor === 'saida') {
-            state.filtroTipo = valor;
-          } else if (valor === 'pendente' || valor === 'cancelado') {
-            state.filtroSituacao = valor;
-          }
-
-          state.todos.pagina = 1;
-          if (labelFiltro) labelFiltro.textContent = labelMap[valor] || 'Todos';
-
-          menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro]').forEach(function (el) { el.classList.remove('active'); });
-          this.classList.add('active');
-
-          wrapperFiltro.classList.remove('open');
-          renderTodos();
-        });
-      });
-    }
-
     if (els.btnSortData) {
       els.btnSortData.addEventListener('click', function () {
         state.sortDataDesc = !state.sortDataDesc;
@@ -1259,8 +1217,12 @@
   function carregarExtratosStorage() {
     try {
       var raw = localStorage.getItem(EXTRATO_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
+      if (!raw) return [];
+      var lista = JSON.parse(raw);
+      return Array.isArray(lista) ? lista : [];
+    } catch (e) {
+      return [];
+    }
   }
 
   function salvarExtratoStorage(extrato) {
@@ -1736,6 +1698,7 @@
   function init() {
     bind();
     registrarEventos();
+    bindNotifCardsFin();
     carregarDados();
   }
 
