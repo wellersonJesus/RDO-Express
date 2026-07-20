@@ -1,0 +1,32 @@
+<div id="modalRelatorioFin" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(220,53,69,.18);display:flex;align-items:center;justify-content:center;">
+          <i class="bi bi-file-earmark-bar-graph" style="color:#fff;font-size:1rem;"></i>
+        </div>
+        <div>
+          <div id="relFin-titulo" style="font-size:.85rem;font-weight:700;color:#fff;letter-spacing:.5px;">RELATÓRIO FINANCEIRO</div>
+          <div id="relFin-subtitulo" style="font-size:.62rem;color:rgba(255,255,255,.5);">Gerado agora</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button id="relFin-btn-pdf" style="background:rgba(220,53,69,.85);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;" title="Imprimir / PDF">
+          <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+        </button>
+        <button id="relFin-btn-copiar" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;">
+          <i class="bi bi-clipboard"></i> Copiar
+        </button>
+        <button id="relFin-btn-fechar" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:.72rem;cursor:pointer;">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="relFin-resumo" class="row g-2 p-3 pb-0" style="margin:0;"></div>
+
+    <div id="relFin-body" style="overflow-y:auto;padding:16px 20px 20px;flex:1;"></div>
+
+  </div>
+</div>

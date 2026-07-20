@@ -2,6 +2,8 @@
 
 (function () {
 
+  var estadoCaixaValores = { visivel: false };
+
   var EXTRATO_STORAGE_KEY = 'rdo_extratos_salvos';
   var EXTRATO_MAX = 50;
 
@@ -26,6 +28,124 @@
   window.financeiroState = state;
 
   var els = {};
+
+  function toggleValoresCaixa() {
+    estadoCaixaValores.visivel = !estadoCaixaValores.visivel;
+    var icon = document.getElementById('icon-toggle-caixa-val');
+    document.querySelectorAll('.fin-valor-caixa').forEach(function (el) {
+      var real = el.getAttribute('data-valor-real') || 'R$ 0,00';
+      el.textContent = estadoCaixaValores.visivel ? real : 'R$ ****';
+    });
+    if (icon) {
+      icon.className = estadoCaixaValores.visivel ? 'bi bi-eye' : 'bi bi-eye-slash';
+    }
+  }
+
+  function bindToggleCaixaValores() {
+    var btn = document.getElementById('btn-toggle-caixa-valores');
+    if (btn) btn.addEventListener('click', toggleValoresCaixa);
+  }
+
+  var filtroCaixaAtivo = null;
+
+  function aplicarFiltroCaixaMini(tipo, card) {
+    var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
+    if (filtroCaixaAtivo === tipo) {
+      filtroCaixaAtivo = null;
+      cards.forEach(function (c) { c.classList.remove('active'); });
+    } else {
+      filtroCaixaAtivo = tipo;
+      cards.forEach(function (c) { c.classList.remove('active'); });
+      card.classList.add('active');
+    }
+    filtrarListaDiariaPorTipo(filtroCaixaAtivo);
+  }
+
+  function filtrarListaDiariaPorTipo(tipo) {
+    var itens = document.querySelectorAll('#caixa-lista-diaria [data-tipo-item]');
+    if (!itens.length) return;
+    itens.forEach(function (item) {
+      if (!tipo) {
+        item.style.display = '';
+      } else {
+        item.style.display = item.getAttribute('data-tipo-item') === tipo ? '' : 'none';
+      }
+    });
+  }
+
+  function bindFiltrosMiniCaixa() {
+    var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
+    cards.forEach(function (card) {
+      card.addEventListener('click', function () {
+        var tipo = card.getAttribute('data-filtro-caixa');
+        aplicarFiltroCaixaMini(tipo, card);
+      });
+    });
+  }
+
+  function bindDropdownFiltroCaixa() {
+    var btn = document.getElementById('btn-filtrar-caixa');
+    var menu = document.getElementById('dropdown-filtro-menu-caixa');
+    var wrapper = document.getElementById('dropdown-filtro-wrapper-caixa');
+    if (!btn || !menu || !wrapper) return;
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      menu.classList.toggle('show');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!wrapper.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+    });
+
+    var btnLimpar = document.getElementById('btn-caixa-filtro-limpar');
+    var btnAplicar = document.getElementById('btn-caixa-filtro-aplicar');
+    var inputDesc = document.getElementById('caixa-filtro-descricao');
+    var inputValor = document.getElementById('caixa-filtro-valor');
+
+    if (btnLimpar) {
+      btnLimpar.addEventListener('click', function () {
+        if (inputDesc) inputDesc.value = '';
+        if (inputValor) inputValor.value = '';
+        filtrarListaDiariaPorTexto('', '');
+      });
+    }
+
+    if (btnAplicar) {
+      btnAplicar.addEventListener('click', function () {
+        var desc = inputDesc ? inputDesc.value.trim().toLowerCase() : '';
+        var valor = inputValor ? inputValor.value.trim() : '';
+        filtrarListaDiariaPorTexto(desc, valor);
+        menu.classList.remove('show');
+      });
+    }
+  }
+
+  function filtrarListaDiariaPorTexto(desc, valor) {
+    var itens = document.querySelectorAll('#caixa-lista-diaria [data-desc-item]');
+    if (!itens.length) return;
+    itens.forEach(function (item) {
+      var textoDesc = (item.getAttribute('data-desc-item') || '').toLowerCase();
+      var textoValor = (item.getAttribute('data-valor-item') || '');
+      var passaDesc = !desc || textoDesc.indexOf(desc) !== -1;
+      var passaValor = !valor || textoValor.indexOf(valor) !== -1;
+      item.style.display = (passaDesc && passaValor) ? '' : 'none';
+    });
+  }
+
+  function initCaixaExtras() {
+    bindToggleCaixaValores();
+    bindFiltrosMiniCaixa();
+    bindDropdownFiltroCaixa();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCaixaExtras);
+  } else {
+    initCaixaExtras();
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -995,6 +1115,51 @@
 
     if (els.extratoModalFechar) els.extratoModalFechar.addEventListener('click', function () { if (els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'none'; });
     if (els.extratoModalOverlay) els.extratoModalOverlay.addEventListener('click', function (e) { if (e.target === els.extratoModalOverlay) els.extratoModalOverlay.style.display = 'none'; });
+
+    var btnRelatorioTodos = document.getElementById('btn-relatorio-fin-todos');
+    if (btnRelatorioTodos) {
+      btnRelatorioTodos.addEventListener('click', function () {
+        var lista = dadosFiltradosTodos();
+        if (!lista.length) { finToast('Nenhum registro para gerar relatório.', 'warning'); return; }
+        abrirRelatorioFinanceiro('financeiro', lista, 'Relatório Financeiro (RDO)');
+      });
+    }
+
+    var btnRelatorioCaixa = document.getElementById('btn-relatorio-fin-caixa');
+    if (btnRelatorioCaixa) {
+      btnRelatorioCaixa.addEventListener('click', function () {
+        var lista = filtrarLogicoCaixa(state.caixa.dadosFiltrados || [], state.caixa.filtroDescricao, state.caixa.filtroValor);
+        if (!lista.length) { finToast('Nenhum registro no período para gerar relatório.', 'warning'); return; }
+        abrirRelatorioFinanceiro('caixa', lista, 'Relatório de Caixa', state.caixa.dataInicio, state.caixa.dataFim);
+      });
+    }
+
+    var btnRelatorioExtrato = document.getElementById('btn-relatorio-fin-extrato');
+    if (btnRelatorioExtrato) {
+      btnRelatorioExtrato.addEventListener('click', function () {
+        if (!els.extratoDataInicio || !els.extratoDataFim) {
+          finToast('Campos de período do extrato não encontrados.', 'danger');
+          return;
+        }
+        var inicio = els.extratoDataInicio.value;
+        var fim = els.extratoDataFim.value;
+        if (!inicio || !fim) { finToast('Selecione o período.', 'warning'); return; }
+        if (inicio > fim) { finToast('Data inicial maior que a final.', 'warning'); return; }
+
+        var origemSelect = els.extratoOrigem ? els.extratoOrigem.value : '__caixa__';
+        var registros = state.cache.filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
+
+        if (origemSelect && origemSelect !== '__caixa__') {
+          registros = registros.filter(function (r) { return r.motoboy === origemSelect || r.grupo === origemSelect; });
+        }
+
+        if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
+
+        var origemLabel = (origemSelect === '__caixa__' || !origemSelect) ? 'Caixa Geral' : origemSelect;
+        abrirRelatorioFinanceiro('extrato', registros, 'Relatório de Extrato - ' + origemLabel, inicio, fim);
+      });
+    }
+
   }
 
   function dadosFiltradosTodos() {
@@ -1252,21 +1417,31 @@
     var inicio = els.extratoDataInicio.value;
     var fim = els.extratoDataFim.value;
     if (!inicio || !fim) { finToast('Selecione o período.', 'warning'); return; }
-    var origem = els.extratoOrigem ? els.extratoOrigem.value : 'Geral';
+    if (inicio > fim) { finToast('Data inicial maior que a final.', 'warning'); return; }
+
+    var origemSelect = els.extratoOrigem ? els.extratoOrigem.value : '__caixa__';
     var registros = state.cache.filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
-    var extrato = {
+
+    if (origemSelect && origemSelect !== '__caixa__') {
+      registros = registros.filter(function (r) { return r.motoboy === origemSelect || r.grupo === origemSelect; });
+    }
+
+    if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
+
+    var origemLabel = (origemSelect === '__caixa__' || !origemSelect) ? 'Caixa Geral' : origemSelect;
+    var periodoLabel = formatDateBR(inicio) + ' a ' + formatDateBR(fim);
+
+    // salva no histórico local também
+    salvarExtratoStorage({
       id: gerarIdExtrato(),
-      origem: origem,
-      periodoLabel: formatDateBR(inicio) + ' a ' + formatDateBR(fim),
-      dataInicio: inicio,
-      dataFim: fim,
+      origem: origemLabel,
+      periodoLabel: periodoLabel,
       registros: registros,
-      criadoEm: new Date().toISOString()
-    };
-    salvarExtratoStorage(extrato);
-    finToast('Extrato gerado com sucesso!', 'success');
+      criadoEm: Date.now()
+    });
     renderizarListaExtratos();
-    abrirExtratoModal(extrato);
+
+    abrirRelatorioFinanceiro('extrato', registros, 'Extrato - ' + origemLabel, inicio, fim);
   }
 
   function dadosFiltradosExtratos() {
@@ -1745,6 +1920,110 @@
       icon.className = 'bi bi-arrow-up-circle-fill';
       titulo.textContent = 'VALOR DA DESPESA';
     }
+  }
+
+  function gerarIdRelatorioFin() {
+    return (Date.now().toString(36) + Math.random().toString(36).substring(2, 10)).toUpperCase().substring(0, 14);
+  }
+
+  function montarSnapshotFinanceiro(registros, tituloBanco) {
+    var linhas = registros.map(function (r) {
+      return {
+        data: r.dataDisplay,
+        descricao: r.descricao,
+        tipo: r.tipo === 'entrada' ? 'Receita' : 'Despesa',
+        motoboy: r.motoboy,
+        valor: formatarMoeda(r.valor),
+        situacao: (r.situacao || '-').charAt(0).toUpperCase() + (r.situacao || '-').slice(1)
+      };
+    });
+
+    var totais = calcularTotaisRegistros(registros);
+
+    return {
+      bancos: {
+        financeiro: {
+          label: tituloBanco || 'Financeiro',
+          campos: [
+            { chave: 'data', label: 'Data' },
+            { chave: 'descricao', label: 'Descrição' },
+            { chave: 'tipo', label: 'Tipo' },
+            { chave: 'motoboy', label: 'Colaborador' },
+            { chave: 'valor', label: 'Valor' },
+            { chave: 'situacao', label: 'Situação' }
+          ],
+          linhas: linhas,
+          totais: { qtd: registros.length, somaValor: totais.entradas - totais.saidas, somaPagos: totais.entradas, temValor: true, temSituacao: true }
+        }
+      },
+      resumos: {},
+      meta: {
+        usuarioGerador: (function () {
+          try {
+            var sess = JSON.parse(sessionStorage.getItem('usuario') || localStorage.getItem('usuario') || 'null');
+            return (sess && (sess.username || sess.nome)) || 'Não identificado';
+          } catch (e) { return 'Não identificado'; }
+        })(),
+        horaGeracao: new Date().toLocaleString('pt-BR')
+      }
+    };
+  }
+
+  function abrirRelatorioFinanceiro(tipo, registros, tituloBanco, inicio, fim) {
+    var snapshot = montarSnapshotFinanceiro(registros, tituloBanco);
+    var periodoLabel = (inicio && fim) ? (formatDateBR(inicio) + ' a ' + formatDateBR(fim)) : 'Todos os registros';
+
+    var relatorio = {
+      id: gerarIdRelatorioFin(),
+      tipo: tipo,
+      titulo: tituloBanco || 'Relatório Financeiro',
+      data_inicio: inicio || '',
+      data_fim: fim || '',
+      periodoLabel: periodoLabel,
+      criadoEm: Date.now(),
+      usuarioGerador: snapshot.meta.usuarioGerador,
+      horaGeracao: snapshot.meta.horaGeracao,
+      snapshot: snapshot
+    };
+
+    _garantirModuloRelatorioFin().then(function () {
+      if (typeof window.abrirModalRelatorioFin !== 'function') {
+        finToast('Módulo de relatórios não carregado.', 'danger');
+        return;
+      }
+      window.abrirModalRelatorioFin(relatorio, true);
+    });
+  }
+
+  var _relatorioFinCarregando = null;
+
+  function _garantirModuloRelatorioFin() {
+    if (typeof window.abrirModalRelatorioFin === 'function') {
+      return Promise.resolve();
+    }
+    if (_relatorioFinCarregando) {
+      return _relatorioFinCarregando;
+    }
+    if (typeof window.carregarScriptExterno !== 'function') {
+      return Promise.resolve();
+    }
+    _relatorioFinCarregando = window.carregarScriptExterno('/js/relatorios_fin.js')
+      .then(function () {
+        // pequena espera para garantir que o script definiu window.abrirModalRelatorioFin
+        return new Promise(function (resolve) {
+          var tentativas = 0;
+          (function checar() {
+            tentativas++;
+            if (typeof window.abrirModalRelatorioFin === 'function' || tentativas > 30) {
+              resolve();
+            } else {
+              setTimeout(checar, 100);
+            }
+          })();
+        });
+      })
+      .finally(function () { _relatorioFinCarregando = null; });
+    return _relatorioFinCarregando;
   }
 
 })();
