@@ -940,17 +940,13 @@
     setText('caixa-status-count-todos', count.todos);
 
     document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]').forEach(function (item) {
-      var t = item.getAttribute('data-filtro-tipo');
-      var s = item.getAttribute('data-filtro-situacao');
-      item.classList.toggle('active', state.filtroTipo === t && state.filtroSituacao === s);
       if (!item._finBound) {
         item._finBound = true;
         item.addEventListener('click', function () {
           state.filtroTipo = this.getAttribute('data-filtro-tipo');
           state.filtroSituacao = this.getAttribute('data-filtro-situacao');
           state.todos.pagina = 1;
-          document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]').forEach(function (el) { el.classList.remove('active'); });
-          this.classList.add('active');
+          atualizarCardAtivoFin();
           renderTodos();
         });
       }
@@ -1627,26 +1623,43 @@
   }
 
   function bindNotifCardsFin() {
+    document.querySelectorAll('.caixa-mini-card').forEach(function (c) {
+      c.classList.remove('active');
+    });
+
     var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]');
     if (!cards.length) return;
 
     cards.forEach(function (card) {
+      if (card._finBound) return;
+      card._finBound = true;
       card.addEventListener('click', function () {
-        cards.forEach(function (c) { c.classList.remove('active'); });
-        this.classList.add('active');
         state.filtroTipo = this.getAttribute('data-filtro-tipo') || 'todos';
         state.filtroSituacao = this.getAttribute('data-filtro-situacao') || 'todos';
         state.todos.pagina = 1;
+        atualizarCardAtivoFin();
         renderTodos();
       });
     });
 
-    var receitaCard = document.querySelector('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo="entrada"][data-filtro-situacao="todos"]');
-    if (receitaCard && !document.querySelector('#fin-tab-content-todos .caixa-mini-card.active')) {
-      receitaCard.classList.add('active');
-      state.filtroTipo = 'entrada';
-      state.filtroSituacao = 'todos';
-    }
+    state.filtroTipo = 'entrada';
+    state.filtroSituacao = 'todos';
+    atualizarCardAtivoFin();
+  }
+
+  function atualizarCardAtivoFin() {
+    document.querySelectorAll('.caixa-mini-card').forEach(function (c) {
+      c.classList.remove('active');
+    });
+
+    var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]');
+    cards.forEach(function (card) {
+      var t = card.getAttribute('data-filtro-tipo');
+      var s = card.getAttribute('data-filtro-situacao');
+      if (state.filtroTipo === t && state.filtroSituacao === s) {
+        card.classList.add('active');
+      }
+    });
   }
 
   function abrirModalNovo() {
