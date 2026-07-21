@@ -760,13 +760,10 @@
   function abrirModalEditar(reg) {
     var OLD_ID = 'modalEditarFinDyn';
     var old = document.getElementById(OLD_ID);
-    if (old) {
-      var oldInst = bootstrap.Modal.getInstance(old);
-      if (oldInst) oldInst.dispose();
-      old.remove();
-    }
+    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
 
     var isEntrada = reg.tipo === 'entrada';
+    var corHeader = isEntrada ? 'linear-gradient(135deg,#198754 0%,#146c43 100%)' : 'linear-gradient(135deg,#dc3545 0%,#c82333 100%)';
     var valorFormatado = (reg.valor || 0).toFixed(2).replace('.', ',');
 
     var html =
@@ -774,35 +771,34 @@
       '<div class="modal-dialog modal-dialog-centered modal-md">' +
       '<div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">' +
 
-      // HEADER
-      '<div class="fin-extrato-header" style="background:linear-gradient(135deg,' +
-      (isEntrada ? '#198754 0%,#146c43 100%' : '#dc3545 0%,#c82333 100%') +
-      ');padding:18px 22px;color:#fff;">' +
+      '<div class="fin-extrato-header" style="background:' + corHeader + ';">' +
       '<div class="d-flex align-items-center justify-content-between">' +
       '<div class="d-flex align-items-center gap-3">' +
-      '<div class="fin-extrato-header-icon" style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">' +
-      '<i class="bi bi-pencil-square"></i></div>' +
-      '<div><div class="fin-extrato-tipo" style="font-size:.7rem;font-weight:700;letter-spacing:.05em;">EDITAR LANÇAMENTO</div>' +
-      '<div class="fin-extrato-date" style="font-size:.72rem;opacity:.85;">' + escapeHtml(reg.dataDisplay || '') + '</div></div></div>' +
+      '<div class="fin-extrato-header-icon"><i class="bi bi-pencil-square"></i></div>' +
+      '<div><div class="fin-extrato-tipo">EDITAR LANÇAMENTO</div>' +
+      '<div class="fin-extrato-date">' + escapeHtml(reg.dataDisplay || '') + '</div></div></div>' +
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div></div>' +
 
       '<div class="modal-body p-0">' +
 
+      '<div class="fin-extrato-status-bar">' +
+      '<div>' + getStatusBadge(reg.situacao) + '</div>' +
+      '<span class="fin-extrato-id">#' + escapeHtml((reg.id || '').toString().slice(-6)) + '</span>' +
+      '</div>' +
+
       '<div id="fin-editar-erro" class="alert alert-danger d-none mx-3 mt-3 py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>' +
 
-      '<div class="fin-extrato-body px-3 pt-3">' +
+      '<div class="fin-extrato-body">' +
 
-      // VALOR
       '<div class="fin-view-valor-destaque ' + (isEntrada ? 'fin-valor-footer-entrada' : 'fin-valor-footer-saida') + '">' +
       '<div class="fin-view-valor-destaque-label"><i class="bi bi-cash-coin"></i><span>VALOR DO LANÇAMENTO</span></div>' +
       '<input type="text" id="fin-edit-valor" class="fin-edit-valor-input" value="' + valorFormatado + '" inputmode="decimal">' +
       '</div>' +
 
-      // INFORMAÇÕES
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Informações do Lançamento</div>' +
-      '<div class="fin-view-grid-info">' +
+      '<div class="fin-view-grid-2x2">' +
 
       '<div class="fin-view-grid-item">' +
       '<div class="fin-view-grid-label"><i class="bi bi-person"></i> Cliente <span class="text-muted" style="font-size:.6rem;">(via pedido)</span></div>' +
@@ -832,19 +828,18 @@
 
       '</div></div>' +
 
-      '<div class="fin-extrato-divider" style="height:1px;background:#f0f0f0;margin:14px 0;"></div>' +
+      '<div class="fin-extrato-divider"></div>' +
 
-      // DETALHES
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Detalhes</div>' +
 
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;flex-direction:column;">' +
-      '<div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;"><i class="bi bi-file-text"></i> Descrição</div>' +
+      '<div class="fin-extrato-row fin-extrato-row-vertical">' +
+      '<div class="fin-extrato-row-label"><i class="bi bi-file-text"></i> Descrição</div>' +
       '<input type="text" id="fin-edit-descricao" class="form-control form-control-sm fin-edit-input" value="' + escapeHtml(reg.descricao || '') + '">' +
       '</div>' +
 
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;flex-direction:column;">' +
-      '<div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;"><i class="bi bi-chat-left-text"></i> Observação</div>' +
+      '<div class="fin-extrato-row fin-extrato-row-vertical">' +
+      '<div class="fin-extrato-row-label"><i class="bi bi-chat-left-text"></i> Observação</div>' +
       '<textarea id="fin-edit-observacao" class="form-control form-control-sm fin-edit-input" rows="2">' + escapeHtml(reg.observacao || '') + '</textarea>' +
       '</div>' +
 
@@ -853,8 +848,7 @@
 
       '</div>' +
 
-      // FOOTER
-      '<div class="fin-extrato-footer d-flex align-items-center justify-content-between px-4 py-3" style="border-top:1px solid #f0f0f0;background:#fafafa;">' +
+      '<div class="fin-extrato-footer fin-extrato-footer-actions">' +
       '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-editar" data-bs-dismiss="modal">Cancelar</button>' +
       '<button type="button" class="fin-btn-salvar-editar" id="fin-btn-salvar-editar">' +
       '<i class="bi bi-check-lg" id="fin-btn-salvar-editar-icon"></i>' +
@@ -884,16 +878,8 @@
       var valorNum = parseValor(valorStr);
       var descricao = document.getElementById('fin-edit-descricao').value.trim();
 
-      if (!descricao) {
-        erroEl.textContent = 'Informe a descrição.';
-        erroEl.classList.remove('d-none');
-        return;
-      }
-      if (valorNum <= 0) {
-        erroEl.textContent = 'Informe um valor válido.';
-        erroEl.classList.remove('d-none');
-        return;
-      }
+      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); return; }
+      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
 
       var dadosAtualizados = {
         valor: valorNum,
@@ -911,9 +897,7 @@
       btnTexto.textContent = 'Salvando...';
 
       salvarRegistroFinanceiro(reg.id, dadosAtualizados)
-        .then(function () {
-          modalInst.hide();
-        })
+        .then(function () { modalInst.hide(); })
         .catch(function (err) {
           console.error('Erro ao salvar registro financeiro:', err);
           erroEl.textContent = err.message || 'Não foi possível salvar as alterações.';
@@ -925,11 +909,7 @@
         });
     });
 
-    modalEl.addEventListener('hidden.bs.modal', function () {
-      modalInst.dispose();
-      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
-    });
-
+    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
 
@@ -1563,10 +1543,10 @@
 
     var pedidoHtml = reg.idPedido ? ('#' + escapeHtml(reg.idPedido)) : '-';
     var obsRowHtml = reg.observacao
-      ? '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;">' +
-      '<div class="fin-extrato-row-icon"><i class="bi bi-chat-left-text text-muted"></i></div>' +
-      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;">Observação</div>' +
-      '<div class="fin-extrato-row-value" style="font-size:.8rem;color:#333;font-weight:600;">' + escapeHtml(reg.observacao) + '</div></div></div>'
+      ? '<div class="fin-extrato-row">' +
+      '<div class="fin-extrato-row-icon"><i class="bi bi-chat-left-text"></i></div>' +
+      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label">Observação</div>' +
+      '<div class="fin-extrato-row-value">' + escapeHtml(reg.observacao) + '</div></div></div>'
       : '';
 
     var html =
@@ -1574,23 +1554,23 @@
       '<div class="modal-dialog modal-dialog-centered modal-md">' +
       '<div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">' +
 
-      '<div class="fin-extrato-header" style="background:' + corHeader + ';padding:18px 22px;color:#fff;">' +
+      '<div class="fin-extrato-header" style="background:' + corHeader + ';">' +
       '<div class="d-flex align-items-center justify-content-between">' +
       '<div class="d-flex align-items-center gap-3">' +
-      '<div class="fin-extrato-header-icon" style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="bi ' + iconHeader + '"></i></div>' +
-      '<div><div class="fin-extrato-tipo" style="font-size:.7rem;font-weight:700;letter-spacing:.05em;">' + tipoLabel + '</div>' +
-      '<div class="fin-extrato-date" style="font-size:.72rem;opacity:.85;">' + escapeHtml(reg.dataDisplay || '-') + '</div></div></div>' +
+      '<div class="fin-extrato-header-icon"><i class="bi ' + iconHeader + '"></i></div>' +
+      '<div><div class="fin-extrato-tipo">' + tipoLabel + '</div>' +
+      '<div class="fin-extrato-date">' + escapeHtml(reg.dataDisplay || '-') + '</div></div></div>' +
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div></div>' +
 
       '<div class="modal-body p-0">' +
 
-      '<div class="fin-extrato-status-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 22px;background:#fafafa;border-bottom:1px solid #f0f0f0;">' +
+      '<div class="fin-extrato-status-bar">' +
       '<div>' + situacaoBadge + '</div>' +
-      '<span class="fin-extrato-id" style="font-size:.68rem;color:#999;font-weight:600;">#' + escapeHtml((reg.id || '').toString().slice(-6)) + '</span>' +
+      '<span class="fin-extrato-id">#' + escapeHtml((reg.id || '').toString().slice(-6)) + '</span>' +
       '</div>' +
 
-      '<div class="fin-extrato-body px-3 pt-3">' +
+      '<div class="fin-extrato-body">' +
 
       '<div class="fin-view-valor-destaque ' + footerClasse + '">' +
       '<div class="fin-view-valor-destaque-label"><i class="bi ' + valorFooterIcon + '"></i><span>' + valorFooterTitulo + '</span></div>' +
@@ -1599,7 +1579,7 @@
 
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Informações do Lançamento</div>' +
-      '<div class="fin-view-grid-info">' +
+      '<div class="fin-view-grid-2x2">' +
       '<div class="fin-view-grid-item"><div class="fin-view-grid-label"><i class="bi bi-person"></i> Cliente</div><div class="fin-view-grid-value">' + escapeHtml(reg.cliente || '-') + '</div></div>' +
       '<div class="fin-view-grid-item"><div class="fin-view-grid-label"><i class="bi bi-person-badge"></i> Colaborador</div><div class="fin-view-grid-value">' + escapeHtml(reg.motoboy || '-') + '</div></div>' +
       '<div class="fin-view-grid-item"><div class="fin-view-grid-label"><i class="bi bi-arrow-down-up"></i> Tipo</div><div class="fin-view-grid-value">' + tipoTexto + '</div></div>' +
@@ -1607,33 +1587,41 @@
       '<div class="fin-view-grid-item"><div class="fin-view-grid-label"><i class="bi bi-clock"></i> Hora</div><div class="fin-view-grid-value">' + escapeHtml(hora) + '</div></div>' +
       '</div></div>' +
 
-      '<div class="fin-extrato-divider" style="height:1px;background:#f0f0f0;margin:14px 0;"></div>' +
+      '<div class="fin-extrato-divider"></div>' +
 
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Detalhes</div>' +
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;">' +
-      '<div class="fin-extrato-row-icon"><i class="bi bi-file-text text-muted"></i></div>' +
-      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;">Descrição</div>' +
-      '<div class="fin-extrato-row-value" style="font-size:.8rem;color:#333;font-weight:600;">' + escapeHtml(reg.descricao || '-') + '</div></div></div>' +
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;">' +
-      '<div class="fin-extrato-row-icon"><i class="bi bi-box-seam text-muted"></i></div>' +
-      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;">Pedido Vinculado</div>' +
-      '<div class="fin-extrato-row-value" style="font-size:.8rem;color:#333;font-weight:600;">' + pedidoHtml + '</div></div></div>' +
+      '<div class="fin-extrato-row">' +
+      '<div class="fin-extrato-row-icon"><i class="bi bi-file-text"></i></div>' +
+      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label">Descrição</div>' +
+      '<div class="fin-extrato-row-value">' + escapeHtml(reg.descricao || '-') + '</div></div></div>' +
+      '<div class="fin-extrato-row">' +
+      '<div class="fin-extrato-row-icon"><i class="bi bi-box-seam"></i></div>' +
+      '<div class="fin-extrato-row-content"><div class="fin-extrato-row-label">Pedido Vinculado</div>' +
+      '<div class="fin-extrato-row-value">' + pedidoHtml + '</div></div></div>' +
       obsRowHtml +
       '</div>' +
 
       '</div>' +
 
-      '<div class="fin-extrato-footer d-flex align-items-center justify-content-center px-4 py-3" style="border-top:1px solid #f0f0f0;background:#fafafa;">' +
-      '<div class="fin-extrato-footer-line" style="font-size:.66rem;color:#999;display:flex;align-items:center;gap:5px;">' +
-      '<i class="bi bi-clock-history"></i><span>Atualizado agora</span></div>' +
-      '</div>' +
+      '<div class="fin-extrato-footer fin-extrato-footer-actions">' +
+      '<div class="fin-extrato-footer-line"><i class="bi bi-clock-history"></i><span>Atualizado agora</span></div>' +
+      '<div class="d-flex gap-2">' +
+      '<button type="button" class="fin-btn-salvar-editar" id="fin-view-btn-editar"><i class="bi bi-pencil-square"></i><span>Editar</span></button>' +
+      '<button type="button" class="fin-btn-cancelar-editar" data-bs-dismiss="modal">Fechar</button>' +
+      '</div></div>' +
 
       '</div></div></div></div>';
 
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
     var modalInst = new bootstrap.Modal(modalEl);
+
+    document.getElementById('fin-view-btn-editar').addEventListener('click', function () {
+      modalInst.hide();
+      setTimeout(function () { abrirModalEditar(reg); }, 250);
+    });
+
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
@@ -1675,20 +1663,25 @@
       '<div class="modal-dialog modal-dialog-centered modal-md">' +
       '<div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">' +
 
-      '<div class="fin-extrato-header" style="background:linear-gradient(135deg,#dc3545 0%,#c82333 100%);padding:18px 22px;color:#fff;">' +
+      '<div class="fin-extrato-header" style="background:linear-gradient(135deg,#dc3545 0%,#c82333 100%);">' +
       '<div class="d-flex align-items-center justify-content-between">' +
       '<div class="d-flex align-items-center gap-3">' +
-      '<div class="fin-extrato-header-icon" style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="bi bi-plus-lg"></i></div>' +
-      '<div><div class="fin-extrato-tipo" style="font-size:.7rem;font-weight:700;letter-spacing:.05em;">NOVO LANÇAMENTO</div>' +
-      '<div class="fin-extrato-date" style="font-size:.72rem;opacity:.85;">Preencha os dados abaixo</div></div></div>' +
+      '<div class="fin-extrato-header-icon"><i class="bi bi-plus-lg"></i></div>' +
+      '<div><div class="fin-extrato-tipo">NOVO LANÇAMENTO</div>' +
+      '<div class="fin-extrato-date">Preencha os dados abaixo</div></div></div>' +
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div></div>' +
 
       '<div class="modal-body p-0">' +
 
+      '<div class="fin-extrato-status-bar">' +
+      '<div>' + getStatusBadge('pendente') + '</div>' +
+      '<span class="fin-extrato-id">NOVO</span>' +
+      '</div>' +
+
       '<div id="fin-novo-erro" class="alert alert-danger d-none mx-3 mt-3 py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>' +
 
-      '<div class="fin-extrato-body px-3 pt-3">' +
+      '<div class="fin-extrato-body">' +
 
       '<div class="fin-view-valor-destaque fin-valor-footer-entrada">' +
       '<div class="fin-view-valor-destaque-label"><i class="bi bi-cash-coin"></i><span>VALOR DO LANÇAMENTO</span></div>' +
@@ -1697,7 +1690,7 @@
 
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Informações do Lançamento</div>' +
-      '<div class="fin-view-grid-info">' +
+      '<div class="fin-view-grid-2x2">' +
 
       '<div class="fin-view-grid-item">' +
       '<div class="fin-view-grid-label"><i class="bi bi-calendar3"></i> Data</div>' +
@@ -1727,20 +1720,20 @@
 
       '</div></div>' +
 
-      '<div class="fin-extrato-divider" style="height:1px;background:#f0f0f0;margin:14px 0;"></div>' +
+      '<div class="fin-extrato-divider"></div>' +
 
       '<div class="fin-extrato-section">' +
       '<div class="fin-extrato-section-title">Detalhes</div>' +
 
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;flex-direction:column;">' +
-      '<div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;"><i class="bi bi-file-text"></i> Descrição</div>' +
+      '<div class="fin-extrato-row fin-extrato-row-vertical">' +
+      '<div class="fin-extrato-row-label"><i class="bi bi-file-text"></i> Descrição</div>' +
       '<input type="text" id="fin-descricao" class="form-control form-control-sm fin-edit-input" placeholder="Ex: Entrega #123">' +
       '</div>' +
 
       '<div id="fin-preview-comissao" class="mb-2" style="font-size:.72rem;"></div>' +
 
-      '<div class="fin-extrato-row" style="display:flex;gap:10px;padding:8px 0;flex-direction:column;">' +
-      '<div class="fin-extrato-row-label" style="font-size:.62rem;color:#999;text-transform:uppercase;"><i class="bi bi-chat-left-text"></i> Observação</div>' +
+      '<div class="fin-extrato-row fin-extrato-row-vertical">' +
+      '<div class="fin-extrato-row-label"><i class="bi bi-chat-left-text"></i> Observação</div>' +
       '<textarea id="fin-observacao" class="form-control form-control-sm fin-edit-input" rows="2" placeholder="Observações opcionais..."></textarea>' +
       '</div>' +
 
@@ -1749,7 +1742,7 @@
 
       '</div>' +
 
-      '<div class="fin-extrato-footer d-flex align-items-center justify-content-between px-4 py-3" style="border-top:1px solid #f0f0f0;background:#fafafa;">' +
+      '<div class="fin-extrato-footer fin-extrato-footer-actions">' +
       '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-novo" data-bs-dismiss="modal">Cancelar</button>' +
       '<button type="button" class="fin-btn-salvar-editar" id="btn-salvar-novo-fin">' +
       '<i class="bi bi-check-lg" id="fin-btn-salvar-novo-icon"></i><span id="fin-btn-salvar-novo-texto">Salvar</span>' +
