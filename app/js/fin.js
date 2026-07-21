@@ -1638,6 +1638,7 @@
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
         '<div style="display:flex;gap:4px;">' +
+        '<button class="extrato-item-btn extrato-item-btn-relatorio" data-id="' + escapeHtml(ex.id) + '" title="Ver Relatório"><i class="bi bi-eye"></i></button>' +
         '<div class="dropdown">' +
         '<button class="extrato-item-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Excluir"><i class="bi bi-trash"></i></button>' +
         '<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width:200px;font-size:.78rem;" onclick="event.stopPropagation();">' +
@@ -1650,6 +1651,14 @@
         '</div></div></div>';
     }).join('');
 
+    els.extratoListaDiaria.querySelectorAll('.extrato-item-btn-relatorio').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
+        if (ext) abrirExtratoModal(ext);
+      });
+    });
+
     bindDropdownConfirmarExclusao(els.extratoListaDiaria, '.dropdown', function (id) {
       removerExtratoStorage(id);
       renderizarListaExtratos();
@@ -1657,7 +1666,8 @@
     });
 
     els.extratoListaDiaria.querySelectorAll('.extrato-item-card').forEach(function (card) {
-      card.addEventListener('click', function () {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.extrato-item-btn') || e.target.closest('.dropdown-menu')) return;
         var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
         if (ext) abrirExtratoModal(ext);
       });
