@@ -2,11 +2,11 @@
 
 (function () {
 
-  var estadoCaixaValores = { visivel: false };
-
   var EXTRATO_STORAGE_KEY = 'rdo_extratos_salvos';
   var EXTRATO_MAX = 50;
-
+  var els = {};
+  var filtroCaixaAtivo = null;
+  var _finJaInicializado = false;
   var state = {
     cache: [],
     pedidosCache: {},
@@ -26,27 +26,6 @@
   };
 
   window.financeiroState = state;
-
-  var els = {};
-
-  function toggleValoresCaixa() {
-    estadoCaixaValores.visivel = !estadoCaixaValores.visivel;
-    var icon = document.getElementById('icon-toggle-caixa-val');
-    document.querySelectorAll('.fin-valor-caixa').forEach(function (el) {
-      var real = el.getAttribute('data-valor-real') || 'R$ 0,00';
-      el.textContent = estadoCaixaValores.visivel ? real : 'R$ ****';
-    });
-    if (icon) {
-      icon.className = estadoCaixaValores.visivel ? 'bi bi-eye' : 'bi bi-eye-slash';
-    }
-  }
-
-  function bindToggleCaixaValores() {
-    var btn = document.getElementById('btn-toggle-caixa-valores');
-    if (btn) btn.addEventListener('click', toggleValoresCaixa);
-  }
-
-  var filtroCaixaAtivo = null;
 
   function aplicarFiltroCaixaMini(tipo, card) {
     var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
@@ -136,7 +115,6 @@
   }
 
   function initCaixaExtras() {
-    bindToggleCaixaValores();
     bindFiltrosMiniCaixa();
     bindDropdownFiltroCaixa();
   }
@@ -592,14 +570,9 @@
 
   function aplicarMascaraValores() {
     document.querySelectorAll('.fin-valor-caixa').forEach(function (el) {
-      if (state.caixaValoresVisiveis) {
-        var real = el.getAttribute('data-valor-real');
-        if (real) el.textContent = real;
-      } else {
-        var current = el.textContent.trim();
-        if (current && current !== 'R$ ****') el.setAttribute('data-valor-real', current);
-        el.textContent = 'R$ ****';
-      }
+      var real = el.getAttribute('data-valor-real');
+      if (!real) return;
+      el.textContent = state.caixaValoresVisiveis ? real : 'R$ ****';
     });
   }
 
@@ -1067,7 +1040,9 @@
         state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
         if (els.iconToggleCaixaVal) els.iconToggleCaixaVal.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
         this.title = state.caixaValoresVisiveis ? 'Ocultar valores' : 'Mostrar valores';
-        aplicarMascaraValores();
+
+        aplicarMascaraValores();   // continua útil para elementos com essa classe (se existirem)
+        aplicarFiltroCaixaLocal(); // re-renderiza os cards e a lista diária do caixa
       });
     }
 
@@ -1818,6 +1793,7 @@
         finToast('Lançamento salvo!', 'success');
         if (modalInst) modalInst.hide();
         carregarDados();
+        aplicarMascaraValores();
       } else {
         erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.');
         erroEl.classList.remove('d-none');
@@ -1877,6 +1853,9 @@
   }
 
   function init() {
+    if (_finJaInicializado) return;
+    _finJaInicializado = true;
+
     bind();
     registrarEventos();
     bindNotifCardsFin();
