@@ -7,6 +7,7 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
+from collections import Counter
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -71,8 +72,8 @@ PADRAO_SOLICITANTE = re.compile(
     re.IGNORECASE
 )
 
-ULTIMO_RDO_LANCADO = "RDO2933"
-FILTRO_DATA_INICIO = "20/07/2026"
+ULTIMO_RDO_LANCADO = "RDO2884"
+FILTRO_DATA_INICIO = "16/07/2026"
 FILTRO_DATA_FIM = "20/07/2026"
 
 PAGAMENTO_SEMANAL = [
@@ -185,11 +186,79 @@ def _extrair_lista_dados(resultado, action):
     return dados
 
 
+def _buscar_lista(action):
+    resultado = post({"action": action, "apiKey": API_KEY})
+    return _extrair_lista_dados(resultado, action)
+
+
+def verificar_ids_duplicados():
+    logger.info("Verificando duplicidade de IDs no banco (pedidos e financeiro)...")
+
+    problemas_encontrados = False
+
+    try:
+        pedidos = _buscar_lista("getpedidos")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        logger.error("Não foi possível verificar duplicidade em 'pedidos': %s", exc)
+        pedidos = []
+
+    ids_pedidos = [str(item.get("id", "")).strip().upper() for item in pedidos if item.get("id")]
+    contagem_pedidos = Counter(ids_pedidos)
+    duplicados_pedidos = {rdo: qtd for rdo, qtd in contagem_pedidos.items() if qtd > 1}
+
+    if duplicados_pedidos:
+        problemas_encontrados = True
+        logger.critical("=" * 70)
+        logger.critical("DUPLICIDADE DETECTADA NA TABELA 'PEDIDOS':")
+        for rdo_id, qtd in sorted(duplicados_pedidos.items()):
+            logger.critical("  -> ID '%s' aparece %d vezes.", rdo_id, qtd)
+        logger.critical("=" * 70)
+
+    try:
+        financeiros = _buscar_lista("getfinanceiro")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        logger.error("Não foi possível verificar duplicidade em 'financeiro': %s", exc)
+        financeiros = []
+
+    ids_financeiro = [str(item.get("id", "")).strip().upper() for item in financeiros if item.get("id")]
+    contagem_financeiro = Counter(ids_financeiro)
+    duplicados_financeiro = {fin: qtd for fin, qtd in contagem_financeiro.items() if qtd > 1}
+
+    if duplicados_financeiro:
+        problemas_encontrados = True
+        logger.critical("=" * 70)
+        logger.critical("DUPLICIDADE DETECTADA NA TABELA 'FINANCEIRO':")
+        for fin_id, qtd in sorted(duplicados_financeiro.items()):
+            logger.critical("  -> ID '%s' aparece %d vezes.", fin_id, qtd)
+        logger.critical("=" * 70)
+
+    ids_pedidos_sem_sufixo = set(ids_pedidos)
+    ids_fin_sem_sufixo = set()
+    for fin_id in ids_financeiro:
+        match = RDO_FIN_PATTERN.match(fin_id)
+        if match:
+            ids_fin_sem_sufixo.add(f"RDO{int(match.group(1)):03d}")
+
+    faltando_financeiro = sorted(ids_pedidos_sem_sufixo - ids_fin_sem_sufixo)
+    if faltando_financeiro:
+        logger.warning(
+            "ATENCAO: os pedidos abaixo existem em 'pedidos' mas NAO possuem financeiro correspondente: %s",
+            faltando_financeiro
+        )
+
+    if problemas_encontrados:
+        raise ErroFatalGeracao(
+            "Foram encontrados IDs duplicados no banco. Corrija/apague os registros duplicados "
+            "listados acima antes de rodar o geraDados novamente."
+        )
+
+    logger.info("Nenhuma duplicidade de ID encontrada. Prosseguindo com a geração.")
+
+
 def carregar_rdos_existentes():
     ids = set()
     try:
-        resultado = post({"action": "getpedidos", "apiKey": API_KEY})
-        dados = _extrair_lista_dados(resultado, "getpedidos")
+        dados = _buscar_lista("getpedidos")
         for item in dados:
             rdo_id = str(item.get("id", "")).strip().upper()
             if rdo_id:
@@ -207,8 +276,7 @@ def carregar_maior_rdo_financeiro():
     maior = 0
     maior_id_str = None
     try:
-        resultado = post({"action": "getfinanceiro", "apiKey": API_KEY})
-        dados = _extrair_lista_dados(resultado, "getfinanceiro")
+        dados = _buscar_lista("getfinanceiro")
         for item in dados:
             fin_id = str(item.get("id", "")).strip().upper()
             match = RDO_FIN_PATTERN.match(fin_id)
@@ -228,6 +296,27 @@ def carregar_maior_rdo_financeiro():
         logger.info("Nenhum RDO-FIN localizado na tabela financeiro.")
 
     return maior
+
+
+def _data_para_datetime(data_str):
+    try:
+        return datetime.strptime(data_str, "%d/%m/%Y")
+    except (ValueError, TypeError):
+        return None
+
+
+def carregar_datas_existentes_financeiro():
+    datas = set()
+    try:
+        dados = _buscar_lista("getfinanceiro")
+        for item in dados:
+            data_dt = _data_para_datetime(str(item.get("data", "")).strip())
+            if data_dt:
+                datas.add(data_dt.date())
+    except (ErroApi, ErroFatalGeracao) as exc:
+        logger.error("Falha ao buscar datas existentes no financeiro: %s.", exc)
+    logger.info("Datas distintas já lançadas no financeiro: %d.", len(datas))
+    return datas
 
 
 def conferir_ultimo_rdo_com_financeiro(rdo_seq_base, maior_rdo_financeiro):
@@ -291,8 +380,7 @@ def proximo_rdo_id():
 
 def carregar_colaboradores():
     try:
-        resultado = post({"action": "getcolaboradores", "apiKey": API_KEY})
-        dados = _extrair_lista_dados(resultado, "getcolaboradores")
+        dados = _buscar_lista("getcolaboradores")
     except (ErroApi, ErroFatalGeracao) as exc:
         logger.critical("Falha crítica ao carregar colaboradores: %s", exc)
         raise ErroFatalGeracao(f"Não foi possível carregar colaboradores: {exc}") from exc
@@ -313,8 +401,7 @@ def carregar_colaboradores():
 
 def carregar_clientes():
     try:
-        resultado = post({"action": "getclientes", "apiKey": API_KEY})
-        dados = _extrair_lista_dados(resultado, "getclientes")
+        dados = _buscar_lista("getclientes")
     except (ErroApi, ErroFatalGeracao) as exc:
         logger.critical("Falha crítica ao carregar clientes: %s", exc)
         raise ErroFatalGeracao(f"Não foi possível carregar clientes: {exc}") from exc
@@ -335,8 +422,8 @@ def carregar_clientes():
 
 def garantir_cliente(nome_cliente, responsavel=""):
     nome_upper = (nome_cliente or "").strip().upper()
-    if not nome_upper:
-        logger.error("Nome de cliente vazio recebido em garantir_cliente().")
+    if not nome_upper or nome_upper == "-":
+        logger.error("Nome de cliente vazio/inválido recebido em garantir_cliente().")
         return None
     if nome_upper in CLIENTES:
         return CLIENTES[nome_upper]
@@ -399,9 +486,7 @@ def parse_valor(valor_str):
         texto = texto.replace(",", ".")
     elif tem_ponto and not tem_virgula:
         partes = texto.split(".")
-        if len(partes[-1]) == 2:
-            pass
-        else:
+        if len(partes[-1]) != 2:
             texto = texto.replace(".", "")
 
     try:
@@ -452,8 +537,7 @@ def definir_colaborador(motoboy_raw):
     if nome not in COLABORADORES:
         COLABORADORES_PENDENTES.add(nome)
         logger.warning(
-            "Colaborador '%s' não encontrado no cadastro (getcolaboradores). "
-            "O nome será gravado normalmente no pedido, mas o financeiro pode ficar sem colaborador_id vinculado.",
+            "Colaborador '%s' não encontrado no cadastro (getcolaboradores).",
             nome
         )
 
@@ -534,11 +618,41 @@ def separar_data_hora(dados):
     return data_servico, hora_final
 
 
-def _data_para_datetime(data_str):
-    try:
-        return datetime.strptime(data_str, "%d/%m/%Y")
-    except (ValueError, TypeError):
-        return None
+def extrair_datas_brutas(linhas):
+    datas = set()
+    for linha in linhas:
+        dados = parse_linha(linha)
+        if dados is None:
+            continue
+        data_str = extrair_data(dados["data_bruta"])
+        data_dt = _data_para_datetime(data_str)
+        if data_dt:
+            datas.add(data_dt.date())
+    return datas
+
+
+def determinar_filtro_data_automatico(todas_linhas):
+    datas_existentes = carregar_datas_existentes_financeiro()
+    datas_brutas = sorted(extrair_datas_brutas(todas_linhas))
+    hoje = datetime.now().date()
+
+    data_inicio = None
+    for data in datas_brutas:
+        if data > hoje:
+            continue
+        if data not in datas_existentes:
+            data_inicio = data
+            break
+
+    if data_inicio is None:
+        logger.info("Nenhuma data pendente de lançamento encontrada nos dados brutos.")
+        return None, hoje.strftime("%d/%m/%Y")
+
+    logger.info(
+        "Primeira data pendente de lançamento detectada (gap): %s.",
+        data_inicio.strftime("%d/%m/%Y")
+    )
+    return data_inicio.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
 
 
 def linha_dentro_do_filtro(dados):
@@ -636,79 +750,15 @@ def criar_pedido(consolidado):
     try:
         resultado = post(payload)
     except ErroApi as exc:
-        return False, str(exc)
-
-    if not resultado or resultado.get("status") != "success":
-        return False, f"resposta={resultado!r}"
-
-    return True, None
-
-
-def criar_financeiro(consolidado):
-    rdo_id = consolidado["rdo_id"]
-    motoboy_final = consolidado["motoboy_final"]
-
-    colaborador_id = COLABORADORES.get(motoboy_final)
-
-    payload = {
-        "action": "criarfinanceiro",
-        "apiKey": API_KEY,
-        "id": rdo_id + "-FIN",
-        "colaborador_id": colaborador_id or "",
-        "id_pedido": rdo_id,
-        "data": consolidado["data_str"],
-        "horario": consolidado["hora_str"],
-        "hora": consolidado["hora_str"],
-        "tipo": TIPO_FINANCEIRO_PADRAO,
-        "descricao": consolidado["descricao_final"],
-        "vlr_servico": consolidado["valor_rs"],
-        "colaborador": motoboy_final,
-        "observacao": consolidado["observacao"],
-        "situacao": "PAGO",
-    }
-
-    try:
-        resultado = post(payload)
-    except ErroApi as exc:
-        return False, str(exc)
-
-    if not resultado or resultado.get("status") != "success":
-        return False, f"resposta={resultado!r}"
-
-    return True, None
-
-
-def criar_chat(consolidado):
-    rdo_id = consolidado["rdo_id"]
-
-    payload = {
-        "action": "criarchat",
-        "apiKey": API_KEY,
-        "id": rdo_id + "-CHAT",
-        "id_pedido": rdo_id,
-        "data": consolidado["data_str"],
-        "hora": consolidado["hora_str"],
-        "cliente": consolidado["cliente_nome"],
-        "colaborador": consolidado["motoboy_final"],
-        "valor_corrida": consolidado["valor_rs"],
-        "mensagem": consolidado["observacao"],
-    }
-
-    try:
-        resultado = post(payload)
-    except ErroApi as exc:
-        logger.error("Exceção ao criar chat do pedido %s: %s", rdo_id, exc)
+        logger.error("Exceção ao criar pedido %s: %s", rdo_id, exc)
         return False, str(exc)
 
     if not resultado or resultado.get("status") != "success":
         detalhe = f"resposta={resultado!r}"
-        logger.error("Falha ao criar chat do pedido %s: %s", rdo_id, detalhe)
+        logger.error("Falha ao criar pedido %s: %s", rdo_id, detalhe)
         return False, detalhe
 
-    logger.info(
-        "Chat lançado: %s | hora=%s | valor=%s",
-        rdo_id, consolidado["hora_str"], consolidado["valor_rs"]
-    )
+    logger.info("Pedido criado: %s | data=%s | cliente=%s", rdo_id, consolidado["data_str"], consolidado["cliente_nome"])
     return True, None
 
 
@@ -727,6 +777,8 @@ def criar_financeiro(consolidado):
         "colaborador_id": colaborador_id or "",
         "id_pedido": rdo_id,
         "data": consolidado["data_str"],
+        "horario": consolidado["hora_str"],
+        "hora": consolidado["hora_str"],
         "tipo": TIPO_FINANCEIRO_PADRAO,
         "descricao": consolidado["descricao_final"],
         "vlr_servico": consolidado["valor_rs"],
@@ -763,6 +815,9 @@ signal.signal(signal.SIGINT, _tratar_interrupcao)
 
 def main():
     global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ
+    global FILTRO_DATA_INICIO, FILTRO_DATA_FIM
+
+    verificar_ids_duplicados()
 
     COLABORADORES = carregar_colaboradores()
     CLIENTES = carregar_clientes()
@@ -773,119 +828,73 @@ def main():
     conferir_ultimo_rdo_com_financeiro(RDO_SEQ, maior_rdo_financeiro)
 
     todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
-    if not todas_linhas:
-        raise SystemExit(1)
+    logger.info("Total de linhas brutas a processar: %d.", len(todas_linhas))
 
-    linhas_filtradas = []
-    fora_do_filtro = 0
-
-    for linha in todas_linhas:
-        dados_temp = parse_linha(linha)
-        if not dados_temp:
-            continue
-        if linha_dentro_do_filtro(dados_temp):
-            linhas_filtradas.append(linha)
-        else:
-            fora_do_filtro += 1
-
-    if not linhas_filtradas:
-        raise SystemExit(1)
-
-    inseridos = 0
-    ignorados = 0
-    clientes_criados = 0
-    pedidos_sem_financeiro = 0
-    pedidos_sem_data = 0
-    erros_detalhados = []
-
-    total_linhas = len(linhas_filtradas)
-
-    for indice, linha in enumerate(linhas_filtradas, start=1):
-        rdo_id = None
-        try:
-            dados = parse_linha(linha)
-            if not dados:
-                ignorados += 1
-                erros_detalhados.append((indice, "PARSE_LINHA_INVALIDA", linha))
-                continue
-
-            nome_cliente = dados["cliente_nome"]
-            if nome_cliente == "-":
-                nome_cliente = dados["tipo_servico"] or "N/A"
-                dados["cliente_nome"] = nome_cliente
-
-            existia = nome_cliente in CLIENTES
-            try:
-                id_cliente = garantir_cliente(nome_cliente, dados["solicitante"])
-            except Exception as exc:
-                id_cliente = None
-                erros_detalhados.append((indice, "EXCECAO_GARANTIR_CLIENTE", f"{nome_cliente} | {exc}"))
-            time.sleep(INTERVALO_ENTRE_REQUISICOES)
-
-            if not id_cliente:
-                ignorados += 1
-                erros_detalhados.append((indice, "CLIENTE_NAO_CRIADO", nome_cliente))
-                continue
-
-            if not existia:
-                clientes_criados += 1
-
-            motoboy_final = definir_colaborador(dados["motoboy_raw"])
-            rdo_id = proximo_rdo_id()
-
-            consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final)
-
-            if not consolidado["data_str"]:
-                pedidos_sem_data += 1
-                erros_detalhados.append((indice, "SEM_DATA_SERVICO", f"{rdo_id} | bruto={dados['data_bruta']!r}"))
-
-            try:
-                pedido_ok, erro_pedido = criar_pedido(consolidado)
-            except Exception as exc:
-                pedido_ok, erro_pedido = False, str(exc)
-
-            if not pedido_ok:
-                ignorados += 1
-                erros_detalhados.append((indice, "FALHA_CRIAR_PEDIDO", f"{rdo_id} | {erro_pedido}"))
-                time.sleep(INTERVALO_ENTRE_REQUISICOES)
-                continue
-            time.sleep(INTERVALO_ENTRE_REQUISICOES)
-
-            try:
-                financeiro_ok, erro_financeiro = criar_financeiro(consolidado)
-            except Exception as exc:
-                financeiro_ok, erro_financeiro = False, str(exc)
-            time.sleep(INTERVALO_ENTRE_REQUISICOES)
-
-            if not financeiro_ok:
-                pedidos_sem_financeiro += 1
-                erros_detalhados.append((indice, "FALHA_CRIAR_FINANCEIRO", f"{rdo_id} | {erro_financeiro}"))
-
-            inseridos += 1
-
-        except Exception as exc:
-            ignorados += 1
-            trace = traceback.format_exc()
-            erros_detalhados.append((indice, "EXCECAO_NAO_TRATADA", f"rdo={rdo_id} | {exc} | {trace}"))
-            continue
-
-        if indice % 20 == 0 or indice == total_linhas:
-            logger.info("Progresso: %d/%d", indice, total_linhas)
+    FILTRO_DATA_INICIO, FILTRO_DATA_FIM = determinar_filtro_data_automatico(todas_linhas)
 
     logger.info(
-        "Concluído. Pedidos: %d | Clientes novos: %d | Ignorados: %d | Sem financeiro: %d | Sem data reconhecida: %d",
-        inseridos, clientes_criados, ignorados, pedidos_sem_financeiro, pedidos_sem_data,
+        "Filtro de data definido automaticamente (com detecção de gaps): INICIO=%s FIM=%s",
+        FILTRO_DATA_INICIO, FILTRO_DATA_FIM
     )
 
-    if erros_detalhados:
-        for idx, tipo, detalhe in erros_detalhados:
-            logger.error("Linha %d | %s | %s", idx, tipo, detalhe)
+    total_processadas = 0
+    total_ignoradas_filtro = 0
+    total_erros_parse = 0
+    total_sucesso = 0
+    total_falha = 0
 
-    if CLIENTES_PENDENTES:
-        logger.warning("Clientes pendentes de CADASTRO MANUAL: %s", sorted(CLIENTES_PENDENTES))
+    for linha in todas_linhas:
+        dados = parse_linha(linha)
+        if dados is None:
+            total_erros_parse += 1
+            continue
+
+        if not linha_dentro_do_filtro(dados):
+            total_ignoradas_filtro += 1
+            continue
+
+        total_processadas += 1
+
+        if dados["cliente_nome"] and dados["cliente_nome"] != "-":
+            id_cliente = garantir_cliente(dados["cliente_nome"], responsavel=dados.get("solicitante", ""))
+        else:
+            id_cliente = None
+
+        motoboy_final = definir_colaborador(dados["motoboy_raw"])
+
+        rdo_id = proximo_rdo_id()
+
+        consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final)
+
+        ok_pedido, erro_pedido = criar_pedido(consolidado)
+        time.sleep(INTERVALO_ENTRE_REQUISICOES)
+
+        if not ok_pedido:
+            total_falha += 1
+            logger.error("RDO %s: pedido não criado, financeiro será ignorado. Motivo: %s", rdo_id, erro_pedido)
+            continue
+
+        ok_financeiro, erro_financeiro = criar_financeiro(consolidado)
+        time.sleep(INTERVALO_ENTRE_REQUISICOES)
+
+        if ok_pedido and ok_financeiro:
+            total_sucesso += 1
+        else:
+            total_falha += 1
+            logger.error(
+                "RDO %s: concluído com falhas parciais. pedido=%s financeiro=%s",
+                rdo_id, ok_pedido, ok_financeiro
+            )
+
+    logger.info(
+        "Resumo da execução: linhas_totais=%d processadas=%d ignoradas_filtro=%d erros_parse=%d sucesso=%d falha=%d",
+        len(todas_linhas), total_processadas, total_ignoradas_filtro, total_erros_parse, total_sucesso, total_falha
+    )
 
     if COLABORADORES_PENDENTES:
-        logger.warning("Colaboradores presentes no bruto mas AUSENTES no cadastro: %s", sorted(COLABORADORES_PENDENTES))
+        logger.warning("Colaboradores não cadastrados encontrados: %s", sorted(COLABORADORES_PENDENTES))
+    if CLIENTES_PENDENTES:
+        logger.warning("Clientes com falha de cadastro: %s", sorted(CLIENTES_PENDENTES))
 
 
 if __name__ == "__main__":

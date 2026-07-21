@@ -19,6 +19,17 @@
 
       <div class="modal-body p-0">
 
+        <!-- ⚠️ BLOCO DE ERRO (exibido dinamicamente via JS) -->
+        <div class="alert alert-danger d-flex align-items-start gap-2 m-3 mb-0 d-none"
+             id="fin-view-erro-box" role="alert">
+          <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold" style="font-size:.85rem;">Erro ao carregar lançamento</div>
+            <div id="fin-view-erro-msg" style="font-size:.78rem;" class="text-break"></div>
+          </div>
+          <button type="button" class="btn-close" id="fin-view-erro-fechar" aria-label="Fechar"></button>
+        </div>
+
         <div class="fin-extrato-status-bar" id="fin-view-status-bar">
           <div class="d-flex align-items-center gap-2">
             <div class="fin-extrato-status-dot" id="fin-view-status-dot"></div>
