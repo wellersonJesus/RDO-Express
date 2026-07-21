@@ -98,6 +98,18 @@ function doPost(e) {
     if (action === "excluirpedidocompleto")
       return responder(processarExclusaoCompleta(ss, data));
 
+    if (action === "salvarrelatoriofinanceiro" || action === "addrelatoriofinanceiro" || action === "criarrelatoriofinanceiro") {
+      var sheetRelFin = buscarAba(ss, "relatorios");
+      if (!sheetRelFin) return responder({ status: "error", message: "Aba 'relatorios' nao encontrada" });
+      return responder(processarSalvarRelatorioFinanceiro(sheetRelFin, data));
+    }
+
+    if (action === "salvarextrato" || action === "addextrato" || action === "criarextrato") {
+      var sheetExt = buscarAba(ss, "extratos");
+      if (!sheetExt) return responder({ status: "error", message: "Aba 'extratos' nao encontrada" });
+      return responder(processarSalvarExtrato(sheetExt, data));
+    }
+
     var entidade = extrairEntidade(action);
     var nomeAba = mapearEntidade(entidade);
     var sheet = buscarAba(ss, nomeAba);
@@ -134,6 +146,7 @@ function processarGetDashboardData(ss) {
   var sheetPedidos = buscarAba(ss, "pedidos");
   var sheetFinanceiro = buscarAba(ss, "financeiro");
   var sheetRelatorios = buscarAba(ss, "relatorios");
+  var sheetExtratos = buscarAba(ss, "extratos");
 
   return {
     status: "success",
@@ -143,7 +156,8 @@ function processarGetDashboardData(ss) {
       usuarios: sheetUsuarios ? processarGet(sheetUsuarios) : [],
       pedidos: sheetPedidos ? processarGet(sheetPedidos) : [],
       financeiro: sheetFinanceiro ? processarGet(sheetFinanceiro) : [],
-      relatorios: sheetRelatorios ? processarGet(sheetRelatorios) : []
+      relatorios: sheetRelatorios ? processarGet(sheetRelatorios) : [],
+      extratos: sheetExtratos ? processarGet(sheetExtratos) : []
     }
   };
 }
@@ -582,6 +596,7 @@ function processarLogin(user, pass) {
   var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
   var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
   var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+  var colId = headers.indexOf("id");
 
   if (colUser === -1 || colPass === -1)
     return { status: "error", message: "Colunas 'username' ou 'password' nao encontradas" };
@@ -600,6 +615,7 @@ function processarLogin(user, pass) {
       return {
         status: "success",
         user: {
+          id: colId !== -1 ? String(rows[i][colId]).trim() : "",
           username: String(rows[i][colUser]).trim(),
           tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
           imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
@@ -704,6 +720,93 @@ function processarGetFinanceiroCompleto() {
   return { status: "success", data: resultado };
 }
 
+function processarSalvarRelatorioFinanceiro(sheet, data) {
+  var headers = obterHeaders(sheet);
+  var idIndex = headers.indexOf("id");
+  var id = String(data.id || "").trim() || gerarId(sheet, "relatorios");
+
+  var rowData = {};
+  rowData.id = id;
+  rowData.colaborador_id = String(data.colaborador_id || "");
+  rowData.id_pedido = String(data.id_pedido || "-");
+  rowData.data = normalizarDataStr(data.data) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  rowData.tipo = String(data.tipo || "Financeiro");
+  rowData.descricao = String(data.descricao || "");
+  rowData.motoboy = String(data.motoboy || "");
+  rowData.vlr_servico = String(data.vlr_servico || "0");
+  rowData.colaborador = String(data.colaborador || "");
+  rowData.rdo = String(data.rdo || "");
+  rowData.observacao = typeof data.observacao === "string" ? data.observacao : JSON.stringify(data.observacao || {});
+  rowData.situacao = String(data.situacao || "Concluído");
+
+  var row = [];
+  for (var i = 0; i < headers.length; i++) {
+    var campo = headers[i];
+    row.push(rowData[campo] !== undefined ? rowData[campo] : "");
+  }
+  sheet.appendRow(row);
+
+  var colDataIndex = headers.indexOf("data");
+  if (colDataIndex !== -1) {
+    escreverComoTexto(sheet, sheet.getLastRow(), colDataIndex + 1, rowData.data);
+  }
+
+  return { status: "success", id: id, message: "Relatório financeiro salvo com sucesso!" };
+}
+
+function processarSalvarExtrato(sheet, data) {
+  var headers = obterHeaders(sheet);
+  var id = String(data.id || "").trim() || gerarId(sheet, "extratos");
+
+  var rowData = {};
+  var chavesRecebidas = Object.keys(data || {});
+  for (var c = 0; c < chavesRecebidas.length; c++) {
+    var chaveOriginal = chavesRecebidas[c];
+    rowData[normalizarChave(chaveOriginal)] = data[chaveOriginal];
+  }
+  rowData.id = id;
+
+  if (rowData.registros !== undefined && typeof rowData.registros !== "string") {
+    rowData.registros = JSON.stringify(rowData.registros);
+  }
+  if (rowData.totais !== undefined && typeof rowData.totais !== "string") {
+    rowData.totais = JSON.stringify(rowData.totais);
+  }
+  if (!rowData.criado_em) {
+    rowData.criado_em = new Date().toISOString();
+  }
+  if (rowData.data !== undefined) {
+    rowData.data = normalizarDataStr(rowData.data);
+  }
+
+  if (headers.length > 0) {
+    var row = [];
+    for (var i = 0; i < headers.length; i++) {
+      var campo = normalizarChave(headers[i]);
+      row.push(rowData[campo] !== undefined ? String(rowData[campo]) : "");
+    }
+    sheet.appendRow(row);
+
+    var colDataIndex = headers.indexOf("data");
+    if (colDataIndex !== -1 && row[colDataIndex]) {
+      escreverComoTexto(sheet, sheet.getLastRow(), colDataIndex + 1, row[colDataIndex]);
+    }
+  } else {
+    sheet.appendRow([
+      id,
+      String(rowData.origem || ""),
+      String(rowData.periodo_inicio || ""),
+      String(rowData.periodo_fim || ""),
+      String(rowData.periodolabel || ""),
+      String(rowData.totais || ""),
+      String(rowData.registros || ""),
+      String(rowData.criado_em || "")
+    ]);
+  }
+
+  return { status: "success", id: id, message: "Extrato salvo com sucesso!" };
+}
+
 function processarAdd(sheet, data, entity) {
   var headers = obterHeaders(sheet);
   var idIndex = headers.indexOf("id");
@@ -713,7 +816,8 @@ function processarAdd(sheet, data, entity) {
   var chavesRecebidas = Object.keys(data || {});
   for (var c = 0; c < chavesRecebidas.length; c++) {
     var chaveOriginal = chavesRecebidas[c];
-    dataNorm[normalizarChave(chaveOriginal)] = data[chaveOriginal];
+    var valorOriginal = data[chaveOriginal];
+    dataNorm[normalizarChave(chaveOriginal)] = (valorOriginal !== null && typeof valorOriginal === "object") ? JSON.stringify(valorOriginal) : valorOriginal;
   }
 
   if (idIndex !== -1) {
@@ -733,6 +837,8 @@ function processarAdd(sheet, data, entity) {
     } else if (campo === "contato" && dataNorm.telefone && !dataNorm.contato) {
       valor = String(dataNorm.telefone).trim();
     } else if (campo === "data_criacao" && !dataNorm.data_criacao) {
+      valor = new Date().toISOString();
+    } else if (campo === "criado_em" && !dataNorm.criado_em) {
       valor = new Date().toISOString();
     } else if (campo === "data" && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
       valor = normalizarDataStr(dataNorm[campo]);
@@ -774,10 +880,14 @@ function processarUpdate(sheet, data) {
         var chaveNorm = normalizarChave(keys[k]);
         var colIndex = headers.indexOf(chaveNorm);
         if (colIndex !== -1) {
+          var valorAtualizar = data[keys[k]];
           if (chaveNorm === "data") {
-            escreverComoTexto(sheet, i + 1, colIndex + 1, normalizarDataStr(data[keys[k]]));
+            escreverComoTexto(sheet, i + 1, colIndex + 1, normalizarDataStr(valorAtualizar));
           } else {
-            sheet.getRange(i + 1, colIndex + 1).setValue(data[keys[k]]);
+            if (valorAtualizar !== null && typeof valorAtualizar === "object") {
+              valorAtualizar = JSON.stringify(valorAtualizar);
+            }
+            sheet.getRange(i + 1, colIndex + 1).setValue(valorAtualizar);
           }
         }
       }
@@ -840,7 +950,13 @@ function mapearEntidade(entity) {
     "financeiro": "financeiro",
     "financeiros": "financeiro",
     "relatorio": "relatorios",
-    "relatorios": "relatorios"
+    "relatorios": "relatorios",
+    "relatoriofinanceiro": "relatorios",
+    "relatoriosfinanceiros": "relatorios",
+    "extrato": "extratos",
+    "extratos": "extratos",
+    "extratofinanceiro": "extratos",
+    "extratosfinanceiros": "extratos"
   };
   return mapa[entity] || entity;
 }
@@ -931,6 +1047,10 @@ function gerarId(sheet, entity) {
 
   if (entity.indexOf("relatorio") !== -1) {
     return "REL" + Date.now();
+  }
+
+  if (entity.indexOf("extrato") !== -1) {
+    return "EXT" + Date.now();
   }
 
   var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
