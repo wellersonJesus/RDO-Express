@@ -1140,7 +1140,6 @@
 
   function registrarEventos() {
     try {
-
       bindBtnSalvarPeriodoCaixa();
 
       document.querySelectorAll('.fin-tab').forEach(function (tab) {
@@ -1241,6 +1240,9 @@
                 tipo: r.tipo,
                 descricao: r.descricao,
                 valor: r.valor,
+                motoboy: r.motoboy,
+                valorColaborador: r.valorColaborador,
+                valorEmpresa: r.valorEmpresa,
                 situacao: r.situacao
               };
             });
@@ -1277,12 +1279,27 @@
             if (!lista.length) { finToast('Nenhum registro no período para gerar relatório.', 'warning'); return; }
 
             var periodoLabel = formatDateBR(state.caixa.dataInicio) + ' a ' + formatDateBR(state.caixa.dataFim);
-
-            // NÃO fechar o modal aqui — ele precisa ficar visível para o print funcionar
-            abrirRelatorioFinanceiro('caixa', lista, 'Relatório de Caixa - ' + periodoLabel, state.caixa.dataInicio, state.caixa.dataFim);
+            abrirJanelaPdfFinanceiro('Relatório de Caixa - ' + periodoLabel, periodoLabel, lista);
           } catch (err) {
             console.error('[btnRelatorioCaixaModal]', err);
             finToast('Erro ao gerar relatório: ' + err.message, 'danger');
+          }
+        });
+      }
+
+      var btnBaixarCaixaModal = document.getElementById('btn-baixar-fin-caixa');
+      if (btnBaixarCaixaModal) {
+        btnBaixarCaixaModal.addEventListener('click', function () {
+          try {
+            if (!state.caixa.dataInicio || !state.caixa.dataFim) { finToast('Nenhum período selecionado.', 'warning'); return; }
+            var lista = registrosNoPeriodo(state.caixa.dataInicio, state.caixa.dataFim);
+            if (!lista.length) { finToast('Nenhum registro no período.', 'warning'); return; }
+
+            var periodoLabel = formatDateBR(state.caixa.dataInicio) + ' a ' + formatDateBR(state.caixa.dataFim);
+            baixarHtmlFinanceiro('Relatorio_Caixa_' + periodoLabel.replace(/[\s\/]+/g, '_'), periodoLabel, lista);
+          } catch (err) {
+            console.error('[btnBaixarCaixaModal]', err);
+            finToast('Erro ao baixar relatório: ' + err.message, 'danger');
           }
         });
       }
@@ -1612,69 +1629,169 @@
     });
   }
 
-  function abrirModalVisualizarPeriodoCaixa(periodo) {
-    var OLD_ID = 'modalVerPeriodoCaixaDyn';
-    var old = document.getElementById(OLD_ID);
-    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-
-    var totais = calcularTotaisRegistros(periodo.registros);
-    var ordenados = (periodo.registros || []).slice().sort(function (a, b) { return a.dataISO < b.dataISO ? 1 : -1; });
+  function gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros) {
+    var totais = calcularTotaisRegistros(registros);
+    var ordenados = (registros || []).slice().sort(function (a, b) {
+      return a.dataISO < b.dataISO ? 1 : -1;
+    });
 
     var linhasHtml = ordenados.length ? ordenados.map(function (r) {
-      return '<tr><td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-        '<td title="' + escapeHtml(r.descricao || '-') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
-        '<td class="text-end ' + (r.tipo === 'entrada' ? 'text-success' : 'text-danger') + '">' + formatarMoeda(r.valor) + '</td>' +
-        '<td class="text-center">' + getStatusBadge(r.situacao) + '</td></tr>';
-    }).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">Nenhum lançamento.</td></tr>';
+      return '<tr>' +
+        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td>' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + '</td>' +
+        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
+        '<td style="text-align:center;">' + escapeHtml((r.situacao || '-').toUpperCase()) + '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
 
-    var html =
-      '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
-      '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:560px;">' +
-      '<div class="modal-content border-0 rounded-4 shadow overflow-hidden">' +
-      '<div class="fin-form-header">' +
-      '<div class="d-flex align-items-center gap-3">' +
-      '<div class="fin-form-header-icon"><i class="bi bi-calendar-range"></i></div>' +
-      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">' + escapeHtml(periodo.periodoLabel || '-') + '</h6>' +
-      '<small class="fin-form-subtitle">Relatório de período salvo</small></div></div>' +
-      '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
-      '</div>' +
-      '<div class="modal-body px-3 py-3 fin-print-area">' +
-      '<div class="row g-2 mb-3">' +
-      '<div class="col-6"><div class="caixa-mini-card caixa-mini-entrada" style="padding:8px 12px;"><div class="caixa-mini-label">Receitas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.entradas) + '</div></div></div>' +
-      '<div class="col-6"><div class="caixa-mini-card caixa-mini-saida" style="padding:8px 12px;"><div class="caixa-mini-label">Despesas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.saidas) + '</div></div></div>' +
-      '</div>' +
-      '<div class="d-flex justify-content-between align-items-center px-1 mb-2">' +
-      '<span style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">Saldo do período</span>' +
-      '<span style="font-size:.95rem;font-weight:700;" class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span>' +
-      '</div>' +
-      '<div class="table-responsive"><table class="table table-sm align-middle border-0 mb-0" style="font-size:.76rem;">' +
-      '<thead style="background:#f8f9fa;"><tr>' +
-      '<th class="border-0 fw-semibold" style="font-size:.65rem;">Data</th>' +
-      '<th class="border-0 fw-semibold" style="font-size:.65rem;">Descrição</th>' +
-      '<th class="text-end border-0 fw-semibold" style="font-size:.65rem;">Valor</th>' +
-      '<th class="text-center border-0 fw-semibold" style="font-size:.65rem;">Status</th>' +
-      '</tr></thead><tbody>' + linhasHtml + '</tbody></table></div>' +
-      '</div>' +
-      '<div class="modal-footer border-0 px-3 pb-3 pt-0 justify-content-between">' +
-      '<div class="d-flex gap-2">' +
-      '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="' + OLD_ID + '-btn-pdf"><i class="bi bi-file-earmark-pdf-fill me-1"></i>Gerar PDF</button>' +
-      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" id="' + OLD_ID + '-btn-copiar"><i class="bi bi-clipboard me-1"></i>Copiar</button>' +
-      '</div>' +
-      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.74rem;">Fechar</button>' +
-      '</div>' +
-      '</div></div></div>';
+    var agora = new Date().toLocaleString('pt-BR');
 
-    document.body.insertAdjacentHTML('beforeend', html);
-    var modalEl = document.getElementById(OLD_ID);
-    var modalInst = new bootstrap.Modal(modalEl);
+    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' +
+      '<style>' +
+      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
+      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
+      'h1 span{color:#222;}' +
+      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
+      '.resumo{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}' +
+      '.resumo div{flex:1;min-width:140px;border:1px solid #eee;border-radius:8px;padding:10px 14px;}' +
+      '.resumo .label{font-size:10px;text-transform:uppercase;color:#999;font-weight:700;letter-spacing:.04em;}' +
+      '.resumo .valor{font-size:15px;font-weight:700;margin-top:2px;}' +
+      '.entrada{color:#198754;} .saida{color:#dc3545;} .saldo{color:#0d6efd;}' +
+      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
+      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
+      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
+      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
+      '@media print{ body{margin:10mm;} }' +
+      '</style></head><body>' +
+      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Financeiro</span></h1>' +
+      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
+      '<div class="resumo">' +
+      '<div><div class="label">Receitas</div><div class="valor entrada">' + formatarMoeda(totais.entradas) + '</div></div>' +
+      '<div><div class="label">Despesas</div><div class="valor saida">' + formatarMoeda(totais.saidas) + '</div></div>' +
+      '<div><div class="label">Empresa (20%)</div><div class="valor">' + formatarMoeda(totais.empresa) + '</div></div>' +
+      '<div><div class="label">Colaboradores (80%)</div><div class="valor">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
+      '<div><div class="label">Saldo do Período</div><div class="valor saldo">' + formatarMoeda(totais.saldo) + '</div></div>' +
+      '</div>' +
+      '<table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Colaborador</th><th style="text-align:right;">Valor</th><th style="text-align:center;">Situação</th></tr></thead>' +
+      '<tbody>' + linhasHtml + '</tbody></table>' +
+      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
+      '</body></html>';
+  }
 
-    var btnPdf = document.getElementById(OLD_ID + '-btn-pdf');
-    var btnCopiar = document.getElementById(OLD_ID + '-btn-copiar');
-    if (btnPdf) btnPdf.addEventListener('click', function () { window.print(); });
-    if (btnCopiar) btnCopiar.addEventListener('click', function () { copiarTextoClipboard(gerarTextoPeriodoCaixa(periodo)); });
+  function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
+    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
+    var win = window.open('', '_blank', 'width=900,height=700');
 
-    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
-    modalInst.show();
+    if (!win) {
+      finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups para este site.', 'warning');
+      return;
+    }
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    win.onload = function () {
+      win.focus();
+      setTimeout(function () { win.print(); }, 300);
+    };
+  }
+
+  function baixarHtmlFinanceiro(titulo, periodoLabel, registros) {
+    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (titulo || 'relatorio').replace(/[^\w\-]+/g, '_') + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
+  }
+
+  function abrirModalVisualizarPeriodoCaixa(periodo) {
+    var idModal = 'modal-visualizar-caixa-' + periodo.id;
+    var registros = periodo.registros || [];
+    var totais = calcularTotaisRegistros(registros);
+
+    var linhasHtml = registros.length ? registros.slice().sort(function (a, b) {
+      return a.dataISO < b.dataISO ? 1 : -1;
+    }).map(function (r) {
+      return '<tr>' +
+        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td>' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + '</td>' +
+        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+        '<td class="text-end">' + formatarMoeda(r.valor) + '</td>' +
+        '<td class="text-center">' + escapeHtml((r.situacao || '-').toUpperCase()) + '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">Nenhum lançamento neste período.</td></tr>';
+
+    var modalHtml =
+      '<div class="modal fade" id="' + idModal + '" tabindex="-1">' +
+      '<div class="modal-dialog modal-lg modal-dialog-scrollable">' +
+      '<div class="modal-content">' +
+      '<div class="modal-header">' +
+      '<h5 class="modal-title">Carteira &middot; ' + escapeHtml(periodo.periodoLabel || '-') + '</h5>' +
+      '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+      '<div class="d-flex flex-wrap gap-2 mb-3">' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Receitas</div><div class="fw-bold text-success">' + formatarMoeda(totais.entradas) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Despesas</div><div class="fw-bold text-danger">' + formatarMoeda(totais.saidas) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Empresa (20%)</div><div class="fw-bold">' + formatarMoeda(totais.empresa) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Colaboradores (80%)</div><div class="fw-bold">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Saldo</div><div class="fw-bold text-primary">' + formatarMoeda(totais.saldo) + '</div></div>' +
+      '</div>' +
+      '<div class="table-responsive">' +
+      '<table class="table table-sm align-middle">' +
+      '<thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Colaborador</th><th class="text-end">Valor</th><th class="text-center">Situação</th></tr></thead>' +
+      '<tbody>' + linhasHtml + '</tbody>' +
+      '</table>' +
+      '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>' +
+      '<button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="' + idModal + '-btn-baixar"><i class="bi bi-download me-1"></i>Baixar</button>' +
+      '<button type="button" class="btn btn-danger btn-sm rounded-pill px-3" id="' + idModal + '-btn-pdf"><i class="bi bi-file-pdf me-1"></i>Gerar PDF</button>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    var antigo = document.getElementById(idModal);
+    if (antigo) antigo.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    var modalEl = document.getElementById(idModal);
+    var modalInstance = new bootstrap.Modal(modalEl);
+
+    var btnPdf = document.getElementById(idModal + '-btn-pdf');
+    var btnBaixar = document.getElementById(idModal + '-btn-baixar');
+
+    if (btnPdf) {
+      btnPdf.addEventListener('click', function () {
+        abrirJanelaPdfFinanceiro('Relatório de Caixa', periodo.periodoLabel, registros);
+      });
+    }
+
+    if (btnBaixar) {
+      btnBaixar.addEventListener('click', function () {
+        var nomeArquivo = 'Relatorio_Caixa_' + (periodo.periodoLabel || '').replace(/[\s\/]+/g, '_');
+        baixarHtmlFinanceiro(nomeArquivo, periodo.periodoLabel, registros);
+      });
+    }
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalEl.remove();
+    });
+
+    modalInstance.show();
   }
 
   function abrirModalView(lancamento) {
@@ -1896,6 +2013,101 @@
 
     state.caixa.listaFiltradaAtual = filtrados;
     renderCaixaListaDiaria();
+  }
+
+  function gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros) {
+    var totais = calcularTotaisRegistros(registros);
+    var ordenados = (registros || []).slice().sort(function (a, b) {
+      return a.dataISO < b.dataISO ? 1 : -1;
+    });
+
+    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
+      return '<tr>' +
+        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td>' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + '</td>' +
+        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
+        '<td style="text-align:center;">' + escapeHtml((r.situacao || '-').toUpperCase()) + '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
+
+    var agora = new Date().toLocaleString('pt-BR');
+
+    var html =
+      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>' + escapeHtml(titulo) + '</title>' +
+      '<style>' +
+      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
+      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
+      'h1 span{color:#222;}' +
+      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
+      '.resumo{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}' +
+      '.resumo div{flex:1;min-width:140px;border:1px solid #eee;border-radius:8px;padding:10px 14px;}' +
+      '.resumo .label{font-size:10px;text-transform:uppercase;color:#999;font-weight:700;letter-spacing:.04em;}' +
+      '.resumo .valor{font-size:15px;font-weight:700;margin-top:2px;}' +
+      '.entrada{color:#198754;} .saida{color:#dc3545;} .saldo{color:#0d6efd;}' +
+      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
+      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
+      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
+      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
+      '@media print{ body{margin:10mm;} }' +
+      '</style></head><body>' +
+
+      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Financeiro</span></h1>' +
+      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
+
+      '<div class="resumo">' +
+      '<div><div class="label">Receitas</div><div class="valor entrada">' + formatarMoeda(totais.entradas) + '</div></div>' +
+      '<div><div class="label">Despesas</div><div class="valor saida">' + formatarMoeda(totais.saidas) + '</div></div>' +
+      '<div><div class="label">Empresa (20%)</div><div class="valor">' + formatarMoeda(totais.empresa) + '</div></div>' +
+      '<div><div class="label">Colaboradores (80%)</div><div class="valor">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
+      '<div><div class="label">Saldo do Período</div><div class="valor saldo">' + formatarMoeda(totais.saldo) + '</div></div>' +
+      '</div>' +
+
+      '<table><thead><tr>' +
+      '<th>Data</th><th>Descrição</th><th>Tipo</th><th>Colaborador</th><th style="text-align:right;">Valor</th><th style="text-align:center;">Situação</th>' +
+      '</tr></thead><tbody>' + linhasHtml + '</tbody></table>' +
+
+      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
+
+      '</body></html>';
+
+    return html;
+  }
+
+  function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
+    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
+    var win = window.open('', '_blank', 'width=900,height=700');
+
+    if (!win) {
+      finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups para este site.', 'warning');
+      return;
+    }
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    // Aguarda o render completo antes de chamar o print (evita PDF em branco)
+    win.onload = function () {
+      win.focus();
+      setTimeout(function () { win.print(); }, 300);
+    };
+  }
+
+  function baixarHtmlFinanceiro(titulo, periodoLabel, registros) {
+    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (titulo || 'relatorio').replace(/[^\w\-]+/g, '_') + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
   }
 
   function renderCaixaListaDiaria() {
@@ -2855,20 +3067,22 @@
     var lista = Array.isArray(registros) ? registros : [];
     var periodoLabel = (inicio && fim) ? (formatDateBR(inicio) + ' a ' + formatDateBR(fim)) : 'Todos os registros';
 
-    if (tipo === 'caixa') {
-      window.print();
+    if (!lista.length) {
+      finToast('Nenhum registro para gerar relatório.', 'warning');
       return;
     }
 
     var origemLabel = 'Caixa';
     if (tipo === 'extrato') origemLabel = tituloBanco || 'Extrato';
     if (tipo === 'financeiro') origemLabel = 'Financeiro (RDO)';
+    if (tipo === 'caixa') origemLabel = tituloBanco || 'Relatório de Caixa';
 
-    if (!lista.length) {
-      finToast('Nenhum registro para gerar relatório.', 'warning');
-      return;
+    // ✅ Agora usa a geração real de HTML (mesma lógica da carteira), em vez de window.print() puro
+    if (tipo === 'caixa') {
+      abrirJanelaPdfFinanceiro(origemLabel, periodoLabel, lista);
     }
 
+    // Salva no histórico de extratos também (mantém seu comportamento anterior)
     salvarExtratoStorage({
       id: gerarIdExtrato(),
       origem: origemLabel,
@@ -2878,7 +3092,7 @@
     });
 
     renderizarListaExtratos();
-    finToast('Relatório gerado e salvo na lista!', 'success');
+    finToast('Relatório gerado com sucesso!', 'success');
   }
 
   function _garantirModuloRelatorioFin() {
