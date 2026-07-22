@@ -1424,6 +1424,7 @@
         html += '<thead><tr>';
         info.campos.forEach(function (c) { html += '<th>' + escapeHtml(c.label) + '</th>'; });
         html += '</tr></thead><tbody>';
+
         info.linhas.forEach(function (linha) {
           html += '<tr>';
           info.campos.forEach(function (c) {
@@ -1432,8 +1433,10 @@
               valor = formatarMoeda(valor);
             } else if (c.chave === 'horario') {
               valor = extrairHora(valor);
+            } else if (c.chave === 'solicitante') {
+              valor = abreviarNome(valor); // <-- abreviação aplicada aqui
             }
-            html += '<td>' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
+            html += '<td class="rel-td-nowrap">' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
           });
           html += '</tr>';
         });
@@ -1488,7 +1491,7 @@
         totalGeralCalculado += m.valorTotalCalculado;
 
         html += '<tr>' +
-          '<td><strong>' + escapeHtml(m.nome) + '</strong></td>' +
+          '<td class="rel-td-nowrap"><strong>' + escapeHtml(abreviarNome(m.nome)) + '</strong></td>' +
           '<td>' + m.qtd + '</td>' +
           '<td>' + formatarMoeda(m.receitaTotal) + '</td>' +
           '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(m.valorMotoboy) + '</td>' +
@@ -1528,7 +1531,7 @@
         totalGeralCli += c.total;
         totalPendGeralCli += c.totalPendente;
         html += '<tr>' +
-          '<td><strong>' + escapeHtml(c.nome) + '</strong></td>' +
+          '<td class="rel-td-nowrap"><strong>' + escapeHtml(abreviarNome(c.nome)) + '</strong></td>' +
           '<td>' + c.qtd + '</td>' +
           '<td>' + formatarMoeda(c.total) + '</td>' +
           '<td>' + (c.qtdPendente || '-') + '</td>' +
@@ -1897,6 +1900,18 @@
         valorTotalCalculado: (m.receitaTotal * PERCENTUAL_MOTOBOY) + (m.receitaTotal * PERCENTUAL_RDO)
       };
     }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
+  }
+
+  function abreviarNome(nomeCompleto) {
+    if (!nomeCompleto) return '';
+    const partes = String(nomeCompleto).trim().split(/\s+/).filter(Boolean);
+
+    if (partes.length <= 1) return partes[0] || '';
+
+    const primeiro = partes[0];
+    const ultimo = partes[partes.length - 1];
+
+    return primeiro.charAt(0).toUpperCase() + '. ' + ultimo;
   }
 
   window.initRelatorios = initRelatorios;

@@ -1167,3 +1167,16 @@
     padding: 6px 10px;
   }
 }
+
+.rel-td-nowrap {
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rel-modal-card-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
