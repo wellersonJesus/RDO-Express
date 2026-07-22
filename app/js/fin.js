@@ -9,6 +9,10 @@
   var _finJaInicializado = false;
   var _relatorioFinCarregando = null;
 
+  var CAIXA_PERIODO_STORAGE_KEY = 'rdo_periodos_caixa_salvos';
+  var CAIXA_PERIODO_MAX = 50;
+  var caixaPeriodoAtual = { inicio: '', fim: '', registros: [] };
+
   var state = {
     cache: [],
     pedidosCache: {},
@@ -415,6 +419,96 @@
 
   function gerarIdFinanceiro() { return Math.random().toString(36).substr(2, 11); }
   function gerarIdExtrato() { return Math.random().toString(36).substr(2, 11); }
+
+  function carregarPeriodosCaixaStorage() {
+    try {
+      var raw = localStorage.getItem(CAIXA_PERIODO_STORAGE_KEY);
+      if (!raw) return [];
+      var lista = JSON.parse(raw);
+      return Array.isArray(lista) ? lista : [];
+    } catch (e) { return []; }
+  }
+
+  function salvarPeriodoCaixaStorage(periodo) {
+    try {
+      var lista = carregarPeriodosCaixaStorage();
+      lista.unshift(periodo);
+      if (lista.length > CAIXA_PERIODO_MAX) lista = lista.slice(0, CAIXA_PERIODO_MAX);
+      localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(lista));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  var btnSalvarPeriodoCaixa = document.getElementById('btn-salvar-periodo-caixa');
+  if (btnSalvarPeriodoCaixa) {
+    btnSalvarPeriodoCaixa.addEventListener('click', function () {
+      try {
+        if (!caixaPeriodoAtual.registros.length) {
+          finToast('Nenhum lançamento para salvar. Faça uma busca primeiro.', 'warning');
+          return;
+        }
+
+        // ISOLAMENTO TOTAL DO MÓDULO PEDIDOS: só guarda os campos abaixo
+        var registrosIsolados = caixaPeriodoAtual.registros.map(function (r) {
+          return {
+            dataISO: r.dataISO,
+            dataDisplay: r.dataDisplay,
+            tipo: r.tipo,
+            descricao: r.descricao,
+            valor: r.valor,
+            situacao: r.situacao
+          };
+        });
+
+        var periodoSalvo = {
+          id: gerarIdExtrato(),
+          inicio: caixaPeriodoAtual.inicio,
+          fim: caixaPeriodoAtual.fim,
+          periodoLabel: formatDateBR(caixaPeriodoAtual.inicio) + ' a ' + formatDateBR(caixaPeriodoAtual.fim),
+          registros: registrosIsolados,
+          criadoEm: Date.now()
+        };
+
+        salvarPeriodoCaixaStorage(periodoSalvo);
+        renderPeriodosSalvosCaixa();
+        finToast('Período salvo com sucesso!', 'success');
+
+        var modalEl = document.getElementById('modalPeriodoCaixa');
+        if (modalEl) { var inst = bootstrap.Modal.getOrCreateInstance(modalEl); inst.hide(); }
+      } catch (err) {
+        console.error('[btnSalvarPeriodoCaixa]', err);
+        finToast('Erro ao salvar período: ' + err.message, 'danger');
+      }
+    });
+  }
+
+  function buscarPeriodoCaixaPorId(id) {
+    return carregarPeriodosCaixaStorage().find(function (p) { return p.id === id; }) || null;
+  }
+
+  function removerPeriodoCaixaStorage(id) {
+    try {
+      var lista = carregarPeriodosCaixaStorage().filter(function (p) { return p.id !== id; });
+      localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(lista));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function gerarTextoPeriodoCaixa(periodo) {
+    var totais = calcularTotaisRegistros(periodo.registros);
+    var linhas = [];
+    linhas.push('RELATÓRIO DE CAIXA');
+    linhas.push('Período: ' + (periodo.periodoLabel || '-'));
+    linhas.push('');
+    (periodo.registros || []).slice().sort(function (a, b) { return a.dataISO < b.dataISO ? -1 : 1; }).forEach(function (r) {
+      linhas.push(r.dataDisplay + ' | ' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + ' | ' + (r.descricao || '-') + ' | ' + formatarMoeda(r.valor));
+    });
+    linhas.push('');
+    linhas.push('Total Entradas: ' + formatarMoeda(totais.entradas));
+    linhas.push('Total Saídas: ' + formatarMoeda(totais.saidas));
+    linhas.push('Saldo: ' + formatarMoeda(totais.saldo));
+    return linhas.join('\n');
+  }
 
   function gerarTextoExtrato(extrato) {
     var totais = calcularTotaisRegistros(extrato.registros);
@@ -1125,12 +1219,14 @@
 
             state.caixa.dataInicio = periodo.inicio;
             state.caixa.dataFim = periodo.fim;
-            state.caixa.buscaRealizada = true;   // ✅ NOVO: libera a exibição
+            state.caixa.buscaRealizada = true;
 
-            renderCaixa();                        // ✅ NOVO: popula lista principal do Caixa
+            renderCaixa();
 
             var registros = registrosNoPeriodo(periodo.inicio, periodo.fim);
             if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
+
+            caixaPeriodoAtual = { inicio: periodo.inicio, fim: periodo.fim, registros: registros }; // NOVO
 
             abrirModalPeriodoCaixa(periodo.inicio, periodo.fim, registros);
           } catch (err) {
@@ -1321,6 +1417,71 @@
   var btnFecharErroFin = document.getElementById('fin-view-erro-fechar');
   if (btnFecharErroFin) btnFecharErroFin.addEventListener('click', ocultarErroViewFin);
 
+  function abrirModalVisualizarPeriodoCaixa(periodo) {
+    var OLD_ID = 'modalVerPeriodoCaixaDyn';
+    var old = document.getElementById(OLD_ID);
+    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+
+    var totais = calcularTotaisRegistros(periodo.registros);
+    var ordenados = (periodo.registros || []).slice().sort(function (a, b) { return a.dataISO < b.dataISO ? 1 : -1; });
+
+    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
+      return '<tr><td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td title="' + escapeHtml(r.descricao || '-') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
+        '<td class="text-end ' + (r.tipo === 'entrada' ? 'text-success' : 'text-danger') + '">' + formatarMoeda(r.valor) + '</td>' +
+        '<td class="text-center">' + getStatusBadge(r.situacao) + '</td></tr>';
+    }).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">Nenhum lançamento.</td></tr>';
+
+    var html =
+      '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
+      '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:560px;">' +
+      '<div class="modal-content border-0 rounded-4 shadow overflow-hidden">' +
+      '<div class="fin-form-header">' +
+      '<div class="d-flex align-items-center gap-3">' +
+      '<div class="fin-form-header-icon"><i class="bi bi-calendar-range"></i></div>' +
+      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.88rem;">' + escapeHtml(periodo.periodoLabel || '-') + '</h6>' +
+      '<small class="fin-form-subtitle">Relatório de período salvo</small></div></div>' +
+      '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
+      '</div>' +
+      '<div class="modal-body px-3 py-3">' +
+      '<div class="row g-2 mb-3">' +
+      '<div class="col-6"><div class="caixa-mini-card caixa-mini-entrada" style="padding:8px 12px;"><div class="caixa-mini-label">Receitas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.entradas) + '</div></div></div>' +
+      '<div class="col-6"><div class="caixa-mini-card caixa-mini-saida" style="padding:8px 12px;"><div class="caixa-mini-label">Despesas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.saidas) + '</div></div></div>' +
+      '</div>' +
+      '<div class="d-flex justify-content-between align-items-center px-1 mb-2">' +
+      '<span style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">Saldo do período</span>' +
+      '<span style="font-size:.95rem;font-weight:700;" class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span>' +
+      '</div>' +
+      '<div class="table-responsive"><table class="table table-sm align-middle border-0 mb-0" style="font-size:.76rem;">' +
+      '<thead style="background:#f8f9fa;"><tr>' +
+      '<th class="border-0 fw-semibold" style="font-size:.65rem;">Data</th>' +
+      '<th class="border-0 fw-semibold" style="font-size:.65rem;">Descrição</th>' +
+      '<th class="text-end border-0 fw-semibold" style="font-size:.65rem;">Valor</th>' +
+      '<th class="text-center border-0 fw-semibold" style="font-size:.65rem;">Status</th>' +
+      '</tr></thead><tbody>' + linhasHtml + '</tbody></table></div>' +
+      '</div>' +
+      '<div class="modal-footer border-0 px-3 pb-3 pt-0 justify-content-between">' +
+      '<div class="d-flex gap-2">' +
+      '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" id="' + OLD_ID + '-btn-pdf"><i class="bi bi-file-earmark-pdf-fill me-1"></i>Gerar PDF</button>' +
+      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" id="' + OLD_ID + '-btn-copiar"><i class="bi bi-clipboard me-1"></i>Copiar</button>' +
+      '</div>' +
+      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.74rem;">Fechar</button>' +
+      '</div>' +
+      '</div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var modalEl = document.getElementById(OLD_ID);
+    var modalInst = new bootstrap.Modal(modalEl);
+
+    var btnPdf = document.getElementById(OLD_ID + '-btn-pdf');
+    var btnCopiar = document.getElementById(OLD_ID + '-btn-copiar');
+    if (btnPdf) btnPdf.addEventListener('click', function () { window.print(); });
+    if (btnCopiar) btnCopiar.addEventListener('click', function () { copiarTextoClipboard(gerarTextoPeriodoCaixa(periodo)); });
+
+    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
+    modalInst.show();
+  }
+
   function abrirModalView(lancamento) {
     ocultarErroViewFin();
     try {
@@ -1460,14 +1621,25 @@
           'Selecione o período e clique em <strong>Buscar</strong> para exibir os lançamentos.' +
           '</div>';
       }
-      // zera os cards
+
+      // ✅ CORRIGIDO: respeita o estado do olhinho mesmo sem busca (tudo zerado, mas exibido conforme visibilidade)
       ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores'].forEach(function (k) {
-        if (els[k]) { els[k].setAttribute('data-valor-real', formatarMoeda(0)); els[k].textContent = 'R$ ****'; }
+        if (els[k]) {
+          els[k].setAttribute('data-valor-real', formatarMoeda(0));
+          els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
+        }
       });
       if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = '0';
-      if (els.rdoPaySaldo) { els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(0)); els.rdoPaySaldo.textContent = 'R$ ****'; }
-      if (els.rdoPaySaldoColabs) { els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(0)); els.rdoPaySaldoColabs.textContent = 'R$ ****'; }
-      renderRelatoriosSalvosCaixa();
+      if (els.rdoPaySaldo) {
+        els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(0));
+        els.rdoPaySaldo.textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
+      }
+      if (els.rdoPaySaldoColabs) {
+        els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(0));
+        els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
+      }
+
+      renderPeriodosSalvosCaixa(); // ✅ nome correto
       return;
     }
 
@@ -1492,7 +1664,7 @@
       els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral2.colaboradores) : 'R$ ****';
     }
 
-    renderRelatoriosSalvosCaixa();
+    renderPeriodosSalvosCaixa(); // ✅ CORRIGIDO: era renderRelatoriosSalvosCaixa (não existia mais)
   }
 
   function aplicarFiltroCaixaLocal() {
@@ -1788,16 +1960,14 @@
     els.extratoModalOverlay.style.display = 'flex';
   }
 
-  function renderRelatoriosSalvosCaixa() {
+  function renderPeriodosSalvosCaixa() {
     var wrapper = document.getElementById('caixa-relatorios-salvos');
     var lista = document.getElementById('caixa-relatorios-salvos-lista');
     if (!wrapper || !lista) return;
 
-    var extratos = carregarExtratosStorage().filter(function (e) {
-      return (e.origem || '').toLowerCase() === 'caixa';
-    });
+    var periodos = carregarPeriodosCaixaStorage();
 
-    if (!extratos.length) {
+    if (!periodos.length) {
       wrapper.style.display = 'none';
       lista.innerHTML = '';
       return;
@@ -1805,69 +1975,59 @@
 
     wrapper.style.display = 'block';
 
-    lista.innerHTML = extratos.map(function (ex) {
-      var totais = calcularTotaisRegistros(ex.registros);
-      var totalRegs = (ex.registros || []).length;
-      var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
+    lista.innerHTML = periodos.map(function (p) {
+      var totais = calcularTotaisRegistros(p.registros);
+      var totalRegs = (p.registros || []).length;
+      var criadoLabel = p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : '-';
       var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
 
-      return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '" style="cursor:pointer;">' +
+      return '<div class="extrato-item-card" data-periodo-id="' + escapeHtml(p.id) + '" style="cursor:pointer;">' +
         '<div class="extrato-item-left">' +
-        '<div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
+        '<div class="extrato-item-icon"><i class="bi bi-calendar-range"></i></div>' +
         '<div>' +
-        '<div class="extrato-item-titulo">' + escapeHtml(ex.periodoLabel || '-') + '</div>' +
-        '<div class="extrato-item-sub">' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
+        '<div class="extrato-item-titulo">' + escapeHtml(p.periodoLabel || '-') + '</div>' +
+        '<div class="extrato-item-sub">' + totalRegs + ' lançamento' + (totalRegs !== 1 ? 's' : '') + '</div>' +
         '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div>' +
         '</div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
         '<div style="display:flex;gap:4px;pointer-events:auto;">' +
-        '<button class="extrato-item-btn extrato-item-btn-ver-caixa" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
+        '<button class="extrato-item-btn periodo-caixa-btn-ver" data-id="' + escapeHtml(p.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
         '<div class="dropdown">' +
-        '<button class="extrato-item-btn extrato-item-btn-excluir-caixa" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Excluir" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
+        '<button class="extrato-item-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Remover" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
         '<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width:200px;font-size:.78rem;">' +
-        '<li class="px-1 pb-2 text-muted" style="font-size:.72rem;line-height:1.3;"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Excluir este relatório salvo?</li>' +
+        '<li class="px-1 pb-2 text-muted" style="font-size:.72rem;line-height:1.3;"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Remover este período salvo?</li>' +
         '<li><div class="d-flex gap-2 px-1">' +
         '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill fin-confirm-cancelar" style="font-size:.7rem;">Cancelar</button>' +
-        '<button type="button" class="btn btn-sm btn-danger rounded-pill flex-fill fin-confirm-excluir" data-id="' + escapeHtml(ex.id) + '" style="font-size:.7rem;">Excluir</button>' +
+        '<button type="button" class="btn btn-sm btn-danger rounded-pill flex-fill fin-confirm-excluir" data-id="' + escapeHtml(p.id) + '" style="font-size:.7rem;">Remover</button>' +
         '</div></li>' +
         '</ul></div>' +
         '</div></div></div>';
     }).join('');
 
-    lista.querySelectorAll('.extrato-item-btn-ver-caixa').forEach(function (btn) {
+    lista.querySelectorAll('.periodo-caixa-btn-ver').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
-        if (ext) abrirExtratoModal(ext);
-      });
-    });
-
-    lista.querySelectorAll('.extrato-item-btn-excluir-caixa').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
+        var p = buscarPeriodoCaixaPorId(this.getAttribute('data-id'));
+        if (p) abrirModalVisualizarPeriodoCaixa(p);
       });
     });
 
     lista.querySelectorAll('.dropdown-menu').forEach(function (menu) {
-      menu.addEventListener('click', function (e) {
-        e.stopPropagation();
-      });
+      menu.addEventListener('click', function (e) { e.stopPropagation(); });
     });
 
     bindDropdownConfirmarExclusao(lista, '.dropdown', function (id) {
-      removerExtratoStorage(id);
-      renderRelatoriosSalvosCaixa();
-      finToast('Relatório removido.', 'success');
+      removerPeriodoCaixaStorage(id);
+      renderPeriodosSalvosCaixa();
+      finToast('Período removido.', 'success');
     });
 
     lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
       card.addEventListener('click', function (e) {
         if (e.target.closest('.extrato-item-btn') || e.target.closest('.dropdown-menu')) return;
-        var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
-        if (ext) abrirExtratoModal(ext);
+        var p = buscarPeriodoCaixaPorId(this.getAttribute('data-periodo-id'));
+        if (p) abrirModalVisualizarPeriodoCaixa(p);
       });
     });
   }

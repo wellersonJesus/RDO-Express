@@ -9,10 +9,6 @@
     relToast('Erro assíncrono: ' + msg, 'danger');
   });
 
-  const PERCENTUAL_MOTOBOY = 0.80;
-  const PERCENTUAL_RDO = 0.20;
-  const LIMIAR_SIMILARIDADE = 0.55;
-
   const ALIASES = {
     pedidos: {
       id: ['id'], id_cliente: ['id_cliente'], solicitante: ['solicitante'], contato: ['contato'],
@@ -30,12 +26,17 @@
     },
     clientes: {
       bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
-      campos: { /* ...igual... */ },
+      campos: {
+        clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
+        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado'],
+        financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
+      },
       defaults: {
         clientes: ['username'],
-        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'], // já defaults corretos
+        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'],
         chat: [],
-        financeiro: ['data', 'descricao', 'vlr_servico']
+        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
       }
     },
     colaborador: {
@@ -623,7 +624,6 @@
     const total = bancosDoBuilder().reduce(function (acc, banco) { return acc + contarSelecionados(banco); }, 0);
     if (total === 0) { relToast('Selecione ao menos um campo.', 'warning'); return false; }
 
-    // Aviso extra para relatórios de clientes/motoboys sem pedidos selecionados
     if ((state.builder.tipo === 'clientes' || state.builder.tipo === 'motoboys') && contarSelecionados('pedidos') === 0) {
       relToast('Atenção: nenhum campo de "Pedidos" foi selecionado. O resumo de corridas ficará zerado.', 'warning');
     }
@@ -649,85 +649,50 @@
     return normalizarComparacao(v).split(' ').filter(function (t) { return t.length > 0; });
   }
 
-  function levenshtein(a, b) {
-    a = a || '';
-    b = b || '';
-    const m = a.length, n = b.length;
-    if (m === 0) return n;
-    if (n === 0) return m;
-    const dp = new Array(n + 1);
-    for (let j = 0; j <= n; j++) dp[j] = j;
-    for (let i = 1; i <= m; i++) {
-      let prev = dp[0];
-      dp[0] = i;
-      for (let j = 1; j <= n; j++) {
-        const temp = dp[j];
-        dp[j] = a[i - 1] === b[j - 1]
-          ? prev
-          : Math.min(prev + 1, dp[j] + 1, dp[j - 1] + 1);
-        prev = temp;
-      }
-    }
-    return dp[n];
-  }
-
-  function similaridade(a, b) {
-    const na = normalizarComparacao(a);
-    const nb = normalizarComparacao(b);
-    if (!na || !nb) return 0;
-    if (na === nb) return 1;
-    if (na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1) return 0.9;
-    const dist = levenshtein(na, nb);
-    const maxLen = Math.max(na.length, nb.length);
-    return maxLen === 0 ? 0 : 1 - (dist / maxLen);
-  }
-
-  function similaridadeTokens(a, b) {
-    const tokensA = tokenizar(a);
-    const tokensB = tokenizar(b);
-    if (!tokensA.length || !tokensB.length) return 0;
-    let melhores = 0;
-    tokensA.forEach(function (ta) {
-      let melhorLocal = 0;
-      tokensB.forEach(function (tb) {
-        const sim = similaridade(ta, tb);
-        if (sim > melhorLocal) melhorLocal = sim;
-      });
-      melhores += melhorLocal;
-    });
-    return melhores / Math.max(tokensA.length, tokensB.length);
-  }
-
   function nomesCorrespondem(a, b) {
     if (!a || !b) return false;
-    const direta = similaridade(a, b);
-    if (direta >= LIMIAR_SIMILARIDADE) return true;
-    const porTokens = similaridadeTokens(a, b);
-    return porTokens >= LIMIAR_SIMILARIDADE;
+    return normalizarComparacao(a) === normalizarComparacao(b);
+  }
+
+  function ehAbreviacaoDeterministica(nomeCurto, nomeCompleto) {
+    const tCurto = tokenizar(nomeCurto);
+    const tCompleto = tokenizar(nomeCompleto);
+    if (!tCurto.length || !tCompleto.length) return false;
+    if (tCurto.length !== tCompleto.length) return false;
+
+    for (let i = 0; i < tCurto.length; i++) {
+      const a = tCurto[i].replace(/\.$/, '');
+      const b = tCompleto[i];
+      if (a === b) continue;
+      if (a.length === 1 && b.charAt(0) === a) continue;
+      return false;
+    }
+    return true;
+  }
+
+  function nomesRelacionados(a, b) {
+    if (!a || !b) return false;
+    if (nomesCorrespondem(a, b)) return true;
+    return ehAbreviacaoDeterministica(a, b) || ehAbreviacaoDeterministica(b, a);
   }
 
   function obterNomeClienteDoPedido(pedido) {
     const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
 
-    // 1) Se id_cliente for numérico, tenta resolver pelo cadastro de clientes
     if (idCliente && /^\d+$/.test(String(idCliente).trim())) {
       const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente).trim(); });
       if (cli) return resolverValor('clientes', 'username', cli);
     }
 
-    // 2) Prioriza o nome do solicitante (nome real do cliente/empresa)
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
     if (solicitante) return solicitante;
 
-    // 3) Tenta o campo "para" (destino), caso exista separado
     const destino = resolverValor('pedidos', 'para', pedido);
     if (destino) return destino;
 
-    // 4) Como último recurso, usa a observação
     const observacao = resolverValor('pedidos', 'observacao', pedido);
     if (observacao) return observacao;
 
-    // 5) Só retorna o código bruto de id_cliente se nada mais funcionar
     if (idCliente) return idCliente;
 
     return '';
@@ -740,44 +705,65 @@
 
   function extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados) {
     const nomesTexto = [];
-    valoresBrutos.forEach(function (v) {
-      const vStr = String(v).trim();
-      if (!vStr) return;
-      if (/^\d+$/.test(vStr)) return;
-      nomesTexto.push(vStr);
-    });
+
     clientesSelecionados.forEach(function (c) {
       const username = resolverValor('clientes', 'username', c);
-      const responsavel = resolverValor('clientes', 'responsavel', c);
-      if (username) nomesTexto.push(username);
-      if (responsavel) nomesTexto.push(responsavel);
+      if (!username) return;
+
+      nomesTexto.push(username);
+
+      state.clientes.forEach(function (outro) {
+        const resp = resolverValor('clientes', 'responsavel', outro);
+        if (!resp) return;
+        if (nomesRelacionados(resp, username)) {
+          const nomeMembro = resolverValor('clientes', 'username', outro);
+          if (nomeMembro && nomesTexto.indexOf(nomeMembro) === -1) {
+            nomesTexto.push(nomeMembro);
+          }
+        }
+      });
     });
+
     return nomesTexto;
   }
 
   function valorCorrespondeNomesAlvo(valor, nomesAlvo) {
     if (!valor) return false;
-    return nomesAlvo.some(function (nome) { return nomesCorrespondem(valor, nome); });
+    // ✅ agora aceita correspondência exata OU abreviação determinística
+    // (ex.: "M PITANGA" [solicitante nos pedidos] === "MARIA PITANGA" [username no cadastro])
+    return nomesAlvo.some(function (nome) { return nomesRelacionados(valor, nome); });
   }
+
+  const PERCENTUAL_MOTOBOY = 0.80;
+  const PERCENTUAL_RDO = 0.20;
 
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
 
-    // Bate direto pelo código/ID do cliente selecionado
-    if (idsStr.indexOf(idPed) !== -1) return true;
+    // 1) Bate pelo ID do cliente (quando o id_cliente do pedido
+    //    realmente corresponde ao id interno do cadastro selecionado)
+    if (idPed && idsStr.indexOf(idPed) !== -1) return true;
 
-    // Bate pelo nome do solicitante (prioridade)
+    // 2) Bate pelo nome do solicitante (comparação exata ou abreviação
+    //    determinística com o username do cliente selecionado)
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
     if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
 
-    // Bate pelo destino, se existir
-    const destino = resolverValor('pedidos', 'para', pedido);
-    if (valorCorrespondeNomesAlvo(destino, nomesAlvo)) return true;
+    return false;
+  }
 
-    // Fallback final: nome resolvido genericamente
-    const nomePedido = obterNomeClienteDoPedido(pedido);
-    if (!nomePedido) return false;
-    return valorCorrespondeNomesAlvo(nomePedido, nomesAlvo);
+  function financeiroCorrespondeCliente(registro, nomesAlvo) {
+    const nomeFin = obterValorCampoFinanceiro('cliente', registro);
+    if (valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
+
+    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+    if (!pedidoVinculado) return false;
+
+    // ✅ mesma correção: também tenta pelo nome do solicitante do pedido vinculado
+    const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
+    if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
+
+    return valorCorrespondeNomesAlvo(obterNomeClienteDoPedido(pedidoVinculado), nomesAlvo);
   }
 
   function chatCorrespondeCliente(registroChat, idsStr, nomesAlvo) {
@@ -786,15 +772,6 @@
     const pedidoVinculado = buscarPedidoDoChat(registroChat);
     if (!pedidoVinculado) return false;
     return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
-  }
-
-  function financeiroCorrespondeCliente(registro, nomesAlvo) {
-    const nomeFin = obterValorCampoFinanceiro('cliente', registro);
-    if (valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
-    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
-    if (!pedidoVinculado) return false;
-    const destino = resolverValor('pedidos', 'para', pedidoVinculado);
-    return valorCorrespondeNomesAlvo(destino, nomesAlvo) || valorCorrespondeNomesAlvo(obterNomeClienteDoPedido(pedidoVinculado), nomesAlvo);
   }
 
   function coletarDadosBanco(banco) {
@@ -953,7 +930,7 @@
     let valor = resolverValor('financeiro', campo, registro);
 
     if (campo === 'cliente') {
-      if (valor) return valor; // já vem resolvido do backend (getfinanceirocompleto)
+      if (valor) return valor;
 
       const descricao = resolverValor('financeiro', 'descricao', registro);
       const nomeDaDescricao = extrairNomeClienteDescricao(descricao);
