@@ -23,7 +23,7 @@
     fetching: false,
     sortDataDesc: true,
     todos: { pagina: 1, porPagina: 15, totalPag: 1 },
-    caixa: { pagina: 1, porPagina: 10, totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [] },
+    caixa: { pagina: 1, porPagina: 10, totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
 
@@ -580,7 +580,6 @@
         '</div>' +
         '</td></tr>';
     }
-    mostrarLupinha('caixa-lista-diaria');
   }
 
   function excluirRegistroDefinitivo(id) {
@@ -830,6 +829,18 @@
         throw new Error((res && (res.message || res.msg)) || 'Erro ao salvar alterações.');
       }
       finToast('Registro atualizado com sucesso!', 'success');
+
+      // 🔗 NOVO: notifica pedidos.js se o lançamento estiver vinculado a um pedido
+      var reg = state.cache.find(function (r) { return String(r.id) === String(id); });
+      var idPedido = reg ? reg.idPedido : '';
+      if (idPedido) {
+        window.EventBus.emit('financeiro:situacaoAtualizada', {
+          idPedido: idPedido,
+          situacaoFinanceira: dados.situacao,
+          statusPedido: dados.situacao === 'cancelado' ? 'CANCELADO' : undefined
+        });
+      }
+
       carregarDados();
       return res;
     });
@@ -1049,7 +1060,7 @@
             if (content) content.classList.add('active');
 
             if (t === 'todos') renderTodos();
-            if (t === 'caixa') { mostrarLupinha('caixa-lista-diaria'); renderCaixa(); }
+            if (t === 'caixa') renderCaixa();
             if (t === 'extrato') renderizarListaExtratos();
           } catch (err) {
             console.error('[fin-tab click]', err);
@@ -1114,6 +1125,9 @@
 
             state.caixa.dataInicio = periodo.inicio;
             state.caixa.dataFim = periodo.fim;
+            state.caixa.buscaRealizada = true;   // ✅ NOVO: libera a exibição
+
+            renderCaixa();                        // ✅ NOVO: popula lista principal do Caixa
 
             var registros = registrosNoPeriodo(periodo.inicio, periodo.fim);
             if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
@@ -1149,8 +1163,17 @@
         });
       }
 
-      if (els.caixaDataInicio) els.caixaDataInicio.addEventListener('change', function () { state.caixa.pagina = 1; });
-      if (els.caixaDataFim) els.caixaDataFim.addEventListener('change', function () { state.caixa.pagina = 1; });
+      if (els.caixaDataInicio) els.caixaDataInicio.addEventListener('change', function () {
+        state.caixa.pagina = 1;
+        state.caixa.buscaRealizada = false;
+        renderCaixa();
+      });
+
+      if (els.caixaDataFim) els.caixaDataFim.addEventListener('change', function () {
+        state.caixa.pagina = 1;
+        state.caixa.buscaRealizada = false;
+        renderCaixa();
+      });
 
       if (els.extratoFiltroDescricao) {
         var extratoFiltroDebounced = debounce(function (valor) {
@@ -1425,13 +1448,31 @@
 
   function renderCaixa() {
     if (!els.caixaDataInicio || !els.caixaDataFim) return;
-    var rangeAtual = obterMesAtualRange();
-    if (!els.caixaDataInicio.value) {
-      els.caixaDataInicio.value = rangeAtual.inicio;
-      if (els.caixaDataFim) els.caixaDataFim.value = rangeAtual.fim;
+
+    // Não bloqueia os inputs de data, só não gera lista automática
+    if (!state.caixa.buscaRealizada) {
+      state.caixa.dadosFiltrados = [];
+      state.caixa.listaFiltradaAtual = [];
+      if (els.caixaListaDiaria) {
+        els.caixaListaDiaria.innerHTML =
+          '<div class="text-center text-muted py-4">' +
+          '<i class="bi bi-calendar-range" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>' +
+          'Selecione o período e clique em <strong>Buscar</strong> para exibir os lançamentos.' +
+          '</div>';
+      }
+      // zera os cards
+      ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores'].forEach(function (k) {
+        if (els[k]) { els[k].setAttribute('data-valor-real', formatarMoeda(0)); els[k].textContent = 'R$ ****'; }
+      });
+      if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = '0';
+      if (els.rdoPaySaldo) { els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(0)); els.rdoPaySaldo.textContent = 'R$ ****'; }
+      if (els.rdoPaySaldoColabs) { els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(0)); els.rdoPaySaldoColabs.textContent = 'R$ ****'; }
+      renderRelatoriosSalvosCaixa();
+      return;
     }
-    state.caixa.dataInicio = els.caixaDataInicio.value || rangeAtual.inicio;
-    state.caixa.dataFim = (els.caixaDataFim && els.caixaDataFim.value) || rangeAtual.fim;
+
+    state.caixa.dataInicio = els.caixaDataInicio.value;
+    state.caixa.dataFim = els.caixaDataFim.value;
 
     var filtrados = state.cache.filter(function (r) {
       return r.dataISO >= state.caixa.dataInicio && r.dataISO <= state.caixa.dataFim;
@@ -1441,12 +1482,12 @@
     aplicarFiltroCaixaLocal();
 
     if (els.rdoPaySaldo) {
-      var totalGeral = calcularTotaisRegistros(filtrados); // usa o período filtrado
+      var totalGeral = calcularTotaisRegistros(filtrados);
       els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(totalGeral.empresa));
       els.rdoPaySaldo.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral.empresa) : 'R$ ****';
     }
     if (els.rdoPaySaldoColabs) {
-      var totalGeral2 = calcularTotaisRegistros(filtrados); // usa o período filtrado
+      var totalGeral2 = calcularTotaisRegistros(filtrados);
       els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(totalGeral2.colaboradores));
       els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral2.colaboradores) : 'R$ ****';
     }
@@ -1496,17 +1537,29 @@
         var labelDia = dia !== 'sem-data' ? formatDateBR(dia) + ' · ' + getDiaSemanaCompleto(dia) : 'Sem data';
         var saldoClasse = totaisDia.saldo > 0 ? 'positivo' : (totaisDia.saldo < 0 ? 'negativo' : 'neutro');
         return '<div class="caixa-dia-item" data-dia="' + escapeHtml(dia) + '">' +
-          '<div class="caixa-dia-item-left"><div class="caixa-dia-icon"><i class="bi bi-calendar3"></i></div>' +
+          '<div class="caixa-dia-item-left" data-acao="abrir-dia" style="cursor:pointer;"><div class="caixa-dia-icon"><i class="bi bi-calendar3"></i></div>' +
           '<div><div class="caixa-dia-info-data">' + labelDia.split(' · ')[0] + '</div>' +
           '<div class="caixa-dia-info-semana">' + (labelDia.split(' · ')[1] || '') + ' · ' + regsDia.length + ' lanç.</div></div></div>' +
-          '<div class="d-flex align-items-center"><span class="caixa-dia-saldo ' + saldoClasse + '">' + (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
-          '<i class="bi bi-chevron-right caixa-dia-chevron"></i></div></div>';
+          '<div class="d-flex align-items-center gap-2">' +
+          '<span class="caixa-dia-saldo ' + saldoClasse + '" data-acao="abrir-dia" style="cursor:pointer;">' + (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
+          '<button type="button" class="btn btn-sm btn-outline-danger rounded-circle btn-excluir-dia" data-dia="' + escapeHtml(dia) + '" title="Excluir todos os lançamentos deste dia" style="width:30px;height:30px;padding:0;line-height:1;">' +
+          '<i class="bi bi-trash3" style="font-size:.75rem;"></i></button>' +
+          '<i class="bi bi-chevron-right caixa-dia-chevron" data-acao="abrir-dia" style="cursor:pointer;"></i></div></div>';
       }).join('');
-      els.caixaListaDiaria.querySelectorAll('.caixa-dia-item').forEach(function (el) {
+
+      els.caixaListaDiaria.querySelectorAll('[data-acao="abrir-dia"]').forEach(function (el) {
         el.addEventListener('click', function () {
-          var dia = this.getAttribute('data-dia');
+          var dia = this.closest('.caixa-dia-item').getAttribute('data-dia');
           var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
           abrirModalDetalheDia(dia, regsDoDia);
+        });
+      });
+
+      els.caixaListaDiaria.querySelectorAll('.btn-excluir-dia').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var dia = this.getAttribute('data-dia');
+          excluirLancamentosDoDia(dia, this);
         });
       });
     }
@@ -1515,6 +1568,51 @@
     if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
     if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
     if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= state.caixa.totalPag;
+  }
+
+  function excluirLancamentosDoDia(dia, btnEl) {
+    var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
+    if (!regsDoDia.length) {
+      finToast('Nenhum lançamento encontrado para este dia.', 'warning');
+      return;
+    }
+
+    var labelDia = formatDateBR(dia);
+    var confirmar = window.confirm(
+      'Excluir TODOS os ' + regsDoDia.length + ' lançamento(s) do dia ' + labelDia + '?\n' +
+      'Essa ação não pode ser desfeita.'
+    );
+    if (!confirmar) return;
+
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.7rem;height:.7rem;"></span>';
+    }
+
+    var promessas = regsDoDia.map(function (r) {
+      return window.API.call('delfinanceiro', { id: r.id }).then(function (res) {
+        var sucesso = res && (res.status === 'success' || res.success === true || res.ok === true);
+        return { id: r.id, ok: sucesso };
+      }).catch(function (err) {
+        return { id: r.id, ok: false, erro: err };
+      });
+    });
+
+    Promise.all(promessas).then(function (resultados) {
+      var idsExcluidos = resultados.filter(function (r) { return r.ok; }).map(function (r) { return r.id; });
+      var falhas = resultados.length - idsExcluidos.length;
+
+      if (idsExcluidos.length) {
+        state.cache = state.cache.filter(function (r) { return idsExcluidos.indexOf(r.id) === -1; });
+        finToast(idsExcluidos.length + ' lançamento(s) do dia ' + labelDia + ' excluído(s)!', 'success');
+      }
+      if (falhas > 0) {
+        finToast(falhas + ' lançamento(s) não puderam ser excluídos.', 'warning');
+      }
+
+      renderCaixa();
+      renderTodos();
+    });
   }
 
   function abrirModalDetalheDia(dia, registros) {
