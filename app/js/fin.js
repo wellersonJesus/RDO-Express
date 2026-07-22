@@ -741,6 +741,19 @@
     });
   }
 
+  function excluirPeriodoCaixaStorage(id) {
+    try {
+      var periodos = carregarPeriodosCaixaStorage();
+      var novaLista = periodos.filter(function (p) { return p.id !== id; });
+      localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(novaLista)); // ✅ chave correta
+      return true;
+    } catch (e) {
+      console.error('[excluirPeriodoCaixaStorage] Erro ao excluir carteira:', e);
+      finToast('Erro ao excluir carteira: ' + e.message, 'danger');
+      return false;
+    }
+  }
+
   function getStatusBadge(situacao) {
     var s = (situacao || '').toLowerCase();
     if (s === 'pago') return '<span class="fin-badge-situacao fin-badge-pago"><i class="bi bi-check-circle-fill"></i> Pago</span>';
@@ -1807,12 +1820,23 @@
     if (!state.caixa.buscaRealizada) {
       state.caixa.dadosFiltrados = [];
       state.caixa.listaFiltradaAtual = [];
+
+      // ✅ NOVO: só mostra o placeholder "selecione o período" se NÃO houver
+      // nenhuma carteira/período já salvo no localStorage
+      var periodosExistentes = carregarPeriodosCaixaStorage();
+
       if (els.caixaListaDiaria) {
-        els.caixaListaDiaria.innerHTML =
-          '<div class="text-center text-muted py-4">' +
-          '<i class="bi bi-calendar-range" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>' +
-          'Selecione o período e clique em <strong>Buscar</strong> para exibir os lançamentos.' +
-          '</div>';
+        if (periodosExistentes.length) {
+          // Já existem carteiras salvas — não mostra o aviso, apenas deixa a
+          // lista de "Relatórios de Período Salvos" visível abaixo.
+          els.caixaListaDiaria.innerHTML = '';
+        } else {
+          els.caixaListaDiaria.innerHTML =
+            '<div class="text-center text-muted py-4">' +
+            '<i class="bi bi-calendar-range" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>' +
+            'Selecione o período e clique em <strong>Gerar Caixa</strong> para exibir os lançamentos.' +
+            '</div>';
+        }
       }
 
       ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores'].forEach(function (k) {
@@ -1903,17 +1927,19 @@
       els.caixaListaDiaria.innerHTML = ordemDias.map(function (dia) {
         var regsDia = porDia[dia];
         var totaisDia = calcularTotaisRegistros(regsDia);
-        var labelDia = dia !== 'sem-data' ? formatDateBR(dia) + ' · ' + getDiaSemanaCompleto(dia) : 'Sem data';
+        var labelData = dia !== 'sem-data' ? formatDateBR(dia) : 'Sem data';
+        var labelSemana = dia !== 'sem-data' ? getDiaSemanaCompleto(dia) : '';
         var saldoClasse = totaisDia.saldo > 0 ? 'positivo' : (totaisDia.saldo < 0 ? 'negativo' : 'neutro');
+
         return '<div class="caixa-dia-item" data-dia="' + escapeHtml(dia) + '">' +
-          '<div class="caixa-dia-item-left" data-acao="abrir-dia" style="cursor:pointer;"><div class="caixa-dia-icon"><i class="bi bi-calendar3"></i></div>' +
-          '<div><div class="caixa-dia-info-data">' + labelDia.split(' · ')[0] + '</div>' +
-          '<div class="caixa-dia-info-semana">' + (labelDia.split(' · ')[1] || '') + ' · ' + regsDia.length + ' lanç.</div></div></div>' +
+          '<div class="caixa-dia-item-left" data-acao="abrir-dia" style="cursor:pointer;">' +
+          '<div class="caixa-dia-icon" style="color:#198754;background:rgba(25,135,84,.12);"><i class="bi bi-cash-coin"></i></div>' +
+          '<div><div class="caixa-dia-info-data">' + labelData + '</div>' +
+          '<div class="caixa-dia-info-semana">' + labelSemana + ' · ' + regsDia.length + ' lanç.</div></div></div>' +
           '<div class="d-flex align-items-center gap-2">' +
           '<span class="caixa-dia-saldo ' + saldoClasse + '" data-acao="abrir-dia" style="cursor:pointer;">' + (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
-          '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle btn-visualizar-dia" data-dia="' + escapeHtml(dia) + '" title="Visualizar este dia" style="width:30px;height:30px;padding:0;line-height:1;">' +
-          '<i class="bi bi-eye" style="font-size:.75rem;"></i></button>' +
-          '<i class="bi bi-chevron-right caixa-dia-chevron" data-acao="abrir-dia" style="cursor:pointer;"></i></div></div>';
+          '<button type="button" class="btn-icone-retangular btn-visualizar-icone btn-visualizar-dia" data-dia="' + escapeHtml(dia) + '" title="Visualizar este dia"><i class="bi bi-eye"></i></button>' +
+          '</div></div>';
       }).join('');
 
       els.caixaListaDiaria.querySelectorAll('[data-acao="abrir-dia"]').forEach(function (el) {
@@ -2119,13 +2145,11 @@
     if (!wrapper || !lista) return;
 
     var periodos = carregarPeriodosCaixaStorage();
-
     if (!periodos.length) {
       wrapper.style.display = 'none';
       lista.innerHTML = '';
       return;
     }
-
     wrapper.style.display = 'block';
 
     lista.innerHTML = periodos.map(function (p) {
@@ -2136,7 +2160,7 @@
 
       return '<div class="extrato-item-card" data-periodo-id="' + escapeHtml(p.id) + '" style="cursor:pointer;">' +
         '<div class="extrato-item-left">' +
-        '<div class="extrato-item-icon"><i class="bi bi-calendar-range"></i></div>' +
+        '<div class="extrato-item-icon" style="color:#8B5E3C;background:rgba(139,94,60,.12);"><i class="bi bi-wallet2"></i></div>' +
         '<div>' +
         '<div class="extrato-item-titulo">' + escapeHtml(p.periodoLabel || '-') + '</div>' +
         '<div class="extrato-item-sub">' + totalRegs + ' lançamento' + (totalRegs !== 1 ? 's' : '') + '</div>' +
@@ -2144,7 +2168,10 @@
         '</div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
-        '<button class="extrato-item-btn periodo-caixa-btn-ver" data-id="' + escapeHtml(p.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button class="btn-icone-retangular btn-visualizar-icone periodo-caixa-btn-ver" data-id="' + escapeHtml(p.id) + '" title="Visualizar carteira" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
+        '<button class="btn-icone-retangular btn-excluir-icone periodo-caixa-btn-excluir" data-id="' + escapeHtml(p.id) + '" title="Excluir carteira" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
+        '</div>' +
         '</div></div>';
     }).join('');
 
@@ -2156,9 +2183,32 @@
       });
     });
 
+    lista.querySelectorAll('.periodo-caixa-btn-excluir').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        var p = buscarPeriodoCaixaPorId(id);
+        if (!p) {
+          finToast('Carteira não encontrada.', 'warning');
+          return;
+        }
+
+        abrirModalAtencaoExclusaoCarteira(
+          'Sua carteira "' + (p.periodoLabel || '') + '" será excluída. Isso remove apenas este relatório salvo localmente — nenhum dado do seu banco/lista será apagado.',
+          function () {
+            var ok = excluirPeriodoCaixaStorage(id);
+            if (ok) {
+              finToast('Carteira excluída com sucesso!', 'success');
+            }
+            renderPeriodosSalvosCaixa(); // sempre re-renderiza, ok ou não
+          }
+        );
+      });
+    });
+
     lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.extrato-item-btn')) return;
+        if (e.target.closest('.btn-icone-retangular')) return;
         var p = buscarPeriodoCaixaPorId(this.getAttribute('data-periodo-id'));
         if (p) abrirModalVisualizarPeriodoCaixa(p);
       });
@@ -2582,6 +2632,29 @@
     return state.cache.filter(function (r) {
       return padraoPeriodo.test((r.descricao || '').trim());
     });
+  }
+
+  function abrirModalAtencaoExclusaoCarteira(mensagem, onConfirmar) {
+    var overlay = document.getElementById('modal-confirmar-exclusao-carteira');
+    var texto = document.getElementById('modal-atencao-texto-carteira');
+    var btnConfirmar = document.getElementById('btn-confirmar-exclusao-carteira');
+    var btnCancelar = document.getElementById('btn-cancelar-exclusao-carteira');
+
+    texto.textContent = mensagem;
+    overlay.style.display = 'flex';
+
+    function fechar() {
+      overlay.style.display = 'none';
+      btnConfirmar.removeEventListener('click', confirmarHandler);
+      btnCancelar.removeEventListener('click', fechar);
+    }
+    function confirmarHandler() {
+      fechar();
+      onConfirmar();
+    }
+
+    btnConfirmar.addEventListener('click', confirmarHandler);
+    btnCancelar.addEventListener('click', fechar);
   }
 
   function excluirLancamentoFinanceiro(id) {
