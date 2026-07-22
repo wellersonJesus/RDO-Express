@@ -2242,29 +2242,23 @@
     if (!inicio || !fim) { finToast('Selecione o período.', 'warning'); return; }
     if (inicio > fim) { finToast('Data inicial maior que a final.', 'warning'); return; }
 
-    var origemSelect = els.extratoOrigem ? els.extratoOrigem.value : '__caixa__';
-    var registros = state.cache.filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
+    var origemValue = els.extratoOrigem ? els.extratoOrigem.value : '__caixa__';
+    var resultado = registrosPorOrigemExtrato(origemValue, inicio, fim);
 
-    if (origemSelect && origemSelect !== '__caixa__') {
-      registros = registros.filter(function (r) { return r.motoboy === origemSelect || r.grupo === origemSelect; });
-    }
+    if (!resultado.registros.length) { finToast('Nenhum registro encontrado para essa origem no período.', 'warning'); return; }
 
-    if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
-
-    var origemLabel = (origemSelect === '__caixa__' || !origemSelect) ? 'Caixa Geral' : origemSelect;
     var periodoLabel = formatDateBR(inicio) + ' a ' + formatDateBR(fim);
 
-    // salva no histórico local também
     salvarExtratoStorage({
       id: gerarIdExtrato(),
-      origem: origemLabel,
+      origem: resultado.label,
       periodoLabel: periodoLabel,
-      registros: registros,
+      registros: resultado.registros,
       criadoEm: Date.now()
     });
     renderizarListaExtratos();
 
-    abrirRelatorioFinanceiro('extrato', registros, 'Extrato - ' + origemLabel, inicio, fim);
+    abrirJanelaPdfExtrato('Extrato - ' + resultado.label, periodoLabel, resultado.registros);
   }
 
   function dadosFiltradosExtratos() {
@@ -2917,6 +2911,119 @@
 
   window.limparLancamentosFantasmasPeriodo = limparLancamentosFantasmasPeriodo;
 
+  function registrosPorOrigemExtrato(origemValue, inicio, fim) {
+    var lista = state.cache.filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
+
+    if (!origemValue || origemValue === '__caixa__') {
+      return { registros: lista, label: 'Caixa Geral' };
+    }
+
+    var partes = origemValue.split('::');
+    var tipoOrigem = partes[0];
+    var valorOrigem = partes[1] || '';
+
+    if (tipoOrigem === 'motoboy') {
+      var filtradosMoto = lista.filter(function (r) { return r.motoboy === valorOrigem; });
+      return { registros: filtradosMoto, label: valorOrigem };
+    }
+
+    if (tipoOrigem === 'cliente') {
+      var filtradosCliente = lista.filter(function (r) { return r.cliente === valorOrigem; });
+      return { registros: filtradosCliente, label: valorOrigem };
+    }
+
+    return { registros: lista, label: 'Caixa Geral' };
+  }
+
+  function gerarHtmlExtratoSimples(titulo, periodoLabel, registros) {
+    var ordenados = (registros || []).slice().sort(function (a, b) {
+      return a.dataISO < b.dataISO ? 1 : -1;
+    });
+
+    var totalValor = 0;
+    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
+      totalValor += (parseFloat(r.valor) || 0);
+      return '<tr>' +
+        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="3" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
+
+    var agora = new Date().toLocaleString('pt-BR');
+    var qtd = ordenados.length;
+
+    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' +
+      '<style>' +
+      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
+      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
+      'h1 span{color:#222;}' +
+      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
+      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
+      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
+      'tfoot td{padding:10px 8px;font-weight:700;border-top:2px solid #ddd;font-size:13px;}' +
+      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
+      '@media print{ body{margin:10mm;} }' +
+      '</style></head><body>' +
+      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Extrato</span></h1>' +
+      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
+      '<table><thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th></tr></thead>' +
+      '<tbody>' + linhasHtml + '</tbody>' +
+      '<tfoot><tr><td colspan="2">Total de lançamentos: ' + qtd + '</td><td style="text-align:right;">' + formatarMoeda(totalValor) + '</td></tr></tfoot>' +
+      '</table>' +
+      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
+      '</body></html>';
+  }
+
+  function abrirJanelaPdfExtrato(titulo, periodoLabel, registros) {
+    var html = gerarHtmlExtratoSimples(titulo, periodoLabel, registros);
+    var win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups.', 'warning'); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = function () { win.focus(); setTimeout(function () { win.print(); }, 300); };
+  }
+
+  function baixarHtmlExtrato(titulo, periodoLabel, registros) {
+    var html = gerarHtmlExtratoSimples(titulo, periodoLabel, registros);
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (titulo || 'extrato').replace(/[^\w\-]+/g, '_') + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
+  }
+
+  function preencherOrigensExtrato() {
+    var selectMotoboys = document.getElementById('extrato-opt-motoboys');
+    var selectClientes = document.getElementById('extrato-opt-clientes');
+    if (!selectMotoboys || !selectClientes) return;
+
+    var nomesMotoboys = {};
+    state.cache.forEach(function (r) {
+      if (r.motoboy && r.motoboy !== '-') nomesMotoboys[r.motoboy] = true;
+    });
+    var listaMotoboys = Object.keys(nomesMotoboys).sort(function (a, b) { return a.localeCompare(b); });
+    selectMotoboys.innerHTML = listaMotoboys.map(function (nome) {
+      return '<option value="motoboy::' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</option>';
+    }).join('');
+
+    var nomesClientes = {};
+    state.cache.forEach(function (r) {
+      if (r.cliente && r.cliente !== '-') nomesClientes[r.cliente] = true;
+    });
+    var listaClientes = Object.keys(nomesClientes).sort(function (a, b) { return a.localeCompare(b); });
+    selectClientes.innerHTML = listaClientes.map(function (nome) {
+      return '<option value="cliente::' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</option>';
+    }).join('');
+  }
+
   function carregarDados() {
     if (state.fetching) return;
     state.fetching = true;
@@ -2946,6 +3053,7 @@
 
       state.cache = financeiro.map(normalizarRegistro);
       resolverClienteSolicitante();
+      preencherOrigensExtrato();
 
       _atualizarContadoresFin();
       renderTodos();
