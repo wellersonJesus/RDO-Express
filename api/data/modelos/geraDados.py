@@ -634,29 +634,32 @@ def extrair_datas_brutas(linhas):
 def determinar_filtro_data_automatico(todas_linhas):
     datas_existentes = carregar_datas_existentes_financeiro()
     datas_brutas = sorted(extrair_datas_brutas(todas_linhas))
-    hoje = datetime.now().date()
+
+    if not datas_brutas:
+        logger.warning("Nenhuma data válida encontrada em DADOS_BRUTOS.")
+        return None, None
+
+    data_fim = datas_brutas[-1]
 
     data_inicio = None
     for data in datas_brutas:
-        if data > hoje:
-            continue
         if data not in datas_existentes:
             data_inicio = data
             break
 
     if data_inicio is None:
         logger.info("Nenhuma data pendente de lançamento encontrada nos dados brutos.")
-        return None, hoje.strftime("%d/%m/%Y")
+        return None, data_fim.strftime("%d/%m/%Y")
 
     logger.info(
-        "Primeira data pendente de lançamento detectada (gap): %s.",
-        data_inicio.strftime("%d/%m/%Y")
+        "Intervalo de lançamento definido: INICIO=%s FIM=%s",
+        data_inicio.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y")
     )
-    return data_inicio.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
+    return data_inicio.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y")
 
 
-def linha_dentro_do_filtro(dados):
-    if not FILTRO_DATA_INICIO and not FILTRO_DATA_FIM:
+def linha_dentro_do_filtro(dados, filtro_inicio, filtro_fim):
+    if not filtro_inicio and not filtro_fim:
         return True
 
     data_str, _ = separar_data_hora(dados)
@@ -664,8 +667,8 @@ def linha_dentro_do_filtro(dados):
     if not data_dt:
         return False
 
-    inicio_dt = _data_para_datetime(FILTRO_DATA_INICIO) if FILTRO_DATA_INICIO else None
-    fim_dt = _data_para_datetime(FILTRO_DATA_FIM) if FILTRO_DATA_FIM else None
+    inicio_dt = _data_para_datetime(filtro_inicio) if filtro_inicio else None
+    fim_dt = _data_para_datetime(filtro_fim) if filtro_fim else None
 
     if inicio_dt and data_dt < inicio_dt:
         return False
@@ -830,11 +833,12 @@ def main():
     todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
     logger.info("Total de linhas brutas a processar: %d.", len(todas_linhas))
 
-    FILTRO_DATA_INICIO, FILTRO_DATA_FIM = determinar_filtro_data_automatico(todas_linhas)
+    filtro_inicio, filtro_fim = determinar_filtro_data_automatico(todas_linhas)
+    FILTRO_DATA_INICIO, FILTRO_DATA_FIM = filtro_inicio, filtro_fim
 
     logger.info(
-        "Filtro de data definido automaticamente (com detecção de gaps): INICIO=%s FIM=%s",
-        FILTRO_DATA_INICIO, FILTRO_DATA_FIM
+        "Filtro de data definido automaticamente: INICIO=%s FIM=%s",
+        filtro_inicio, filtro_fim
     )
 
     total_processadas = 0
@@ -844,47 +848,50 @@ def main():
     total_falha = 0
 
     for linha in todas_linhas:
-        dados = parse_linha(linha)
-        if dados is None:
-            total_erros_parse += 1
-            continue
+        try:
+            dados = parse_linha(linha)
+            if dados is None:
+                total_erros_parse += 1
+                continue
 
-        if not linha_dentro_do_filtro(dados):
-            total_ignoradas_filtro += 1
-            continue
+            if not linha_dentro_do_filtro(dados, filtro_inicio, filtro_fim):
+                total_ignoradas_filtro += 1
+                continue
 
-        total_processadas += 1
+            total_processadas += 1
 
-        if dados["cliente_nome"] and dados["cliente_nome"] != "-":
-            id_cliente = garantir_cliente(dados["cliente_nome"], responsavel=dados.get("solicitante", ""))
-        else:
-            id_cliente = None
+            if dados["cliente_nome"] and dados["cliente_nome"] != "-":
+                id_cliente = garantir_cliente(dados["cliente_nome"], responsavel=dados.get("solicitante", ""))
+            else:
+                id_cliente = None
 
-        motoboy_final = definir_colaborador(dados["motoboy_raw"])
+            motoboy_final = definir_colaborador(dados["motoboy_raw"])
+            rdo_id = proximo_rdo_id()
+            consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final)
 
-        rdo_id = proximo_rdo_id()
+            ok_pedido, erro_pedido = criar_pedido(consolidado)
+            time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
-        consolidado = montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final)
+            if not ok_pedido:
+                total_falha += 1
+                logger.error("RDO %s: pedido não criado, financeiro será ignorado. Motivo: %s", rdo_id, erro_pedido)
+                continue
 
-        ok_pedido, erro_pedido = criar_pedido(consolidado)
-        time.sleep(INTERVALO_ENTRE_REQUISICOES)
+            ok_financeiro, erro_financeiro = criar_financeiro(consolidado)
+            time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
-        if not ok_pedido:
+            if ok_pedido and ok_financeiro:
+                total_sucesso += 1
+            else:
+                total_falha += 1
+                logger.error(
+                    "RDO %s: concluído com falhas parciais. pedido=%s financeiro=%s",
+                    rdo_id, ok_pedido, ok_financeiro
+                )
+        except Exception as exc:
             total_falha += 1
-            logger.error("RDO %s: pedido não criado, financeiro será ignorado. Motivo: %s", rdo_id, erro_pedido)
+            logger.error("Falha inesperada ao processar linha %r: %s\n%s", linha, exc, traceback.format_exc())
             continue
-
-        ok_financeiro, erro_financeiro = criar_financeiro(consolidado)
-        time.sleep(INTERVALO_ENTRE_REQUISICOES)
-
-        if ok_pedido and ok_financeiro:
-            total_sucesso += 1
-        else:
-            total_falha += 1
-            logger.error(
-                "RDO %s: concluído com falhas parciais. pedido=%s financeiro=%s",
-                rdo_id, ok_pedido, ok_financeiro
-            )
 
     logger.info(
         "Resumo da execução: linhas_totais=%d processadas=%d ignoradas_filtro=%d erros_parse=%d sucesso=%d falha=%d",

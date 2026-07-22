@@ -33,7 +33,7 @@
       campos: { /* ...igual... */ },
       defaults: {
         clientes: ['username'],
-        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'],
+        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'], // já defaults corretos
         chat: [],
         financeiro: ['data', 'descricao', 'vlr_servico']
       }
@@ -622,6 +622,12 @@
   function validarSelecao() {
     const total = bancosDoBuilder().reduce(function (acc, banco) { return acc + contarSelecionados(banco); }, 0);
     if (total === 0) { relToast('Selecione ao menos um campo.', 'warning'); return false; }
+
+    // Aviso extra para relatórios de clientes/motoboys sem pedidos selecionados
+    if ((state.builder.tipo === 'clientes' || state.builder.tipo === 'motoboys') && contarSelecionados('pedidos') === 0) {
+      relToast('Atenção: nenhum campo de "Pedidos" foi selecionado. O resumo de corridas ficará zerado.', 'warning');
+    }
+
     return true;
   }
 
@@ -702,21 +708,29 @@
 
   function obterNomeClienteDoPedido(pedido) {
     const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
+
+    // 1) Se id_cliente for numérico, tenta resolver pelo cadastro de clientes
     if (idCliente && /^\d+$/.test(String(idCliente).trim())) {
       const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente).trim(); });
       if (cli) return resolverValor('clientes', 'username', cli);
     }
 
-    const destino = resolverValor('pedidos', 'para', pedido);
-    if (destino) return destino;
-
-    if (idCliente) return idCliente;
-
+    // 2) Prioriza o nome do solicitante (nome real do cliente/empresa)
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
     if (solicitante) return solicitante;
 
+    // 3) Tenta o campo "para" (destino), caso exista separado
+    const destino = resolverValor('pedidos', 'para', pedido);
+    if (destino) return destino;
+
+    // 4) Como último recurso, usa a observação
     const observacao = resolverValor('pedidos', 'observacao', pedido);
-    return observacao || '';
+    if (observacao) return observacao;
+
+    // 5) Só retorna o código bruto de id_cliente se nada mais funcionar
+    if (idCliente) return idCliente;
+
+    return '';
   }
 
   function idsParaClientesSelecionados(ids) {
@@ -748,9 +762,19 @@
 
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
+
+    // Bate direto pelo código/ID do cliente selecionado
     if (idsStr.indexOf(idPed) !== -1) return true;
+
+    // Bate pelo nome do solicitante (prioridade)
+    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+    if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
+
+    // Bate pelo destino, se existir
     const destino = resolverValor('pedidos', 'para', pedido);
     if (valorCorrespondeNomesAlvo(destino, nomesAlvo)) return true;
+
+    // Fallback final: nome resolvido genericamente
     const nomePedido = obterNomeClienteDoPedido(pedido);
     if (!nomePedido) return false;
     return valorCorrespondeNomesAlvo(nomePedido, nomesAlvo);

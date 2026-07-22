@@ -211,7 +211,7 @@ DADOS_BRUTOS = """
 12:35	21/07/2026	M pitanga	EMERSON	ENTREGA	Bruna Carmo	R$21,00	Rua Ramalhete 337 apto 501 - Anchieta - até 17h
 12:59	21/07/2026	Cesta	EMERSON	ENTREGA	Rafael Oliveira e Beatriz Couto	R$22,00	Rua Castelo de Setúbal 65, ap 303, Bairro Castelo, BH - retirada 15h - Caixa coração
 13:06	21/07/2026	Mimame	IGOR	ENTREGA	Rua Oriente	R$18,00	Nº685, Apto 500, Bairro Serra, BH, CEP 30220270
-13:41	21/07/2026	Ff fashion	EMERSON	COLETA/ENTREGA	Gabriela	R$20,00	Coleta: Loja Fashion; Entrega: Rua Cuiabá 1077, Prado - Anne Fernandes
+13:41	21/07/2026	FF Fashion	EMERSON	COLETA/ENTREGA	Gabriela	R$20,00	Coleta: Loja Fashion; Entrega: Rua Cuiabá 1077, Prado - Anne Fernandes
 14:09	21/07/2026	Cesta	AUANDER	ENTREGA	Fernanda e Wagner	R$20,00	Rua Cônego Floriano 115 - Cesta com tecido colorido
 14:10	21/07/2026	S Manoel	AUANDER	ENTREGA	Aura Celeste	R$17,00	Rua Padre Severino, 177, apto 302 - São Pedro - até 16h
 14:10	21/07/2026	Basique	AUANDER	ENTREGA	Patrícia Dornelas	R$21,00	Rua Alagoas 1049 - Savassi - deixar com porteiro
