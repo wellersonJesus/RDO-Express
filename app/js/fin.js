@@ -12,6 +12,7 @@
   var CAIXA_PERIODO_STORAGE_KEY = 'rdo_periodos_caixa_salvos';
   var CAIXA_PERIODO_MAX = 50;
   var caixaPeriodoAtual = { inicio: '', fim: '', registros: [] };
+  var CAIXA_BUSCA_SESSION_KEY = 'rdo_caixa_busca_atual';
 
   var state = {
     cache: [],
@@ -27,7 +28,7 @@
     fetching: false,
     sortDataDesc: true,
     todos: { pagina: 1, porPagina: 15, totalPag: 1 },
-    caixa: { pagina: 1, porPagina: 10, totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
+    caixa: { pagina: 1, porPagina: 15, totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
 
@@ -429,6 +430,36 @@
     } catch (e) { return []; }
   }
 
+  function salvarBuscaCaixaSession(inicio, fim, registros) {
+    try {
+      sessionStorage.setItem(CAIXA_BUSCA_SESSION_KEY, JSON.stringify({ inicio: inicio, fim: fim, registros: registros }));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function carregarBuscaCaixaSession() {
+    try {
+      var raw = sessionStorage.getItem(CAIXA_BUSCA_SESSION_KEY);
+      if (!raw) return null;
+      var dados = JSON.parse(raw);
+      if (!dados || !dados.inicio || !dados.fim || !Array.isArray(dados.registros)) return null;
+      return dados;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function limparBuscaCaixaSession() {
+    try {
+      sessionStorage.removeItem(CAIXA_BUSCA_SESSION_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function salvarPeriodoCaixaStorage(periodo) {
     try {
       var lista = carregarPeriodosCaixaStorage();
@@ -437,49 +468,6 @@
       localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(lista));
       return true;
     } catch (e) { return false; }
-  }
-
-  var btnSalvarPeriodoCaixa = document.getElementById('btn-salvar-periodo-caixa');
-  if (btnSalvarPeriodoCaixa) {
-    btnSalvarPeriodoCaixa.addEventListener('click', function () {
-      try {
-        if (!caixaPeriodoAtual.registros.length) {
-          finToast('Nenhum lançamento para salvar. Faça uma busca primeiro.', 'warning');
-          return;
-        }
-
-        // ISOLAMENTO TOTAL DO MÓDULO PEDIDOS: só guarda os campos abaixo
-        var registrosIsolados = caixaPeriodoAtual.registros.map(function (r) {
-          return {
-            dataISO: r.dataISO,
-            dataDisplay: r.dataDisplay,
-            tipo: r.tipo,
-            descricao: r.descricao,
-            valor: r.valor,
-            situacao: r.situacao
-          };
-        });
-
-        var periodoSalvo = {
-          id: gerarIdExtrato(),
-          inicio: caixaPeriodoAtual.inicio,
-          fim: caixaPeriodoAtual.fim,
-          periodoLabel: formatDateBR(caixaPeriodoAtual.inicio) + ' a ' + formatDateBR(caixaPeriodoAtual.fim),
-          registros: registrosIsolados,
-          criadoEm: Date.now()
-        };
-
-        salvarPeriodoCaixaStorage(periodoSalvo);
-        renderPeriodosSalvosCaixa();
-        finToast('Período salvo com sucesso!', 'success');
-
-        var modalEl = document.getElementById('modalPeriodoCaixa');
-        if (modalEl) { var inst = bootstrap.Modal.getOrCreateInstance(modalEl); inst.hide(); }
-      } catch (err) {
-        console.error('[btnSalvarPeriodoCaixa]', err);
-        finToast('Erro ao salvar período: ' + err.message, 'danger');
-      }
-    });
   }
 
   function buscarPeriodoCaixaPorId(id) {
@@ -1140,6 +1128,8 @@
   function registrarEventos() {
     try {
 
+      bindBtnSalvarPeriodoCaixa();
+
       document.querySelectorAll('.fin-tab').forEach(function (tab) {
         tab.addEventListener('click', function (e) {
           e.preventDefault();
@@ -1226,12 +1216,42 @@
             var registros = registrosNoPeriodo(periodo.inicio, periodo.fim);
             if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
 
-            caixaPeriodoAtual = { inicio: periodo.inicio, fim: periodo.fim, registros: registros }; // NOVO
+            if (periodoJaExisteStorage(periodo.inicio, periodo.fim)) {
+              mostrarModalPeriodoDuplicado(formatDateBR(periodo.inicio) + ' a ' + formatDateBR(periodo.fim));
+              return;
+            }
 
-            abrirModalPeriodoCaixa(periodo.inicio, periodo.fim, registros);
+            var registrosIsolados = registros.map(function (r) {
+              return {
+                dataISO: r.dataISO,
+                dataDisplay: r.dataDisplay,
+                tipo: r.tipo,
+                descricao: r.descricao,
+                valor: r.valor,
+                situacao: r.situacao
+              };
+            });
+
+            var periodoSalvo = {
+              id: gerarIdExtrato(),
+              inicio: periodo.inicio,
+              fim: periodo.fim,
+              periodoLabel: formatDateBR(periodo.inicio) + ' a ' + formatDateBR(periodo.fim),
+              registros: registrosIsolados,
+              criadoEm: Date.now()
+            };
+
+            salvarPeriodoCaixaStorage(periodoSalvo);
+            renderPeriodosSalvosCaixa();
+            limparBuscaCaixaSession();
+
+            caixaPeriodoAtual = { inicio: periodo.inicio, fim: periodo.fim, registros: registros };
+            salvarBuscaCaixaSession(periodo.inicio, periodo.fim, registros);
+
+            finToast('Caixa gerado com sucesso!', 'success');
           } catch (err) {
             console.error('[btnFiltrarCaixa]', err);
-            finToast('Erro ao filtrar caixa: ' + err.message, 'danger');
+            finToast('Erro ao gerar caixa: ' + err.message, 'danger');
           }
         });
       }
@@ -1245,12 +1265,7 @@
 
             var periodoLabel = formatDateBR(state.caixa.dataInicio) + ' a ' + formatDateBR(state.caixa.dataFim);
 
-            var modalEl = document.getElementById('modalPeriodoCaixa');
-            if (modalEl) {
-              var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
-              modalInst.hide();
-            }
-
+            // NÃO fechar o modal aqui — ele precisa ficar visível para o print funcionar
             abrirRelatorioFinanceiro('caixa', lista, 'Relatório de Caixa - ' + periodoLabel, state.caixa.dataInicio, state.caixa.dataFim);
           } catch (err) {
             console.error('[btnRelatorioCaixaModal]', err);
@@ -1262,12 +1277,14 @@
       if (els.caixaDataInicio) els.caixaDataInicio.addEventListener('change', function () {
         state.caixa.pagina = 1;
         state.caixa.buscaRealizada = false;
+        limparBuscaCaixaSession();
         renderCaixa();
       });
 
       if (els.caixaDataFim) els.caixaDataFim.addEventListener('change', function () {
         state.caixa.pagina = 1;
         state.caixa.buscaRealizada = false;
+        limparBuscaCaixaSession();
         renderCaixa();
       });
 
@@ -1417,6 +1434,171 @@
   var btnFecharErroFin = document.getElementById('fin-view-erro-fechar');
   if (btnFecharErroFin) btnFecharErroFin.addEventListener('click', ocultarErroViewFin);
 
+  function periodoJaExisteStorage(inicio, fim) {
+    return carregarPeriodosCaixaStorage().some(function (p) {
+      return p.inicio === inicio && p.fim === fim;
+    });
+  }
+
+  function mostrarModalPeriodoDuplicado(periodoLabel) {
+    var OLD_ID = 'modalPeriodoDuplicadoDyn';
+    var old = document.getElementById(OLD_ID);
+    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+
+    var html =
+      '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
+      '<div class="modal-dialog modal-dialog-centered" style="max-width:380px;">' +
+      '<div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">' +
+      '<div style="background:linear-gradient(135deg,#fd7e14 0%,#c65e0a 100%);padding:20px 24px 16px;">' +
+      '<div class="d-flex align-items-center gap-3">' +
+      '<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;">' +
+      '<i class="bi bi-exclamation-triangle-fill" style="font-size:1.1rem;color:#fff;"></i></div>' +
+      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.9rem;">Período já salvo</h6>' +
+      '<small style="color:rgba(255,255,255,.75);font-size:.72rem;">' + escapeHtml(periodoLabel) + '</small></div></div></div>' +
+      '<div class="modal-body px-4 py-4" style="font-size:.82rem;">' +
+      'Esse período já foi salvo, esse período já existe na lista.</div>' +
+      '<div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">' +
+      '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;">Entendi</button>' +
+      '</div></div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var modalEl = document.getElementById(OLD_ID);
+    var modalInst = new bootstrap.Modal(modalEl);
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+    });
+    modalInst.show();
+  }
+
+  function abrirModalConfirmarExclusaoFin(opcoes) {
+    opcoes = opcoes || {};
+    var titulo = opcoes.titulo || 'Confirmar exclusão';
+    var mensagem = opcoes.mensagem || 'Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.';
+    var subtitulo = opcoes.subtitulo || '';
+    var onConfirmar = typeof opcoes.onConfirmar === 'function' ? opcoes.onConfirmar : function () { };
+
+    var OLD_ID = 'modalConfirmarExclusaoFinDyn';
+    var old = document.getElementById(OLD_ID);
+    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+
+    var html =
+      '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
+      '<div class="modal-dialog modal-dialog-centered" style="max-width:380px;">' +
+      '<div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">' +
+
+      '<div style="background:linear-gradient(135deg,#dc3545 0%,#b02a37 100%);padding:20px 24px 16px;">' +
+      '<div class="d-flex align-items-center gap-3">' +
+      '<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+      '<i class="bi bi-trash3-fill" style="font-size:1.1rem;color:#fff;"></i></div>' +
+      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.9rem;">' + escapeHtml(titulo) + '</h6>' +
+      (subtitulo ? '<small style="color:rgba(255,255,255,.75);font-size:.72rem;">' + escapeHtml(subtitulo) + '</small>' : '') +
+      '</div></div></div>' +
+
+      '<div class="modal-body px-4 py-4" style="font-size:.82rem;color:#444;">' +
+      escapeHtml(mensagem) +
+      '</div>' +
+
+      '<div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end">' +
+      '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">' +
+      '<i class="bi bi-x-lg me-1"></i>Cancelar</button>' +
+      '<button type="button" class="btn btn-danger rounded-pill px-4" id="' + OLD_ID + '-btn-confirmar" style="font-size:.78rem;height:38px;font-weight:600;">' +
+      '<i class="bi bi-trash3 me-1"></i>Excluir</button>' +
+      '</div>' +
+
+      '</div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var modalEl = document.getElementById(OLD_ID);
+    var modalInst = new bootstrap.Modal(modalEl);
+    var btnConfirmar = document.getElementById(OLD_ID + '-btn-confirmar');
+
+    btnConfirmar.addEventListener('click', function () {
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      try {
+        onConfirmar();
+      } finally {
+        modalInst.hide();
+      }
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+    });
+
+    modalInst.show();
+  }
+
+  function bindBtnSalvarPeriodoCaixa() {
+    var btn = document.getElementById('btn-salvar-periodo-caixa');
+    if (!btn || btn._bindSalvarPeriodo) return;
+    btn._bindSalvarPeriodo = true;
+
+    var textoOriginal = btn.innerHTML;
+
+    btn.addEventListener('click', function () {
+      if (btn.disabled) return;
+
+      if (!caixaPeriodoAtual.registros.length) {
+        finToast('Nenhum lançamento para salvar. Faça uma busca primeiro.', 'warning');
+        return;
+      }
+
+      var periodoLabel = formatDateBR(caixaPeriodoAtual.inicio) + ' a ' + formatDateBR(caixaPeriodoAtual.fim);
+
+      if (periodoJaExisteStorage(caixaPeriodoAtual.inicio, caixaPeriodoAtual.fim)) {
+        mostrarModalPeriodoDuplicado(periodoLabel);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat fin-spin-icon"></i>';
+
+      setTimeout(function () {
+        try {
+          var registrosIsolados = caixaPeriodoAtual.registros.map(function (r) {
+            return {
+              dataISO: r.dataISO,
+              dataDisplay: r.dataDisplay,
+              tipo: r.tipo,
+              descricao: r.descricao,
+              valor: r.valor,
+              situacao: r.situacao
+            };
+          });
+
+          var periodoSalvo = {
+            id: gerarIdExtrato(),
+            inicio: caixaPeriodoAtual.inicio,
+            fim: caixaPeriodoAtual.fim,
+            periodoLabel: periodoLabel,
+            registros: registrosIsolados,
+            criadoEm: Date.now()
+          };
+
+          salvarPeriodoCaixaStorage(periodoSalvo);
+          renderPeriodosSalvosCaixa();
+          limparBuscaCaixaSession();
+          finToast('Período salvo com sucesso!', 'success');
+
+          var modalEl = document.getElementById('modalPeriodoCaixa');
+          if (modalEl) {
+            var inst = bootstrap.Modal.getOrCreateInstance(modalEl);
+            inst.hide();
+          }
+        } catch (err) {
+          console.error('[bindBtnSalvarPeriodoCaixa]', err);
+          finToast('Erro ao salvar período: ' + err.message, 'danger');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = textoOriginal;
+        }
+      }, 400);
+    });
+  }
+
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var OLD_ID = 'modalVerPeriodoCaixaDyn';
     var old = document.getElementById(OLD_ID);
@@ -1443,7 +1625,7 @@
       '<small class="fin-form-subtitle">Relatório de período salvo</small></div></div>' +
       '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
       '</div>' +
-      '<div class="modal-body px-3 py-3">' +
+      '<div class="modal-body px-3 py-3 fin-print-area">' +
       '<div class="row g-2 mb-3">' +
       '<div class="col-6"><div class="caixa-mini-card caixa-mini-entrada" style="padding:8px 12px;"><div class="caixa-mini-label">Receitas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.entradas) + '</div></div></div>' +
       '<div class="col-6"><div class="caixa-mini-card caixa-mini-saida" style="padding:8px 12px;"><div class="caixa-mini-label">Despesas</div><div class="caixa-mini-valor" style="font-size:.82rem;">' + formatarMoeda(totais.saidas) + '</div></div></div>' +
@@ -1610,7 +1792,18 @@
   function renderCaixa() {
     if (!els.caixaDataInicio || !els.caixaDataFim) return;
 
-    // Não bloqueia os inputs de data, só não gera lista automática
+    if (!state.caixa.buscaRealizada) {
+      var buscaSalva = carregarBuscaCaixaSession();
+      if (buscaSalva) {
+        els.caixaDataInicio.value = buscaSalva.inicio;
+        els.caixaDataFim.value = buscaSalva.fim;
+        state.caixa.dataInicio = buscaSalva.inicio;
+        state.caixa.dataFim = buscaSalva.fim;
+        state.caixa.buscaRealizada = true;
+        caixaPeriodoAtual = { inicio: buscaSalva.inicio, fim: buscaSalva.fim, registros: buscaSalva.registros };
+      }
+    }
+
     if (!state.caixa.buscaRealizada) {
       state.caixa.dadosFiltrados = [];
       state.caixa.listaFiltradaAtual = [];
@@ -1622,7 +1815,6 @@
           '</div>';
       }
 
-      // ✅ CORRIGIDO: respeita o estado do olhinho mesmo sem busca (tudo zerado, mas exibido conforme visibilidade)
       ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores'].forEach(function (k) {
         if (els[k]) {
           els[k].setAttribute('data-valor-real', formatarMoeda(0));
@@ -1639,7 +1831,7 @@
         els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
       }
 
-      renderPeriodosSalvosCaixa(); // ✅ nome correto
+      renderPeriodosSalvosCaixa();
       return;
     }
 
@@ -1664,7 +1856,7 @@
       els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral2.colaboradores) : 'R$ ****';
     }
 
-    renderPeriodosSalvosCaixa(); // ✅ CORRIGIDO: era renderRelatoriosSalvosCaixa (não existia mais)
+    renderPeriodosSalvosCaixa();
   }
 
   function aplicarFiltroCaixaLocal() {
@@ -1684,12 +1876,16 @@
 
   function renderCaixaListaDiaria() {
     if (!els.caixaListaDiaria) return;
+
     var lista = (state.caixa.listaFiltradaAtual || []).slice().sort(function (a, b) {
+      if (a.dataISO === b.dataISO) return 0;
       return a.dataISO < b.dataISO ? 1 : -1;
     });
+
     var totalItens = lista.length;
     state.caixa.totalPag = Math.max(1, Math.ceil(totalItens / state.caixa.porPagina));
     if (state.caixa.pagina > state.caixa.totalPag) state.caixa.pagina = state.caixa.totalPag;
+
     var ini = (state.caixa.pagina - 1) * state.caixa.porPagina;
     var pagina = lista.slice(ini, ini + state.caixa.porPagina);
 
@@ -1697,13 +1893,14 @@
       els.caixaListaDiaria.innerHTML = '<div class="text-center text-muted py-4">Nenhum registro encontrado.</div>';
     } else {
       var porDia = {};
+      var ordemDias = [];
       pagina.forEach(function (r) {
         var dia = r.dataISO || 'sem-data';
-        if (!porDia[dia]) porDia[dia] = [];
+        if (!porDia[dia]) { porDia[dia] = []; ordemDias.push(dia); }
         porDia[dia].push(r);
       });
-      var diasAgrupados = Object.keys(porDia).sort(function (a, b) { return a < b ? 1 : -1; });
-      els.caixaListaDiaria.innerHTML = diasAgrupados.map(function (dia) {
+
+      els.caixaListaDiaria.innerHTML = ordemDias.map(function (dia) {
         var regsDia = porDia[dia];
         var totaisDia = calcularTotaisRegistros(regsDia);
         var labelDia = dia !== 'sem-data' ? formatDateBR(dia) + ' · ' + getDiaSemanaCompleto(dia) : 'Sem data';
@@ -1714,8 +1911,8 @@
           '<div class="caixa-dia-info-semana">' + (labelDia.split(' · ')[1] || '') + ' · ' + regsDia.length + ' lanç.</div></div></div>' +
           '<div class="d-flex align-items-center gap-2">' +
           '<span class="caixa-dia-saldo ' + saldoClasse + '" data-acao="abrir-dia" style="cursor:pointer;">' + (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
-          '<button type="button" class="btn btn-sm btn-outline-danger rounded-circle btn-excluir-dia" data-dia="' + escapeHtml(dia) + '" title="Excluir todos os lançamentos deste dia" style="width:30px;height:30px;padding:0;line-height:1;">' +
-          '<i class="bi bi-trash3" style="font-size:.75rem;"></i></button>' +
+          '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle btn-visualizar-dia" data-dia="' + escapeHtml(dia) + '" title="Visualizar este dia" style="width:30px;height:30px;padding:0;line-height:1;">' +
+          '<i class="bi bi-eye" style="font-size:.75rem;"></i></button>' +
           '<i class="bi bi-chevron-right caixa-dia-chevron" data-acao="abrir-dia" style="cursor:pointer;"></i></div></div>';
       }).join('');
 
@@ -1727,64 +1924,20 @@
         });
       });
 
-      els.caixaListaDiaria.querySelectorAll('.btn-excluir-dia').forEach(function (btn) {
+      els.caixaListaDiaria.querySelectorAll('.btn-visualizar-dia').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
           var dia = this.getAttribute('data-dia');
-          excluirLancamentosDoDia(dia, this);
+          var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
+          abrirModalDetalheDia(dia, regsDoDia);
         });
       });
     }
 
-    if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'Pág ' + state.caixa.pagina;
+    if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'Pág ' + state.caixa.pagina + ' de ' + state.caixa.totalPag;
     if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
     if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
     if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= state.caixa.totalPag;
-  }
-
-  function excluirLancamentosDoDia(dia, btnEl) {
-    var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
-    if (!regsDoDia.length) {
-      finToast('Nenhum lançamento encontrado para este dia.', 'warning');
-      return;
-    }
-
-    var labelDia = formatDateBR(dia);
-    var confirmar = window.confirm(
-      'Excluir TODOS os ' + regsDoDia.length + ' lançamento(s) do dia ' + labelDia + '?\n' +
-      'Essa ação não pode ser desfeita.'
-    );
-    if (!confirmar) return;
-
-    if (btnEl) {
-      btnEl.disabled = true;
-      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.7rem;height:.7rem;"></span>';
-    }
-
-    var promessas = regsDoDia.map(function (r) {
-      return window.API.call('delfinanceiro', { id: r.id }).then(function (res) {
-        var sucesso = res && (res.status === 'success' || res.success === true || res.ok === true);
-        return { id: r.id, ok: sucesso };
-      }).catch(function (err) {
-        return { id: r.id, ok: false, erro: err };
-      });
-    });
-
-    Promise.all(promessas).then(function (resultados) {
-      var idsExcluidos = resultados.filter(function (r) { return r.ok; }).map(function (r) { return r.id; });
-      var falhas = resultados.length - idsExcluidos.length;
-
-      if (idsExcluidos.length) {
-        state.cache = state.cache.filter(function (r) { return idsExcluidos.indexOf(r.id) === -1; });
-        finToast(idsExcluidos.length + ' lançamento(s) do dia ' + labelDia + ' excluído(s)!', 'success');
-      }
-      if (falhas > 0) {
-        finToast(falhas + ' lançamento(s) não puderam ser excluídos.', 'warning');
-      }
-
-      renderCaixa();
-      renderTodos();
-    });
   }
 
   function abrirModalDetalheDia(dia, registros) {
@@ -1991,18 +2144,8 @@
         '</div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
-        '<div style="display:flex;gap:4px;pointer-events:auto;">' +
         '<button class="extrato-item-btn periodo-caixa-btn-ver" data-id="' + escapeHtml(p.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
-        '<div class="dropdown">' +
-        '<button class="extrato-item-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Remover" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
-        '<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width:200px;font-size:.78rem;">' +
-        '<li class="px-1 pb-2 text-muted" style="font-size:.72rem;line-height:1.3;"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Remover este período salvo?</li>' +
-        '<li><div class="d-flex gap-2 px-1">' +
-        '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill fin-confirm-cancelar" style="font-size:.7rem;">Cancelar</button>' +
-        '<button type="button" class="btn btn-sm btn-danger rounded-pill flex-fill fin-confirm-excluir" data-id="' + escapeHtml(p.id) + '" style="font-size:.7rem;">Remover</button>' +
-        '</div></li>' +
-        '</ul></div>' +
-        '</div></div></div>';
+        '</div></div>';
     }).join('');
 
     lista.querySelectorAll('.periodo-caixa-btn-ver').forEach(function (btn) {
@@ -2013,19 +2156,9 @@
       });
     });
 
-    lista.querySelectorAll('.dropdown-menu').forEach(function (menu) {
-      menu.addEventListener('click', function (e) { e.stopPropagation(); });
-    });
-
-    bindDropdownConfirmarExclusao(lista, '.dropdown', function (id) {
-      removerPeriodoCaixaStorage(id);
-      renderPeriodosSalvosCaixa();
-      finToast('Período removido.', 'success');
-    });
-
     lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.extrato-item-btn') || e.target.closest('.dropdown-menu')) return;
+        if (e.target.closest('.extrato-item-btn')) return;
         var p = buscarPeriodoCaixaPorId(this.getAttribute('data-periodo-id'));
         if (p) abrirModalVisualizarPeriodoCaixa(p);
       });
@@ -2646,23 +2779,32 @@
   }
 
   function abrirRelatorioFinanceiro(tipo, registros, tituloBanco, inicio, fim) {
+    var lista = Array.isArray(registros) ? registros : [];
     var periodoLabel = (inicio && fim) ? (formatDateBR(inicio) + ' a ' + formatDateBR(fim)) : 'Todos os registros';
+
+    if (tipo === 'caixa') {
+      window.print();
+      return;
+    }
 
     var origemLabel = 'Caixa';
     if (tipo === 'extrato') origemLabel = tituloBanco || 'Extrato';
     if (tipo === 'financeiro') origemLabel = 'Financeiro (RDO)';
 
+    if (!lista.length) {
+      finToast('Nenhum registro para gerar relatório.', 'warning');
+      return;
+    }
+
     salvarExtratoStorage({
       id: gerarIdExtrato(),
       origem: origemLabel,
       periodoLabel: periodoLabel,
-      registros: registros,
+      registros: lista,
       criadoEm: Date.now()
     });
 
-    renderCaixa();
     renderizarListaExtratos();
-
     finToast('Relatório gerado e salvo na lista!', 'success');
   }
 

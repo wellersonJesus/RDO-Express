@@ -2632,3 +2632,26 @@
     padding: 40px 16px;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .fin-print-area,
+  .fin-print-area * {
+    visibility: visible;
+  }
+  .fin-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .modal-footer,
+  .btn-close,
+  .fin-tabs-nav,
+  .fin-content-area > .card:first-child {
+    display: none !important;
+  }
+}
+

@@ -727,11 +727,19 @@
     return nomesTexto;
   }
 
+  function valorContemNome(valor, nomeAlvo) {
+    if (!valor || !nomeAlvo) return false;
+    const a = normalizarComparacao(valor);
+    const b = normalizarComparacao(nomeAlvo);
+    if (!a || !b) return false;
+    return a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+  }
+
   function valorCorrespondeNomesAlvo(valor, nomesAlvo) {
     if (!valor) return false;
-    // ✅ agora aceita correspondência exata OU abreviação determinística
-    // (ex.: "M PITANGA" [solicitante nos pedidos] === "MARIA PITANGA" [username no cadastro])
-    return nomesAlvo.some(function (nome) { return nomesRelacionados(valor, nome); });
+    return nomesAlvo.some(function (nome) {
+      return nomesRelacionados(valor, nome) || valorContemNome(valor, nome);
+    });
   }
 
   const PERCENTUAL_MOTOBOY = 0.80;
@@ -739,15 +747,15 @@
 
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
-
-    // 1) Bate pelo ID do cliente (quando o id_cliente do pedido
-    //    realmente corresponde ao id interno do cadastro selecionado)
     if (idPed && idsStr.indexOf(idPed) !== -1) return true;
 
-    // 2) Bate pelo nome do solicitante (comparação exata ou abreviação
-    //    determinística com o username do cliente selecionado)
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
     if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
+
+    // ✅ NOVO: também verifica dentro da descrição/mercadoria
+    // (cobre casos como "MIMAME CAPS — Rua...", "TAMARA CAPS — Rua...")
+    const mercadoria = resolverValor('pedidos', 'mercadoria', pedido);
+    if (valorCorrespondeNomesAlvo(mercadoria, nomesAlvo)) return true;
 
     return false;
   }
