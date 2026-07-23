@@ -739,7 +739,8 @@
             de: (document.getElementById('novo-de') || {}).value || '',
             para: (document.getElementById('novo-para') || {}).value || '',
             observacao: (document.getElementById('novo-obs') || {}).value || '',
-            status: 'PENDENTE'
+            status: 'PENDENTE',
+            situacao_financeira: 'pendente'
         };
 
         if (!payload.solicitante) {

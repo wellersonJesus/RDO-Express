@@ -2582,6 +2582,7 @@ window.remitirPedido = async function () {
         valor_total: valorTotal,
         valor_final: valorTotal,
         status: 'PENDENTE',
+        situacao_financeira: 'PENDENTE',
         texto: mensagemProvisoria
     };
 
@@ -2615,6 +2616,7 @@ window.remitirPedido = async function () {
             var novoPedidoCache = Object.assign({}, payload, {
                 id: novoPedidoId,
                 status: 'PENDENTE',
+                situacao_financeira: 'PENDENTE',
                 motoboy: '',
                 mensagem: mensagemFinal
             });

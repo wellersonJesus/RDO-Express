@@ -834,15 +834,48 @@ function abrirModalNotifPagamento() {
 
 function abrirPedidoDaNotificacao(pedidoId) {
     window.AppRDO = window.AppRDO || {};
-    window.AppRDO._pedidoAlvoNotificacao = String(pedidoId || '').trim();
 
+    var dados = window.dashboardState.dados || {};
+    var pedidos = dados.pedidos || [];
+
+    // Localiza o pedido completo (não só o ID) para saber o cliente vinculado
+    var pedido = pedidos.find(function (p) {
+        return String(p.id || p.id_pedido || '').trim() === String(pedidoId || '').trim();
+    });
+
+    var idCliente = pedido ? (pedido.id_cliente || pedido.solicitante || '') : '';
+
+    // Guarda os alvos que o módulo de Relatórios vai ler ao iniciar
+    window.AppRDO._pedidoAlvoNotificacao = String(pedidoId || '').trim();
+    window.AppRDO._clienteAlvoRelatorio = String(idCliente || '').trim();
+    window.AppRDO._origemNavegacao = 'notificacao-pagamento';
+
+    // Fecha o modal de notificação
     var modalEl = document.getElementById('modalNotifPagamentoDashboard');
     if (modalEl && typeof bootstrap !== 'undefined') {
         var inst = bootstrap.Modal.getInstance(modalEl);
         if (inst) inst.hide();
     }
 
-    navegarParaPedidos();
+    navegarParaRelatorioCliente();
+}
+
+function navegarParaRelatorioCliente() {
+    if (window.router && typeof window.router.navigate === 'function') {
+        window.router.navigate('relatorios'); // ajuste o nome da rota conforme seu router
+    } else {
+        window.location.hash = '#relatorios';
+    }
+
+    // Dispara um evento customizado para o módulo de relatórios "ouvir"
+    // e já abrir focado no pedido/cliente certo, mesmo se o módulo
+    // já estiver carregado em memória (SPA sem reload).
+    window.dispatchEvent(new CustomEvent('abrirRelatorioDoPedido', {
+        detail: {
+            pedidoId: window.AppRDO._pedidoAlvoNotificacao,
+            clienteId: window.AppRDO._clienteAlvoRelatorio
+        }
+    }));
 }
 
 function navegarParaPedidos() {

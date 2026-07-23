@@ -1868,6 +1868,66 @@
     carregarDados();
   }
 
+  function _clientePorId(idCliente) {
+    return state.clientes.find(function (c) {
+      return String(c.id).trim() === String(idCliente).trim();
+    });
+  }
+
+  function _obterPeriodoParaPedido(pedido) {
+    // Usa o mês do pedido como período padrão do relatório
+    const dataPedido = normalizarDataISO(resolverValor('pedidos', 'data', pedido));
+    const base = dataPedido ? new Date(dataPedido) : new Date();
+
+    const inicio = new Date(base.getFullYear(), base.getMonth(), 1);
+    const fim = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+
+    return { inicio: toISO(inicio), fim: toISO(fim) };
+  }
+
+  function abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId) {
+    if (state.fetching || !state.clientes.length) {
+      // Dados ainda não carregaram — tenta de novo em breve
+      setTimeout(function () { abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId); }, 400);
+      return;
+    }
+
+    const pedido = state.pedidos.find(function (p) {
+      return String(resolverValor('pedidos', 'id', p)).trim() === String(pedidoId).trim();
+    });
+
+    const idClienteFinal = clienteId || (pedido ? resolverValor('pedidos', 'id_cliente', pedido) : '');
+    const cliente = _clientePorId(idClienteFinal);
+
+    if (!cliente) {
+      relToast('Cliente do pedido #' + pedidoId + ' não encontrado.', 'warning');
+      return;
+    }
+
+    const periodo = pedido ? _obterPeriodoParaPedido(pedido) : { inicio: toISO(new Date()), fim: toISO(new Date()) };
+    const filtroExtra = { campo: 'cliente_id', valor: [String(cliente.id)] };
+
+    // Muda para a aba "Clientes" na tela de relatórios (se existir navegação de abas)
+    const tabClientes = document.querySelector('.rel-tab[data-tab="clientes"]');
+    if (tabClientes) tabClientes.click();
+
+    // Abre o builder já filtrado pelo cliente e período do pedido
+    iniciarBuilder('clientes', periodo, filtroExtra);
+
+    relToast('Relatório do cliente "' + resolverValor('clientes', 'username', cliente) + '" pronto para gerar.', 'info');
+  }
+
+  window.addEventListener('abrirRelatorioDoPedido', function (e) {
+    const pedidoId = e.detail && e.detail.pedidoId;
+    const clienteId = e.detail && e.detail.clienteId;
+    if (!pedidoId && !clienteId) return;
+
+    // Garante que o módulo de relatórios já foi inicializado
+    if (typeof window.initRelatorios === 'function') window.initRelatorios();
+
+    abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId);
+  });
+
   function agruparPorMotoboyFinanceiro(registrosFinanceiro) {
     const mapa = {};
 
