@@ -1,5 +1,3 @@
-console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
-
 (function () {
     'use strict';
 
@@ -392,9 +390,10 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
 
         if (filtrados.length === 0) {
             els.tbody.innerHTML =
-                '<tr><td colspan="4" class="text-center text-muted py-4">' +
+                '<tr><td colspan="6" class="text-center text-muted py-4">' +
                 '<i class="bi bi-inbox d-block mb-2" style="font-size:2rem;"></i>' +
                 'Nenhum pedido encontrado</td></tr>';
+
             if (els.infoPaginacao) els.infoPaginacao.textContent = 'Pág 0 de 0';
             if (els.btnPrev) els.btnPrev.disabled = true;
             if (els.btnNext) els.btnNext.disabled = true;

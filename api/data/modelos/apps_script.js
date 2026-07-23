@@ -11,12 +11,63 @@ var MODELO_PADRAO = [
   'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
 ].join('\n');
 
+var CAMPOS_MONETARIOS = [
+  "valor_corrida", "valor_base", "taxa_espera", "valor_km",
+  "vlr_servico", "valor_total", "valor_final", "valorcorrida"
+];
+
 function normalizarChave(str) {
   return String(str || "")
     .toLowerCase()
     .trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[\s\/]+/g, '_');
+}
+
+function ehCampoMonetario(chave) {
+  return CAMPOS_MONETARIOS.indexOf(chave) !== -1;
+}
+
+function formatarMoeda(valor) {
+  if (valor === null || valor === undefined || valor === "") return "";
+
+  var texto = String(valor).trim();
+  if (texto === "") return "";
+
+  if (/^R\$\s*-?\d/.test(texto)) return texto;
+
+  var limpo = texto.replace(/[^\d,.\-]/g, "");
+  if (limpo === "") return "";
+
+  var negativo = limpo.indexOf("-") === 0;
+  limpo = limpo.replace("-", "");
+
+  var numero;
+  if (limpo.indexOf(",") !== -1) {
+    limpo = limpo.replace(/\./g, "").replace(",", ".");
+    numero = parseFloat(limpo);
+  } else {
+    numero = parseFloat(limpo);
+  }
+
+  if (isNaN(numero)) return texto;
+
+  var formatado = numero.toFixed(2).replace(".", ",");
+  var partes = formatado.split(",");
+  var inteiro = partes[0];
+  var decimal = partes[1];
+
+  var comMilhares = "";
+  var contador = 0;
+  for (var i = inteiro.length - 1; i >= 0; i--) {
+    comMilhares = inteiro.charAt(i) + comMilhares;
+    contador++;
+    if (contador % 3 === 0 && i !== 0) {
+      comMilhares = "." + comMilhares;
+    }
+  }
+
+  return (negativo ? "-" : "") + "R$ " + comMilhares + "," + decimal;
 }
 
 function doPost(e) {
@@ -121,7 +172,35 @@ function doPost(e) {
     if (action.indexOf("add") === 0 ||
       action.indexOf("save") === 0 ||
       action.indexOf("criar") === 0) return responder(processarAdd(sheet, data, nomeAba));
-    if (action.indexOf("update") === 0) return responder(processarUpdate(sheet, data));
+    if (action.indexOf("update") === 0) {
+      var resultadoUpdate = processarUpdate(sheet, data);
+
+      if (nomeAba === "financeiro") {
+        var chaveSituacao = null;
+        var chaveIdPedido = null;
+        var chavesRecebidasUpd = Object.keys(data);
+
+        for (var ku = 0; ku < chavesRecebidasUpd.length; ku++) {
+          var normUpd = normalizarChave(chavesRecebidasUpd[ku]);
+          if (normUpd === "situacao") chaveSituacao = chavesRecebidasUpd[ku];
+          if (normUpd === "id_pedido" || normUpd === "pedido_id") chaveIdPedido = chavesRecebidasUpd[ku];
+        }
+
+        if (chaveSituacao !== null) {
+          var novaSituacaoVal = data[chaveSituacao];
+          var idPedidoRelacionado = chaveIdPedido ? data[chaveIdPedido] : "";
+
+          if (!idPedidoRelacionado) {
+            idPedidoRelacionado = buscarIdPedidoNoFinanceiro(sheet, data.id);
+          }
+
+          sincronizarSituacaoFinanceiroComPedido(ss, idPedidoRelacionado, novaSituacaoVal);
+        }
+      }
+
+      return responder(resultadoUpdate);
+    }
+
     if (action.indexOf("delete") === 0) {
       if (nomeAba === "pedidos") {
         return responder(processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" }));
@@ -136,6 +215,41 @@ function doPost(e) {
     return responder({ status: "error", message: "Erro interno: " + err.toString() });
   } finally {
     if (temLock) lock.releaseLock();
+  }
+}
+
+function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
+  if (!idPedido) return;
+
+  var sheetPedidos = buscarAba(ss, "pedidos");
+  if (!sheetPedidos) return;
+
+  var values = sheetPedidos.getDataRange().getValues();
+  if (values.length === 0) return;
+
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idIndex = headers.indexOf("id");
+  var colSitFinIndex = headers.indexOf("situacao_financeira");
+
+  if (idIndex === -1 || colSitFinIndex === -1) return;
+
+  var idBusca = String(idPedido).trim().toUpperCase();
+  var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
+
+  var sitFormatada = String(novaSituacao || "").trim();
+  if (sitFormatada) {
+    sitFormatada = sitFormatada.charAt(0).toUpperCase() + sitFormatada.slice(1).toLowerCase();
+  }
+
+  for (var i = 1; i < values.length; i++) {
+    var idCelula = String(values[i][idIndex]).trim().toUpperCase();
+    var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
+
+    if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
+      sheetPedidos.getRange(i + 1, colSitFinIndex + 1).setValue(sitFormatada);
+      SpreadsheetApp.flush();
+      break;
+    }
   }
 }
 
@@ -503,39 +617,37 @@ function processarCriarPedido(sheetPedidos, data) {
     escreverComoTexto(sheetChat, sheetChat.getLastRow(), 6, dataStr);
   }
 
-  var headers = obterHeaders(sheetPedidos);
-  var idIndex = headers.indexOf("id");
-  var colDataIndex = headers.indexOf("data");
+  var rowData = {
+    id: idPedido,
+    id_cliente: idCliente,
+    solicitante: String(data.solicitante || ""),
+    contato: String(data.contato || ""),
+    horario: horaStr,
+    mercadoria: String(data.mercadoria || ""),
+    de: deStr,
+    para: paraStr,
+    retorno: String(data.retorno || ""),
+    prioridade: String(data.prioridade || "N/A"),
+    valor_corrida: formatarMoeda(data.valor_corrida || data.valor_final || ""),
+    motoboy: String(data.motoboy || ""),
+    status: String(data.status || "PENDENTE"),
+    situacao_financeira: String(data.situacao_financeira || "Pendente"),
+    observacao: String(data.observacao || data.obs || ""),
+    data: dataStr,
+    hora: horaStr
+  };
 
-  if (headers.length > 1 && idIndex !== -1) {
-    var rowData = {};
-    rowData.id = idPedido;
-    rowData.id_cliente = idCliente;
-    rowData.solicitante = String(data.solicitante || "");
-    rowData.contato = String(data.contato || "");
-    rowData.horario = horaStr;
-    rowData.mercadoria = String(data.mercadoria || "");
-    rowData.de = deStr;
-    rowData.para = paraStr;
-    rowData.retorno = String(data.retorno || "");
-    rowData.prioridade = String(data.prioridade || "N/A");
-    rowData.valor_corrida = String(data.valor_corrida || data.valor_final || "");
-    rowData.valor_base = String(data.valor_base || "");
-    rowData.taxa_espera = String(data.taxa_espera || "");
-    rowData.motoboy = String(data.motoboy || "");
-    rowData.status = String(data.status || "PENDENTE");
-    rowData.observacao = String(data.observacao || data.obs || "");
-    rowData.distancia = String(data.distancia || "");
-    rowData.tempo = String(data.tempo || "");
-    rowData.valor_km = String(data.valor_km || "");
-    rowData.dinamica = String(data.dinamica || "");
-    rowData.numero_servico = idPedido;
-    rowData.data = dataStr;
-    rowData.hora = horaStr;
+  var headersOriginais = obterHeaders(sheetPedidos);
+  var headersNorm = headersOriginais.map(normalizarChave);
 
+  var idIndex = headersNorm.indexOf("id");
+  var colDataIndex = headersNorm.indexOf("data");
+
+  if (headersNorm.length > 1 && idIndex !== -1) {
     var row = [];
-    for (var i = 0; i < headers.length; i++) {
-      row.push(rowData[headers[i]] !== undefined ? rowData[headers[i]] : "");
+    for (var i = 0; i < headersNorm.length; i++) {
+      var campo = headersNorm[i];
+      row.push(rowData[campo] !== undefined ? rowData[campo] : "");
     }
     sheetPedidos.appendRow(row);
 
@@ -545,22 +657,21 @@ function processarCriarPedido(sheetPedidos, data) {
   } else {
     sheetPedidos.appendRow([
       idPedido, idCliente,
-      String(data.solicitante || ""),
-      String(data.contato || ""),
+      rowData.solicitante,
+      rowData.contato,
+      dataStr,
       horaStr,
-      String(data.mercadoria || ""),
+      rowData.mercadoria,
       deStr, paraStr,
-      String(data.retorno || ""),
-      String(data.prioridade || "N/A"),
-      String(data.valor_corrida || data.valor_final || ""),
-      String(data.valor_base || ""),
-      String(data.taxa_espera || ""),
-      String(data.motoboy || ""),
-      String(data.status || "PENDENTE"),
-      String(data.observacao || data.obs || ""),
-      dataStr, horaStr
+      rowData.retorno,
+      rowData.prioridade,
+      rowData.valor_corrida,
+      rowData.motoboy,
+      rowData.status,
+      rowData.situacao_financeira,
+      rowData.observacao
     ]);
-    escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), 16, dataStr);
+    escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), 5, dataStr);
   }
 
   return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
@@ -635,7 +746,14 @@ function processarGet(sheet) {
   for (var i = 1; i < rows.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      if (headers[j] !== "") obj[headers[j]] = converterValorCelula(rows[i][j]);
+      if (headers[j] !== "") {
+        var campoNorm = normalizarChave(headers[j]);
+        var valorCel = converterValorCelula(rows[i][j]);
+        if (ehCampoMonetario(campoNorm) && valorCel !== "") {
+          valorCel = formatarMoeda(valorCel);
+        }
+        obj[headers[j]] = valorCel;
+      }
     }
     resultado.push(obj);
   }
@@ -702,7 +820,14 @@ function processarGetFinanceiroCompleto() {
   for (var r = 1; r < finRows.length; r++) {
     var obj = {};
     for (var col = 0; col < finHeaders.length; col++) {
-      if (finHeaders[col] !== "") obj[finHeaders[col]] = converterValorCelula(finRows[r][col]);
+      if (finHeaders[col] !== "") {
+        var campoNormFin = normalizarChave(finHeaders[col]);
+        var valorCelFin = converterValorCelula(finRows[r][col]);
+        if (ehCampoMonetario(campoNormFin) && valorCelFin !== "") {
+          valorCelFin = formatarMoeda(valorCelFin);
+        }
+        obj[finHeaders[col]] = valorCelFin;
+      }
     }
     var idPedido = finIdPedidoIdx !== -1 ? String(finRows[r][finIdPedidoIdx]).trim() : "";
     var pedido = idPedido ? pedidosMap[idPedido] : null;
@@ -722,7 +847,6 @@ function processarGetFinanceiroCompleto() {
 
 function processarSalvarRelatorioFinanceiro(sheet, data) {
   var headers = obterHeaders(sheet);
-  var idIndex = headers.indexOf("id");
   var id = String(data.id || "").trim() || gerarId(sheet, "relatorios");
 
   var rowData = {};
@@ -732,16 +856,14 @@ function processarSalvarRelatorioFinanceiro(sheet, data) {
   rowData.data = normalizarDataStr(data.data) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
   rowData.tipo = String(data.tipo || "Financeiro");
   rowData.descricao = String(data.descricao || "");
-  rowData.motoboy = String(data.motoboy || "");
-  rowData.vlr_servico = String(data.vlr_servico || "0");
+  rowData.vlr_servico = formatarMoeda(data.vlr_servico || "0");
   rowData.colaborador = String(data.colaborador || "");
-  rowData.rdo = String(data.rdo || "");
   rowData.observacao = typeof data.observacao === "string" ? data.observacao : JSON.stringify(data.observacao || {});
   rowData.situacao = String(data.situacao || "Concluído");
 
   var row = [];
   for (var i = 0; i < headers.length; i++) {
-    var campo = headers[i];
+    var campo = normalizarChave(headers[i]);
     row.push(rowData[campo] !== undefined ? rowData[campo] : "");
   }
   sheet.appendRow(row);
@@ -842,6 +964,8 @@ function processarAdd(sheet, data, entity) {
       valor = new Date().toISOString();
     } else if (campo === "data" && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
       valor = normalizarDataStr(dataNorm[campo]);
+    } else if (ehCampoMonetario(campo) && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
+      valor = formatarMoeda(dataNorm[campo]);
     } else if (dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
       valor = String(dataNorm[campo]).trim();
     }
@@ -861,40 +985,95 @@ function processarAdd(sheet, data, entity) {
 
 function processarUpdate(sheet, data) {
   var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function (h) { return String(h).toLowerCase().trim(); });
-  var idIndex = headers.indexOf("id");
+  if (values.length === 0) return { status: "error", message: "Planilha vazia" };
 
+  var headersOriginais = values[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var headers = headersOriginais.map(normalizarChave);
+
+  var idIndex = headers.indexOf("id");
   if (idIndex === -1) return { status: "error", message: "Coluna 'id' nao encontrada" };
-  if (!data.id) return { status: "error", message: "ID nao informado para atualizacao" };
+  if (!data || !data.id) return { status: "error", message: "ID nao informado para atualizacao" };
 
   var idBusca = String(data.id).trim();
+  var idBuscaUpper = idBusca.toUpperCase();
   var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
+
+  var ALIASES = {
+    "valor_total": "valor_corrida",
+    "valor_final": "valor_corrida",
+    "valorcorrida": "valor_corrida",
+    "espera_tipo": "espera_tipo",
+    "espera_minutos": "espera_minutos",
+    "taxa_espera": "taxa_espera",
+    "horario": "horario",
+    "hora": "horario"
+  };
+
+  var linhaEncontrada = -1;
 
   for (var i = 1; i < values.length; i++) {
     var idCelula = String(values[i][idIndex]).trim();
+    var idCelulaUpper = idCelula.toUpperCase();
     var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
 
-    if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
-      var keys = Object.keys(data);
-      for (var k = 0; k < keys.length; k++) {
-        var chaveNorm = normalizarChave(keys[k]);
-        var colIndex = headers.indexOf(chaveNorm);
-        if (colIndex !== -1) {
-          var valorAtualizar = data[keys[k]];
-          if (chaveNorm === "data") {
-            escreverComoTexto(sheet, i + 1, colIndex + 1, normalizarDataStr(valorAtualizar));
-          } else {
-            if (valorAtualizar !== null && typeof valorAtualizar === "object") {
-              valorAtualizar = JSON.stringify(valorAtualizar);
-            }
-            sheet.getRange(i + 1, colIndex + 1).setValue(valorAtualizar);
-          }
-        }
-      }
-      return { status: "success", message: "Atualizado!" };
+    if (idCelula === idBusca || idCelulaUpper === idBuscaUpper || idCelulaNum === idBuscaNum) {
+      linhaEncontrada = i;
+      break;
     }
   }
-  return { status: "error", message: "ID nao encontrado: " + data.id };
+
+  if (linhaEncontrada === -1) {
+    return { status: "error", message: "ID nao encontrado: " + data.id };
+  }
+
+  var linhaPlanilha = linhaEncontrada + 1;
+  var keys = Object.keys(data);
+  var camposAtualizados = [];
+  var camposIgnorados = [];
+
+  for (var k = 0; k < keys.length; k++) {
+    var chaveOriginal = keys[k];
+    if (chaveOriginal === "id" || chaveOriginal === "apiKey" || chaveOriginal === "action") continue;
+
+    var chaveNorm = normalizarChave(chaveOriginal);
+    var chaveFinal = ALIASES[chaveNorm] || chaveNorm;
+
+    var colIndex = headers.indexOf(chaveFinal);
+
+    if (colIndex === -1) {
+      camposIgnorados.push(chaveOriginal + " (-> " + chaveFinal + ")");
+      continue;
+    }
+
+    var valorAtualizar = data[chaveOriginal];
+
+    if (chaveFinal === "data") {
+      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, normalizarDataStr(valorAtualizar));
+    } else if (chaveFinal === "horario" || chaveFinal === "hora") {
+      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, String(valorAtualizar || ""));
+    } else if (ehCampoMonetario(chaveFinal)) {
+      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, formatarMoeda(valorAtualizar));
+    } else {
+      if (valorAtualizar !== null && typeof valorAtualizar === "object") {
+        valorAtualizar = JSON.stringify(valorAtualizar);
+      }
+      if (valorAtualizar === null || valorAtualizar === undefined) {
+        valorAtualizar = "";
+      }
+      sheet.getRange(linhaPlanilha, colIndex + 1).setValue(valorAtualizar);
+    }
+
+    camposAtualizados.push(chaveFinal);
+  }
+
+  SpreadsheetApp.flush();
+
+  return {
+    status: "success",
+    message: "Atualizado!",
+    camposAtualizados: camposAtualizados,
+    camposIgnorados: camposIgnorados
+  };
 }
 
 function processarDelete(sheet, id) {
@@ -959,6 +1138,28 @@ function mapearEntidade(entity) {
     "extratosfinanceiros": "extratos"
   };
   return mapa[entity] || entity;
+}
+
+function buscarIdPedidoNoFinanceiro(sheetFinanceiro, idFinanceiro) {
+  var values = sheetFinanceiro.getDataRange().getValues();
+  if (values.length === 0) return "";
+
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idIndex = headers.indexOf("id");
+  var idPedidoIndex = headers.indexOf("id_pedido") !== -1
+    ? headers.indexOf("id_pedido")
+    : headers.indexOf("pedido_id");
+
+  if (idIndex === -1 || idPedidoIndex === -1) return "";
+
+  var idBusca = String(idFinanceiro).trim().toUpperCase();
+
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][idIndex]).trim().toUpperCase() === idBusca) {
+      return String(values[i][idPedidoIndex]).trim();
+    }
+  }
+  return "";
 }
 
 function buscarAba(ss, nome) {

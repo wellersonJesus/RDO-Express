@@ -1,5 +1,27 @@
 'use strict';
 
+if (!window.EventBus) {
+  window.EventBus = (function () {
+    var listeners = {};
+    return {
+      on: function (evento, callback) {
+        if (!listeners[evento]) listeners[evento] = [];
+        listeners[evento].push(callback);
+      },
+      off: function (evento, callback) {
+        if (!listeners[evento]) return;
+        listeners[evento] = listeners[evento].filter(function (cb) { return cb !== callback; });
+      },
+      emit: function (evento, payload) {
+        if (!listeners[evento]) return;
+        listeners[evento].forEach(function (cb) {
+          try { cb(payload); } catch (e) { console.error('[EventBus] Erro no listener de "' + evento + '":', e); }
+        });
+      }
+    };
+  })();
+}
+
 (function () {
 
   var EXTRATO_STORAGE_KEY = 'rdo_extratos_salvos';
@@ -342,14 +364,15 @@
     var s = String(v).replace(/R\$\s*/g, '').replace(/%/g, '').replace(/\s/g, '');
     if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) s = s.replace(/\./g, '').replace(',', '.');
     else if (s.indexOf(',') !== -1) s = s.replace(',', '.');
-    return parseFloat(s);
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
   }
 
   function normalizarRegistro(d) {
     var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
     var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME') ? 'entrada' : 'saida';
     var dataObj = parseData(d.data);
-    var valorNorm = parseCurrencyField(d.valor || d.vlr_servico);
+    var valorNorm = parseCurrencyField(d.valor !== undefined ? d.valor : d.vlr_servico);
     if (isNaN(valorNorm)) valorNorm = 0;
     var situacao = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var idPedido = (d.id_pedido || '').toString().trim();
@@ -367,7 +390,7 @@
     var pctEmpresa = 100 - pctColab;
     var valorColab = 0, valorEmpresa = 0;
     if (tipoNorm === 'entrada') {
-      var colabVal = parseCurrencyField(d.colaborador);
+      var colabVal = parseCurrencyField(d.colaborador_valor !== undefined ? d.colaborador_valor : d.colaborador);
       var rdoVal = parseCurrencyField(d.rdo);
       if (!isNaN(colabVal) && colabVal > 0) {
         valorColab = colabVal;
@@ -472,8 +495,9 @@
   }
 
   function formatarMoeda(valor) {
-    if (valor === null || valor === undefined || isNaN(valor)) return 'R$ 0,00';
-    return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var num = typeof valor === 'number' ? valor : parseCurrencyField(valor);
+    if (isNaN(num)) num = 0;
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function formatDateBR(iso) {
@@ -697,6 +721,7 @@
     els.caixaCardEmpresa = document.getElementById('caixa-card-empresa');
     els.caixaCardColaboradores = document.getElementById('caixa-card-colaboradores');
     els.caixaCardRegistros = document.getElementById('caixa-card-registros');
+    els.caixaCardSaldoTotal = document.getElementById('caixa-card-saldo-total');
     els.caixaListaDiaria = document.getElementById('caixa-lista-diaria');
     els.rdoPaySaldo = document.getElementById('rdo-pay-saldo');
     els.rdoPaySaldoColabs = document.getElementById('rdo-pay-saldo-colaboradores');
@@ -824,6 +849,100 @@
       })
       .catch(function (err) {
         console.error('[excluirRegistroDefinitivo] Erro na chamada da API:', err);
+        throw err;
+      });
+  }
+
+  function notificarSituacaoFinanceiraAtualizada(idPedido, situacaoFinanceira) {
+    var payload = { idPedido: idPedido, situacaoFinanceira: situacaoFinanceira };
+
+    if (window.EventBus && typeof window.EventBus.emit === 'function') {
+      window.EventBus.emit('financeiro:situacaoAtualizada', payload);
+    }
+
+    document.dispatchEvent(new CustomEvent('financeiro:situacaoAtualizada', { detail: payload }));
+  }
+
+  function salvarRegistroFinanceiro(id, dados) {
+    if (!id) {
+      return Promise.reject(new Error('ID do registro não informado.'));
+    }
+
+    var payload = Object.assign({ id: id }, dados);
+    if (payload.valor !== undefined) {
+      var vNum = parseValor(payload.valor);
+      payload.valor = isNaN(vNum) ? 0 : vNum;
+    }
+
+    return window.API.call('updatefinanceiro', payload)
+      .then(function (res) {
+        var sucesso = isRespostaSucesso(res) || (res && (res.status === 'success' || res.success === true || res.ok === true));
+
+        if (!sucesso) {
+          var msgErro = (res && (res.message || res.msg)) || 'Não foi possível salvar as alterações.';
+          throw new Error(msgErro);
+        }
+
+        var idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
+        var regAtualizado = idx !== -1 ? state.cache[idx] : null;
+
+        if (idx !== -1) {
+          var reg = state.cache[idx];
+          if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
+          if (dados.tipo !== undefined) reg.tipo = dados.tipo;
+          if (dados.situacao !== undefined) reg.situacao = dados.situacao;
+          if (dados.descricao !== undefined) reg.descricao = dados.descricao;
+          if (dados.observacao !== undefined) reg.observacao = dados.observacao;
+          if (dados.colaborador_id !== undefined) reg.colaboradorId = dados.colaborador_id;
+          if (dados.motoboy !== undefined) reg.motoboy = dados.motoboy || '-';
+
+          if (reg.tipo === 'entrada') {
+            var pctColab = 80;
+            if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && state.colaboradoresCache[reg.colaboradorId].percentual_comissao) {
+              pctColab = parseFloat(state.colaboradoresCache[reg.colaboradorId].percentual_comissao) || 80;
+            }
+            reg.percentualComissao = pctColab;
+            reg.valorColaborador = reg.valor * (pctColab / 100);
+            reg.valorEmpresa = reg.valor * ((100 - pctColab) / 100);
+          } else {
+            reg.valorColaborador = 0;
+            reg.valorEmpresa = 0;
+          }
+
+          state.cache[idx] = reg;
+        }
+
+        var propagacao = Promise.resolve();
+        if (dados.situacao !== undefined && regAtualizado && regAtualizado.idPedido) {
+          var idPedidoNorm = String(regAtualizado.idPedido).trim().replace(/^RDO0*/i, '') || String(regAtualizado.idPedido).trim();
+
+          propagacao = window.API.call('updatepedidos', {
+            id: idPedidoNorm,
+            situacao_financeira: dados.situacao
+          }).then(function (resPedido) {
+            var pedido = state.pedidosCache[regAtualizado.idPedido] || state.pedidosCache[idPedidoNorm];
+            if (pedido) pedido.situacao_financeira = dados.situacao;
+
+            notificarSituacaoFinanceiraAtualizada(idPedidoNorm, dados.situacao);
+
+            return resPedido;
+          }).catch(function (err) {
+            console.error('[salvarRegistroFinanceiro] Falha ao sincronizar pedido:', err);
+            finToast('Lançamento salvo, mas houve erro ao atualizar o pedido vinculado.', 'warning');
+          });
+        }
+
+        return propagacao.then(function () {
+          if (typeof renderTodos === 'function') renderTodos();
+          if (typeof renderCaixa === 'function') renderCaixa();
+          if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
+
+          finToast('Lançamento atualizado com sucesso!', 'success');
+          return res;
+        });
+      })
+      .catch(function (err) {
+        console.error('[salvarRegistroFinanceiro] Erro:', err);
         throw err;
       });
   }
@@ -1034,64 +1153,6 @@
     }
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
-  }
-
-  function salvarRegistroFinanceiro(id, dados) {
-    var payload = {
-      id: id,
-      tipo: dados.tipo,
-      descricao: dados.descricao,
-      vlr_servico: dados.valor,
-      colaborador: dados.motoboy,
-      colaborador_id: dados.colaborador_id || '',
-      situacao: dados.situacao,
-      observacao: dados.observacao
-    };
-
-    return window.API.call('editfinanceiro', payload).then(function (res) {
-      if (!isRespostaSucesso(res)) {
-        throw new Error((res && (res.message || res.msg)) || 'Erro ao salvar alterações.');
-      }
-      finToast('Registro atualizado com sucesso!', 'success');
-
-      var reg = state.cache.find(function (r) { return String(r.id) === String(id); });
-      var idPedido = reg ? (reg.id_pedido || reg.idPedido || '') : '';
-
-      var sit = (dados.situacao || '').toLowerCase();
-      var statusPedido;
-
-      if (sit === 'cancelado') {
-        statusPedido = 'CANCELADO';
-      } else if (sit === 'pago' || sit === 'recebido') {
-        statusPedido = 'CONCLUIDO';
-      } else if (sit === 'pendente') {
-        statusPedido = 'PENDENTE';
-      }
-
-      var promiseAtualizarPedido = Promise.resolve();
-      if (idPedido && statusPedido) {
-        promiseAtualizarPedido = window.API.call('updatepedido', {
-          id: idPedido,
-          status: statusPedido,
-          situacao_financeira: sit
-        }).catch(function (err) {
-          console.error('[fim.js] ❌ Falha ao persistir status do pedido:', err);
-        });
-      }
-
-      return promiseAtualizarPedido.then(function () {
-        if (idPedido && window.EventBus) {
-          window.EventBus.emit('financeiro:situacaoAtualizada', {
-            idPedido: idPedido,
-            situacaoFinanceira: sit,
-            statusPedido: statusPedido
-          });
-        }
-
-        carregarDados();
-        return res;
-      });
-    });
   }
 
   function abrirModalEditar(reg) {
@@ -2084,14 +2145,10 @@
       state.caixa.dadosFiltrados = [];
       state.caixa.listaFiltradaAtual = [];
 
-      // ✅ NOVO: só mostra o placeholder "selecione o período" se NÃO houver
-      // nenhuma carteira/período já salvo no localStorage
       var periodosExistentes = carregarPeriodosCaixaStorage();
 
       if (els.caixaListaDiaria) {
         if (periodosExistentes.length) {
-          // Já existem carteiras salvas — não mostra o aviso, apenas deixa a
-          // lista de "Relatórios de Período Salvos" visível abaixo.
           els.caixaListaDiaria.innerHTML = '';
         } else {
           els.caixaListaDiaria.innerHTML =
@@ -2102,7 +2159,7 @@
         }
       }
 
-      ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores'].forEach(function (k) {
+      ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores', 'caixaCardSaldoTotal'].forEach(function (k) {
         if (els[k]) {
           els[k].setAttribute('data-valor-real', formatarMoeda(0));
           els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
@@ -2151,10 +2208,23 @@
     var filtrados = filtrarLogicoCaixa(base, state.caixa.filtroDescricao, state.caixa.filtroValor);
 
     var totais = calcularTotaisRegistros(filtrados);
-    if (els.caixaCardEntradas) { els.caixaCardEntradas.setAttribute('data-valor-real', formatarMoeda(totais.entradas)); els.caixaCardEntradas.textContent = state.caixaValoresVisiveis ? formatarMoeda(totais.entradas) : 'R$ ****'; }
-    if (els.caixaCardSaidas) { els.caixaCardSaidas.setAttribute('data-valor-real', formatarMoeda(totais.saidas)); els.caixaCardSaidas.textContent = state.caixaValoresVisiveis ? formatarMoeda(totais.saidas) : 'R$ ****'; }
-    if (els.caixaCardEmpresa) { els.caixaCardEmpresa.setAttribute('data-valor-real', formatarMoeda(totais.empresa)); els.caixaCardEmpresa.textContent = state.caixaValoresVisiveis ? formatarMoeda(totais.empresa) : 'R$ ****'; }
-    if (els.caixaCardColaboradores) { els.caixaCardColaboradores.setAttribute('data-valor-real', formatarMoeda(totais.colaboradores)); els.caixaCardColaboradores.textContent = state.caixaValoresVisiveis ? formatarMoeda(totais.colaboradores) : 'R$ ****'; }
+    var saldoTotal = totais.entradas - totais.saidas;
+
+    var valores = {
+      caixaCardEntradas: totais.entradas,
+      caixaCardSaidas: totais.saidas,
+      caixaCardEmpresa: totais.empresa,
+      caixaCardColaboradores: totais.colaboradores,
+      caixaCardSaldoTotal: saldoTotal
+    };
+
+    Object.keys(valores).forEach(function (k) {
+      if (els[k]) {
+        els[k].setAttribute('data-valor-real', formatarMoeda(valores[k]));
+        els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(valores[k]) : 'R$ ****';
+      }
+    });
+
     if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = totais.qtd;
 
     state.caixa.listaFiltradaAtual = filtrados;
