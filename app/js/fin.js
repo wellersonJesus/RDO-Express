@@ -2292,40 +2292,129 @@
         '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
-        '<div style="display:flex;gap:4px;">' +
-        '<button class="extrato-item-btn extrato-item-btn-relatorio" data-id="' + escapeHtml(ex.id) + '" title="Ver Relatório"><i class="bi bi-eye"></i></button>' +
-        '<div class="dropdown">' +
-        '<button class="extrato-item-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Excluir"><i class="bi bi-trash"></i></button>' +
-        '<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width:200px;font-size:.78rem;" onclick="event.stopPropagation();">' +
-        '<li class="px-1 pb-2 text-muted" style="font-size:.72rem;line-height:1.3;"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Excluir este extrato?</li>' +
-        '<li><div class="d-flex gap-2 px-1">' +
-        '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill fin-confirm-cancelar" style="font-size:.7rem;">Cancelar</button>' +
-        '<button type="button" class="btn btn-sm btn-danger rounded-pill flex-fill fin-confirm-excluir" data-id="' + escapeHtml(ex.id) + '" style="font-size:.7rem;">Excluir</button>' +
-        '</div></li>' +
-        '</ul></div>' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button class="btn-icone-retangular btn-visualizar-icone extrato-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
+        '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
         '</div></div></div>';
     }).join('');
 
-    els.extratoListaDiaria.querySelectorAll('.extrato-item-btn-relatorio').forEach(function (btn) {
+    els.extratoListaDiaria.querySelectorAll('.extrato-btn-ver').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
         if (ext) abrirExtratoModal(ext);
       });
     });
 
-    bindDropdownConfirmarExclusao(els.extratoListaDiaria, '.dropdown', function (id) {
-      removerExtratoStorage(id);
-      renderizarListaExtratos();
-      finToast('Extrato removido.', 'success');
+    els.extratoListaDiaria.querySelectorAll('.extrato-btn-excluir').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        var ext = buscarExtratoStoragePorId(id);
+        if (!ext) { finToast('Extrato não encontrado.', 'warning'); return; }
+        abrirModalAtencaoExclusaoCarteira(
+          'O extrato "' + (ext.origem || '-') + ' · ' + (ext.periodoLabel || '-') + '" será removido. Essa ação apenas exclui o relatório salvo localmente.',
+          function () {
+            removerExtratoStorage(id);
+            renderizarListaExtratos();
+            finToast('Extrato removido com sucesso!', 'success');
+          }
+        );
+      });
     });
 
     els.extratoListaDiaria.querySelectorAll('.extrato-item-card').forEach(function (card) {
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.extrato-item-btn') || e.target.closest('.dropdown-menu')) return;
+        if (e.target.closest('.btn-icone-retangular')) return;
         var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
         if (ext) abrirExtratoModal(ext);
       });
+    });
+  }
+  function renderizarListaExtratos() {
+    if (!els.extratoListaDiaria) return;
+    var lista = dadosFiltradosExtratos();
+    if (!lista.length) {
+      els.extratoListaDiaria.innerHTML = '<div class="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o período, a origem e clique em <strong>Gerar</strong>.</span></div>';
+      return;
+    }
+    els.extratoListaDiaria.innerHTML = lista.map(function (ex) {
+      var totais = calcularTotaisRegistros(ex.registros);
+      var totalRegs = (ex.registros || []).length;
+      var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
+      var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
+      return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '">' +
+        '<div class="extrato-item-left"><div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
+        '<div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
+        '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
+        '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+        '<span class="extrato-saldo-valor" data-valor-real="' + formatarMoeda(totais.saldo) + '" data-visivel="0" style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">R$ ****</span>' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button class="btn-icone-retangular btn-toggle-valor-extrato" data-id="' + escapeHtml(ex.id) + '" title="Mostrar/ocultar valor"><i class="bi bi-eye-slash"></i></button>' +
+        '<button class="btn-icone-retangular btn-visualizar-icone extrato-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-file-earmark-text"></i></button>' +
+        '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover"><i class="bi bi-trash"></i></button>' +
+        '</div></div></div>';
+    }).join('');
+  }
+
+  function initExtratoListaDelegacao() {
+    var container = document.getElementById('extrato-lista');
+    if (!container || container._delegado) return;
+    container._delegado = true;
+
+    container.addEventListener('click', function (e) {
+      var btnToggle = e.target.closest('.btn-toggle-valor-extrato');
+      if (btnToggle) {
+        e.stopPropagation();
+        var card = btnToggle.closest('.extrato-item-card');
+        var span = card ? card.querySelector('.extrato-saldo-valor') : null;
+        var icon = btnToggle.querySelector('i');
+        if (span) {
+          var visivel = span.getAttribute('data-visivel') === '1';
+          if (visivel) {
+            span.textContent = 'R$ ****';
+            span.setAttribute('data-visivel', '0');
+            if (icon) icon.className = 'bi bi-eye-slash';
+          } else {
+            span.textContent = span.getAttribute('data-valor-real');
+            span.setAttribute('data-visivel', '1');
+            if (icon) icon.className = 'bi bi-eye';
+          }
+        }
+        return;
+      }
+
+      var btnVer = e.target.closest('.extrato-btn-ver');
+      if (btnVer) {
+        e.stopPropagation();
+        var ext = buscarExtratoStoragePorId(btnVer.getAttribute('data-id'));
+        if (ext) abrirExtratoModal(ext);
+        return;
+      }
+
+      var btnExcluir = e.target.closest('.extrato-btn-excluir');
+      if (btnExcluir) {
+        e.stopPropagation();
+        var id = btnExcluir.getAttribute('data-id');
+        var extEx = buscarExtratoStoragePorId(id);
+        if (!extEx) { finToast('Extrato não encontrado.', 'warning'); return; }
+        abrirModalAtencaoExclusaoCarteira(
+          'O extrato "' + (extEx.origem || '-') + ' · ' + (extEx.periodoLabel || '-') + '" será removido. Essa ação apenas exclui o relatório salvo localmente.',
+          function () {
+            removerExtratoStorage(id);
+            renderizarListaExtratos();
+            finToast('Extrato removido com sucesso!', 'success');
+          }
+        );
+        return;
+      }
+
+      var card = e.target.closest('.extrato-item-card');
+      if (card) {
+        var extCard = buscarExtratoStoragePorId(card.getAttribute('data-extrato-id'));
+        if (extCard) abrirExtratoModal(extCard);
+      }
     });
   }
 
@@ -2341,7 +2430,8 @@
     els.extratoModalBody.innerHTML = linhas +
       '<div class="d-flex justify-content-between pt-3 fw-bold" style="font-size:.85rem;"><span>Saldo:</span><span class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span></div>';
     if (els.extratoModalCopiar) els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(gerarTextoExtrato(extrato)); };
-    if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { window.print(); };
+    if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { abrirJanelaPdfExtrato('Extrato - ' + (extrato.origem || '-'), extrato.periodoLabel, extrato.registros); };
+    if (els.extratoModalFechar) els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
     els.extratoModalOverlay.style.display = 'flex';
   }
 
@@ -3069,6 +3159,165 @@
     });
   }
 
+  function initExtratoFluxo() {
+    var overlay = document.getElementById('extrato-fluxo-overlay');
+    var btnAbrir = document.getElementById('btn-abrir-fluxo-extrato');
+    if (!overlay || !btnAbrir || btnAbrir._bound) return;
+    btnAbrir._bound = true;
+
+    var titulo = document.getElementById('extrato-fluxo-titulo');
+    var btnVoltar = document.getElementById('extrato-fluxo-voltar');
+    var btnFechar = document.getElementById('extrato-fluxo-fechar');
+    var etapaTipo = document.getElementById('extrato-etapa-tipo');
+    var etapaLista = document.getElementById('extrato-etapa-lista');
+    var etapaPeriodo = document.getElementById('extrato-etapa-periodo');
+    var listaSelecao = document.getElementById('extrato-lista-selecao');
+    var buscaLista = document.getElementById('extrato-busca-lista');
+    var selecionarTodos = document.getElementById('extrato-selecionar-todos');
+    var btnContinuarLista = document.getElementById('btn-extrato-continuar-lista');
+    var btnGerarFinal = document.getElementById('btn-extrato-gerar-final');
+
+    var fluxo = { tipo: null, selecionados: [], etapa: 'tipo' };
+
+    function abrirOverlay() {
+      fluxo = { tipo: null, selecionados: [], etapa: 'tipo' };
+      var inputIni = document.getElementById('extrato-fluxo-data-inicio');
+      var inputFim = document.getElementById('extrato-fluxo-data-fim');
+      if (inputIni) inputIni.value = '';
+      if (inputFim) inputFim.value = '';
+      if (buscaLista) buscaLista.value = '';
+      if (selecionarTodos) selecionarTodos.checked = false;
+      mostrarEtapa('tipo');
+      overlay.style.display = 'flex';
+    }
+
+    function fecharOverlay() { overlay.style.display = 'none'; }
+
+    function mostrarEtapa(nome) {
+      [etapaTipo, etapaLista, etapaPeriodo].forEach(function (e) { if (e) e.style.display = 'none'; });
+      fluxo.etapa = nome;
+      if (nome === 'tipo') {
+        titulo.textContent = 'Gerar Extrato';
+        btnVoltar.style.display = 'none';
+        etapaTipo.style.display = 'block';
+      }
+      if (nome === 'lista') {
+        titulo.textContent = fluxo.tipo === 'colaboradores' ? 'Selecionar Colaboradores' : 'Selecionar Clientes';
+        btnVoltar.style.display = 'inline-flex';
+        etapaLista.style.display = 'block';
+        renderListaSelecao();
+      }
+      if (nome === 'periodo') {
+        titulo.textContent = 'Período do Extrato';
+        btnVoltar.style.display = 'inline-flex';
+        etapaPeriodo.style.display = 'block';
+      }
+    }
+
+    function obterNomesUnicos(campo) {
+      var nomes = {};
+      (state.cache || []).forEach(function (r) {
+        var v = r[campo];
+        if (v && v !== '-') nomes[v] = true;
+      });
+      return Object.keys(nomes).sort(function (a, b) { return a.localeCompare(b); });
+    }
+
+    function renderListaSelecao(filtro) {
+      var campo = fluxo.tipo === 'colaboradores' ? 'motoboy' : 'cliente';
+      var nomes = obterNomesUnicos(campo);
+      if (filtro) {
+        var f = filtro.toLowerCase();
+        nomes = nomes.filter(function (n) { return n.toLowerCase().indexOf(f) !== -1; });
+      }
+      if (!nomes.length) {
+        listaSelecao.innerHTML = '<div class="text-center text-muted py-4" style="font-size:.78rem;">Nenhum registro encontrado.</div>';
+        return;
+      }
+      listaSelecao.innerHTML = nomes.map(function (n) {
+        var checked = fluxo.selecionados.indexOf(n) !== -1 ? 'checked' : '';
+        return '<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #eee;border-radius:10px;font-size:.78rem;cursor:pointer;">' +
+          '<input type="checkbox" class="extrato-check-item" value="' + escapeHtml(n) + '" ' + checked + '>' +
+          '<span>' + escapeHtml(n) + '</span></label>';
+      }).join('');
+      listaSelecao.querySelectorAll('.extrato-check-item').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+          var v = this.value;
+          if (this.checked) {
+            if (fluxo.selecionados.indexOf(v) === -1) fluxo.selecionados.push(v);
+          } else {
+            fluxo.selecionados = fluxo.selecionados.filter(function (x) { return x !== v; });
+          }
+          btnContinuarLista.disabled = fluxo.selecionados.length === 0;
+        });
+      });
+      btnContinuarLista.disabled = fluxo.selecionados.length === 0;
+    }
+
+    if (buscaLista) buscaLista.addEventListener('input', function () { renderListaSelecao(this.value); });
+
+    if (selecionarTodos) selecionarTodos.addEventListener('change', function () {
+      var campo = fluxo.tipo === 'colaboradores' ? 'motoboy' : 'cliente';
+      fluxo.selecionados = this.checked ? obterNomesUnicos(campo) : [];
+      renderListaSelecao(buscaLista ? buscaLista.value : '');
+    });
+
+    document.querySelectorAll('.extrato-opcao-tipo').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        fluxo.tipo = this.getAttribute('data-tipo');
+        fluxo.selecionados = [];
+        mostrarEtapa(fluxo.tipo === 'global' ? 'periodo' : 'lista');
+      });
+    });
+
+    if (btnContinuarLista) btnContinuarLista.addEventListener('click', function () { mostrarEtapa('periodo'); });
+
+    if (btnVoltar) btnVoltar.addEventListener('click', function () {
+      if (fluxo.etapa === 'periodo') mostrarEtapa(fluxo.tipo === 'global' ? 'tipo' : 'lista');
+      else if (fluxo.etapa === 'lista') mostrarEtapa('tipo');
+    });
+
+    if (btnFechar) btnFechar.addEventListener('click', fecharOverlay);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) fecharOverlay(); });
+
+    if (btnGerarFinal) btnGerarFinal.addEventListener('click', function () {
+      var inicio = document.getElementById('extrato-fluxo-data-inicio').value;
+      var fim = document.getElementById('extrato-fluxo-data-fim').value;
+      if (!inicio || !fim) { finToast('Selecione o período.', 'warning'); return; }
+      if (inicio > fim) { finToast('Data inicial maior que a final.', 'warning'); return; }
+
+      var lista = (state.cache || []).filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
+      var label = 'Caixa Geral';
+
+      if (fluxo.tipo === 'colaboradores') {
+        lista = lista.filter(function (r) { return fluxo.selecionados.indexOf(r.motoboy) !== -1; });
+        label = fluxo.selecionados.join(', ');
+      } else if (fluxo.tipo === 'clientes') {
+        lista = lista.filter(function (r) { return fluxo.selecionados.indexOf(r.cliente) !== -1; });
+        label = fluxo.selecionados.join(', ');
+      }
+
+      if (!lista.length) { finToast('Nenhum registro encontrado para essa seleção no período.', 'warning'); return; }
+
+      var periodoLabel = formatDateBR(inicio) + ' a ' + formatDateBR(fim);
+
+      salvarExtratoStorage({
+        id: gerarIdExtrato(),
+        origem: label,
+        periodoLabel: periodoLabel,
+        registros: lista,
+        criadoEm: Date.now()
+      });
+
+      renderizarListaExtratos();
+      fecharOverlay();
+      abrirJanelaPdfExtrato('Extrato - ' + label, periodoLabel, lista);
+      finToast('Extrato gerado com sucesso!', 'success');
+    });
+
+    btnAbrir.addEventListener('click', abrirOverlay);
+  }
+
   function init() {
     if (_finJaInicializado) return;
     _finJaInicializado = true;
@@ -3076,6 +3325,8 @@
     bind();
     registrarEventos();
     bindNotifCardsFin();
+    initExtratoFluxo();
+    initExtratoListaDelegacao();
     carregarDados();
   }
 

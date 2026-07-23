@@ -23,7 +23,6 @@
     </div>
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
-
       <div class="row g-2 mb-2 mt-2">
         <div class="col-4">
           <div class="caixa-mini-card active" data-filtro-tipo="entrada" data-filtro-situacao="todos"
@@ -39,7 +38,6 @@
             </div>
           </div>
         </div>
-
         <div class="col-4">
           <div class="caixa-mini-card" data-filtro-tipo="saida" data-filtro-situacao="todos" style="cursor:pointer;">
             <div class="d-flex align-items-center gap-2">
@@ -53,7 +51,6 @@
             </div>
           </div>
         </div>
-
         <div class="col-4">
           <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="pago" style="cursor:pointer;">
             <div class="d-flex align-items-center gap-2">
@@ -67,7 +64,6 @@
             </div>
           </div>
         </div>
-
         <div class="col-6">
           <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="pendente" style="cursor:pointer;">
             <div class="d-flex align-items-center gap-2">
@@ -81,7 +77,6 @@
             </div>
           </div>
         </div>
-
         <div class="col-6">
           <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="cancelado"
             style="cursor:pointer;">
@@ -283,7 +278,6 @@
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
-
               <div class="caixa-filtro-row d-flex align-items-end gap-2 flex-wrap">
                 <div class="caixa-filtro-campo">
                   <label class="caixa-filtro-label">De</label>
@@ -318,7 +312,6 @@
                   </div>
                 </div>
               </div>
-
             </div>
             <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
@@ -336,37 +329,110 @@
     </div>
 
     <div id="fin-tab-content-extrato" class="fin-tab-content">
-      <div class="extrato-toolbar">
-        <div class="extrato-toolbar-row w-100">
-          <div class="d-flex align-items-center gap-2 flex-wrap w-100">
-            <div class="extrato-field">
-              <label>De</label>
-              <input type="date" id="extrato-data-inicio" class="extrato-input-date">
-            </div>
-            <div class="extrato-field">
-              <label>Até</label>
-              <input type="date" id="extrato-data-fim" class="extrato-input-date">
-            </div>
-            <div class="extrato-field" style="min-width:200px;flex:1;">
-              <label>Origem</label>
-              <select id="extrato-origem" class="extrato-select">
-                <option value="__caixa__">📊 Caixa Geral</option>
-                <optgroup label="Motoboys" id="extrato-opt-motoboys"></optgroup>
-                <optgroup label="Clientes" id="extrato-opt-clientes"></optgroup>
-              </select>
-            </div>
-            <div style="padding-top:16px;">
-              <button type="button" class="extrato-btn-gerar" id="btn-gerar-extrato">
-                <i class="bi bi-file-earmark-bar-graph"></i> Gerar Relatório
-              </button>
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body pb-0">
+              <div class="d-flex align-items-center gap-2 mb-3" style="justify-content:flex-end;">
+                <input type="search" id="extrato-filtro-descricao" class="form-control form-control-sm rounded-pill"
+                  placeholder="Buscar extrato salvo..." autocomplete="off" style="max-width:220px;">
+                <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3"
+                  id="btn-abrir-fluxo-extrato">
+                  <i class="bi bi-plus-lg"></i> Gerar Extrato
+                </button>
+              </div>
+              <div id="extrato-lista" class="extrato-lista pb-3">
+                <div class="extrato-placeholder">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <span>Nenhum extrato gerado ainda.<br>Clique em <strong>Gerar Extrato</strong> para começar.</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="extrato-lista" id="extrato-lista">
-        <div class="extrato-placeholder" id="extrato-placeholder">
-          <i class="bi bi-file-earmark-text"></i>
-          <span>Nenhum extrato gerado ainda.<br>Selecione o período, a origem e clique em <strong>Gerar</strong>.</span>
+    </div>
+
+    <div id="extrato-fluxo-overlay"
+      style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px;">
+      <div
+        style="background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">
+        <div
+          style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" id="extrato-fluxo-voltar"
+              style="display:none;background:rgba(255,255,255,.1);border:none;border-radius:8px;width:30px;height:30px;color:#fff;">
+              <i class="bi bi-arrow-left"></i>
+            </button>
+            <div style="font-size:.82rem;font-weight:700;color:#fff;" id="extrato-fluxo-titulo">Gerar Extrato</div>
+          </div>
+          <button type="button" id="extrato-fluxo-fechar"
+            style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:6px 10px;color:#fff;">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div id="extrato-fluxo-body" style="padding:20px;overflow-y:auto;flex:1;">
+
+          <div id="extrato-etapa-tipo" class="extrato-etapa">
+            <p style="font-size:.75rem;color:#888;margin-bottom:14px;">Selecione o tipo de extrato que deseja gerar:</p>
+            <div class="d-flex flex-column gap-2">
+              <button type="button" class="extrato-opcao-tipo" data-tipo="global">
+                <i class="bi bi-globe2"></i>
+                <div>
+                  <strong>Extrato Global</strong>
+                  <small>Todos os lançamentos do caixa</small>
+                </div>
+              </button>
+              <button type="button" class="extrato-opcao-tipo" data-tipo="colaboradores">
+                <i class="bi bi-people-fill"></i>
+                <div>
+                  <strong>Colaboradores</strong>
+                  <small>Filtrar por um ou mais colaboradores</small>
+                </div>
+              </button>
+              <button type="button" class="extrato-opcao-tipo" data-tipo="clientes">
+                <i class="bi bi-person-badge-fill"></i>
+                <div>
+                  <strong>Clientes</strong>
+                  <small>Filtrar por um ou mais clientes</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div id="extrato-etapa-lista" class="extrato-etapa" style="display:none;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label style="font-size:.72rem;font-weight:700;color:#666;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="extrato-selecionar-todos"> Selecionar todos
+              </label>
+              <input type="search" id="extrato-busca-lista" placeholder="Buscar..."
+                style="font-size:.72rem;border:1px solid #eee;border-radius:20px;padding:4px 12px;">
+            </div>
+            <div id="extrato-lista-selecao"
+              style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+            <button type="button" class="extrato-btn-continuar mt-3" id="btn-extrato-continuar-lista" disabled>
+              Continuar
+            </button>
+          </div>
+
+          <div id="extrato-etapa-periodo" class="extrato-etapa" style="display:none;">
+            <p style="font-size:.75rem;color:#888;margin-bottom:14px;">Selecione o período do extrato:</p>
+            <div class="d-flex gap-2 mb-3">
+              <div style="flex:1;">
+                <label style="font-size:.68rem;font-weight:700;color:#888;">De</label>
+                <input type="date" id="extrato-fluxo-data-inicio" class="form-control form-control-sm rounded-pill">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:.68rem;font-weight:700;color:#888;">Até</label>
+                <input type="date" id="extrato-fluxo-data-fim" class="form-control form-control-sm rounded-pill">
+              </div>
+            </div>
+            <button type="button" class="extrato-btn-continuar" id="btn-extrato-gerar-final">
+              <i class="bi bi-file-earmark-bar-graph"></i> Gerar Extrato
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -466,7 +532,6 @@
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-
       <div class="modal-body px-3 py-3 fin-print-area">
         <div class="row g-2 mb-3">
           <div class="col-6">
@@ -497,16 +562,13 @@
             </div>
           </div>
         </div>
-
         <div class="d-flex justify-content-between align-items-center px-1 mb-2">
           <span style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">Saldo
             do período</span>
           <span id="modal-periodo-caixa-saldo" style="font-size:.95rem;font-weight:700;">R$ 0,00</span>
         </div>
-
         <div id="modal-periodo-caixa-lista"></div>
       </div>
-
       <div class="modal-footer border-0 px-3 pb-3 pt-0 justify-content-between">
         <button type="button" class="btn btn-outline-success btn-sm rounded-pill px-3" id="btn-salvar-periodo-caixa">
           <i class="bi bi-save2 me-1"></i> Salvar Período
@@ -574,9 +636,23 @@
 <script>
   (function () {
     'use strict';
+    function bindBotaoAbrirFluxoExtrato() {
+      var btn = document.getElementById('btn-abrir-fluxo-extrato');
+      var overlay = document.getElementById('extrato-fluxo-overlay');
+      var btnFechar = document.getElementById('extrato-fluxo-fechar');
+      if (btn && overlay && !btn._bound) {
+        btn._bound = true;
+        btn.addEventListener('click', function () { overlay.style.display = 'flex'; });
+      }
+      if (btnFechar && overlay && !btnFechar._bound) {
+        btnFechar._bound = true;
+        btnFechar.addEventListener('click', function () { overlay.style.display = 'none'; });
+      }
+    }
     function _aguardarFinJs() {
       if (typeof window.initFinanceiro === 'function') {
         window.initFinanceiro();
+        bindBotaoAbrirFluxoExtrato();
       } else {
         setTimeout(_aguardarFinJs, 100);
       }
