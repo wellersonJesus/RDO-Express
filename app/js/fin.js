@@ -1054,19 +1054,43 @@
       }
       finToast('Registro atualizado com sucesso!', 'success');
 
-      // 🔗 NOVO: notifica pedidos.js se o lançamento estiver vinculado a um pedido
       var reg = state.cache.find(function (r) { return String(r.id) === String(id); });
-      var idPedido = reg ? reg.idPedido : '';
-      if (idPedido) {
-        window.EventBus.emit('financeiro:situacaoAtualizada', {
-          idPedido: idPedido,
-          situacaoFinanceira: dados.situacao,
-          statusPedido: dados.situacao === 'cancelado' ? 'CANCELADO' : undefined
+      var idPedido = reg ? (reg.id_pedido || reg.idPedido || '') : '';
+
+      var sit = (dados.situacao || '').toLowerCase();
+      var statusPedido;
+
+      if (sit === 'cancelado') {
+        statusPedido = 'CANCELADO';
+      } else if (sit === 'pago' || sit === 'recebido') {
+        statusPedido = 'CONCLUIDO';
+      } else if (sit === 'pendente') {
+        statusPedido = 'PENDENTE';
+      }
+
+      var promiseAtualizarPedido = Promise.resolve();
+      if (idPedido && statusPedido) {
+        promiseAtualizarPedido = window.API.call('updatepedido', {
+          id: idPedido,
+          status: statusPedido,
+          situacao_financeira: sit
+        }).catch(function (err) {
+          console.error('[fim.js] ❌ Falha ao persistir status do pedido:', err);
         });
       }
 
-      carregarDados();
-      return res;
+      return promiseAtualizarPedido.then(function () {
+        if (idPedido && window.EventBus) {
+          window.EventBus.emit('financeiro:situacaoAtualizada', {
+            idPedido: idPedido,
+            situacaoFinanceira: sit,
+            statusPedido: statusPedido
+          });
+        }
+
+        carregarDados();
+        return res;
+      });
     });
   }
 
@@ -1229,35 +1253,26 @@
 
   function _atualizarContadoresFin() {
     var lista = state.cache;
-    var count = { todos: 0, receitas: 0, despesas: 0, receber: 0, pagar: 0, pendente: 0, pago: 0, cancelado: 0 };
+    var count = { pendente: 0, pago: 0, recebido: 0, cancelado: 0 };
 
     lista.forEach(function (r) {
       var sit = (r.situacao || '').toLowerCase();
-      count.todos++;
-      if (r.tipo === 'entrada') count.receitas++;
-      if (r.tipo === 'saida') count.despesas++;
-      if (r.tipo === 'entrada' && sit === 'pendente') count.receber++;
-      if (r.tipo === 'saida' && sit === 'pendente') count.pagar++;
       if (sit === 'pendente') count.pendente++;
-      if (sit === 'pago' || sit === 'recebido') count.pago++;
-      if (sit === 'cancelado') count.cancelado++;
+      else if (sit === 'pago') count.pago++;
+      else if (sit === 'recebido') count.recebido++;
+      else if (sit === 'cancelado') count.cancelado++;
     });
 
-    setText('fin-status-count-receitas', count.receitas);
-    setText('fin-status-count-despesas', count.despesas);
-    setText('fin-status-count-pago', count.pago);
     setText('fin-status-count-pendente', count.pendente);
+    setText('fin-status-count-pago', count.pago);
+    setText('fin-status-count-recebido', count.recebido);
     setText('fin-status-count-cancelado', count.cancelado);
 
-    setText('caixa-status-count-receber', count.receber);
-    setText('caixa-status-count-pagar', count.pagar);
-    setText('caixa-status-count-todos', count.todos);
-
-    document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]').forEach(function (item) {
+    document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-situacao]').forEach(function (item) {
       if (!item._finBound) {
         item._finBound = true;
         item.addEventListener('click', function () {
-          state.filtroTipo = this.getAttribute('data-filtro-tipo');
+          state.filtroTipo = this.getAttribute('data-filtro-tipo') || 'todos';
           state.filtroSituacao = this.getAttribute('data-filtro-situacao');
           state.todos.pagina = 1;
           atualizarCardAtivoFin();
@@ -2849,7 +2864,7 @@
       c.classList.remove('active');
     });
 
-    var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]');
+    var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-situacao]');
     if (!cards.length) return;
 
     cards.forEach(function (card) {
@@ -2864,7 +2879,8 @@
       });
     });
 
-    state.filtroTipo = 'entrada';
+    // ✅ Corrigido: mostra TODOS os registros por padrão ao carregar a tela
+    state.filtroTipo = 'todos';
     state.filtroSituacao = 'todos';
     atualizarCardAtivoFin();
   }
@@ -2873,12 +2889,12 @@
     document.querySelectorAll('.caixa-mini-card').forEach(function (c) {
       c.classList.remove('active');
     });
+    if (state.filtroSituacao === 'todos') return; // nenhum card fica marcado quando é "todos"
 
-    var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-tipo]');
+    var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-situacao]');
     cards.forEach(function (card) {
-      var t = card.getAttribute('data-filtro-tipo');
       var s = card.getAttribute('data-filtro-situacao');
-      if (state.filtroTipo === t && state.filtroSituacao === s) {
+      if (state.filtroSituacao === s) {
         card.classList.add('active');
       }
     });
