@@ -1173,8 +1173,9 @@ console.log('[pedidos.js] ========== SCRIPT CARREGADO ==========');
             if (!pedido) return;
 
             pedido.situacao_financeira = dados.situacaoFinanceira;
-            pedido.status = dados.statusPedido;   // ESSA LINHA é obrigatória
-
+            if (dados.statusPedido) {           // ✅ correção aplicada
+                pedido.status = dados.statusPedido;
+            }
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
 

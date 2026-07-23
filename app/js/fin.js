@@ -1992,12 +1992,14 @@
       els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>Nenhum registro encontrado.</td></tr>';
     } else {
       els.tbodyTodos.innerHTML = pagina.map(function (r) {
+        var badgeTipo = getTipoBadge(r.tipo);
+        var badgeSituacao = getStatusBadge(r.situacao);
+        var celulaTipoCombinada = '<div class="d-flex flex-nowrap gap-1 align-items-center" style="overflow-x:auto;">' + badgeTipo + badgeSituacao + '</div>';
+
         return '<tr class="fin-row" data-id="' + escapeHtml(r.id) + '" style="cursor:pointer;">' +
           '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-          // ALTERADO: descrição resumida + title com texto completo (tooltip)
           '<td title="' + escapeHtml(r.descricao || '-') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
-          // ALTERADO: adicionada classe fin-col-tipo para poder ocultar só esta coluna no mobile via CSS
-          '<td class="fin-col-tipo">' + getTipoBadge(r.tipo) + '</td>' +
+          '<td class="fin-col-tipo">' + celulaTipoCombinada + '</td>' +
           '<td class="text-end"><div class="fin-actions-group">' +
           '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-id="' + escapeHtml(r.id) + '"><i class="bi bi-eye"></i></button>' +
           '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-id="' + escapeHtml(r.id) + '"><i class="bi bi-pencil-square"></i></button>' +
@@ -2460,7 +2462,7 @@
       });
     });
   }
-  
+
   function renderizarListaExtratos() {
     if (!els.extratoListaDiaria) return;
     var lista = dadosFiltradosExtratos();
