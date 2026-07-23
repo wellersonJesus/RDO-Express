@@ -266,12 +266,15 @@
         var badgeFinanceiroHtml = '';
         if (statusNorm !== 'CANCELADO') {
             var sitFin = String(pedido.situacao_financeira || 'pendente').trim().toLowerCase();
-            if (sitFin === 'pago' || sitFin === 'recebido') {
-                badgeFinanceiroHtml = '<span class="badge bg-success ms-1"><i class="bi bi-cash-coin"></i> Pago</span>';
+
+            if (sitFin === 'pago') {
+                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#d1e7dd; color:#0f5132;"><i class="bi bi-cash-coin"></i> Pago</span>';
+            } else if (sitFin === 'recebido') {
+                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#cfe2ff; color:#084298;"><i class="bi bi-cash-coin"></i> Recebido</span>';
             } else if (sitFin === 'cancelado') {
-                badgeFinanceiroHtml = '<span class="badge bg-secondary ms-1">Financ. Cancelado</span>';
+                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#e2e3e5; color:#41464b;">Financ. Cancelado</span>';
             } else {
-                badgeFinanceiroHtml = '<span class="badge bg-warning text-dark ms-1"><i class="bi bi-clock"></i> Pendente</span>';
+                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#fff3cd; color:#664d03;"><i class="bi bi-clock"></i> Pendente</span>';
             }
         }
 

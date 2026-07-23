@@ -854,7 +854,18 @@ if (!window.EventBus) {
   }
 
   function notificarSituacaoFinanceiraAtualizada(idPedido, situacaoFinanceira) {
-    var payload = { idPedido: idPedido, situacaoFinanceira: situacaoFinanceira };
+    var situacaoNormalizada = (situacaoFinanceira || '').toString().trim().toLowerCase();
+
+    // Label única para todos os módulos: pendente, pago, recebido, cancelado
+    var statusLabel = situacaoNormalizada
+      ? situacaoNormalizada.charAt(0).toUpperCase() + situacaoNormalizada.slice(1)
+      : 'Pendente';
+
+    var payload = {
+      idPedido: idPedido,
+      situacaoFinanceira: situacaoNormalizada,
+      statusPedido: statusLabel // agora é o MESMO valor, sem tradução (Pendente, Pago, Recebido, Cancelado)
+    };
 
     if (window.EventBus && typeof window.EventBus.emit === 'function') {
       window.EventBus.emit('financeiro:situacaoAtualizada', payload);
