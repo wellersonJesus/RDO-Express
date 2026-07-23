@@ -34,6 +34,135 @@
 
   window.financeiroState = state;
 
+  /**
+ * Gera o HTML completo do relatório de extrato para impressão/PDF.
+ * Colunas: Data | Colaborador | Descrição (resumo) | Valor
+ * @param {Object} ext - objeto do extrato salvo (origem, periodoLabel, registros, etc.)
+ */
+  function gerarHtmlRelatorioExtrato(ext) {
+    var registros = ext.registros || [];
+    var totais = calcularTotaisRegistros(registros);
+
+    // Resumo da descrição: corta em N caracteres e adiciona "..."
+    function resumirDescricao(texto, limite) {
+      limite = limite || 40;
+      if (!texto) return '-';
+      texto = String(texto).trim();
+      if (texto.length <= limite) return escapeHtml(texto);
+      return escapeHtml(texto.slice(0, limite).trim()) + '…';
+    }
+
+    var linhasHtml = registros.map(function (r) {
+      var valorClasse = r.valor >= 0 ? 'positivo' : 'negativo';
+      return '' +
+        '<tr class="linha-lancamento">' +
+        '<td class="col-data">' + formatDateBR(r.dataISO) + '</td>' +
+        '<td class="col-colaborador">' + escapeHtml(r.colaborador || r.motoboy || '-') + '</td>' +
+        '<td class="col-descricao" title="' + escapeHtml(r.descricao || '') + '">' + resumirDescricao(r.descricao, 40) + '</td>' +
+        '<td class="col-valor ' + valorClasse + '">' + formatarMoeda(r.valor) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    return '' +
+      '<!DOCTYPE html>' +
+      '<html lang="pt-BR">' +
+      '<head>' +
+      '<meta charset="UTF-8">' +
+      '<title>Relatório - ' + escapeHtml(ext.origem || 'Extrato') + '</title>' +
+      '<style>' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body {' +
+      'font-family: "Segoe UI", Arial, Helvetica, sans-serif;' +
+      'font-weight: 400;' +
+      'color: #333;' +
+      'padding: 24px;' +
+      '-webkit-font-smoothing: antialiased;' +
+      '}' +
+
+      /* Cabeçalho */
+      '.relatorio-header { margin-bottom: 18px; }' +
+      '.relatorio-titulo { font-size: 15px; font-weight: 400; color: #444; letter-spacing: .2px; }' +
+      '.relatorio-periodo { font-size: 11px; font-weight: 400; color: #888; margin-top: 2px; }' +
+
+      /* Tabela */
+      'table { width: 100%; border-collapse: collapse; }' +
+      'thead th {' +
+      'font-size: 10.5px;' +
+      'font-weight: 400;' +
+      'color: #999;' +
+      'text-align: left;' +
+      'padding: 6px 4px;' +
+      'border-bottom: 1px solid #ddd;' +
+      'text-transform: uppercase;' +
+      'letter-spacing: .3px;' +
+      '}' +
+      'thead th.col-valor { text-align: right; }' +
+
+      '.linha-lancamento td {' +
+      'padding: 8px 4px;' +
+      'border-bottom: 1px solid #eee;' + /* linha leve entre lançamentos */
+      'font-weight: 400;' +
+      'white-space: nowrap;' +
+      '}' +
+      '.linha-lancamento:last-child td { border-bottom: none; }' +
+
+      '.col-data { font-size: 10.5px; color: #999; width: 80px; }' +
+      '.col-colaborador { font-size: 11.5px; color: #555; width: 140px; }' +
+      '.col-descricao {' +
+      'font-size: 11.5px;' +
+      'color: #555;' +
+      'max-width: 260px;' +
+      'overflow: hidden;' +
+      'text-overflow: ellipsis;' +
+      '}' +
+      '.col-valor { font-size: 11.5px; text-align: right; width: 100px; }' +
+      '.col-valor.positivo { color: #2e7d32; }' +
+      '.col-valor.negativo { color: #c62828; }' +
+
+      /* Totais */
+      '.relatorio-total { margin-top: 16px; text-align: right; }' +
+      '.relatorio-total-label { font-size: 11px; font-weight: 400; color: #666; }' +
+      '.relatorio-total-valor { font-size: 13px; font-weight: 400; color: #333; margin-left: 6px; }' +
+
+      /* Remove qualquer negrito remanescente */
+      'strong, b, .fw-bold { font-weight: 400 !important; }' +
+      '</style>' +
+      '</head>' +
+      '<body>' +
+      '<div class="relatorio-header">' +
+      '<div class="relatorio-titulo">' + escapeHtml(ext.origem || '-') + '</div>' +
+      '<div class="relatorio-periodo">' + escapeHtml(ext.periodoLabel || '-') + '</div>' +
+      '</div>' +
+
+      '<table>' +
+      '<thead>' +
+      '<tr>' +
+      '<th class="col-data">Data</th>' +
+      '<th class="col-colaborador">Colaborador</th>' +
+      '<th class="col-descricao">Descrição</th>' +
+      '<th class="col-valor">Valor</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>' + linhasHtml + '</tbody>' +
+      '</table>' +
+
+      '<div class="relatorio-total">' +
+      '<span class="relatorio-total-label">Saldo total:</span>' +
+      '<span class="relatorio-total-valor">' + formatarMoeda(totais.saldo) + '</span>' +
+      '</div>' +
+      '</body>' +
+      '</html>';
+  }
+
+  function abrirJanelaPdfExtrato(ext) {
+    var html = gerarHtmlRelatorioExtrato(ext);
+    var janela = window.open('', '_blank');
+    janela.document.write(html);
+    janela.document.close();
+    janela.focus();
+    janela.print();
+  }
+
   function aplicarFiltroCaixaMini(tipo, card) {
     var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
     if (filtroCaixaAtivo === tipo) {
@@ -2331,6 +2460,7 @@
       });
     });
   }
+  
   function renderizarListaExtratos() {
     if (!els.extratoListaDiaria) return;
     var lista = dadosFiltradosExtratos();
@@ -3035,32 +3165,43 @@
       totalValor += (parseFloat(r.valor) || 0);
       return '<tr>' +
         '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
+        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+        '<td title="' + escapeHtml(r.descricao || '') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
         '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
         '</tr>';
-    }).join('') : '<tr><td colspan="3" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
+    }).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
 
     var agora = new Date().toLocaleString('pt-BR');
     var qtd = ordenados.length;
 
     return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' +
       '<style>' +
-      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
-      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
-      'h1 span{color:#222;}' +
-      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
-      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
-      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
-      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
-      'tfoot td{padding:10px 8px;font-weight:700;border-top:2px solid #ddd;font-size:13px;}' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-weight:400;margin:24px;color:#333;-webkit-font-smoothing:antialiased;}' +
+      'h1{font-size:15px;margin:0 0 2px;font-weight:400;color:#444;}' +
+      'h1 span{color:#dc3545;}' +
+      '.sub{font-size:11px;color:#888;margin-bottom:18px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px;}' +
+      'thead th{text-align:left;padding:6px 4px;border-bottom:1px solid #ddd;font-size:10.5px;font-weight:400;color:#999;text-transform:uppercase;letter-spacing:.3px;}' +
+      'thead th.col-valor{text-align:right;}' +
+      'tbody td{padding:8px 4px;border-bottom:1px solid #eee;font-weight:400;white-space:nowrap;}' +
+      'tbody tr:last-child td{border-bottom:none;}' +
+      'td:nth-child(2){color:#555;width:130px;}' +
+      'td:nth-child(3){color:#555;max-width:240px;overflow:hidden;text-overflow:ellipsis;}' +
+      'td:nth-child(1){color:#999;font-size:10.5px;width:80px;}' +
+      'td:nth-child(4){text-align:right;width:100px;}' +
+      'tfoot td{padding:10px 4px;font-weight:400;border-top:1px solid #ddd;font-size:13px;color:#333;}' +
       'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
-      '@media print{ body{margin:10mm;} }' +
+      '.btn-imprimir-extrato{position:fixed;top:16px;right:16px;background:#dc3545;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:999;}' +
+      '.btn-imprimir-extrato:hover{background:#c82333;}' +
+      '@media print{ body{margin:10mm;} .btn-imprimir-extrato{display:none;} }' +
       '</style></head><body>' +
-      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Extrato</span></h1>' +
+      '<button type="button" class="btn-imprimir-extrato" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimir / Salvar PDF</button>' +
+      '<h1><span>RDO</span> Express - Extrato</h1>' +
       '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
-      '<table><thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th></tr></thead>' +
+      '<table><thead><tr><th>Data</th><th>Colaborador</th><th>Descrição</th><th class="col-valor">Valor</th></tr></thead>' +
       '<tbody>' + linhasHtml + '</tbody>' +
-      '<tfoot><tr><td colspan="2">Total de lançamentos: ' + qtd + '</td><td style="text-align:right;">' + formatarMoeda(totalValor) + '</td></tr></tfoot>' +
+      '<tfoot><tr><td colspan="3">Total de lançamentos: ' + qtd + '</td><td style="text-align:right;">' + formatarMoeda(totalValor) + '</td></tr></tfoot>' +
       '</table>' +
       '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
       '</body></html>';
@@ -3073,7 +3214,7 @@
     win.document.open();
     win.document.write(html);
     win.document.close();
-    win.onload = function () { win.focus(); setTimeout(function () { win.print(); }, 300); };
+    win.onload = function () { win.focus(); };
   }
 
   function baixarHtmlExtrato(titulo, periodoLabel, registros) {
