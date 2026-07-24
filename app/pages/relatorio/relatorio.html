@@ -47,12 +47,20 @@
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
                   <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
+                <!-- Aba Motoboys -->
                 <div class="rel-filtro-select-wrapper">
                   <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Motoboy</label>
-                  <select id="rel-mb-select" class="form-select rel-filtro-select">
-                    <option value="__todos__">Todos os motoboys</option>
-                  </select>
+                  <div class="rel-autocomplete" id="rel-mb-autocomplete">
+                    <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-mb-input"
+                      placeholder="Todos os motoboys" autocomplete="off">
+                    <input type="hidden" id="rel-mb-select" value="__todos__">
+                    <button type="button" class="rel-autocomplete-clear" id="rel-mb-clear" title="Limpar">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                    <div class="rel-autocomplete-dropdown" id="rel-mb-dropdown"></div>
+                  </div>
                 </div>
+
                 <div class="rel-filtro-item-btn">
                   <button class="btn-rel-gerar" data-tab-tipo="motoboys" type="button">
                     <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
@@ -146,12 +154,20 @@
                   <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
                   <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
                 </div>
+                <!-- Aba Clientes -->
                 <div class="rel-filtro-select-wrapper">
                   <label class="rel-filtro-label"><i class="bi bi-building me-1"></i> Cliente</label>
-                  <select id="rel-cli-select" class="form-select rel-filtro-select">
-                    <option value="__todos__">Todos os clientes</option>
-                  </select>
+                  <div class="rel-autocomplete" id="rel-cli-autocomplete">
+                    <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-cli-input"
+                      placeholder="Todos os clientes" autocomplete="off">
+                    <input type="hidden" id="rel-cli-select" value="__todos__">
+                    <button type="button" class="rel-autocomplete-clear" id="rel-cli-clear" title="Limpar">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                    <div class="rel-autocomplete-dropdown" id="rel-cli-dropdown"></div>
+                  </div>
                 </div>
+
                 <div class="rel-filtro-item-btn">
                   <button class="btn-rel-gerar" data-tab-tipo="clientes" type="button">
                     <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>

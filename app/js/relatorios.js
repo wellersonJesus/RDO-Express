@@ -348,25 +348,6 @@
     els.btnsOrdenar = document.querySelectorAll('.btn-sort-data');
   }
 
-  function popularSelectMotoboys() {
-    if (!els.formMotoboySelect) return;
-    let html = '<option value="__todos__">Todos os motoboys</option>';
-    state.motoboys.forEach(function (mb) {
-      const nome = resolverValor('colaborador', 'username', mb) || 'Sem nome';
-      html += '<option value="' + escapeHtml(mb.id) + '">' + escapeHtml(nome) + '</option>';
-    });
-    els.formMotoboySelect.innerHTML = html;
-  }
-
-  function popularSelectClientes() {
-    if (!els.formClienteSelect) return;
-    let html = '<option value="__todos__">Todos os clientes</option>';
-    state.clientes.forEach(function (cli) {
-      const nome = resolverValor('clientes', 'username', cli) || 'Sem nome';
-      html += '<option value="' + escapeHtml(cli.id) + '">' + escapeHtml(nome) + '</option>';
-    });
-    els.formClienteSelect.innerHTML = html;
-  }
 
   function exibirLoadingListas() {
     const loadingHtml =
@@ -1045,6 +1026,112 @@
       }
     });
     return nomes;
+  }
+
+  function criarAutocompleteFiltro(cfg) {
+    const input = document.getElementById(cfg.inputId);
+    const hidden = document.getElementById(cfg.hiddenId);
+    const dropdown = document.getElementById(cfg.dropdownId);
+    const clearBtn = document.getElementById(cfg.clearId);
+    if (!input || !hidden || !dropdown) return;
+
+    let itens = cfg.dados();
+    let filtrados = itens;
+    let ativo = -1;
+
+    function render() {
+      if (!filtrados.length) {
+        dropdown.innerHTML = '<div class="rel-autocomplete-empty">Nenhum resultado encontrado.</div>';
+      } else {
+        dropdown.innerHTML = filtrados.map(function (it, i) {
+          return '<div class="rel-autocomplete-item' + (i === ativo ? ' active' : '') +
+            '" data-id="' + escapeHtml(it.id) + '" data-nome="' + escapeHtml(it.nome) + '">' +
+            escapeHtml(it.nome) + '</div>';
+        }).join('');
+      }
+      dropdown.classList.add('show');
+    }
+
+    function filtrar(termo) {
+      const t = normalizarComparacao(termo);
+      filtrados = !t ? itens : itens.filter(function (it) {
+        return normalizarComparacao(it.nome).indexOf(t) !== -1 || nomesRelacionados(it.nome, termo);
+      });
+      ativo = -1;
+      render();
+    }
+
+    function selecionar(id, nome) {
+      hidden.value = id;
+      input.value = id === '__todos__' ? '' : nome;
+      clearBtn && clearBtn.classList.toggle('show', id !== '__todos__');
+      dropdown.classList.remove('show');
+    }
+
+    function limpar() { selecionar('__todos__', ''); input.focus(); }
+
+    input.addEventListener('focus', function () { filtrar(input.value); });
+    input.addEventListener('input', function () { filtrar(input.value); });
+
+    input.addEventListener('keydown', function (e) {
+      const linhas = dropdown.querySelectorAll('.rel-autocomplete-item');
+      if (!linhas.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); ativo = Math.min(ativo + 1, linhas.length - 1); render(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); ativo = Math.max(ativo - 1, 0); render(); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const alvo = linhas[ativo >= 0 ? ativo : 0];
+        if (alvo) selecionar(alvo.dataset.id, alvo.dataset.nome);
+      } else if (e.key === 'Escape') dropdown.classList.remove('show');
+    });
+
+    dropdown.addEventListener('click', function (e) {
+      const item = e.target.closest('.rel-autocomplete-item');
+      if (item) selecionar(item.dataset.id, item.dataset.nome);
+    });
+
+    if (clearBtn) clearBtn.addEventListener('click', limpar);
+
+    document.addEventListener('click', function (e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target) && (!clearBtn || !clearBtn.contains(e.target))) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    cfg._atualizarDados = function () { itens = cfg.dados(); filtrar(input.value); };
+    selecionar(hidden.value || '__todos__', input.value);
+  }
+
+  function popularSelectMotoboys() {
+    if (!els._autoMb) {
+      els._autoMb = {
+        inputId: 'rel-mb-input', hiddenId: 'rel-mb-select', dropdownId: 'rel-mb-dropdown', clearId: 'rel-mb-clear',
+        dados: function () {
+          return state.motoboys.map(function (mb) {
+            return { id: mb.id, nome: resolverValor('colaborador', 'username', mb) || 'Sem nome' };
+          });
+        }
+      };
+      criarAutocompleteFiltro(els._autoMb);
+    } else {
+      els._autoMb._atualizarDados();
+    }
+  }
+
+  function popularSelectClientes() {
+    if (!els._autoCli) {
+      els._autoCli = {
+        inputId: 'rel-cli-input', hiddenId: 'rel-cli-select', dropdownId: 'rel-cli-dropdown', clearId: 'rel-cli-clear',
+        dados: function () {
+          return state.clientes.map(function (cli) {
+            return { id: cli.id, nome: resolverValor('clientes', 'username', cli) || 'Sem nome' };
+          });
+        }
+      };
+      criarAutocompleteFiltro(els._autoCli);
+    } else {
+      els._autoCli._atualizarDados();
+    }
   }
 
   function calcularTotaisBanco(banco, dadosOriginais) {
@@ -1869,9 +1956,36 @@
   }
 
   function _clientePorId(idCliente) {
+    const idStr = String(idCliente || '').trim();
+    if (!idStr) return null;
     return state.clientes.find(function (c) {
-      return String(c.id).trim() === String(idCliente).trim();
-    });
+      return String(c.id).trim() === idStr;
+    }) || null;
+  }
+
+  function _clientePorNomeAproximado(nomeAlvo) {
+    if (!nomeAlvo) return null;
+    return state.clientes.find(function (c) {
+      const username = resolverValor('clientes', 'username', c);
+      return nomesRelacionados(username, nomeAlvo) || valorContemNome(username, nomeAlvo);
+    }) || null;
+  }
+
+  function _obterPeriodoExatoDoPedido(pedido) {
+    const dataPedido = normalizarDataISO(
+      pedido ? (resolverValor('pedidos', 'data', pedido) || obterDataPedidoComFallback(pedido)) : ''
+    );
+    const iso = dataPedido || toISO(new Date());
+    return { inicio: iso, fim: iso };
+  }
+
+  function _irParaAbaClientes() {
+    const tabClientes = document.querySelector('.rel-tab[data-tab="clientes"]');
+    if (tabClientes) tabClientes.click();
+    else {
+      state.tabAtual = 'clientes';
+      renderizarListas();
+    }
   }
 
   function _obterPeriodoParaPedido(pedido) {
@@ -1886,8 +2000,7 @@
   }
 
   function abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId) {
-    if (state.fetching || !state.clientes.length) {
-      // Dados ainda não carregaram — tenta de novo em breve
+    if (state.fetching || !state.clientes.length || !state.pedidos.length) {
       setTimeout(function () { abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId); }, 400);
       return;
     }
@@ -1896,22 +2009,25 @@
       return String(resolverValor('pedidos', 'id', p)).trim() === String(pedidoId).trim();
     });
 
-    const idClienteFinal = clienteId || (pedido ? resolverValor('pedidos', 'id_cliente', pedido) : '');
-    const cliente = _clientePorId(idClienteFinal);
+    // Sempre vai para a aba de Clientes primeiro, independente do resultado da busca
+    _irParaAbaClientes();
+
+    let cliente = _clientePorId(clienteId) || (pedido ? _clientePorId(resolverValor('pedidos', 'id_cliente', pedido)) : null);
+
+    // Fallback: tenta casar pelo nome do solicitante do pedido
+    if (!cliente && pedido) {
+      const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+      cliente = _clientePorNomeAproximado(solicitante);
+    }
 
     if (!cliente) {
-      relToast('Cliente do pedido #' + pedidoId + ' não encontrado.', 'warning');
+      relToast('Cliente do pedido #' + pedidoId + ' não encontrado. Selecione manualmente na aba Clientes.', 'warning');
       return;
     }
 
-    const periodo = pedido ? _obterPeriodoParaPedido(pedido) : { inicio: toISO(new Date()), fim: toISO(new Date()) };
+    const periodo = _obterPeriodoExatoDoPedido(pedido);
     const filtroExtra = { campo: 'cliente_id', valor: [String(cliente.id)] };
 
-    // Muda para a aba "Clientes" na tela de relatórios (se existir navegação de abas)
-    const tabClientes = document.querySelector('.rel-tab[data-tab="clientes"]');
-    if (tabClientes) tabClientes.click();
-
-    // Abre o builder já filtrado pelo cliente e período do pedido
     iniciarBuilder('clientes', periodo, filtroExtra);
 
     relToast('Relatório do cliente "' + resolverValor('clientes', 'username', cliente) + '" pronto para gerar.', 'info');
