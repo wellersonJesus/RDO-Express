@@ -806,6 +806,7 @@ function preencherModalNotifPagamento(pedidosAbertos) {
         btnVer.innerHTML = '<i class="bi bi-eye"></i> Ver Pedido';
         btnVer.style.cssText = 'border:none;background:#0d6efd;color:#fff;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
         btnVer.addEventListener('click', function () {
+            btnVer.blur();
             abrirPedidoDaNotificacao(idPedido);
         });
 
@@ -835,20 +836,8 @@ function abrirModalNotifPagamento() {
 function abrirPedidoDaNotificacao(pedidoId) {
     window.AppRDO = window.AppRDO || {};
 
-    var dados = window.dashboardState.dados || {};
-    var pedidos = dados.pedidos || [];
-
-    // Localiza o pedido completo (não só o ID) para saber o cliente vinculado
-    var pedido = pedidos.find(function (p) {
-        return String(p.id || p.id_pedido || '').trim() === String(pedidoId || '').trim();
-    });
-
-    var idCliente = pedido ? (pedido.id_cliente || pedido.solicitante || '') : '';
-
-    // Guarda os alvos que o módulo de Relatórios vai ler ao iniciar
-    window.AppRDO._pedidoAlvoNotificacao = String(pedidoId || '').trim();
-    window.AppRDO._clienteAlvoRelatorio = String(idCliente || '').trim();
-    window.AppRDO._origemNavegacao = 'notificacao-pagamento';
+    // Guarda o ID do pedido que o financeiro deve abrir
+    window.AppRDO._pedidoAlvoFinanceiro = String(pedidoId || '').trim();
 
     // Fecha o modal de notificação
     var modalEl = document.getElementById('modalNotifPagamentoDashboard');
@@ -857,7 +846,42 @@ function abrirPedidoDaNotificacao(pedidoId) {
         if (inst) inst.hide();
     }
 
-    navegarParaRelatorioCliente();
+    navegarParaFinanceiroPedido(pedidoId);
+}
+
+function navegarParaFinanceiroPedido(pedidoId) {
+    var idAlvo = String(pedidoId || '').trim();
+
+    window.AppRDO = window.AppRDO || {};
+    window.AppRDO._pedidoAlvoFinanceiro = idAlvo;
+
+    // Usa o mecanismo real de navegação do app (loadPage), não um "router" inexistente
+    if (typeof window.loadPage === 'function') {
+        window.loadPage('fin', 'Financeiro', 'Gestão financeira'); // ajuste title/subtitle como preferir
+    } else {
+        console.error('[navegarParaFinanceiroPedido] window.loadPage não está disponível.');
+        return;
+    }
+
+    aguardarFinanceiroEDispararEvento(idAlvo);
+}
+
+function aguardarFinanceiroEDispararEvento(idAlvo, tentativas) {
+    tentativas = tentativas || 0;
+    // Espera o módulo financeiro estar de fato inicializado
+    if (window.FinanceiroModule && typeof window.tentarAbrirPedidoFinanceiro === 'function') {
+        window.dispatchEvent(new CustomEvent('abrirPedidoFinanceiro', {
+            detail: { pedidoId: idAlvo }
+        }));
+        return;
+    }
+    if (tentativas < 40) {
+        setTimeout(function () {
+            aguardarFinanceiroEDispararEvento(idAlvo, tentativas + 1);
+        }, 100);
+    } else {
+        console.warn('[navegarParaFinanceiroPedido] fin.js não inicializou a tempo.');
+    }
 }
 
 function navegarParaRelatorioCliente() {

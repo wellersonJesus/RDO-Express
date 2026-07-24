@@ -3434,6 +3434,8 @@ if (!window.EventBus) {
       renderTodos();
       renderCaixa();
       renderizarListaExtratos();
+      tentarAbrirPedidoFinanceiro();
+
     }).catch(function (err) {
       finToast('Erro ao carregar dados financeiros.', 'danger');
       if (els.tbodyTodos) els.tbodyTodos.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>';
@@ -3603,6 +3605,83 @@ if (!window.EventBus) {
     btnAbrir.addEventListener('click', abrirOverlay);
   }
 
+  function tentarAbrirPedidoFinanceiro(tentativas) {
+    tentativas = tentativas || 0;
+    var pedidoId = window.AppRDO && window.AppRDO._pedidoAlvoFinanceiro;
+    if (!pedidoId) return;
+
+    if (!state.cache.length || state.fetching) {
+      if (tentativas < 40) {
+        setTimeout(function () { tentarAbrirPedidoFinanceiro(tentativas + 1); }, 200);
+        return;
+      }
+      finToast('Não foi possível carregar os dados financeiros para localizar o pedido.', 'warning');
+      window.AppRDO._pedidoAlvoFinanceiro = null;
+      return;
+    }
+
+    var idNorm = String(pedidoId).trim();
+    var idNormSemPrefixo = idNorm.replace(/^RDO0*/i, '');
+
+    var reg = state.cache.find(function (r) {
+      var idReg = String(r.idPedido || '').trim();
+      return idReg === idNorm || idReg.replace(/^RDO0*/i, '') === idNormSemPrefixo;
+    });
+
+    window.AppRDO._pedidoAlvoFinanceiro = null;
+
+    if (!reg) {
+      finToast('Pedido ' + pedidoId + ' não encontrado no financeiro.', 'warning');
+      return;
+    }
+
+    // Garante que a aba "RDO" (data-tab="todos") está ativa
+    var tabRDO = document.querySelector('.fin-tab[data-tab="todos"]');
+    if (tabRDO && !tabRDO.classList.contains('active')) {
+      tabRDO.click();
+    }
+
+    // Aplica o filtro de busca pelo idPedido
+    var termoFiltro = reg.idPedido || pedidoId;
+    state.filtroBusca = termoFiltro;
+
+    var inputBusca = document.getElementById('filtro-busca-fin');
+    if (inputBusca) inputBusca.value = termoFiltro;
+
+    var btnLimpar = document.getElementById('btn-limpar-busca-fin');
+    if (btnLimpar) btnLimpar.classList.remove('d-none');
+
+    state.todos.pagina = 1;
+    renderTodos();
+
+    // Aguarda a renderização, faz scroll até a linha e abre o modal
+    setTimeout(function () {
+      var tbody = document.getElementById('tabela-fin-body-todos');
+      var linha = tbody ? tbody.querySelector('[data-id="' + reg.id + '"]') : null;
+      if (linha) {
+        linha.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        linha.classList.add('fin-row-destaque');
+        setTimeout(function () { linha.classList.remove('fin-row-destaque'); }, 1500);
+      }
+      abrirModalVisualizar(reg);
+    }, 300);
+  }
+
+  function bindEventoAbrirPedidoFinanceiro() {
+    if (window._abrirPedidoFinanceiroBound) return;
+    window._abrirPedidoFinanceiroBound = true;
+
+    window.addEventListener('abrirPedidoFinanceiro', function (e) {
+      var pedidoId = e.detail && e.detail.pedidoId;
+      if (!pedidoId) return;
+      window.AppRDO = window.AppRDO || {};
+      window.AppRDO._pedidoAlvoFinanceiro = pedidoId;
+      tentarAbrirPedidoFinanceiro();
+    });
+  }
+
+  window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
+
   function init() {
     if (_finJaInicializado) return;
     _finJaInicializado = true;
@@ -3613,6 +3692,7 @@ if (!window.EventBus) {
     bindNotifCardsFin();
     initExtratoFluxo();
     initExtratoListaDelegacao();
+    bindEventoAbrirPedidoFinanceiro();
     carregarDados();
   }
 
@@ -3738,6 +3818,7 @@ if (!window.EventBus) {
 
     renderizarListaExtratos();
     finToast('Relatório gerado com sucesso!', 'success');
+
   }
 
   function _garantirModuloRelatorioFin() {
