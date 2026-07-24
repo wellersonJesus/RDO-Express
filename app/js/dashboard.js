@@ -440,6 +440,21 @@ function renderizarBlocoAdministracao(usuario, dados) {
         : 'Nenhum cancelamento no período';
     if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
     if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
+
+    var btnVerPedidos = document.getElementById('btn-ver-todos-pedidos');
+    if (btnVerPedidos && !btnVerPedidos._bound) {
+        btnVerPedidos._bound = true;
+        btnVerPedidos.addEventListener('click', function (e) {
+            e.preventDefault();
+            navegarParaTodosPedidos();
+        });
+    }
+}
+
+function navegarParaTodosPedidos() {
+    if (typeof window.loadPage === 'function') {
+        window.loadPage('pedidos', 'Pedidos', 'Todos os pedidos');
+    }
 }
 
 function renderizarBlocoFinanceiro(usuario, dados) {
@@ -1141,20 +1156,48 @@ function _pedidoAguardandoPagamento(pedido, financeiro) {
     return situacao === 'pendente';
 }
 
+var LS_DASH_CACHE = 'dashboard_cache_v1';
+var LS_DASH_CACHE_TS = 'dashboard_cache_ts_v1';
+var CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+function _salvarCacheLocalDashboard(dados) {
+    try {
+        localStorage.setItem(LS_DASH_CACHE, JSON.stringify(dados));
+        localStorage.setItem(LS_DASH_CACHE_TS, String(Date.now()));
+    } catch (e) { /* localStorage cheio, ignora */ }
+}
+
+function _lerCacheLocalDashboard() {
+    try {
+        var raw = localStorage.getItem(LS_DASH_CACHE);
+        var ts = Number(localStorage.getItem(LS_DASH_CACHE_TS) || 0);
+        if (!raw || !ts) return null;
+        return { dados: JSON.parse(raw), idade: Date.now() - ts };
+    } catch (e) { return null; }
+}
+
 window.initDashboard = function () {
     if (window.dashboardState.isFetching) return Promise.resolve();
     window.dashboardState.isFetching = true;
-
     window.dashboardState.modalNotifJaExibido = false;
 
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
 
+    var cacheLocal = _lerCacheLocalDashboard();
+
     if (window.dashboardState.dados) {
+        // já tem dados em memória (navegação dentro da sessão)
         renderizarDashboardCompleto(usuario, window.dashboardState.dados);
         ocultarLoadingDashboard();
+    } else if (cacheLocal) {
+        // 1ª entrada do dia/sessão, mas já existe cache do localStorage -> exibe já
+        window.dashboardState.dados = cacheLocal.dados;
+        renderizarDashboardCompleto(usuario, cacheLocal.dados);
+        ocultarLoadingDashboard();
     } else {
+        // não tem nada -> aí sim mostra loading (primeira vez real)
         mostrarLoadingDashboard();
     }
 
@@ -1165,6 +1208,7 @@ window.initDashboard = function () {
         .then(function (dados) {
             if (window.AppRDO && window.AppRDO._navToken !== meuToken) return;
             window.dashboardState.dados = dados;
+            _salvarCacheLocalDashboard(dados);
             renderizarDashboardCompleto(usuario, dados);
             ocultarLoadingDashboard();
         })

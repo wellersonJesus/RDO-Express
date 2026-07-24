@@ -4,7 +4,8 @@
         <div id="dashboard-loading-overlay" class="dashboard-loading-overlay">
             <div class="dashboard-loading-content">
                 <i class="bi bi-search dashboard-loading-spin"></i>
-                <span class="dashboard-loading-text">Buscando informações<span class="dots"><span>.</span><span>.</span><span>.</span></span></span>
+                <span class="dashboard-loading-text">Buscando informações<span
+                        class="dots"><span>.</span><span>.</span><span>.</span></span></span>
             </div>
         </div>
 
@@ -23,8 +24,10 @@
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
                     <div class="notificacao-pagamento-info">
-                        <span class="notificacao-pagamento-title" id="notif-pagamento-title">Você possui pedidos em aberto</span>
-                        <span class="notificacao-pagamento-subtitle" id="notif-pagamento-subtitle">0 pedido(s) aguardando pagamento</span>
+                        <span class="notificacao-pagamento-title" id="notif-pagamento-title">Você possui pedidos em
+                            aberto</span>
+                        <span class="notificacao-pagamento-subtitle" id="notif-pagamento-subtitle">0 pedido(s)
+                            aguardando pagamento</span>
                     </div>
                     <button class="btn-notificacao-pagamento" id="btn-notif-pagamento-ver">
                         Ver pedidos <i class="bi bi-arrow-right"></i>
@@ -35,10 +38,13 @@
             <div class="dashboard-blocos mt-3">
 
                 <div class="dash-block dash-automation-block bloco-dashboard" id="bloco-automacao">
-                    <div class="dash-block-header"><i class="bi bi-people"></i><h6>Gestão</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-people"></i>
+                        <h6>Gestão</h6>
+                    </div>
                     <div class="automation-cards-row">
                         <div class="automation-card">
-                            <div class="automation-icon automation-icon-danger-soft"><i class="bi bi-person-check-fill"></i></div>
+                            <div class="automation-icon automation-icon-danger-soft"><i
+                                    class="bi bi-person-check-fill"></i></div>
                             <div class="automation-info">
                                 <span class="automation-title">Usuários Ativos</span>
                                 <span class="automation-value" id="visao-geral-usuarios-ativos">0</span>
@@ -46,7 +52,8 @@
                             </div>
                         </div>
                         <div class="automation-card">
-                            <div class="automation-icon automation-icon-danger-soft"><i class="bi bi-person-badge-fill"></i></div>
+                            <div class="automation-icon automation-icon-danger-soft"><i
+                                    class="bi bi-person-badge-fill"></i></div>
                             <div class="automation-info">
                                 <span class="automation-title">Usuários Logados</span>
                                 <span class="automation-value" id="visao-geral-usuarios-logados">0</span>
@@ -54,29 +61,38 @@
                             </div>
                         </div>
                         <div class="automation-card" id="automacao-card-bot">
-                            <div class="automation-icon automation-icon-bot" id="automacao-icone-bot"><i class="bi bi-gear-fill"></i></div>
+                            <div class="automation-icon automation-icon-bot" id="automacao-icone-bot"><i
+                                    class="bi bi-gear-fill"></i></div>
                             <div class="automation-info">
                                 <span class="automation-title">Status do Bot</span>
-                                <span class="automation-value automation-value-status" id="automacao-status-bot">Ativo</span>
-                                <span class="automation-subtitle" id="automacao-status-desc">Bot em execução normal</span>
+                                <span class="automation-value automation-value-status"
+                                    id="automacao-status-bot">Ativo</span>
+                                <span class="automation-subtitle" id="automacao-status-desc">Bot em execução
+                                    normal</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="dash-block dash-bars-block bloco-dashboard" id="bloco-visao-geral">
-                    <div class="dash-block-header"><i class="bi bi-kanban-fill"></i><h6>Visão Geral</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-kanban-fill"></i>
+                        <h6>Visão Geral</h6>
+                    </div>
                     <div class="hbars-list" id="dashboard-visao-geral-hbars"></div>
                 </div>
 
                 <div class="dash-block dash-ranking-block bloco-dashboard" id="bloco-chat-pedidos">
-                    <div class="dash-block-header"><i class="bi bi-chat-dots-fill"></i><h6>Chat e Pedidos</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-chat-dots-fill"></i>
+                        <h6>Chat e Pedidos</h6>
+                    </div>
                     <div class="ranking-list" id="dashboard-chat-pedidos-ranking"></div>
                     <div class="bars-list" id="dashboard-chat-pedidos-ranking-bars"></div>
                 </div>
 
                 <div class="dash-block dash-admin-block bloco-dashboard" id="bloco-administracao">
-                    <div class="dash-block-header"><i class="bi bi-gear-fill"></i><h6>Administração</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-gear-fill"></i>
+                        <h6>Administração</h6>
+                    </div>
                     <div class="admin-cards-row">
                         <div class="admin-card admin-card-clean-red" id="card-total-pedidos">
                             <div class="admin-card-header">
@@ -85,22 +101,33 @@
                             </div>
                             <span class="admin-card-subtitle">Mês até hoje</span>
                             <h2 class="admin-card-value" id="admin-total-pedidos">0</h2>
-                            <span class="admin-card-target" id="admin-pedidos-info">0 pedido(s) registrado(s) no período</span>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="admin-card-target" id="admin-pedidos-info">0 pedido(s) registrado(s) no
+                                    período</span>
+                                <a href="#" id="btn-ver-todos-pedidos" class="admin-card-link"
+                                    style="font-size:.72rem;color:#dc3545;font-weight:600;text-decoration:none;white-space:nowrap;">
+                                    Ver pedidos <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
                         </div>
                         <div class="admin-card admin-card-clean-red-alt" id="card-cancelados">
                             <div class="admin-card-header">
                                 <span class="admin-card-title">Pedidos cancelados</span>
                                 <i class="bi bi-three-dots-vertical admin-card-menu"></i>
                             </div>
-                            <span class="admin-card-subtitle" id="admin-cancelados-status">Nenhum cancelamento no período</span>
+                            <span class="admin-card-subtitle" id="admin-cancelados-status">Nenhum cancelamento no
+                                período</span>
                             <h2 class="admin-card-value admin-card-value-danger" id="admin-total-cancelados">0</h2>
-                            <span class="admin-card-target" id="admin-cancelados-info">0% do total de pedidos no mês</span>
+                            <span class="admin-card-target" id="admin-cancelados-info">0% do total de pedidos no
+                                mês</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="dash-block bloco-dashboard" id="bloco-financeiro" style="flex-basis:100%;">
-                    <div class="dash-block-header"><i class="bi bi-wallet2"></i><h6>Financeiro</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-wallet2"></i>
+                        <h6>Financeiro</h6>
+                    </div>
                     <div id="dashboard-fin-cards" class="indicadores-row"></div>
                     <div class="fin-charts-row">
                         <div class="fin-chart-card">
@@ -115,7 +142,9 @@
                 </div>
 
                 <div class="dash-block bloco-dashboard" id="bloco-relatorio" style="flex-basis:100%;">
-                    <div class="dash-block-header"><i class="bi bi-file-earmark-bar-graph"></i><h6>Relatórios</h6></div>
+                    <div class="dash-block-header"><i class="bi bi-file-earmark-bar-graph"></i>
+                        <h6>Relatórios</h6>
+                    </div>
                     <div id="dashboard-relatorio-grid" class="indicadores-row"></div>
                     <div class="fin-charts-row">
                         <div class="fin-chart-card">
@@ -146,7 +175,8 @@
                     <div id="modal-notif-pagamento-lista" class="modal-notif-pagamento-lista"></div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4"
+                        data-bs-dismiss="modal">Fechar</button>
                     <button type="button" class="btn btn-danger rounded-pill px-4" id="btn-modal-notif-pagamento-ver">
                         Ver pedidos <i class="bi bi-arrow-right ms-1"></i>
                     </button>
