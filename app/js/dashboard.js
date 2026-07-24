@@ -800,18 +800,31 @@ function preencherModalNotifPagamento(pedidosAbertos) {
         badge.className = 'modal-notif-pagamento-item-badge';
         badge.textContent = 'Pendente';
 
-        var btnVer = document.createElement('button');
+                var btnVer = document.createElement('button');
         btnVer.type = 'button';
         btnVer.className = 'modal-notif-pagamento-item-btn-ver';
         btnVer.innerHTML = '<i class="bi bi-eye"></i> Ver Pedido';
-        btnVer.style.cssText = 'border:none;background:#0d6efd;color:#fff;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+        btnVer.style.cssText = 'border:none;background:rgba(13,110,253,.12);color:#0d6efd;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
         btnVer.addEventListener('click', function () {
             btnVer.blur();
             abrirPedidoDaNotificacao(idPedido);
         });
 
+        var idClientePedido = pedido.id_cliente || '';
+        var btnRelatorio = document.createElement('button');
+        btnRelatorio.type = 'button';
+        btnRelatorio.className = 'modal-notif-pagamento-item-btn-relatorio';
+        btnRelatorio.title = 'Gerar relatório deste cliente';
+        btnRelatorio.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i> Relatório';
+        btnRelatorio.style.cssText = 'border:none;background:rgba(111,66,193,.12);color:#6f42c1;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+        btnRelatorio.addEventListener('click', function () {
+            btnRelatorio.blur();
+            abrirRelatorioDaNotificacao(idPedido, idClientePedido);
+        });
+
         acoes.appendChild(badge);
         acoes.appendChild(btnVer);
+        acoes.appendChild(btnRelatorio);
 
         item.appendChild(info);
         item.appendChild(acoes);
@@ -892,22 +905,62 @@ function aguardarFinanceiroEDispararEvento(idAlvo, tentativas) {
     }
 }
 
-function navegarParaRelatorioCliente() {
-    if (window.router && typeof window.router.navigate === 'function') {
-        window.router.navigate('relatorios'); // ajuste o nome da rota conforme seu router
-    } else {
-        window.location.hash = '#relatorios';
+function abrirRelatorioDaNotificacao(pedidoId, idCliente) {
+    window.AppRDO = window.AppRDO || {};
+    window.AppRDO._pedidoAlvoRelatorio = String(pedidoId || '').trim();
+    window.AppRDO._clienteAlvoRelatorio = String(idCliente || '').trim();
+
+    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) {
+            var aoEsconder = function () {
+                modalEl.removeEventListener('hidden.bs.modal', aoEsconder);
+                navegarParaRelatorioDoPedido(pedidoId, idCliente);
+            };
+            modalEl.addEventListener('hidden.bs.modal', aoEsconder);
+            inst.hide();
+            return;
+        }
     }
 
-    // Dispara um evento customizado para o módulo de relatórios "ouvir"
-    // e já abrir focado no pedido/cliente certo, mesmo se o módulo
-    // já estiver carregado em memória (SPA sem reload).
-    window.dispatchEvent(new CustomEvent('abrirRelatorioDoPedido', {
-        detail: {
-            pedidoId: window.AppRDO._pedidoAlvoNotificacao,
-            clienteId: window.AppRDO._clienteAlvoRelatorio
-        }
-    }));
+    navegarParaRelatorioDoPedido(pedidoId, idCliente);
+}
+
+function navegarParaRelatorioDoPedido(pedidoId, idCliente) {
+    var idPedidoAlvo = String(pedidoId || '').trim();
+    var idClienteAlvo = String(idCliente || '').trim();
+
+    window.AppRDO = window.AppRDO || {};
+    window.AppRDO._pedidoAlvoRelatorio = idPedidoAlvo;
+    window.AppRDO._clienteAlvoRelatorio = idClienteAlvo;
+
+    if (typeof window.loadPage === 'function') {
+        window.loadPage('relatorio', 'Relatórios', 'Relatórios do cliente'); // ajuste rota/title conforme seu app
+    } else {
+        console.error('[navegarParaRelatorioDoPedido] window.loadPage não está disponível.');
+        return;
+    }
+
+    aguardarRelatorioEDispararEvento(idPedidoAlvo, idClienteAlvo);
+}
+
+function aguardarRelatorioEDispararEvento(pedidoId, idCliente, tentativas) {
+    tentativas = tentativas || 0;
+    if (typeof window.initRelatorios === 'function') {
+        window.dispatchEvent(new CustomEvent('abrirRelatorioDoPedido', {
+            detail: { pedidoId: pedidoId, clienteId: idCliente }
+        }));
+        return;
+    }
+    if (tentativas < 40) {
+        setTimeout(function () {
+            aguardarRelatorioEDispararEvento(pedidoId, idCliente, tentativas + 1);
+        }, 100);
+    } else {
+        console.warn('[navegarParaRelatorioDoPedido] relatorios.js não inicializou a tempo.');
+    }
 }
 
 function navegarParaPedidos() {
@@ -1108,7 +1161,7 @@ window.initDashboard = function () {
     syncStartDashboard();
     var meuToken = window.AppRDO ? window.AppRDO._navToken : null;
 
-    return carregarDadosDashboard()
+    return carregarDadosDashboard(true)
         .then(function (dados) {
             if (window.AppRDO && window.AppRDO._navToken !== meuToken) return;
             window.dashboardState.dados = dados;
