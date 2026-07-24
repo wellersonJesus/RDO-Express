@@ -886,6 +886,124 @@ function navegarParaPedidos() {
     }
 }
 
+function renderizarDashboardCompleto(usuario, dados) {
+    var blocos = [
+        function () { renderizarBlocoNotificacaoPagamento(dados); },
+        function () { renderizarBlocoChatPedidos(usuario, dados); },
+        function () { renderizarBlocoVisaoGeral(); },
+        function () { renderizarBlocoGestao(); },
+        function () { renderizarBlocoAdministracao(usuario, dados); },
+        function () { renderizarBlocoFinanceiro(usuario, dados); },
+        function () { renderizarBlocoRelatorio(usuario, dados); }
+    ];
+
+    blocos.forEach(function (fn) {
+        try { fn(); } catch (e) { console.error('Erro ao renderizar bloco:', e); }
+    });
+}
+
+function _situacaoFinanceiroDoPedido(pedido, financeiro) {
+    var idPedido = String(pedido.id || pedido.id_pedido || '').trim();
+    if (!idPedido) return null;
+    var lancamento = financeiro.find(function (f) {
+        return String(f.id_pedido || '').trim() === idPedido;
+    });
+    if (!lancamento) return null;
+    return String(lancamento.situacao || '').trim().toLowerCase();
+}
+
+function _obterMapaClientesPorId(clientes) {
+    var mapa = {};
+    (clientes || []).forEach(function (c) {
+        mapa[String(c.id)] = c;
+    });
+    return mapa;
+}
+
+function _diasLimitePagamento(pagamento) {
+    var tipo = String(pagamento || '').trim().toUpperCase();
+    if (tipo === 'SEMANAL') return 7;
+    if (tipo === 'QUINZENAL') return 15;
+    if (tipo === 'MENSAL') return 30;
+    return 0;
+}
+
+function _diasEntreDatas(dataInicial, dataFinal) {
+    var msPorDia = 1000 * 60 * 60 * 24;
+    var inicio = new Date(dataInicial.getFullYear(), dataInicial.getMonth(), dataInicial.getDate());
+    var fim = new Date(dataFinal.getFullYear(), dataFinal.getMonth(), dataFinal.getDate());
+    return Math.round((fim - inicio) / msPorDia);
+}
+
+function _statusPedidoCancelado(status) {
+    var raw = String(status || '').trim();
+    if (raw.includes('/')) raw = raw.split('/').pop().trim();
+    return raw.toUpperCase() === 'CANCELADO';
+}
+
+function _situacaoFinanceiraPendente(pedido) {
+    var situacao = String(pedido.situacao_financeira || '').trim().toUpperCase();
+    return situacao === 'PENDENTE';
+}
+
+function _ultimaDataPedidoCliente(idCliente, pedidosPendentesDoCliente) {
+    var maiorData = null;
+    pedidosPendentesDoCliente.forEach(function (p) {
+        var data = _parseDataBR(p.data);
+        if (isNaN(data.getTime())) return;
+        if (!maiorData || data > maiorData) maiorData = data;
+    });
+    return maiorData;
+}
+
+function _agruparPedidosPendentesPorCliente(pedidosPendentes) {
+    var grupos = {};
+    pedidosPendentes.forEach(function (p) {
+        var chave = String(p.id_cliente || '').trim();
+        if (!chave) return;
+        if (!grupos[chave]) grupos[chave] = [];
+        grupos[chave].push(p);
+    });
+    return grupos;
+}
+
+function _calcularPedidosAguardandoPagamento(pedidos, clientes) {
+    var mapaClientes = _obterMapaClientesPorId(clientes);
+    var hoje = new Date();
+
+    var pedidosPendentes = pedidos.filter(function (p) {
+        if (_statusPedidoCancelado(p.status)) return false;
+        return _situacaoFinanceiraPendente(p);
+    });
+
+    var gruposPorCliente = _agruparPedidosPendentesPorCliente(pedidosPendentes);
+
+    var resultado = [];
+
+    Object.keys(gruposPorCliente).forEach(function (idCliente) {
+        var pedidosDoCliente = gruposPorCliente[idCliente];
+        var cliente = mapaClientes[idCliente];
+        var pagamento = cliente ? cliente.pagamento : 'DIÁRIO';
+        var diasLimite = _diasLimitePagamento(pagamento);
+
+        var ultimaData = _ultimaDataPedidoCliente(idCliente, pedidosDoCliente);
+
+        if (diasLimite === 0) {
+            pedidosDoCliente.forEach(function (p) { resultado.push(p); });
+            return;
+        }
+
+        if (!ultimaData) return;
+
+        var diasDecorridos = _diasEntreDatas(ultimaData, hoje);
+        if (diasDecorridos >= diasLimite) {
+            pedidosDoCliente.forEach(function (p) { resultado.push(p); });
+        }
+    });
+
+    return resultado;
+}
+
 function renderizarBlocoNotificacaoPagamento(dados) {
     var bloco = document.getElementById('bloco-notificacao-pagamento');
     if (!bloco) return;
@@ -893,11 +1011,9 @@ function renderizarBlocoNotificacaoPagamento(dados) {
     window.dashboardState = window.dashboardState || {};
 
     var pedidos = (dados && dados.pedidos) || [];
-    var financeiro = (dados && dados.financeiro) || [];
+    var clientes = (dados && dados.clientes) || [];
 
-    var pedidosAbertos = pedidos.filter(function (p) {
-        return _pedidoAguardandoPagamento(p, financeiro);
-    });
+    var pedidosAbertos = _calcularPedidosAguardandoPagamento(pedidos, clientes);
 
     var total = pedidosAbertos.length;
     window.dashboardState.pedidosAbertosPagamento = pedidosAbertos;
@@ -925,38 +1041,6 @@ function renderizarBlocoNotificacaoPagamento(dados) {
             abrirModalNotifPagamento();
         }, 400);
     }
-}
-
-function renderizarDashboardCompleto(usuario, dados) {
-    var blocos = [
-        function () { renderizarBlocoNotificacaoPagamento(dados); },
-        function () { renderizarBlocoChatPedidos(usuario, dados); },
-        function () { renderizarBlocoVisaoGeral(); },
-        function () { renderizarBlocoGestao(); },
-        function () { renderizarBlocoAdministracao(usuario, dados); },
-        function () { renderizarBlocoFinanceiro(usuario, dados); },
-        function () { renderizarBlocoRelatorio(usuario, dados); }
-    ];
-
-    blocos.forEach(function (fn) {
-        try { fn(); } catch (e) { console.error('Erro ao renderizar bloco:', e); }
-    });
-}
-
-function _situacaoFinanceiroDoPedido(pedido, financeiro) {
-    var idPedido = String(pedido.id || pedido.id_pedido || '').trim();
-    if (!idPedido) return null;
-    var lancamento = financeiro.find(function (f) {
-        return String(f.id_pedido || '').trim() === idPedido;
-    });
-    if (!lancamento) return null;
-    return String(lancamento.situacao || '').trim().toLowerCase();
-}
-
-function _statusPedidoCancelado(status) {
-    var raw = String(status || '').trim();
-    if (raw.includes('/')) raw = raw.split('/').pop().trim();
-    return raw.toUpperCase() === 'CANCELADO';
 }
 
 function _pedidoAguardandoPagamento(pedido, financeiro) {
