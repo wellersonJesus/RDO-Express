@@ -1417,64 +1417,55 @@
 
   function salvarRelatorioModal() {
     if (!state.relatorioAtual) { relToast('Nenhum relatório para salvar.', 'warning'); return; }
-    if (!window.API || typeof window.API.call !== 'function') { relToast('API não disponível.', 'danger'); return; }
-
-    const btnSalvar = els.modalBtnSalvar;
-    btnSalvar.disabled = true;
-    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
 
     const atual = state.relatorioAtual;
-    const descricao = JSON.stringify({ titulo: atual.titulo, snapshot: atual.snapshot });
-
-    const payload = {
+    const registroLista = {
       id: atual.id,
-      id_pedido: '',
-      data: formatDateBR(atual.data_inicio) + ' - ' + formatDateBR(atual.data_fim),
       tipo: atual.tipo,
-      descricao: descricao,
-      motoboy: '',
-      vlr_servico: '',
-      colaborador: '',
-      observacao: atual.periodoLabel,
-      situacao: 'gerado',
-      data_criacao: new Date().toISOString().slice(0, 10)
+      titulo: atual.titulo,
+      periodoLabel: atual.periodoLabel,
+      criadoEm: atual.criadoEm,
+      snapshot: atual.snapshot,
+      data_inicio: atual.data_inicio,
+      data_fim: atual.data_fim,
+      usuarioGerador: atual.usuarioGerador,
+      horaGeracao: atual.horaGeracao
     };
 
-    window.API.call('addrelatorio', payload)
-      .then(function (res) {
-        if (res && res.status === 'success') {
-          const registroLista = {
-            id: payload.id,
-            tipo: payload.tipo,
-            titulo: atual.titulo,
-            periodoLabel: payload.observacao,
-            criadoEm: atual.criadoEm,
-            descricao: payload.descricao,
-            snapshot: atual.snapshot,
-            data_inicio: atual.data_inicio,
-            data_fim: atual.data_fim,
-            data: payload.data,
-            usuarioGerador: atual.usuarioGerador,
-            horaGeracao: atual.horaGeracao
-          };
+    state.relatoriosSalvos.unshift(registroLista);
+    persistirRelatoriosLocal();
+    state.ultimoBuilderState = null;
+    state.paginaAtual = 1;
+    renderizarListas();
+    relToast('Relatório salvo com sucesso!', 'success');
+    fecharModalRelatorio();
+  }
 
-          state.relatoriosSalvos.unshift(registroLista);
-          state.ultimoBuilderState = null;
-          state.paginaAtual = 1;
-          renderizarListas();
-          relToast('Relatório salvo com sucesso!', 'success');
-          fecharModalRelatorio();
-        } else {
-          throw new Error((res && res.message) || 'Erro desconhecido ao salvar');
-        }
-      })
-      .catch(function (err) {
-        relToast('Erro ao salvar relatório: ' + err.message, 'danger');
-      })
-      .finally(function () {
-        btnSalvar.disabled = false;
-        btnSalvar.innerHTML = '<i class="bi bi-save"></i><span>Salvar Relatório</span>';
-      });
+  function excluirRelatorioLocal(id) {
+    state.relatoriosSalvos = state.relatoriosSalvos.filter(r => r.id !== id);
+    persistirRelatoriosLocal();
+    renderizarListas();
+    relToast('Relatório excluído com sucesso!', 'success');
+  }
+
+  // Helpers
+  const LS_KEY = 'rdo_relatorios_salvos';
+
+  function persistirRelatoriosLocal() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(state.relatoriosSalvos));
+    } catch (e) {
+      relToast('Erro ao salvar localmente: ' + e.message, 'danger');
+    }
+  }
+
+  function carregarRelatoriosLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      state.relatoriosSalvos = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      state.relatoriosSalvos = [];
+    }
   }
 
   function copiarRelatorioModal() {
@@ -1715,25 +1706,8 @@
 
     const btnConfirmar = document.getElementById('btn-confirmar-excluir-rel');
     btnConfirmar.addEventListener('click', function () {
-      btnConfirmar.disabled = true;
-      btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-      window.API.call('delrelatorio', { id: rel.id })
-        .then(function (res) {
-          if (res && res.status === 'success') {
-            state.relatoriosSalvos = state.relatoriosSalvos.filter(function (r) { return r.id !== rel.id; });
-            renderizarListas();
-            relToast('Relatório excluído com sucesso!', 'success');
-            modalInst.hide();
-          } else {
-            throw new Error((res && res.message) || 'Erro ao excluir');
-          }
-        })
-        .catch(function (err) {
-          relToast('Erro ao excluir relatório: ' + err.message, 'danger');
-          btnConfirmar.disabled = false;
-          btnConfirmar.innerHTML = 'Excluir';
-        });
+      excluirRelatorioLocal(rel.id);
+      modalInst.hide();
     });
   }
 
@@ -1901,39 +1875,13 @@
       window.API.call('getclientes', {}),
       window.API.call('getpedidos', {}),
       window.API.call('getchat', {}),
-      window.API.call('getfinanceirocompleto', {}),
-      window.API.call('getrelatorios', {})
+      window.API.call('getfinanceirocompleto', {})
     ]).then(function (resultados) {
       state.motoboys = extrairArray(resultados[0]);
       state.clientes = extrairArray(resultados[1]);
       state.pedidos = extrairArray(resultados[2]);
       state.chat = extrairArray(resultados[3]);
       state.financeiro = extrairArray(resultados[4]);
-
-      const relatoriosBrutos = extrairArray(resultados[5]);
-      state.relatoriosSalvos = relatoriosBrutos.map(function (r) {
-        let snapshot = {};
-        let titulo = r.tipo || 'Relatório';
-        try {
-          const parsed = JSON.parse(r.descricao);
-          snapshot = parsed.snapshot || {};
-          titulo = parsed.titulo || titulo;
-        } catch (e) { }
-
-        const dataCriacaoISO = normalizarDataISO(r.data_criacao || r.criadoEm || r.data);
-        const criadoEmTimestamp = dataCriacaoISO ? new Date(dataCriacaoISO).getTime() : Date.now();
-
-        return {
-          id: r.id,
-          tipo: r.tipo,
-          titulo: titulo,
-          periodoLabel: r.observacao || r.data,
-          criadoEm: isNaN(criadoEmTimestamp) ? Date.now() : criadoEmTimestamp,
-          descricao: r.descricao,
-          snapshot: snapshot,
-          data: r.data
-        };
-      });
 
       popularSelectMotoboys();
       popularSelectClientes();
@@ -1951,6 +1899,7 @@
     if (inicializado) return;
     inicializado = true;
     bind();
+    carregarRelatoriosLocal();
     registrarEventos();
     carregarDados();
   }
