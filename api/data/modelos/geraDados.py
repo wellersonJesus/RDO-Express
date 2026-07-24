@@ -899,7 +899,7 @@ def criar_financeiro(consolidado):
             "vlr_servico": consolidado["valor_rs"],
             "colaborador": motoboy_final,
             "observacao": consolidado["observacao"],
-            "situacao": "PAGO",
+            "situacao": "Pendente",
         }
 
         try:

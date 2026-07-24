@@ -958,6 +958,68 @@ if (!window.EventBus) {
       });
   }
 
+  function _toggleBtnClearBuscaFin() {
+    if (els.btnClearBuscaFin) {
+      var temTexto = els.inputBuscaFin && els.inputBuscaFin.value.trim().length > 0;
+      els.btnClearBuscaFin.classList.toggle('d-none', !temTexto);
+    }
+    if (els.btnClearBuscaExtrato) {
+      var temTextoExtrato = els.inputBuscaExtrato && els.inputBuscaExtrato.value.trim().length > 0;
+      els.btnClearBuscaExtrato.classList.toggle('d-none', !temTextoExtrato);
+    }
+  }
+
+  function _bindBuscaFin() {
+    els.btnClearBuscaFin = document.getElementById('btn-limpar-busca-fin');
+    els.inputBuscaFin = document.getElementById('filtro-busca-fin');
+    els.btnClearBuscaExtrato = document.getElementById('btn-limpar-busca-extrato');
+    els.inputBuscaExtrato = document.getElementById('extrato-filtro-descricao');
+
+    if (els.inputBuscaFin) {
+      var buscaFinDebounced = debounce(function (valor) {
+        state.filtroBusca = valor;
+        state.todos.pagina = 1;
+        renderTodos();
+      }, 350);
+
+      els.inputBuscaFin.oninput = function () {
+        _toggleBtnClearBuscaFin();
+        buscaFinDebounced(els.inputBuscaFin.value);
+      };
+    }
+
+    if (els.btnClearBuscaFin) {
+      els.btnClearBuscaFin.onclick = function () {
+        els.inputBuscaFin.value = '';
+        state.filtroBusca = '';
+        state.todos.pagina = 1;
+        _toggleBtnClearBuscaFin();
+        els.inputBuscaFin.focus();
+        renderTodos();
+      };
+    }
+
+    if (els.inputBuscaExtrato) {
+      els.inputBuscaExtrato.oninput = function () {
+        state.extrato.filtroDescricao = els.inputBuscaExtrato.value.trim();
+        _toggleBtnClearBuscaFin();
+        renderizarListaExtratos();
+      };
+    }
+
+    if (els.btnClearBuscaExtrato) {
+      els.btnClearBuscaExtrato.onclick = function () {
+        els.inputBuscaExtrato.value = '';
+        state.extrato.filtroDescricao = '';
+        _toggleBtnClearBuscaFin();
+        els.inputBuscaExtrato.focus();
+        renderizarListaExtratos();
+      };
+    }
+
+    _toggleBtnClearBuscaFin();
+  }
+
   window.excluirRegistroDefinitivo = excluirRegistroDefinitivo;
 
   function _esconderLoadingFin() {
@@ -1380,23 +1442,6 @@ if (!window.EventBus) {
           }
         });
       });
-
-      if (els.filtroBusca) {
-        var buscaDebounced = debounce(function (valor) {
-          try {
-            state.filtroBusca = valor;
-            state.todos.pagina = 1;
-            renderTodos();
-          } catch (err) {
-            console.error('[filtroBusca]', err);
-            finToast('Erro ao filtrar: ' + err.message, 'danger');
-          }
-        }, 350);
-        els.filtroBusca.addEventListener('input', function () { buscaDebounced(this.value); });
-        els.filtroBusca.addEventListener('search', function () {
-          if (!this.value) { state.filtroBusca = ''; state.todos.pagina = 1; renderTodos(); }
-        });
-      }
 
       if (els.btnSortData) {
         els.btnSortData.addEventListener('click', function () {
@@ -3563,6 +3608,7 @@ if (!window.EventBus) {
     _finJaInicializado = true;
 
     bind();
+    _bindBuscaFin();
     registrarEventos();
     bindNotifCardsFin();
     initExtratoFluxo();

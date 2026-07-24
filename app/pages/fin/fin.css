@@ -141,6 +141,35 @@
   flex-wrap: nowrap;
 }
 
+.fin-busca-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.input-filtro-fin,
+.fin-busca-wrapper .form-control {
+  padding-right: 26px;
+}
+
+.btn-limpar-busca-fin {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 0;
+  color: #adb5bd;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.btn-limpar-busca-fin:hover {
+  color: #dc3545;
+}
+
 .input-filtro-fin {
   height: 30px;
   width: 170px;
@@ -356,8 +385,9 @@
   font-size: 0.62rem !important;
 }
 
+.fin-table-todos thead th:nth-child(2),
 .fin-table-todos tbody td:nth-child(2) {
-  width: 40%;
+  width: 30%;
   max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -365,7 +395,14 @@
   font-size: 0.62rem !important;
 }
 
-.fin-table-todos thead th:nth-child(3) 
+.fin-table-todos thead th:nth-child(3),
+.fin-table-todos tbody td:nth-child(3) {
+  width: 32%;
+  overflow: visible !important;
+  white-space: normal !important;
+  font-size: 0.62rem !important;
+}
+
 .fin-table-todos thead th:nth-child(4),
 .fin-table-todos tbody td:nth-child(4) {
   width: 22%;
@@ -2365,6 +2402,22 @@
   border-width: 2px;
 }
 
+.fin-badges-combo {
+  overflow: visible;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+.fin-badges-combo .fin-badge-tipo,
+.fin-badges-combo .fin-badge-situacao {
+  font-size: 0.5rem;
+  padding: 2px 5px;
+  gap: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .input-filtro-fin {
     width: 130px;
@@ -2453,7 +2506,7 @@
     font-size: 0.62rem !important;
   }
 
-  .fin-table-todos thead th:nth-child(2) .fin-table-todos thead th:nth-child(4),
+  .fin-table-todos thead th:nth-child(4),
   .fin-table-todos tbody td:nth-child(4) {
     width: 30%;
   }
@@ -2824,38 +2877,4 @@
   .fin-content-area>.card:first-child {
     display: none !important;
   }
-}
-
-.fin-badges-combo {
-  overflow: visible;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 3px;
-}
-
-.fin-badges-combo .fin-badge-tipo,
-.fin-badges-combo .fin-badge-situacao {
-  font-size: 0.5rem;
-  padding: 2px 5px;
-  gap: 2px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.fin-table-todos thead th:nth-child(2),
-.fin-table-todos tbody td:nth-child(2) {
-  width: 30%;
-  max-width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.62rem !important;
-}
-
-.fin-table-todos thead th:nth-child(3),
-.fin-table-todos tbody td:nth-child(3) {
-  width: 32%;
-  overflow: visible !important;
-  white-space: normal !important;
-  font-size: 0.62rem !important;
 }

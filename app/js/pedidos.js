@@ -48,6 +48,7 @@
         els.btnSync = document.getElementById('btn-loop-pedidos');
         els.iconSync = document.getElementById('icon-loop-pedidos');
         els.inputBusca = document.getElementById('filtro-pedidos');
+        els.btnClearBusca = document.getElementById('btn-limpar-busca-pedidos');
         els.filtroData = document.getElementById('filtro-data-pedidos');
         els.btnFiltroTipo = document.getElementById('btn-filtro-tipo');
         els.dropdownFiltroMenu = document.getElementById('dropdown-filtro-menu');
@@ -68,6 +69,41 @@
         ];
         if (!els.tbody) { console.error('[pedidos.js] ❌ tbody não encontrado'); return false; }
         return true;
+    }
+
+    function _toggleBtnClearBusca() {
+        if (!els.btnClearBusca) return;
+        var temTexto = els.inputBusca && els.inputBusca.value.trim().length > 0;
+        els.btnClearBusca.classList.toggle('d-none', !temTexto);
+    }
+
+    function _bindBuscaPedidos() {
+        els.btnClearBusca = document.getElementById('btn-limpar-busca-pedidos');
+        els.inputBusca = document.getElementById('filtro-pedidos');
+
+        if (els.inputBusca) {
+            els.inputBusca.oninput = function () {
+                window.pedidosState.busca = els.inputBusca.value;
+                window.pedidosState.paginaAtual = 1;
+                _toggleBtnClearBusca();
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            };
+        }
+
+        if (els.btnClearBusca) {
+            els.btnClearBusca.onclick = function () {
+                els.inputBusca.value = '';
+                window.pedidosState.busca = '';
+                window.pedidosState.paginaAtual = 1;
+                window.pedidosState.emAcao = true;
+                _toggleBtnClearBusca();
+                els.inputBusca.focus();
+                _spinFeedback();
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            };
+        }
+
+        _toggleBtnClearBusca();
     }
 
     function _normalizarStatus(s) {
@@ -953,6 +989,14 @@
         _spinOn();
         _mostrarLoading();
 
+        var loadingContent = document.getElementById('pedidos-loading-state');
+        var errorContent = document.getElementById('pedidos-error-state');
+        var errorText = document.getElementById('pedidos-error-text');
+        var btnRetry = document.getElementById('btn-retry-pedidos');
+
+        if (loadingContent) loadingContent.classList.remove('d-none');
+        if (errorContent) errorContent.classList.add('d-none');
+
         try {
             if (typeof API === 'undefined' || typeof API.call !== 'function')
                 throw new Error('API.call indefinido');
@@ -972,17 +1016,37 @@
             window.AppRDO.pedidosCache = pedidos;
             window.pedidosState.dadosCarregados = true;
             _renderizarTabela(pedidos);
+            _esconderLoading();
 
         } catch (e) {
             console.error('[pedidos.js] ❌ Erro no fetch:', e);
-            if (els.tbody)
+
+            var msg = e && e.message ? e.message : 'Erro desconhecido ao buscar pedidos.';
+
+            if (loadingContent) loadingContent.classList.add('d-none');
+            if (errorContent) errorContent.classList.remove('d-none');
+            if (errorText) errorText.textContent = msg;
+
+            if (btnRetry) {
+                btnRetry.onclick = function () {
+                    window.pedidosState.dadosCarregados = false;
+                    window.pedidosState.emAcao = true;
+                    _fetchPedidos();
+                };
+            }
+
+            if (window.PedidosErro && typeof window.PedidosErro.mostrar === 'function') {
+                window.PedidosErro.mostrar(msg);
+            }
+
+            if (els.tbody && window.pedidosState.dadosCarregados === false) {
                 els.tbody.innerHTML =
                     '<tr><td colspan="6" class="text-center text-danger py-4">' +
                     '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>' +
-                    'Erro: ' + _escHtml(e.message) + '</td></tr>';
+                    'Erro: ' + _escHtml(msg) + '</td></tr>';
+            }
         } finally {
             window.pedidosState.isFetching = false;
-            _esconderLoading();
             _spinOff();
         }
     }
@@ -1009,6 +1073,7 @@
             els.inputBusca.oninput = function () {
                 clearTimeout(tBusca);
                 _spinFeedback();
+                _toggleBtnClearBusca();
                 tBusca = setTimeout(function () {
                     window.pedidosState.busca = els.inputBusca.value.trim();
                     window.pedidosState.paginaAtual = 1;
@@ -1016,6 +1081,21 @@
                     _renderizarTabela(window.AppRDO.pedidosCache);
                 }, 300);
             };
+
+            if (els.btnClearBusca) {
+                els.btnClearBusca.onclick = function () {
+                    els.inputBusca.value = '';
+                    window.pedidosState.busca = '';
+                    window.pedidosState.paginaAtual = 1;
+                    window.pedidosState.emAcao = true;
+                    _toggleBtnClearBusca();
+                    els.inputBusca.focus();
+                    _spinFeedback();
+                    _renderizarTabela(window.AppRDO.pedidosCache);
+                };
+            }
+
+            _toggleBtnClearBusca();
         }
 
         if (els.filtroData) {
@@ -1283,6 +1363,7 @@
             window.AppRDO._pedidoAlvoNotificacao = null;
         }
 
+        _toggleBtnClearBusca();
         _registrarEventos();
         _registrarEventosEventBus();
         _fetchPedidos();

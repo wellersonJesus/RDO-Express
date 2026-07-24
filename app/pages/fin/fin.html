@@ -88,9 +88,16 @@
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
               <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                <input type="search" id="filtro-busca-fin"
-                  class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..."
-                  autocomplete="off">
+                <div class="fin-busca-wrapper">
+                  <input type="text" id="filtro-busca-fin"
+                    class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..."
+                    autocomplete="off">
+                  <button type="button" id="btn-limpar-busca-fin" class="btn-limpar-busca-fin d-none"
+                    title="Limpar busca">
+                    <i class="bi bi-x-circle-fill"></i>
+                  </button>
+                </div>
+
                 <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
                   <i class="bi bi-plus-lg"></i> Novo
                 </button>
@@ -324,8 +331,15 @@
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body pb-0">
               <div class="d-flex align-items-center gap-2 mb-3" style="justify-content:flex-end;">
-                <input type="search" id="extrato-filtro-descricao" class="form-control form-control-sm rounded-pill"
-                  placeholder="Buscar extrato salvo..." autocomplete="off" style="max-width:220px;">
+                <div class="fin-busca-wrapper" style="max-width:220px;">
+                  <input type="search" id="extrato-filtro-descricao" class="form-control form-control-sm rounded-pill"
+                    placeholder="Buscar extrato salvo..." autocomplete="off">
+                  <button type="button" id="btn-limpar-busca-extrato" class="btn-limpar-busca-fin d-none"
+                    title="Limpar busca">
+                    <i class="bi bi-x-circle-fill"></i>
+                  </button>
+                </div>
+
                 <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3"
                   id="btn-abrir-fluxo-extrato">
                   <i class="bi bi-plus-lg"></i> Gerar Extrato
