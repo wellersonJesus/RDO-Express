@@ -16,8 +16,46 @@ var CAMPOS_MONETARIOS = [
   "vlr_servico", "valor_total", "valor_final", "valorcorrida"
 ];
 
+var ALIASES_FINANCEIRO = {
+  "situacao_pagamento": "situacao",
+  "situacaopagamento": "situacao",
+  "status_pagamento": "situacao",
+  "statuspagamento": "situacao",
+  "status": "situacao",
+  "nova_situacao": "situacao",
+  "novasituacao": "situacao",
+  "valor_total": "vlr_servico",
+  "valor_final": "vlr_servico",
+  "valor": "vlr_servico",          
+  "pedido_id": "id_pedido",
+  "colaboradorid": "colaborador_id",
+  "vlrservico": "vlr_servico",
+  "motoboy": "colaborador"
+};
+
+var ALIASES_PEDIDOS = {
+  "situacao": "situacao_financeira",
+  "situacao_pagamento": "situacao_financeira",
+  "situacaopagamento": "situacao_financeira",
+  "status_pagamento": "situacao_financeira",
+  "statuspagamento": "situacao_financeira",
+  "valor_total": "valor_corrida",
+  "valor_final": "valor_corrida",
+  "valorcorrida": "valor_corrida",
+  "horario": "horario",
+  "hora": "horario"
+};
+
+function testarHeadersFinanceiro() {
+  var ss = SpreadsheetApp.openById('17foT_x60t_e6W9JATNrkLeGv8e3PshgVcIUa5hl0kOI');
+  var sheet = ss.getSheetByName('financeiro');
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  Logger.log(JSON.stringify(headers));
+}
+
 function normalizarChave(str) {
   return String(str || "")
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .toLowerCase()
     .trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -26,6 +64,12 @@ function normalizarChave(str) {
 
 function ehCampoMonetario(chave) {
   return CAMPOS_MONETARIOS.indexOf(chave) !== -1;
+}
+
+function capitalizar(texto) {
+  var t = String(texto || "").trim();
+  if (!t) return "";
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
 function formatarMoeda(valor) {
@@ -181,36 +225,13 @@ function doPost(e) {
       return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
 
     if (action.indexOf("get") === 0) return responder(processarGet(sheet));
+
     if (action.indexOf("add") === 0 ||
       action.indexOf("save") === 0 ||
       action.indexOf("criar") === 0) return responder(processarAdd(sheet, data, nomeAba));
+
     if (action.indexOf("update") === 0) {
-      var resultadoUpdate = processarUpdate(sheet, data);
-
-      if (nomeAba === "financeiro") {
-        var chaveSituacao = null;
-        var chaveIdPedido = null;
-        var chavesRecebidasUpd = Object.keys(data);
-
-        for (var ku = 0; ku < chavesRecebidasUpd.length; ku++) {
-          var normUpd = normalizarChave(chavesRecebidasUpd[ku]);
-          if (normUpd === "situacao") chaveSituacao = chavesRecebidasUpd[ku];
-          if (normUpd === "id_pedido" || normUpd === "pedido_id") chaveIdPedido = chavesRecebidasUpd[ku];
-        }
-
-        if (chaveSituacao !== null) {
-          var novaSituacaoVal = data[chaveSituacao];
-          var idPedidoRelacionado = chaveIdPedido ? data[chaveIdPedido] : "";
-
-          if (!idPedidoRelacionado) {
-            idPedidoRelacionado = buscarIdPedidoNoFinanceiro(sheet, data.id);
-          }
-
-          sincronizarSituacaoFinanceiroComPedido(ss, idPedidoRelacionado, novaSituacaoVal);
-        }
-      }
-
-      return responder(resultadoUpdate);
+      return responder(processarUpdateComSincronia(ss, sheet, nomeAba, data));
     }
 
     if (action.indexOf("delete") === 0) {
@@ -230,28 +251,110 @@ function doPost(e) {
   }
 }
 
+function processarUpdateComSincronia(ss, sheet, nomeAba, data) {
+  var aliases = nomeAba === "financeiro" ? ALIASES_FINANCEIRO :
+                nomeAba === "pedidos" ? ALIASES_PEDIDOS : {};
+
+  var resultadoUpdate = processarUpdate(sheet, data, aliases);
+
+  if (nomeAba === "financeiro" &&
+      (resultadoUpdate.status === "success" || resultadoUpdate.status === "partial_error")) {
+
+    var chaveSituacao = null;
+    var chaveIdPedido = null;
+    var chavesRecebidas = Object.keys(data);
+
+    for (var k = 0; k < chavesRecebidas.length; k++) {
+      var norm = normalizarChave(chavesRecebidas[k]);
+      var alvo = aliases[norm] || norm;
+      if (alvo === "situacao") chaveSituacao = chavesRecebidas[k];
+      if (norm === "id_pedido" || norm === "pedido_id") chaveIdPedido = chavesRecebidas[k];
+    }
+
+    if (chaveSituacao !== null) {
+      var novaSituacaoVal = data[chaveSituacao];
+      var idPedidoRelacionado = chaveIdPedido ? data[chaveIdPedido] : "";
+
+      if (!idPedidoRelacionado) {
+        idPedidoRelacionado = buscarIdPedidoNoFinanceiro(sheet, data.id);
+      }
+
+      if (idPedidoRelacionado) {
+        var syncOk = sincronizarSituacaoFinanceiroComPedido(ss, idPedidoRelacionado, novaSituacaoVal);
+        resultadoUpdate.sincronizadoComPedido = syncOk;
+        resultadoUpdate.idPedidoSincronizado = idPedidoRelacionado;
+      } else {
+        resultadoUpdate.sincronizadoComPedido = false;
+        resultadoUpdate.avisoSincronizacao = "id_pedido nao encontrado para vincular com 'pedidos'";
+      }
+    }
+  }
+
+  if (nomeAba === "pedidos" &&
+      (resultadoUpdate.status === "success" || resultadoUpdate.status === "partial_error")) {
+
+    var chavesRecebidasPed = Object.keys(data);
+    var chaveSituacaoPed = null;
+    var chaveStatusPed = null;
+
+    for (var kp = 0; kp < chavesRecebidasPed.length; kp++) {
+      var normPed = normalizarChave(chavesRecebidasPed[kp]);
+      var alvoPed = ALIASES_PEDIDOS[normPed] || normPed;
+      if (alvoPed === "situacao_financeira") chaveSituacaoPed = chavesRecebidasPed[kp];
+      if (normPed === "status") chaveStatusPed = chavesRecebidasPed[kp];
+    }
+
+    if (chaveStatusPed !== null) {
+      var statusValor = String(data[chaveStatusPed] || "").trim().toUpperCase();
+      if (statusValor === "CANCELADO") {
+        var sheetPedidosRef = buscarAba(ss, "pedidos");
+        var valuesPed = sheetPedidosRef.getDataRange().getValues();
+        var headersPed2 = valuesPed[0].map(function (h) { return normalizarChave(h); });
+        var idIdxPed = headersPed2.indexOf("id");
+        var colSitFinIdx = headersPed2.indexOf("situacao_financeira");
+
+        if (idIdxPed !== -1 && colSitFinIdx !== -1) {
+          var idBuscaCanc = String(data.id).trim().toUpperCase();
+          for (var lp = 1; lp < valuesPed.length; lp++) {
+            if (String(valuesPed[lp][idIdxPed]).trim().toUpperCase() === idBuscaCanc) {
+              sheetPedidosRef.getRange(lp + 1, colSitFinIdx + 1).setValue("Cancelado");
+              SpreadsheetApp.flush();
+              break;
+            }
+          }
+        }
+        data["_forcarSituacaoFinanceira"] = "Cancelado";
+      }
+    }
+
+    if (chaveSituacaoPed !== null || data["_forcarSituacaoFinanceira"]) {
+      var novaSituacaoPedVal = data["_forcarSituacaoFinanceira"] || data[chaveSituacaoPed];
+      var syncOkPed = sincronizarSituacaoPedidoComFinanceiro(ss, data.id, novaSituacaoPedVal);
+      resultadoUpdate.sincronizadoComFinanceiro = syncOkPed;
+    }
+  }
+
+  return resultadoUpdate;
+}
+
 function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
-  if (!idPedido) return;
+  if (!idPedido) return false;
 
   var sheetPedidos = buscarAba(ss, "pedidos");
-  if (!sheetPedidos) return;
+  if (!sheetPedidos) return false;
 
   var values = sheetPedidos.getDataRange().getValues();
-  if (values.length === 0) return;
+  if (values.length === 0) return false;
 
   var headers = values[0].map(function (h) { return normalizarChave(h); });
   var idIndex = headers.indexOf("id");
   var colSitFinIndex = headers.indexOf("situacao_financeira");
 
-  if (idIndex === -1 || colSitFinIndex === -1) return;
+  if (idIndex === -1 || colSitFinIndex === -1) return false;
 
   var idBusca = String(idPedido).trim().toUpperCase();
   var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
-
-  var sitFormatada = String(novaSituacao || "").trim();
-  if (sitFormatada) {
-    sitFormatada = sitFormatada.charAt(0).toUpperCase() + sitFormatada.slice(1).toLowerCase();
-  }
+  var sitFormatada = capitalizar(novaSituacao);
 
   for (var i = 1; i < values.length; i++) {
     var idCelula = String(values[i][idIndex]).trim().toUpperCase();
@@ -260,9 +363,44 @@ function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
     if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
       sheetPedidos.getRange(i + 1, colSitFinIndex + 1).setValue(sitFormatada);
       SpreadsheetApp.flush();
-      break;
+      return true;
     }
   }
+  return false;
+}
+
+function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
+  if (!idPedido) return false;
+
+  var sheetFinanceiro = buscarAba(ss, "financeiro");
+  if (!sheetFinanceiro) return false;
+
+  var values = sheetFinanceiro.getDataRange().getValues();
+  if (values.length === 0) return false;
+
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idPedidoIndex = headers.indexOf("id_pedido") !== -1 ? headers.indexOf("id_pedido") : headers.indexOf("pedido_id");
+  var colSituacaoIndex = headers.indexOf("situacao");
+
+  if (idPedidoIndex === -1 || colSituacaoIndex === -1) return false;
+
+  var idBusca = String(idPedido).trim().toUpperCase();
+  var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
+  var sitFormatada = capitalizar(novaSituacao);
+  var atualizou = false;
+
+  for (var i = 1; i < values.length; i++) {
+    var idCelula = String(values[i][idPedidoIndex]).trim().toUpperCase();
+    var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
+
+    if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
+      sheetFinanceiro.getRange(i + 1, colSituacaoIndex + 1).setValue(sitFormatada);
+      atualizou = true;
+    }
+  }
+
+  if (atualizou) SpreadsheetApp.flush();
+  return atualizou;
 }
 
 function processarGetDashboardData(ss) {
@@ -309,7 +447,6 @@ function processarHeartbeat(sheet, username) {
 
   for (var i = 1; i < rows.length; i++) {
     if (String(rows[i][colUser]).trim() === usernameTrim) {
-
       sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
 
       return {
@@ -629,10 +766,8 @@ function processarCriarPedido(sheetPedidos, data) {
     escreverComoTexto(sheetChat, sheetChat.getLastRow(), 6, dataStr);
   }
 
-  var situacaoFinanceira = String(data.situacao_financeira || "Pendente").trim();
-  if (situacaoFinanceira) {
-    situacaoFinanceira = situacaoFinanceira.charAt(0).toUpperCase() + situacaoFinanceira.slice(1).toLowerCase();
-  }
+  var situacaoFinanceira = capitalizar(data.situacao_financeira || "Pendente");
+  var valorFormatado = formatarMoeda(data.valor_corrida || data.valor_final || "");
 
   var rowData = {
     id: idPedido,
@@ -647,7 +782,7 @@ function processarCriarPedido(sheetPedidos, data) {
     para: paraStr,
     retorno: String(data.retorno || ""),
     prioridade: String(data.prioridade || "N/A"),
-    valor_corrida: formatarMoeda(data.valor_corrida || data.valor_final || ""),
+    valor_corrida: valorFormatado,
     motoboy: String(data.motoboy || ""),
     status: String(data.status || "PENDENTE"),
     situacao_financeira: situacaoFinanceira,
@@ -673,6 +808,38 @@ function processarCriarPedido(sheetPedidos, data) {
 
   if (colDataIndex !== -1) {
     escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataIndex + 1, dataStr);
+  }
+
+  var sheetFinanceiro = buscarAba(ss, "financeiro");
+  if (sheetFinanceiro) {
+    var idFinanceiro = gerarId(sheetFinanceiro, "financeiro");
+    var headersFin = obterHeaders(sheetFinanceiro);
+
+    var rowDataFin = {
+      id: idFinanceiro,
+      colaborador_id: String(data.colaborador_id || ""),
+      id_pedido: idPedido,
+      pedido_id: idPedido,
+      data: dataStr,
+      tipo: "Corrida",
+      descricao: "Referente ao pedido " + idPedido,
+      vlr_servico: valorFormatado,
+      colaborador: String(data.motoboy || ""),
+      observacao: "",
+      situacao: "Pendente"
+    };
+
+    var rowFin = [];
+    for (var f = 0; f < headersFin.length; f++) {
+      var campoFin = normalizarChave(headersFin[f]);
+      rowFin.push(rowDataFin[campoFin] !== undefined ? rowDataFin[campoFin] : "");
+    }
+    sheetFinanceiro.appendRow(rowFin);
+
+    var colDataFinIdx = headersFin.indexOf("data");
+    if (colDataFinIdx !== -1) {
+      escreverComoTexto(sheetFinanceiro, sheetFinanceiro.getLastRow(), colDataFinIdx + 1, dataStr);
+    }
   }
 
   SpreadsheetApp.flush();
@@ -967,6 +1134,10 @@ function processarAdd(sheet, data, entity) {
       valor = new Date().toISOString();
     } else if (campo === "data" && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
       valor = normalizarDataStr(dataNorm[campo]);
+    } else if (campo === "situacao" && !dataNorm.situacao) {
+      valor = "Pendente";
+    } else if (campo === "situacao_financeira" && !dataNorm.situacao_financeira) {
+      valor = "Pendente";
     } else if (ehCampoMonetario(campo) && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
       valor = formatarMoeda(dataNorm[campo]);
     } else if (dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
@@ -986,97 +1157,103 @@ function processarAdd(sheet, data, entity) {
   return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? dataNorm.id : undefined };
 }
 
-function processarUpdate(sheet, data) {
+function processarUpdate(sheet, data, aliases) {
+  aliases = aliases || {};
   var values = sheet.getDataRange().getValues();
   if (values.length === 0) return { status: "error", message: "Planilha vazia" };
 
-  var headersOriginais = values[0].map(function (h) { return String(h).toLowerCase().trim(); });
-  var headers = headersOriginais.map(normalizarChave);
-
+  var headers = values[0].map(function (h) { return String(h).toLowerCase().trim(); }).map(normalizarChave);
   var idIndex = headers.indexOf("id");
   if (idIndex === -1) return { status: "error", message: "Coluna 'id' nao encontrada" };
   if (!data || !data.id) return { status: "error", message: "ID nao informado para atualizacao" };
 
-  var idBusca = String(data.id).trim();
+  var linhaEncontrada = _localizarLinhaPorId(values, idIndex, data.id);
+  if (linhaEncontrada === -1) return { status: "error", message: "ID nao encontrado: " + data.id };
+
+  var linhaPlanilha = linhaEncontrada + 1;
+  var resultadoCampos = _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data);
+
+  SpreadsheetApp.flush();
+
+  var falhouCritico = resultadoCampos.camposIgnorados.some(function (c) {
+    return c.indexOf("situacao") !== -1;
+  });
+
+  return {
+    status: falhouCritico ? "partial_error" : "success",
+    message: falhouCritico ? "Atualizado parcialmente. Coluna de situacao NAO foi encontrada na planilha!" : "Atualizado!",
+    camposAtualizados: resultadoCampos.camposAtualizados,
+    camposIgnorados: resultadoCampos.camposIgnorados
+  };
+}
+
+function _localizarLinhaPorId(values, idIndex, idAlvo) {
+  var idBusca = String(idAlvo).trim();
   var idBuscaUpper = idBusca.toUpperCase();
   var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
-
-  var ALIASES = {
-    "valor_total": "valor_corrida",
-    "valor_final": "valor_corrida",
-    "valorcorrida": "valor_corrida",
-    "espera_tipo": "espera_tipo",
-    "espera_minutos": "espera_minutos",
-    "taxa_espera": "taxa_espera",
-    "horario": "horario",
-    "hora": "horario"
-  };
-
-  var linhaEncontrada = -1;
+  var idBuscaFin = idBusca.replace(/^FIN0*/i, "").trim();
 
   for (var i = 1; i < values.length; i++) {
     var idCelula = String(values[i][idIndex]).trim();
     var idCelulaUpper = idCelula.toUpperCase();
     var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
+    var idCelulaFin = idCelula.replace(/^FIN0*/i, "").trim();
 
-    if (idCelula === idBusca || idCelulaUpper === idBuscaUpper || idCelulaNum === idBuscaNum) {
-      linhaEncontrada = i;
-      break;
+    if (idCelula === idBusca || idCelulaUpper === idBuscaUpper ||
+        idCelulaNum === idBuscaNum || idCelulaFin === idBuscaFin) {
+      return i;
     }
   }
+  return -1;
+}
 
-  if (linhaEncontrada === -1) {
-    return { status: "error", message: "ID nao encontrado: " + data.id };
+function _resolverColuna(headers, chaveFinal) {
+  var colIndex = headers.indexOf(chaveFinal);
+  if (colIndex !== -1) return colIndex;
+  for (var h = 0; h < headers.length; h++) {
+    if (headers[h].indexOf(chaveFinal) !== -1 || chaveFinal.indexOf(headers[h]) !== -1) return h;
   }
+  return -1;
+}
 
-  var linhaPlanilha = linhaEncontrada + 1;
-  var keys = Object.keys(data);
+function _escreverValorPorTipo(sheet, linha, colIndex, chaveFinal, valor) {
+  if (chaveFinal === "data") {
+    escreverComoTexto(sheet, linha, colIndex + 1, normalizarDataStr(valor));
+  } else if (chaveFinal === "horario" || chaveFinal === "hora") {
+    escreverComoTexto(sheet, linha, colIndex + 1, String(valor || ""));
+  } else if (ehCampoMonetario(chaveFinal)) {
+    escreverComoTexto(sheet, linha, colIndex + 1, formatarMoeda(valor));
+  } else if (chaveFinal === "situacao" || chaveFinal === "situacao_financeira") {
+    sheet.getRange(linha, colIndex + 1).setValue(capitalizar(valor));
+  } else {
+    if (valor !== null && typeof valor === "object") valor = JSON.stringify(valor);
+    sheet.getRange(linha, colIndex + 1).setValue(valor === null || valor === undefined ? "" : valor);
+  }
+}
+
+function _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data) {
   var camposAtualizados = [];
   var camposIgnorados = [];
+  var keys = Object.keys(data);
 
   for (var k = 0; k < keys.length; k++) {
     var chaveOriginal = keys[k];
     if (chaveOriginal === "id" || chaveOriginal === "apiKey" || chaveOriginal === "action") continue;
 
     var chaveNorm = normalizarChave(chaveOriginal);
-    var chaveFinal = ALIASES[chaveNorm] || chaveNorm;
-
-    var colIndex = headers.indexOf(chaveFinal);
+    var chaveFinal = aliases[chaveNorm] || chaveNorm;
+    var colIndex = _resolverColuna(headers, chaveFinal);
 
     if (colIndex === -1) {
       camposIgnorados.push(chaveOriginal + " (-> " + chaveFinal + ")");
       continue;
     }
 
-    var valorAtualizar = data[chaveOriginal];
-
-    if (chaveFinal === "data") {
-      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, normalizarDataStr(valorAtualizar));
-    } else if (chaveFinal === "horario" || chaveFinal === "hora") {
-      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, String(valorAtualizar || ""));
-    } else if (ehCampoMonetario(chaveFinal)) {
-      escreverComoTexto(sheet, linhaPlanilha, colIndex + 1, formatarMoeda(valorAtualizar));
-    } else {
-      if (valorAtualizar !== null && typeof valorAtualizar === "object") {
-        valorAtualizar = JSON.stringify(valorAtualizar);
-      }
-      if (valorAtualizar === null || valorAtualizar === undefined) {
-        valorAtualizar = "";
-      }
-      sheet.getRange(linhaPlanilha, colIndex + 1).setValue(valorAtualizar);
-    }
-
+    _escreverValorPorTipo(sheet, linhaPlanilha, colIndex, chaveFinal, data[chaveOriginal]);
     camposAtualizados.push(chaveFinal);
   }
 
-  SpreadsheetApp.flush();
-
-  return {
-    status: "success",
-    message: "Atualizado!",
-    camposAtualizados: camposAtualizados,
-    camposIgnorados: camposIgnorados
-  };
+  return { camposAtualizados: camposAtualizados, camposIgnorados: camposIgnorados };
 }
 
 function processarDelete(sheet, id) {
@@ -1237,17 +1414,17 @@ function gerarId(sheet, entity) {
     return "RDO" + padded;
   }
 
-  if (entity.indexOf("financeiro") !== -1 && idIndex !== -1) {
-    var maxFin = 0;
-    for (var j = 1; j < data.length; j++) {
-      var num = parseInt(String(data[j][idIndex]).replace(/[^0-9]/g, ""), 10);
-      if (!isNaN(num) && num > maxFin) maxFin = num;
-    }
-    var nextFin = maxFin + 1;
-    var paddedFin = String(nextFin);
-    while (paddedFin.length < 4) paddedFin = "0" + paddedFin;
-    return "FIN" + paddedFin;
+if (entity.indexOf("financeiro") !== -1 && idIndex !== -1) {
+  var maxFin = 0;
+  for (var j = 1; j < data.length; j++) {
+    var num = parseInt(String(data[j][idIndex]).replace(/[^0-9]/g, ""), 10);
+    if (!isNaN(num) && num > maxFin) maxFin = num;
   }
+  var nextFin = maxFin + 1;
+  var paddedFin = String(nextFin);
+  while (paddedFin.length < 4) paddedFin = "0" + paddedFin;
+  return "FIN" + paddedFin; // Ex: FIN0001
+}
 
   if (entity.indexOf("relatorio") !== -1) {
     return "REL" + Date.now();

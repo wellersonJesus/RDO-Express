@@ -875,86 +875,140 @@ if (!window.EventBus) {
   }
 
   function salvarRegistroFinanceiro(id, dados) {
+    // ── Validação de entrada ──────────────────────────────
     if (!id) {
       return Promise.reject(new Error('ID do registro não informado.'));
     }
+    if (!dados || typeof dados !== 'object') {
+      return Promise.reject(new Error('Dados do lançamento não informados ou inválidos.'));
+    }
 
-    var payload = Object.assign({ id: id }, dados);
-    if (payload.valor !== undefined) {
-      var vNum = parseValor(payload.valor);
-      payload.valor = isNaN(vNum) ? 0 : vNum;
+    var payload;
+    try {
+      payload = Object.assign({ id: id }, dados);
+      if (payload.valor !== undefined) {
+        var vNum = parseValor(payload.valor);
+        payload.valor = isNaN(vNum) ? 0 : vNum;
+      }
+    } catch (errPayload) {
+      console.error('[salvarRegistroFinanceiro] Erro ao montar payload:', errPayload);
+      return Promise.reject(new Error('Erro ao preparar os dados para envio: ' + errPayload.message));
+    }
+
+    if (typeof window.API === 'undefined' || typeof window.API.call !== 'function') {
+      return Promise.reject(new Error('API indisponível. Verifique sua conexão ou recarregue a página.'));
     }
 
     return window.API.call('updatefinanceiro', payload)
-      .then(function (res) {
-        var sucesso = isRespostaSucesso(res) || (res && (res.status === 'success' || res.success === true || res.ok === true));
+      .catch(function (errApi) {
+        // Erro de rede / comunicação com o backend
+        console.error('[salvarRegistroFinanceiro] Falha na chamada API:', errApi);
+        throw new Error('Falha na comunicação com o servidor: ' + (errApi && errApi.message ? errApi.message : 'Erro desconhecido.'));
+      })
+      .then(function (resFin) {
+        console.log('[salvarRegistroFinanceiro] resposta backend:', resFin);
 
-        if (!sucesso) {
-          var msgErro = (res && (res.message || res.msg)) || 'Não foi possível salvar as alterações.';
-          throw new Error(msgErro);
+        if (!resFin) {
+          throw new Error('O servidor não retornou nenhuma resposta.');
         }
 
-        var idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
-        var regAtualizado = idx !== -1 ? state.cache[idx] : null;
+        var sucessoFin = resFin.status === 'success' ||
+          resFin.success === true ||
+          resFin.success === 'true' ||
+          resFin.success === 1 ||
+          resFin.ok === true;
 
-        if (idx !== -1) {
-          var reg = state.cache[idx];
-          if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
-          if (dados.tipo !== undefined) reg.tipo = dados.tipo;
-          if (dados.situacao !== undefined) reg.situacao = dados.situacao;
-          if (dados.descricao !== undefined) reg.descricao = dados.descricao;
-          if (dados.observacao !== undefined) reg.observacao = dados.observacao;
-          if (dados.colaborador_id !== undefined) reg.colaboradorId = dados.colaborador_id;
-          if (dados.motoboy !== undefined) reg.motoboy = dados.motoboy || '-';
+        if (resFin.status === 'partial_error') {
+          finToast('Atenção: ' + (resFin.message || 'coluna não localizada na planilha.'), 'warning');
+        } else if (!sucessoFin) {
+          var msgErroFin = resFin.message || resFin.msg || resFin.error || 'O banco financeiro não confirmou a atualização.';
+          throw new Error(msgErroFin);
+        }
 
-          if (reg.tipo === 'entrada') {
-            var pctColab = 80;
-            if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && state.colaboradoresCache[reg.colaboradorId].percentual_comissao) {
-              pctColab = parseFloat(state.colaboradoresCache[reg.colaboradorId].percentual_comissao) || 80;
+        // ── Atualização do cache local ──────────────────────
+        var idx = -1;
+        try {
+          idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
+
+          if (idx !== -1) {
+            var reg = state.cache[idx];
+            if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
+            if (dados.tipo !== undefined) reg.tipo = dados.tipo;
+            if (dados.situacao !== undefined) reg.situacao = dados.situacao;
+            if (dados.descricao !== undefined) reg.descricao = dados.descricao;
+            if (dados.observacao !== undefined) reg.observacao = dados.observacao;
+            if (dados.colaborador_id !== undefined) reg.colaboradorId = dados.colaborador_id;
+            if (dados.motoboy !== undefined) reg.motoboy = dados.motoboy || '-';
+
+            if (reg.tipo === 'entrada') {
+              var pctColab = 80;
+              if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && state.colaboradoresCache[reg.colaboradorId].percentual_comissao) {
+                pctColab = parseFloat(state.colaboradoresCache[reg.colaboradorId].percentual_comissao) || 80;
+              }
+              reg.percentualComissao = pctColab;
+              reg.valorColaborador = reg.valor * (pctColab / 100);
+              reg.valorEmpresa = reg.valor * ((100 - pctColab) / 100);
+            } else {
+              reg.valorColaborador = 0;
+              reg.valorEmpresa = 0;
             }
-            reg.percentualComissao = pctColab;
-            reg.valorColaborador = reg.valor * (pctColab / 100);
-            reg.valorEmpresa = reg.valor * ((100 - pctColab) / 100);
+
+            state.cache[idx] = reg;
+
+            if (dados.situacao !== undefined && reg.idPedido && state.pedidosCache[reg.idPedido]) {
+              state.pedidosCache[reg.idPedido].situacao_financeira = dados.situacao;
+            }
           } else {
-            reg.valorColaborador = 0;
-            reg.valorEmpresa = 0;
+            console.warn('[salvarRegistroFinanceiro] Registro id=' + id + ' não encontrado no cache local. A UI pode não refletir a mudança até o próximo refresh.');
           }
-
-          state.cache[idx] = reg;
+        } catch (errCache) {
+          // Não interrompe o fluxo — o backend já confirmou o sucesso.
+          console.error('[salvarRegistroFinanceiro] Erro ao atualizar cache local:', errCache);
+          finToast('Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.', 'warning');
         }
 
-        var propagacao = Promise.resolve();
-        if (dados.situacao !== undefined && regAtualizado && regAtualizado.idPedido) {
-          var idPedidoNorm = String(regAtualizado.idPedido).trim().replace(/^RDO0*/i, '') || String(regAtualizado.idPedido).trim();
-
-          propagacao = window.API.call('updatepedidos', {
-            id: idPedidoNorm,
-            situacao_financeira: dados.situacao
-          }).then(function (resPedido) {
-            var pedido = state.pedidosCache[regAtualizado.idPedido] || state.pedidosCache[idPedidoNorm];
-            if (pedido) pedido.situacao_financeira = dados.situacao;
-
-            notificarSituacaoFinanceiraAtualizada(idPedidoNorm, dados.situacao);
-
-            return resPedido;
-          }).catch(function (err) {
-            console.error('[salvarRegistroFinanceiro] Falha ao sincronizar pedido:', err);
-            finToast('Lançamento salvo, mas houve erro ao atualizar o pedido vinculado.', 'warning');
-          });
+        // ── 🔗 Notifica pedidos.js sobre a mudança de situação financeira ──
+        if (dados.situacao !== undefined) {
+          try {
+            var idPedidoNotificar = idx !== -1 ? state.cache[idx].idPedido : null;
+            if (idPedidoNotificar) {
+              notificarSituacaoFinanceiraAtualizada(idPedidoNotificar, dados.situacao);
+            } else {
+              console.warn('[salvarRegistroFinanceiro] Não foi possível notificar: id_pedido ausente no registro id=' + id);
+            }
+          } catch (errNotify) {
+            console.error('[salvarRegistroFinanceiro] Erro ao emitir evento financeiro:situacaoAtualizada:', errNotify);
+            finToast('Situação salva, mas a tela de pedidos pode não atualizar automaticamente.', 'warning');
+          }
         }
 
-        return propagacao.then(function () {
+        return resFin;
+      })
+      .then(function (resultado) {
+        // ── Re-render das telas (isolado em try/catch para não mascarar sucesso) ──
+        try {
           if (typeof renderTodos === 'function') renderTodos();
           if (typeof renderCaixa === 'function') renderCaixa();
           if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
+        } catch (errRender) {
+          console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar telas:', errRender);
+          finToast('Dados salvos, mas houve um erro ao atualizar a tela. Recarregue se necessário.', 'warning');
+        }
 
+        if (!resultado || resultado.status !== 'partial_error') {
           finToast('Lançamento atualizado com sucesso!', 'success');
-          return res;
-        });
+        }
+        return resultado;
       })
       .catch(function (err) {
         console.error('[salvarRegistroFinanceiro] Erro:', err);
-        throw err;
+        try {
+          if (typeof renderTodos === 'function') renderTodos();
+        } catch (errRenderErro) {
+          console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar após falha:', errRenderErro);
+        }
+        // Repassa o erro para quem chamou (ex: modal de edição) exibir a mensagem correta
+        throw err instanceof Error ? err : new Error(String(err));
       });
   }
 
@@ -2077,6 +2131,10 @@ if (!window.EventBus) {
     return { id: '', username: 'N/D' };
   }
 
+  function _normalizarIdPedidoBusca(valor) {
+    return String(valor || '').trim().toUpperCase().replace(/^RDO0*/, '').replace(/^0+/, '');
+  }
+
   function dadosFiltradosTodos() {
     var lista = state.cache.slice();
 
@@ -2087,13 +2145,24 @@ if (!window.EventBus) {
       lista = lista.filter(function (r) { return (r.situacao || '').toLowerCase() === state.filtroSituacao; });
     }
     if (state.filtroBusca) {
-      var termo = removerAcentos(state.filtroBusca.toLowerCase().trim());
-      var termos = termo.split(/\s+/).filter(Boolean);
+      var termoOriginal = removerAcentos(state.filtroBusca.toLowerCase().trim());
+      var termos = termoOriginal.split(/\s+/).filter(Boolean);
+      var termoIdNormalizado = _normalizarIdPedidoBusca(state.filtroBusca);
+
       lista = lista.filter(function (r) {
+        var idPedidoRaw = (r.idPedido || '').toString();
+        var idPedidoNormalizado = _normalizarIdPedidoBusca(idPedidoRaw);
+        var idPedidoComPrefixo = 'RDO' + idPedidoNormalizado;
+
+        if (termoIdNormalizado && idPedidoNormalizado && termoIdNormalizado === idPedidoNormalizado) {
+          return true;
+        }
+
         var pool = removerAcentos(
-          [r.descricao, r.motoboy, r.observacao, r.idPedido, r.cliente, r.solicitante, r.dataBR, r.dataDisplay, r.grupo]
+          [r.descricao, r.motoboy, r.observacao, idPedidoRaw, idPedidoComPrefixo, r.cliente, r.solicitante, r.dataBR, r.dataDisplay, r.grupo]
             .map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
         );
+
         for (var i = 0; i < termos.length; i++) {
           if (termos[i] && pool.indexOf(termos[i]) === -1) return false;
         }
@@ -2692,7 +2761,10 @@ if (!window.EventBus) {
   }
 
   function abrirExtratoModal(extrato) {
-    if (!els.extratoModalOverlay || !els.extratoModalBody) return;
+    if (!els.extratoModalOverlay || !els.extratoModalBody) {
+      finToast('Componente de modal de extrato não encontrado na página.', 'danger');
+      return;
+    }
     var totais = calcularTotaisRegistros(extrato.registros);
     if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = (extrato.origem || '-') + ' · ' + (extrato.periodoLabel || '-');
     var linhas = (extrato.registros || []).slice().sort(function (a, b) { return a.dataISO < b.dataISO ? -1 : 1; }).map(function (r) {
@@ -2702,9 +2774,11 @@ if (!window.EventBus) {
     }).join('');
     els.extratoModalBody.innerHTML = linhas +
       '<div class="d-flex justify-content-between pt-3 fw-bold" style="font-size:.85rem;"><span>Saldo:</span><span class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span></div>';
+
     if (els.extratoModalCopiar) els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(gerarTextoExtrato(extrato)); };
     if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { abrirJanelaPdfExtrato('Extrato - ' + (extrato.origem || '-'), extrato.periodoLabel, extrato.registros); };
     if (els.extratoModalFechar) els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
+
     els.extratoModalOverlay.style.display = 'flex';
   }
 
@@ -3209,6 +3283,12 @@ if (!window.EventBus) {
     var texto = document.getElementById('modal-atencao-texto-carteira');
     var btnConfirmar = document.getElementById('btn-confirmar-exclusao-carteira');
     var btnCancelar = document.getElementById('btn-cancelar-exclusao-carteira');
+
+    if (!overlay || !texto || !btnConfirmar || !btnCancelar) {
+      var ok = window.confirm(mensagem);
+      if (ok) onConfirmar();
+      return;
+    }
 
     texto.textContent = mensagem;
     overlay.style.display = 'flex';

@@ -1256,9 +1256,8 @@
             if (!pedido) return;
 
             pedido.situacao_financeira = dados.situacaoFinanceira;
-            if (dados.statusPedido) {           // ✅ correção aplicada
-                pedido.status = dados.statusPedido;
-            }
+            // ❌ REMOVIDO: pedido.status = dados.statusPedido;
+
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
 

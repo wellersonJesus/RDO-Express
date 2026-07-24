@@ -1961,7 +1961,7 @@ window.StatusModal = (function () {
                         cancelButtonColor: '#6c757d', reverseButtons: true,
                         customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
                     }).then(function (result) {
-                        if (result.isConfirmed) _executarAlteracao('CONCLUIDO');
+                        if (result.isConfirmed) _executarAlteracao('Concluido');
                     }).catch(function (e) { window._exibirErroGlobal(e, 'confirmar conclusão'); });
                 }, 300);
             }
@@ -2027,22 +2027,6 @@ window.abrirModalEdicao = function (msgId) {
         }, 150);
     }).catch(function (e) { window._exibirErroGlobal(e, 'abrir modal de edição'); });
 };
-
-function abrirModalMensagemPadrao() {
-    if (window.Swal && Swal.isVisible()) {
-        Swal.close();
-    }
-    const modalEl = document.getElementById('modalMensagemPadrao');
-    if (modalEl) {
-        modalEl.style.zIndex = '20050';
-    }
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-    setTimeout(() => {
-        const backdrop = document.querySelector('.modal-backdrop:last-of-type');
-        if (backdrop) backdrop.style.zIndex = '20049';
-    }, 0);
-}
 
 window.abrirModalMensagemPadrao = function (config) {
     config = config || {};
@@ -2550,6 +2534,10 @@ window.remitirPedido = async function () {
         rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
     }
 
+    var primeiraRota = rotasProcessadas.length > 0 ? rotasProcessadas[0] : null;
+    var deStr = primeiraRota ? primeiraRota.de : '';
+    var paraStr = primeiraRota ? primeiraRota.para : '';
+
     var dadosParaMensagem = {
         id: '[ID_GERADO]',
         solicitante: solicitante,
@@ -2571,7 +2559,9 @@ window.remitirPedido = async function () {
         contato: contato,
         horario: horario,
         mercadoria: mercadoria,
-        rotas: rotasTexto,
+        rotas_texto: rotasTexto,
+        de: deStr,
+        para: paraStr,
         distancia: distancia.toFixed(2),
         tempo: tempo,
         obs: obs,

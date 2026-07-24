@@ -834,19 +834,27 @@ function abrirModalNotifPagamento() {
 }
 
 function abrirPedidoDaNotificacao(pedidoId) {
-    window.AppRDO = window.AppRDO || {};
+  window.AppRDO = window.AppRDO || {};
+  window.AppRDO._pedidoAlvoFinanceiro = String(pedidoId || '').trim();
 
-    // Guarda o ID do pedido que o financeiro deve abrir
-    window.AppRDO._pedidoAlvoFinanceiro = String(pedidoId || '').trim();
+  var modalEl = document.getElementById('modalNotifPagamentoDashboard');
 
-    // Fecha o modal de notificação
-    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        var inst = bootstrap.Modal.getInstance(modalEl);
-        if (inst) inst.hide();
+  if (modalEl && typeof bootstrap !== 'undefined') {
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (inst) {
+      // Só navega DEPOIS que o modal terminar de esconder (evita remover o DOM no meio da transição)
+      var aoEsconder = function () {
+        modalEl.removeEventListener('hidden.bs.modal', aoEsconder);
+        navegarParaFinanceiroPedido(pedidoId);
+      };
+      modalEl.addEventListener('hidden.bs.modal', aoEsconder);
+      inst.hide();
+      return; // navegação ocorre no callback acima
     }
+  }
 
-    navegarParaFinanceiroPedido(pedidoId);
+  // Se não havia modal/instância, navega direto
+  navegarParaFinanceiroPedido(pedidoId);
 }
 
 function navegarParaFinanceiroPedido(pedidoId) {
