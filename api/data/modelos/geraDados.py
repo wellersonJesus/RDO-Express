@@ -84,6 +84,7 @@ def registrar_erro(tipo, detalhe, linha=None, exc=None):
 STATUS_CLIENTE_PADRAO = "TRUE"
 STATUS_PEDIDO_PADRAO = "CONCLUIDO"
 TIPO_FINANCEIRO_PADRAO = "RECEITA"
+SITUACAO_FINANCEIRO_PADRAO = "Pago"
 
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 RDO_FIN_PATTERN = re.compile(r"^RDO0*(\d+)-FIN$", re.IGNORECASE)
@@ -97,9 +98,9 @@ PADRAO_SOLICITANTE = re.compile(
     re.IGNORECASE
 )
 
-ULTIMO_RDO_LANCADO = "RDO0639"
-FILTRO_DATA_INICIO = "22/06/2026"
-FILTRO_DATA_FIM = "22/07/2026"
+ULTIMO_RDO_LANCADO = "RDO0679"
+FILTRO_DATA_INICIO = "23/07/2026"
+FILTRO_DATA_FIM = "23/07/2026"
 
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS", "OPMINAS",
@@ -111,23 +112,19 @@ PAGAMENTO_MENSAL = ["BASIQUE", "BETE PLURAL", "FFASHION", "ELISA STHANIS"]
 CAMPOS_LINHA_TOTAL = 8
 
 SINONIMOS_MANUAIS = {
-    # Opminas
     "OPIMINAS": "OPMINAS",
     "OPENMINAS": "OPMINAS",
     "OPMINAS": "OPMINAS",
 
-    # Maria Pitanga
     "MPITANGA": "MARIAPITANGA",
     "MARIAPITANGA": "MARIAPITANGA",
 
-    # Val Fortunato (aparece corrompido/repetido nos dados brutos)
     "VALFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
 
-    # Elisa Atheniense (várias abreviações)
     "ELISAATHENI": "ELISAATHENIENSE",
     "ELISAATHENIENSE": "ELISAATHENIENSE",
     "ELISAATHENICEARA": "ELISAATHENIENSECEARA",
@@ -136,50 +133,37 @@ SINONIMOS_MANUAIS = {
     "ELISAATHENIENSEBOTANICO": "ELISAATHENIENSEBOTANICO",
     "ELISAATHENIENSEBOTANIICO": "ELISAATHENIENSEBOTANICO",
 
-    # Mima-me
     "MIMAME": "MIMAME",
     "MIMAMES": "MIMAME",
 
-    # Natu Pet
     "NATUPET": "NATUPET",
     "NATUPETS": "NATUPET",
 
-    # FF Fashion
     "FFASHION": "FFFASHION",
     "FFFASHION": "FFFASHION",
 
-    # Cacal Show / Cacau Show
     "CACALSHOW": "CACAUSHOW",
     "CACAUSHOW": "CACAUSHOW",
 
-    # Mauricio (garante consistência de caixa)
     "MAURICIO": "MAURICIO",
 
-    # Tamara / Cpap Tamara
     "TAMARA": "TAMARA",
     "TAMARACAPS": "TAMARACAPS",
 
-    # Kopenhagen
     "KOPENHAGEN": "KOPENHAGEN",
 
-    # S Manoel
     "SMANOEL": "SMANOEL",
     "SAOMANOELINDUSTRIA": "SMANOEL",
 
-    # Cesta
     "CESTA": "CESTA",
 
-    # Basique
     "BASIQUE": "BASIQUE",
 
-    # Rosa Dalia
     "ROSADALIA": "ROSADALIA",
 
-    # In Closet
     "INCLOSET": "INCLOSET",
     "INCLOSED": "INCLOSET",
 
-    # Plural
     "PLURAL": "PLURAL",
     "BETEPLURAL": "BETEPLURAL",
     "BETEPLURALDIAMONDMALL": "BETEPLURALDIAMONDMALL",
@@ -417,22 +401,6 @@ def _data_para_datetime(data_str):
         return datetime.strptime(data_str, "%d/%m/%Y")
     except (ValueError, TypeError):
         return None
-
-
-def carregar_datas_existentes_financeiro():
-    datas = set()
-    try:
-        dados = _buscar_lista("getfinanceiro")
-        for item in dados:
-            data_dt = _data_para_datetime(str(item.get("data", "")).strip())
-            if data_dt:
-                datas.add(data_dt.date())
-    except (ErroApi, ErroFatalGeracao) as exc:
-        registrar_erro("FALHA_CARREGAR_DATAS_FINANCEIRO", exc, exc=exc)
-    except Exception as exc:
-        registrar_erro("ERRO_INESPERADO_CARREGAR_DATAS_FINANCEIRO", exc, exc=exc)
-    logger.info("Datas distintas já lançadas no financeiro: %d.", len(datas))
-    return datas
 
 
 def conferir_ultimo_rdo_com_financeiro(rdo_seq_base, maior_rdo_financeiro):
@@ -786,50 +754,6 @@ def separar_data_hora(dados):
         return "", "00:00"
 
 
-def extrair_datas_brutas(linhas):
-    datas = set()
-    for linha in linhas:
-        try:
-            dados = parse_linha(linha)
-            if dados is None:
-                continue
-            data_str = extrair_data(dados["data_bruta"])
-            data_dt = _data_para_datetime(data_str)
-            if data_dt:
-                datas.add(data_dt.date())
-        except Exception as exc:
-            registrar_erro("ERRO_EXTRAIR_DATAS_BRUTAS", f"{exc}", linha=linha, exc=exc)
-    return datas
-
-
-def determinar_filtro_data_automatico(todas_linhas):
-    try:
-        datas_existentes = carregar_datas_existentes_financeiro()
-        datas_brutas = sorted(extrair_datas_brutas(todas_linhas))
-
-        if not datas_brutas:
-            registrar_erro("SEM_DATAS_VALIDAS", "Nenhuma data válida encontrada em DADOS_BRUTOS.")
-            return None, None
-
-        data_fim = datas_brutas[-1]
-
-        data_inicio = None
-        for data in datas_brutas:
-            if data not in datas_existentes:
-                data_inicio = data
-                break
-
-        if data_inicio is None:
-            logger.info("Nenhuma data pendente de lançamento encontrada nos dados brutos.")
-            return None, data_fim.strftime("%d/%m/%Y")
-
-        logger.info("Intervalo de lançamento definido: INICIO=%s FIM=%s", data_inicio.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y"))
-        return data_inicio.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y")
-    except Exception as exc:
-        registrar_erro("ERRO_DETERMINAR_FILTRO_DATA", f"{exc}", exc=exc)
-        return None, None
-
-
 def linha_dentro_do_filtro(dados, filtro_inicio, filtro_fim):
     try:
         if not filtro_inicio and not filtro_fim:
@@ -931,6 +855,7 @@ def criar_pedido(consolidado):
             "valor_corrida": consolidado["valor_rs"],
             "motoboy": consolidado["motoboy_final"],
             "status": consolidado["status_final"],
+            "situacao_financeira": SITUACAO_FINANCEIRO_PADRAO,
             "observacao": consolidado["observacao"],
         }
 
@@ -1027,7 +952,6 @@ def exibir_resumo_erros():
 
 def main():
     global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ
-    global FILTRO_DATA_INICIO, FILTRO_DATA_FIM
 
     try:
         verificar_ids_duplicados()
@@ -1043,10 +967,8 @@ def main():
         todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
         logger.info("Total de linhas brutas a processar: %d.", len(todas_linhas))
 
-        filtro_inicio, filtro_fim = determinar_filtro_data_automatico(todas_linhas)
-        FILTRO_DATA_INICIO, FILTRO_DATA_FIM = filtro_inicio, filtro_fim
-
-        logger.info("Filtro de data definido automaticamente: INICIO=%s FIM=%s", filtro_inicio, filtro_fim)
+        filtro_inicio, filtro_fim = FILTRO_DATA_INICIO, FILTRO_DATA_FIM
+        logger.info("Filtro de data em uso: INICIO=%s FIM=%s", filtro_inicio, filtro_fim)
 
         total_processadas = 0
         total_ignoradas_filtro = 0

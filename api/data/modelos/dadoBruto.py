@@ -1,42 +1,54 @@
 DADOS_BRUTOS = """
-08:13	22/07/2026	Cesta	GRUPO	Entrega	Luciana	R$17,00	(31) 98634-0814 - Rua Major Lopes 194, apto 301, São Pedro
-08:54	22/07/2026	Mauricio	GRUPO	Coleta	CPAP Minas	R$19,00	Círio Gaspar de Araújo 79, Aparecida - contato Mauro 031 996251226
-08:58	22/07/2026	Mauricio	IGOR	Entrega	CPAP Minas	R$50,00	Rua dos Bem-te-vis 121, Maria Adélia, Santa Luzia - contato Wiliam
-08:59	22/07/2026	Sara	AUANDER	Entrega	11 coletas	R$168,00	Percurso de 73km
-09:27	22/07/2026	S MANOEL	AUANDER	Entrega	Danielle Ladeia	R$47,00	Rua São Sebastião do Paraíso 120/701, Itapoã, até 14h
-09:33	22/07/2026	Opminas	AUANDER	Coleta	Victor Rocha	R$25,00	São Camilo - coleta mala p/ sacola
-09:58	22/07/2026	S MANOEL	AUANDER	Coleta	Patrícia de Deus	R$17,00	Rua Tomé de Souza 1244/402, a partir das 10:30h
-09:59	22/07/2026	Incloset	AUANDER	Coleta	Paola Sede 2	R$18,00	R. Senador Lima Guimarães 108, 4º andar
-10:07	22/07/2026	Bete Plural Diamond Mall	AUANDER	Entrega	Lucimara	R$15,00	Prioridade - Av Contorno 2316/6, Floresta
-10:26	22/07/2026	M Pitanga	IGOR	Entrega	Camila Costa Pereira	R$35,00	Rua Castelo Serpa 421, apto 504, Castelo - entre 11h e 14h
-10:27	22/07/2026	M Pitanga	IGOR	Entrega	Rebecca Fraga	R$18,00	Rua João Furtado 200, apto 601, Gutierrez - entre 14h e 17h
-10:57	22/07/2026	Basique	IGOR	Coleta	Junia Pinheiro	R$18,00	Rua Almirante Alexandrino 750, apto 1502, Gutierrez
-11:21	22/07/2026	Mauricio	IGOR	Coleta	CPAP Minas	R$29,00	Rua Itamar Teixeira 205b, ap 104, Betânia - contato Andrea
-11:22	22/07/2026	P&P	IGOR	Entrega	Correios	R$25,00	Postagem - Av Wilson Tavares Ribeiro 800, Contagem
-11:38	22/07/2026	Opminas	AUANDER	Coleta	Pedal Linvatec	R$22,00	Surgical - coleta pedal
-11:38	22/07/2026	Opminas	IGOR	Coleta	Robson Rodrigo	R$22,00	Vera Cruz - mala G + sacola
-11:39	22/07/2026	Bete Plural Diamond Mall	IGOR	Coleta	Lucimara / Isabael (Costureira)	R$52,00	Prioridade - Av Contorno 2316/6, Floresta - entrega no Mantiqueira
-11:49	22/07/2026	Natupet	AUANDER	Entrega	Carolina, Thales, Bianca, Isabela, Grasiela, Eliana	R$100,00	Múltiplas entregas a partir das 16h
-12:19	22/07/2026	Elisa Atheniense	CANCELADO	Coleta/Entrega	Camila	R$15,00	Retirada Botânico Shopping - entrega Rua Ceará 1332
-12:57	22/07/2026	Opminas	IGOR	Entrega	M.A.C.N / C.L.F	R$22,00	Mater Dei Contorno - 2 sacolas
-12:58	22/07/2026	Opminas	AUANDER	Entrega	Bernardo Correa	R$25,00	Vila da Serra - 1 sacola
-13:01	22/07/2026	Mauricio	AUANDER	Entrega	CPAP Minas	R$29,00	Rua Itamar Teixeira 205b, ap 104, Betânia - contato Andrea
-14:02	22/07/2026	Ffashion	AUANDER	Entrega	Viviane	R$28,00	Com retorno - Av Raja Gabaglia 3135, São Bento
-14:03	22/07/2026	Mauricio	AUANDER	Entrega	CPAP Minas	R$20,00	Rua Ouro Preto 1596, 4º andar - contato Marcos
-14:22	22/07/2026	Mauricio	CANCELADO	Entrega	CPAP Minas	R$20,00	Av Brasil 283, sl 903/904 - contato Altair
-14:47	22/07/2026	AMMIS	CANCELADO	Entrega	Livia Soares	R$19,00	Rua Cristina 408, apt 302, Sion
-14:54	22/07/2026	AMMIS	GRUPO	Coleta/Entrega	Amanda	R$27,00	Com retorno - Rua Gonzales Pecotche 392, ap 1503 T3, Vila da Serra
-14:59	22/07/2026	Opminas	GRUPO	Entrega	Benjamin Rocha	R$20,00	Instituto - mala G + sacola
-15:04	22/07/2026	Cesta	AUANDER	Coleta	Alexandre/Ivan	R$17,00	Av do Contorno 6061, Funcionários
-15:12	22/07/2026	Val Fortunato	AUANDER	Coleta	Cris (LN)	R$18,00	Bernardino de Lima 321, Gutierrez
-15:26	22/07/2026	Val Fortunato	GRUPO	Entrega	Fabiola	R$18,00	R Estácio de Sá 49, Gutierrez
-15:29	22/07/2026	Basique	AUANDER	Coleta	Costureira Lili	R$48,00	Coleta às 17h - R. Maria Gertrudes Santos 952, Céu Azul
-15:29	22/07/2026	Basique	AUANDER	Coleta	Costureira Lili	R$48,00	Duplicata da mesma coleta (mensagem repetida)
-15:36	22/07/2026	S MANOEL	GRUPO	Coleta	Altero Metais	R$18,00	Av Paraná 85, Centro
-16:33	22/07/2026	Mauricio	GRUPO	Entrega	CPAP Minas	R$19,00	Círio Gaspar de Araújo 79, Aparecida - contato Mauro
-16:45	22/07/2026	Cesta	AUANDER	Entrega	Izabela	R$20,00	Maternidade Neo Center, quarto 304
-16:45	22/07/2026	Cesta	AUANDER	Entrega	Silesia	R$20,00	Av Raja 2000, sala 335, torre 2, até 17h
-16:46	22/07/2026	M PITANGA	GRUPO	Entrega	Maria Teresa	R$16,00	Rua Vicente Guimarães 35, apto 1302, Belvedere
-16:58	22/07/2026	AMMIS	AUANDER	Coleta	Ana Lúcia	R$19,00	Rua Patagônia 983, apto 1101 B, Sion
-17:02	22/07/2026	Basique	AUANDER	Entrega	Alexsandra	R$17,00	Rua José Silveira 14, Buritis
+09:04	23/07/2026	Basique	EMERSON	COLETA	COSTUREIRA LILI	R$48,00	R. Maria Gertrudes Santos, 952 - Céu Azul, BH
+09:04	23/07/2026	Basique	GRUPO	COLETA	COSTUREIRA LILI	R$48,00	R. Maria Gertrudes Santos, 952 - Céu Azul, BH
+09:14	23/07/2026	S manoel	EMERSON	ENTREGA	Maria Pinto	R$18,00	Rua Brumadinho, 811 - Prado
+09:17	23/07/2026	M pitanga	GRUPO	ENTREGA	Michele Cassaro	R$22,00	Rua Martim de Carvalho, 94 - Santo Agostinho
+09:35	23/07/2026	S manoel	EMERSON	ENTREGA	Silvia Machado Guedes	R$18,00	Rua Joaquim Linhares, 74 apto 201 - Anchieta
+09:38	23/07/2026	Opminas	IGOR	COLETA	Benjamin Rocha	R$20,00	Instituto - mala G + sacola
+09:46	23/07/2026	S manoel	EMERSON	ENTREGA	Kênia Bernadete	R$18,00	Rua Ludgero Dolabela, 249/301 - Gutierrez
+10:18	23/07/2026	Jacira	EMERSON	COLETA/ENTREGA	Sara Santos / Jane	R$32,00	Loja Val Fortunato - R. Cuiabá 1107 Prado -> R. Brumadinho 438 Prado
+10:26	23/07/2026	Ff fashion	EMERSON	ENTREGA	Cyntia Nayara	R$22,00	Rua da Mata, 205 apto 1102 torre 1 - Vila da Serra
+10:41	23/07/2026	Opminas	IGOR	COLETA	A.C.B / A.D.M.C / C.L.F	R$22,00	Mater Dei Contorno - mala G + 3 sacolas
+10:55	23/07/2026	Ammis	EMERSON	COLETA	Tayra	R$16,00	Rua da Fonte, 110 apto 2602 - Vila da Serra
+10:56	23/07/2026	Basique	EMERSON	COLETA	—	R$30,00	R. Belmiro Braga, 374 - Alto Caiçaras
+11:27	23/07/2026	Elisa athenienses ceara	EMERSON	RETIRADA/ENTREGA	Camila	R$15,00	Botânico Shopping -> Rua Ceará, 1332 loja 02
+11:28	23/07/2026	Elisa athenienses	EMERSON	RETIRADA/ENTREGA	Angela/Tiago	R$15,00	Rua Ceará, 1332 loja 02 -> Botânico Shopping
+12:01	23/07/2026	Opminas	IGOR	COLETA	Jucilene Aparecida	R$22,00	Santa Casa BH - mala P + sacola
+12:02	23/07/2026	Ammis	EMERSON	ENTREGA	Laura	R$25,00	Rua Tabelião Pereira de Carvalho, 611 apto 901 - Cidade Nova
+12:05	23/07/2026	Elisa athenienses	IGOR	ENTREGA	Leticia Canhestro	R$18,00	Rua Turfa, 1535 apto 1501 - Grajaú
+12:08	23/07/2026	Opminas	IGOR	ENTREGA	Laurita Naza	R$29,00	São Lucas - mala P + sacola
+12:15	23/07/2026	Bete plural diamond mall	IGOR	COM RETORNO	Lucimara	R$27,00	Av Contorno, 2316/6º andar - Floresta
+12:23	23/07/2026	Plural	EMERSON	COLETA	Costureira Isabel	R$42,00	R. Miguel Gomes da Costa, 52 - Mantiqueira
+12:32	23/07/2026	Opminas	IGOR	COLETA	Bernardo Correa / Andre Couto	R$25,00	Vila da Serra - mala G + 2 sacolas
+12:32	23/07/2026	Opminas	IGOR	ENTREGA	Maria do Carmo	R$85,00	Regional de Betim - mala G + 1 sacola
+13:23	23/07/2026	M pitanga	EMERSON	ENTREGA	Juliana Borges	R$22,00	Rua Santa Rita, 221 - Olhos da Água, Geosol portaria 2
+13:26	23/07/2026	Opminas	IGOR	ENTREGA	Manutenção Volume	R$22,00	Carlito - mala G
+13:27	23/07/2026	Opminas	IGOR	ENTREGA	P.L.M	R$22,00	Mater Dei Santo Agostinho - mala G + 1 sacola
+13:44	23/07/2026	M pitanga	EMERSON	COLETA	Maria Teresa	R$16,00	Rua Vicente Guimarães, 35 apto 1302 - Belvedere
+13:54	23/07/2026	Basique	IGOR	ENTREGA/RETORNO	Luziana	R$29,00	Rua Rodrigues Caldas, 30 2º andar - TV Assembleia
+14:09	23/07/2026	Ammis	EMERSON	COLETA	Rachel Tergilene	R$28,00	Rua Embaúba, 215 - Cond. Mirante da Mata
+14:12	23/07/2026	Ammis	EMERSON	ENTREGA	Cristiane	R$18,00	Rua Padre Severino, 349 apto 1001 - São Pedro
+14:14	23/07/2026	Ammis	EMERSON	ENTREGA	Beth Nejm	R$21,00	Rua do Ouro, 1005/201 - Serra
+14:14	23/07/2026	Incloset	EMERSON	ENTREGA	Paola Sede 2	R$18,00	R. Senador Lima Guimarães, 108/4º andar
+14:16	23/07/2026	Cesta	GRUPO	RETIRADA/ENTREGA	Vitória	R$20,00	Rua Gentios, 40 apto 604
+14:17	23/07/2026	Mauricio	GRUPO	COLETA	CPAP Minas	R$18,00	Coleta Av Brasil 283 903/904 -> Rua Raposos 135 Esplanada
+14:23	23/07/2026	Opminas	IGOR	ENTREGA	E.C.D.G / A.G.V.B	R$22,00	Mater Dei Contorno - 2 sacolas
+14:43	23/07/2026	S manoel	IGOR	TROCA	MH Matos	R$28,00	Av Afonso Pena, 4321 loja 14
+14:45	23/07/2026	Ff fashion	GRUPO	ENTREGA	Naiara	R$48,00	Rua Domingos Mancini, 99 - Brasil Industrial
+16:09	23/07/2026	Mauricio	GRUPO	ENTREGA	CPAP Minas	R$18,00	Entregar Rua Raposos 135 Esplanada
+16:18	23/07/2026	Mauricio	AUANDER	COM RETORNO	Nilva	R$27,00	Rua Santa Rita Durão, 700 apto 801 - Savassi
+16:21	23/07/2026	Mauricio	AUANDER	ENTREGA	Paulo Cezar	R$33,00	Av JK, 1158 casa - Industrial Contagem
+16:21	23/07/2026	Sara	AUANDER	ENTREGA	—	R$250,00	25 coletas - percurso 100km
+16:47	23/07/2026	Opminas	IGOR	ENTREGA	J.C.G.C	R$22,00	Mater Dei Santo Agostinho - mala G + 1 sacola
+16:48	23/07/2026	Opminas	IGOR	ENTREGA	J.C.G.C	R$22,00	Mater Dei Contorno - 1 sacola CME Sto Agostinho
+16:49	23/07/2026	Basique	EMERSON	ENTREGA	Junia / Lara	R$21,00	Rua Turquesa, 197 casa - Prado
+16:54	23/07/2026	Mauricio	AUANDER	COLETA	Cilmara	R$40,00	Rua Ébano, 60 casa - Jardim Laguna Contagem
+16:55	23/07/2026	Mauricio	AUANDER	COLETA	Nilva	R$18,00	Rua Santa Rita Durão, 700 apto 801 - Savassi
+16:56	23/07/2026	Mauricio	AUANDER	COLETA	Paulo Cezar	R$33,00	Av JK, 1158 casa - Industrial Contagem
+16:57	23/07/2026	Mauricio	AUANDER	COLETA	Nilda	R$70,00	R. Cândido Cardoso Miranda, 458 apto 101 - Jardim da Cidade, Betim
+16:59	23/07/2026	Mauricio	AUANDER	ENTREGA	Antônia	R$18,00	Av Itaité, 427 apto 202 - São Geraldo
+17:05	23/07/2026	S manoel	GRUPO	COLETA/ENTREGA	Danielle Caetano	R$22,00	Rua Itambacuri, 139 -> Rua da Paisagem 480/1208 Vila da Serra
+17:08	23/07/2026	Mauricio	AUANDER	ENTREGA	Cilmara	R$40,00	Rua Ébano, 60 casa - Jardim Laguna Contagem
+17:09	23/07/2026	Mauricio	AUANDER	COM RETORNO	Tânia	R$32,00	R. Coronel Jairo Pereira, 570 apto 400 - Palmares
+18:35	23/07/2026	Basique	-	ENTREGA	Junia / Lara	R$21,00	Rua Turquesa, 197 casa - Prado
 """.strip()

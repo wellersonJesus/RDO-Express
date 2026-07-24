@@ -115,6 +115,18 @@ function doPost(e) {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    if (action === "debuginfo") {
+      var abaPed = buscarAba(ss, "pedidos");
+      var abaFin = buscarAba(ss, "financeiro");
+      return responder({
+        status: "success",
+        spreadsheet_id: ss.getId(),
+        spreadsheet_url: ss.getUrl(),
+        aba_pedidos_linhas: abaPed ? abaPed.getLastRow() : "aba nao encontrada",
+        aba_financeiro_linhas: abaFin ? abaFin.getLastRow() : "aba nao encontrada"
+      });
+    }
+
     if (action === "heartbeat") {
       var sheetUsuariosHb = buscarAba(ss, "usuarios");
       return responder(processarHeartbeat(sheetUsuariosHb, data.username));
@@ -585,12 +597,12 @@ function processarCriarPedido(sheetPedidos, data) {
   var idPedido = String(data.id || "").trim() || gerarId(sheetPedidos, "pedidos");
   var idCliente = String(data.id_cliente || data.id_chat || "").trim();
 
-  var rotas_texto = String(data.rotas_texto || "");
+  var rotasTexto = String(data.rotas_texto || "");
   var deStr = "";
   var paraStr = "";
 
-  if (rotas_texto) {
-    var primeiraLinha = rotas_texto.split("\n")[0] || "";
+  if (rotasTexto) {
+    var primeiraLinha = rotasTexto.split("\n")[0] || "";
     var deMatch = primeiraLinha.match(/De:\s*([^|]+)/i);
     var paraMatch = primeiraLinha.match(/Para:\s*(.+)/i);
     if (deMatch) deStr = deMatch[1].trim();
@@ -617,12 +629,19 @@ function processarCriarPedido(sheetPedidos, data) {
     escreverComoTexto(sheetChat, sheetChat.getLastRow(), 6, dataStr);
   }
 
+  var situacaoFinanceira = String(data.situacao_financeira || "Pendente").trim();
+  if (situacaoFinanceira) {
+    situacaoFinanceira = situacaoFinanceira.charAt(0).toUpperCase() + situacaoFinanceira.slice(1).toLowerCase();
+  }
+
   var rowData = {
     id: idPedido,
     id_cliente: idCliente,
     solicitante: String(data.solicitante || ""),
     contato: String(data.contato || ""),
+    data: dataStr,
     horario: horaStr,
+    hora: horaStr,
     mercadoria: String(data.mercadoria || ""),
     de: deStr,
     para: paraStr,
@@ -631,48 +650,32 @@ function processarCriarPedido(sheetPedidos, data) {
     valor_corrida: formatarMoeda(data.valor_corrida || data.valor_final || ""),
     motoboy: String(data.motoboy || ""),
     status: String(data.status || "PENDENTE"),
-    situacao_financeira: String(data.situacao_financeira || "Pendente"),
-    observacao: String(data.observacao || data.obs || ""),
-    data: dataStr,
-    hora: horaStr
+    situacao_financeira: situacaoFinanceira,
+    observacao: String(data.observacao || data.obs || "")
   };
 
   var headersOriginais = obterHeaders(sheetPedidos);
   var headersNorm = headersOriginais.map(normalizarChave);
-
   var idIndex = headersNorm.indexOf("id");
   var colDataIndex = headersNorm.indexOf("data");
 
-  if (headersNorm.length > 1 && idIndex !== -1) {
-    var row = [];
-    for (var i = 0; i < headersNorm.length; i++) {
-      var campo = headersNorm[i];
-      row.push(rowData[campo] !== undefined ? rowData[campo] : "");
-    }
-    sheetPedidos.appendRow(row);
-
-    if (colDataIndex !== -1) {
-      escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataIndex + 1, dataStr);
-    }
-  } else {
-    sheetPedidos.appendRow([
-      idPedido, idCliente,
-      rowData.solicitante,
-      rowData.contato,
-      dataStr,
-      horaStr,
-      rowData.mercadoria,
-      deStr, paraStr,
-      rowData.retorno,
-      rowData.prioridade,
-      rowData.valor_corrida,
-      rowData.motoboy,
-      rowData.status,
-      rowData.situacao_financeira,
-      rowData.observacao
-    ]);
-    escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), 5, dataStr);
+  if (headersNorm.length === 0 || idIndex === -1) {
+    return { status: "error", message: "Cabecalho invalido na aba 'pedidos': coluna 'id' nao encontrada." };
   }
+
+  var row = [];
+  for (var i = 0; i < headersNorm.length; i++) {
+    var campo = headersNorm[i];
+    row.push(rowData[campo] !== undefined ? rowData[campo] : "");
+  }
+
+  sheetPedidos.appendRow(row);
+
+  if (colDataIndex !== -1) {
+    escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataIndex + 1, dataStr);
+  }
+
+  SpreadsheetApp.flush();
 
   return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
 }
