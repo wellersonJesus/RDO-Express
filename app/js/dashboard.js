@@ -867,21 +867,19 @@ function abrirPedidoDaNotificacao(pedidoId) {
 
   var modalEl = document.getElementById('modalNotifPagamentoDashboard');
 
-  if (modalEl && typeof bootstrap !== 'undefined') {
+  if (modalEl && modalEl.classList.contains('show') && typeof bootstrap !== 'undefined') {
     var inst = bootstrap.Modal.getInstance(modalEl);
     if (inst) {
-      // Só navega DEPOIS que o modal terminar de esconder (evita remover o DOM no meio da transição)
       var aoEsconder = function () {
         modalEl.removeEventListener('hidden.bs.modal', aoEsconder);
         navegarParaFinanceiroPedido(pedidoId);
       };
       modalEl.addEventListener('hidden.bs.modal', aoEsconder);
       inst.hide();
-      return; // navegação ocorre no callback acima
+      return;
     }
   }
 
-  // Se não havia modal/instância, navega direto
   navegarParaFinanceiroPedido(pedidoId);
 }
 
@@ -927,7 +925,7 @@ function abrirRelatorioDaNotificacao(pedidoId, idCliente) {
 
     var modalEl = document.getElementById('modalNotifPagamentoDashboard');
 
-    if (modalEl && typeof bootstrap !== 'undefined') {
+    if (modalEl && modalEl.classList.contains('show') && typeof bootstrap !== 'undefined') {
         var inst = bootstrap.Modal.getInstance(modalEl);
         if (inst) {
             var aoEsconder = function () {
@@ -975,14 +973,6 @@ function aguardarRelatorioEDispararEvento(pedidoId, idCliente, tentativas) {
         }, 100);
     } else {
         console.warn('[navegarParaRelatorioDoPedido] relatorios.js não inicializou a tempo.');
-    }
-}
-
-function navegarParaPedidos() {
-    if (window.router && typeof window.router.navigate === 'function') {
-        window.router.navigate('pedidos');
-    } else {
-        window.location.hash = '#pedidos';
     }
 }
 
@@ -1135,12 +1125,40 @@ function renderizarBlocoNotificacaoPagamento(dados) {
 
     bloco.classList.remove('d-none');
 
+    var btnVerPedidosNotif = document.getElementById('btn-notif-pagamento-ver-pedidos');
+    if (btnVerPedidosNotif && !btnVerPedidosNotif._bound) {
+        btnVerPedidosNotif._bound = true;
+        btnVerPedidosNotif.addEventListener('click', function (e) {
+            e.preventDefault();
+            navegarParaPedidosDaNotificacao();
+        });
+    }
+
     if (!window.dashboardState.modalNotifJaExibido) {
         window.dashboardState.modalNotifJaExibido = true;
         setTimeout(function () {
             abrirModalNotifPagamento();
         }, 400);
     }
+}
+
+function navegarParaPedidosDaNotificacao() {
+    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+
+    if (modalEl && modalEl.classList.contains('show') && typeof bootstrap !== 'undefined') {
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) {
+            var aoEsconder = function () {
+                modalEl.removeEventListener('hidden.bs.modal', aoEsconder);
+                navegarParaTodosPedidos();
+            };
+            modalEl.addEventListener('hidden.bs.modal', aoEsconder);
+            inst.hide();
+            return;
+        }
+    }
+
+    navegarParaTodosPedidos();
 }
 
 function _pedidoAguardandoPagamento(pedido, financeiro) {
