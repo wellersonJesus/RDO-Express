@@ -57,6 +57,9 @@ COLABORADORES_PENDENTES = set()
 RDOS_EXISTENTES = set()
 RDO_SEQ = 0
 
+FIN_IDS_EXISTENTES = set()
+FIN_SEQ = 0
+
 REGISTRO_ERROS = []
 
 
@@ -87,7 +90,7 @@ TIPO_FINANCEIRO_PADRAO = "RECEITA"
 SITUACAO_FINANCEIRO_PADRAO = "PENDENTE"
 
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
-RDO_FIN_PATTERN = re.compile(r"^RDO0*(\d+)-FIN$", re.IGNORECASE)
+FIN_PATTERN = re.compile(r"^FIN0*(\d+)$", re.IGNORECASE)
 HORA_STRICT_PATTERN = re.compile(r"(\d{1,2}):(\d{2})")
 
 DATA_BR_PATTERN = re.compile(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})")
@@ -333,14 +336,13 @@ def verificar_ids_duplicados():
         for fin_id, qtd in sorted(duplicados_financeiro.items()):
             registrar_erro("FIN_DUPLICADO", f"ID '{fin_id}' aparece {qtd}x na tabela financeiro")
 
-    ids_pedidos_sem_sufixo = set(ids_pedidos)
-    ids_fin_sem_sufixo = set()
-    for fin_id in ids_financeiro:
-        match = RDO_FIN_PATTERN.match(fin_id)
-        if match:
-            ids_fin_sem_sufixo.add(f"RDO{int(match.group(1)):03d}")
+    ids_pedidos_com_financeiro = set()
+    for item in financeiros:
+        id_pedido = str(item.get("id_pedido", "")).strip().upper()
+        if id_pedido:
+            ids_pedidos_com_financeiro.add(id_pedido)
 
-    faltando_financeiro = sorted(ids_pedidos_sem_sufixo - ids_fin_sem_sufixo)
+    faltando_financeiro = sorted(set(ids_pedidos) - ids_pedidos_com_financeiro)
     if faltando_financeiro:
         registrar_erro("PEDIDO_SEM_FINANCEIRO", f"pedidos sem financeiro correspondente: {faltando_financeiro}")
 
@@ -370,14 +372,17 @@ def carregar_rdos_existentes():
     return ids
 
 
-def carregar_maior_rdo_financeiro():
+def carregar_fin_ids_existentes():
+    ids = set()
     maior = 0
     maior_id_str = None
     try:
         dados = _buscar_lista("getfinanceiro")
         for item in dados:
             fin_id = str(item.get("id", "")).strip().upper()
-            match = RDO_FIN_PATTERN.match(fin_id)
+            if fin_id:
+                ids.add(fin_id)
+            match = FIN_PATTERN.match(fin_id)
             if match:
                 numero = int(match.group(1))
                 if numero > maior:
@@ -389,11 +394,11 @@ def carregar_maior_rdo_financeiro():
         registrar_erro("ERRO_INESPERADO_CARREGAR_FINANCEIRO", exc, exc=exc)
 
     if maior_id_str:
-        logger.info("Maior RDO-FIN localizado na tabela financeiro: %s.", maior_id_str)
+        logger.info("Maior ID financeiro (padrão FIN) localizado: %s.", maior_id_str)
     else:
-        logger.info("Nenhum RDO-FIN localizado na tabela financeiro.")
+        logger.info("Nenhum ID financeiro no padrão FIN localizado. Iniciando a partir de FIN000.")
 
-    return maior
+    return ids, maior
 
 
 def _data_para_datetime(data_str):
@@ -401,18 +406,6 @@ def _data_para_datetime(data_str):
         return datetime.strptime(data_str, "%d/%m/%Y")
     except (ValueError, TypeError):
         return None
-
-
-def conferir_ultimo_rdo_com_financeiro(rdo_seq_base, maior_rdo_financeiro):
-    if maior_rdo_financeiro == 0:
-        logger.info("Sem RDO-FIN na tabela financeiro para comparação. Seguindo com valor manual (RDO%03d).", rdo_seq_base)
-        return
-    if maior_rdo_financeiro == rdo_seq_base:
-        logger.info("OK: ULTIMO_RDO_LANCADO (RDO%03d) confere com maior RDO-FIN (RDO%03d).", rdo_seq_base, maior_rdo_financeiro)
-    elif maior_rdo_financeiro > rdo_seq_base:
-        registrar_erro("RDO_DESALINHADO", f"financeiro já tem RDO{maior_rdo_financeiro:03d}-FIN, mas ULTIMO_RDO_LANCADO=RDO{rdo_seq_base:03d}")
-    else:
-        registrar_erro("RDO_DESALINHADO", f"ULTIMO_RDO_LANCADO=RDO{rdo_seq_base:03d}, mas maior RDO-FIN encontrado é RDO{maior_rdo_financeiro:03d}")
 
 
 def determinar_rdo_seq_inicial(rdos_existentes):
@@ -443,6 +436,16 @@ def proximo_rdo_id():
         candidato = f"RDO{RDO_SEQ:03d}"
         if candidato not in RDOS_EXISTENTES:
             RDOS_EXISTENTES.add(candidato)
+            return candidato
+
+
+def proximo_fin_id():
+    global FIN_SEQ
+    while True:
+        candidato = f"FIN{FIN_SEQ:03d}"
+        FIN_SEQ += 1
+        if candidato not in FIN_IDS_EXISTENTES:
+            FIN_IDS_EXISTENTES.add(candidato)
             return candidato
 
 
@@ -880,6 +883,7 @@ def criar_pedido(consolidado):
 def criar_financeiro(consolidado):
     rdo_id = consolidado["rdo_id"]
     motoboy_final = consolidado["motoboy_final"]
+    fin_id = proximo_fin_id()
     try:
         colaborador_id = COLABORADORES.get(motoboy_final)
         if not colaborador_id:
@@ -888,7 +892,7 @@ def criar_financeiro(consolidado):
         payload = {
             "action": "criarfinanceiro",
             "apiKey": API_KEY,
-            "id": rdo_id + "-FIN",
+            "id": fin_id,
             "colaborador_id": colaborador_id or "",
             "id_pedido": rdo_id,
             "data": consolidado["data_str"],
@@ -905,18 +909,18 @@ def criar_financeiro(consolidado):
         try:
             resultado = post(payload)
         except ErroApi as exc:
-            registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id}: {exc}", exc=exc)
+            registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {exc}", exc=exc)
             return False, str(exc)
 
         if not resultado or resultado.get("status") != "success":
             detalhe = f"resposta={resultado!r}"
-            registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id}: {detalhe}")
+            registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {detalhe}")
             return False, detalhe
 
-        logger.info("Financeiro lançado: %s | data=%s | colaborador=%s | tipo=%s | valor=%s", rdo_id, consolidado["data_str"], motoboy_final, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
+        logger.info("Financeiro lançado: %s (pedido=%s) | data=%s | colaborador=%s | tipo=%s | valor=%s", fin_id, rdo_id, consolidado["data_str"], motoboy_final, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
         return True, None
     except Exception as exc:
-        registrar_erro("ERRO_INESPERADO_CRIAR_FINANCEIRO", f"RDO {rdo_id}: {exc}", exc=exc)
+        registrar_erro("ERRO_INESPERADO_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {exc}", exc=exc)
         return False, str(exc)
 
 
@@ -951,7 +955,7 @@ def exibir_resumo_erros():
 
 
 def main():
-    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ
+    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, FIN_IDS_EXISTENTES, FIN_SEQ
 
     try:
         verificar_ids_duplicados()
@@ -961,8 +965,9 @@ def main():
         RDOS_EXISTENTES = carregar_rdos_existentes()
         RDO_SEQ = determinar_rdo_seq_inicial(RDOS_EXISTENTES)
 
-        maior_rdo_financeiro = carregar_maior_rdo_financeiro()
-        conferir_ultimo_rdo_com_financeiro(RDO_SEQ, maior_rdo_financeiro)
+        FIN_IDS_EXISTENTES, maior_fin = carregar_fin_ids_existentes()
+        FIN_SEQ = maior_fin + 1
+        logger.info("Sequência financeira iniciando em FIN%03d.", FIN_SEQ)
 
         todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
         logger.info("Total de linhas brutas a processar: %d.", len(todas_linhas))
