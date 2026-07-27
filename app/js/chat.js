@@ -600,20 +600,29 @@ window.NotificationManager = (function () {
             }).join('');
     }
 
+    var _configurado = false;
+
     function _configurar() {
+        if (_configurado) return;
+
         var btnSino = _getBtn();
-        if (btnSino) {
-            btnSino.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                _toggleDropdown();
-            });
+        if (!btnSino) {
+            setTimeout(_configurar, 300); // tenta de novo, ainda não marcou como configurado
+            return;
         }
+
+        _configurado = true;
+
+        btnSino.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            _toggleDropdown();
+        });
 
         document.addEventListener('click', function (e) {
             var menu = _getMenu();
             if (!menu || !isAberto) return;
-            if (!menu.contains(e.target) && e.target !== btnSino && (!btnSino || !btnSino.contains(e.target))) {
+            if (!menu.contains(e.target) && e.target !== btnSino && !btnSino.contains(e.target)) {
                 _fecharDropdown();
             }
         });
@@ -640,9 +649,6 @@ window.NotificationManager = (function () {
         _escutarEventos();
         _criarBotaoSom();
         _configurar();
-        if (!_getBtn()) {
-            setTimeout(_configurar, 300);
-        }
         if (typeof window._aplicarEstadoMuteNotif === 'function') {
             window._aplicarEstadoMuteNotif(window._storageComExpiracao.get('rdo_notif_muted', false) === true);
         }
@@ -664,116 +670,6 @@ window.NotificationManager = (function () {
         alternarMudo: _alternarMudo,
         somEstaMutado: _somEstaMutado
     };
-})();
-
-window.PedidosDropdown = (function () {
-    var pedidosAtuais = [];
-    var btn = document.getElementById('btn-dropdown-pedidos');
-    var painel = document.getElementById('dropdown-pedidos-lista');
-    var inputBusca = document.getElementById('busca-pedido-id');
-    var listaItens = document.getElementById('lista-pedidos-itens');
-
-    function abrir() {
-        if (!btn || !painel || !inputBusca) return;
-        if (window.NotificationManager && typeof window.NotificationManager.close === 'function') {
-            window.NotificationManager.close();
-        }
-        posicionarPainel();
-        painel.style.display = 'flex';
-        requestAnimationFrame(function () { painel.classList.add('show'); });
-        inputBusca.value = '';
-        inputBusca.focus();
-        renderizarLista(pedidosAtuais);
-        document.addEventListener('click', fecharAoClicarFora, true);
-    }
-
-    function fechar() {
-        if (!painel) return;
-        painel.classList.remove('show');
-        setTimeout(function () {
-            if (!painel.classList.contains('show')) painel.style.display = 'none';
-        }, 180);
-        document.removeEventListener('click', fecharAoClicarFora, true);
-    }
-
-    function fecharAoClicarFora(e) {
-        if (!painel || !btn) return;
-        if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) fechar();
-    }
-
-    function posicionarPainel() {
-        if (!btn || !painel) return;
-        var rect = btn.getBoundingClientRect();
-        var larguraPainel = 320;
-        var left = rect.right - larguraPainel;
-        if (left < 8) left = 8;
-        painel.style.position = 'fixed';
-        painel.style.top = (rect.bottom + 6) + 'px';
-        painel.style.left = left + 'px';
-        painel.style.right = 'auto';
-    }
-
-    function renderizarLista(pedidos) {
-        if (!listaItens) return;
-        if (!pedidos || pedidos.length === 0) {
-            listaItens.innerHTML = '<div class="px-3 py-3 text-muted text-center"><small>Nenhum pedido encontrado</small></div>';
-            return;
-        }
-
-        listaItens.innerHTML = pedidos.map(function (p) {
-            var idExibicao = p.idFormatado || p.id;
-            return '<div class="pedido-item" data-pedido-id="' + p.id + '">' +
-                '<div class="pedido-item-info">' +
-                '<span class="pedido-item-id">' + idExibicao + '</span>' +
-                '<span class="pedido-item-rota">' + (p.resumo || '') + '</span>' +
-                '</div></div>';
-        }).join('');
-
-        listaItens.querySelectorAll('.pedido-item').forEach(function (el) {
-            el.addEventListener('click', function () {
-                var id = el.getAttribute('data-pedido-id');
-                irParaPedidoNoChat(id);
-                fechar();
-            });
-        });
-    }
-
-    function filtrar(termo) {
-        termo = (termo || '').trim().toLowerCase();
-        if (!termo) { renderizarLista(pedidosAtuais); return; }
-        var filtrados = pedidosAtuais.filter(function (p) {
-            var idFmt = (p.idFormatado || '').toLowerCase();
-            var idBruto = String(p.id).toLowerCase();
-            return idFmt.includes(termo) || idBruto.includes(termo);
-        });
-        renderizarLista(filtrados);
-    }
-
-    function irParaPedidoNoChat(id) {
-        var msgEl = document.querySelector('#chat-messages-container [data-pedido-id="' + id + '"]');
-        if (!msgEl) return;
-        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        var wrapper = msgEl.closest('.message-wrapper') || msgEl;
-        wrapper.classList.add('pedido-highlight');
-        setTimeout(function () { wrapper.classList.remove('pedido-highlight'); }, 1600);
-    }
-
-    function setPedidos(lista) {
-        pedidosAtuais = lista || [];
-        if (painel && painel.classList.contains('show')) renderizarLista(pedidosAtuais);
-    }
-
-    function init() {
-        if (!btn || !painel || !inputBusca) return;
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var aberto = painel.classList.contains('show');
-            aberto ? fechar() : abrir();
-        });
-        inputBusca.addEventListener('input', function (e) { filtrar(e.target.value); });
-    }
-
-    return { init: init, setPedidos: setPedidos, abrir: abrir, fechar: fechar, close: fechar };
 })();
 
 function _atualizarHeaderCliente(nome, isOnline) {
@@ -884,46 +780,172 @@ window.loadModal = function (arquivo) {
     });
 };
 
-window.iniciarChat = function () { return window.carregarDados(); };
+function _inicializarListenersGlobaisChat() {
+    if (window._chatListenersRegistrados) return;
+    window._chatListenersRegistrados = true;
 
-document.addEventListener('input', function (e) {
-    if (!e.target) return;
-    if (e.target.id === 'p-contato') {
-        var val = e.target.value.replace(/\D/g, '');
-        e.target.value = typeof window.formatarTelefone === 'function'
-            ? window.formatarTelefone(val) : val;
-    }
-    if (e.target.id === 'chat-search') window.filtrarContatos();
-    if (e.target.closest && e.target.closest('#modalFormulario')) {
-        e.target.style.border = '';
-        e.target.style.boxShadow = '';
-    }
-    if (e.target.id === 'msg-input') {
-        e.target.style.border = '';
-        e.target.style.boxShadow = '';
-        e.target.setAttribute('placeholder', 'Digite o pedido...');
-    }
-});
+    document.addEventListener('input', function (e) {
+        if (!e.target) return;
+        if (e.target.id === 'p-contato') {
+            var val = e.target.value.replace(/\D/g, '');
+            e.target.value = typeof window.formatarTelefone === 'function'
+                ? window.formatarTelefone(val) : val;
+        }
+        if (e.target.id === 'chat-search') window.filtrarContatos();
+        if (e.target.closest && e.target.closest('#modalFormulario')) {
+            e.target.style.border = '';
+            e.target.style.boxShadow = '';
+        }
+        if (e.target.id === 'msg-input') {
+            e.target.style.border = '';
+            e.target.style.boxShadow = '';
+            e.target.setAttribute('placeholder', 'Digite o pedido...');
+        }
+    });
 
-document.addEventListener('change', function (e) {
-    if (!e.target) return;
-    if (e.target.closest && e.target.closest('#modalFormulario')) {
-        e.target.style.border = '';
-        e.target.style.boxShadow = '';
-        if (typeof window.calcularTudo === 'function') window.calcularTudo();
+    document.addEventListener('change', function (e) {
+        if (!e.target) return;
+        if (e.target.closest && e.target.closest('#modalFormulario')) {
+            e.target.style.border = '';
+            e.target.style.boxShadow = '';
+            if (typeof window.calcularTudo === 'function') window.calcularTudo();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (!e.target || e.target.id !== 'msg-input') return;
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.enviarMensagemGeral(); }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
+        if (window.AppRDO && window.AppRDO.isFetching) return;
+        if (typeof window.carregarDados === 'function') window.carregarDados();
+    });
+}
+
+_inicializarListenersGlobaisChat();
+
+window.PedidosDropdown = (function () {
+    var pedidosAtuais = [];
+    var btn = null;
+    var painel = null;
+    var inputBusca = null;
+    var listaItens = null;
+    var _inicializado = false;
+
+    function abrir() {
+        if (!btn || !painel || !inputBusca) return;
+        if (window.NotificationManager && typeof window.NotificationManager.close === 'function') {
+            window.NotificationManager.close();
+        }
+        posicionarPainel();
+        painel.style.display = 'flex';
+        requestAnimationFrame(function () { painel.classList.add('show'); });
+        inputBusca.value = '';
+        inputBusca.focus();
+        renderizarLista(pedidosAtuais);
+        document.addEventListener('click', fecharAoClicarFora, true);
     }
-});
 
-document.addEventListener('keydown', function (e) {
-    if (!e.target || e.target.id !== 'msg-input') return;
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.enviarMensagemGeral(); }
-});
+    function fechar() {
+        if (!painel) return;
+        painel.classList.remove('show');
+        setTimeout(function () {
+            if (!painel.classList.contains('show')) painel.style.display = 'none';
+        }, 180);
+        document.removeEventListener('click', fecharAoClicarFora, true);
+    }
 
-document.addEventListener('click', function (e) {
-    if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
-    if (window.AppRDO && window.AppRDO.isFetching) return;
-    if (typeof window.carregarDados === 'function') window.carregarDados();
-});
+    function fecharAoClicarFora(e) {
+        if (!painel || !btn) return;
+        if (!painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) fechar();
+    }
+
+    function posicionarPainel() {
+        if (!btn || !painel) return;
+        var rect = btn.getBoundingClientRect();
+        var larguraPainel = 320;
+        var left = rect.right - larguraPainel;
+        if (left < 8) left = 8;
+        painel.style.position = 'fixed';
+        painel.style.top = (rect.bottom + 6) + 'px';
+        painel.style.left = left + 'px';
+        painel.style.right = 'auto';
+    }
+
+    function renderizarLista(pedidos) {
+        if (!listaItens) return;
+        if (!pedidos || pedidos.length === 0) {
+            listaItens.innerHTML = '<div class="px-3 py-3 text-muted text-center"><small>Nenhum pedido encontrado</small></div>';
+            return;
+        }
+
+        listaItens.innerHTML = pedidos.map(function (p) {
+            var idExibicao = p.idFormatado || p.id;
+            return '<div class="pedido-item" data-pedido-id="' + p.id + '">' +
+                '<div class="pedido-item-info">' +
+                '<span class="pedido-item-id">' + idExibicao + '</span>' +
+                '<span class="pedido-item-rota">' + (p.resumo || '') + '</span>' +
+                '</div></div>';
+        }).join('');
+
+        listaItens.querySelectorAll('.pedido-item').forEach(function (el) {
+            el.addEventListener('click', function () {
+                var id = el.getAttribute('data-pedido-id');
+                irParaPedidoNoChat(id);
+                fechar();
+            });
+        });
+    }
+
+    function filtrar(termo) {
+        termo = (termo || '').trim().toLowerCase();
+        if (!termo) { renderizarLista(pedidosAtuais); return; }
+        var filtrados = pedidosAtuais.filter(function (p) {
+            var idFmt = (p.idFormatado || '').toLowerCase();
+            var idBruto = String(p.id).toLowerCase();
+            return idFmt.includes(termo) || idBruto.includes(termo);
+        });
+        renderizarLista(filtrados);
+    }
+
+    function irParaPedidoNoChat(id) {
+        var msgEl = document.querySelector('#chat-messages-container [data-pedido-id="' + id + '"]');
+        if (!msgEl) return;
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var wrapper = msgEl.closest('.message-wrapper') || msgEl;
+        wrapper.classList.add('pedido-highlight');
+        setTimeout(function () { wrapper.classList.remove('pedido-highlight'); }, 1600);
+    }
+
+    function setPedidos(lista) {
+        pedidosAtuais = lista || [];
+        if (painel && painel.classList.contains('show')) renderizarLista(pedidosAtuais);
+    }
+
+    function init() {
+        if (_inicializado) return;
+
+        btn = document.getElementById('btn-dropdown-pedidos');
+        painel = document.getElementById('dropdown-pedidos-lista');
+        inputBusca = document.getElementById('busca-pedido-id');
+        listaItens = document.getElementById('lista-pedidos-itens');
+
+        if (!btn || !painel || !inputBusca) return;
+
+        _inicializado = true;
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var aberto = painel.classList.contains('show');
+            aberto ? fechar() : abrir();
+        });
+        inputBusca.addEventListener('input', function (e) { filtrar(e.target.value); });
+    }
+
+    return { init: init, setPedidos: setPedidos, abrir: abrir, fechar: fechar, close: fechar };
+})();
 
 window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
@@ -1119,6 +1141,7 @@ function _parseMoedaSeguro(valor) {
     var num = parseFloat(str);
     return isNaN(num) ? 0 : num;
 }
+
 window._parseMoedaSeguro = _parseMoedaSeguro;
 
 function _formatarNomeServico(idBruto) {
@@ -1371,13 +1394,6 @@ function _resolverTextoMensagem(msg, pedido) {
     var textoSalvo = msg && msg.texto != null ? String(msg.texto).trim() : '';
     if (textoSalvo.length > 0) return textoSalvo;
     if (!pedido) return null;
-    var distancia = parseFloat(String(pedido.distancia || pedido.distanciaTotal || '0').replace(',', '.')) || 0;
-    var tempo = String(pedido.tempo || pedido.tempoFormatado || '').trim();
-    var tempoMin = 0;
-    var mH = tempo.match(/(\d+)h/);
-    var mM = tempo.match(/(\d+)min/);
-    if (mH) tempoMin += parseInt(mH[1]) * 60;
-    if (mM) tempoMin += parseInt(mM[1]);
 
     return window.gerarMensagemFormatada({
         id: String(pedido.id || '').trim(),
@@ -1386,9 +1402,9 @@ function _resolverTextoMensagem(msg, pedido) {
         mercadoria: String(pedido.mercadoria || 'ENTREGA').trim(),
         de: String(pedido.de || '').trim(),
         para: String(pedido.para || '').trim(),
-        distanciaTotal: distancia,
-        tempoTotal: tempoMin,
-        valorEstimado: _parseMoedaSeguro(pedido.valor_total || pedido.valor_final || 0)
+        distanciaTotal: _parseMoedaSeguro(pedido.distancia || 0),
+        tempoTotal: _parseMoedaSeguro(pedido.tempo || 0),
+        valorEstimado: _parseMoedaSeguro(pedido.valor_corrida || 0)
     });
 }
 
@@ -1560,6 +1576,8 @@ window.renderizarMensagens = function (mensagens, pedidos) {
 
     var ultimaData = null;
     mensagens.forEach(function (msg) {
+        var pedidoId = String(msg.pedido_id || '').trim();
+
         var labelData = window.formatarDataSeparador(msg.data || null);
         if (labelData && labelData !== ultimaData) {
             ultimaData = labelData;
@@ -1570,7 +1588,7 @@ window.renderizarMensagens = function (mensagens, pedidos) {
         }
 
         var pedido = pedidos.find(function (p) {
-            return String(p.id).trim() === String(msg.pedido_id).trim();
+            return String(p.id).trim() === pedidoId;
         });
 
         var statusBruto = String(pedido ? pedido.status : '').trim();
@@ -1589,7 +1607,7 @@ window.renderizarMensagens = function (mensagens, pedidos) {
         if (textoMensagem === null) return;
 
         container.appendChild(
-            _criarWrapperMensagem(msg.pedido_id, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
+            _criarWrapperMensagem(pedidoId, textoMensagem, msg.hora || '', temStatus, statusPuro, tooltipTexto)
         );
     });
 
@@ -1961,7 +1979,7 @@ window.StatusModal = (function () {
                         cancelButtonColor: '#6c757d', reverseButtons: true,
                         customClass: { popup: 'rounded-4', confirmButton: 'rounded-3', cancelButton: 'rounded-3' }
                     }).then(function (result) {
-                        if (result.isConfirmed) _executarAlteracao('Concluido');
+                        if (result.isConfirmed) _executarAlteracao('CONCLUIDO');
                     }).catch(function (e) { window._exibirErroGlobal(e, 'confirmar conclusão'); });
                 }, 300);
             }

@@ -8,6 +8,37 @@ window.API = (function () {
     var _cache = {};
     var CACHE_TTL_MS = 30000;
 
+    var MAPA_CHAVE_ARRAY = {
+        getclientes: 'clientes',
+        getchat: 'chat',
+        getpedidos: 'pedidos',
+        getcolaboradores: 'colaboradores',
+        getfinanceiro: 'financeiro',
+        getrelatorios: 'relatorios',
+        getextratos: 'extratos'
+    };
+
+    function extrairArrayDaResposta(action, result) {
+        if (!result || typeof result !== 'object') return result;
+        if (Array.isArray(result)) return result;
+
+        var acaoLower = String(action || '').toLowerCase();
+
+        var chaveMapeada = MAPA_CHAVE_ARRAY[acaoLower];
+        if (chaveMapeada && Array.isArray(result[chaveMapeada])) {
+            return result[chaveMapeada];
+        }
+
+        if (Array.isArray(result.data)) return result.data;
+
+        var chaves = Object.keys(result);
+        for (var i = 0; i < chaves.length; i++) {
+            if (Array.isArray(result[chaves[i]])) return result[chaves[i]];
+        }
+
+        return result;
+    }
+
     function snakeToCamel(str) {
         return str.replace(/_([a-z0-9])/g, function (_, letra) {
             return letra.toUpperCase();
@@ -151,9 +182,13 @@ window.API = (function () {
                     invalidarCacheRelacionado(action);
                 }
 
+                // ✅ Unwrap automático do array quando a action for "getXXX"
+                if (String(action || '').toLowerCase().indexOf('get') === 0) {
+                    result = extrairArrayDaResposta(action, result);
+                }
+
                 return result;
-            })
-            .catch(function (err) {
+            }).catch(function (err) {
                 if (timeoutId) clearTimeout(timeoutId);
 
                 if (err && err.name === 'AbortError') {

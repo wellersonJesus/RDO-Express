@@ -126,12 +126,6 @@ function ehCampoMonetario(chave) {
   return CAMPOS_MONETARIOS.indexOf(chave) !== -1;
 }
 
-function capitalizar(texto) {
-  var t = String(texto || "").trim();
-  if (!t) return "";
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
-}
-
 function timestampAtual() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
 }
@@ -170,13 +164,7 @@ function formatarMoeda(valor) {
 }
 
 function doPost(e) {
-  var lock = LockService.getScriptLock();
-  var temLock = false;
   try {
-    temLock = lock.tryLock(10000);
-    if (!temLock) {
-      return responder({ status: "error", message: "Sistema ocupado, tente novamente em alguns segundos." });
-    }
     if (!e || !e.postData || !e.postData.contents) {
       return responder({ status: "error", message: "Payload vazio" });
     }
@@ -202,121 +190,161 @@ function doPost(e) {
     if (action.indexOf("edit") === 0) {
       action = "update" + action.substring(4);
     }
-    if (action === "login") {
-      return responder(processarLogin(data.username, data.password));
+
+    var acoesLeitura = ["login", "debuginfo", "heartbeat", "getusuariosonline",
+      "getpedidosrapido", "getdashboarddata",
+      "getfinanceirocompleto", "validarsenhamaster"];
+
+    var precisaLock = acoesLeitura.indexOf(action) === -1 && action.indexOf("get") !== 0;
+
+    if (!precisaLock) {
+      return processarAcaoSemLock(action, data);
     }
-    if (!data.apiKey || data.apiKey !== SECRET_KEY) {
-      return responder({ status: "error", message: "Acesso Negado" });
-    }
-    var ss;
+
+    var lock = LockService.getScriptLock();
+    var temLock = false;
     try {
-      ss = SpreadsheetApp.getActiveSpreadsheet();
-    } catch (errSS) {
-      return responder({ status: "error", message: "Erro ao abrir planilha: " + errSS.toString() });
+      temLock = lock.tryLock(10000);
+      if (!temLock) {
+        return responder({ status: "error", message: "Sistema ocupado, tente novamente em alguns segundos." });
+      }
+      return processarAcaoComLock(action, data);
+    } finally {
+      if (temLock) lock.releaseLock();
     }
-    if (action === "debuginfo") {
-      var abaPed = buscarAba(ss, "pedidos");
-      var abaFin = buscarAba(ss, "financeiro");
-      return responder({
-        status: "success",
-        spreadsheet_id: ss.getId(),
-        spreadsheet_url: ss.getUrl(),
-        aba_pedidos_linhas: abaPed ? abaPed.getLastRow() : "aba nao encontrada",
-        aba_financeiro_linhas: abaFin ? abaFin.getLastRow() : "aba nao encontrada"
-      });
-    }
-    if (action === "heartbeat") {
-      var sheetUsuariosHb = buscarAba(ss, "usuarios");
-      return responder(processarHeartbeat(sheetUsuariosHb, data.username));
-    }
-    if (action === "getusuariosonline") {
-      var sheetUsuariosOn = buscarAba(ss, "usuarios");
-      return responder(processarGetUsuariosOnline(sheetUsuariosOn));
-    }
-    if (action === "getpedidosrapido") {
-      var sheetPedRapido = buscarAba(ss, "pedidos");
-      if (!sheetPedRapido) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
-      return responder(processarGetPedidosRapido(sheetPedRapido));
-    }
-    if (action === "getchatpedido") {
-      var sheetChatRapido = buscarAba(ss, "chat");
-      if (!sheetChatRapido) return responder({ status: "error", message: "Aba 'chat' nao encontrada" });
-      return responder(processarGetChatPedido(sheetChatRapido, data.pedido_id || data.id_pedido || data.id));
-    }
-    if (action === "getdashboarddata") {
-      return responder(processarGetDashboardData(ss));
-    }
-    if (action === "criarpedido") {
-      var sheetPedidos = buscarAba(ss, "pedidos");
-      if (!sheetPedidos) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
-      return responder(processarCriarPedido(sheetPedidos, data));
-    }
-    if (action === "criarchat" || action === "addchat" || action === "savechat") {
-      return responder({ status: "error", message: "Acao bloqueada. O chat e criado automaticamente junto com o pedido." });
-    }
-    if (action === "getfinanceirocompleto") {
-      return responder(processarGetFinanceiroCompleto());
-    }
-    if (action === "validarsenhamaster") {
-      return responder(processarValidarSenhaMaster(data.senha));
-    }
-    if (action === "deletechat") {
-      return responder(processarDeleteChat(ss, data));
-    }
-    if (action === "excluirpedidocompleto") {
-      return responder(processarExclusaoCompleta(ss, data));
-    }
-    if (action === "salvarrelatoriofinanceiro" || action === "addrelatoriofinanceiro" || action === "criarrelatoriofinanceiro") {
-      var sheetRelFin = buscarAba(ss, "relatorios");
-      if (!sheetRelFin) return responder({ status: "error", message: "Aba 'relatorios' nao encontrada" });
-      return responder(processarSalvarRelatorioFinanceiro(sheetRelFin, data));
-    }
-    if (action === "salvarextrato" || action === "addextrato" || action === "criarextrato") {
-      var sheetExt = buscarAba(ss, "extratos");
-      if (!sheetExt) return responder({ status: "error", message: "Aba 'extratos' nao encontrada" });
-      return responder(processarSalvarExtrato(sheetExt, data));
-    }
+  } catch (err) {
+    console.error("[doPost] Erro interno: " + err.toString() + " | Stack: " + (err.stack || "n/a"));
+    return responder({ status: "error", message: "Erro interno: " + err.toString(), stack: err.stack || "n/a" });
+  }
+}
+
+function processarAcaoSemLock(action, data) {
+  if (action === "login") {
+    return responder(processarLogin(data.username, data.password));
+  }
+  if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+    return responder({ status: "error", message: "Acesso Negado" });
+  }
+  var ss;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (errSS) {
+    return responder({ status: "error", message: "Erro ao abrir planilha: " + errSS.toString() });
+  }
+  if (action === "debuginfo") {
+    var abaPed = buscarAba(ss, "pedidos");
+    var abaFin = buscarAba(ss, "financeiro");
+    return responder({
+      status: "success",
+      spreadsheet_id: ss.getId(),
+      spreadsheet_url: ss.getUrl(),
+      aba_pedidos_linhas: abaPed ? abaPed.getLastRow() : "aba nao encontrada",
+      aba_financeiro_linhas: abaFin ? abaFin.getLastRow() : "aba nao encontrada"
+    });
+  }
+  if (action === "heartbeat") {
+    var sheetUsuariosHb = buscarAba(ss, "usuarios");
+    return responder(processarHeartbeat(sheetUsuariosHb, data.username));
+  }
+  if (action === "getusuariosonline") {
+    var sheetUsuariosOn = buscarAba(ss, "usuarios");
+    return responder(processarGetUsuariosOnline(sheetUsuariosOn));
+  }
+  if (action === "getpedidosrapido") {
+    var sheetPedRapido = buscarAba(ss, "pedidos");
+    if (!sheetPedRapido) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
+    return responder(processarGetPedidosRapido(sheetPedRapido));
+  }
+  if (action === "getdashboarddata") {
+    return responder(processarGetDashboardData(ss));
+  }
+  if (action === "getfinanceirocompleto") {
+    return responder(processarGetFinanceiroCompleto());
+  }
+  if (action === "validarsenhamaster") {
+    return responder(processarValidarSenhaMaster(data.senha));
+  }
+
+  if (action.indexOf("get") === 0) {
     var entidade = extrairEntidade(action);
     var nomeAba = mapearEntidade(entidade);
     var sheet = buscarAba(ss, nomeAba);
     if (!sheet) {
       return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
     }
-    if (action.indexOf("get") === 0) {
-      return responder(processarGetComCache(sheet, nomeAba));
-    }
-    if (action.indexOf("add") === 0 || action.indexOf("save") === 0 || action.indexOf("criar") === 0) {
-      var resAdd = processarAdd(sheet, data, nomeAba);
-      if (resAdd.status === "success") invalidarCache(nomeAba);
-      return responder(resAdd);
-    }
-    if (action.indexOf("update") === 0) {
-      var resUpd = processarUpdateComSincronia(ss, sheet, nomeAba, data);
-      if (resUpd.status === "success" || resUpd.status === "partial_error") {
-        invalidarCache(nomeAba);
-        invalidarCache("pedidos");
-        invalidarCache("financeiro");
-      }
-      return responder(resUpd);
-    }
-    if (action.indexOf("delete") === 0) {
-      if (nomeAba === "pedidos") {
-        var resExc = processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" });
-        invalidarCache("pedidos");
-        invalidarCache("chat");
-        return responder(resExc);
-      }
-      var resDel = processarDelete(sheet, data.id);
-      if (resDel.status === "success") invalidarCache(nomeAba);
-      return responder(resDel);
-    }
-    return responder({ status: "error", message: "Acao nao suportada: " + action });
-  } catch (err) {
-    console.error("[doPost] Erro interno: " + err.toString() + " | Stack: " + (err.stack || "n/a"));
-    return responder({ status: "error", message: "Erro interno: " + err.toString(), stack: err.stack || "n/a" });
-  } finally {
-    if (temLock) lock.releaseLock();
+    return responder(processarGetComCache(sheet, nomeAba));
   }
+
+  return responder({ status: "error", message: "Acao nao suportada (sem lock): " + action });
+}
+
+function processarAcaoComLock(action, data) {
+  if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+    return responder({ status: "error", message: "Acesso Negado" });
+  }
+  var ss;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (errSS) {
+    return responder({ status: "error", message: "Erro ao abrir planilha: " + errSS.toString() });
+  }
+  if (action === "criarpedido") {
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    if (!sheetPedidos) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
+    return responder(processarCriarPedido(sheetPedidos, data));
+  }
+  if (action === "criarchat" || action === "addchat" || action === "savechat") {
+    return responder({ status: "error", message: "Acao bloqueada. O chat e criado automaticamente junto com o pedido." });
+  }
+  if (action === "deletechat") {
+    return responder(processarDeleteChat(ss, data));
+  }
+  if (action === "excluirpedidocompleto") {
+    return responder(processarExclusaoCompleta(ss, data));
+  }
+  if (action === "salvarrelatoriofinanceiro" || action === "addrelatoriofinanceiro" || action === "criarrelatoriofinanceiro") {
+    var sheetRelFin = buscarAba(ss, "relatorios");
+    if (!sheetRelFin) return responder({ status: "error", message: "Aba 'relatorios' nao encontrada" });
+    return responder(processarSalvarRelatorioFinanceiro(sheetRelFin, data));
+  }
+  if (action === "salvarextrato" || action === "addextrato" || action === "criarextrato") {
+    var sheetExt = buscarAba(ss, "extratos");
+    if (!sheetExt) return responder({ status: "error", message: "Aba 'extratos' nao encontrada" });
+    return responder(processarSalvarExtrato(sheetExt, data));
+  }
+
+  var entidade = extrairEntidade(action);
+  var nomeAba = mapearEntidade(entidade);
+  var sheet = buscarAba(ss, nomeAba);
+  if (!sheet) {
+    return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
+  }
+  if (action.indexOf("add") === 0 || action.indexOf("save") === 0 || action.indexOf("criar") === 0) {
+    var resAdd = processarAdd(sheet, data, nomeAba);
+    if (resAdd.status === "success") invalidarCache(nomeAba);
+    return responder(resAdd);
+  }
+  if (action.indexOf("update") === 0) {
+    var resUpd = processarUpdateComSincronia(ss, sheet, nomeAba, data);
+    if (resUpd.status === "success" || resUpd.status === "partial_error") {
+      invalidarCache(nomeAba);
+      invalidarCache("pedidos");
+      invalidarCache("financeiro");
+    }
+    return responder(resUpd);
+  }
+  if (action.indexOf("delete") === 0) {
+    if (nomeAba === "pedidos") {
+      var resExc = processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" });
+      invalidarCache("pedidos");
+      invalidarCache("chat");
+      return responder(resExc);
+    }
+    var resDel = processarDelete(sheet, data.id);
+    if (resDel.status === "success") invalidarCache(nomeAba);
+    return responder(resDel);
+  }
+  return responder({ status: "error", message: "Acao nao suportada (com lock): " + action });
 }
 
 function processarGetPedidosRapido(sheet) {
@@ -343,36 +371,6 @@ function processarGetPedidosRapido(sheet) {
     return { status: "success", data: resultado, total: resultado.length };
   } catch (err) {
     return { status: "error", message: "Erro em processarGetPedidosRapido: " + err.toString() };
-  }
-}
-
-function processarGetChatPedido(sheet, pedidoId) {
-  try {
-    if (!pedidoId) return { status: "error", message: "pedido_id nao informado" };
-    var lastRow = sheet.getLastRow();
-    var lastCol = sheet.getLastColumn();
-    if (lastRow <= 1) return { status: "success", data: [], total: 0 };
-    var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-    var headers = range[0].map(function (h) { return String(h).toLowerCase().trim(); });
-    var colPedidoId = headers.indexOf("pedido_id");
-    if (colPedidoId === -1) return { status: "error", message: "Coluna 'pedido_id' nao encontrada na aba chat" };
-    var idBusca = String(pedidoId).trim().toUpperCase();
-    var idBuscaNorm = idBusca.replace(/^RDO0*/i, "").trim();
-    var resultado = [];
-    for (var i = 1; i < range.length; i++) {
-      var valCelula = String(range[i][colPedidoId]).trim().toUpperCase();
-      var valNorm = valCelula.replace(/^RDO0*/i, "").trim();
-      if (valCelula === idBusca || valNorm === idBuscaNorm) {
-        var obj = {};
-        for (var j = 0; j < headers.length; j++) {
-          if (headers[j] !== "") obj[headers[j]] = converterValorCelula(range[i][j]);
-        }
-        resultado.push(obj);
-      }
-    }
-    return { status: "success", data: resultado, total: resultado.length };
-  } catch (err) {
-    return { status: "error", message: "Erro em processarGetChatPedido: " + err.toString() };
   }
 }
 
@@ -431,13 +429,13 @@ function processarUpdateComSincronia(ss, sheet, nomeAba, data) {
             var idBuscaCanc = String(data.id).trim().toUpperCase();
             for (var lp = 1; lp < valuesPed.length; lp++) {
               if (String(valuesPed[lp][idIdxPed]).trim().toUpperCase() === idBuscaCanc) {
-                sheetPedidosRef.getRange(lp + 1, colSitFinIdx + 1).setValue("Cancelado");
+                sheetPedidosRef.getRange(lp + 1, colSitFinIdx + 1).setValue("CANCELADO");
                 SpreadsheetApp.flush();
                 break;
               }
             }
           }
-          data["_forcarSituacaoFinanceira"] = "Cancelado";
+          data["_forcarSituacaoFinanceira"] = "CANCELADO";
         }
       }
       if (chaveSituacaoPed !== null || data["_forcarSituacaoFinanceira"]) {
@@ -466,7 +464,7 @@ function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
     if (idIndex === -1 || colSitFinIndex === -1) return false;
     var idBusca = String(idPedido).trim().toUpperCase();
     var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
-    var sitFormatada = capitalizar(novaSituacao);
+    var sitFormatada = String(novaSituacao || "").trim().toUpperCase();
     for (var i = 1; i < values.length; i++) {
       var idCelula = String(values[i][idIndex]).trim().toUpperCase();
       var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
@@ -501,7 +499,7 @@ function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
     if (idPedidoIndex === -1 || colSituacaoIndex === -1) return false;
     var idBusca = String(idPedido).trim().toUpperCase();
     var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
-    var sitFormatada = capitalizar(novaSituacao);
+    var sitFormatada = String(novaSituacao || "").trim().toUpperCase();
     var atualizou = false;
     for (var i = 1; i < values.length; i++) {
       var idCelula = String(values[i][idPedidoIndex]).trim().toUpperCase();
@@ -523,44 +521,6 @@ function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
     console.error("Erro em sincronizarSituacaoPedidoComFinanceiro: " + err.toString());
     return false;
   }
-}
-
-function resolverColaboradorId(ss, nomeMotoboy) {
-  if (!nomeMotoboy) return "";
-
-  var sheetColaboradores = buscarAba(ss, "colaboradores");
-  if (!sheetColaboradores) return "";
-
-  var values = sheetColaboradores.getDataRange().getValues();
-  if (values.length === 0) return "";
-
-  var headers = values[0].map(function (h) { return normalizarChave(h); });
-  var idIndex = headers.indexOf("id");
-  var nomeIndex = headers.indexOf("nome");
-
-  if (idIndex === -1 || nomeIndex === -1) return "";
-
-  var nomeBuscaNormalizado = normalizarNomeColaborador(nomeMotoboy);
-
-  for (var i = 1; i < values.length; i++) {
-    var nomeCelula = String(values[i][nomeIndex] || "").trim();
-    if (normalizarNomeColaborador(nomeCelula) === nomeBuscaNormalizado) {
-      return String(values[i][idIndex] || "").trim();
-    }
-  }
-
-  return "";
-}
-
-function normalizarNomeColaborador(nome) {
-  if (!nome) return "";
-
-  var resultado = String(nome).trim().toUpperCase();
-  resultado = resultado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  resultado = resultado.replace(/\s+/g, " ");
-  resultado = resultado.replace(/[^A-Z0-9 ]/g, "");
-
-  return resultado.trim();
 }
 
 function processarGetDashboardData(ss) {
@@ -877,6 +837,8 @@ function processarCriarPedido(sheetPedidos, data) {
       dataStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
     }
     var agoraTimestamp = timestampAtual();
+    var distanciaReal = String(data.distancia || "").trim();
+    var tempoReal = String(data.tempo || "").trim();
 
     if (sheetChat && idCliente && !chatJaExiste(sheetChat, idPedido)) {
       var textoChat = montarTextoChat(idPedido, data);
@@ -905,7 +867,7 @@ function processarCriarPedido(sheetPedidos, data) {
       invalidarCache("chat");
     }
 
-    var situacaoFinanceira = capitalizar(data.situacao_financeira || "Pendente");
+    var situacaoFinanceira = String(data.situacao_financeira || "PENDENTE").trim().toUpperCase();
     var valorFormatado = formatarMoeda(data.valor_corrida || data.valor_final || "");
     var rowData = {
       id: idPedido,
@@ -922,8 +884,10 @@ function processarCriarPedido(sheetPedidos, data) {
       retorno: String(data.retorno || ""),
       prioridade: String(data.prioridade || "N/A"),
       valor_corrida: valorFormatado,
+      distancia: distanciaReal,
+      tempo: tempoReal,
       motoboy: String(data.motoboy || ""),
-      status: String(data.status || "PENDENTE"),
+      status: String(data.status || "PENDENTE").trim().toUpperCase(),
       situacao_financeira: situacaoFinanceira,
       observacao: String(data.observacao || data.obs || "")
     };
@@ -1126,7 +1090,7 @@ function processarSalvarRelatorioFinanceiro(sheet, data) {
       vlr_servico: formatarMoeda(data.vlr_servico || "0"),
       colaborador: String(data.colaborador || ""),
       observacao: typeof data.observacao === "string" ? data.observacao : JSON.stringify(data.observacao || {}),
-      situacao: String(data.situacao || "Concluído")
+      situacao: String(data.situacao || "CONCLUIDO").trim().toUpperCase()
     };
     var row = [];
     for (var i = 0; i < headers.length; i++) {
@@ -1139,7 +1103,7 @@ function processarSalvarRelatorioFinanceiro(sheet, data) {
       escreverComoTexto(sheet, sheet.getLastRow(), colDataIdx + 1, rowData.data);
     }
     invalidarCache("relatorios");
-    return { status: "success", id: id, message: "Relatório financeiro salvo com sucesso!" };
+    return { status: "success", id: id, message: "Relatorio financeiro salvo com sucesso!" };
   } catch (err) {
     return { status: "error", message: "Erro em processarSalvarRelatorioFinanceiro: " + err.toString() };
   }
@@ -1218,8 +1182,7 @@ function processarAdd(sheet, data, entity) {
       var campo = headersNorm[i];
       var valor = "";
       if (campo === "status" && dataNorm[campo] !== undefined && dataNorm[campo] !== null && dataNorm[campo] !== "") {
-        var statusVal = String(dataNorm[campo]).trim().toUpperCase();
-        valor = (statusVal === "TRUE" || statusVal === "FALSE") ? statusVal : String(dataNorm[campo]).trim();
+        valor = String(dataNorm[campo]).trim().toUpperCase();
       } else if (campo === "contato" && dataNorm.telefone && !dataNorm.contato) {
         valor = String(dataNorm.telefone).trim();
       } else if (campo === "data_criacao" && !dataNorm.data_criacao) {
@@ -1229,9 +1192,11 @@ function processarAdd(sheet, data, entity) {
       } else if (campo === "data" && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
         valor = normalizarDataStr(dataNorm[campo]);
       } else if (campo === "situacao" && !dataNorm.situacao) {
-        valor = "Pendente";
+        valor = "PENDENTE";
       } else if (campo === "situacao_financeira" && !dataNorm.situacao_financeira) {
-        valor = "Pendente";
+        valor = "PENDENTE";
+      } else if ((campo === "situacao" || campo === "situacao_financeira") && dataNorm[campo]) {
+        valor = String(dataNorm[campo]).trim().toUpperCase();
       } else if (ehCampoMonetario(campo) && dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
         valor = formatarMoeda(dataNorm[campo]);
       } else if (dataNorm[campo] !== undefined && dataNorm[campo] !== null) {
@@ -1313,8 +1278,8 @@ function _escreverValorPorTipo(sheet, linha, colIndex, chaveFinal, valor) {
     escreverComoTexto(sheet, linha, colIndex + 1, String(valor || ""));
   } else if (ehCampoMonetario(chaveFinal)) {
     escreverComoTexto(sheet, linha, colIndex + 1, formatarMoeda(valor));
-  } else if (chaveFinal === "situacao" || chaveFinal === "situacao_financeira") {
-    sheet.getRange(linha, colIndex + 1).setValue(capitalizar(valor));
+  } else if (chaveFinal === "situacao" || chaveFinal === "situacao_financeira" || chaveFinal === "status") {
+    sheet.getRange(linha, colIndex + 1).setValue(String(valor || "").trim().toUpperCase());
   } else {
     if (valor !== null && typeof valor === "object") valor = JSON.stringify(valor);
     sheet.getRange(linha, colIndex + 1).setValue(valor === null || valor === undefined ? "" : valor);
