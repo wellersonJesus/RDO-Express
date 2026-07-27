@@ -783,7 +783,7 @@ def carregar_colaboradores():
 
     for item in dados:
         try:
-            nome = str(item.get("nome") or item.get("colaborador") or "").strip()
+            nome = str(item.get("username") or item.get("nome") or "").strip()
             colaborador_id = item.get("id") or item.get("colaborador_id") or ""
             if not nome or not colaborador_id:
                 registrar_erro("COLABORADOR_SEM_NOME_OU_ID", item)
