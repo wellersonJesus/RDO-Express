@@ -6,6 +6,7 @@ import string
 import logging
 import signal
 import sys
+import unicodedata
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +55,7 @@ CLIENTES = {}
 CLIENTES_NORMALIZADOS = {}
 COLABORADORES = {}
 CLIENTES_PENDENTES = set()
+CLIENTES_UPDATED_NESTA_EXECUCAO = set()
 COLABORADORES_PENDENTES = set()
 
 RDOS_EXISTENTES = set()
@@ -61,6 +63,8 @@ RDO_SEQ = 0
 
 FIN_IDS_EXISTENTES = set()
 FIN_SEQ = 0
+
+RDOS_COM_FINANCEIRO = set()
 
 CHAT_IDS_EXISTENTES = set()
 
@@ -109,8 +113,8 @@ PADRAO_SOLICITANTE = re.compile(
     re.IGNORECASE
 )
 
-ULTIMO_RDO_LANCADO = "RDO0730"
-FILTRO_DATA_INICIO = "24/07/2026"
+ULTIMO_RDO_LANCADO = "RDO000"
+FILTRO_DATA_INICIO = "01/07/2026"
 FILTRO_DATA_FIM = "25/07/2026"
 
 PAGAMENTO_SEMANAL = [
@@ -236,9 +240,20 @@ def determinar_pagamento_cliente(nome_cliente):
         return "DIÁRIO"
 
 
-def post(payload, tentativas=MAX_TENTATIVAS_POST):
+def post(payload, tentativas=MAX_TENTATIVAS_POST, verificar_existencia=None):
     ultimo_erro = None
     for tentativa in range(1, tentativas + 1):
+        if tentativa > 1 and verificar_existencia is not None:
+            try:
+                if verificar_existencia():
+                    logger.warning(
+                        "Ação '%s' já parece ter sido concluída no servidor antes do retry; abortando reenvio para evitar duplicidade.",
+                        payload.get("action"),
+                    )
+                    return {"status": "success", "id": payload.get("id"), "skip_retry_duplicado": True}
+            except Exception as exc_verif:
+                registrar_erro("ERRO_VERIFICAR_EXISTENCIA_ANTES_RETRY", f"ação='{payload.get('action')}': {exc_verif}", exc=exc_verif)
+
         try:
             resp = SESSAO.post(URL, json=payload, timeout=TIMEOUT_CONEXAO)
         except requests.exceptions.Timeout as exc:
@@ -340,6 +355,15 @@ def verificar_ids_duplicados():
         for fin_id, qtd in sorted(duplicados_financeiro.items()):
             registrar_erro("FIN_DUPLICADO", f"ID '{fin_id}' aparece {qtd}x na tabela financeiro")
 
+    ids_pedido_financeiro = [str(item.get("id_pedido", "")).strip().upper() for item in financeiros if item.get("id_pedido")]
+    contagem_pedido_financeiro = Counter(ids_pedido_financeiro)
+    pedidos_com_financeiro_duplicado = {rdo: qtd for rdo, qtd in contagem_pedido_financeiro.items() if qtd > 1}
+
+    if pedidos_com_financeiro_duplicado:
+        problemas_encontrados = True
+        for rdo_id, qtd in sorted(pedidos_com_financeiro_duplicado.items()):
+            registrar_erro("PEDIDO_COM_FINANCEIRO_DUPLICADO", f"Pedido '{rdo_id}' tem {qtd} lançamentos financeiros")
+
     try:
         chats = _buscar_lista("getchat")
     except (ErroApi, ErroFatalGeracao) as exc:
@@ -398,12 +422,16 @@ def carregar_fin_ids_existentes():
     ids = set()
     maior = 0
     maior_id_str = None
+    rdos_com_financeiro = set()
     try:
         dados = _buscar_lista("getfinanceiro")
         for item in dados:
             fin_id = str(item.get("id", "")).strip().upper()
             if fin_id:
                 ids.add(fin_id)
+            id_pedido = str(item.get("id_pedido", "")).strip().upper()
+            if id_pedido:
+                rdos_com_financeiro.add(id_pedido)
             match = FIN_PATTERN.match(fin_id)
             if match:
                 numero = int(match.group(1))
@@ -420,7 +448,7 @@ def carregar_fin_ids_existentes():
     else:
         logger.info("Nenhum ID financeiro no padrão FIN localizado. Iniciando a partir de FIN000.")
 
-    return ids, maior
+    return ids, maior, rdos_com_financeiro
 
 
 def carregar_chat_ids_existentes():
@@ -499,31 +527,24 @@ def proximo_chat_id():
     return candidato
 
 
-def carregar_colaboradores():
+def verificar_financeiro_ja_existe(rdo_id):
     try:
-        dados = _buscar_lista("getcolaboradores")
-    except (ErroApi, ErroFatalGeracao) as exc:
-        logger.critical("Falha crítica ao carregar colaboradores: %s", exc)
-        raise ErroFatalGeracao(f"Não foi possível carregar colaboradores: {exc}") from exc
-    except Exception as exc:
-        logger.critical("Erro inesperado ao carregar colaboradores: %s\n%s", exc, traceback.format_exc())
-        raise ErroFatalGeracao(f"Erro inesperado ao carregar colaboradores: {exc}") from exc
+        resultado = post({"action": "getchatpedido", "apiKey": API_KEY, "pedido_id": rdo_id})
+    except Exception:
+        return False
+    return False
 
-    mapa = {}
+
+def _financeiro_existe_para_pedido(rdo_id):
+    try:
+        dados = _buscar_lista("getfinanceiro")
+    except Exception:
+        return False
+    rdo_upper = str(rdo_id).strip().upper()
     for item in dados:
-        try:
-            nome = str(item.get("username", "")).strip().upper()
-            if not nome:
-                registrar_erro("COLABORADOR_SEM_USERNAME", item)
-                continue
-            colaborador_id = item.get("id")
-            if colaborador_id is None:
-                registrar_erro("COLABORADOR_SEM_ID", f"'{nome}': {item}")
-            mapa[nome] = colaborador_id
-        except Exception as exc:
-            registrar_erro("ERRO_PROCESSAR_COLABORADOR", f"item={item!r}: {exc}", exc=exc)
-    logger.info("Colaboradores carregados: %d", len(mapa))
-    return mapa
+        if str(item.get("id_pedido", "")).strip().upper() == rdo_upper:
+            return True
+    return False
 
 
 def carregar_clientes():
@@ -580,13 +601,16 @@ def garantir_cliente(nome_cliente, responsavel=""):
             return None
 
         if nome_upper in CLIENTES:
-            return CLIENTES[nome_upper]
+            cliente_id_existente = CLIENTES[nome_upper]
+            _atualizar_updated_at_cliente(cliente_id_existente, nome_upper)
+            return cliente_id_existente
 
         chave_norm = _normalizar_nome_cliente(nome_upper)
         if chave_norm in CLIENTES_NORMALIZADOS:
             cliente_id_canonico, nome_canonico = CLIENTES_NORMALIZADOS[chave_norm]
             logger.info("Cliente '%s' associado ao cadastro canônico '%s' (id=%s) via normalização.", nome_upper, nome_canonico, cliente_id_canonico)
             CLIENTES[nome_upper] = cliente_id_canonico
+            _atualizar_updated_at_cliente(cliente_id_canonico, nome_canonico)
             return cliente_id_canonico
 
         if nome_upper in CLIENTES_PENDENTES:
@@ -631,6 +655,28 @@ def garantir_cliente(nome_cliente, responsavel=""):
     except Exception as exc:
         registrar_erro("ERRO_INESPERADO_GARANTIR_CLIENTE", f"cliente={nome_cliente!r}: {exc}", exc=exc)
         return None
+
+
+def _atualizar_updated_at_cliente(cliente_id, nome_cliente):
+    if not cliente_id or cliente_id in CLIENTES_UPDATED_NESTA_EXECUCAO:
+        return
+    try:
+        payload = {
+            "action": "updatecliente",
+            "apiKey": API_KEY,
+            "id": cliente_id,
+            "updated_at": timestamp_atual(),
+        }
+        resultado = post(payload)
+        if resultado and resultado.get("status") == "success":
+            CLIENTES_UPDATED_NESTA_EXECUCAO.add(cliente_id)
+            logger.info("Cliente existente atualizado (updated_at): %s (id=%s)", nome_cliente, cliente_id)
+        else:
+            registrar_erro("FALHA_ATUALIZAR_UPDATED_AT_CLIENTE", f"'{nome_cliente}' (id={cliente_id}): resposta={resultado!r}")
+    except ErroApi as exc:
+        registrar_erro("FALHA_ATUALIZAR_UPDATED_AT_CLIENTE", f"'{nome_cliente}' (id={cliente_id}): {exc}", exc=exc)
+    except Exception as exc:
+        registrar_erro("ERRO_INESPERADO_ATUALIZAR_UPDATED_AT_CLIENTE", f"'{nome_cliente}' (id={cliente_id}): {exc}", exc=exc)
 
 
 def definir_prioridade(endereco, observacao):
@@ -711,21 +757,59 @@ def extrair_solicitante(observacao_bruta, cliente_nome):
         return "N/A"
 
 
-def definir_colaborador(motoboy_raw):
+def normalizar_nome_colaborador(nome):
+    if not nome:
+        return ""
+
+    nome = str(nome).strip().upper()
+    nome = unicodedata.normalize("NFKD", nome)
+    nome = "".join(c for c in nome if not unicodedata.combining(c))
+    nome = re.sub(r"\s+", " ", nome)
+    nome = re.sub(r"[^A-Z0-9 ]", "", nome)
+
+    return nome.strip()
+
+
+def carregar_colaboradores():
+    resultado = {}
     try:
-        nome = (motoboy_raw or "").strip().upper()
-        if not nome or nome == "-":
-            registrar_erro("COLABORADOR_VAZIO", "campo 'colaborador' vazio na linha bruta; registrado como 'N/A'")
-            return "N/A"
-
-        if nome not in COLABORADORES:
-            COLABORADORES_PENDENTES.add(nome)
-            registrar_erro("COLABORADOR_NAO_CADASTRADO", f"'{nome}' não encontrado no cadastro (getcolaboradores)")
-
-        return nome
+        dados = _buscar_lista("getcolaboradores")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        registrar_erro("FALHA_CARREGAR_COLABORADORES", exc, exc=exc)
+        return resultado
     except Exception as exc:
-        registrar_erro("ERRO_DEFINIR_COLABORADOR", f"motoboy_raw={motoboy_raw!r}: {exc}", exc=exc)
-        return "N/A"
+        registrar_erro("ERRO_INESPERADO_CARREGAR_COLABORADORES", exc, exc=exc)
+        return resultado
+
+    for item in dados:
+        try:
+            nome = str(item.get("nome") or item.get("colaborador") or "").strip()
+            colaborador_id = item.get("id") or item.get("colaborador_id") or ""
+            if not nome or not colaborador_id:
+                registrar_erro("COLABORADOR_SEM_NOME_OU_ID", item)
+                continue
+            chave_norm = normalizar_nome_colaborador(nome)
+            resultado[chave_norm] = colaborador_id
+        except Exception as exc:
+            registrar_erro("ERRO_PROCESSAR_COLABORADOR", f"item={item!r}: {exc}", exc=exc)
+
+    logger.info("Colaboradores carregados: %d.", len(resultado))
+    return resultado
+
+
+def definir_colaborador(motoboy_raw):
+    global COLABORADORES_PENDENTES
+
+    if not motoboy_raw or not str(motoboy_raw).strip():
+        return ""
+
+    nome_normalizado = normalizar_nome_colaborador(motoboy_raw)
+
+    if nome_normalizado in COLABORADORES:
+        return nome_normalizado
+
+    COLABORADORES_PENDENTES.add(motoboy_raw.strip())
+    return nome_normalizado
 
 
 def parse_linha(linha):
@@ -915,6 +999,8 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
 
 def criar_pedido(consolidado):
     rdo_id = consolidado["rdo_id"]
+    motoboy_final = consolidado["motoboy_final"]
+    colaborador_id = COLABORADORES.get(motoboy_final) or ""
     try:
         payload = {
             "action": "criarpedido",
@@ -933,25 +1019,22 @@ def criar_pedido(consolidado):
             "retorno": "NÃO",
             "prioridade": definir_prioridade(consolidado["endereco_para"], consolidado["observacao"]),
             "valor_corrida": consolidado["valor_rs"],
-            "motoboy": consolidado["motoboy_final"],
+            "valor_final": consolidado["valor_rs"],
+            "motoboy": motoboy_final,
+            "colaborador_id": colaborador_id,
             "status": consolidado["status_final"],
             "situacao_financeira": SITUACAO_FINANCEIRO_PADRAO,
             "observacao": consolidado["observacao"],
         }
-
-        try:
-            resultado = post(payload)
-        except ErroApi as exc:
-            registrar_erro("FALHA_CRIAR_PEDIDO", f"RDO {rdo_id}: {exc}", exc=exc)
-            return False, str(exc)
-
+        resultado = post(payload)
         if not resultado or resultado.get("status") != "success":
-            detalhe = f"resposta={resultado!r}"
-            registrar_erro("FALHA_CRIAR_PEDIDO", f"RDO {rdo_id}: {detalhe}")
-            return False, detalhe
-
-        logger.info("Pedido criado: %s | data=%s | cliente=%s | id_cliente=%s", rdo_id, consolidado["data_str"], consolidado["cliente_nome"], consolidado["id_cliente"])
+            registrar_erro("FALHA_CRIAR_PEDIDO", f"RDO {rdo_id}: resposta={resultado!r}")
+            return False, f"resposta={resultado!r}"
+        logger.info("Pedido criado: %s (financeiro gerado automaticamente pelo AppScript)", rdo_id)
         return True, None
+    except ErroApi as exc:
+        registrar_erro("FALHA_CRIAR_PEDIDO", f"RDO {rdo_id}: {exc}", exc=exc)
+        return False, str(exc)
     except Exception as exc:
         registrar_erro("ERRO_INESPERADO_CRIAR_PEDIDO", f"RDO {rdo_id}: {exc}", exc=exc)
         return False, str(exc)
@@ -960,6 +1043,11 @@ def criar_pedido(consolidado):
 def criar_financeiro(consolidado):
     rdo_id = consolidado["rdo_id"]
     motoboy_final = consolidado["motoboy_final"]
+
+    if rdo_id in RDOS_COM_FINANCEIRO:
+        registrar_erro("FINANCEIRO_JA_CRIADO_SKIP", f"RDO {rdo_id}: já existe lançamento financeiro para este pedido; ignorando para evitar duplicidade.")
+        return True, None
+
     fin_id = proximo_fin_id()
     try:
         colaborador_id = COLABORADORES.get(motoboy_final)
@@ -985,7 +1073,10 @@ def criar_financeiro(consolidado):
         }
 
         try:
-            resultado = post(payload)
+            resultado = post(
+                payload,
+                verificar_existencia=lambda: _financeiro_existe_para_pedido(rdo_id),
+            )
         except ErroApi as exc:
             registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {exc}", exc=exc)
             return False, str(exc)
@@ -994,6 +1085,8 @@ def criar_financeiro(consolidado):
             detalhe = f"resposta={resultado!r}"
             registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {detalhe}")
             return False, detalhe
+
+        RDOS_COM_FINANCEIRO.add(rdo_id)
 
         logger.info("Financeiro lançado: %s (pedido=%s) | data=%s | colaborador=%s (id=%s) | tipo=%s | valor=%s", fin_id, rdo_id, consolidado["data_str"], motoboy_final, colaborador_id, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
         return True, None
@@ -1068,7 +1161,7 @@ def exibir_resumo_erros():
 
 
 def main():
-    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, FIN_IDS_EXISTENTES, FIN_SEQ, CHAT_IDS_EXISTENTES
+    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, FIN_IDS_EXISTENTES, FIN_SEQ, CHAT_IDS_EXISTENTES, RDOS_COM_FINANCEIRO
 
     try:
         verificar_ids_duplicados()
@@ -1078,9 +1171,10 @@ def main():
         RDOS_EXISTENTES = carregar_rdos_existentes()
         RDO_SEQ = determinar_rdo_seq_inicial(RDOS_EXISTENTES)
 
-        FIN_IDS_EXISTENTES, maior_fin = carregar_fin_ids_existentes()
+        FIN_IDS_EXISTENTES, maior_fin, RDOS_COM_FINANCEIRO = carregar_fin_ids_existentes()
         FIN_SEQ = maior_fin + 1
         logger.info("Sequência financeira iniciando em FIN%03d.", FIN_SEQ)
+        logger.info("Pedidos que já possuem financeiro lançado: %d.", len(RDOS_COM_FINANCEIRO))
 
         CHAT_IDS_EXISTENTES = carregar_chat_ids_existentes()
 
@@ -1123,7 +1217,10 @@ def main():
 
                 if not ok_pedido:
                     total_falha += 1
-                    logger.error("RDO %s: pedido não criado, financeiro/chat serão ignorados. Motivo: %s", rdo_id, erro_pedido)
+                    registrar_erro(
+                        "RDO_FALHA_PEDIDO_SEM_FINANCEIRO",
+                        f"RDO {rdo_id}: pedido não criado, financeiro e chat foram ignorados. Motivo: {erro_pedido}"
+                    )
                     continue
 
                 ok_financeiro, erro_financeiro = criar_financeiro(consolidado)

@@ -525,6 +525,44 @@ function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
   }
 }
 
+function resolverColaboradorId(ss, nomeMotoboy) {
+  if (!nomeMotoboy) return "";
+
+  var sheetColaboradores = buscarAba(ss, "colaboradores");
+  if (!sheetColaboradores) return "";
+
+  var values = sheetColaboradores.getDataRange().getValues();
+  if (values.length === 0) return "";
+
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idIndex = headers.indexOf("id");
+  var nomeIndex = headers.indexOf("nome");
+
+  if (idIndex === -1 || nomeIndex === -1) return "";
+
+  var nomeBuscaNormalizado = normalizarNomeColaborador(nomeMotoboy);
+
+  for (var i = 1; i < values.length; i++) {
+    var nomeCelula = String(values[i][nomeIndex] || "").trim();
+    if (normalizarNomeColaborador(nomeCelula) === nomeBuscaNormalizado) {
+      return String(values[i][idIndex] || "").trim();
+    }
+  }
+
+  return "";
+}
+
+function normalizarNomeColaborador(nome) {
+  if (!nome) return "";
+
+  var resultado = String(nome).trim().toUpperCase();
+  resultado = resultado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  resultado = resultado.replace(/\s+/g, " ");
+  resultado = resultado.replace(/[^A-Z0-9 ]/g, "");
+
+  return resultado.trim();
+}
+
 function processarGetDashboardData(ss) {
   try {
     var sheetClientes = buscarAba(ss, "clientes");
@@ -907,36 +945,6 @@ function processarCriarPedido(sheetPedidos, data) {
     }
     invalidarCache("pedidos");
 
-    var sheetFinanceiro = buscarAba(ss, "financeiro");
-    if (sheetFinanceiro) {
-      var idFinanceiro = gerarId(sheetFinanceiro, "financeiro");
-      var headersFin = obterHeaders(sheetFinanceiro);
-      var rowDataFin = {
-        id: idFinanceiro,
-        updated_at: agoraTimestamp,
-        colaborador_id: String(data.colaborador_id || ""),
-        id_pedido: idPedido,
-        pedido_id: idPedido,
-        data: dataStr,
-        tipo: "Corrida",
-        descricao: "Referente ao pedido " + idPedido,
-        vlr_servico: valorFormatado,
-        colaborador: String(data.motoboy || ""),
-        observacao: "",
-        situacao: "Pendente"
-      };
-      var rowFin = [];
-      for (var f = 0; f < headersFin.length; f++) {
-        var campoFin = normalizarChave(headersFin[f]);
-        rowFin.push(rowDataFin[campoFin] !== undefined ? rowDataFin[campoFin] : "");
-      }
-      sheetFinanceiro.appendRow(rowFin);
-      var colDataFinIdx = headersFin.map(normalizarChave).indexOf("data");
-      if (colDataFinIdx !== -1) {
-        escreverComoTexto(sheetFinanceiro, sheetFinanceiro.getLastRow(), colDataFinIdx + 1, dataStr);
-      }
-      invalidarCache("financeiro");
-    }
     SpreadsheetApp.flush();
     return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
   } catch (err) {
