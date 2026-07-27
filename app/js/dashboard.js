@@ -1031,6 +1031,11 @@ function navegarParaFinanceiroPedido(pedidoId) {
     window.AppRDO = window.AppRDO || {};
     window.AppRDO._pedidoAlvoFinanceiro = idAlvo;
 
+    // ✅ invalida a referência da execução anterior do script,
+    // forçando o polling a esperar a NOVA closure de fin.js carregar.
+    window.tentarAbrirPedidoFinanceiro = null;
+    window.FinanceiroModule = null;
+
     if (typeof window.loadPage === 'function') {
         window.loadPage('fin', 'Financeiro', 'Gestão financeira');
     } else {
@@ -1088,6 +1093,11 @@ function navegarParaRelatorioDoPedido(pedidoId, idCliente) {
     var periodo = _obterPeriodoTodosPedidosAbertosDash(idClienteAlvo);
     window.AppRDO._periodoAlvoRelatorio = periodo;
 
+    // ✅ CORREÇÃO: invalida as referências da execução anterior do script,
+    // forçando o polling a esperar a NOVA closure de relatorio.js carregar.
+    window.initRelatorios = null;
+    window._abrirRelatorioAutomaticoDoPedido = null;
+
     if (typeof window.loadPage === 'function') {
         window.loadPage('relatorio', 'Relatórios', 'Relatórios do cliente');
     } else {
@@ -1109,7 +1119,7 @@ function aguardarRelatorioEDispararEvento(pedidoId, idCliente, periodo, tentativ
     if (tentativas < 40) {
         setTimeout(function () { aguardarRelatorioEDispararEvento(pedidoId, idCliente, periodo, tentativas + 1); }, 100);
     } else {
-        console.warn('[navegarParaRelatorioDoPedido] relatorios.js não inicializou a tempo.');
+        console.warn('[navegarParaRelatorioDoPedido] relatorio.js não inicializou a tempo.');
     }
 }
 

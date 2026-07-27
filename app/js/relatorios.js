@@ -1289,7 +1289,7 @@
     }
   }
 
-  function registrarEventos() {
+  function registrarEventosLocais() {
     document.querySelectorAll('.rel-tab').forEach(function (tab) {
       tab.addEventListener('click', function (e) {
         e.preventDefault();
@@ -1359,6 +1359,14 @@
       });
     }
 
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (els.builderOverlay && els.builderOverlay.style.display === 'flex') fecharBuilder();
+      else if (els.modalOverlay && els.modalOverlay.style.display === 'flex') fecharModalRelatorio();
+    });
+  }
+
+  function registrarEventosGlobais() {
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (els.builderOverlay && els.builderOverlay.style.display === 'flex') fecharBuilder();
@@ -1847,11 +1855,8 @@
   }
 
   function carregarDados() {
-    if (state.fetching) return;
-    if (!window.API || typeof window.API.call !== 'function') {
-      relToast('API não disponível.', 'danger');
-      return;
-    }
+    if (state.fetching || window._relatorioFetchEmAndamento) return;
+    window._relatorioFetchEmAndamento = true;
     state.fetching = true;
     spinOn();
     exibirLoadingListas();
@@ -1877,17 +1882,35 @@
       relToast('Erro ao carregar dados: ' + err.message, 'danger');
     }).finally(function () {
       state.fetching = false;
+      window._relatorioFetchEmAndamento = false;
       spinOff();
     });
   }
 
+  let _eventosGlobaisRegistrados = false;
+
   function initRelatorios() {
-    if (inicializado) return;
-    inicializado = true;
-    bind();
-    carregarRelatoriosLocal();
-    registrarEventos();
-    carregarDados();
+    bind(); // sempre rebind, pois o DOM pode ter sido recriado pelo loadPage
+
+    if (!inicializado) {
+      inicializado = true;
+      carregarRelatoriosLocal();
+    }
+
+    registrarEventosLocais(); // eventos ligados aos elementos da página (sempre re-executa, DOM é novo)
+
+    if (!_eventosGlobaisRegistrados) {
+      _eventosGlobaisRegistrados = true;
+      registrarEventosGlobais(); // document/window - só uma vez
+    }
+
+    if (state.motoboys.length || state.clientes.length || state.pedidos.length) {
+      popularSelectMotoboys();
+      popularSelectClientes();
+      renderizarListas();
+    }
+
+    if (!state.fetching) carregarDados();
   }
 
   function _clientePorId(idCliente) {
@@ -2021,17 +2044,19 @@
 
   let _tokenRelatorioAutomatico = 0;
 
-  function abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId) {
+  function abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId, periodoExterno) {
     const meuToken = ++_tokenRelatorioAutomatico;
-    _executarAberturaAutomatica(pedidoId, clienteId, meuToken);
+    _executarAberturaAutomatica(pedidoId, clienteId, periodoExterno, meuToken);
   }
 
-  function _executarAberturaAutomatica(pedidoId, clienteId, meuToken) {
+  window._abrirRelatorioAutomaticoDoPedido = abrirRelatorioAutomaticoDoPedido; // ✅ agora está aqui
+
+  function _executarAberturaAutomatica(pedidoId, clienteId, periodoExterno, meuToken) {
     if (meuToken !== _tokenRelatorioAutomatico) return;
 
     if (state.fetching || !state.clientes.length || !state.pedidos.length) {
       setTimeout(function () {
-        _executarAberturaAutomatica(pedidoId, clienteId, meuToken);
+        _executarAberturaAutomatica(pedidoId, clienteId, periodoExterno, meuToken);
       }, 400);
       return;
     }
@@ -2054,12 +2079,17 @@
 
     if (meuToken !== _tokenRelatorioAutomatico) return;
 
-    // Fecha explicitamente QUALQUER modal/overlay que possa estar aberto
     fecharModalRelatorio();
     fecharBuilder();
     window.dispatchEvent(new CustomEvent('fecharDashboardPedido'));
 
-    const periodo = _calcularPeriodoPagamentoCliente(cliente, pedido);
+    let periodo;
+    if (periodoExterno && periodoExterno.inicio && periodoExterno.fim) {
+      periodo = { inicio: periodoExterno.inicio, fim: periodoExterno.fim };
+    } else {
+      periodo = _calcularPeriodoPagamentoCliente(cliente, pedido);
+    }
+
     const filtroExtra = { campo: 'cliente_id', valor: [String(cliente.id)] };
 
     state.tabAtual = 'clientes';
@@ -2070,23 +2100,30 @@
     const contentClientes = document.getElementById('rel-tab-content-clientes');
     if (contentClientes) contentClientes.classList.add('active');
 
-    // Pequeno delay para garantir que o fechamento do modal anterior finalize
-    // antes de renderizar o overlay do builder (evita conflito de z-index/overflow)
     setTimeout(function () {
       iniciarBuilder('clientes', periodo, filtroExtra);
       relToast('Relatório do cliente "' + resolverValor('clientes', 'username', cliente) + '" pronto para gerar.', 'info');
     }, 50);
   }
 
-  window.addEventListener('abrirRelatorioDoPedido', function (e) {
-    const pedidoId = e.detail && e.detail.pedidoId;
-    const clienteId = e.detail && e.detail.clienteId;
-    if (!pedidoId && !clienteId) return;
+  if (!window._relatorioListenerAbrirPedido) {
+    window._relatorioListenerAbrirPedido = true;
 
-    if (typeof window.initRelatorios === 'function') window.initRelatorios();
+    window.addEventListener('abrirRelatorioDoPedido', function (e) {
+      const pedidoId = e.detail && e.detail.pedidoId;
+      const clienteId = e.detail && e.detail.clienteId;
+      const periodo = e.detail && e.detail.periodo;
+      if (!pedidoId && !clienteId) return;
 
-    abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId);
-  });
+      if (typeof window.initRelatorios === 'function') window.initRelatorios();
+
+      // Sempre delega para a função MAIS RECENTE exposta em window,
+      // nunca para a closure antiga desta execução do script.
+      if (typeof window._abrirRelatorioAutomaticoDoPedido === 'function') {
+        window._abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId, periodo);
+      }
+    });
+  }
 
   function agruparPorMotoboyFinanceiro(registrosFinanceiro) {
     const mapa = {};

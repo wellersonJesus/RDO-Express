@@ -35,6 +35,7 @@ if (!window.EventBus) {
   var CAIXA_PERIODO_MAX = 50;
   var caixaPeriodoAtual = { inicio: '', fim: '', registros: [] };
   var CAIXA_BUSCA_SESSION_KEY = 'rdo_caixa_busca_atual';
+  var _tokenAbrirPedidoFinanceiro = 0;
 
   var state = {
     cache: [],
@@ -3685,20 +3686,29 @@ if (!window.EventBus) {
     btnAbrir.addEventListener('click', abrirOverlay);
   }
 
-  function tentarAbrirPedidoFinanceiro(tentativas) {
+  function tentarAbrirPedidoFinanceiro(tentativas, meuToken) {
     tentativas = tentativas || 0;
+
+    if (meuToken === undefined) {
+      meuToken = ++_tokenAbrirPedidoFinanceiro;
+    }
+
+    if (meuToken !== _tokenAbrirPedidoFinanceiro) return;
+
     var pedidoId = window.AppRDO && window.AppRDO._pedidoAlvoFinanceiro;
     if (!pedidoId) return;
 
     if (!state.cache.length || state.fetching) {
       if (tentativas < 40) {
-        setTimeout(function () { tentarAbrirPedidoFinanceiro(tentativas + 1); }, 200);
+        setTimeout(function () { tentarAbrirPedidoFinanceiro(tentativas + 1, meuToken); }, 200);
         return;
       }
       finToast('Não foi possível carregar os dados financeiros para localizar o pedido.', 'warning');
       window.AppRDO._pedidoAlvoFinanceiro = null;
       return;
     }
+
+    if (meuToken !== _tokenAbrirPedidoFinanceiro) return;
 
     var idNorm = String(pedidoId).trim();
     var idNormSemPrefixo = idNorm.replace(/^RDO0*/i, '');
@@ -3715,13 +3725,11 @@ if (!window.EventBus) {
       return;
     }
 
-    // Garante que a aba "RDO" (data-tab="todos") está ativa
     var tabRDO = document.querySelector('.fin-tab[data-tab="todos"]');
     if (tabRDO && !tabRDO.classList.contains('active')) {
       tabRDO.click();
     }
 
-    // Aplica o filtro de busca pelo idPedido
     var termoFiltro = reg.idPedido || pedidoId;
     state.filtroBusca = termoFiltro;
 
@@ -3734,8 +3742,9 @@ if (!window.EventBus) {
     state.todos.pagina = 1;
     renderTodos();
 
-    // Aguarda a renderização, faz scroll até a linha e abre o modal
     setTimeout(function () {
+      if (meuToken !== _tokenAbrirPedidoFinanceiro) return;
+
       var tbody = document.getElementById('tabela-fin-body-todos');
       var linha = tbody ? tbody.querySelector('[data-id="' + reg.id + '"]') : null;
       if (linha) {
@@ -3756,14 +3765,16 @@ if (!window.EventBus) {
       if (!pedidoId) return;
       window.AppRDO = window.AppRDO || {};
       window.AppRDO._pedidoAlvoFinanceiro = pedidoId;
-      tentarAbrirPedidoFinanceiro();
+
+      if (typeof window.tentarAbrirPedidoFinanceiro === 'function') {
+        window.tentarAbrirPedidoFinanceiro();
+      }
     });
   }
 
   window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
 
   function init() {
-    if (_finJaInicializado) return;
     _finJaInicializado = true;
 
     bind();
@@ -3780,9 +3791,11 @@ if (!window.EventBus) {
     carregarDados: carregarDados,
     renderTodos: renderTodos,
     renderCaixa: renderCaixa,
+    tentarAbrirPedidoFinanceiro: tentarAbrirPedidoFinanceiro,
     init: init
   };
 
+  window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
   window.initFinanceiro = init;
 
   if (document.readyState === 'loading') {
@@ -3929,5 +3942,7 @@ if (!window.EventBus) {
       .finally(function () { _relatorioFinCarregando = null; });
     return _relatorioFinCarregando;
   }
+
+  window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
 
 })();
