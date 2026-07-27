@@ -814,7 +814,9 @@ function processarCriarPedido(sheetPedidos, data) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheetChat = buscarAba(ss, "chat");
     var idPedido = String(data.id || "").trim() || gerarId(sheetPedidos, "pedidos");
-    var idCliente = String(data.id_cliente || data.id_chat || "").trim();
+    var idCliente = String(
+      data.id_cliente || data.idCliente || data.id_chat || data.idChat || ""
+    ).trim();        
     var rotasTexto = String(data.rotas_texto || "");
     var deStr = "";
     var paraStr = "";

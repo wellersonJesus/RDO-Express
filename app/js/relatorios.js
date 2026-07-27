@@ -686,25 +686,10 @@
 
   function extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados) {
     const nomesTexto = [];
-
     clientesSelecionados.forEach(function (c) {
       const username = resolverValor('clientes', 'username', c);
-      if (!username) return;
-
-      nomesTexto.push(username);
-
-      state.clientes.forEach(function (outro) {
-        const resp = resolverValor('clientes', 'responsavel', outro);
-        if (!resp) return;
-        if (nomesRelacionados(resp, username)) {
-          const nomeMembro = resolverValor('clientes', 'username', outro);
-          if (nomeMembro && nomesTexto.indexOf(nomeMembro) === -1) {
-            nomesTexto.push(nomeMembro);
-          }
-        }
-      });
+      if (username) nomesTexto.push(username);
     });
-
     return nomesTexto;
   }
 
@@ -712,7 +697,7 @@
     if (!valor || !nomeAlvo) return false;
     const a = normalizarComparacao(valor);
     const b = normalizarComparacao(nomeAlvo);
-    if (!a || !b) return false;
+    if (!a || !b || a.length < 4 || b.length < 4) return false; // evita match de strings curtas
     return a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
   }
 
@@ -728,15 +713,16 @@
 
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
-    if (idPed && idsStr.indexOf(idPed) !== -1) return true;
+    if (idPed && idsStr.indexOf(idPed) !== -1) return true; // match por ID sempre prioritário
+
+    // Só cai no fallback textual se o pedido NÃO tiver id_cliente vinculado
+    if (idPed) return false;
 
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
-    if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
+    if (nomesAlvo.some(function (nome) { return nomesRelacionados(solicitante, nome); })) return true;
 
-    // ✅ NOVO: também verifica dentro da descrição/mercadoria
-    // (cobre casos como "MIMAME CAPS — Rua...", "TAMARA CAPS — Rua...")
     const mercadoria = resolverValor('pedidos', 'mercadoria', pedido);
-    if (valorCorrespondeNomesAlvo(mercadoria, nomesAlvo)) return true;
+    if (nomesAlvo.some(function (nome) { return nomesRelacionados(mercadoria, nome); })) return true;
 
     return false;
   }
@@ -1928,13 +1914,98 @@
     return { inicio: iso, fim: iso };
   }
 
-  function _irParaAbaClientes() {
-    const tabClientes = document.querySelector('.rel-tab[data-tab="clientes"]');
-    if (tabClientes) tabClientes.click();
-    else {
-      state.tabAtual = 'clientes';
-      renderizarListas();
+  function _obterHoraCorte(textoFechamento) {
+    const t = normalizarComparacao(textoFechamento);
+    return t.indexOf('INICIO') !== -1 ? 8 : 17;
+  }
+
+  function _obterDiaSemanaFechamento(textoFechamento) {
+    const t = normalizarComparacao(textoFechamento);
+    const DIAS = { DOMINGO: 0, SEGUNDA: 1, TERCA: 2, QUARTA: 3, QUINTA: 4, SEXTA: 5, SABADO: 6 };
+    const chaves = Object.keys(DIAS);
+    for (let i = 0; i < chaves.length; i++) {
+      if (t.indexOf(chaves[i]) !== -1) return DIAS[chaves[i]];
     }
+    return null;
+  }
+
+  function _obterDiasCorteMes(textoFechamento) {
+    const matches = String(textoFechamento || '').match(/\d{1,2}/g);
+    if (!matches) return [1];
+    let dias = matches.map(d => parseInt(d, 10)).filter(d => d >= 1 && d <= 31);
+    dias = dias.filter((v, i) => dias.indexOf(v) === i).sort((a, b) => a - b);
+    return dias.length ? dias : [1];
+  }
+
+  function _construirDataHora(ano, mes, dia, hora) {
+    return new Date(ano, mes, dia, hora, 0, 0, 0);
+  }
+
+  function _calcularPeriodoSemanal(cliente, agora) {
+    let diaSemana = _obterDiaSemanaFechamento(cliente.dia_fechamento);
+    if (diaSemana === null) diaSemana = 1;
+    const hora = _obterHoraCorte(cliente.dia_fechamento);
+
+    const cursor = new Date(agora);
+    cursor.setHours(0, 0, 0, 0);
+    const diff = (cursor.getDay() - diaSemana + 7) % 7;
+    const ultimoDia = new Date(cursor);
+    ultimoDia.setDate(cursor.getDate() - diff);
+    let ultimoFechamentoDatHora = _construirDataHora(ultimoDia.getFullYear(), ultimoDia.getMonth(), ultimoDia.getDate(), hora);
+
+    if (ultimoFechamentoDatHora > agora) {
+      ultimoDia.setDate(ultimoDia.getDate() - 7);
+      ultimoFechamentoDatHora = _construirDataHora(ultimoDia.getFullYear(), ultimoDia.getMonth(), ultimoDia.getDate(), hora);
+    }
+
+    const dataFinal = new Date(ultimoDia);
+    const dataInicial = new Date(ultimoDia);
+    dataInicial.setDate(dataInicial.getDate() - 6);
+
+    return { inicio: toISO(dataInicial), fim: toISO(dataFinal) };
+  }
+
+  function _calcularPeriodoMensalQuinzenal(cliente, agora) {
+    const dias = _obterDiasCorteMes(cliente.dia_fechamento);
+    const hora = _obterHoraCorte(cliente.dia_fechamento);
+
+    const candidatos = [];
+    [-1, 0, 1].forEach(offsetMes => {
+      dias.forEach(dia => {
+        candidatos.push(new Date(agora.getFullYear(), agora.getMonth() + offsetMes, dia, hora, 0, 0, 0));
+      });
+    });
+    candidatos.sort((a, b) => a - b);
+
+    let ultimoFechamento = null;
+    for (let i = candidatos.length - 1; i >= 0; i--) {
+      if (candidatos[i] <= agora) { ultimoFechamento = candidatos[i]; break; }
+    }
+    if (!ultimoFechamento) ultimoFechamento = candidatos[0];
+
+    const idx = candidatos.indexOf(ultimoFechamento);
+    const penultimoFechamento = idx > 0 ? candidatos[idx - 1] : null;
+
+    const dataFinal = new Date(ultimoFechamento.getFullYear(), ultimoFechamento.getMonth(), ultimoFechamento.getDate());
+    let dataInicial;
+    if (penultimoFechamento) {
+      dataInicial = new Date(penultimoFechamento.getFullYear(), penultimoFechamento.getMonth(), penultimoFechamento.getDate() + 1);
+    } else {
+      dataInicial = new Date(dataFinal);
+      dataInicial.setDate(dataInicial.getDate() - 14);
+    }
+
+    return { inicio: toISO(dataInicial), fim: toISO(dataFinal) };
+  }
+
+  function _calcularPeriodoPagamentoCliente(cliente, pedido) {
+    const agora = new Date();
+    const tipoPagamento = normalizarComparacao(cliente && cliente.pagamento ? cliente.pagamento : 'DIARIO');
+
+    if (tipoPagamento === 'SEMANAL') return _calcularPeriodoSemanal(cliente, agora);
+    if (tipoPagamento === 'QUINZENAL' || tipoPagamento === 'MENSAL') return _calcularPeriodoMensalQuinzenal(cliente, agora);
+
+    return _obterPeriodoExatoDoPedido(pedido);
   }
 
   function _obterPeriodoParaPedido(pedido) {
@@ -1948,9 +2019,20 @@
     return { inicio: toISO(inicio), fim: toISO(fim) };
   }
 
+  let _tokenRelatorioAutomatico = 0;
+
   function abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId) {
+    const meuToken = ++_tokenRelatorioAutomatico;
+    _executarAberturaAutomatica(pedidoId, clienteId, meuToken);
+  }
+
+  function _executarAberturaAutomatica(pedidoId, clienteId, meuToken) {
+    if (meuToken !== _tokenRelatorioAutomatico) return;
+
     if (state.fetching || !state.clientes.length || !state.pedidos.length) {
-      setTimeout(function () { abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId); }, 400);
+      setTimeout(function () {
+        _executarAberturaAutomatica(pedidoId, clienteId, meuToken);
+      }, 400);
       return;
     }
 
@@ -1958,12 +2040,8 @@
       return String(resolverValor('pedidos', 'id', p)).trim() === String(pedidoId).trim();
     });
 
-    // Sempre vai para a aba de Clientes primeiro, independente do resultado da busca
-    _irParaAbaClientes();
-
     let cliente = _clientePorId(clienteId) || (pedido ? _clientePorId(resolverValor('pedidos', 'id_cliente', pedido)) : null);
 
-    // Fallback: tenta casar pelo nome do solicitante do pedido
     if (!cliente && pedido) {
       const solicitante = resolverValor('pedidos', 'solicitante', pedido);
       cliente = _clientePorNomeAproximado(solicitante);
@@ -1974,12 +2052,30 @@
       return;
     }
 
-    const periodo = _obterPeriodoExatoDoPedido(pedido);
+    if (meuToken !== _tokenRelatorioAutomatico) return;
+
+    // Fecha explicitamente QUALQUER modal/overlay que possa estar aberto
+    fecharModalRelatorio();
+    fecharBuilder();
+    window.dispatchEvent(new CustomEvent('fecharDashboardPedido'));
+
+    const periodo = _calcularPeriodoPagamentoCliente(cliente, pedido);
     const filtroExtra = { campo: 'cliente_id', valor: [String(cliente.id)] };
 
-    iniciarBuilder('clientes', periodo, filtroExtra);
+    state.tabAtual = 'clientes';
+    document.querySelectorAll('.rel-tab').forEach(function (el) { el.classList.remove('active'); });
+    const tabClientes = document.querySelector('.rel-tab[data-tab="clientes"]');
+    if (tabClientes) tabClientes.classList.add('active');
+    document.querySelectorAll('.rel-tab-content').forEach(function (el) { el.classList.remove('active'); });
+    const contentClientes = document.getElementById('rel-tab-content-clientes');
+    if (contentClientes) contentClientes.classList.add('active');
 
-    relToast('Relatório do cliente "' + resolverValor('clientes', 'username', cliente) + '" pronto para gerar.', 'info');
+    // Pequeno delay para garantir que o fechamento do modal anterior finalize
+    // antes de renderizar o overlay do builder (evita conflito de z-index/overflow)
+    setTimeout(function () {
+      iniciarBuilder('clientes', periodo, filtroExtra);
+      relToast('Relatório do cliente "' + resolverValor('clientes', 'username', cliente) + '" pronto para gerar.', 'info');
+    }, 50);
   }
 
   window.addEventListener('abrirRelatorioDoPedido', function (e) {
@@ -1987,7 +2083,6 @@
     const clienteId = e.detail && e.detail.clienteId;
     if (!pedidoId && !clienteId) return;
 
-    // Garante que o módulo de relatórios já foi inicializado
     if (typeof window.initRelatorios === 'function') window.initRelatorios();
 
     abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId);
