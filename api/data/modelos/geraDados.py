@@ -1,6 +1,8 @@
 import os
 import time
 import re
+import random
+import string
 import logging
 import signal
 import sys
@@ -60,7 +62,12 @@ RDO_SEQ = 0
 FIN_IDS_EXISTENTES = set()
 FIN_SEQ = 0
 
+CHAT_IDS_EXISTENTES = set()
+
 REGISTRO_ERROS = []
+
+ID_ALFANUMERICO_TAMANHO = 11
+CARACTERES_ID = string.ascii_uppercase + string.digits
 
 
 def registrar_erro(tipo, detalhe, linha=None, exc=None):
@@ -88,6 +95,7 @@ STATUS_CLIENTE_PADRAO = "TRUE"
 STATUS_PEDIDO_PADRAO = "CONCLUIDO"
 TIPO_FINANCEIRO_PADRAO = "RECEITA"
 SITUACAO_FINANCEIRO_PADRAO = "PENDENTE"
+FINALIZADO_CHAT_PADRAO = "TRUE"
 
 RDO_PATTERN = re.compile(r"^RDO0*(\d+)$", re.IGNORECASE)
 FIN_PATTERN = re.compile(r"^FIN0*(\d+)$", re.IGNORECASE)
@@ -103,7 +111,7 @@ PADRAO_SOLICITANTE = re.compile(
 
 ULTIMO_RDO_LANCADO = "RDO0730"
 FILTRO_DATA_INICIO = "24/07/2026"
-FILTRO_DATA_FIM = "24/07/2026"
+FILTRO_DATA_FIM = "25/07/2026"
 
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS", "OPMINAS",
@@ -118,16 +126,13 @@ SINONIMOS_MANUAIS = {
     "OPIMINAS": "OPMINAS",
     "OPENMINAS": "OPMINAS",
     "OPMINAS": "OPMINAS",
-
     "MPITANGA": "MARIAPITANGA",
     "MARIAPITANGA": "MARIAPITANGA",
-
     "VALFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
     "VALFORTUNATOFORTUNATOFORTUNATOFORTUNATOFORTUNATO": "VALFORTUNATO",
-
     "ELISAATHENI": "ELISAATHENIENSE",
     "ELISAATHENIENSE": "ELISAATHENIENSE",
     "ELISAATHENICEARA": "ELISAATHENIENSECEARA",
@@ -135,38 +140,25 @@ SINONIMOS_MANUAIS = {
     "ELISAATHENIENSESCEARA": "ELISAATHENIENSECEARA",
     "ELISAATHENIENSEBOTANICO": "ELISAATHENIENSEBOTANICO",
     "ELISAATHENIENSEBOTANIICO": "ELISAATHENIENSEBOTANICO",
-
     "MIMAME": "MIMAME",
     "MIMAMES": "MIMAME",
-
     "NATUPET": "NATUPET",
     "NATUPETS": "NATUPET",
-
     "FFASHION": "FFFASHION",
     "FFFASHION": "FFFASHION",
-
     "CACALSHOW": "CACAUSHOW",
     "CACAUSHOW": "CACAUSHOW",
-
     "MAURICIO": "MAURICIO",
-
     "TAMARA": "TAMARA",
     "TAMARACAPS": "TAMARACAPS",
-
     "KOPENHAGEN": "KOPENHAGEN",
-
     "SMANOEL": "SMANOEL",
     "SAOMANOELINDUSTRIA": "SMANOEL",
-
     "CESTA": "CESTA",
-
     "BASIQUE": "BASIQUE",
-
     "ROSADALIA": "ROSADALIA",
-
     "INCLOSET": "INCLOSET",
     "INCLOSED": "INCLOSET",
-
     "PLURAL": "PLURAL",
     "BETEPLURAL": "BETEPLURAL",
     "BETEPLURALDIAMONDMALL": "BETEPLURALDIAMONDMALL",
@@ -183,6 +175,18 @@ class ErroApi(Exception):
         self.payload = payload
         self.resposta = resposta
         super().__init__(f"Falha na ação '{action}': resposta={resposta!r} payload={payload!r}")
+
+
+def gerar_id_alfanumerico(tamanho=ID_ALFANUMERICO_TAMANHO, excluidos=None):
+    excluidos = excluidos or set()
+    while True:
+        candidato = "".join(random.choices(CARACTERES_ID, k=tamanho))
+        if candidato not in excluidos:
+            return candidato
+
+
+def timestamp_atual():
+    return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 
 def _normalizar_nome(nome):
@@ -297,7 +301,7 @@ def _buscar_lista(action):
 
 
 def verificar_ids_duplicados():
-    logger.info("Verificando duplicidade de IDs no banco (pedidos e financeiro)...")
+    logger.info("Verificando duplicidade de IDs no banco (pedidos, financeiro e chat)...")
     problemas_encontrados = False
 
     try:
@@ -335,6 +339,24 @@ def verificar_ids_duplicados():
         problemas_encontrados = True
         for fin_id, qtd in sorted(duplicados_financeiro.items()):
             registrar_erro("FIN_DUPLICADO", f"ID '{fin_id}' aparece {qtd}x na tabela financeiro")
+
+    try:
+        chats = _buscar_lista("getchat")
+    except (ErroApi, ErroFatalGeracao) as exc:
+        registrar_erro("FALHA_BUSCA_CHAT", exc, exc=exc)
+        chats = []
+    except Exception as exc:
+        registrar_erro("ERRO_INESPERADO_BUSCA_CHAT", exc, exc=exc)
+        chats = []
+
+    ids_chat = [str(item.get("id", "")).strip().upper() for item in chats if item.get("id")]
+    contagem_chat = Counter(ids_chat)
+    duplicados_chat = {c: qtd for c, qtd in contagem_chat.items() if qtd > 1}
+
+    if duplicados_chat:
+        problemas_encontrados = True
+        for chat_id, qtd in sorted(duplicados_chat.items()):
+            registrar_erro("CHAT_DUPLICADO", f"ID '{chat_id}' aparece {qtd}x na tabela chat")
 
     ids_pedidos_com_financeiro = set()
     for item in financeiros:
@@ -401,6 +423,23 @@ def carregar_fin_ids_existentes():
     return ids, maior
 
 
+def carregar_chat_ids_existentes():
+    ids = set()
+    try:
+        dados = _buscar_lista("getchat")
+        for item in dados:
+            chat_id = str(item.get("id", "")).strip().upper()
+            if chat_id:
+                ids.add(chat_id)
+    except (ErroApi, ErroFatalGeracao) as exc:
+        registrar_erro("FALHA_CARREGAR_CHAT", exc, exc=exc)
+    except Exception as exc:
+        registrar_erro("ERRO_INESPERADO_CARREGAR_CHAT", exc, exc=exc)
+
+    logger.info("IDs de chat existentes localizados na API: %d.", len(ids))
+    return ids
+
+
 def _data_para_datetime(data_str):
     try:
         return datetime.strptime(data_str, "%d/%m/%Y")
@@ -429,11 +468,16 @@ def determinar_rdo_seq_inicial(rdos_existentes):
     return maior
 
 
+def _formatar_com_prefixo(prefixo, numero):
+    largura = max(3, len(str(numero)))
+    return f"{prefixo}{numero:0{largura}d}"
+
+
 def proximo_rdo_id():
     global RDO_SEQ
     while True:
         RDO_SEQ += 1
-        candidato = f"RDO{RDO_SEQ:03d}"
+        candidato = _formatar_com_prefixo("RDO", RDO_SEQ)
         if candidato not in RDOS_EXISTENTES:
             RDOS_EXISTENTES.add(candidato)
             return candidato
@@ -442,11 +486,17 @@ def proximo_rdo_id():
 def proximo_fin_id():
     global FIN_SEQ
     while True:
-        candidato = f"FIN{FIN_SEQ:03d}"
+        candidato = _formatar_com_prefixo("FIN", FIN_SEQ)
         FIN_SEQ += 1
         if candidato not in FIN_IDS_EXISTENTES:
             FIN_IDS_EXISTENTES.add(candidato)
             return candidato
+
+
+def proximo_chat_id():
+    candidato = gerar_id_alfanumerico(ID_ALFANUMERICO_TAMANHO, excluidos=CHAT_IDS_EXISTENTES)
+    CHAT_IDS_EXISTENTES.add(candidato)
+    return candidato
 
 
 def carregar_colaboradores():
@@ -545,10 +595,14 @@ def garantir_cliente(nome_cliente, responsavel=""):
 
         pagamento_identificado = determinar_pagamento_cliente(nome_upper)
         responsavel_final = (responsavel or "").strip()
+        ids_em_uso = {str(v).upper() for v in CLIENTES.values() if v}
+        novo_id_gerado = gerar_id_alfanumerico(ID_ALFANUMERICO_TAMANHO, excluidos=ids_em_uso)
 
         payload = {
             "action": "criarcliente",
             "apiKey": API_KEY,
+            "id": novo_id_gerado,
+            "updated_at": timestamp_atual(),
             "username": nome_upper,
             "responsavel": responsavel_final,
             "contato": "",
@@ -564,7 +618,7 @@ def garantir_cliente(nome_cliente, responsavel=""):
             return None
 
         if resultado and resultado.get("status") == "success":
-            novo_id = resultado.get("id") or nome_upper
+            novo_id = resultado.get("id") or novo_id_gerado
             CLIENTES[nome_upper] = novo_id
             CLIENTES_NORMALIZADOS[chave_norm] = (novo_id, nome_upper)
             logger.info("Cliente criado: %s (id=%s, pagamento=%s, responsavel=%s)", nome_upper, novo_id, pagamento_identificado, responsavel_final)
@@ -799,6 +853,27 @@ def montar_descricao_financeiro(dados, hora_str, valor_rs):
         return ""
 
 
+def montar_texto_chat(dados):
+    try:
+        tipo_servico = dados["tipo_servico"] or "ENTREGA"
+        cliente_nome = dados["cliente_nome"] or ""
+        endereco_para = dados["endereco_para"] or ""
+        observacao = dados["observacao_bruta"] or ""
+
+        partes = [tipo_servico]
+        if cliente_nome and cliente_nome != "-":
+            partes.append(f"de {cliente_nome}")
+        if endereco_para:
+            partes.append(f"para {endereco_para}")
+        if observacao:
+            partes.append(f"- {observacao}")
+
+        return " ".join(partes).strip()
+    except Exception as exc:
+        registrar_erro("ERRO_MONTAR_TEXTO_CHAT", f"dados={dados!r}: {exc}", exc=exc)
+        return ""
+
+
 def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
     try:
         data_str, hora_str = separar_data_hora(dados)
@@ -827,6 +902,7 @@ def montar_dados_consolidados(rdo_id, dados, id_cliente, motoboy_final):
             "hora_str": hora_str,
             "status_final": STATUS_PEDIDO_PADRAO,
             "descricao_final": montar_descricao_financeiro(dados, hora_str, valor_rs),
+            "texto_chat": montar_texto_chat(dados),
             "tipo_servico": tipo_servico,
             "endereco_para": endereco_para,
             "valor_rs": valor_rs,
@@ -844,6 +920,7 @@ def criar_pedido(consolidado):
             "action": "criarpedido",
             "apiKey": API_KEY,
             "id": rdo_id,
+            "updated_at": timestamp_atual(),
             "id_cliente": consolidado["id_cliente"],
             "solicitante": consolidado["solicitante"],
             "contato": consolidado["telefone"],
@@ -893,6 +970,7 @@ def criar_financeiro(consolidado):
             "action": "criarfinanceiro",
             "apiKey": API_KEY,
             "id": fin_id,
+            "updated_at": timestamp_atual(),
             "colaborador_id": colaborador_id or "",
             "id_pedido": rdo_id,
             "data": consolidado["data_str"],
@@ -917,10 +995,45 @@ def criar_financeiro(consolidado):
             registrar_erro("FALHA_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {detalhe}")
             return False, detalhe
 
-        logger.info("Financeiro lançado: %s (pedido=%s) | data=%s | colaborador=%s | tipo=%s | valor=%s", fin_id, rdo_id, consolidado["data_str"], motoboy_final, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
+        logger.info("Financeiro lançado: %s (pedido=%s) | data=%s | colaborador=%s (id=%s) | tipo=%s | valor=%s", fin_id, rdo_id, consolidado["data_str"], motoboy_final, colaborador_id, TIPO_FINANCEIRO_PADRAO, consolidado["valor_rs"])
         return True, None
     except Exception as exc:
         registrar_erro("ERRO_INESPERADO_CRIAR_FINANCEIRO", f"RDO {rdo_id} (FIN {fin_id}): {exc}", exc=exc)
+        return False, str(exc)
+
+
+def criar_chat(consolidado):
+    rdo_id = consolidado["rdo_id"]
+    chat_id = proximo_chat_id()
+    try:
+        payload = {
+            "action": "criarchat",
+            "apiKey": API_KEY,
+            "id": chat_id,
+            "updated_at": timestamp_atual(),
+            "id_cliente": consolidado["id_cliente"] or "",
+            "pedido_id": rdo_id,
+            "texto": consolidado["texto_chat"],
+            "hora": consolidado["hora_str"],
+            "data": consolidado["data_str"],
+            "finalizado": FINALIZADO_CHAT_PADRAO,
+        }
+
+        try:
+            resultado = post(payload)
+        except ErroApi as exc:
+            registrar_erro("FALHA_CRIAR_CHAT", f"RDO {rdo_id} (CHAT {chat_id}): {exc}", exc=exc)
+            return False, str(exc)
+
+        if not resultado or resultado.get("status") != "success":
+            detalhe = f"resposta={resultado!r}"
+            registrar_erro("FALHA_CRIAR_CHAT", f"RDO {rdo_id} (CHAT {chat_id}): {detalhe}")
+            return False, detalhe
+
+        logger.info("Chat lançado: %s (pedido=%s) | data=%s | hora=%s | id_cliente=%s", chat_id, rdo_id, consolidado["data_str"], consolidado["hora_str"], consolidado["id_cliente"])
+        return True, None
+    except Exception as exc:
+        registrar_erro("ERRO_INESPERADO_CRIAR_CHAT", f"RDO {rdo_id} (CHAT {chat_id}): {exc}", exc=exc)
         return False, str(exc)
 
 
@@ -955,7 +1068,7 @@ def exibir_resumo_erros():
 
 
 def main():
-    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, FIN_IDS_EXISTENTES, FIN_SEQ
+    global CLIENTES, COLABORADORES, RDOS_EXISTENTES, RDO_SEQ, FIN_IDS_EXISTENTES, FIN_SEQ, CHAT_IDS_EXISTENTES
 
     try:
         verificar_ids_duplicados()
@@ -968,6 +1081,8 @@ def main():
         FIN_IDS_EXISTENTES, maior_fin = carregar_fin_ids_existentes()
         FIN_SEQ = maior_fin + 1
         logger.info("Sequência financeira iniciando em FIN%03d.", FIN_SEQ)
+
+        CHAT_IDS_EXISTENTES = carregar_chat_ids_existentes()
 
         todas_linhas = [l for l in DADOS_BRUTOS.split("\n") if l.strip()]
         logger.info("Total de linhas brutas a processar: %d.", len(todas_linhas))
@@ -1008,17 +1123,20 @@ def main():
 
                 if not ok_pedido:
                     total_falha += 1
-                    logger.error("RDO %s: pedido não criado, financeiro será ignorado. Motivo: %s", rdo_id, erro_pedido)
+                    logger.error("RDO %s: pedido não criado, financeiro/chat serão ignorados. Motivo: %s", rdo_id, erro_pedido)
                     continue
 
                 ok_financeiro, erro_financeiro = criar_financeiro(consolidado)
                 time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
-                if ok_pedido and ok_financeiro:
+                ok_chat, erro_chat = criar_chat(consolidado)
+                time.sleep(INTERVALO_ENTRE_REQUISICOES)
+
+                if ok_pedido and ok_financeiro and ok_chat:
                     total_sucesso += 1
                 else:
                     total_falha += 1
-                    registrar_erro("RDO_FALHA_PARCIAL", f"RDO {rdo_id}: pedido={ok_pedido} financeiro={ok_financeiro}")
+                    registrar_erro("RDO_FALHA_PARCIAL", f"RDO {rdo_id}: pedido={ok_pedido} financeiro={ok_financeiro} chat={ok_chat}")
 
             except Exception as exc:
                 total_falha += 1

@@ -46,6 +46,66 @@ var ALIASES_PEDIDOS = {
   "hora": "horario"
 };
 
+var CACHE_TTL_SEGUNDOS = 21600;
+
+function _chaveCache(nomeAba) {
+  return "CACHE_ABA_" + String(nomeAba).toLowerCase().trim();
+}
+
+function invalidarCache(nomeAba) {
+  try {
+    CacheService.getScriptCache().remove(_chaveCache(nomeAba));
+  } catch (err) {
+    console.error("Erro ao invalidar cache de '" + nomeAba + "': " + err.toString());
+  }
+}
+
+function obterUltimaAtualizacaoAba(sheet) {
+  try {
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow <= 1) return "";
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+      return normalizarChave(h);
+    });
+    var colUpdated = headers.indexOf("updated_at");
+    if (colUpdated === -1) return "";
+    var valores = sheet.getRange(2, colUpdated + 1, lastRow - 1, 1).getValues();
+    var maior = "";
+    for (var i = 0; i < valores.length; i++) {
+      var v = String(valores[i][0] || "");
+      if (v > maior) maior = v;
+    }
+    return maior;
+  } catch (err) {
+    return "";
+  }
+}
+
+function processarGetComCache(sheet, nomeAba) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var chave = _chaveCache(nomeAba);
+    var ultimoUpdate = obterUltimaAtualizacaoAba(sheet);
+    var cacheado = cache.get(chave);
+    if (cacheado) {
+      var envelope = JSON.parse(cacheado);
+      if (envelope.ultimo_update === ultimoUpdate) {
+        return { status: "success", data: envelope.data, cache: true };
+      }
+    }
+    var dados = processarGet(sheet);
+    try {
+      cache.put(chave, JSON.stringify({ ultimo_update: ultimoUpdate, data: dados }), CACHE_TTL_SEGUNDOS);
+    } catch (errPut) {
+      console.error("Falha ao gravar cache de '" + nomeAba + "': " + errPut.toString());
+    }
+    return { status: "success", data: dados, cache: false };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetComCache: " + err.toString() };
+  }
+}
+
 function testarHeadersFinanceiro() {
   var ss = SpreadsheetApp.openById('17foT_x60t_e6W9JATNrkLeGv8e3PshgVcIUa5hl0kOI');
   var sheet = ss.getSheetByName('financeiro');
@@ -70,6 +130,10 @@ function capitalizar(texto) {
   var t = String(texto || "").trim();
   if (!t) return "";
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+function timestampAtual() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
 }
 
 function formatarMoeda(valor) {
@@ -219,19 +283,32 @@ function doPost(e) {
       return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
     }
     if (action.indexOf("get") === 0) {
-      return responder(processarGet(sheet));
+      return responder(processarGetComCache(sheet, nomeAba));
     }
     if (action.indexOf("add") === 0 || action.indexOf("save") === 0 || action.indexOf("criar") === 0) {
-      return responder(processarAdd(sheet, data, nomeAba));
+      var resAdd = processarAdd(sheet, data, nomeAba);
+      if (resAdd.status === "success") invalidarCache(nomeAba);
+      return responder(resAdd);
     }
     if (action.indexOf("update") === 0) {
-      return responder(processarUpdateComSincronia(ss, sheet, nomeAba, data));
+      var resUpd = processarUpdateComSincronia(ss, sheet, nomeAba, data);
+      if (resUpd.status === "success" || resUpd.status === "partial_error") {
+        invalidarCache(nomeAba);
+        invalidarCache("pedidos");
+        invalidarCache("financeiro");
+      }
+      return responder(resUpd);
     }
     if (action.indexOf("delete") === 0) {
       if (nomeAba === "pedidos") {
-        return responder(processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" }));
+        var resExc = processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" });
+        invalidarCache("pedidos");
+        invalidarCache("chat");
+        return responder(resExc);
       }
-      return responder(processarDelete(sheet, data.id));
+      var resDel = processarDelete(sheet, data.id);
+      if (resDel.status === "success") invalidarCache(nomeAba);
+      return responder(resDel);
     }
     return responder({ status: "error", message: "Acao nao suportada: " + action });
   } catch (err) {
@@ -385,6 +462,7 @@ function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
     var headers = values[0].map(function (h) { return normalizarChave(h); });
     var idIndex = headers.indexOf("id");
     var colSitFinIndex = headers.indexOf("situacao_financeira");
+    var colUpdatedIndex = headers.indexOf("updated_at");
     if (idIndex === -1 || colSitFinIndex === -1) return false;
     var idBusca = String(idPedido).trim().toUpperCase();
     var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
@@ -394,7 +472,11 @@ function sincronizarSituacaoFinanceiroComPedido(ss, idPedido, novaSituacao) {
       var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
       if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
         sheetPedidos.getRange(i + 1, colSitFinIndex + 1).setValue(sitFormatada);
+        if (colUpdatedIndex !== -1) {
+          sheetPedidos.getRange(i + 1, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
         SpreadsheetApp.flush();
+        invalidarCache("pedidos");
         return true;
       }
     }
@@ -415,6 +497,7 @@ function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
     var headers = values[0].map(function (h) { return normalizarChave(h); });
     var idPedidoIndex = headers.indexOf("id_pedido") !== -1 ? headers.indexOf("id_pedido") : headers.indexOf("pedido_id");
     var colSituacaoIndex = headers.indexOf("situacao");
+    var colUpdatedIndex = headers.indexOf("updated_at");
     if (idPedidoIndex === -1 || colSituacaoIndex === -1) return false;
     var idBusca = String(idPedido).trim().toUpperCase();
     var idBuscaNum = idBusca.replace(/^RDO0*/i, "").trim();
@@ -425,10 +508,16 @@ function sincronizarSituacaoPedidoComFinanceiro(ss, idPedido, novaSituacao) {
       var idCelulaNum = idCelula.replace(/^RDO0*/i, "").trim();
       if (idCelula === idBusca || idCelulaNum === idBuscaNum) {
         sheetFinanceiro.getRange(i + 1, colSituacaoIndex + 1).setValue(sitFormatada);
+        if (colUpdatedIndex !== -1) {
+          sheetFinanceiro.getRange(i + 1, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
         atualizou = true;
       }
     }
-    if (atualizou) SpreadsheetApp.flush();
+    if (atualizou) {
+      SpreadsheetApp.flush();
+      invalidarCache("financeiro");
+    }
     return atualizou;
   } catch (err) {
     console.error("Erro em sincronizarSituacaoPedidoComFinanceiro: " + err.toString());
@@ -448,13 +537,13 @@ function processarGetDashboardData(ss) {
     return {
       status: "success",
       data: {
-        clientes: sheetClientes ? processarGet(sheetClientes) : [],
-        colaboradores: sheetColaboradores ? processarGet(sheetColaboradores) : [],
-        usuarios: sheetUsuarios ? processarGet(sheetUsuarios) : [],
-        pedidos: sheetPedidos ? processarGet(sheetPedidos) : [],
-        financeiro: sheetFinanceiro ? processarGet(sheetFinanceiro) : [],
-        relatorios: sheetRelatorios ? processarGet(sheetRelatorios) : [],
-        extratos: sheetExtratos ? processarGet(sheetExtratos) : []
+        clientes: sheetClientes ? processarGetComCache(sheetClientes, "clientes").data : [],
+        colaboradores: sheetColaboradores ? processarGetComCache(sheetColaboradores, "colaboradores").data : [],
+        usuarios: sheetUsuarios ? processarGetComCache(sheetUsuarios, "usuarios").data : [],
+        pedidos: sheetPedidos ? processarGetComCache(sheetPedidos, "pedidos").data : [],
+        financeiro: sheetFinanceiro ? processarGetComCache(sheetFinanceiro, "financeiro").data : [],
+        relatorios: sheetRelatorios ? processarGetComCache(sheetRelatorios, "relatorios").data : [],
+        extratos: sheetExtratos ? processarGetComCache(sheetExtratos, "extratos").data : []
       }
     };
   } catch (err) {
@@ -472,6 +561,7 @@ function processarHeartbeat(sheet, username) {
     var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
     var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
     var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+    var colUpdatedAt = headers.indexOf("updated_at");
     var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
     var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
     var colId = headers.indexOf("id");
@@ -480,6 +570,10 @@ function processarHeartbeat(sheet, username) {
     for (var i = 1; i < rows.length; i++) {
       if (String(rows[i][colUser]).trim() === usernameTrim) {
         sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+        if (colUpdatedAt !== -1) {
+          sheet.getRange(i + 1, colUpdatedAt + 1).setValue(timestampAtual());
+          invalidarCache("usuarios");
+        }
         return {
           status: "success",
           user: {
@@ -551,7 +645,10 @@ function processarDeleteChat(ss, data) {
         deletados++;
       }
     }
-    if (deletados > 0) return { status: "success", message: "Chat excluido! Registros: " + deletados };
+    if (deletados > 0) {
+      invalidarCache("chat");
+      return { status: "success", message: "Chat excluido! Registros: " + deletados };
+    }
     return { status: "success", message: "Nenhum chat encontrado para pedido_id: " + pedidoId };
   } catch (err) {
     return { status: "error", message: "Erro em processarDeleteChat: " + err.toString() };
@@ -616,6 +713,9 @@ function processarExclusaoCompleta(ss, data) {
       resultado.message = "Pedido nao encontrado: " + idBruto + " (chat removido: " + resultado.chat.deletados + " registro(s)).";
       return resultado;
     }
+    invalidarCache("pedidos");
+    invalidarCache("chat");
+    invalidarCache("financeiro");
     resultado.message = "Pedido e chat excluidos com sucesso. Chat removido: " + resultado.chat.deletados + " registro(s).";
     return resultado;
   } catch (err) {
@@ -738,16 +838,40 @@ function processarCriarPedido(sheetPedidos, data) {
     if (!dataStr) {
       dataStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
     }
+    var agoraTimestamp = timestampAtual();
+
     if (sheetChat && idCliente && !chatJaExiste(sheetChat, idPedido)) {
       var textoChat = montarTextoChat(idPedido, data);
-      var idMsg = Math.random().toString(36).substring(2, 13).toUpperCase();
-      sheetChat.appendRow([idMsg, idCliente, idPedido, textoChat, horaStr, dataStr, "TRUE"]);
-      escreverComoTexto(sheetChat, sheetChat.getLastRow(), 6, dataStr);
+      var idMsg = gerarId(sheetChat, "chat");
+      var headersChat = obterHeaders(sheetChat);
+      var rowDataChat = {
+        id: idMsg,
+        updated_at: agoraTimestamp,
+        id_cliente: idCliente,
+        pedido_id: idPedido,
+        texto: textoChat,
+        hora: horaStr,
+        data: dataStr,
+        finalizado: "TRUE"
+      };
+      var rowChat = [];
+      for (var ci = 0; ci < headersChat.length; ci++) {
+        var campoChat = normalizarChave(headersChat[ci]);
+        rowChat.push(rowDataChat[campoChat] !== undefined ? rowDataChat[campoChat] : "");
+      }
+      sheetChat.appendRow(rowChat);
+      var colDataChatIdx = headersChat.map(normalizarChave).indexOf("data");
+      if (colDataChatIdx !== -1) {
+        escreverComoTexto(sheetChat, sheetChat.getLastRow(), colDataChatIdx + 1, dataStr);
+      }
+      invalidarCache("chat");
     }
+
     var situacaoFinanceira = capitalizar(data.situacao_financeira || "Pendente");
     var valorFormatado = formatarMoeda(data.valor_corrida || data.valor_final || "");
     var rowData = {
       id: idPedido,
+      updated_at: agoraTimestamp,
       id_cliente: idCliente,
       solicitante: String(data.solicitante || ""),
       contato: String(data.contato || ""),
@@ -781,12 +905,15 @@ function processarCriarPedido(sheetPedidos, data) {
     if (colDataIndex !== -1) {
       escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataIndex + 1, dataStr);
     }
+    invalidarCache("pedidos");
+
     var sheetFinanceiro = buscarAba(ss, "financeiro");
     if (sheetFinanceiro) {
       var idFinanceiro = gerarId(sheetFinanceiro, "financeiro");
       var headersFin = obterHeaders(sheetFinanceiro);
       var rowDataFin = {
         id: idFinanceiro,
+        updated_at: agoraTimestamp,
         colaborador_id: String(data.colaborador_id || ""),
         id_pedido: idPedido,
         pedido_id: idPedido,
@@ -804,10 +931,11 @@ function processarCriarPedido(sheetPedidos, data) {
         rowFin.push(rowDataFin[campoFin] !== undefined ? rowDataFin[campoFin] : "");
       }
       sheetFinanceiro.appendRow(rowFin);
-      var colDataFinIdx = headersFin.indexOf("data");
+      var colDataFinIdx = headersFin.map(normalizarChave).indexOf("data");
       if (colDataFinIdx !== -1) {
         escreverComoTexto(sheetFinanceiro, sheetFinanceiro.getLastRow(), colDataFinIdx + 1, dataStr);
       }
+      invalidarCache("financeiro");
     }
     SpreadsheetApp.flush();
     return { status: "success", id: idPedido, message: "Pedido criado com sucesso!" };
@@ -838,6 +966,7 @@ function processarLogin(user, pass) {
     var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
     var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
     var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+    var colUpdatedAt = headers.indexOf("updated_at");
     var colId = headers.indexOf("id");
     if (colUser === -1 || colPass === -1) return { status: "error", message: "Colunas 'username' ou 'password' nao encontradas" };
     var userTrim = String(user).trim();
@@ -846,6 +975,10 @@ function processarLogin(user, pass) {
       if (String(rows[i][colUser]).trim() === userTrim && String(rows[i][colPass]).trim() === passTrim) {
         if (colUltimoAcesso !== -1) {
           sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+        }
+        if (colUpdatedAt !== -1) {
+          sheet.getRange(i + 1, colUpdatedAt + 1).setValue(timestampAtual());
+          invalidarCache("usuarios");
         }
         return {
           status: "success",
@@ -976,6 +1109,7 @@ function processarSalvarRelatorioFinanceiro(sheet, data) {
     var id = String(data.id || "").trim() || gerarId(sheet, "relatorios");
     var rowData = {
       id: id,
+      updated_at: timestampAtual(),
       colaborador_id: String(data.colaborador_id || ""),
       id_pedido: String(data.id_pedido || "-"),
       data: normalizarDataStr(data.data) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy"),
@@ -992,10 +1126,11 @@ function processarSalvarRelatorioFinanceiro(sheet, data) {
       row.push(rowData[campo] !== undefined ? rowData[campo] : "");
     }
     sheet.appendRow(row);
-    var colDataIdx = headers.indexOf("data");
+    var colDataIdx = headers.map(normalizarChave).indexOf("data");
     if (colDataIdx !== -1) {
       escreverComoTexto(sheet, sheet.getLastRow(), colDataIdx + 1, rowData.data);
     }
+    invalidarCache("relatorios");
     return { status: "success", id: id, message: "Relatório financeiro salvo com sucesso!" };
   } catch (err) {
     return { status: "error", message: "Erro em processarSalvarRelatorioFinanceiro: " + err.toString() };
@@ -1013,6 +1148,7 @@ function processarSalvarExtrato(sheet, data) {
       rowData[normalizarChave(chaveO)] = data[chaveO];
     }
     rowData.id = id;
+    rowData.updated_at = timestampAtual();
     if (rowData.registros !== undefined && typeof rowData.registros !== "string") {
       rowData.registros = JSON.stringify(rowData.registros);
     }
@@ -1032,15 +1168,16 @@ function processarSalvarExtrato(sheet, data) {
         row.push(rowData[campo] !== undefined ? String(rowData[campo]) : "");
       }
       sheet.appendRow(row);
-      var colDataIdx = headers.indexOf("data");
+      var colDataIdx = headers.map(normalizarChave).indexOf("data");
       if (colDataIdx !== -1 && row[colDataIdx]) {
         escreverComoTexto(sheet, sheet.getLastRow(), colDataIdx + 1, row[colDataIdx]);
       }
     } else {
-      sheet.appendRow([id, String(rowData.origem || ""), String(rowData.periodo_inicio || ""),
+      sheet.appendRow([id, String(rowData.updated_at || ""), String(rowData.origem || ""), String(rowData.periodo_inicio || ""),
         String(rowData.periodo_fim || ""), String(rowData.periodolabel || ""),
         String(rowData.totais || ""), String(rowData.registros || ""), String(rowData.criado_em || "")]);
     }
+    invalidarCache("extratos");
     return { status: "success", id: id, message: "Extrato salvo com sucesso!" };
   } catch (err) {
     return { status: "error", message: "Erro em processarSalvarExtrato: " + err.toString() };
@@ -1050,8 +1187,9 @@ function processarSalvarExtrato(sheet, data) {
 function processarAdd(sheet, data, entity) {
   try {
     var headers = obterHeaders(sheet);
-    var idIndex = headers.indexOf("id");
-    var colDataIdx = headers.indexOf("data");
+    var headersNorm = headers.map(normalizarChave);
+    var idIndex = headersNorm.indexOf("id");
+    var colDataIdx = headersNorm.indexOf("data");
     var dataNorm = {};
     var chaves = Object.keys(data || {});
     for (var c = 0; c < chaves.length; c++) {
@@ -1064,9 +1202,12 @@ function processarAdd(sheet, data, entity) {
       if (!idAtual) dataNorm.id = gerarId(sheet, entity);
       data.id = dataNorm.id;
     }
+    if (headersNorm.indexOf("updated_at") !== -1 && !dataNorm.updated_at) {
+      dataNorm.updated_at = timestampAtual();
+    }
     var row = [];
-    for (var i = 0; i < headers.length; i++) {
-      var campo = normalizarChave(headers[i]);
+    for (var i = 0; i < headersNorm.length; i++) {
+      var campo = headersNorm[i];
       var valor = "";
       if (campo === "status" && dataNorm[campo] !== undefined && dataNorm[campo] !== null && dataNorm[campo] !== "") {
         var statusVal = String(dataNorm[campo]).trim().toUpperCase();
@@ -1094,8 +1235,7 @@ function processarAdd(sheet, data, entity) {
     if (colDataIdx !== -1 && row[colDataIdx]) {
       escreverComoTexto(sheet, sheet.getLastRow(), colDataIdx + 1, row[colDataIdx]);
     }
-    var idIndexRetorno = headers.indexOf("id");
-    return { status: "success", message: "Adicionado!", id: idIndexRetorno !== -1 ? dataNorm.id : undefined };
+    return { status: "success", message: "Adicionado!", id: idIndex !== -1 ? dataNorm.id : undefined };
   } catch (err) {
     return { status: "error", message: "Erro em processarAdd: " + err.toString() };
   }
@@ -1114,6 +1254,10 @@ function processarUpdate(sheet, data, aliases) {
     if (linhaEncontrada === -1) return { status: "error", message: "ID nao encontrado: " + data.id };
     var linhaPlanilha = linhaEncontrada + 1;
     var resultadoCampos = _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data);
+    var colUpdatedAt = headers.indexOf("updated_at");
+    if (colUpdatedAt !== -1) {
+      sheet.getRange(linhaPlanilha, colUpdatedAt + 1).setValue(timestampAtual());
+    }
     SpreadsheetApp.flush();
     var falhouCritico = resultadoCampos.camposIgnorados.some(function (c) { return c.indexOf("situacao") !== -1; });
     return {
@@ -1175,7 +1319,7 @@ function _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data) {
   var keys = Object.keys(data);
   for (var k = 0; k < keys.length; k++) {
     var chaveOriginal = keys[k];
-    if (chaveOriginal === "id" || chaveOriginal === "apiKey" || chaveOriginal === "action") continue;
+    if (chaveOriginal === "id" || chaveOriginal === "apiKey" || chaveOriginal === "action" || chaveOriginal === "updated_at") continue;
     var chaveNorm = normalizarChave(chaveOriginal);
     var chaveFinal = aliases[chaveNorm] || chaveNorm;
     var colIndex = _resolverColuna(headers, chaveFinal);
@@ -1308,15 +1452,19 @@ function buscarColuna(headers, nomesPossiveis) {
   return -1;
 }
 
+function _gerarIdAleatorio11() {
+  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  var id = "";
+  for (var z = 0; z < 11; z++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
 function gerarId(sheet, entity) {
   var data = sheet.getDataRange().getValues();
   if (!data || data.length === 0) {
-    var chars0 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    var id0 = "";
-    for (var z = 0; z < 11; z++) {
-      id0 += chars0.charAt(Math.floor(Math.random() * chars0.length));
-    }
-    return id0;
+    return _gerarIdAleatorio11();
   }
   var headers = data[0].map(function (h) { return String(h).toLowerCase().trim(); });
   var idIndex = headers.indexOf("id");
@@ -1339,7 +1487,7 @@ function gerarId(sheet, entity) {
     }
     var nextFin = maxFin + 1;
     var paddedFin = String(nextFin);
-    while (paddedFin.length < 4) paddedFin = "0" + paddedFin;
+    while (paddedFin.length < 3) paddedFin = "0" + paddedFin;
     return "FIN" + paddedFin;
   }
   if (entity.indexOf("relatorio") !== -1) {
@@ -1348,12 +1496,29 @@ function gerarId(sheet, entity) {
   if (entity.indexOf("extrato") !== -1) {
     return "EXT" + Date.now();
   }
-  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  var id = "";
-  for (var k = 0; k < 11; k++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  if (entity === "chat") {
+    var existentesChat = {};
+    for (var ec = 1; ec < data.length; ec++) {
+      existentesChat[String(data[ec][idIndex]).trim().toUpperCase()] = true;
+    }
+    var novoIdChat = _gerarIdAleatorio11();
+    while (existentesChat[novoIdChat]) {
+      novoIdChat = _gerarIdAleatorio11();
+    }
+    return novoIdChat;
   }
-  return id;
+  if (entity === "clientes") {
+    var existentesCli = {};
+    for (var eci = 1; eci < data.length; eci++) {
+      existentesCli[String(data[eci][idIndex]).trim().toUpperCase()] = true;
+    }
+    var novoIdCli = _gerarIdAleatorio11();
+    while (existentesCli[novoIdCli]) {
+      novoIdCli = _gerarIdAleatorio11();
+    }
+    return novoIdCli;
+  }
+  return _gerarIdAleatorio11();
 }
 
 function responder(obj) {

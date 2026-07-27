@@ -42,4 +42,6 @@ DADOS_BRUTOS = """
 16:41	24/07/2026	Sra Nilza	AUANDER	Mauricio	-	R$29,00	Entrega - R. Itamar Teixeira 93/302/bl 5, Betânia
 16:52	24/07/2026	-	AUANDER	Sara	-	R$237,20	23 coletas + 1 retorno, percurso 80km
 18:40	24/07/2026	-	EMERSON	Natupet	-	R$150,00	8 entregas, percurso 48km
+07:17	25/07/2026	Patrícia rangel	GRUPO	Entrega	Marília	R$20,00	CESTA - Rua Manoel Miranda, 38 apto 202 - União. CPF:012323684-31, Tel: (21)98060-2100
+07:34	25/07/2026	Maurício	AUANDER	Entrega	Mário Otávio	R$45,00	Olinto Meireles, 1670 - Barreiro. Melhor trazer aqui mesmo.
 """.strip()
