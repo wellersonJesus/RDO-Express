@@ -317,6 +317,7 @@
 
 .dropdown-filtro-wrapper {
     position: relative;
+    flex-shrink: 0;
 }
 
 .btn-filtro-inteligente {
@@ -401,10 +402,20 @@
     text-align: center;
 }
 
+.posicao-busca-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
 .input-filtro-pedidos {
     height: 31px;
     max-width: 180px;
     font-size: 0.78rem;
+    padding-right: 28px;
+    min-width: 0;
 }
 
 .input-filtro-pedidos:focus {
@@ -419,6 +430,7 @@
     color: #495057;
     border: 1px solid #dee2e6;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .input-filtro-data-pedidos:focus {
@@ -1007,12 +1019,33 @@
         padding: 2px 6px;
     }
 
+    .pedidos-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
+        flex-wrap: nowrap;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .dropdown-filtro-wrapper {
+        flex-shrink: 0;
+    }
+
+    .posicao-busca-wrapper {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
     .input-filtro-pedidos {
-        max-width: 120px;
+        max-width: none;
+        width: 100%;
+        min-width: 60px;
     }
 
     .input-filtro-data-pedidos {
-        max-width: 120px;
+        max-width: 90px;
+        width: 90px;
+        flex-shrink: 0;
+        padding-left: 6px;
+        padding-right: 6px;
     }
 
     .btn-filtro-inteligente span {
@@ -1020,7 +1053,7 @@
     }
 
     .btn-filtro-inteligente {
-        padding: 4px 10px;
+        padding: 4px 8px;
     }
 
     .dropdown-filtro-menu {
@@ -1077,16 +1110,6 @@
         left: 10px;
         max-width: none;
     }
-}
-
-.posicao-busca-wrapper {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-.input-filtro-pedidos {
-    padding-right: 28px;
 }
 
 .btn-limpar-busca {
