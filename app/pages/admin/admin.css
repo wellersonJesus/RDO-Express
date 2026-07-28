@@ -119,45 +119,52 @@
 }
 
 .admin-status-card {
-    width: 100%;
-    padding-bottom: 12px;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 4px;
 }
 
-.admin-status-card-inner {
+.admin-status-grid {
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.admin-status-card-inner::-webkit-scrollbar {
-    display: none;
+.admin-status-row {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-status-row .admin-status-action-item {
+    flex: 1;
 }
 
 .admin-status-action-item {
-    flex: 1;
-    min-width: 100px;
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
-    padding: 7px 9px;
-    border-radius: 12px;
-    border: 1px solid #f1f1f1;
-    background: #fafafa;
+    gap: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
     position: relative;
 }
 
 .admin-status-action-item:hover {
-    border-color: #dc3545;
     background: #fdf2f3;
+    border-color: #f5c6cb;
+    transform: translateY(-1px);
 }
 
 .admin-status-action-item.active {
-    border-color: #dc3545;
-    background: #fdf2f3;
-    box-shadow: 0 2px 10px rgba(220, 53, 69, 0.1);
+    background: #fff5f6;
+    border-color: #f5c6cb;
 }
 
 .admin-status-action-item.d-none {
@@ -165,92 +172,135 @@
 }
 
 .admin-status-action-icon {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    border-radius: 9px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.78rem;
-    transition: all 0.2s ease;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-icon-lg {
+    width: 46px;
+    height: 46px;
+    font-size: 1.4rem;
+}
+
+.admin-status-action-item.active .admin-status-action-icon,
+.admin-status-action-item:hover .admin-status-action-icon {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .admin-status-action-info {
     display: flex;
     flex-direction: column;
-    line-height: 1.15;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+    line-height: 1.2;
 }
 
 .admin-status-action-label {
-    font-size: 0.62rem;
-    color: #6c757d;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s ease;
+    line-height: 1.2;
+}
+
+.admin-status-action-item.active .admin-status-action-label {
+    color: #555;
+    font-weight: 600;
+}
+
+.admin-status-action-item:hover .admin-status-action-label {
+    color: #666;
 }
 
 .admin-status-action-count {
     font-size: 0.82rem;
     font-weight: 700;
-    color: #212529;
+    color: #222;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.admin-status-action-item.active .admin-status-action-count {
+    color: #dc3545;
 }
 
 .admin-status-action-pct {
     font-size: 0.6rem;
-    color: #adb5bd;
+    font-weight: 500;
+    color: #bbb;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.admin-status-action-item.active .admin-status-action-pct {
+    color: #e07080;
 }
 
 .admin-icon-todos {
-    background: rgba(220, 53, 69, 0.08);
-    color: #dc3545;
+    background: #f0f0f0;
+    color: #888;
 }
 
 .admin-status-action-item.active .admin-icon-todos,
 .admin-status-action-item:hover .admin-icon-todos {
-    background: rgba(220, 53, 69, 0.16);
-    color: #c23947;
+    background: #e8e8e8;
+    color: #555;
 }
 
 .admin-icon-diario {
-    background: rgba(220, 53, 69, 0.08);
+    background: rgba(220, 53, 69, 0.12);
     color: #dc3545;
 }
 
 .admin-status-action-item.active .admin-icon-diario,
 .admin-status-action-item:hover .admin-icon-diario {
-    background: rgba(220, 53, 69, 0.16);
-    color: #c23947;
+    background: rgba(220, 53, 69, 0.24);
+    color: #b02a37;
 }
 
 .admin-icon-semanal {
-    background: rgba(13, 110, 253, 0.07);
-    color: #5b9bfa;
+    background: rgba(13, 110, 253, 0.12);
+    color: #1976d2;
 }
 
 .admin-status-action-item.active .admin-icon-semanal,
 .admin-status-action-item:hover .admin-icon-semanal {
-    background: rgba(13, 110, 253, 0.14);
-    color: #3d7fe0;
+    background: rgba(13, 110, 253, 0.22);
+    color: #1565c0;
 }
 
 .admin-icon-quinzenal {
-    background: rgba(255, 193, 7, 0.1);
-    color: #e0b429;
+    background: rgba(255, 193, 7, 0.15);
+    color: #e6a800;
 }
 
 .admin-status-action-item.active .admin-icon-quinzenal,
 .admin-status-action-item:hover .admin-icon-quinzenal {
-    background: rgba(255, 193, 7, 0.2);
-    color: #c99b12;
+    background: rgba(255, 193, 7, 0.28);
+    color: #c8900a;
 }
 
 .admin-icon-mensal {
-    background: rgba(25, 135, 84, 0.07);
-    color: #4fa87c;
+    background: rgba(25, 135, 84, 0.12);
+    color: #198754;
 }
 
 .admin-status-action-item.active .admin-icon-mensal,
 .admin-status-action-item:hover .admin-icon-mensal {
-    background: rgba(25, 135, 84, 0.14);
-    color: #328a5f;
+    background: rgba(25, 135, 84, 0.24);
+    color: #146c43;
 }
 
 .admin-input-busca {
@@ -455,11 +505,18 @@
     }
 
     .admin-status-card {
+        padding: 10px 8px;
         position: relative;
         z-index: 30;
     }
 
-    .admin-status-card-inner {
+    .admin-status-grid {
+        gap: 8px;
+        position: relative;
+        z-index: 30;
+    }
+
+    .admin-status-row {
         gap: 6px;
         position: relative;
         z-index: 30;
@@ -469,15 +526,20 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        min-width: 56px;
+        gap: 2px;
         padding: 8px 4px;
-        gap: 4px;
         position: relative;
         z-index: 30;
     }
 
     .admin-status-action-item.mostrar-info {
         z-index: 999;
+    }
+
+    .admin-icon-lg {
+        width: 40px;
+        height: 40px;
+        font-size: 1.15rem;
     }
 
     .admin-status-action-info {
@@ -503,15 +565,20 @@
         animation: adminInfoMobilePop 0.15s ease;
     }
 
-    .admin-status-card-inner .admin-status-action-item:last-child .admin-status-action-info {
+    .admin-status-row .admin-status-action-item:last-child .admin-status-action-info {
         left: auto;
         right: 0;
         transform: none;
     }
 
-    .admin-status-card-inner .admin-status-action-item:first-child .admin-status-action-info {
+    .admin-status-row .admin-status-action-item:first-child .admin-status-action-info {
         left: 0;
         transform: none;
+    }
+
+    .admin-status-action-label {
+        white-space: nowrap;
+        overflow: visible;
     }
 
     @keyframes adminInfoMobilePop {
@@ -519,4 +586,3 @@
         to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
 }
-

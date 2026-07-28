@@ -30,60 +30,65 @@
 
                         <div class="d-flex flex-column gap-2">
                             <div class="admin-status-card">
-                                <div class="admin-status-card-inner">
-                                    <div class="admin-status-action-item active" data-adm-status="todos"
-                                        id="adm-filter-todos">
-                                        <div class="admin-status-action-icon admin-icon-todos">
-                                            <i class="bi bi-grid-3x3-gap"></i>
+                                <div class="admin-status-grid">
+                                    <div class="admin-status-row">
+                                        <div class="admin-status-action-item active" data-adm-status="todos"
+                                            id="adm-filter-todos">
+                                            <div class="admin-status-action-icon admin-icon-lg admin-icon-todos">
+                                                <i class="bi bi-grid-3x3-gap"></i>
+                                            </div>
+                                            <div class="admin-status-action-info">
+                                                <span class="admin-status-action-label">Todos</span>
+                                                <span class="admin-status-action-count" id="adm-count-todos">0</span>
+                                                <span class="admin-status-action-pct" id="adm-pct-todos">de 0</span>
+                                            </div>
                                         </div>
-                                        <div class="admin-status-action-info">
-                                            <span class="admin-status-action-label">Todos</span>
-                                            <span class="admin-status-action-count" id="adm-count-todos">0</span>
-                                            <span class="admin-status-action-pct" id="adm-pct-todos">de 0</span>
+                                        <div class="admin-status-action-item admin-bloco-pagamento"
+                                            data-adm-status="diario" id="adm-filter-diario">
+                                            <div class="admin-status-action-icon admin-icon-lg admin-icon-diario">
+                                                <i class="bi bi-calendar-day"></i>
+                                            </div>
+                                            <div class="admin-status-action-info">
+                                                <span class="admin-status-action-label">Diário</span>
+                                                <span class="admin-status-action-count" id="adm-count-diario">0</span>
+                                                <span class="admin-status-action-pct" id="adm-pct-diario">0%</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="diario"
-                                        id="adm-filter-diario">
-                                        <div class="admin-status-action-icon admin-icon-diario">
-                                            <i class="bi bi-calendar-day"></i>
-                                        </div>
-                                        <div class="admin-status-action-info">
-                                            <span class="admin-status-action-label">Diário</span>
-                                            <span class="admin-status-action-count" id="adm-count-diario">0</span>
-                                            <span class="admin-status-action-pct" id="adm-pct-diario">0%</span>
-                                        </div>
-                                    </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento"
-                                        data-adm-status="semanal" id="adm-filter-semanal">
-                                        <div class="admin-status-action-icon admin-icon-semanal">
-                                            <i class="bi bi-calendar-week"></i>
-                                        </div>
-                                        <div class="admin-status-action-info">
-                                            <span class="admin-status-action-label">Semanal</span>
-                                            <span class="admin-status-action-count" id="adm-count-semanal">0</span>
-                                            <span class="admin-status-action-pct" id="adm-pct-semanal">0%</span>
-                                        </div>
-                                    </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento"
-                                        data-adm-status="quinzenal" id="adm-filter-quinzenal">
-                                        <div class="admin-status-action-icon admin-icon-quinzenal">
-                                            <i class="bi bi-calendar2-range"></i>
-                                        </div>
-                                        <div class="admin-status-action-info">
-                                            <span class="admin-status-action-label">Quinzenal</span>
-                                            <span class="admin-status-action-count" id="adm-count-quinzenal">0</span>
-                                            <span class="admin-status-action-pct" id="adm-pct-quinzenal">0%</span>
+                                        <div class="admin-status-action-item admin-bloco-pagamento"
+                                            data-adm-status="semanal" id="adm-filter-semanal">
+                                            <div class="admin-status-action-icon admin-icon-lg admin-icon-semanal">
+                                                <i class="bi bi-calendar-week"></i>
+                                            </div>
+                                            <div class="admin-status-action-info">
+                                                <span class="admin-status-action-label">Semanal</span>
+                                                <span class="admin-status-action-count" id="adm-count-semanal">0</span>
+                                                <span class="admin-status-action-pct" id="adm-pct-semanal">0%</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="admin-status-action-item admin-bloco-pagamento" data-adm-status="mensal"
-                                        id="adm-filter-mensal">
-                                        <div class="admin-status-action-icon admin-icon-mensal">
-                                            <i class="bi bi-calendar-month"></i>
+                                    <div class="admin-status-row">
+                                        <div class="admin-status-action-item admin-bloco-pagamento"
+                                            data-adm-status="quinzenal" id="adm-filter-quinzenal">
+                                            <div class="admin-status-action-icon admin-icon-lg admin-icon-quinzenal">
+                                                <i class="bi bi-calendar2-range"></i>
+                                            </div>
+                                            <div class="admin-status-action-info">
+                                                <span class="admin-status-action-label">Quinzenal</span>
+                                                <span class="admin-status-action-count"
+                                                    id="adm-count-quinzenal">0</span>
+                                                <span class="admin-status-action-pct" id="adm-pct-quinzenal">0%</span>
+                                            </div>
                                         </div>
-                                        <div class="admin-status-action-info">
-                                            <span class="admin-status-action-label">Mensal</span>
-                                            <span class="admin-status-action-count" id="adm-count-mensal">0</span>
-                                            <span class="admin-status-action-pct" id="adm-pct-mensal">0%</span>
+                                        <div class="admin-status-action-item admin-bloco-pagamento"
+                                            data-adm-status="mensal" id="adm-filter-mensal">
+                                            <div class="admin-status-action-icon admin-icon-lg admin-icon-mensal">
+                                                <i class="bi bi-calendar-month"></i>
+                                            </div>
+                                            <div class="admin-status-action-info">
+                                                <span class="admin-status-action-label">Mensal</span>
+                                                <span class="admin-status-action-count" id="adm-count-mensal">0</span>
+                                                <span class="admin-status-action-pct" id="adm-pct-mensal">0%</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
