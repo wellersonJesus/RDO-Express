@@ -1,4 +1,3 @@
-# [RDO-Express](https://wellersonjesus.github.io/RDO-Express/)
 # [RDO-Express](https://rdo-express.onrender.com)
 
 Interface de gestão logística e automação de atendimento integrada via WhatsApp.

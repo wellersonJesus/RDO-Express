@@ -895,7 +895,8 @@ function _renderizarItemNotifPagamento(itemDados) {
     var btnVer = document.createElement('button');
     btnVer.type = 'button';
     btnVer.className = 'modal-notif-pagamento-item-btn-ver';
-    btnVer.innerHTML = '<i class="bi bi-eye"></i> Ver Pedido';
+    btnVer.title = 'Ver detalhes do pedido';
+    btnVer.innerHTML = '<i class="bi bi-eye"></i><span class="btn-notif-texto"> Ver Pedido</span>';
     btnVer.style.cssText = 'border:none;background:rgba(13,110,253,.12);color:#0d6efd;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
     btnVer.addEventListener('click', function () {
         btnVer.blur();
@@ -906,7 +907,7 @@ function _renderizarItemNotifPagamento(itemDados) {
     btnRelatorio.type = 'button';
     btnRelatorio.className = 'modal-notif-pagamento-item-btn-relatorio';
     btnRelatorio.title = 'Gerar relatório deste cliente';
-    btnRelatorio.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i> Relatório';
+    btnRelatorio.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span class="btn-notif-texto"> Relatório</span>';
     btnRelatorio.style.cssText = 'border:none;background:rgba(111,66,193,.12);color:#6f42c1;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
     btnRelatorio.addEventListener('click', function () {
         btnRelatorio.blur();
