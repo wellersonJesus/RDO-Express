@@ -23,60 +23,54 @@
     </div>
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
-      <div class="row g-2 mb-2 mt-2">
-        <div class="col-3">
-          <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="recebido" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;">
+      <div class="fin-status-card mb-2 mt-2">
+        <div class="fin-status-grid">
+          <div class="fin-status-row">
+            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="recebido">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(13,110,253,.12);color:#0d6efd;">
                 <i class="bi bi-cash-coin"></i>
               </div>
-              <div>
-                <div class="caixa-mini-label">Recebido</div>
-                <div class="caixa-mini-valor" id="fin-status-count-recebido">0</div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Recebido</span>
+                <span class="fin-status-action-count" id="fin-status-count-recebido">0</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="col-3">
-          <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="pago" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(25,135,84,.12);color:#198754;">
+            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="pago">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(25,135,84,.12);color:#198754;">
                 <i class="bi bi-check-circle-fill"></i>
               </div>
-              <div>
-                <div class="caixa-mini-label">Pago</div>
-                <div class="caixa-mini-valor" id="fin-status-count-pago">0</div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Pago</span>
+                <span class="fin-status-action-count" id="fin-status-count-pago">0</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="col-3">
-          <div class="caixa-mini-card active" data-filtro-tipo="todos" data-filtro-situacao="pendente"
-            style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(255,193,7,.2);color:#856404;">
+            <div class="fin-status-action-item active" data-filtro-tipo="todos" data-filtro-situacao="pendente">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(255,193,7,.2);color:#856404;">
                 <i class="bi bi-exclamation-circle-fill"></i>
               </div>
-              <div>
-                <div class="caixa-mini-label">Pendente</div>
-                <div class="caixa-mini-valor" id="fin-status-count-pendente">0</div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Pendente</span>
+                <span class="fin-status-action-count" id="fin-status-count-pendente">0</span>
               </div>
             </div>
           </div>
-        </div>
-
-        <div class="col-3">
-          <div class="caixa-mini-card" data-filtro-tipo="todos" data-filtro-situacao="cancelado"
-            style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(108,117,125,.18);color:#6c757d;">
+          <div class="fin-status-row">
+            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="cancelado">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(108,117,125,.18);color:#6c757d;">
                 <i class="bi bi-x-circle-fill"></i>
               </div>
-              <div>
-                <div class="caixa-mini-label">Cancelado</div>
-                <div class="caixa-mini-valor" id="fin-status-count-cancelado" style="color:#6c757d;">0</div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Cancelado</span>
+                <span class="fin-status-action-count" id="fin-status-count-cancelado" style="color:#6c757d;">0</span>
+              </div>
+            </div>
+            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="todos">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:#f0f0f0;color:#888;">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+              </div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Todos</span>
+                <span class="fin-status-action-count" id="fin-status-count-total">0</span>
               </div>
             </div>
           </div>

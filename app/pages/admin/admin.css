@@ -133,12 +133,14 @@
 }
 
 .admin-status-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
-.admin-status-row .admin-status-action-item {
-    flex: 1;
+.admin-status-placeholder {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .admin-status-action-item {
@@ -303,15 +305,44 @@
     color: #146c43;
 }
 
+.admin-busca-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
 .admin-input-busca {
     height: 32px;
     width: 180px;
     font-size: 0.72rem;
+    padding-right: 28px;
+    min-width: 0;
 }
 
 .admin-input-busca:focus {
     box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
     border-color: #e4606d;
+}
+
+.btn-limpar-busca-admin {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 0;
+    color: #adb5bd;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+
+.btn-limpar-busca-admin:hover {
+    color: #dc3545;
 }
 
 .btn-novo-admin {
@@ -447,8 +478,22 @@
 }
 
 @media (max-width: 576px) {
+    .admin-busca-wrapper {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+    }
+
     .admin-input-busca {
-        width: 130px;
+        width: 100%;
+        max-width: none;
+        padding-left: 10px;
+        padding-right: 24px;
+        font-size: 0.7rem;
+    }
+
+    .btn-limpar-busca-admin {
+        right: 6px;
     }
 
     .td-mobile-hide-admin {
@@ -457,6 +502,7 @@
 
     #dropdown-filtro-wrapper-admin {
         position: relative;
+        flex-shrink: 0;
     }
 
     #dropdown-filtro-menu-admin {
@@ -565,13 +611,13 @@
         animation: adminInfoMobilePop 0.15s ease;
     }
 
-    .admin-status-row .admin-status-action-item:last-child .admin-status-action-info {
+    .admin-status-row .admin-status-action-item:nth-child(3n) .admin-status-action-info {
         left: auto;
         right: 0;
         transform: none;
     }
 
-    .admin-status-row .admin-status-action-item:first-child .admin-status-action-info {
+    .admin-status-row .admin-status-action-item:nth-child(3n+1) .admin-status-action-info {
         left: 0;
         transform: none;
     }
@@ -585,4 +631,34 @@
         from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
         to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
+
+        .admin-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
+        flex-wrap: nowrap !important;
+        gap: 6px;
+        width: 100%;
+    }
+
+    #dropdown-filtro-wrapper-admin,
+    .btn-novo-admin {
+        flex-shrink: 0;
+    }
+
+    .btn-filtro-inteligente {
+        padding: 4px 6px;
+        gap: 3px;
+    }
+
+    .btn-filtro-inteligente span {
+        display: none;
+    }
+
+    .btn-novo-admin {
+        padding: 0 10px;
+    }
+
+    .btn-novo-admin span,
+    .btn-novo-admin .me-1 + span {
+        display: none;
+    }
+
 }

@@ -1456,8 +1456,9 @@ if (!window.EventBus) {
     setText('fin-status-count-pago', count.pago);
     setText('fin-status-count-recebido', count.recebido);
     setText('fin-status-count-cancelado', count.cancelado);
+    setText('fin-status-count-total', lista.length);
 
-    document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-situacao]').forEach(function (item) {
+    document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item[data-filtro-situacao]').forEach(function (item) {
       if (!item._finBound) {
         item._finBound = true;
         item.addEventListener('click', function () {
@@ -1467,6 +1468,23 @@ if (!window.EventBus) {
           atualizarCardAtivoFin();
           renderTodos();
         });
+      }
+    });
+  }
+
+  function configurarInfoHoverFin() {
+    var itens = document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item');
+    itens.forEach(function (item) {
+      if (item._hoverFinBound) return;
+      item._hoverFinBound = true;
+      item.addEventListener('touchstart', function () {
+        itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+        this.classList.toggle('mostrar-info');
+      }, { passive: true });
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.fin-status-action-item')) {
+        itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
       }
     });
   }

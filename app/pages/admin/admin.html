@@ -90,6 +90,8 @@
                                                 <span class="admin-status-action-pct" id="adm-pct-mensal">0%</span>
                                             </div>
                                         </div>
+                                        <div class="admin-status-action-item admin-status-placeholder"
+                                            aria-hidden="true"></div>
                                     </div>
                                 </div>
                             </div>
@@ -111,9 +113,15 @@
                                     </div>
                                 </div>
 
-                                <input type="text" id="filtro-admin"
-                                    class="form-control form-control-sm rounded-pill admin-input-busca"
-                                    placeholder="Buscar..." autocomplete="off">
+                                <div class="admin-busca-wrapper">
+                                    <input type="text" id="filtro-admin"
+                                        class="form-control form-control-sm rounded-pill admin-input-busca"
+                                        placeholder="Buscar..." autocomplete="off">
+                                    <button type="button" id="btn-limpar-busca-admin"
+                                        class="btn-limpar-busca-admin d-none" title="Limpar busca">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </div>
 
                                 <button class="btn btn-danger btn-novo-admin" id="btn-novo-admin">
                                     <i class="bi bi-plus-lg me-1"></i> Novo

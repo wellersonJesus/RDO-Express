@@ -1801,16 +1801,27 @@
   margin-bottom: 4px;
 }
 
-.fin-status-card-inner {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.fin-status-grid {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.fin-status-row {
+  display: flex;
+  gap: 10px;
+}
+
+.fin-status-row .fin-status-action-item {
+  flex: 1;
 }
 
 .fin-status-action-item {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
+  text-align: left;
   gap: 10px;
   cursor: pointer;
   width: 100%;
@@ -1845,6 +1856,12 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.fin-icon-lg {
+  width: 46px;
+  height: 46px;
+  font-size: 1.4rem;
+}
+
 .fin-status-action-item.active .fin-status-action-icon,
 .fin-status-action-item:hover .fin-status-action-icon {
   transform: translateY(-2px);
@@ -1854,6 +1871,8 @@
 .fin-status-action-info {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
   gap: 1px;
   min-width: 0;
   flex: 1;
@@ -1868,6 +1887,8 @@
   text-overflow: ellipsis;
   transition: color 0.2s ease;
   line-height: 1.2;
+  text-align: left;
+  width: 100%;
 }
 
 .fin-status-action-item.active .fin-status-action-label {
@@ -1885,6 +1906,8 @@
   color: #222;
   line-height: 1.2;
   white-space: nowrap;
+  text-align: left;
+  width: 100%;
 }
 
 .fin-status-action-item.active .fin-status-action-count {
@@ -1897,6 +1920,8 @@
   color: #bbb;
   line-height: 1;
   white-space: nowrap;
+  text-align: left;
+  width: 100%;
 }
 
 .fin-status-action-item.active .fin-status-action-pct {
@@ -2778,39 +2803,91 @@
   }
 
   .fin-status-card {
-    padding: 10px 10px;
+    padding: 10px 8px;
     border-radius: 14px;
+    position: relative;
+    z-index: 30;
   }
 
-  .fin-status-card-inner {
-    grid-template-columns: repeat(3, 1fr);
+  .fin-status-grid {
+    gap: 8px;
+    position: relative;
+    z-index: 30;
+  }
+
+  .fin-status-row {
     gap: 6px;
+    position: relative;
+    z-index: 30;
   }
 
   .fin-status-action-item {
-    flex-direction: row;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 6px;
-    padding: 6px 6px;
+    text-align: center;
+    gap: 2px;
+    padding: 8px 4px;
+    position: relative;
+    z-index: 30;
   }
 
-  .fin-status-action-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 0.82rem;
-    border-radius: 9px;
+  .fin-status-action-item.mostrar-info {
+    z-index: 999;
   }
 
-  .fin-status-action-label {
-    font-size: 0.56rem;
+  .fin-icon-lg {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
   }
 
-  .fin-status-action-count {
-    font-size: 0.72rem;
+  .fin-status-action-item .fin-status-action-info {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 2px;
+    background: #fff;
+    border: 1px solid #f0d0d3;
+    border-radius: 10px;
+    padding: 6px 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    z-index: 999;
+    white-space: nowrap;
   }
 
+  .fin-status-action-item.mostrar-info .fin-status-action-info {
+    display: flex;
+    animation: finInfoMobilePop 0.15s ease;
+  }
+
+  .fin-status-row .fin-status-action-item:last-child .fin-status-action-info {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .fin-status-row .fin-status-action-item:first-child .fin-status-action-info {
+    left: 0;
+    transform: none;
+  }
+
+  .fin-status-action-label,
+  .fin-status-action-count,
   .fin-status-action-pct {
-    font-size: 0.52rem;
+    white-space: nowrap;
+    overflow: visible;
+    text-align: left;
+  }
+
+  @keyframes finInfoMobilePop {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 
   .fin-view-grid-2x2 {

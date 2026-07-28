@@ -37,6 +37,7 @@
     function bind() {
         els.tbody = document.getElementById('admin-list');
         els.filtro = document.getElementById('filtro-admin');
+        els.btnLimparBusca = document.getElementById('btn-limpar-busca-admin');
         els.syncIcon = document.getElementById('sync-icon-admin');
         els.btnSync = document.getElementById('btn-sync-admin');
         els.btnNovo = document.getElementById('btn-novo-admin');
@@ -70,6 +71,12 @@
         els.modalAviso = document.getElementById('modal-aviso-admin');
         els.avisoTitulo = document.getElementById('aviso-admin-titulo');
         els.avisoMensagem = document.getElementById('aviso-admin-mensagem');
+    }
+
+    function toggleBtnLimparBuscaAdmin() {
+        if (!els.btnLimparBusca) return;
+        var temTexto = els.filtro && els.filtro.value.trim().length > 0;
+        els.btnLimparBusca.classList.toggle('d-none', !temTexto);
     }
 
     function mostrarModalAviso(mensagem, tipo) {
@@ -170,9 +177,10 @@
         state.filtro = '';
         state.blocoAtivo = 'todos';
         state.filtroStatus = 'todos';
-        state.cache = []; // limpa cache antigo para não "vazar" dados da aba anterior
+        state.cache = [];
 
         if (els.filtro) els.filtro.value = '';
+        toggleBtnLimparBuscaAdmin();
         if (els.labelFiltro) els.labelFiltro.textContent = 'Status';
         if (els.menuFiltro) {
             els.menuFiltro.querySelectorAll('.dropdown-filtro-item[data-filtro-status]').forEach(function (el) {
@@ -191,6 +199,7 @@
     function onInputFiltro() {
         state.filtro = (els.filtro.value || '').trim().toLowerCase();
         state.pagina = 1;
+        toggleBtnLimparBuscaAdmin();
         renderTabela();
     }
 
@@ -213,6 +222,21 @@
             els.filtro.removeEventListener('input', onInputFiltro);
             els.filtro.addEventListener('input', onInputFiltro);
         }
+
+        if (els.btnLimparBusca) {
+            els.btnLimparBusca.onclick = function () {
+                if (els.filtro) {
+                    els.filtro.value = '';
+                    els.filtro.focus();
+                }
+                state.filtro = '';
+                state.pagina = 1;
+                toggleBtnLimparBuscaAdmin();
+                renderTabela();
+            };
+        }
+
+        toggleBtnLimparBuscaAdmin();
 
         if (els.btnSync) els.btnSync.onclick = function () { fetchDados(); };
         if (els.btnLoopHeader) els.btnLoopHeader.onclick = function () { fetchDados(); };
