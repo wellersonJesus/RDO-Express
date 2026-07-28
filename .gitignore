@@ -1,14 +1,61 @@
-# Historico
-.php_history
+# ================================
+# Dependências
+# ================================
+node_modules/
 
-# Config
+# ================================
+# Variáveis de ambiente / Credenciais
+# ================================
+.env
+.env.*
+!.env.example
+
+# ================================
+# Configs sensíveis do app (frontend)
+# ================================
+app/js/config.js
 public/assets/js/config.js
 
-# Credenciais
-.env
+# ================================
+# Pasta api/ - rascunhos e dados sensíveis
+# ================================
+# Ignora TUDO dentro de api/data (rascunhos, Apps Script, credenciais)
+api/data/*
+# Caso queira manter algum arquivo específico como referência sem segredo,
+# você pode "liberar" ele manualmente assim (opcional, remova o # se usar):
+# !api/data/exemplo-sem-credencial.js
 
-# Config
-app/js/config.js
+# ================================
+# Histórico de shell / PHP
+# ================================
+.php_history
+.bash_history
+.node_repl_history
 
-#Apps Script
-api/data/modeloAppsScritp.js
+# ================================
+# Logs
+# ================================
+*.log
+npm-debug.log*
+logs/
+
+# ================================
+# Sistema Operacional
+# ================================
+.DS_Store
+Thumbs.db
+
+# ================================
+# Editores / IDEs
+# ================================
+.vscode/
+.idea/
+*.swp
+
+# ================================
+# Build / Cache
+# ================================
+dist/
+build/
+.cache/
+*.db
