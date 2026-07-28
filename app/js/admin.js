@@ -921,12 +921,43 @@
             });
     }
 
+    function configurarInfoHoverAdmin() {
+        var itens = Array.prototype.slice.call(document.querySelectorAll('.admin-status-action-item'));
+        if (!itens.length) return;
+
+        function isMobile() {
+            return window.innerWidth <= 576;
+        }
+
+        itens.forEach(function (item) {
+            item.addEventListener('mouseenter', function () {
+                if (isMobile()) item.classList.add('mostrar-info');
+            });
+            item.addEventListener('mouseleave', function () {
+                if (isMobile()) item.classList.remove('mostrar-info');
+            });
+            item.addEventListener('touchstart', function () {
+                if (!isMobile()) return;
+                itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+                item.classList.add('mostrar-info');
+            }, { passive: true });
+        });
+
+        document.addEventListener('touchstart', function (e) {
+            if (!isMobile()) return;
+            if (!e.target.closest('.admin-status-action-item')) {
+                itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+            }
+        }, { passive: true });
+    }
+
     function init() {
         try {
             bind();
             registrarEventos();
             atualizarTabsAtivas();
             atualizarColunaPagamento();
+            configurarInfoHoverAdmin();
             fetchDados();
         } catch (err) {
             tratarErro(err, 'Erro na inicialização do módulo Admin');
