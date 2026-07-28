@@ -76,14 +76,8 @@
 }
 
 @keyframes pedidosLoadingSpin {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 0.7;
-    }
-    50% {
-        transform: scale(1.15);
-        opacity: 1;
-    }
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.15); opacity: 1; }
 }
 
 .pedidos-loading-text {
@@ -97,25 +91,13 @@
     opacity: 0;
 }
 
-.pedidos-loading-dots span:nth-child(1) {
-    animation-delay: 0s;
-}
-
-.pedidos-loading-dots span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.pedidos-loading-dots span:nth-child(3) {
-    animation-delay: 0.4s;
-}
+.pedidos-loading-dots span:nth-child(1) { animation-delay: 0s; }
+.pedidos-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.pedidos-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes pedidosLoadingDots {
-    0%, 80%, 100% {
-        opacity: 0;
-    }
-    40% {
-        opacity: 1;
-    }
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
 }
 
 .pedidos-error-content {
@@ -163,14 +145,8 @@
 }
 
 @keyframes pedidosErrorToastIn {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 .pedidos-error-toast.fade-out {
@@ -178,10 +154,7 @@
 }
 
 @keyframes pedidosErrorToastOut {
-    to {
-        opacity: 0;
-        transform: translateX(20px);
-    }
+    to { opacity: 0; transform: translateX(20px); }
 }
 
 .pedidos-error-icon {
@@ -276,30 +249,11 @@
     flex-shrink: 0;
 }
 
-.bg-status-pending {
-    background-color: #fff8e1;
-    color: #b8860b;
-}
-
-.bg-status-route {
-    background-color: #e8f4fd;
-    color: #1976d2;
-}
-
-.bg-status-done {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-
-.bg-status-cancel {
-    background-color: #fce4ec;
-    color: #c62828;
-}
-
-.bg-status-default {
-    background-color: #f5f5f5;
-    color: #757575;
-}
+.bg-status-pending { background-color: #fff8e1; color: #b8860b; }
+.bg-status-route { background-color: #e8f4fd; color: #1976d2; }
+.bg-status-done { background-color: #e8f5e9; color: #2e7d32; }
+.bg-status-cancel { background-color: #fce4ec; color: #c62828; }
+.bg-status-default { background-color: #f5f5f5; color: #757575; }
 
 .spinner-rotate {
     display: inline-block;
@@ -307,12 +261,8 @@
 }
 
 @keyframes spin-loop {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .dropdown-filtro-wrapper {
@@ -372,12 +322,8 @@
 }
 
 @keyframes fadeInDropFiltro {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .dropdown-filtro-item {
@@ -423,19 +369,52 @@
     border-color: #e4606d;
 }
 
-.input-filtro-data-pedidos {
-    height: 31px;
-    max-width: 150px;
-    font-size: 0.75rem;
-    color: #495057;
-    border: 1px solid #dee2e6;
-    cursor: pointer;
+.calendario-btn-wrapper {
+    position: relative;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
 }
 
-.input-filtro-data-pedidos:focus {
-    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
-    border-color: #e4606d;
+.input-filtro-data-pedidos-hidden {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.btn-icon-calendario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 31px;
+    height: 31px;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #495057;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.btn-icon-calendario:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+    transform: translateY(-1px);
+}
+
+.btn-icon-calendario.tem-data {
+    background: #fce4ec;
+    border-color: #dc3545;
+    color: #dc3545;
 }
 
 #info-paginacao-pedidos {
@@ -705,10 +684,19 @@
     margin-bottom: 4px;
 }
 
-.ped-status-card-inner {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+.ped-status-grid {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
+}
+
+.ped-status-row {
+    display: flex;
+    gap: 10px;
+}
+
+.ped-status-row .ped-status-action-item {
+    flex: 1;
 }
 
 .ped-status-action-item {
@@ -747,6 +735,12 @@
     font-size: 1rem;
     flex-shrink: 0;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ped-icon-lg {
+    width: 46px;
+    height: 46px;
+    font-size: 1.4rem;
 }
 
 .ped-status-action-item.active .ped-status-action-icon,
@@ -807,66 +801,42 @@
     color: #e07080;
 }
 
-.ped-icon-todos {
-    background: #f0f0f0;
-    color: #888;
-}
-
+.ped-icon-todos { background: #f0f0f0; color: #888; }
 .ped-status-action-item.active .ped-icon-todos,
 .ped-status-action-item:hover .ped-icon-todos {
     background: #e8e8e8;
     color: #555;
 }
 
-.ped-icon-pendente {
-    background: rgba(255, 193, 7, 0.15);
-    color: #e6a800;
-}
-
+.ped-icon-pendente { background: rgba(255, 193, 7, 0.15); color: #e6a800; }
 .ped-status-action-item.active .ped-icon-pendente,
 .ped-status-action-item:hover .ped-icon-pendente {
     background: rgba(255, 193, 7, 0.28);
     color: #c8900a;
 }
 
-.ped-icon-em-rota {
-    background: rgba(25, 118, 210, 0.12);
-    color: #1976d2;
-}
-
+.ped-icon-em-rota { background: rgba(25, 118, 210, 0.12); color: #1976d2; }
 .ped-status-action-item.active .ped-icon-em-rota,
 .ped-status-action-item:hover .ped-icon-em-rota {
     background: rgba(25, 118, 210, 0.22);
     color: #1565c0;
 }
 
-.ped-icon-concluido {
-    background: rgba(25, 135, 84, 0.12);
-    color: #198754;
-}
-
+.ped-icon-concluido { background: rgba(25, 135, 84, 0.12); color: #198754; }
 .ped-status-action-item.active .ped-icon-concluido,
 .ped-status-action-item:hover .ped-icon-concluido {
     background: rgba(25, 135, 84, 0.24);
     color: #146c43;
 }
 
-.ped-icon-cancelado {
-    background: rgba(220, 53, 69, 0.10);
-    color: #dc3545;
-}
-
+.ped-icon-cancelado { background: rgba(220, 53, 69, 0.10); color: #dc3545; }
 .ped-status-action-item.active .ped-icon-cancelado,
 .ped-status-action-item:hover .ped-icon-cancelado {
     background: rgba(220, 53, 69, 0.20);
     color: #b02a37;
 }
 
-.ped-icon-financeiro {
-    background: rgba(13, 202, 240, 0.12);
-    color: #0dcaf0;
-}
-
+.ped-icon-financeiro { background: rgba(13, 202, 240, 0.12); color: #0dcaf0; }
 .ped-status-action-item.active .ped-icon-financeiro,
 .ped-status-action-item:hover .ped-icon-financeiro {
     background: rgba(13, 202, 240, 0.24);
@@ -908,9 +878,7 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-.btn-pedido-view:hover i {
-    color: #495057;
-}
+.btn-pedido-view:hover i { color: #495057; }
 
 .btn-pedido-edit:hover {
     background: #e7f1ff;
@@ -919,9 +887,7 @@
     box-shadow: 0 2px 6px rgba(13, 110, 253, 0.15);
 }
 
-.btn-pedido-edit:hover i {
-    color: #0d6efd;
-}
+.btn-pedido-edit:hover i { color: #0d6efd; }
 
 .btn-pedido-delete:hover {
     background: #fff5f5;
@@ -930,9 +896,7 @@
     box-shadow: 0 2px 6px rgba(220, 53, 69, 0.15);
 }
 
-.btn-pedido-delete:hover i {
-    color: #dc3545;
-}
+.btn-pedido-delete:hover i { color: #dc3545; }
 
 .btn-pedido-view:active,
 .btn-pedido-edit:active,
@@ -964,50 +928,77 @@
     color: #6c757d;
 }
 
+.btn-limpar-busca {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 0;
+    color: #adb5bd;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.btn-limpar-busca:hover {
+    color: #dc3545;
+}
+
 @media (max-width: 768px) {
     .input-filtro-pedidos {
         max-width: 140px;
     }
-
-    .input-filtro-data-pedidos {
-        max-width: 130px;
-    }
 }
 
 @media (max-width: 576px) {
-    .ped-status-card {
-        padding: 10px 10px;
-        border-radius: 14px;
-    }
-
-    .ped-status-card-inner {
+    .pedidos-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
+        flex-wrap: nowrap !important;
         gap: 6px;
+        width: 100%;
     }
 
-    .ped-status-action-item {
-        flex-direction: row;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 6px;
+    .dropdown-filtro-wrapper {
+        flex-shrink: 0;
     }
 
-    .ped-status-action-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 0.82rem;
-        border-radius: 9px;
+    .btn-filtro-inteligente {
+        padding: 4px 6px;
+        gap: 3px;
     }
 
-    .ped-status-action-label {
-        font-size: 0.56rem;
+    .btn-filtro-inteligente span {
+        display: none;
     }
 
-    .ped-status-action-count {
+    .posicao-busca-wrapper {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .input-filtro-pedidos {
+        max-width: none;
+        width: 100%;
+        min-width: 0;
+        padding-left: 10px;
+        padding-right: 24px;
         font-size: 0.72rem;
     }
 
-    .ped-status-action-pct {
-        font-size: 0.52rem;
+    .pedidos-content-area .btn-limpar-busca {
+        right: 6px;
+    }
+
+    .calendario-btn-wrapper {
+        flex-shrink: 0;
+    }
+
+    .btn-icon-calendario {
+        width: 31px;
+        height: 31px;
+        font-size: 0.8rem;
     }
 
     .status-badges-row {
@@ -1017,43 +1008,6 @@
     .status-badges-row .status-badge {
         font-size: 0.55rem;
         padding: 2px 6px;
-    }
-
-    .pedidos-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
-        flex-wrap: nowrap;
-        gap: 6px;
-        width: 100%;
-    }
-
-    .dropdown-filtro-wrapper {
-        flex-shrink: 0;
-    }
-
-    .posicao-busca-wrapper {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
-    .input-filtro-pedidos {
-        max-width: none;
-        width: 100%;
-        min-width: 60px;
-    }
-
-    .input-filtro-data-pedidos {
-        max-width: 90px;
-        width: 90px;
-        flex-shrink: 0;
-        padding-left: 6px;
-        padding-right: 6px;
-    }
-
-    .btn-filtro-inteligente span {
-        display: none;
-    }
-
-    .btn-filtro-inteligente {
-        padding: 4px 8px;
     }
 
     .dropdown-filtro-menu {
@@ -1099,8 +1053,7 @@
         display: none;
     }
 
-    #tabela-pedidos td:nth-child(1),
-    #tabela-pedidos td:nth-child(2) {
+    #tabela-pedidos td:nth-child(1) {
         white-space: nowrap;
     }
 
@@ -1110,22 +1063,74 @@
         left: 10px;
         max-width: none;
     }
-}
 
-.btn-limpar-busca {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    padding: 0;
-    line-height: 0;
-    color: #adb5bd;
-    cursor: pointer;
-    z-index: 2;
-}
+    .ped-status-card {
+        padding: 10px 8px;
+    }
 
-.btn-limpar-busca:hover {
-    color: #dc3545;
+    .ped-status-grid {
+        gap: 8px;
+    }
+
+    .ped-status-row {
+        gap: 6px;
+    }
+
+    .ped-status-action-item {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 4px;
+    }
+
+    .ped-icon-lg {
+        width: 40px;
+        height: 40px;
+        font-size: 1.15rem;
+    }
+
+    .ped-status-action-info {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        flex-direction: row;
+        align-items: baseline;
+        gap: 6px;
+        background: #fff;
+        border: 1px solid #f0d0d3;
+        border-radius: 10px;
+        padding: 6px 12px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        z-index: 25;
+        white-space: nowrap;
+    }
+
+    .ped-status-action-item.mostrar-info .ped-status-action-info {
+        display: flex;
+        animation: pedInfoMobilePop 0.15s ease;
+    }
+
+    .ped-status-row .ped-status-action-item:last-child .ped-status-action-info {
+        left: auto;
+        right: 0;
+        transform: none;
+    }
+
+    .ped-status-row .ped-status-action-item:first-child .ped-status-action-info {
+        left: 0;
+        transform: none;
+    }
+
+    .ped-status-action-label {
+        white-space: nowrap;
+        overflow: visible;
+    }
+
+    @keyframes pedInfoMobilePop {
+        from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
 }

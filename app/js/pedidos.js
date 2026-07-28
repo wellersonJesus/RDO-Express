@@ -1338,6 +1338,76 @@
         });
     }
 
+    function _configurarBotaoCalendario() {
+        var inputData = document.getElementById('filtro-data-pedidos');
+        var btnCalendario = document.getElementById('btn-abrir-calendario-pedidos');
+        if (!inputData || !btnCalendario) return;
+
+        function _isMobile() {
+            return window.innerWidth <= 576;
+        }
+
+        btnCalendario.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (_isMobile()) {
+                inputData.style.position = 'fixed';
+                inputData.style.top = '10px';
+                inputData.style.right = '8px';
+                inputData.style.left = 'auto';
+                inputData.style.width = '1px';
+                inputData.style.height = '1px';
+            }
+
+            try {
+                if (typeof inputData.showPicker === 'function') {
+                    inputData.showPicker();
+                    return;
+                }
+            } catch (_) { }
+
+            inputData.style.opacity = '0';
+            inputData.style.pointerEvents = 'auto';
+            inputData.focus();
+            inputData.click();
+        };
+
+        inputData.onchange = function () {
+            btnCalendario.classList.toggle('tem-data', !!inputData.value);
+        };
+    }
+
+    function _configurarInfoHoverStatus() {
+        var itens = Array.prototype.slice.call(document.querySelectorAll('.ped-status-action-item'));
+        if (!itens.length) return;
+
+        function _isMobile() {
+            return window.innerWidth <= 576;
+        }
+
+        itens.forEach(function (item) {
+            item.addEventListener('mouseenter', function () {
+                if (_isMobile()) item.classList.add('mostrar-info');
+            });
+            item.addEventListener('mouseleave', function () {
+                if (_isMobile()) item.classList.remove('mostrar-info');
+            });
+            item.addEventListener('touchstart', function () {
+                if (!_isMobile()) return;
+                itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+                item.classList.add('mostrar-info');
+            }, { passive: true });
+        });
+
+        document.addEventListener('touchstart', function (e) {
+            if (!_isMobile()) return;
+            if (!e.target.closest('.ped-status-action-item')) {
+                itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+            }
+        }, { passive: true });
+    }
+
     window.initPedidos = function () {
         console.log('[pedidos.js] ========== initPedidos ==========');
         if (!document.getElementById('corpo-tabela-pedidos')) {
@@ -1365,6 +1435,8 @@
         _toggleBtnClearBusca();
         _registrarEventos();
         _registrarEventosEventBus();
+        _configurarBotaoCalendario();
+        _configurarInfoHoverStatus();
         _fetchPedidos();
 
         console.log('[pedidos.js] Pronto!');
