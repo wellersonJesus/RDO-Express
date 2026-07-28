@@ -69,7 +69,7 @@ docker-compose start
 ```bash
 #Na raiz
 python3 api/data/modelos/geraDados.py
-
+python3 api/data/modelos/conciliaDados.py
 #Na pasta
 python geraDados.py
 ```
