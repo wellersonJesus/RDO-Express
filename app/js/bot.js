@@ -1,3 +1,23 @@
+var ICONES_CARGO = {
+    'Atendente': 'bi-headset',
+    'Financeiro': 'bi-currency-dollar',
+    'Gestor': 'bi-award',
+    'Administrativo': 'bi-building',
+    'SRE Architect': 'bi-shield-lock'
+};
+
+var MAPA_MODULO_PAGE = {
+    'Dashboard': 'dashboard',
+    'Chat': 'chat',
+    'Pedidos': 'pedidos',
+    'Administração': 'admin',
+    'Financeiro': 'fin',
+    'Relatórios': 'relatorio',
+    'Bot': 'bot'
+};
+
+var CARGOS_DISPONIVEIS = ['Atendente', 'Financeiro', 'Gestor', 'Administrativo', 'SRE Architect'];
+
 window.botState = {
     cache: [],
     cacheCompleto: [],
@@ -10,14 +30,6 @@ window.botState = {
     _listenersRegistrados: false,
     _cacheCarregado: false,
     _formAdminCarregado: false
-};
-
-var ICONES_CARGO = {
-    'Atendente': 'bi-headset',
-    'Financeiro': 'bi-currency-dollar',
-    'Gestor': 'bi-award',
-    'Administrativo': 'bi-building',
-    'SRE Tecnologia': 'bi-shield-lock'
 };
 
 function _trocarModal(idFechar, idAbrir) {
@@ -64,24 +76,12 @@ window.reabrirModalCargo = function () {
     _trocarModal('modalUsuarioBot', 'modalSelecionarCargo');
 };
 
-var MAPA_MODULO_PAGE = {
-    'Dashboard': 'dashboard',
-    'Chat': 'chat',
-    'Pedidos': 'pedidos',
-    'Administração': 'admin',
-    'Financeiro': 'fin',
-    'Relatórios': 'relatorio',
-    'Bot': 'bot'
-};
-
-var CARGOS_DISPONIVEIS = ['Atendente', 'Financeiro', 'Gestor', 'Administrativo', 'SRE Tecnologia'];
-
 window.PERMISSOES_PADRAO = {
     'Atendente': ['Dashboard', 'Chat', 'Pedidos'],
     'Financeiro': ['Dashboard', 'Pedidos', 'Financeiro', 'Relatórios'],
     'Gestor': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios'],
     'Administrativo': ['Dashboard', 'Pedidos', 'Administração', 'Relatórios'],
-    'SRE Tecnologia': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios', 'Bot']
+    'SRE Architect': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios', 'Bot']
 };
 
 function normalizeStatus(val, fallback) {

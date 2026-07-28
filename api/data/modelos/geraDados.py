@@ -113,9 +113,9 @@ PADRAO_SOLICITANTE = re.compile(
     re.IGNORECASE
 )
 
-ULTIMO_RDO_LANCADO = "RDO000"
-FILTRO_DATA_INICIO = "01/07/2026"
-FILTRO_DATA_FIM = "25/07/2026"
+ULTIMO_RDO_LANCADO = "RDO775"
+FILTRO_DATA_INICIO = "27/07/2026"
+FILTRO_DATA_FIM = "27/07/2026"
 
 PAGAMENTO_SEMANAL = [
     "VAL FORTUNATO", "MARIA PITANGA", "IN CLOSET", "CACAL SHOW", "OPIMINAS", "OPMINAS",
@@ -1226,8 +1226,9 @@ def main():
                 ok_financeiro, erro_financeiro = criar_financeiro(consolidado)
                 time.sleep(INTERVALO_ENTRE_REQUISICOES)
 
-                ok_chat, erro_chat = criar_chat(consolidado)
-                time.sleep(INTERVALO_ENTRE_REQUISICOES)
+                # Chat é criado automaticamente pelo AppScript junto com o pedido.
+                # Não chamar criar_chat() aqui — isso causava bloqueio duplicado.
+                ok_chat = True
 
                 if ok_pedido and ok_financeiro and ok_chat:
                     total_sucesso += 1
