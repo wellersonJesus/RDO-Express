@@ -159,15 +159,33 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px;
   line-height: 0;
   color: #adb5bd;
   cursor: pointer;
-  z-index: 2;
+  z-index: 3;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.15s ease;
 }
 
-.btn-limpar-busca-fin:hover {
-  color: #dc3545;
+.btn-limpar-busca-fin i {
+  color: inherit;
+  pointer-events: none;
+}
+
+.btn-limpar-busca-fin:hover,
+.btn-limpar-busca-fin:focus {
+  color: #fff;
+  background: var(--fin-red);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.btn-limpar-busca-fin:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 .input-filtro-fin {
@@ -1802,18 +1820,18 @@
 }
 
 .fin-status-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
 .fin-status-row {
-  display: flex;
-  gap: 10px;
+  display: contents;
 }
 
 .fin-status-row .fin-status-action-item {
-  flex: 1;
+  flex: unset;
+  width: 100%;
 }
 
 .fin-status-action-item {
@@ -2816,7 +2834,6 @@
   }
 
   .fin-status-row {
-    gap: 6px;
     position: relative;
     z-index: 30;
   }
@@ -2885,9 +2902,53 @@
     text-align: left;
   }
 
+  .fin-tab-content .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap,
+  #fin-tab-content-extrato .d-flex.align-items-center.gap-2.mb-3 {
+    flex-wrap: nowrap !important;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .fin-busca-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .input-filtro-fin,
+  .fin-busca-wrapper .form-control {
+    width: 100% !important;
+    max-width: none;
+    padding-right: 24px;
+    font-size: 0.68rem;
+  }
+
+  .btn-limpar-busca-fin {
+    right: 6px;
+  }
+
+  .btn-novo-fin-action {
+    flex-shrink: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    white-space: nowrap;
+  }
+
+  .btn-novo-fin-action span,
+  .btn-novo-fin-action {
+    font-size: 0.62rem;
+  }
+
   @keyframes finInfoMobilePop {
-    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   }
 
   .fin-view-grid-2x2 {
