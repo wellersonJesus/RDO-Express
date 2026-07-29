@@ -42,6 +42,57 @@
     z-index: var(--z-conteudo);
 }
 
+#global-error-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: pre-wrap;
+    -webkit-overflow-scrolling: touch;
+    animation: globalErrorFadeIn .25s ease-out;
+}
+
+#global-error-container.d-none {
+    display: none !important;
+}
+
+#global-error-container i {
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 1.1rem;
+}
+
+#global-error-message {
+    flex: 1;
+    min-width: 0;
+    font-size: .85rem;
+    line-height: 1.5;
+}
+
+#global-error-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+#global-error-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#global-error-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, .15);
+    border-radius: 5px;
+}
+
+#global-error-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, .3);
+}
+
+@keyframes globalErrorFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .chat-wrapper {
     display: flex;
     flex-direction: row;
@@ -1273,6 +1324,50 @@
     #dropdown-pedidos-lista {
         min-width: 300px;
         max-width: calc(100vw - 24px);
+    }
+
+    #global-error-container {
+        max-height: 180px;
+        font-size: .8rem;
+    }
+
+    #global-error-message {
+        font-size: .78rem;
+    }
+
+    .fin-form-header-icon {
+        width: 34px;
+        height: 34px;
+        font-size: .95rem;
+    }
+
+    .fin-linha-dupla > [class*="col-"],
+    .fin-linha-quadrupla > [class*="col-"] {
+        margin-bottom: 2px;
+    }
+
+    .fin-field-label {
+        font-size: .68rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .fin-field-input {
+        font-size: .78rem !important;
+        padding: .35rem .55rem !important;
+    }
+
+    #p-rotas.fin-field-input {
+        font-size: .68rem !important;
+        line-height: 1.5 !important;
+    }
+
+    .modal-body.px-4 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    #view-valor-final {
+        font-size: 1.2rem !important;
     }
 }
 
