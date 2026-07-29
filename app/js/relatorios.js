@@ -612,12 +612,6 @@
     return true;
   }
 
-  function dentroPeriodo(dataStr, inicio, fim) {
-    const d = normalizarDataISO(dataStr);
-    if (!d) return false;
-    return d >= inicio && d <= fim;
-  }
-
   function normalizarComparacao(v) {
     return String(v == null ? '' : v)
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -657,28 +651,6 @@
     return ehAbreviacaoDeterministica(a, b) || ehAbreviacaoDeterministica(b, a);
   }
 
-  function obterNomeClienteDoPedido(pedido) {
-    const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
-
-    if (idCliente && /^\d+$/.test(String(idCliente).trim())) {
-      const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente).trim(); });
-      if (cli) return resolverValor('clientes', 'username', cli);
-    }
-
-    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
-    if (solicitante) return solicitante;
-
-    const destino = resolverValor('pedidos', 'para', pedido);
-    if (destino) return destino;
-
-    const observacao = resolverValor('pedidos', 'observacao', pedido);
-    if (observacao) return observacao;
-
-    if (idCliente) return idCliente;
-
-    return '';
-  }
-
   function idsParaClientesSelecionados(ids) {
     const idsStr = ids.map(function (v) { return String(v).trim(); });
     return state.clientes.filter(function (c) { return idsStr.indexOf(String(c.id).trim()) !== -1; });
@@ -693,14 +665,6 @@
     return nomesTexto;
   }
 
-  function valorContemNome(valor, nomeAlvo) {
-    if (!valor || !nomeAlvo) return false;
-    const a = normalizarComparacao(valor);
-    const b = normalizarComparacao(nomeAlvo);
-    if (!a || !b || a.length < 4 || b.length < 4) return false; // evita match de strings curtas
-    return a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
-  }
-
   function valorCorrespondeNomesAlvo(valor, nomesAlvo) {
     if (!valor) return false;
     return nomesAlvo.some(function (nome) {
@@ -711,32 +675,42 @@
   const PERCENTUAL_MOTOBOY = 0.80;
   const PERCENTUAL_RDO = 0.20;
 
+  function valorContemNome(valor, nomeAlvo) {
+    if (!valor || !nomeAlvo) return false;
+    const a = tokenizar(valor);
+    const b = normalizarComparacao(nomeAlvo);
+    if (!b || b.length < 3) return false;
+    return a.indexOf(b) !== -1;
+  }
+
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
-    if (idPed && idsStr.indexOf(idPed) !== -1) return true; // match por ID sempre prioritário
+    if (idPed && idsStr.indexOf(idPed) !== -1) return true;
 
-    // Só cai no fallback textual se o pedido NÃO tiver id_cliente vinculado
-    if (idPed) return false;
-
-    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
-    if (nomesAlvo.some(function (nome) { return nomesRelacionados(solicitante, nome); })) return true;
-
-    const mercadoria = resolverValor('pedidos', 'mercadoria', pedido);
-    if (nomesAlvo.some(function (nome) { return nomesRelacionados(mercadoria, nome); })) return true;
+    const camposParaVerificar = ['solicitante'];
+    for (let i = 0; i < camposParaVerificar.length; i++) {
+      const valorCampo = resolverValor('pedidos', camposParaVerificar[i], pedido);
+      if (!valorCampo) continue;
+      if (nomesAlvo.some(function (nome) { return nomesRelacionados(valorCampo, nome); })) {
+        return true;
+      }
+    }
 
     return false;
   }
 
   function financeiroCorrespondeCliente(registro, nomesAlvo) {
     const nomeFin = obterValorCampoFinanceiro('cliente', registro);
-    if (valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
+    if (nomeFin && nomesAlvo.some(function (nome) { return nomesRelacionados(nomeFin, nome); })) return true;
 
     const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
     if (!pedidoVinculado) return false;
 
-    // ✅ mesma correção: também tenta pelo nome do solicitante do pedido vinculado
+    const idCliente = resolverValor('pedidos', 'id_cliente', pedidoVinculado);
     const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
-    if (valorCorrespondeNomesAlvo(solicitante, nomesAlvo)) return true;
+
+    if (idCliente && nomesAlvo.some(function (nome) { return nomesRelacionados(String(idCliente), nome); })) return true;
+    if (solicitante && nomesAlvo.some(function (nome) { return nomesRelacionados(solicitante, nome); })) return true;
 
     return valorCorrespondeNomesAlvo(obterNomeClienteDoPedido(pedidoVinculado), nomesAlvo);
   }
@@ -747,6 +721,40 @@
     const pedidoVinculado = buscarPedidoDoChat(registroChat);
     if (!pedidoVinculado) return false;
     return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
+  }
+
+  function dentroPeriodo(dataStr, inicio, fim) {
+    const d = normalizarDataISO(dataStr);
+    if (!d || !inicio || !fim) return false;
+    return d >= inicio && d <= fim;
+  }
+
+  function obterNomeClienteDoPedido(pedido) {
+    const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
+
+    if (idCliente && /^\d+$/.test(String(idCliente).trim())) {
+      const cli = state.clientes.find(function (c) { return String(c.id) === String(idCliente).trim(); });
+      if (cli) return resolverValor('clientes', 'username', cli);
+    }
+
+    const mercadoria = resolverValor('pedidos', 'mercadoria', pedido);
+    if (mercadoria) return mercadoria;
+
+    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+    if (solicitante) return solicitante;
+
+    const de = resolverValor('pedidos', 'de', pedido);
+    if (de) return de;
+
+    const destino = resolverValor('pedidos', 'para', pedido);
+    if (destino) return destino;
+
+    const observacao = resolverValor('pedidos', 'observacao', pedido);
+    if (observacao) return observacao;
+
+    if (idCliente) return idCliente;
+
+    return '';
   }
 
   function coletarDadosBanco(banco) {
@@ -1861,25 +1869,44 @@
     spinOn();
     exibirLoadingListas();
 
-    Promise.all([
-      window.API.call('getcolaboradores', {}),
-      window.API.call('getclientes', {}),
-      window.API.call('getpedidos', {}),
-      window.API.call('getchat', {}),
-      window.API.call('getfinanceirocompleto', {})
-    ]).then(function (resultados) {
-      state.motoboys = extrairArray(resultados[0]);
-      state.clientes = extrairArray(resultados[1]);
-      state.pedidos = extrairArray(resultados[2]);
-      state.chat = extrairArray(resultados[3]);
-      state.financeiro = extrairArray(resultados[4]);
+    const ENDPOINTS = [
+      { chave: 'motoboys', nome: 'getcolaboradores' },
+      { chave: 'clientes', nome: 'getclientes' },
+      { chave: 'pedidos', nome: 'getpedidos' },
+      { chave: 'chat', nome: 'getchat' },
+      { chave: 'financeiro', nome: 'getfinanceirocompleto' }
+    ];
+
+    Promise.allSettled(
+      ENDPOINTS.map(function (e) { return window.API.call(e.nome, {}); })
+    ).then(function (resultados) {
+      const falhas = [];
+
+      resultados.forEach(function (resultado, i) {
+        const chave = ENDPOINTS[i].chave;
+        const nome = ENDPOINTS[i].nome;
+
+        if (resultado.status === 'fulfilled') {
+          state[chave] = extrairArray(resultado.value);
+        } else {
+          state[chave] = state[chave] && state[chave].length ? state[chave] : [];
+          falhas.push(nome);
+        }
+      });
 
       popularSelectMotoboys();
       popularSelectClientes();
       renderizarListas();
-      relToast('Dados atualizados com sucesso!', 'success');
+
+      if (falhas.length === ENDPOINTS.length) {
+        relToast('Falha total na comunicação com o servidor. Tente novamente em alguns instantes.', 'danger');
+      } else if (falhas.length > 0) {
+        relToast('Dados parcialmente atualizados. Falha em: ' + falhas.join(', ') + '.', 'warning');
+      } else {
+        relToast('Dados atualizados com sucesso!', 'success');
+      }
     }).catch(function (err) {
-      relToast('Erro ao carregar dados: ' + err.message, 'danger');
+      relToast('Erro inesperado ao carregar dados: ' + err.message, 'danger');
     }).finally(function () {
       state.fetching = false;
       window._relatorioFetchEmAndamento = false;

@@ -2198,39 +2198,7 @@ window.extrairRotasDaMensagem = function (texto) {
 window._cacheGeocodificacao = window._cacheGeocodificacao || {};
 
 window.buscarCoordenadasEndereco = function (endereco) {
-    var CHAVE_CACHE = 'rdo_geocache_v1';
-    var VALIDADE_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
     var LAT_BH = -19.9167, LON_BH = -43.9345;
-
-    function _normalizar(str) {
-        return String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    }
-
-    function _lerCache(chave) {
-        try {
-            var bruto = localStorage.getItem(CHAVE_CACHE);
-            if (!bruto) return null;
-            var mapa = JSON.parse(bruto);
-            var item = mapa[chave];
-            if (!item) return null;
-            if (Date.now() - item.t > VALIDADE_CACHE_MS) return null;
-            return item.v;
-        } catch (e) { return null; }
-    }
-
-    function _salvarCache(chave, valor) {
-        try {
-            var bruto = localStorage.getItem(CHAVE_CACHE);
-            var mapa = bruto ? JSON.parse(bruto) : {};
-            mapa[chave] = { v: valor, t: Date.now() };
-            var chaves = Object.keys(mapa);
-            if (chaves.length > 500) {
-                chaves.sort(function (a, b) { return mapa[a].t - mapa[b].t; });
-                for (var i = 0; i < chaves.length - 500; i++) delete mapa[chaves[i]];
-            }
-            localStorage.setItem(CHAVE_CACHE, JSON.stringify(mapa));
-        } catch (e) { }
-    }
 
     function _fetchGeoComTimeout(url, ms) {
         return fetch(url, { signal: AbortSignal.timeout(ms) });
@@ -2265,29 +2233,51 @@ window.buscarCoordenadasEndereco = function (endereco) {
             .catch(function () { return null; });
     }
 
+    function _geocodificarExterno(busca) {
+        var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim/i.test(busca);
+        var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+
+        return _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
+            if (resultado) return resultado;
+            return _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
+                if (resultado2) return resultado2;
+                return _tentarNominatim(busca + ', Brasil', 4000);
+            });
+        });
+    }
+
     return new Promise(function (resolve) {
         var busca = String(endereco || '').trim();
         if (!busca) { resolve(null); return; }
 
-        var chaveCache = _normalizar(busca);
-        var doCache = _lerCache(chaveCache);
-        if (doCache) { resolve(doCache); return; }
+        API.call('buscarenderecogeo', { endereco: busca })
+            .then(function (resp) {
+                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
+                    resolve({ lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) });
+                    return null;
+                }
+                return _geocodificarExterno(busca);
+            })
+            .then(function (resultadoExterno) {
+                if (resultadoExterno === null) return;
+                if (!resultadoExterno) { resolve(null); return; }
 
-        var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim/i.test(busca);
-        var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+                resolve(resultadoExterno);
 
-        _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
-            if (resultado) { _salvarCache(chaveCache, resultado); resolve(resultado); return; }
-
-            _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
-                if (resultado2) { _salvarCache(chaveCache, resultado2); resolve(resultado2); return; }
-
-                _tentarNominatim(busca + ', Brasil', 4000).then(function (resultado3) {
-                    if (resultado3) _salvarCache(chaveCache, resultado3);
-                    resolve(resultado3);
+                API.call('salvarenderecogeo', {
+                    endereco_original: busca,
+                    lat: resultadoExterno.lat,
+                    lng: resultadoExterno.lng,
+                    cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
+                    origem_resolucao: 'geocodificado'
+                }).catch(function (e) {
+                    window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
                 });
+            })
+            .catch(function (e) {
+                window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
+                resolve(null);
             });
-        });
     });
 };
 
