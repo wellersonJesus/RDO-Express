@@ -37,6 +37,8 @@ if (!window.EventBus) {
   var CAIXA_BUSCA_SESSION_KEY = 'rdo_caixa_busca_atual';
   var _tokenAbrirPedidoFinanceiro = 0;
 
+  var _repassesAbrindoAgora = false;
+
   var state = {
     cache: [],
     pedidosCache: {},
@@ -1290,11 +1292,19 @@ if (!window.EventBus) {
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
-
+  
   function abrirModalRepasses() {
+    if (_repassesAbrindoAgora) return; // ✅ ignora clique duplicado
+    _repassesAbrindoAgora = true;
+
     var OLD_ID = 'modalRepassesDyn';
     var old = document.getElementById(OLD_ID);
-    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+    if (old) {
+      var oi = bootstrap.Modal.getInstance(old);
+      if (oi) oi.dispose();
+      old.remove();
+    }
+
     var dados = state.caixa.dadosFiltrados.length ? state.caixa.dadosFiltrados : state.cache;
     var entradas = dados.filter(function (r) { return r.tipo === 'entrada'; });
     var por = {};
@@ -1310,8 +1320,19 @@ if (!window.EventBus) {
     var html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:420px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#6f42c1 0%,#59359a 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-people-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Repasses</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">' + escapeHtml(periodoLabel) + '</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-3 py-3">' + listaHtml + '</div><div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button></div></div></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
+
+    if (!modalEl) { // ✅ trava defensiva extra
+      _repassesAbrindoAgora = false;
+      finToast('Erro ao montar o modal de repasses.', 'danger');
+      return;
+    }
+
     var modalInst = new bootstrap.Modal(modalEl);
-    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+      _repassesAbrindoAgora = false; // ✅ libera para o próximo clique
+    });
     modalInst.show();
   }
 
@@ -1820,7 +1841,7 @@ if (!window.EventBus) {
       }
     }
   }
-  
+
   function exibirErroViewFin(msg) {
     var box = document.getElementById('fin-view-erro-box');
     var txt = document.getElementById('fin-view-erro-msg');
