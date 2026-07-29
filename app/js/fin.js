@@ -285,7 +285,7 @@ if (!window.EventBus) {
   }
 
   function obterPorPaginaFin() {
-    return window.innerWidth <= 576 ? 5 : 15;
+    return window.innerWidth <= 576 ? 5 : 5;
   }
 
   function filtrarListaDiariaPorTipo(tipo) {
