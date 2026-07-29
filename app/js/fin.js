@@ -50,8 +50,8 @@ if (!window.EventBus) {
     filtroBusca: '',
     fetching: false,
     sortDataDesc: true,
-    todos: { pagina: 1, porPagina: 15, totalPag: 1 },
-    caixa: { pagina: 1, porPagina: 15, totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
+    todos: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1 },
+    caixa: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
 
@@ -186,6 +186,42 @@ if (!window.EventBus) {
     janela.print();
   }
 
+  function configurarInfoHoverFin() {
+    var itens = document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item');
+    itens.forEach(function (item) {
+      if (item._hoverFinBound) return;
+      item._hoverFinBound = true;
+      item.addEventListener('click', function (e) {
+        e.stopPropagation();
+        itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+        this.classList.toggle('mostrar-info');
+      });
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.fin-status-action-item')) {
+        itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+      }
+    });
+  }
+
+  function configurarInfoHoverCaixa() {
+    var itens = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card');
+    itens.forEach(function (item) {
+      if (item._hoverCaixaBound) return;
+      item._hoverCaixaBound = true;
+      item.addEventListener('click', function (e) {
+        e.stopPropagation();
+        itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+        this.classList.toggle('mostrar-info');
+      });
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#fin-tab-content-caixa .caixa-mini-card')) {
+        itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+      }
+    });
+  }
+
   function aplicarFiltroCaixaMini(tipo, card) {
     var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
     if (filtroCaixaAtivo === tipo) {
@@ -199,6 +235,56 @@ if (!window.EventBus) {
     filtrarListaDiariaPorTipo(filtroCaixaAtivo);
   }
 
+  function bindFiltrosMiniCaixa() {
+    var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
+    cards.forEach(function (card) {
+      if (card._finCaixaBound) return;
+      card._finCaixaBound = true;
+      card.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var tipo = card.getAttribute('data-filtro-caixa');
+        aplicarFiltroCaixaMini(tipo, card);
+        var itens = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card');
+        itens.forEach(function (i) { if (i !== card) i.classList.remove('mostrar-info'); });
+        card.classList.toggle('mostrar-info');
+      });
+    });
+  }
+
+  function configurarOlhinhoCarteiraRDOP() {
+    var btn = els.btnToggleCaixaVal || document.getElementById('btn-toggle-caixa-valores');
+    var icon = els.iconToggleCaixaVal || document.getElementById('icon-toggle-caixa-val');
+    var painel = document.getElementById('rdo-pay-saldo-wrap') || (els.rdoPaySaldo ? els.rdoPaySaldo.closest('.rdo-pay-saldo-wrap') : null);
+    if (!btn || btn._olhinhoRdopBound) return;
+    btn._olhinhoRdopBound = true;
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
+
+      btn.classList.toggle('oculto', !state.caixaValoresVisiveis);
+      if (icon) icon.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
+      btn.title = state.caixaValoresVisiveis ? 'Ocultar valores da carteira RDOP' : 'Mostrar valores da carteira RDOP';
+
+      if (painel) painel.classList.toggle('mostrar-info', state.caixaValoresVisiveis);
+
+      aplicarMascaraValores();
+      renderCaixa();
+    });
+  }
+
+  function initCaixaExtras() {
+    bindFiltrosMiniCaixa();
+    bindDropdownFiltroCaixa();
+    configurarInfoHoverCaixa();
+    configurarOlhinhoCarteiraRDOP();
+  }
+
+  function obterPorPaginaFin() {
+    return window.innerWidth <= 576 ? 5 : 15;
+  }
+
   function filtrarListaDiariaPorTipo(tipo) {
     var itens = document.querySelectorAll('#caixa-lista-diaria [data-tipo-item]');
     if (!itens.length) return;
@@ -208,16 +294,6 @@ if (!window.EventBus) {
       } else {
         item.style.display = item.getAttribute('data-tipo-item') === tipo ? '' : 'none';
       }
-    });
-  }
-
-  function bindFiltrosMiniCaixa() {
-    var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
-    cards.forEach(function (card) {
-      card.addEventListener('click', function () {
-        var tipo = card.getAttribute('data-filtro-caixa');
-        aplicarFiltroCaixaMini(tipo, card);
-      });
     });
   }
 
@@ -271,11 +347,6 @@ if (!window.EventBus) {
       var passaValor = !valor || textoValor.indexOf(valor) !== -1;
       item.style.display = (passaDesc && passaValor) ? '' : 'none';
     });
-  }
-
-  function initCaixaExtras() {
-    bindFiltrosMiniCaixa();
-    bindDropdownFiltroCaixa();
   }
 
   if (document.readyState === 'loading') {
@@ -1470,28 +1541,14 @@ if (!window.EventBus) {
         });
       }
     });
-  }
 
-  function configurarInfoHoverFin() {
-    var itens = document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item');
-    itens.forEach(function (item) {
-      if (item._hoverFinBound) return;
-      item._hoverFinBound = true;
-      item.addEventListener('touchstart', function () {
-        itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
-        this.classList.toggle('mostrar-info');
-      }, { passive: true });
-    });
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.fin-status-action-item')) {
-        itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
-      }
-    });
+    configurarInfoHoverFin();
   }
 
   function registrarEventos() {
     try {
       bindBtnSalvarPeriodoCaixa();
+      configurarOlhinhoCarteiraRDOP();
 
       document.querySelectorAll('.fin-tab').forEach(function (tab) {
         tab.addEventListener('click', function (e) {
@@ -1686,23 +1743,6 @@ if (!window.EventBus) {
         }
       });
 
-      if (els.btnToggleCaixaVal) {
-        els.btnToggleCaixaVal.addEventListener('click', function (e) {
-          e.preventDefault(); e.stopPropagation();
-          try {
-            state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
-            if (els.iconToggleCaixaVal) els.iconToggleCaixaVal.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
-            this.title = state.caixaValoresVisiveis ? 'Ocultar valores' : 'Mostrar valores';
-
-            aplicarMascaraValores();
-            renderCaixa();
-          } catch (err) {
-            console.error('[btnToggleCaixaVal]', err);
-            finToast('Erro ao alternar visibilidade: ' + err.message, 'danger');
-          }
-        });
-      }
-
       var btnAdicionar = document.querySelector('[data-rdo-action="adicionar"]');
       if (btnAdicionar) btnAdicionar.addEventListener('click', function (e) {
         e.preventDefault();
@@ -1780,7 +1820,7 @@ if (!window.EventBus) {
       }
     }
   }
-
+  
   function exibirErroViewFin(msg) {
     var box = document.getElementById('fin-view-erro-box');
     var txt = document.getElementById('fin-view-erro-msg');
@@ -2320,6 +2360,8 @@ if (!window.EventBus) {
       }
 
       renderPeriodosSalvosCaixa();
+      configurarInfoHoverCaixa();
+      bindFiltrosMiniCaixa();
       return;
     }
 
@@ -2345,6 +2387,8 @@ if (!window.EventBus) {
     }
 
     renderPeriodosSalvosCaixa();
+    configurarInfoHoverCaixa();
+    bindFiltrosMiniCaixa();
   }
 
   function aplicarFiltroCaixaLocal() {
@@ -3803,6 +3847,20 @@ if (!window.EventBus) {
     initExtratoListaDelegacao();
     bindEventoAbrirPedidoFinanceiro();
     carregarDados();
+
+    window.addEventListener('resize', debounce(function () {
+      var novo = obterPorPaginaFin();
+      if (state.todos.porPagina !== novo) {
+        state.todos.porPagina = novo;
+        state.todos.pagina = 1;
+        renderTodos();
+      }
+      if (state.caixa.porPagina !== novo) {
+        state.caixa.porPagina = novo;
+        state.caixa.pagina = 1;
+        renderCaixaListaDiaria();
+      }
+    }, 250));
   }
 
   window.FinanceiroModule = {

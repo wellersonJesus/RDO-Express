@@ -677,7 +677,7 @@
 
   function valorContemNome(valor, nomeAlvo) {
     if (!valor || !nomeAlvo) return false;
-    const a = tokenizar(valor);
+    const a = normalizarComparacao(valor);
     const b = normalizarComparacao(nomeAlvo);
     if (!b || b.length < 3) return false;
     return a.indexOf(b) !== -1;
@@ -687,11 +687,14 @@
     const idPed = String(resolverValor('pedidos', 'id_cliente', pedido)).trim();
     if (idPed && idsStr.indexOf(idPed) !== -1) return true;
 
-    const camposParaVerificar = ['solicitante'];
+    // ✅ verificar também mercadoria (onde o nome do cliente geralmente aparece)
+    const camposParaVerificar = ['solicitante', 'mercadoria', 'de', 'para', 'observacao'];
     for (let i = 0; i < camposParaVerificar.length; i++) {
       const valorCampo = resolverValor('pedidos', camposParaVerificar[i], pedido);
       if (!valorCampo) continue;
-      if (nomesAlvo.some(function (nome) { return nomesRelacionados(valorCampo, nome); })) {
+      if (nomesAlvo.some(function (nome) {
+        return nomesRelacionados(valorCampo, nome) || valorContemNome(valorCampo, nome);
+      })) {
         return true;
       }
     }
@@ -701,7 +704,9 @@
 
   function financeiroCorrespondeCliente(registro, nomesAlvo) {
     const nomeFin = obterValorCampoFinanceiro('cliente', registro);
-    if (nomeFin && nomesAlvo.some(function (nome) { return nomesRelacionados(nomeFin, nome); })) return true;
+    if (nomeFin && nomesAlvo.some(function (nome) {
+      return nomesRelacionados(nomeFin, nome) || valorContemNome(nomeFin, nome); // ✅ adicionado
+    })) return true;
 
     const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
     if (!pedidoVinculado) return false;
@@ -710,7 +715,9 @@
     const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
 
     if (idCliente && nomesAlvo.some(function (nome) { return nomesRelacionados(String(idCliente), nome); })) return true;
-    if (solicitante && nomesAlvo.some(function (nome) { return nomesRelacionados(solicitante, nome); })) return true;
+    if (solicitante && nomesAlvo.some(function (nome) {
+      return nomesRelacionados(solicitante, nome) || valorContemNome(solicitante, nome); // ✅ adicionado
+    })) return true;
 
     return valorCorrespondeNomesAlvo(obterNomeClienteDoPedido(pedidoVinculado), nomesAlvo);
   }

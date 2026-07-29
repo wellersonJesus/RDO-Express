@@ -23,54 +23,68 @@
     </div>
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
-      <div class="fin-status-card mb-2 mt-2">
+      <div class="fin-status-card mb-3">
         <div class="fin-status-grid">
           <div class="fin-status-row">
-            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="recebido">
-              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(13,110,253,.12);color:#0d6efd;">
-                <i class="bi bi-cash-coin"></i>
-              </div>
-              <div class="fin-status-action-info">
-                <span class="fin-status-action-label">Recebido</span>
-                <span class="fin-status-action-count" id="fin-status-count-recebido">0</span>
-              </div>
-            </div>
-            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="pago">
+            <div class="fin-status-action-item" data-filtro-caixa="entrada">
               <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(25,135,84,.12);color:#198754;">
-                <i class="bi bi-check-circle-fill"></i>
+                <i class="bi bi-arrow-down-circle-fill"></i>
               </div>
               <div class="fin-status-action-info">
-                <span class="fin-status-action-label">Pago</span>
-                <span class="fin-status-action-count" id="fin-status-count-pago">0</span>
+                <span class="fin-status-action-label">Receitas</span>
+                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-entradas"
+                  data-valor-real="R$ 0,00">R$ ****</span>
               </div>
             </div>
-            <div class="fin-status-action-item active" data-filtro-tipo="todos" data-filtro-situacao="pendente">
-              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(255,193,7,.2);color:#856404;">
-                <i class="bi bi-exclamation-circle-fill"></i>
+            <div class="fin-status-action-item" data-filtro-caixa="saida">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(220,53,69,.12);color:#dc3545;">
+                <i class="bi bi-arrow-up-circle-fill"></i>
               </div>
               <div class="fin-status-action-info">
-                <span class="fin-status-action-label">Pendente</span>
-                <span class="fin-status-action-count" id="fin-status-count-pendente">0</span>
+                <span class="fin-status-action-label">Despesas</span>
+                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-saidas"
+                  data-valor-real="R$ 0,00">R$ ****</span>
+              </div>
+            </div>
+            <div class="fin-status-action-item" data-filtro-caixa="empresa">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(111,66,193,.15);color:#6f42c1;">
+                <i class="bi bi-building"></i>
+              </div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Empresa (20%)</span>
+                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
+                  style="color:#6f42c1;">R$ ****</span>
               </div>
             </div>
           </div>
           <div class="fin-status-row">
-            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="cancelado">
-              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(108,117,125,.18);color:#6c757d;">
-                <i class="bi bi-x-circle-fill"></i>
+            <div class="fin-status-action-item" data-filtro-caixa="colaborador">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(13,110,253,.12);color:#0d6efd;">
+                <i class="bi bi-person-fill"></i>
               </div>
               <div class="fin-status-action-info">
-                <span class="fin-status-action-label">Cancelado</span>
-                <span class="fin-status-action-count" id="fin-status-count-cancelado" style="color:#6c757d;">0</span>
+                <span class="fin-status-action-label">Colaborador (80%)</span>
+                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-colaboradores"
+                  data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</span>
               </div>
             </div>
-            <div class="fin-status-action-item" data-filtro-tipo="todos" data-filtro-situacao="todos">
-              <div class="fin-status-action-icon fin-icon-lg" style="background:#f0f0f0;color:#888;">
-                <i class="bi bi-grid-3x3-gap-fill"></i>
+            <div class="fin-status-action-item" data-filtro-caixa="registros">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(255,193,7,.2);color:#856404;">
+                <i class="bi bi-list-check"></i>
               </div>
               <div class="fin-status-action-info">
-                <span class="fin-status-action-label">Todos</span>
-                <span class="fin-status-action-count" id="fin-status-count-total">0</span>
+                <span class="fin-status-action-label">Registros</span>
+                <span class="fin-status-action-count" id="caixa-card-registros" style="color:#856404;">0</span>
+              </div>
+            </div>
+            <div class="fin-status-action-item" data-filtro-caixa="saldo">
+              <div class="fin-status-action-icon fin-icon-lg" style="background:rgba(108,117,125,.12);color:#6c757d;">
+                <i class="bi bi-piggy-bank-fill"></i>
+              </div>
+              <div class="fin-status-action-info">
+                <span class="fin-status-action-label">Saldo Total</span>
+                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-saldo-total"
+                  data-valor-real="R$ 0,00">R$ ****</span>
               </div>
             </div>
           </div>
@@ -179,91 +193,87 @@
         </div>
       </div>
 
-      <div class="row g-2 mb-3">
+      <!-- ✅ BLOCO REFATORADO: mesmo padrão compacto da Carteira (ícone + label + painel oculto ao clicar) -->
+      <div class="row g-2 mb-3 caixa-mini-cards-row">
         <div class="col-4">
-          <div class="caixa-mini-card caixa-mini-entrada" data-filtro-caixa="entrada" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(25,135,84,.12);color:#198754;">
-                <i class="bi bi-arrow-down-circle-fill"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Receitas</div>
-                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****
-                </div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="entrada">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#198754,#146c43);">
+              <i class="bi bi-arrow-down-circle-fill"></i>
+            </div>
+            <span class="caixa-mini-card-label">Receitas</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Total de Receitas</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****</span>
             </div>
           </div>
         </div>
+
         <div class="col-4">
-          <div class="caixa-mini-card caixa-mini-saida" data-filtro-caixa="saida" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(220,53,69,.12);color:#dc3545;">
-                <i class="bi bi-arrow-up-circle-fill"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Despesas</div>
-                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****
-                </div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="saida">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
+              <i class="bi bi-arrow-up-circle-fill"></i>
+            </div>
+            <span class="caixa-mini-card-label">Despesas</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Total de Despesas</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****</span>
             </div>
           </div>
         </div>
+
         <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="empresa" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(111,66,193,.15);color:#6f42c1;">
-                <i class="bi bi-building"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Empresa (20%)</div>
-                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
-                  style="color:#6f42c1;">R$ ****</div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="empresa">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#6f42c1,#59359a);">
+              <i class="bi bi-building"></i>
+            </div>
+            <span class="caixa-mini-card-label">Empresa</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Empresa (20%)</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00" style="color:#6f42c1;">R$ ****</span>
             </div>
           </div>
         </div>
+
         <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="colaborador" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(13,110,253,.12);color:#0d6efd;">
-                <i class="bi bi-person-fill"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Colaborador (80%)</div>
-                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
-                  style="color:#0d6efd;">R$ ****</div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="colaborador">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);">
+              <i class="bi bi-person-fill"></i>
+            </div>
+            <span class="caixa-mini-card-label">Colaborador</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Colaborador (80%)</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</span>
             </div>
           </div>
         </div>
+
         <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="registros" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(255,193,7,.2);color:#856404;">
-                <i class="bi bi-list-check"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Registros</div>
-                <div class="caixa-mini-valor" id="caixa-card-registros" style="color:#856404;">0</div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="registros">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#ffc107,#d39e00);color:#5c4700;">
+              <i class="bi bi-list-check"></i>
+            </div>
+            <span class="caixa-mini-card-label">Registros</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Total de Registros</span>
+              <span class="info-valor" id="caixa-card-registros" style="color:#856404;">0</span>
             </div>
           </div>
         </div>
+
         <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="saldo" style="cursor:pointer;">
-            <div class="d-flex align-items-center gap-2">
-              <div class="fin-mini-icon" style="background:rgba(108,117,125,.12);color:#6c757d;">
-                <i class="bi bi-piggy-bank-fill"></i>
-              </div>
-              <div>
-                <div class="caixa-mini-label">Saldo Total</div>
-                <div class="caixa-mini-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$
-                  ****</div>
-              </div>
+          <div class="caixa-mini-card" data-filtro-caixa="saldo">
+            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#6c757d,#495057);">
+              <i class="bi bi-piggy-bank-fill"></i>
+            </div>
+            <span class="caixa-mini-card-label">Saldo Total</span>
+            <div class="caixa-mini-card-info">
+              <span class="info-desc">Saldo Total do Período</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$ ****</span>
             </div>
           </div>
         </div>
       </div>
+      <!-- ✅ FIM DO BLOCO REFATORADO -->
 
       <div class="row g-3">
         <div class="col-12">
