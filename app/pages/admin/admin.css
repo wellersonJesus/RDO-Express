@@ -114,8 +114,13 @@
 }
 
 @keyframes admin-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .admin-status-card {
@@ -442,8 +447,15 @@
 }
 
 @keyframes admin-girar {
-    0%, 100% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(15deg) scale(1.1); }
+
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(15deg) scale(1.1);
+    }
 }
 
 .admin-dots-anim span {
@@ -451,14 +463,32 @@
     opacity: 0;
 }
 
-.admin-dots-anim span:nth-child(1) { animation-delay: 0s; }
-.admin-dots-anim span:nth-child(2) { animation-delay: .2s; }
-.admin-dots-anim span:nth-child(3) { animation-delay: .4s; }
+.admin-dots-anim span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.admin-dots-anim span:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.admin-dots-anim span:nth-child(3) {
+    animation-delay: .4s;
+}
 
 @keyframes admin-piscar {
-    0%, 20% { opacity: 0; }
-    50% { opacity: 1; }
-    100% { opacity: 0; }
+
+    0%,
+    20% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
 }
 
 .admin-avatar-img {
@@ -628,11 +658,18 @@
     }
 
     @keyframes adminInfoMobilePop {
-        from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
     }
 
-        .admin-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
+    .admin-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
         flex-wrap: nowrap !important;
         gap: 6px;
         width: 100%;
@@ -657,8 +694,58 @@
     }
 
     .btn-novo-admin span,
-    .btn-novo-admin .me-1 + span {
+    .btn-novo-admin .me-1+span {
         display: none;
     }
 
+}
+
+#modalFormAdmin .modal-pedido-body .row.g-2 {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    flex-direction: row !important;
+}
+
+#modalFormAdmin .modal-pedido-body .row.g-2>[class*="col-"] {
+    display: block !important;
+    box-sizing: border-box;
+}
+
+#modalFormAdmin .modal-pedido-body .col-sm-4 {
+    width: 33.3333%;
+}
+
+#modalFormAdmin .modal-pedido-body .col-sm-6 {
+    width: 50%;
+}
+
+@media (max-width: 576px) {
+    #modalFormAdmin .modal-pedido-body .row.g-2>.col-12 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        width: 50% !important;
+    }
+
+    #modalFormAdmin .modal-pedido-body .row.g-2>.col-sm-4.col-12 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        width: 50% !important;
+    }
+
+    #modalFormAdmin .modal-pedido-field-label {
+        font-size: 0.68rem;
+    }
+
+    #modalFormAdmin .modal-pedido-input,
+    #modalFormAdmin .form-control-sm,
+    #modalFormAdmin .form-select-sm {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    #modalFormAdmin .modal-pedido-body .row.g-2>.col-12:only-child {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
 }

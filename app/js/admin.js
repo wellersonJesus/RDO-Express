@@ -18,7 +18,7 @@
         origem: 'clientes',
         cache: [],
         pagina: 1,
-        porPagina: 15,
+        porPagina: 5,
         filtro: '',
         tipoFiltro: 'todos',
         blocoAtivo: 'todos',
