@@ -2817,3 +2817,76 @@
     animation: none;
   }
 }
+
+.fin-status-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.fin-status-card-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fin-status-action-item[data-filtro-caixa="entrada"].active {
+  background: linear-gradient(135deg, #d1e7dd 0%, #e8f5ee 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="saida"].active {
+  background: linear-gradient(135deg, #f8d7da 0%, #fdecee 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="empresa"].active {
+  background: linear-gradient(135deg, #e2d9f3 0%, #f0ecf8 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="colaborador"].active {
+  background: linear-gradient(135deg, #cfe2ff 0%, #e8f1ff 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="registros"].active,
+.fin-status-action-item[data-filtro-caixa="saldo"].active {
+  background: linear-gradient(135deg, #fff3cd 0%, #fffbeb 100%);
+  border-color: transparent;
+}
+
+/* ===== Caixa - ícones com cores suaves (mesmo padrão da aba RDO) ===== */
+.caixa-mini-card[data-filtro-caixa="entrada"] .caixa-mini-card-icon {
+  background: rgba(25, 135, 84, .12) !important;
+  color: #198754 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="saida"] .caixa-mini-card-icon {
+  background: rgba(220, 53, 69, .12) !important;
+  color: #dc3545 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="empresa"] .caixa-mini-card-icon {
+  background: rgba(111, 66, 193, .15) !important;
+  color: #6f42c1 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="colaborador"] .caixa-mini-card-icon {
+  background: rgba(13, 110, 253, .12) !important;
+  color: #0d6efd !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="registros"] .caixa-mini-card-icon {
+  background: rgba(255, 193, 7, .2) !important;
+  color: #856404 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="saldo"] .caixa-mini-card-icon {
+  background: rgba(108, 117, 125, .12) !important;
+  color: #6c757d !important;
+}

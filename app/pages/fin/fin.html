@@ -24,6 +24,12 @@
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
       <div class="fin-status-card mb-3">
+        <div class="fin-status-card-header">
+          <span class="fin-status-card-title">Resumo Geral</span>
+          <button type="button" class="btn-olhinho-clean" id="btn-toggle-rdo-valores" title="Mostrar valores">
+            <i class="bi bi-eye-slash" id="icon-toggle-rdo-val"></i>
+          </button>
+        </div>
         <div class="fin-status-grid">
           <div class="fin-status-row">
             <div class="fin-status-action-item" data-filtro-caixa="entrada">
@@ -32,8 +38,8 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Receitas</span>
-                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-entradas"
-                  data-valor-real="R$ 0,00">R$ ****</span>
+                <span class="fin-status-action-count fin-valor-rdo" id="rdo-card-entradas" data-valor-real="R$ 0,00">R$
+                  ****</span>
               </div>
             </div>
             <div class="fin-status-action-item" data-filtro-caixa="saida">
@@ -42,8 +48,8 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Despesas</span>
-                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-saidas"
-                  data-valor-real="R$ 0,00">R$ ****</span>
+                <span class="fin-status-action-count fin-valor-rdo" id="rdo-card-saidas" data-valor-real="R$ 0,00">R$
+                  ****</span>
               </div>
             </div>
             <div class="fin-status-action-item" data-filtro-caixa="empresa">
@@ -52,7 +58,7 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Empresa (20%)</span>
-                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
+                <span class="fin-status-action-count fin-valor-rdo" id="rdo-card-empresa" data-valor-real="R$ 0,00"
                   style="color:#6f42c1;">R$ ****</span>
               </div>
             </div>
@@ -64,7 +70,7 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Colaborador (80%)</span>
-                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-colaboradores"
+                <span class="fin-status-action-count fin-valor-rdo" id="rdo-card-colaboradores"
                   data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</span>
               </div>
             </div>
@@ -74,7 +80,7 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Registros</span>
-                <span class="fin-status-action-count" id="caixa-card-registros" style="color:#856404;">0</span>
+                <span class="fin-status-action-count" id="rdo-card-registros" style="color:#856404;">0</span>
               </div>
             </div>
             <div class="fin-status-action-item" data-filtro-caixa="saldo">
@@ -83,7 +89,7 @@
               </div>
               <div class="fin-status-action-info">
                 <span class="fin-status-action-label">Saldo Total</span>
-                <span class="fin-status-action-count fin-valor-caixa" id="caixa-card-saldo-total"
+                <span class="fin-status-action-count fin-valor-rdo" id="rdo-card-saldo-total"
                   data-valor-real="R$ 0,00">R$ ****</span>
               </div>
             </div>
@@ -229,7 +235,8 @@
             <span class="caixa-mini-card-label">Empresa</span>
             <div class="caixa-mini-card-info">
               <span class="info-desc">Empresa (20%)</span>
-              <span class="info-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00" style="color:#6f42c1;">R$ ****</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
+                style="color:#6f42c1;">R$ ****</span>
             </div>
           </div>
         </div>
@@ -242,7 +249,8 @@
             <span class="caixa-mini-card-label">Colaborador</span>
             <div class="caixa-mini-card-info">
               <span class="info-desc">Colaborador (80%)</span>
-              <span class="info-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00" style="color:#0d6efd;">R$ ****</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
+                style="color:#0d6efd;">R$ ****</span>
             </div>
           </div>
         </div>
@@ -268,7 +276,8 @@
             <span class="caixa-mini-card-label">Saldo Total</span>
             <div class="caixa-mini-card-info">
               <span class="info-desc">Saldo Total do Período</span>
-              <span class="info-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$ ****</span>
+              <span class="info-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$
+                ****</span>
             </div>
           </div>
         </div>

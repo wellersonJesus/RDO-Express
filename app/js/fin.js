@@ -38,6 +38,7 @@ if (!window.EventBus) {
   var _tokenAbrirPedidoFinanceiro = 0;
 
   var _repassesAbrindoAgora = false;
+  var _rdoValoresVisiveis = false;
 
   var state = {
     cache: [],
@@ -1292,7 +1293,7 @@ if (!window.EventBus) {
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
   }
-  
+
   function abrirModalRepasses() {
     if (_repassesAbrindoAgora) return; // ✅ ignora clique duplicado
     _repassesAbrindoAgora = true;
@@ -1854,6 +1855,83 @@ if (!window.EventBus) {
   function ocultarErroViewFin() {
     var box = document.getElementById('fin-view-erro-box');
     if (box) box.classList.add('d-none');
+  }
+
+  function renderRdoContadores() {
+    var totais = calcularTotaisRegistros(state.cache);
+    var mapa = {
+      'rdo-card-entradas': totais.entradas,
+      'rdo-card-saidas': totais.saidas,
+      'rdo-card-empresa': totais.empresa,
+      'rdo-card-colaboradores': totais.colaboradores,
+      'rdo-card-saldo-total': totais.saldo
+    };
+    Object.keys(mapa).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('data-valor-real', formatarMoeda(mapa[id]));
+      el.textContent = _rdoValoresVisiveis ? formatarMoeda(mapa[id]) : 'R$ ****';
+    });
+    var elReg = document.getElementById('rdo-card-registros');
+    if (elReg) elReg.textContent = state.cache.length;
+  }
+
+  function aplicarMascaraValoresRdo() {
+    document.querySelectorAll('#fin-tab-content-todos .fin-valor-rdo').forEach(function (el) {
+      var real = el.getAttribute('data-valor-real');
+      if (!real) return;
+      el.textContent = _rdoValoresVisiveis ? real : 'R$ ****';
+    });
+  }
+
+  function bindOlhinhoRdo() {
+    var btn = document.getElementById('btn-toggle-rdo-valores');
+    var icon = document.getElementById('icon-toggle-rdo-val');
+    if (!btn || btn._rdoOlhinhoBound) return;
+    btn._rdoOlhinhoBound = true;
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      _rdoValoresVisiveis = !_rdoValoresVisiveis;
+      btn.classList.toggle('oculto', !_rdoValoresVisiveis);
+      if (icon) icon.className = _rdoValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
+      btn.title = _rdoValoresVisiveis ? 'Ocultar valores' : 'Mostrar valores';
+      aplicarMascaraValoresRdo();
+    });
+  }
+
+  function bindFiltrosRdo() {
+    var itens = document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item[data-filtro-caixa]');
+    itens.forEach(function (item) {
+      if (item._rdoFiltroBound) return;
+      item._rdoFiltroBound = true;
+
+      item.addEventListener('click', function () {
+        var tipo = item.getAttribute('data-filtro-caixa');
+
+        // se clicar de novo no mesmo ativo, volta pra "todos"
+        var jaAtivo = item.classList.contains('active');
+
+        itens.forEach(function (i) { i.classList.remove('active'); });
+
+        if (jaAtivo) {
+          state.filtroTipo = 'todos';
+        } else {
+          item.classList.add('active');
+          if (tipo === 'entrada' || tipo === 'empresa' || tipo === 'colaborador') {
+            state.filtroTipo = 'entrada';
+          } else if (tipo === 'saida') {
+            state.filtroTipo = 'saida';
+          } else {
+            state.filtroTipo = 'todos'; // registros, saldo
+          }
+        }
+
+        state.todos.pagina = 1;
+        renderTodos();
+      });
+    });
   }
 
   var btnFecharErroFin = document.getElementById('fin-view-erro-fechar');
@@ -3596,6 +3674,7 @@ if (!window.EventBus) {
 
       _atualizarContadoresFin();
       renderTodos();
+      renderRdoContadores();
       renderCaixa();
       renderizarListaExtratos();
       tentarAbrirPedidoFinanceiro();
@@ -3864,6 +3943,8 @@ if (!window.EventBus) {
     _bindBuscaFin();
     registrarEventos();
     bindNotifCardsFin();
+    bindOlhinhoRdo();        
+    bindFiltrosRdo();        
     initExtratoFluxo();
     initExtratoListaDelegacao();
     bindEventoAbrirPedidoFinanceiro();
