@@ -163,15 +163,11 @@ window.fecharModaisAbertos = _fecharModaisAbertos;
 
 function _carregarScriptExterno(src, forceReload) {
     return new Promise(function (resolve) {
-        if (forceReload) {
-            var existente = document.querySelector('script[src="' + src + '"]');
-            if (existente) existente.parentNode.removeChild(existente);
-        } else {
-            var existe = document.querySelector('script[src="' + src + '"]');
-            if (existe) { resolve(); return; }
-        }
+        var existente = document.querySelector('script[src^="' + src + '"]');
+        if (existente) existente.parentNode.removeChild(existente);
+
         var s = document.createElement('script');
-        s.src = src;
+        s.src = forceReload ? src + '?v=' + Date.now() : src;
         s.async = false;
         s.onload = resolve;
         s.onerror = resolve;

@@ -24,23 +24,15 @@ window.API = (function () {
 
         var acaoLower = String(action || '').toLowerCase();
 
-        // Não faz unwrap de ações que devolvem objeto composto
-        var acoesQueRetornamObjeto = ['getdashboarddata'];
+        var acoesQueRetornamObjeto = ['getdashboarddata', 'getusuariosonline'];
         if (acoesQueRetornamObjeto.indexOf(acaoLower) !== -1) {
             return result;
         }
 
-        // Caso especial: getusuariosonline usa chave "usuarios"
-        if (acaoLower === 'getusuariosonline' && Array.isArray(result.usuarios)) {
-            return result.usuarios;
-        }
-
-        // Padrão geral: processarGetComCache sempre usa "data"
         if (Array.isArray(result.data)) {
             return result.data;
         }
 
-        // Fallback de segurança
         var chaves = Object.keys(result);
         for (var i = 0; i < chaves.length; i++) {
             if (Array.isArray(result[chaves[i]])) return result[chaves[i]];

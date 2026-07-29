@@ -317,27 +317,39 @@ function renderizarBlocoAutomacao() {
     var elLogados = document.getElementById('visao-geral-usuarios-logados');
     if (elAtivos) elAtivos.textContent = totalUsuariosAtivos;
 
-    if (!window.API || typeof window.API.call !== 'function') {
-        if (elLogados) elLogados.textContent = '—/' + totalUsuariosCadastrados;
-        return;
+    var agora = Date.now();
+    var totalOnlineLocal = usuarios.filter(function (u) {
+        var ultimo = u.ultimo_acesso || u.last_seen || u.ultimoLogin || u.heartbeat;
+        if (!ultimo) return false;
+        var timestamp;
+        if (ultimo instanceof Date) {
+            timestamp = ultimo.getTime();
+        } else if (typeof ultimo === 'number') {
+            timestamp = ultimo;
+        } else {
+            var texto = String(ultimo).trim();
+            timestamp = /^\d+$/.test(texto) ? parseInt(texto, 10) : new Date(texto).getTime();
+        }
+        if (isNaN(timestamp)) return false;
+        var minutosDesde = (agora - timestamp) / 60000;
+        return minutosDesde <= LIMITE_MINUTOS_ONLINE;
+    }).length;
+
+    if (elLogados) {
+        elLogados.textContent = totalOnlineLocal + '/' + totalUsuariosCadastrados;
+        elLogados.removeAttribute('title');
     }
+
+    if (!window.API || typeof window.API.call !== 'function') return;
 
     window.API.call('getusuariosonline')
         .then(function (resp) {
-            var totalOnline = (resp && resp.status === 'success' && typeof resp.total === 'number') ? resp.total : null;
-            if (elLogados) {
-                if (totalOnline === null) {
-                    elLogados.textContent = '—/' + totalUsuariosCadastrados;
-                    elLogados.title = 'Sem dado de presença disponível na API';
-                } else {
-                    elLogados.textContent = totalOnline + '/' + totalUsuariosCadastrados;
-                    elLogados.removeAttribute('title');
-                }
+            var totalOnlineApi = (resp && resp.status === 'success' && typeof resp.total === 'number') ? resp.total : null;
+            if (elLogados && totalOnlineApi !== null) {
+                elLogados.textContent = totalOnlineApi + '/' + totalUsuariosCadastrados;
             }
         })
-        .catch(function () {
-            if (elLogados) elLogados.textContent = '—/' + totalUsuariosCadastrados;
-        });
+        .catch(function () { });
 }
 
 function _construirIndicadoresVisaoGeral(dados) {
@@ -691,18 +703,65 @@ function renderizarRankingClientes(containerId, ranking) {
 }
 
 function iniciarHeartbeat() {
+    var HEARTBEAT_INTERVAL_MS = 60000;
+
     var username = localStorage.getItem('username');
-    if (!username || !window.API) return;
 
-    if (window.dashboardState.heartbeatIntervalId) clearInterval(window.dashboardState.heartbeatIntervalId);
-
-    function enviar() {
-        window.API.call('heartbeat', { username: username }).catch(function () { });
-        renderizarBlocoGestao();
+    if (!username) {
+        console.warn('[Heartbeat] Abortado: username não encontrado no localStorage.');
+        return;
+    }
+    if (!window.API) {
+        console.warn('[Heartbeat] Abortado: window.API não está disponível.');
+        return;
+    }
+    if (!window.dashboardState) {
+        console.warn('[Heartbeat] Abortado: window.dashboardState não está inicializado.');
+        return;
     }
 
-    enviar();
-    window.dashboardState.heartbeatIntervalId = setInterval(enviar, 60000);
+    pararHeartbeat();
+
+    function atualizarUltimoAcessoLocal() {
+        var dados = window.dashboardState.dados;
+        if (!dados || !Array.isArray(dados.usuarios)) return;
+
+        var usuarioAtual = dados.usuarios.find(function (u) {
+            return String(u.username).toLowerCase() === username.toLowerCase();
+        });
+
+        if (usuarioAtual) {
+            var agoraISO = new Date().toISOString();
+            usuarioAtual.ultimo_acesso = agoraISO;
+            usuarioAtual.ultimoAcesso = agoraISO;
+        }
+    }
+
+    function enviarHeartbeat() {
+        window.API.call('heartbeat', { username: username })
+            .then(function () {
+                atualizarUltimoAcessoLocal();
+                renderizarBlocoGestao();
+            })
+            .catch(function (erro) {
+                console.error('[Heartbeat] Falha ao enviar:', erro && erro.message);
+            });
+    }
+
+    // Execução inicial imediata
+    atualizarUltimoAcessoLocal();
+    enviarHeartbeat();
+    renderizarBlocoGestao();
+
+    // Agenda envios periódicos
+    window.dashboardState.heartbeatIntervalId = setInterval(enviarHeartbeat, HEARTBEAT_INTERVAL_MS);
+}
+
+function pararHeartbeat() {
+    if (window.dashboardState && window.dashboardState.heartbeatIntervalId) {
+        clearInterval(window.dashboardState.heartbeatIntervalId);
+        window.dashboardState.heartbeatIntervalId = null;
+    }
 }
 
 function _formatarDataPedido(str) {
@@ -1224,6 +1283,8 @@ window.initDashboard = function () {
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
     atualizarHeaderUsuario(usuario);
+
+    iniciarHeartbeat(); 
 
     var cacheLocal = _lerCacheLocalDashboard();
 
