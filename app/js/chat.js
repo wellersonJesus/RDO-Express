@@ -2195,18 +2195,271 @@ window.extrairRotasDaMensagem = function (texto) {
     return rotas;
 };
 
+window._cacheGeocodificacao = window._cacheGeocodificacao || {};
+
 window.buscarCoordenadasEndereco = function (endereco) {
-    return new Promise(function (resolve) {
-        var busca = endereco;
-        if (!/MG|Minas Gerais/i.test(busca)) busca += ', MG';
-        if (!/Brasil|Brazil/i.test(busca)) busca += ', Brasil';
-        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' +
-            encodeURIComponent(busca) + '&limit=1&countrycodes=br')
+    var CHAVE_CACHE = 'rdo_geocache_v1';
+    var VALIDADE_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
+    var LAT_BH = -19.9167, LON_BH = -43.9345;
+
+    function _normalizar(str) {
+        return String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function _lerCache(chave) {
+        try {
+            var bruto = localStorage.getItem(CHAVE_CACHE);
+            if (!bruto) return null;
+            var mapa = JSON.parse(bruto);
+            var item = mapa[chave];
+            if (!item) return null;
+            if (Date.now() - item.t > VALIDADE_CACHE_MS) return null;
+            return item.v;
+        } catch (e) { return null; }
+    }
+
+    function _salvarCache(chave, valor) {
+        try {
+            var bruto = localStorage.getItem(CHAVE_CACHE);
+            var mapa = bruto ? JSON.parse(bruto) : {};
+            mapa[chave] = { v: valor, t: Date.now() };
+            var chaves = Object.keys(mapa);
+            if (chaves.length > 500) {
+                chaves.sort(function (a, b) { return mapa[a].t - mapa[b].t; });
+                for (var i = 0; i < chaves.length - 500; i++) delete mapa[chaves[i]];
+            }
+            localStorage.setItem(CHAVE_CACHE, JSON.stringify(mapa));
+        } catch (e) { }
+    }
+
+    function _fetchGeoComTimeout(url, ms) {
+        return fetch(url, { signal: AbortSignal.timeout(ms) });
+    }
+
+    function _tentarPhoton(query, ms) {
+        return _fetchGeoComTimeout(
+            'https://photon.komoot.io/api/?limit=1&lat=' + LAT_BH + '&lon=' + LON_BH +
+            '&q=' + encodeURIComponent(query),
+            ms
+        )
             .then(function (resp) { return resp.json(); })
             .then(function (data) {
-                resolve(data && data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null);
+                if (data && data.features && data.features[0]) {
+                    var coords = data.features[0].geometry.coordinates;
+                    return { lat: coords[1], lng: coords[0] };
+                }
+                return null;
             })
-            .catch(function (e) { window._exibirErroGlobal(e, 'buscar coordenadas do endereço'); resolve(null); });
+            .catch(function () { return null; });
+    }
+
+    function _tentarNominatim(query, ms) {
+        return _fetchGeoComTimeout(
+            'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
+            ms
+        )
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                return (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+            })
+            .catch(function () { return null; });
+    }
+
+    return new Promise(function (resolve) {
+        var busca = String(endereco || '').trim();
+        if (!busca) { resolve(null); return; }
+
+        var chaveCache = _normalizar(busca);
+        var doCache = _lerCache(chaveCache);
+        if (doCache) { resolve(doCache); return; }
+
+        var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim/i.test(busca);
+        var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+
+        _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
+            if (resultado) { _salvarCache(chaveCache, resultado); resolve(resultado); return; }
+
+            _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
+                if (resultado2) { _salvarCache(chaveCache, resultado2); resolve(resultado2); return; }
+
+                _tentarNominatim(busca + ', Brasil', 4000).then(function (resultado3) {
+                    if (resultado3) _salvarCache(chaveCache, resultado3);
+                    resolve(resultado3);
+                });
+            });
+        });
+    });
+};
+
+window.iniciarFluxoCheckout = function () {
+    if (window.AppRDO._mapaModalAberto) return;
+
+    var msgInput = document.getElementById('msg-input');
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
+    if (!texto) { window.marcarCampoInvalido(); return; }
+
+    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
+    var rotasExtraidas = window.extrairRotasDaMensagem(texto);
+
+    if (rotasExtraidas.length === 0) {
+        window.exibirModalValidacao('Nenhuma rota encontrada.<br>Use o formato: <strong>De: Origem | Para: Destino</strong>');
+        return;
+    }
+
+    window.AppRDO._mapaModalAberto = true;
+
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        if (!carregou) { window.AppRDO._mapaModalAberto = false; return; }
+
+        var modalEl = document.getElementById('modalMapa');
+        if (!modalEl) { window.AppRDO._mapaModalAberto = false; return; }
+
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        try {
+            var existente = bootstrap.Modal.getInstance(modalEl);
+            if (existente) existente.dispose();
+        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
+        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            window.AppRDO._mapaModalAberto = false;
+            if (window._leafletMapInstance) {
+                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
+                window._leafletMapInstance = null;
+            }
+        }, { once: true });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, { once: true });
+
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            modalEl.style.zIndex = '1075';
+            var backdrops = document.querySelectorAll('.modal-backdrop');
+            var ultimoBackdrop = backdrops[backdrops.length - 1];
+            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
+            var elSolicitante = document.getElementById('header-nome-solicitante');
+            var loaderEl = document.getElementById('mapa-loader');
+            if (elSolicitante) elSolicitante.innerText = solicitante;
+            if (loaderEl) {
+                loaderEl.style.display = '';
+                loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
+            }
+
+            var footer = document.getElementById('footer-resumo-dados');
+            if (footer) footer.innerHTML = '';
+
+            var kmTotal = 0, minTotal = 0, listaCaminhos = [];
+            var rotasComFalha = [];
+
+            function _fetchComTimeout(url, ms) {
+                return fetch(url, { signal: AbortSignal.timeout(ms) });
+            }
+
+            function _processarRota(rota, idx) {
+                return Promise.all([
+                    window.buscarCoordenadasEndereco(rota.de),
+                    window.buscarCoordenadasEndereco(rota.para)
+                ]).then(function (coords) {
+                    var p1 = coords[0], p2 = coords[1];
+                    if (!p1 || !p2) { rotasComFalha.push(idx + 1); return; }
+
+                    return _fetchComTimeout(
+                        'https://router.project-osrm.org/route/v1/driving/' +
+                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
+                        '?overview=full&geometries=geojson',
+                        6000
+                    )
+                        .then(function (resp) { return resp.json(); })
+                        .then(function (data) {
+                            if (data && data.routes && data.routes[0]) {
+                                kmTotal += data.routes[0].distance / 1000;
+                                minTotal += data.routes[0].duration / 60;
+                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
+                            } else {
+                                rotasComFalha.push(idx + 1);
+                            }
+                        })
+                        .catch(function (e) {
+                            window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
+                            rotasComFalha.push(idx + 1);
+                        });
+                }).catch(function (e) {
+                    window._exibirErroGlobal(e, 'geocodificar rota ' + (idx + 1));
+                    rotasComFalha.push(idx + 1);
+                });
+            }
+
+            Promise.all(rotasExtraidas.map(_processarRota))
+                .then(function () {
+                    if (listaCaminhos.length === 0) {
+                        if (loaderEl) {
+                            loaderEl.style.display = '';
+                            loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Não foi possível localizar os endereços informados. Verifique se o nome da rua está correto.</p>';
+                        }
+                        return;
+                    }
+
+                    var kmArredondado = Math.round(kmTotal);
+                    var valorCalculado = kmArredondado * 3.00;
+
+                    window.dadosPedidoAtual = {
+                        solicitante: solicitante,
+                        contato: contato,
+                        horario: horario,
+                        mercadoria: mercadoria,
+                        obs: obs,
+                        cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                        distanciaTotal: kmArredondado,
+                        tempoTotal: Math.round(minTotal),
+                        coordenadas: listaCaminhos,
+                        valorEstimado: valorCalculado,
+                        rotasProcessadas: rotasExtraidas,
+                        rawInput: texto
+                    };
+
+                    if (loaderEl) loaderEl.style.display = 'none';
+
+                    window._renderizarResumo(
+                        kmArredondado, minTotal,
+                        valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    );
+                    window.renderizarMapaUnificado();
+
+                    if (rotasComFalha.length > 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Atenção',
+                            html: 'Algumas rotas não puderam ser calculadas: <strong>' + rotasComFalha.join(', ') + '</strong>.<br>O valor exibido considera apenas as rotas encontradas.',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(function (e) {
+                    window._exibirErroGlobal(e, 'calcular rotas do pedido');
+                    if (loaderEl) {
+                        loaderEl.style.display = '';
+                        loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
+                    }
+                    var footerErro = document.getElementById('footer-resumo-dados');
+                    if (footerErro) footerErro.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
+                });
+        }, { once: true });
+
+        modal.show();
     });
 };
 
@@ -2306,128 +2559,6 @@ window.enviarMensagemGeral = function () {
         return;
     }
     window.iniciarFluxoCheckout();
-};
-
-window.iniciarFluxoCheckout = function () {
-    if (window.AppRDO._mapaModalAberto) return;
-
-    var msgInput = document.getElementById('msg-input');
-    var texto = msgInput ? (msgInput.value || '').trim() : '';
-    if (!texto) { window.marcarCampoInvalido(); return; }
-
-    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
-    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
-    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
-    var rotasExtraidas = window.extrairRotasDaMensagem(texto);
-
-    if (rotasExtraidas.length === 0) {
-        window.exibirModalValidacao('Nenhuma rota encontrada.<br>Use o formato: <strong>De: Origem | Para: Destino</strong>');
-        return;
-    }
-
-    window.AppRDO._mapaModalAberto = true;
-
-    window.loadModal('mapa_clientes.html').then(function (carregou) {
-        if (!carregou) { window.AppRDO._mapaModalAberto = false; return; }
-
-        var modalEl = document.getElementById('modalMapa');
-        if (!modalEl) { window.AppRDO._mapaModalAberto = false; return; }
-
-        // 🔑 PORTAL: escapa do stacking context do #chat / #modal-container
-        if (modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
-        try {
-            var existente = bootstrap.Modal.getInstance(modalEl);
-            if (existente) existente.dispose();
-        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
-        if (typeof _limparBackdrop === 'function') _limparBackdrop();
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            window.AppRDO._mapaModalAberto = false;
-            if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
-                window._leafletMapInstance = null;
-            }
-        }, { once: true });
-
-        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-
-        modalEl.addEventListener('shown.bs.modal', function () {
-            modalEl.style.zIndex = '1075';
-            var backdrops = document.querySelectorAll('.modal-backdrop');
-            var ultimoBackdrop = backdrops[backdrops.length - 1];
-            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
-
-            var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl = document.getElementById('mapa-loader');
-            if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (loaderEl) loaderEl.style.display = '';
-
-            var kmTotal = 0, minTotal = 0, listaCaminhos = [];
-
-            Promise.all(rotasExtraidas.map(function (rota) {
-                return Promise.all([
-                    window.buscarCoordenadasEndereco(rota.de),
-                    window.buscarCoordenadasEndereco(rota.para)
-                ]).then(function (coords) {
-                    var p1 = coords[0], p2 = coords[1];
-                    if (!p1 || !p2) return;
-                    return fetch('https://router.project-osrm.org/route/v1/driving/' +
-                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
-                        '?overview=full&geometries=geojson')
-                        .then(function (resp) { return resp.json(); })
-                        .then(function (data) {
-                            if (data.routes && data.routes[0]) {
-                                kmTotal += data.routes[0].distance / 1000;
-                                minTotal += data.routes[0].duration / 60;
-                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
-                            }
-                        });
-                });
-            })).then(function () {
-                var kmArredondado = Math.round(kmTotal);
-                var valorCalculado = kmArredondado * 3.00;
-
-                window.dadosPedidoAtual = {
-                    solicitante: solicitante,
-                    contato: contato,
-                    horario: horario,
-                    mercadoria: mercadoria,
-                    obs: obs,
-                    cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                    distanciaTotal: kmArredondado,
-                    tempoTotal: Math.round(minTotal),
-                    coordenadas: listaCaminhos,
-                    valorEstimado: valorCalculado,
-                    rotasProcessadas: rotasExtraidas,
-                    rawInput: texto
-                };
-
-                window._renderizarResumo(
-                    kmArredondado, minTotal,
-                    valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                );
-                window.renderizarMapaUnificado();
-            }).catch(function (e) {
-                window._exibirErroGlobal(e, 'calcular rotas do pedido');
-                var footer = document.getElementById('footer-resumo-dados');
-                if (footer) footer.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
-            });
-        }, { once: true });
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            if (typeof _limparBackdrop === 'function') _limparBackdrop();
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }, { once: true });
-
-        modal.show();
-    });
 };
 
 window.prosseguirParaFormulario = function () {
