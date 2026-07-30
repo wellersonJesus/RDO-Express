@@ -28,15 +28,40 @@ window._storageComExpiracao = (function () {
 })();
 
 window._exibirErroGlobal = function (erro, contexto) {
-    var msg = (erro && (erro.message || erro.reason || erro)) || 'Erro desconhecido';
     var ctx = contexto || 'executar operação';
+
+    var existeErro = erro !== null && erro !== undefined &&
+        !(typeof erro === 'string' && erro.trim() === '') &&
+        !(erro instanceof Event && !erro.error && !erro.message && !erro.reason);
+
+    if (!existeErro) return;
+
+    var msg;
+    if (erro instanceof Error) {
+        msg = erro.message || erro.name || 'Erro sem mensagem';
+    } else if (typeof erro === 'string') {
+        msg = erro;
+    } else if (erro && typeof erro === 'object') {
+        msg = erro.message || erro.reason || erro.error || (function () {
+            try { return JSON.stringify(erro); } catch (_) { return 'Erro desconhecido'; }
+        })();
+    } else {
+        msg = String(erro);
+    }
+
     try { console.error('[ERRO][' + ctx + ']', erro); } catch (_) { }
+
+    var msgSegura = String(msg)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
     try {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
                 title: 'Erro: ' + ctx,
-                html: '<div style="font-size:.85rem;word-break:break-word;">' + String(msg) + '</div>',
+                html: '<div style="font-size:.85rem;word-break:break-word;">' + msgSegura + '</div>',
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
@@ -1047,166 +1072,324 @@ window.iniciarFluxoCheckout = function () {
     window.AppRDO._mapaModalAberto = true;
     window.AppRDO.isProcessingCheckout = true;
 
-    window.loadModal('mapa_clientes.html').then(function (carregou) {
-        if (!carregou) {
-            window.AppRDO._mapaModalAberto = false;
-            window.AppRDO.isProcessingCheckout = false;
-            return;
-        }
-
-        var modalEl = document.getElementById('modalMapa');
-        if (!modalEl) {
-            window.AppRDO._mapaModalAberto = false;
-            window.AppRDO.isProcessingCheckout = false;
-            return;
-        }
-
-        if (modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
+    function _falharAbertura(mensagem) {
+        window.AppRDO._mapaModalAberto = false;
+        window.AppRDO.isProcessingCheckout = false;
         try {
-            var existente = bootstrap.Modal.getInstance(modalEl);
-            if (existente) existente.dispose();
-        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
-        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao abrir mapa',
+                html: '<div style="font-size:.9rem;">' + (mensagem || 'Não foi possível abrir o modal de rotas.') + '</div>',
+                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
+            });
+        } catch (_) { alert(mensagem || 'Erro ao abrir modal de rotas.'); }
+    }
 
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            window.AppRDO._mapaModalAberto = false;
-            window.AppRDO.isProcessingCheckout = false;
-            if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
-                window._leafletMapInstance = null;
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        try {
+            if (!carregou) {
+                _falharAbertura('Falha ao carregar o arquivo do modal de mapa (mapa_clientes.html).');
+                return;
             }
-        }, { once: true });
 
-        modalEl.addEventListener('hidden.bs.modal', function () {
+            var modalEl = document.getElementById('modalMapa');
+            if (!modalEl) {
+                _falharAbertura('Elemento #modalMapa não encontrado após o carregamento do modal.');
+                return;
+            }
+
+            if (modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+
+            try {
+                var existente = bootstrap.Modal.getInstance(modalEl);
+                if (existente) existente.dispose();
+            } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
             if (typeof _limparBackdrop === 'function') _limparBackdrop();
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }, { once: true });
 
-        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                window.AppRDO._mapaModalAberto = false;
+                window.AppRDO.isProcessingCheckout = false;
+                if (window._leafletMapInstance) {
+                    try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
+                    window._leafletMapInstance = null;
+                }
+            }, { once: true });
 
-        modalEl.addEventListener('shown.bs.modal', function () {
-            modalEl.style.zIndex = '1075';
-            var backdrops = document.querySelectorAll('.modal-backdrop');
-            var ultimoBackdrop = backdrops[backdrops.length - 1];
-            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                if (typeof _limparBackdrop === 'function') _limparBackdrop();
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, { once: true });
 
-            var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl = document.getElementById('mapa-loader');
-            if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (loaderEl) {
-                loaderEl.style.display = '';
-                loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
-            }
+            var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
 
-            var footer = document.getElementById('footer-resumo-dados');
-            if (footer) footer.innerHTML = '';
+            modalEl.addEventListener('shown.bs.modal', function () {
+                try {
+                    modalEl.style.zIndex = '1075';
+                    var backdrops = document.querySelectorAll('.modal-backdrop');
+                    var ultimoBackdrop = backdrops[backdrops.length - 1];
+                    if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
 
-            var kmTotal = 0, minTotal = 0, listaCaminhos = [];
-            var rotasComFalha = [];
+                    var elSolicitante = document.getElementById('header-nome-solicitante');
+                    var loaderEl = document.getElementById('mapa-loader');
+                    if (elSolicitante) elSolicitante.innerText = solicitante;
+                    if (loaderEl) {
+                        loaderEl.style.display = '';
+                        loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
+                    }
 
-            function _fetchComTimeout(url, ms) {
-                return fetch(url, { signal: AbortSignal.timeout(ms) });
-            }
+                    var footer = document.getElementById('footer-resumo-dados');
+                    if (footer) footer.innerHTML = '';
 
-            function _processarRota(rota, idx) {
-                return Promise.all([
-                    window.buscarCoordenadasEndereco(rota.de),
-                    window.buscarCoordenadasEndereco(rota.para)
-                ]).then(function (coords) {
-                    var p1 = coords[0], p2 = coords[1];
-                    if (!p1 || !p2) { rotasComFalha.push(idx + 1); return; }
+                    var kmTotal = 0, minTotal = 0, listaCaminhos = [];
+                    var rotasComFalha = [];
 
-                    return _fetchComTimeout(
-                        'https://router.project-osrm.org/route/v1/driving/' +
-                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
-                        '?overview=full&geometries=geojson',
-                        6000
-                    )
-                        .then(function (resp) { return resp.json(); })
-                        .then(function (data) {
-                            if (data && data.routes && data.routes[0]) {
-                                kmTotal += data.routes[0].distance / 1000;
-                                minTotal += data.routes[0].duration / 60;
-                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
-                            } else {
-                                rotasComFalha.push(idx + 1);
+                    function _coletarEnderecosUnicos(rotas) {
+                        var mapa = {};
+                        var lista = [];
+                        rotas.forEach(function (rota) {
+                            [rota.de, rota.para].forEach(function (end) {
+                                var chave = String(end || '').trim().toLowerCase();
+                                if (chave && !mapa[chave]) {
+                                    mapa[chave] = true;
+                                    lista.push(end);
+                                }
+                            });
+                        });
+                        return lista;
+                    }
+
+                    function _geocodificarTodosUnicos(rotas) {
+                        var enderecosUnicos = _coletarEnderecosUnicos(rotas);
+                        return Promise.all(
+                            enderecosUnicos.map(function (end) {
+                                return window.buscarCoordenadasEndereco(end).then(function (coords) {
+                                    return { endereco: end, coords: coords };
+                                });
+                            })
+                        ).then(function (resultados) {
+                            var mapaCoords = {};
+                            resultados.forEach(function (r) {
+                                mapaCoords[String(r.endereco || '').trim().toLowerCase()] = r.coords;
+                            });
+                            return mapaCoords;
+                        });
+                    }
+
+                    function _sanitizarCoord(valor) {
+                        var num = parseFloat(String(valor).replace(',', '.'));
+                        if (isNaN(num)) return null;
+
+                        // Corrige coordenadas sem ponto decimal (ex: -197616228 -> -19.7616228)
+                        if (Math.abs(num) > 180) {
+                            var str = String(Math.trunc(num));
+                            var negativo = str.startsWith('-');
+                            var digitos = negativo ? str.slice(1) : str;
+                            // Assume 2 dígitos antes da vírgula para lat/lng no Brasil
+                            var parteInteira = digitos.slice(0, 2);
+                            var parteDecimal = digitos.slice(2);
+                            num = parseFloat((negativo ? '-' : '') + parteInteira + '.' + parteDecimal);
+                        }
+
+                        return isNaN(num) ? null : num;
+                    }
+
+                    function _geocodificarTodosUnicos(rotas) {
+                        var enderecosUnicos = _coletarEnderecosUnicos(rotas);
+                        return Promise.all(
+                            enderecosUnicos.map(function (end) {
+                                return window.buscarCoordenadasEndereco(end).then(function (coords) {
+                                    return { endereco: end, coords: coords };
+                                });
+                            })
+                        ).then(function (resultados) {
+                            var mapaCoords = {};
+                            resultados.forEach(function (r) {
+                                mapaCoords[String(r.endereco || '').trim().toLowerCase()] = r.coords;
+                            });
+                            return mapaCoords;
+                        });
+                    }
+
+                    function _fetchComTimeout(url, ms) {
+                        return fetch(url, { signal: AbortSignal.timeout(ms) });
+                    }
+
+                    var _filaOsrm = Promise.resolve();
+
+                    function _enfileirarOsrm(fn) {
+                        var resultado = _filaOsrm.then(function () {
+                            return fn().then(function (r) {
+                                return new Promise(function (resolve) {
+                                    setTimeout(function () { resolve(r); }, 300);
+                                });
+                            });
+                        });
+                        _filaOsrm = resultado.catch(function () { return null; });
+                        return resultado;
+                    }
+
+                    function _processarRota(rota, idx, mapaCoords) {
+                        var p1raw = mapaCoords[String(rota.de || '').trim().toLowerCase()];
+                        var p2raw = mapaCoords[String(rota.para || '').trim().toLowerCase()];
+
+                        var p1 = p1raw ? { lat: _sanitizarCoord(p1raw.lat), lng: _sanitizarCoord(p1raw.lng) } : null;
+                        var p2 = p2raw ? { lat: _sanitizarCoord(p2raw.lat), lng: _sanitizarCoord(p2raw.lng) } : null;
+
+                        if (!p1 || p1.lat === null || p1.lng === null) {
+                            rotasComFalha.push({ indice: idx + 1, endereco: rota.de, motivo: (p1raw && p1raw.erro) || 'Endereço de origem não localizado ou coordenadas inválidas.' });
+                            return Promise.resolve();
+                        }
+                        if (!p2 || p2.lat === null || p2.lng === null) {
+                            rotasComFalha.push({ indice: idx + 1, endereco: rota.para, motivo: (p2raw && p2raw.erro) || 'Endereço de destino não localizado ou coordenadas inválidas.' });
+                            return Promise.resolve();
+                        }
+
+                        return _enfileirarOsrm(function () {
+                            return _fetchComTimeout(
+                                'https://router.project-osrm.org/route/v1/driving/' +
+                                p1.lng.toFixed(6) + ',' + p1.lat.toFixed(6) + ';' + p2.lng.toFixed(6) + ',' + p2.lat.toFixed(6) +
+                                '?overview=full&geometries=geojson',
+                                6000
+                            );
+                        })
+                            .then(function (resp) {
+                                if (!resp || !resp.ok) {
+                                    return (resp ? resp.json().catch(function () { return null; }) : Promise.resolve(null)).then(function (body) {
+                                        console.error('[OSRM DEBUG] Rota ' + (idx + 1) + ' falhou.', {
+                                            origem: rota.de,
+                                            destino: rota.para,
+                                            p1: p1,
+                                            p2: p2,
+                                            status: resp ? resp.status : '?',
+                                            body: body
+                                        });
+                                        var motivo = (body && body.code === 'NoRoute')
+                                            ? 'Nenhuma rota rodoviária encontrada (coordenadas podem estar incorretas).'
+                                            : 'HTTP ' + (resp ? resp.status : '?') + ' ao calcular rota ' + (idx + 1);
+                                        throw new Error(motivo);
+                                    });
+                                }
+                                return resp.json();
+                            })
+                            .then(function (data) {
+                                if (data && data.routes && data.routes[0]) {
+                                    kmTotal += data.routes[0].distance / 1000;
+                                    minTotal += data.routes[0].duration / 60;
+                                    listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
+                                } else {
+                                    rotasComFalha.push({ indice: idx + 1, endereco: rota.de + ' → ' + rota.para, motivo: 'Rota não encontrada pelo serviço de mapas.' });
+                                }
+                            })
+                            .catch(function (e) {
+                                window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
+                                rotasComFalha.push({ indice: idx + 1, endereco: rota.de + ' → ' + rota.para, motivo: e.message || 'Erro ao calcular rota.' });
+                            });
+                    }
+
+                    _geocodificarTodosUnicos(rotasExtraidas)
+                        .then(function (mapaCoords) {
+                            return Promise.all(rotasExtraidas.map(function (rota, idx) {
+                                return _processarRota(rota, idx, mapaCoords);
+                            }));
+                        })
+                        .then(function () {
+                            if (listaCaminhos.length === 0) {
+                                var motivoPrincipal = (rotasComFalha[0] && rotasComFalha[0].motivo) || 'Verifique se a Rua, Número, Bairro e Cidade estão corretos.';
+                                if (loaderEl) {
+                                    loaderEl.style.display = '';
+                                    loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>' + motivoPrincipal + '</p>';
+                                }
+                                window.AppRDO.isProcessingCheckout = false;
+                                return;
+                            }
+
+                            var kmArredondado = Math.round(kmTotal);
+                            var valorCalculado = kmArredondado * 3.00;
+
+                            window.dadosPedidoAtual = {
+                                solicitante: solicitante,
+                                contato: contato,
+                                horario: horario,
+                                mercadoria: mercadoria,
+                                obs: obs,
+                                cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                                distanciaTotal: kmArredondado,
+                                tempoTotal: Math.round(minTotal),
+                                coordenadas: listaCaminhos,
+                                valorEstimado: valorCalculado,
+                                rotasProcessadas: rotasExtraidas,
+                                rawInput: texto
+                            };
+
+                            if (loaderEl) loaderEl.style.display = 'none';
+
+                            window._renderizarResumo(
+                                kmArredondado, minTotal,
+                                valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                            );
+                            window.renderizarMapaUnificado();
+                            window.AppRDO.isProcessingCheckout = false;
+
+                            if (rotasComFalha.length > 0) {
+                                var listaErros = rotasComFalha.map(function (f) {
+                                    return '• Rota ' + f.indice + ' (<strong>' + (f.endereco || 'endereço') + '</strong>): ' + f.motivo;
+                                }).join('<br>');
+
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Não foi possível geolocalizar algumas rotas',
+                                    html: '<div style="font-size:.85rem;text-align:left;">' + listaErros + '</div><hr>O valor exibido considera apenas as rotas encontradas.',
+                                    confirmButtonColor: '#dc3545'
+                                });
                             }
                         })
                         .catch(function (e) {
-                            window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
-                            rotasComFalha.push(idx + 1);
+                            window._exibirErroGlobal(e, 'calcular rotas do pedido');
+                            window.AppRDO.isProcessingCheckout = false;
+                            if (loaderEl) {
+                                loaderEl.style.display = '';
+                                loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
+                            }
+                            var footerErro = document.getElementById('footer-resumo-dados');
+                            if (footerErro) footerErro.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
+                            try {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erro ao calcular rotas',
+                                    html: '<div style="font-size:.9rem;">' + (e.message || 'Tente novamente.') + '</div>',
+                                    confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                                    customClass: { popup: 'rounded-4' }
+                                });
+                            } catch (_) { }
                         });
-                }).catch(function (e) {
-                    window._exibirErroGlobal(e, 'geocodificar rota ' + (idx + 1));
-                    rotasComFalha.push(idx + 1);
-                });
-            }
-
-            Promise.all(rotasExtraidas.map(_processarRota))
-                .then(function () {
-                    if (listaCaminhos.length === 0) {
-                        if (loaderEl) {
-                            loaderEl.style.display = '';
-                            loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Não foi possível localizar os endereços informados. Verifique se a Rua, Número, Bairro e Cidade estão corretos.</p>';
-                        }
-                        window.AppRDO.isProcessingCheckout = false;
-                        return;
-                    }
-
-                    var kmArredondado = Math.round(kmTotal);
-                    var valorCalculado = kmArredondado * 3.00;
-
-                    window.dadosPedidoAtual = {
-                        solicitante: solicitante,
-                        contato: contato,
-                        horario: horario,
-                        mercadoria: mercadoria,
-                        obs: obs,
-                        cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                        distanciaTotal: kmArredondado,
-                        tempoTotal: Math.round(minTotal),
-                        coordenadas: listaCaminhos,
-                        valorEstimado: valorCalculado,
-                        rotasProcessadas: rotasExtraidas,
-                        rawInput: texto
-                    };
-
-                    if (loaderEl) loaderEl.style.display = 'none';
-
-                    window._renderizarResumo(
-                        kmArredondado, minTotal,
-                        valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                    );
-                    window.renderizarMapaUnificado();
+                } catch (eShown) {
+                    window._exibirErroGlobal(eShown, 'preparar exibição do modal de mapa');
                     window.AppRDO.isProcessingCheckout = false;
-
-                    if (rotasComFalha.length > 0) {
+                    try {
                         Swal.fire({
-                            icon: 'warning',
-                            title: 'Atenção',
-                            html: 'Algumas rotas não puderam ser calculadas: <strong>' + rotasComFalha.join(', ') + '</strong>.<br>O valor exibido considera apenas as rotas encontradas.',
-                            confirmButtonColor: '#dc3545'
+                            icon: 'error',
+                            title: 'Erro inesperado',
+                            html: '<div style="font-size:.9rem;">' + (eShown.message || 'Falha ao preparar o modal de mapa.') + '</div>',
+                            confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                            customClass: { popup: 'rounded-4' }
                         });
-                    }
-                })
-                .catch(function (e) {
-                    window._exibirErroGlobal(e, 'calcular rotas do pedido');
-                    window.AppRDO.isProcessingCheckout = false;
-                    if (loaderEl) {
-                        loaderEl.style.display = '';
-                        loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
-                    }
-                    var footerErro = document.getElementById('footer-resumo-dados');
-                    if (footerErro) footerErro.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
-                });
-        }, { once: true });
+                    } catch (_) { }
+                }
+            }, { once: true });
 
-        modal.show();
+            modal.show();
+        } catch (eCarregou) {
+            window._exibirErroGlobal(eCarregou, 'processar carregamento do modal de mapa');
+            _falharAbertura(eCarregou.message || 'Erro inesperado ao processar o modal.');
+        }
+    }).catch(function (eLoad) {
+        window._exibirErroGlobal(eLoad, 'carregar modal de mapa (Promise rejeitada)');
+        _falharAbertura(eLoad.message || 'Falha inesperada ao carregar o modal de mapa.');
     });
 };
 
@@ -1737,7 +1920,8 @@ window.remitirPedido = async function () {
         retorno: retorno,
         dinamica: dinamica,
         prioridade: prioridade,
-        valor_total: valorTotal,
+        valor_corrida: valorTotal,
+        valor_final: valorTotal,
         status: 'PENDENTE',
         situacao_financeira: 'PENDENTE',
         texto: mensagemProvisoria
@@ -1870,10 +2054,6 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
     div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
 
     return div;
-}
-
-function _fetchGeoComTimeout(url, ms) {
-    return fetch(url, { signal: AbortSignal.timeout(ms) });
 }
 
 window._criarWrapperMensagem = _criarWrapperMensagem;
@@ -2670,17 +2850,48 @@ function _tentarNominatim(query, ms) {
 }
 
 function _geocodificarExterno(busca) {
-    var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim|Sabará|Ibirité|Ribeirão das Neves/i.test(busca);
-    var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+    return API.call('geocodificarendereco', { endereco: busca }).then(function (resp) {
+        if (resp && resp.status === 'success' && resp.encontrado) {
+            return { lat: resp.lat, lng: resp.lng, erro: null };
+        }
+        var motivo = (resp && resp.message) || 'Endereço não localizado pelo serviço de geocodificação.';
+        return { lat: null, lng: null, erro: motivo };
+    }).catch(function (e) {
+        window._exibirErroGlobal(e, 'geocodificar endereço "' + busca + '"');
+        return { lat: null, lng: null, erro: e.message || 'Falha de comunicação com o servidor.' };
+    });
+}
 
-    return _tentarPhoton(queryPrincipal, 4000).then(function (resultado) {
-        if (resultado) return resultado;
-        return _tentarNominatim(queryPrincipal, 5000).then(function (resultado2) {
-            if (resultado2) return resultado2;
-            if (temContexto) return null;
-            return _tentarNominatim(busca + ', Brasil', 5000);
+function _geocodificarComFallback(enderecoCompleto) {
+    return _geocodificarExterno(enderecoCompleto).then(function (resultado) {
+        if (resultado && !resultado.erro) return resultado;
+
+        // Fallback: remove o número da rua e tenta de novo
+        var enderecoSemNumero = enderecoCompleto.replace(/,?\s*\d+\s*,/, ',');
+        if (enderecoSemNumero === enderecoCompleto) return resultado; // não havia número pra remover
+
+        return _geocodificarExterno(enderecoSemNumero).then(function (resultadoSemNumero) {
+            if (resultadoSemNumero && !resultadoSemNumero.erro) {
+                resultadoSemNumero.aproximado = true; // marca que é aproximado (sem número exato)
+                return resultadoSemNumero;
+            }
+            return resultado; // mantém o erro original se nem isso funcionou
         });
     });
+}
+
+window._filaSalvarGeo = window._filaSalvarGeo || Promise.resolve();
+window._promessasGeocodificacaoEmAndamento = window._promessasGeocodificacaoEmAndamento || {};
+
+function _salvarGeoSerializado(payload) {
+    var resultado = window._filaSalvarGeo.then(function () {
+        return API.call('salvarenderecogeo', payload).catch(function (e) {
+            window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
+            return null;
+        });
+    });
+    window._filaSalvarGeo = resultado.catch(function () { return null; });
+    return resultado;
 }
 
 window.buscarCoordenadasEndereco = function (endereco) {
@@ -2691,53 +2902,87 @@ window.buscarCoordenadasEndereco = function (endereco) {
     if (window._cacheGeocodificacao[chaveCache] !== undefined) {
         return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
     }
+    if (window._promessasGeocodificacaoEmAndamento[chaveCache]) {
+        return window._promessasGeocodificacaoEmAndamento[chaveCache];
+    }
 
     function _tentarBackendInterno() {
         return API.call('buscarenderecogeo', { endereco: busca })
             .then(function (resp) {
                 if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
-                    return { coords: { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) }, resolvidoInterno: true };
+                    return { coords: { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng), erro: null }, resolvidoInterno: true };
                 }
                 var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
                 return { enderecoParaBuscar: enderecoParaBuscar, resolvidoInterno: false };
             })
             .catch(function (e) {
-                window._exibirErroGlobal(e, 'consultar endereço no backend');
+                window._exibirErroGlobal(e, 'consultar endereço "' + busca + '" no backend');
                 return { enderecoParaBuscar: busca, resolvidoInterno: false };
             });
     }
 
-    return _tentarBackendInterno().then(function (resultadoInterno) {
+    // 🔑 Timeout de segurança — GARANTE que a promise sempre resolve em até 15s
+    function _comTimeoutDeSeguranca(promiseOriginal, ms) {
+        var timeoutId;
+        var promiseTimeout = new Promise(function (resolve) {
+            timeoutId = setTimeout(function () {
+                resolve({
+                    lat: null, lng: null,
+                    erro: 'Tempo limite excedido ao consultar o endereço (backend não respondeu em ' + (ms / 1000) + 's).',
+                    enderecoOriginal: busca
+                });
+            }, ms);
+        });
+
+        return Promise.race([promiseOriginal, promiseTimeout]).finally(function () {
+            clearTimeout(timeoutId);
+        });
+    }
+
+    var promessaReal = _tentarBackendInterno().then(function (resultadoInterno) {
         if (resultadoInterno.resolvidoInterno) {
             window._cacheGeocodificacao[chaveCache] = resultadoInterno.coords;
             return resultadoInterno.coords;
         }
 
-        return _geocodificarExterno(resultadoInterno.enderecoParaBuscar).then(function (resultadoExterno) {
-            if (!resultadoExterno) {
-                window._cacheGeocodificacao[chaveCache] = null;
-                return null;
+        return _geocodificarComFallback(resultadoInterno.enderecoParaBuscar).then(function (resultadoExterno) {
+            if (!resultadoExterno || resultadoExterno.erro) {
+                var falha = { lat: null, lng: null, erro: (resultadoExterno && resultadoExterno.erro) || 'Endereço não encontrado.', enderecoOriginal: busca };
+                window._cacheGeocodificacao[chaveCache] = falha;
+                return falha;
             }
 
             window._cacheGeocodificacao[chaveCache] = resultadoExterno;
 
-            API.call('salvarenderecogeo', {
+            _salvarGeoSerializado({
                 endereco_original: busca,
                 lat: resultadoExterno.lat,
                 lng: resultadoExterno.lng,
                 cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
                 origem_resolucao: 'geocodificado'
-            }).catch(function (e) {
-                window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
             });
 
             return resultadoExterno;
         });
     }).catch(function (e) {
-        window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
-        window._cacheGeocodificacao[chaveCache] = null;
-        return null;
+        window._exibirErroGlobal(e, 'buscar/geocodificar endereço "' + busca + '"');
+        var falha = { lat: null, lng: null, erro: e.message || 'Erro inesperado.', enderecoOriginal: busca };
+        window._cacheGeocodificacao[chaveCache] = falha;
+        return falha;
     });
+
+    var promessa = _comTimeoutDeSeguranca(promessaReal, 15000).then(function (resultado) {
+        // Se o resultado veio do timeout (não foi cacheado ainda), NÃO fixa no cache definitivo
+        // — assim, se o backend real responder depois, a próxima tentativa pode tentar de novo.
+        if (window._cacheGeocodificacao[chaveCache] === undefined) {
+            // não grava no cache permanente em caso de timeout, só limpa o "em andamento"
+        }
+        delete window._promessasGeocodificacaoEmAndamento[chaveCache];
+        return resultado;
+    });
+
+    window._promessasGeocodificacaoEmAndamento[chaveCache] = promessa;
+    return promessa;
 };
 
 window.exibirErro = function (erro, contexto) {
@@ -2758,54 +3003,65 @@ window.exibirErro = function (erro, contexto) {
 };
 
 window.renderizarMapaUnificado = function () {
-    var loaderEl = document.getElementById('mapa-loader');
-    var containerEl = document.getElementById('container-mapa-visual');
-    if (!containerEl) return;
+    window.carregarLeaflet().then(function () {
+        _renderizarMapaUnificadoInterno();
+    });
+};
 
-    if (window._leafletMapInstance) { try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover instância de mapa'); } window._leafletMapInstance = null; }
-    containerEl.innerHTML = '';
-    containerEl.style.display = 'none';
+function _renderizarMapaUnificadoInterno() {
+    var mapaContainer = document.getElementById('container-mapa-visual');
+    if (!mapaContainer) return;
 
-    if (!window.dadosPedidoAtual || !window.dadosPedidoAtual.coordenadas || window.dadosPedidoAtual.coordenadas.length === 0) {
-        if (loaderEl) { loaderEl.style.display = ''; loaderEl.innerHTML = '<p class="text-muted small mb-0"><i class="bi bi-exclamation-circle me-1"></i>Nenhuma rota para exibir.</p>'; }
-        return;
+    // Torna o container visível (estava com display:none por padrão)
+    mapaContainer.style.display = 'block';
+
+    // Remove instância anterior, se existir
+    if (window._leafletMapInstance) {
+        try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa anterior'); }
+        window._leafletMapInstance = null;
     }
-    if (typeof L === 'undefined') {
-        if (loaderEl) { loaderEl.style.display = ''; loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Biblioteca de mapa não carregada.</p>'; }
-        return;
-    }
 
-    if (loaderEl) loaderEl.style.display = 'none';
-    containerEl.style.display = 'block';
-    if (!containerEl.offsetHeight || containerEl.offsetHeight < 50) containerEl.style.height = '340px';
+    var dados = window.dadosPedidoAtual || {};
+    var caminhos = dados.coordenadas || [];
 
-    var mapa = L.map(containerEl, { zoomControl: true, scrollWheelZoom: true }).setView([-19.92, -43.94], 12);
-    window._leafletMapInstance = mapa;
+    if (caminhos.length === 0) return;
+
+    var map = L.map(mapaContainer, { zoomControl: true, attributionControl: false });
+    window._leafletMapInstance = map;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>', maxZoom: 19
-    }).addTo(mapa);
+        maxZoom: 19
+    }).addTo(map);
 
-    var cores = ['#e74c3c', '#2ecc71', '#3498db', '#f39c12', '#9b59b6', '#1abc9c'];
-    var todosOsPontos = [];
-    var criarIcone = function (emoji) {
-        return L.divIcon({ html: '<div style="font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));">' + emoji + '</div>', className: 'custom-div-icon', iconSize: [28, 28], iconAnchor: [14, 14] });
-    };
+    var todosPontos = [];
 
-    window.dadosPedidoAtual.coordenadas.forEach(function (caminho, i) {
+    caminhos.forEach(function (caminho) {
         if (!caminho || caminho.length === 0) return;
-        L.polyline(caminho, { color: cores[i % cores.length], weight: 4, opacity: 0.85, dashArray: '10,8' }).addTo(mapa);
-        if (i === 0) L.marker(caminho[0], { icon: criarIcone('🏁') }).addTo(mapa).bindPopup('<strong>Origem</strong>');
-        if (i === window.dadosPedidoAtual.coordenadas.length - 1)
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('📍') }).addTo(mapa).bindPopup('<strong>Destino Final</strong>');
-        else
-            L.marker(caminho[caminho.length - 1], { icon: criarIcone('🔄') }).addTo(mapa).bindPopup('<strong>Parada ' + (i + 1) + '</strong>');
-        caminho.forEach(function (p) { todosOsPontos.push(p); });
+
+        L.polyline(caminho, { color: '#dc3545', weight: 4, opacity: 0.85 }).addTo(map);
+
+        var origem = caminho[0];
+        var destino = caminho[caminho.length - 1];
+
+        L.marker(origem, {
+            icon: L.divIcon({ className: 'marker-origem', html: '<i class="bi bi-geo-alt-fill" style="color:#28a745;font-size:1.5rem;"></i>' })
+        }).addTo(map);
+
+        L.marker(destino, {
+            icon: L.divIcon({ className: 'marker-destino', html: '<i class="bi bi-geo-alt-fill" style="color:#dc3545;font-size:1.5rem;"></i>' })
+        }).addTo(map);
+
+        todosPontos = todosPontos.concat(caminho);
     });
 
-    if (todosOsPontos.length > 0) { try { mapa.fitBounds(L.latLngBounds(todosOsPontos).pad(0.15)); } catch (e) { window._exibirErroGlobal(e, 'ajustar visualização do mapa'); } }
-    setTimeout(function () { try { mapa.invalidateSize(true); } catch (e) { window._exibirErroGlobal(e, 'redimensionar mapa'); } }, 300);
-};
+    if (todosPontos.length > 0) {
+        map.fitBounds(L.latLngBounds(todosPontos), { padding: [30, 30] });
+    } else {
+        map.setView([-19.92, -43.94], 12);
+    }
+
+    setTimeout(function () { map.invalidateSize(); }, 200);
+}
 
 window._renderizarResumo = function (km, min, valor) {
     var footer = document.getElementById('footer-resumo-dados');

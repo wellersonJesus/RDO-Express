@@ -2,6 +2,8 @@ window.API = (function () {
 
     var ENDPOINT = '/api/proxy';
     var TIMEOUT_MS = 20000;
+    var TIMEOUT_ESPECIAL = { getpedidos: 30000 };
+
     var MAX_RETRIES = 3;
     var RETRY_DELAY_MS = 1500;
 
@@ -31,6 +33,11 @@ window.API = (function () {
 
         if (Array.isArray(result.data)) {
             return result.data;
+        }
+
+        var chaveMapeada = MAPA_CHAVE_ARRAY[acaoLower];
+        if (chaveMapeada && Array.isArray(result[chaveMapeada])) {
+            return result[chaveMapeada];
         }
 
         var chaves = Object.keys(result);
@@ -95,6 +102,14 @@ window.API = (function () {
         return err && err.message && err.message.indexOf('Sistema ocupado') !== -1;
     }
 
+    function isTimeoutError(err) {
+        return err && err.message && err.message.indexOf('Tempo limite excedido') !== -1;
+    }
+
+    function isRetryable(err) {
+        return isBusyError(err) || isTimeoutError(err);
+    }
+
     function cacheKey(action, data) {
         return action + '::' + JSON.stringify(data || {});
     }
@@ -119,6 +134,11 @@ window.API = (function () {
         });
     }
 
+    function obterTimeoutParaAction(action) {
+        var acaoLower = String(action || '').toLowerCase();
+        return TIMEOUT_ESPECIAL[acaoLower] || TIMEOUT_MS;
+    }
+
     function doCall(action, data) {
         var payload = { action: action };
         if (data && typeof data === 'object') {
@@ -127,10 +147,11 @@ window.API = (function () {
             });
         }
 
+        var timeoutAtual = obterTimeoutParaAction(action);
         var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
         var timeoutId = null;
         if (controller) {
-            timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+            timeoutId = setTimeout(function () { controller.abort(); }, timeoutAtual);
         }
 
         console.log('[API] →', action, payload);
@@ -184,7 +205,6 @@ window.API = (function () {
                     invalidarCacheRelacionado(action);
                 }
 
-                // ✅ Unwrap automático do array quando a action for "getXXX"
                 if (String(action || '').toLowerCase().indexOf('get') === 0) {
                     result = extrairArrayDaResposta(action, result);
                 }
@@ -194,7 +214,7 @@ window.API = (function () {
                 if (timeoutId) clearTimeout(timeoutId);
 
                 if (err && err.name === 'AbortError') {
-                    throw new Error('Tempo limite excedido ao chamar "' + action + '" (' + (TIMEOUT_MS / 1000) + 's).');
+                    throw new Error('Tempo limite excedido ao chamar "' + action + '" (' + (timeoutAtual / 1000) + 's).');
                 }
 
                 console.error('[API] Erro em "' + action + '":', err);
@@ -220,8 +240,8 @@ window.API = (function () {
             _cache[key] = { value: result, time: Date.now() };
             return result;
         }).catch(function (err) {
-            if (isBusyError(err) && attempt < MAX_RETRIES) {
-                console.warn('[API] "' + action + '" ocupado. Tentativa ' + attempt + '/' + MAX_RETRIES + '...');
+            if (isRetryable(err) && attempt < MAX_RETRIES) {
+                console.warn('[API] "' + action + '" instável. Tentativa ' + attempt + '/' + MAX_RETRIES + '...');
                 return sleep(RETRY_DELAY_MS * attempt).then(function () {
                     return call(action, data, attempt + 1, useCache);
                 });
