@@ -24,7 +24,7 @@ window.botState = {
     idEmEdicao: null,
     origemEmEdicao: null,
     paginaAtual: 1,
-    itensPorPagina: 15,
+    itensPorPagina: 5,
     isFetching: false,
     isTogglingAll: false,
     _listenersRegistrados: false,
