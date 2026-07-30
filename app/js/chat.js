@@ -1011,82 +1011,6 @@ window.validarMensagemModelo = function (texto) {
     return { valido: false, tipo: 'modelo', camposPendentes: faltando };
 };
 
-function _tentarNominatim(query, ms) {
-    return _fetchGeoComTimeout(
-        'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
-        ms
-    )
-        .then(function (resp) { return resp.json(); })
-        .then(function (data) {
-            return (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
-        })
-        .catch(function () { return null; });
-}
-
-function _geocodificarExterno(busca) {
-    var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim|Sabará|Ibirité|Ribeirão das Neves/i.test(busca);
-    var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
-
-    return _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
-        if (resultado) return resultado;
-        return _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
-            if (resultado2) return resultado2;
-            if (temContexto) return null;
-            return _tentarNominatim(busca + ', Brasil', 4000);
-        });
-    });
-}
-
-window.buscarCoordenadasEndereco = function (endereco) {
-    var busca = String(endereco || '').trim();
-    if (!busca) return Promise.resolve(null);
-
-    var chaveCache = busca.toLowerCase();
-    if (window._cacheGeocodificacao[chaveCache] !== undefined) {
-        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
-    }
-
-    return new Promise(function (resolve) {
-        API.call('buscarenderecogeo', { endereco: busca })
-            .then(function (resp) {
-                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
-                    var coordsSalvas = { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) };
-                    window._cacheGeocodificacao[chaveCache] = coordsSalvas;
-                    resolve(coordsSalvas);
-                    return null;
-                }
-                var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
-                return _geocodificarExterno(enderecoParaBuscar);
-            })
-            .then(function (resultadoExterno) {
-                if (resultadoExterno === null) return;
-                if (!resultadoExterno) {
-                    window._cacheGeocodificacao[chaveCache] = null;
-                    resolve(null);
-                    return;
-                }
-
-                window._cacheGeocodificacao[chaveCache] = resultadoExterno;
-                resolve(resultadoExterno);
-
-                API.call('salvarenderecogeo', {
-                    endereco_original: busca,
-                    lat: resultadoExterno.lat,
-                    lng: resultadoExterno.lng,
-                    cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
-                    origem_resolucao: 'geocodificado'
-                }).catch(function (e) {
-                    window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
-                });
-            })
-            .catch(function (e) {
-                window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
-                window._cacheGeocodificacao[chaveCache] = null;
-                resolve(null);
-            });
-    });
-};
-
 window.iniciarFluxoCheckout = function () {
     if (window.AppRDO._mapaModalAberto) return;
     if (window.AppRDO.isProcessingCheckout) return;
@@ -1491,7 +1415,6 @@ function _registrarListenerExpansaoInput() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _registrarListenerExpansaoInput);
 else _registrarListenerExpansaoInput();
-
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
@@ -1951,22 +1874,6 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
 
 function _fetchGeoComTimeout(url, ms) {
     return fetch(url, { signal: AbortSignal.timeout(ms) });
-}
-
-function _tentarPhoton(query, ms) {
-    return _fetchGeoComTimeout(
-        'https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=' + encodeURIComponent(query),
-        ms
-    )
-        .then(function (resp) { return resp.json(); })
-        .then(function (data) {
-            if (data && data.features && data.features.length > 0) {
-                var coords = data.features[0].geometry.coordinates;
-                return { lat: coords[1], lng: coords[0] };
-            }
-            return null;
-        })
-        .catch(function () { return null; });
 }
 
 window._criarWrapperMensagem = _criarWrapperMensagem;
@@ -2715,6 +2622,123 @@ window.extrairRotasDaMensagem = function (texto) {
 };
 
 window._cacheGeocodificacao = window._cacheGeocodificacao || {};
+window._filaNominatim = window._filaNominatim || Promise.resolve();
+
+function _fetchGeoComTimeout(url, ms, headers) {
+    return fetch(url, { signal: AbortSignal.timeout(ms), headers: headers || {} });
+}
+
+function _tentarPhoton(query, ms) {
+    return _fetchGeoComTimeout(
+        'https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=' + encodeURIComponent(query),
+        ms
+    )
+        .then(function (resp) { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(function (data) {
+            if (data && data.features && data.features.length > 0) {
+                var coords = data.features[0].geometry.coordinates;
+                return { lat: coords[1], lng: coords[0] };
+            }
+            return null;
+        })
+        .catch(function (e) { window._exibirErroGlobal(e, 'geocodificar via Photon'); return null; });
+}
+
+function _tentarNominatimReal(query, ms) {
+    return _fetchGeoComTimeout(
+        'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
+        ms,
+        { 'Accept-Language': 'pt-BR' }
+    )
+        .then(function (resp) { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(function (data) {
+            return (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        })
+        .catch(function (e) { window._exibirErroGlobal(e, 'geocodificar via Nominatim'); return null; });
+}
+
+function _tentarNominatim(query, ms) {
+    var resultado = window._filaNominatim.then(function () {
+        return _tentarNominatimReal(query, ms).then(function (r) {
+            return new Promise(function (resolve) {
+                setTimeout(function () { resolve(r); }, 1100); // respeita rate-limit p/ próxima chamada
+            });
+        });
+    });
+    window._filaNominatim = resultado.catch(function () { return null; });
+    return resultado;
+}
+
+function _geocodificarExterno(busca) {
+    var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim|Sabará|Ibirité|Ribeirão das Neves/i.test(busca);
+    var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+
+    return _tentarPhoton(queryPrincipal, 4000).then(function (resultado) {
+        if (resultado) return resultado;
+        return _tentarNominatim(queryPrincipal, 5000).then(function (resultado2) {
+            if (resultado2) return resultado2;
+            if (temContexto) return null;
+            return _tentarNominatim(busca + ', Brasil', 5000);
+        });
+    });
+}
+
+window.buscarCoordenadasEndereco = function (endereco) {
+    var busca = String(endereco || '').trim();
+    if (!busca) return Promise.resolve(null);
+
+    var chaveCache = busca.toLowerCase();
+    if (window._cacheGeocodificacao[chaveCache] !== undefined) {
+        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
+    }
+
+    function _tentarBackendInterno() {
+        return API.call('buscarenderecogeo', { endereco: busca })
+            .then(function (resp) {
+                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
+                    return { coords: { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) }, resolvidoInterno: true };
+                }
+                var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
+                return { enderecoParaBuscar: enderecoParaBuscar, resolvidoInterno: false };
+            })
+            .catch(function (e) {
+                window._exibirErroGlobal(e, 'consultar endereço no backend');
+                return { enderecoParaBuscar: busca, resolvidoInterno: false };
+            });
+    }
+
+    return _tentarBackendInterno().then(function (resultadoInterno) {
+        if (resultadoInterno.resolvidoInterno) {
+            window._cacheGeocodificacao[chaveCache] = resultadoInterno.coords;
+            return resultadoInterno.coords;
+        }
+
+        return _geocodificarExterno(resultadoInterno.enderecoParaBuscar).then(function (resultadoExterno) {
+            if (!resultadoExterno) {
+                window._cacheGeocodificacao[chaveCache] = null;
+                return null;
+            }
+
+            window._cacheGeocodificacao[chaveCache] = resultadoExterno;
+
+            API.call('salvarenderecogeo', {
+                endereco_original: busca,
+                lat: resultadoExterno.lat,
+                lng: resultadoExterno.lng,
+                cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
+                origem_resolucao: 'geocodificado'
+            }).catch(function (e) {
+                window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
+            });
+
+            return resultadoExterno;
+        });
+    }).catch(function (e) {
+        window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
+        window._cacheGeocodificacao[chaveCache] = null;
+        return null;
+    });
+};
 
 window.exibirErro = function (erro, contexto) {
     contexto = contexto || 'Erro desconhecido';
