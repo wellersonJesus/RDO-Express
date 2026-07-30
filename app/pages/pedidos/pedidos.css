@@ -1040,9 +1040,105 @@
     color: #dc3545;
 }
 
-@media (max-width: 768px) {
-    .input-filtro-pedidos {
-        max-width: 140px;
+@media (max-width: 767.98px) {
+
+    #modalEditarPedido .modal-pedido-body .row,
+    #modalNovoPedido .modal-pedido-body .row,
+    #modalPedidoDetalhes .modal-pedido-body .row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        margin-right: -6px;
+        margin-left: -6px;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>[class*="col-"],
+    #modalNovoPedido .modal-pedido-body .row>[class*="col-"],
+    #modalPedidoDetalhes .modal-pedido-body .row>[class*="col-"] {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        padding-right: 6px;
+        padding-left: 6px;
+        box-sizing: border-box;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-2,
+    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-2,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-2 {
+        flex-basis: 16.6667% !important;
+        width: 16.6667% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-3,
+    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-3,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-3 {
+        flex-basis: 25% !important;
+        width: 25% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-4,
+    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-4,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-4 {
+        flex-basis: 33.3333% !important;
+        width: 33.3333% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-6,
+    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-6,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-6 {
+        flex-basis: 50% !important;
+        width: 50% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-3,
+    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-3,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-3 {
+        flex-basis: 25% !important;
+        width: 25% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-4,
+    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-4,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-4 {
+        flex-basis: 33.3333% !important;
+        width: 33.3333% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-6,
+    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-6,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-6 {
+        flex-basis: 50% !important;
+        width: 50% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-4.col-sm-4,
+    #modalNovoPedido .modal-pedido-body .row>.col-4.col-sm-4,
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-4.col-sm-4 {
+        flex-basis: 33.3333% !important;
+        width: 33.3333% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-body .row>.col-12:not([class*="col-sm-"]),
+    #modalNovoPedido .modal-pedido-body .row>.col-12:not([class*="col-sm-"]),
+    #modalPedidoDetalhes .modal-pedido-body .row>.col-12:not([class*="col-sm-"]) {
+        flex-basis: 100% !important;
+        width: 100% !important;
+    }
+
+    #modalEditarPedido .modal-pedido-field-label,
+    #modalNovoPedido .modal-pedido-field-label,
+    #modalPedidoDetalhes .modal-pedido-field-label {
+        font-size: 0.62rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #modalEditarPedido .modal-pedido-input,
+    #modalNovoPedido .modal-pedido-input,
+    #modalPedidoDetalhes .modal-pedido-input {
+        font-size: 0.68rem;
+        padding: 0.25rem 0.4rem;
     }
 }
 
@@ -1233,55 +1329,5 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-    }
-}
-
-@media (max-width: 575.98px) {
-    #modalPedidoDetalhes .modal-pedido-body .row {
-        display: flex;
-        flex-wrap: wrap;
-    }
-
-    #modalPedidoDetalhes .modal-pedido-body .row>[class*="col-"] {
-        flex: 0 0 auto;
-        width: auto;
-        max-width: none;
-    }
-
-    #modalPedidoDetalhes .row.mb-2:nth-of-type(1)>.col-12.col-sm-3 {
-        flex: 0 0 25%;
-        max-width: 25%;
-    }
-
-    #modalPedidoDetalhes .row.mb-2:nth-of-type(2)>.col-12.col-sm-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-
-    #modalPedidoDetalhes .row.mb-2:nth-of-type(2)>.col-12.col-sm-2 {
-        flex: 0 0 16.6667%;
-        max-width: 16.6667%;
-    }
-
-    #modalPedidoDetalhes .col-12.col-sm-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-
-    #modalPedidoDetalhes .col-12.col-sm-4 {
-        flex: 0 0 33.3333%;
-        max-width: 33.3333%;
-    }
-
-    #modalPedidoDetalhes .modal-pedido-field-label {
-        font-size: 0.62rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    #modalPedidoDetalhes .modal-pedido-input {
-        font-size: 0.68rem;
-        padding: 0.25rem 0.4rem;
     }
 }
