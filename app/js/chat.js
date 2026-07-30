@@ -1,8 +1,3 @@
-var _expandidoAtivo = false;
-var _overlayExpandido = null;
-var _textareaOriginalParent = null;
-var _textareaOriginalNextSibling = null;
-
 window._storageComExpiracao = (function () {
     var VALIDADE_MS = 24 * 60 * 60 * 1000;
 
@@ -954,22 +949,26 @@ window.PedidosDropdown = (function () {
 
 window.MODELO_PADRAO = [
     '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
-    '', 'SOLICITANTE: ', 'CONTATO: ', 'HORÁRIO ESTIMADO P/ COLETA:  ',
-    'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)', 'ROTA(s): ',
-    '📍1. De: ... | Para: ...', '📍2. De: ... | Para: ... ', '📍3. De: ... | Para: ... ',
-    'RETORNO:  (SIM /NÃO)', 'PRIORIDADE: (Normal, Agendado, Urgente) ',
-    'OBSERVAÇÃO: Descreva a observação aqui se necessario', '',
-    'Assim que enviar esta mensagem preenchida, ', 'calcularemos á sua taxa! 🏁'
+    '',
+    'SOLICITANTE: ',
+    'CONTATO: ',
+    'HORÁRIO ESTIMADO P/ COLETA:  ',
+    'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)',
+    '',
+    'ROTA(s): Informe Rua, Número, Bairro e Cidade completos (origem e destino)',
+    '📍1. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+    '📍2. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+    '📍3. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+    '',
+    'RETORNO:  (SIM /NÃO)',
+    'PRIORIDADE: (Normal, Agendado, Urgente) ',
+    'OBSERVAÇÃO: Descreva a observação aqui se necessario',
+    '',
+    '⚠️ Endereços incompletos podem atrasar o cálculo da taxa.',
+    '',
+    'Assim que enviar esta mensagem preenchida, ',
+    'calcularemos á sua taxa! 🏁'
 ].join('\n');
-
-window.validarClienteOnline = function () {
-    if (!window.AppRDO || !window.AppRDO.clienteId) return false;
-    var cliente = window.AppRDO.clientesCache.find(function (c) {
-        return String(c.id) === String(window.AppRDO.clienteId);
-    });
-    if (!cliente) return false;
-    return window.AppRDO.isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
-};
 
 window.validarMensagemModelo = function (texto) {
     if (!texto || !texto.trim()) return { valido: false, tipo: 'vazio' };
@@ -980,25 +979,320 @@ window.validarMensagemModelo = function (texto) {
     var temContato = !!(matchC && matchC[1] && matchC[1].trim().length > 0);
 
     var quantRotas = 0;
+    var rotasIncompletas = 0;
     texto.split('\n').forEach(function (linha) {
         linha = linha.trim();
         if (!/de\s*:/i.test(linha) || !/para\s*:/i.test(linha)) return;
         var vDe = linha.match(/de\s*:\s*([^|]+)/i);
         var vPara = linha.match(/para\s*:\s*(.+)/i);
-        if (vDe && vDe[1] && vDe[1].trim() !== '...' && vDe[1].trim().length > 0 &&
-            vPara && vPara[1] && vPara[1].trim() !== '...' && vPara[1].trim().length > 0) {
+        var deTexto = vDe && vDe[1] ? vDe[1].trim() : '';
+        var paraTexto = vPara && vPara[1] ? vPara[1].trim() : '';
+        var deValido = deTexto && deTexto !== '...' && deTexto.length > 0;
+        var paraValido = paraTexto && paraTexto !== '...' && paraTexto.length > 0;
+        if (deValido && paraValido) {
             quantRotas++;
+            var deVirgulas = deTexto.split(',').length - 1;
+            var paraVirgulas = paraTexto.split(',').length - 1;
+            if (deVirgulas < 2 || paraVirgulas < 2) rotasIncompletas++;
         }
     });
     var temRota = quantRotas >= 1;
 
-    if (temSolic && temContato && temRota) return { valido: true, tipo: 'ok', rotas: quantRotas };
+    if (temSolic && temContato && temRota && rotasIncompletas === 0) {
+        return { valido: true, tipo: 'ok', rotas: quantRotas };
+    }
 
     var faltando = [];
     if (!temSolic) faltando.push('SOLICITANTE');
     if (!temContato) faltando.push('CONTATO');
-    if (!temRota) faltando.push('ROTA (De: ... | Para: ...)');
+    if (!temRota) faltando.push('ROTA (De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade)');
+    if (temRota && rotasIncompletas > 0) faltando.push('Endereço incompleto: informe Rua, Número, Bairro e Cidade em cada rota');
+
     return { valido: false, tipo: 'modelo', camposPendentes: faltando };
+};
+
+function _tentarNominatim(query, ms) {
+    return _fetchGeoComTimeout(
+        'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
+        ms
+    )
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            return (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        })
+        .catch(function () { return null; });
+}
+
+function _geocodificarExterno(busca) {
+    var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim|Sabará|Ibirité|Ribeirão das Neves/i.test(busca);
+    var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
+
+    return _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
+        if (resultado) return resultado;
+        return _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
+            if (resultado2) return resultado2;
+            if (temContexto) return null;
+            return _tentarNominatim(busca + ', Brasil', 4000);
+        });
+    });
+}
+
+window.buscarCoordenadasEndereco = function (endereco) {
+    var busca = String(endereco || '').trim();
+    if (!busca) return Promise.resolve(null);
+
+    var chaveCache = busca.toLowerCase();
+    if (window._cacheGeocodificacao[chaveCache] !== undefined) {
+        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
+    }
+
+    return new Promise(function (resolve) {
+        API.call('buscarenderecogeo', { endereco: busca })
+            .then(function (resp) {
+                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
+                    var coordsSalvas = { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) };
+                    window._cacheGeocodificacao[chaveCache] = coordsSalvas;
+                    resolve(coordsSalvas);
+                    return null;
+                }
+                var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
+                return _geocodificarExterno(enderecoParaBuscar);
+            })
+            .then(function (resultadoExterno) {
+                if (resultadoExterno === null) return;
+                if (!resultadoExterno) {
+                    window._cacheGeocodificacao[chaveCache] = null;
+                    resolve(null);
+                    return;
+                }
+
+                window._cacheGeocodificacao[chaveCache] = resultadoExterno;
+                resolve(resultadoExterno);
+
+                API.call('salvarenderecogeo', {
+                    endereco_original: busca,
+                    lat: resultadoExterno.lat,
+                    lng: resultadoExterno.lng,
+                    cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
+                    origem_resolucao: 'geocodificado'
+                }).catch(function (e) {
+                    window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
+                });
+            })
+            .catch(function (e) {
+                window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
+                window._cacheGeocodificacao[chaveCache] = null;
+                resolve(null);
+            });
+    });
+};
+
+window.iniciarFluxoCheckout = function () {
+    if (window.AppRDO._mapaModalAberto) return;
+    if (window.AppRDO.isProcessingCheckout) return;
+
+    var msgInput = document.getElementById('msg-input');
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
+    if (!texto) { window.marcarCampoInvalido(); return; }
+
+    var validacao = window.validarMensagemModelo(texto);
+    if (!validacao.valido) {
+        var faltantes = validacao.camposPendentes ? validacao.camposPendentes.join(', ') : '';
+        window.exibirModalValidacao(
+            'Preencha corretamente o modelo antes de enviar.<br>Campos pendentes: <strong>' + faltantes + '</strong>',
+            { titulo: 'Modelo incompleto', icone: 'bi-exclamation-triangle-fill', modelo: window.MODELO_PADRAO }
+        );
+        return;
+    }
+
+    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
+    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
+    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
+    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
+    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
+    var rotasExtraidas = window.extrairRotasDaMensagem(texto);
+
+    if (rotasExtraidas.length === 0) {
+        window.exibirModalValidacao(
+            'Nenhuma rota encontrada.<br>Use o formato: <strong>De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade</strong>',
+            { titulo: 'Rota inválida', icone: 'bi-signpost-split-fill', modelo: window.MODELO_PADRAO }
+        );
+        return;
+    }
+
+    window.AppRDO._mapaModalAberto = true;
+    window.AppRDO.isProcessingCheckout = true;
+
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        if (!carregou) {
+            window.AppRDO._mapaModalAberto = false;
+            window.AppRDO.isProcessingCheckout = false;
+            return;
+        }
+
+        var modalEl = document.getElementById('modalMapa');
+        if (!modalEl) {
+            window.AppRDO._mapaModalAberto = false;
+            window.AppRDO.isProcessingCheckout = false;
+            return;
+        }
+
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        try {
+            var existente = bootstrap.Modal.getInstance(modalEl);
+            if (existente) existente.dispose();
+        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
+        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            window.AppRDO._mapaModalAberto = false;
+            window.AppRDO.isProcessingCheckout = false;
+            if (window._leafletMapInstance) {
+                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
+                window._leafletMapInstance = null;
+            }
+        }, { once: true });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, { once: true });
+
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            modalEl.style.zIndex = '1075';
+            var backdrops = document.querySelectorAll('.modal-backdrop');
+            var ultimoBackdrop = backdrops[backdrops.length - 1];
+            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
+            var elSolicitante = document.getElementById('header-nome-solicitante');
+            var loaderEl = document.getElementById('mapa-loader');
+            if (elSolicitante) elSolicitante.innerText = solicitante;
+            if (loaderEl) {
+                loaderEl.style.display = '';
+                loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
+            }
+
+            var footer = document.getElementById('footer-resumo-dados');
+            if (footer) footer.innerHTML = '';
+
+            var kmTotal = 0, minTotal = 0, listaCaminhos = [];
+            var rotasComFalha = [];
+
+            function _fetchComTimeout(url, ms) {
+                return fetch(url, { signal: AbortSignal.timeout(ms) });
+            }
+
+            function _processarRota(rota, idx) {
+                return Promise.all([
+                    window.buscarCoordenadasEndereco(rota.de),
+                    window.buscarCoordenadasEndereco(rota.para)
+                ]).then(function (coords) {
+                    var p1 = coords[0], p2 = coords[1];
+                    if (!p1 || !p2) { rotasComFalha.push(idx + 1); return; }
+
+                    return _fetchComTimeout(
+                        'https://router.project-osrm.org/route/v1/driving/' +
+                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
+                        '?overview=full&geometries=geojson',
+                        6000
+                    )
+                        .then(function (resp) { return resp.json(); })
+                        .then(function (data) {
+                            if (data && data.routes && data.routes[0]) {
+                                kmTotal += data.routes[0].distance / 1000;
+                                minTotal += data.routes[0].duration / 60;
+                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
+                            } else {
+                                rotasComFalha.push(idx + 1);
+                            }
+                        })
+                        .catch(function (e) {
+                            window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
+                            rotasComFalha.push(idx + 1);
+                        });
+                }).catch(function (e) {
+                    window._exibirErroGlobal(e, 'geocodificar rota ' + (idx + 1));
+                    rotasComFalha.push(idx + 1);
+                });
+            }
+
+            Promise.all(rotasExtraidas.map(_processarRota))
+                .then(function () {
+                    if (listaCaminhos.length === 0) {
+                        if (loaderEl) {
+                            loaderEl.style.display = '';
+                            loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Não foi possível localizar os endereços informados. Verifique se a Rua, Número, Bairro e Cidade estão corretos.</p>';
+                        }
+                        window.AppRDO.isProcessingCheckout = false;
+                        return;
+                    }
+
+                    var kmArredondado = Math.round(kmTotal);
+                    var valorCalculado = kmArredondado * 3.00;
+
+                    window.dadosPedidoAtual = {
+                        solicitante: solicitante,
+                        contato: contato,
+                        horario: horario,
+                        mercadoria: mercadoria,
+                        obs: obs,
+                        cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                        distanciaTotal: kmArredondado,
+                        tempoTotal: Math.round(minTotal),
+                        coordenadas: listaCaminhos,
+                        valorEstimado: valorCalculado,
+                        rotasProcessadas: rotasExtraidas,
+                        rawInput: texto
+                    };
+
+                    if (loaderEl) loaderEl.style.display = 'none';
+
+                    window._renderizarResumo(
+                        kmArredondado, minTotal,
+                        valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    );
+                    window.renderizarMapaUnificado();
+                    window.AppRDO.isProcessingCheckout = false;
+
+                    if (rotasComFalha.length > 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Atenção',
+                            html: 'Algumas rotas não puderam ser calculadas: <strong>' + rotasComFalha.join(', ') + '</strong>.<br>O valor exibido considera apenas as rotas encontradas.',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(function (e) {
+                    window._exibirErroGlobal(e, 'calcular rotas do pedido');
+                    window.AppRDO.isProcessingCheckout = false;
+                    if (loaderEl) {
+                        loaderEl.style.display = '';
+                        loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
+                    }
+                    var footerErro = document.getElementById('footer-resumo-dados');
+                    if (footerErro) footerErro.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
+                });
+        }, { once: true });
+
+        modal.show();
+    });
+};
+
+window.validarClienteOnline = function () {
+    if (!window.AppRDO || !window.AppRDO.clienteId) return false;
+    var cliente = window.AppRDO.clientesCache.find(function (c) {
+        return String(c.id) === String(window.AppRDO.clienteId);
+    });
+    if (!cliente) return false;
+    return window.AppRDO.isMasterOn && String(cliente.status || '').toUpperCase() === 'TRUE';
 };
 
 window.exibirModalValidacao = function (mensagem, opcoes) {
@@ -1175,115 +1469,29 @@ window.formatarTempoHumano = function (minutos) {
     return h > 0 ? h + 'h ' + m + 'min' : m + 'min';
 };
 
-function _criarOverlayExpandido() {
-    var overlay = document.createElement('div');
-    overlay.id = 'overlay-input-expandido';
-    overlay.className = 'overlay-input-expandido';
-
-    var caixa = document.createElement('div');
-    caixa.className = 'caixa-input-expandido';
-
-    var header = document.createElement('div');
-    header.className = 'header-input-expandido';
-    header.innerHTML = '<span>Digite o pedido</span><button type="button" class="btn-fechar-input-expandido"><i class="bi bi-x-lg"></i></button>';
-
-    var corpo = document.createElement('div');
-    corpo.className = 'corpo-input-expandido';
-
-    var footer = document.createElement('div');
-    footer.className = 'footer-input-expandido';
-    var btnEnviar = document.createElement('button');
-    btnEnviar.type = 'button';
-    btnEnviar.className = 'btn btn-danger rounded-pill px-4';
-    btnEnviar.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Pedido';
-    footer.appendChild(btnEnviar);
-
-    caixa.appendChild(header);
-    caixa.appendChild(corpo);
-    caixa.appendChild(footer);
-    overlay.appendChild(caixa);
-    document.body.appendChild(overlay);
-
-    header.querySelector('.btn-fechar-input-expandido').addEventListener('click', _fecharExpandido);
-    overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) _fecharExpandido();
-    });
-    btnEnviar.addEventListener('click', function () {
-        _fecharExpandido();
-        setTimeout(function () { window.enviarMensagemGeral(); }, 150);
-    });
-
-    return { overlay: overlay, corpo: corpo };
-}
-
-function _abrirExpandido() {
-    if (_expandidoAtivo) return;
+function _registrarListenerExpansaoInput() {
     var textarea = document.getElementById('msg-input');
-    if (!textarea) return;
-
-    _expandidoAtivo = true;
-    _textareaOriginalParent = textarea.parentElement;
-    _textareaOriginalNextSibling = textarea.nextSibling;
-
-    var refs = _criarOverlayExpandido();
-    _overlayExpandido = refs.overlay;
-
-    textarea.classList.add('textarea-modo-expandido');
-    refs.corpo.appendChild(textarea);
-
-    requestAnimationFrame(function () {
-        _overlayExpandido.classList.add('show');
-        textarea.focus();
-        var len = textarea.value.length;
-        textarea.setSelectionRange(len, len);
-    });
-
-    document.addEventListener('keydown', _escListener);
-}
-
-function _fecharExpandido() {
-    if (!_expandidoAtivo) return;
-    var textarea = document.getElementById('msg-input');
-    if (!_overlayExpandido || !textarea) { _expandidoAtivo = false; return; }
-
-    _overlayExpandido.classList.remove('show');
-
-    setTimeout(function () {
-        textarea.classList.remove('textarea-modo-expandido');
-        if (_textareaOriginalNextSibling) {
-            _textareaOriginalParent.insertBefore(textarea, _textareaOriginalNextSibling);
-        } else {
-            _textareaOriginalParent.appendChild(textarea);
-        }
-        if (_overlayExpandido && _overlayExpandido.parentElement) {
-            _overlayExpandido.parentElement.removeChild(_overlayExpandido);
-        }
-        _overlayExpandido = null;
-        _expandidoAtivo = false;
-        document.removeEventListener('keydown', _escListener);
-    }, 250);
-}
-
-function _escListener(e) {
-    if (e.key === 'Escape') _fecharExpandido();
-}
-
-function _registrarListenerFoco() {
-    var textarea = document.getElementById('msg-input');
-    if (!textarea) { setTimeout(_registrarListenerFoco, 300); return; }
+    var inputArea = document.querySelector('.chat-input-area');
+    if (!textarea || !inputArea) { setTimeout(_registrarListenerExpansaoInput, 300); return; }
     if (textarea._listenerExpandidoRegistrado) return;
     textarea._listenerExpandidoRegistrado = true;
 
     textarea.addEventListener('focus', function () {
-        if (window.innerWidth <= 768) _abrirExpandido();
+        textarea.classList.add('textarea-expandida');
+        inputArea.classList.add('input-expandido');
+    });
+
+    textarea.addEventListener('blur', function () {
+        if (!textarea.value.trim()) {
+            textarea.classList.remove('textarea-expandida');
+            inputArea.classList.remove('input-expandido');
+        }
     });
 }
 
-window._abrirInputExpandido = _abrirExpandido;
-window._fecharInputExpandido = _fecharExpandido;
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _registrarListenerExpansaoInput);
+else _registrarListenerExpansaoInput();
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _registrarListenerFoco);
-else _registrarListenerFoco();
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
@@ -1519,9 +1727,185 @@ function _resolverTextoMensagem(msg, pedido) {
         para: String(pedido.para || '').trim(),
         distanciaTotal: _parseMoedaSeguro(pedido.distancia || 0),
         tempoTotal: _parseMoedaSeguro(pedido.tempo || 0),
-        valorEstimado: _parseMoedaSeguro(pedido.valor_corrida || 0)
+        valorEstimado: _parseMoedaSeguro(pedido.valor_total || 0)
     });
 }
+
+window.remitirPedido = async function () {
+    var _validarCampo = function (el) {
+        if (!el || !String(el.value || '').trim()) {
+            if (el) {
+                el.style.border = '2px solid #dc3545';
+                el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+            }
+            return false;
+        }
+        return true;
+    };
+
+    var invalido = false;
+    ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'].forEach(function (id) {
+        if (!_validarCampo(document.getElementById(id))) invalido = true;
+    });
+    if (invalido) return;
+
+    if (typeof window.calcularTudo === 'function') window.calcularTudo();
+
+    var dados = window.dadosPedidoAtual || {};
+    var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
+    var contato = String((document.getElementById('p-contato') || {}).value || dados.contato || '').trim();
+    var horario = String((document.getElementById('p-horario') || {}).value || dados.horario || '').trim();
+    var mercadoria = String((document.getElementById('p-mercadoria') || {}).value || dados.mercadoria || 'ENTREGA').trim();
+    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
+    var tempo = String((document.getElementById('p-tempo') || {}).value || '').trim();
+    var obs = String((document.getElementById('p-obs') || {}).value || dados.obs || '').trim();
+    var valorKm = String((document.getElementById('p-valor-km') || {}).value || '3').trim();
+    var retorno = String((document.getElementById('p-retorno') || {}).value || '0').trim();
+    var dinamica = String((document.getElementById('p-dinamica') || {}).value || '0').trim();
+    var prioridade = String((document.getElementById('p-prioridade') || {}).value || '0').trim();
+    var valorTotal = Number(dados.valorEstimado || 0);
+
+    var rotasProcessadas = (
+        Array.isArray(dados.rotasProcessadas) && dados.rotasProcessadas.length > 0
+    ) ? dados.rotasProcessadas : [];
+
+    var rotasTexto = '';
+    if (rotasProcessadas.length > 0) {
+        rotasTexto = rotasProcessadas.map(function (r, i) {
+            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
+        }).join('\n');
+    } else {
+        rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
+    }
+
+    var primeiraRota = rotasProcessadas.length > 0 ? rotasProcessadas[0] : null;
+    var deStr = primeiraRota ? primeiraRota.de : '';
+    var paraStr = primeiraRota ? primeiraRota.para : '';
+
+    var dadosParaMensagem = {
+        id: '[ID_GERADO]',
+        solicitante: solicitante,
+        contato: contato,
+        mercadoria: mercadoria,
+        rotasProcessadas: rotasProcessadas,
+        distanciaTotal: dados.distanciaTotal || distancia,
+        tempoTotal: dados.tempoTotal || 0,
+        valorEstimado: valorTotal
+    };
+
+    var mensagemProvisoria = typeof window.gerarMensagemFormatada === 'function'
+        ? window.gerarMensagemFormatada(dadosParaMensagem)
+        : '';
+
+    var payload = {
+        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
+        solicitante: solicitante,
+        contato: contato,
+        horario: horario,
+        mercadoria: mercadoria,
+        rotas_texto: rotasTexto,
+        de: deStr,
+        para: paraStr,
+        distancia: distancia.toFixed(2),
+        tempo: tempo,
+        obs: obs,
+        valor_km: valorKm,
+        retorno: retorno,
+        dinamica: dinamica,
+        prioridade: prioridade,
+        valor_total: valorTotal,
+        status: 'PENDENTE',
+        situacao_financeira: 'PENDENTE',
+        texto: mensagemProvisoria
+    };
+
+    if (!payload.id_cliente) { window.exibirModalValidacao('Nenhum cliente selecionado.'); return; }
+
+    var btnRemitir = document.getElementById('btn-remitir-pedido');
+    var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
+    if (btnRemitir) {
+        btnRemitir.disabled = true;
+        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+    }
+
+    try {
+        var resposta = await API.call('createpedido', payload);
+        if (!resposta || resposta.status !== 'success')
+            throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
+
+        var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
+        var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
+
+        var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
+
+        var modalForm = document.getElementById('modalFormulario');
+        var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
+        if (instForm) { try { instForm.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
+
+        if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function')
+            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
+
+        if (novoPedidoId) {
+            var novoPedidoCache = Object.assign({}, payload, {
+                id: novoPedidoId,
+                status: 'PENDENTE',
+                situacao_financeira: 'PENDENTE',
+                motoboy: '',
+                mensagem: mensagemFinal
+            });
+            if (Array.isArray(window.AppRDO.pedidosCache))
+                window.AppRDO.pedidosCache.push(novoPedidoCache);
+
+            if (Array.isArray(window.AppRDO.mensagensCache))
+                window.AppRDO.mensagensCache.push({
+                    id_cliente: payload.id_cliente,
+                    pedido_id: novoPedidoId,
+                    texto: mensagemFinal,
+                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    data: new Date().toISOString()
+                });
+
+            if (typeof window.EventBus !== 'undefined')
+                window.EventBus.emit('pedido:adicionado', novoPedidoCache);
+        }
+
+        window.dadosPedidoAtual = {};
+        window.AppRDO._mapaModalAberto = false;
+        window.AppRDO.isProcessingCheckout = false;
+
+        var msgInput = document.getElementById('msg-input');
+        if (msgInput) {
+            msgInput.value = '';
+            msgInput.style.height = 'auto';
+            msgInput.setAttribute('placeholder', 'Digite o pedido...');
+        }
+
+        setTimeout(function () { _limparBackdrop(); }, 350);
+
+        try {
+            Swal.fire({
+                icon: 'success', title: 'Pedido enviado!',
+                text: 'O pedido foi registrado com sucesso.',
+                toast: true, position: 'top-end',
+                showConfirmButton: false, timer: 3000,
+                timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
+            });
+        } catch (_) { }
+
+    } catch (err) {
+        window._exibirErroGlobal(err, 'enviar pedido');
+        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
+        try {
+            Swal.fire({
+                icon: 'error', title: 'Erro ao enviar pedido',
+                html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
+                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
+            });
+        } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
+    }
+};
 
 function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, tooltipTexto) {
     var div = document.createElement('div');
@@ -1563,6 +1947,26 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
     div.addEventListener('mouseleave', function () { div.classList.remove('msg-hover-active'); });
 
     return div;
+}
+
+function _fetchGeoComTimeout(url, ms) {
+    return fetch(url, { signal: AbortSignal.timeout(ms) });
+}
+
+function _tentarPhoton(query, ms) {
+    return _fetchGeoComTimeout(
+        'https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=' + encodeURIComponent(query),
+        ms
+    )
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            if (data && data.features && data.features.length > 0) {
+                var coords = data.features[0].geometry.coordinates;
+                return { lat: coords[1], lng: coords[0] };
+            }
+            return null;
+        })
+        .catch(function () { return null; });
 }
 
 window._criarWrapperMensagem = _criarWrapperMensagem;
@@ -2312,262 +2716,6 @@ window.extrairRotasDaMensagem = function (texto) {
 
 window._cacheGeocodificacao = window._cacheGeocodificacao || {};
 
-window.buscarCoordenadasEndereco = function (endereco) {
-    var LAT_BH = -19.9167, LON_BH = -43.9345;
-
-    function _fetchGeoComTimeout(url, ms) {
-        return fetch(url, { signal: AbortSignal.timeout(ms) });
-    }
-
-    function _tentarPhoton(query, ms) {
-        return _fetchGeoComTimeout(
-            'https://photon.komoot.io/api/?limit=1&lat=' + LAT_BH + '&lon=' + LON_BH +
-            '&q=' + encodeURIComponent(query),
-            ms
-        )
-            .then(function (resp) { return resp.json(); })
-            .then(function (data) {
-                if (data && data.features && data.features[0]) {
-                    var coords = data.features[0].geometry.coordinates;
-                    return { lat: coords[1], lng: coords[0] };
-                }
-                return null;
-            })
-            .catch(function () { return null; });
-    }
-
-    function _tentarNominatim(query, ms) {
-        return _fetchGeoComTimeout(
-            'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
-            ms
-        )
-            .then(function (resp) { return resp.json(); })
-            .then(function (data) {
-                return (data && data.length > 0) ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
-            })
-            .catch(function () { return null; });
-    }
-
-    function _geocodificarExterno(busca) {
-        var temContexto = /MG|Minas Gerais|Belo Horizonte|Contagem|Nova Lima|Vespasiano|Santa Luzia|Betim/i.test(busca);
-        var queryPrincipal = temContexto ? busca : busca + ', Belo Horizonte, MG';
-
-        return _tentarPhoton(queryPrincipal, 2500).then(function (resultado) {
-            if (resultado) return resultado;
-            return _tentarNominatim(queryPrincipal, 4000).then(function (resultado2) {
-                if (resultado2) return resultado2;
-                return _tentarNominatim(busca + ', Brasil', 4000);
-            });
-        });
-    }
-
-    return new Promise(function (resolve) {
-        var busca = String(endereco || '').trim();
-        if (!busca) { resolve(null); return; }
-
-        API.call('buscarenderecogeo', { endereco: busca })
-            .then(function (resp) {
-                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
-                    resolve({ lat: parseFloat(resp.lat), lng: parseFloat(resp.lng) });
-                    return null;
-                }
-                return _geocodificarExterno(busca);
-            })
-            .then(function (resultadoExterno) {
-                if (resultadoExterno === null) return;
-                if (!resultadoExterno) { resolve(null); return; }
-
-                resolve(resultadoExterno);
-
-                API.call('salvarenderecogeo', {
-                    endereco_original: busca,
-                    lat: resultadoExterno.lat,
-                    lng: resultadoExterno.lng,
-                    cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
-                    origem_resolucao: 'geocodificado'
-                }).catch(function (e) {
-                    window._exibirErroGlobal(e, 'salvar endereço geocodificado no banco');
-                });
-            })
-            .catch(function (e) {
-                window._exibirErroGlobal(e, 'buscar/geocodificar endereço');
-                resolve(null);
-            });
-    });
-};
-
-window.iniciarFluxoCheckout = function () {
-    if (window.AppRDO._mapaModalAberto) return;
-
-    var msgInput = document.getElementById('msg-input');
-    var texto = msgInput ? (msgInput.value || '').trim() : '';
-    if (!texto) { window.marcarCampoInvalido(); return; }
-
-    var solicitante = ((texto.match(/(?:SOLICITANTE|NOME|CLIENTE):\s*(.*)/i) || [])[1] || 'Não informado').trim();
-    var contato = ((texto.match(/(?:CONTATO|CONATO|TEL|TELEFONE):\s*([\d\s\-\(\)\+]+)/i) || [])[1] || '').trim();
-    var horario = ((texto.match(/(?:HORÁRIO|HORARIO).*?:\s*([\d:]+)/i) || [])[1] || '').trim();
-    var mercadoria = ((texto.match(/(?:MERCADORIA):\s*(.*)/i) || [])[1] || 'ENTREGA').trim().toUpperCase();
-    var obs = ((texto.match(/(?:OBSERVAÇÃO|OBSERVACAO):\s*(.*)/i) || [])[1] || '').trim();
-    var rotasExtraidas = window.extrairRotasDaMensagem(texto);
-
-    if (rotasExtraidas.length === 0) {
-        window.exibirModalValidacao('Nenhuma rota encontrada.<br>Use o formato: <strong>De: Origem | Para: Destino</strong>');
-        return;
-    }
-
-    window.AppRDO._mapaModalAberto = true;
-
-    window.loadModal('mapa_clientes.html').then(function (carregou) {
-        if (!carregou) { window.AppRDO._mapaModalAberto = false; return; }
-
-        var modalEl = document.getElementById('modalMapa');
-        if (!modalEl) { window.AppRDO._mapaModalAberto = false; return; }
-
-        if (modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
-        try {
-            var existente = bootstrap.Modal.getInstance(modalEl);
-            if (existente) existente.dispose();
-        } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
-        if (typeof _limparBackdrop === 'function') _limparBackdrop();
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            window.AppRDO._mapaModalAberto = false;
-            if (window._leafletMapInstance) {
-                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao fechar modal'); }
-                window._leafletMapInstance = null;
-            }
-        }, { once: true });
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            if (typeof _limparBackdrop === 'function') _limparBackdrop();
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }, { once: true });
-
-        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-
-        modalEl.addEventListener('shown.bs.modal', function () {
-            modalEl.style.zIndex = '1075';
-            var backdrops = document.querySelectorAll('.modal-backdrop');
-            var ultimoBackdrop = backdrops[backdrops.length - 1];
-            if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
-
-            var elSolicitante = document.getElementById('header-nome-solicitante');
-            var loaderEl = document.getElementById('mapa-loader');
-            if (elSolicitante) elSolicitante.innerText = solicitante;
-            if (loaderEl) {
-                loaderEl.style.display = '';
-                loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
-            }
-
-            var footer = document.getElementById('footer-resumo-dados');
-            if (footer) footer.innerHTML = '';
-
-            var kmTotal = 0, minTotal = 0, listaCaminhos = [];
-            var rotasComFalha = [];
-
-            function _fetchComTimeout(url, ms) {
-                return fetch(url, { signal: AbortSignal.timeout(ms) });
-            }
-
-            function _processarRota(rota, idx) {
-                return Promise.all([
-                    window.buscarCoordenadasEndereco(rota.de),
-                    window.buscarCoordenadasEndereco(rota.para)
-                ]).then(function (coords) {
-                    var p1 = coords[0], p2 = coords[1];
-                    if (!p1 || !p2) { rotasComFalha.push(idx + 1); return; }
-
-                    return _fetchComTimeout(
-                        'https://router.project-osrm.org/route/v1/driving/' +
-                        p1.lng + ',' + p1.lat + ';' + p2.lng + ',' + p2.lat +
-                        '?overview=full&geometries=geojson',
-                        6000
-                    )
-                        .then(function (resp) { return resp.json(); })
-                        .then(function (data) {
-                            if (data && data.routes && data.routes[0]) {
-                                kmTotal += data.routes[0].distance / 1000;
-                                minTotal += data.routes[0].duration / 60;
-                                listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
-                            } else {
-                                rotasComFalha.push(idx + 1);
-                            }
-                        })
-                        .catch(function (e) {
-                            window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
-                            rotasComFalha.push(idx + 1);
-                        });
-                }).catch(function (e) {
-                    window._exibirErroGlobal(e, 'geocodificar rota ' + (idx + 1));
-                    rotasComFalha.push(idx + 1);
-                });
-            }
-
-            Promise.all(rotasExtraidas.map(_processarRota))
-                .then(function () {
-                    if (listaCaminhos.length === 0) {
-                        if (loaderEl) {
-                            loaderEl.style.display = '';
-                            loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Não foi possível localizar os endereços informados. Verifique se o nome da rua está correto.</p>';
-                        }
-                        return;
-                    }
-
-                    var kmArredondado = Math.round(kmTotal);
-                    var valorCalculado = kmArredondado * 3.00;
-
-                    window.dadosPedidoAtual = {
-                        solicitante: solicitante,
-                        contato: contato,
-                        horario: horario,
-                        mercadoria: mercadoria,
-                        obs: obs,
-                        cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                        distanciaTotal: kmArredondado,
-                        tempoTotal: Math.round(minTotal),
-                        coordenadas: listaCaminhos,
-                        valorEstimado: valorCalculado,
-                        rotasProcessadas: rotasExtraidas,
-                        rawInput: texto
-                    };
-
-                    if (loaderEl) loaderEl.style.display = 'none';
-
-                    window._renderizarResumo(
-                        kmArredondado, minTotal,
-                        valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                    );
-                    window.renderizarMapaUnificado();
-
-                    if (rotasComFalha.length > 0) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Atenção',
-                            html: 'Algumas rotas não puderam ser calculadas: <strong>' + rotasComFalha.join(', ') + '</strong>.<br>O valor exibido considera apenas as rotas encontradas.',
-                            confirmButtonColor: '#dc3545'
-                        });
-                    }
-                })
-                .catch(function (e) {
-                    window._exibirErroGlobal(e, 'calcular rotas do pedido');
-                    if (loaderEl) {
-                        loaderEl.style.display = '';
-                        loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
-                    }
-                    var footerErro = document.getElementById('footer-resumo-dados');
-                    if (footerErro) footerErro.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao calcular rotas</span>';
-                });
-        }, { once: true });
-
-        modal.show();
-    });
-};
-
 window.exibirErro = function (erro, contexto) {
     contexto = contexto || 'Erro desconhecido';
     window._exibirErroGlobal(erro, contexto);
@@ -2737,183 +2885,6 @@ window.calcularTudo = function () {
         window.dadosPedidoAtual.retorno = retorno;
         window.dadosPedidoAtual.dinamica = dinamica;
         window.dadosPedidoAtual.prioridade = prioridade;
-    }
-};
-
-window.remitirPedido = async function () {
-    var _validarCampo = function (el) {
-        if (!el || !String(el.value || '').trim()) {
-            if (el) {
-                el.style.border = '2px solid #dc3545';
-                el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
-                setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
-            }
-            return false;
-        }
-        return true;
-    };
-
-    var invalido = false;
-    ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'].forEach(function (id) {
-        if (!_validarCampo(document.getElementById(id))) invalido = true;
-    });
-    if (invalido) return;
-
-    if (typeof window.calcularTudo === 'function') window.calcularTudo();
-
-    var dados = window.dadosPedidoAtual || {};
-    var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
-    var contato = String((document.getElementById('p-contato') || {}).value || dados.contato || '').trim();
-    var horario = String((document.getElementById('p-horario') || {}).value || dados.horario || '').trim();
-    var mercadoria = String((document.getElementById('p-mercadoria') || {}).value || dados.mercadoria || 'ENTREGA').trim();
-    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
-    var tempo = String((document.getElementById('p-tempo') || {}).value || '').trim();
-    var obs = String((document.getElementById('p-obs') || {}).value || dados.obs || '').trim();
-    var valorKm = String((document.getElementById('p-valor-km') || {}).value || '3').trim();
-    var retorno = String((document.getElementById('p-retorno') || {}).value || '0').trim();
-    var dinamica = String((document.getElementById('p-dinamica') || {}).value || '0').trim();
-    var prioridade = String((document.getElementById('p-prioridade') || {}).value || '0').trim();
-    var valorTotal = Number(dados.valorEstimado || 0);
-
-    var rotasProcessadas = (
-        Array.isArray(dados.rotasProcessadas) && dados.rotasProcessadas.length > 0
-    ) ? dados.rotasProcessadas : [];
-
-    var rotasTexto = '';
-    if (rotasProcessadas.length > 0) {
-        rotasTexto = rotasProcessadas.map(function (r, i) {
-            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
-        }).join('\n');
-    } else {
-        rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
-    }
-
-    var primeiraRota = rotasProcessadas.length > 0 ? rotasProcessadas[0] : null;
-    var deStr = primeiraRota ? primeiraRota.de : '';
-    var paraStr = primeiraRota ? primeiraRota.para : '';
-
-    var dadosParaMensagem = {
-        id: '[ID_GERADO]',
-        solicitante: solicitante,
-        contato: contato,
-        mercadoria: mercadoria,
-        rotasProcessadas: rotasProcessadas,
-        distanciaTotal: dados.distanciaTotal || distancia,
-        tempoTotal: dados.tempoTotal || 0,
-        valorEstimado: valorTotal
-    };
-
-    var mensagemProvisoria = typeof window.gerarMensagemFormatada === 'function'
-        ? window.gerarMensagemFormatada(dadosParaMensagem)
-        : '';
-
-    var payload = {
-        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
-        solicitante: solicitante,
-        contato: contato,
-        horario: horario,
-        mercadoria: mercadoria,
-        rotas_texto: rotasTexto,
-        de: deStr,
-        para: paraStr,
-        distancia: distancia.toFixed(2),
-        tempo: tempo,
-        obs: obs,
-        valor_km: valorKm,
-        retorno: retorno,
-        dinamica: dinamica,
-        prioridade: prioridade,
-        valor_total: valorTotal,
-        valor_final: valorTotal,
-        status: 'PENDENTE',
-        situacao_financeira: 'PENDENTE',
-        texto: mensagemProvisoria
-    };
-
-    if (!payload.id_cliente) { window.exibirModalValidacao('Nenhum cliente selecionado.'); return; }
-
-    var btnRemitir = document.getElementById('btn-remitir-pedido');
-    var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
-    if (btnRemitir) {
-        btnRemitir.disabled = true;
-        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
-    }
-
-    try {
-        var resposta = await API.call('createpedido', payload);
-        if (!resposta || resposta.status !== 'success')
-            throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
-
-        var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
-        var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
-
-        var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
-
-        var modalForm = document.getElementById('modalFormulario');
-        var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-        if (instForm) { try { instForm.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
-
-        if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function')
-            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
-
-        if (novoPedidoId) {
-            var novoPedidoCache = Object.assign({}, payload, {
-                id: novoPedidoId,
-                status: 'PENDENTE',
-                situacao_financeira: 'PENDENTE',
-                motoboy: '',
-                mensagem: mensagemFinal
-            });
-            if (Array.isArray(window.AppRDO.pedidosCache))
-                window.AppRDO.pedidosCache.push(novoPedidoCache);
-
-            if (Array.isArray(window.AppRDO.mensagensCache))
-                window.AppRDO.mensagensCache.push({
-                    id_cliente: payload.id_cliente,
-                    pedido_id: novoPedidoId,
-                    texto: mensagemFinal,
-                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    data: new Date().toISOString()
-                });
-
-            if (typeof window.EventBus !== 'undefined')
-                window.EventBus.emit('pedido:adicionado', novoPedidoCache);
-        }
-
-        window.dadosPedidoAtual = {};
-        window.AppRDO._mapaModalAberto = false;
-        window.AppRDO.isProcessingCheckout = false;
-
-        var msgInput = document.getElementById('msg-input');
-        if (msgInput) {
-            msgInput.value = '';
-            msgInput.style.height = 'auto';
-            msgInput.setAttribute('placeholder', 'Digite o pedido...');
-        }
-
-        setTimeout(function () { _limparBackdrop(); }, 350);
-
-        try {
-            Swal.fire({
-                icon: 'success', title: 'Pedido enviado!',
-                text: 'O pedido foi registrado com sucesso.',
-                toast: true, position: 'top-end',
-                showConfirmButton: false, timer: 3000,
-                timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
-            });
-        } catch (_) { }
-
-    } catch (err) {
-        window._exibirErroGlobal(err, 'enviar pedido');
-        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
-        try {
-            Swal.fire({
-                icon: 'error', title: 'Erro ao enviar pedido',
-                html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
-                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
-                customClass: { popup: 'rounded-4' }
-            });
-        } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
     }
 };
 
