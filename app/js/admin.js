@@ -621,11 +621,17 @@
     }
 
     function carregarFormHTML() {
-        if (state.formCarregado) return Promise.resolve(true);
+        var jaExiste = document.getElementById('modalFormAdmin');
+        if (state.formCarregado && jaExiste) return Promise.resolve(true);
+
+        if (!els.modalContainer || !document.body.contains(els.modalContainer)) {
+            els.modalContainer = document.getElementById('admin-modal-container');
+        }
         if (!els.modalContainer) {
             mostrarErro('Container do modal não encontrado no DOM.', 'Erro ao abrir formulário');
             return Promise.resolve(false);
         }
+
         return fetch('pages/admin/form_admin.html')
             .then(function (res) {
                 if (!res.ok) throw new Error('Falha ao carregar formulário (HTTP ' + res.status + ').');
@@ -638,9 +644,71 @@
                 return true;
             })
             .catch(function (err) {
+                state.formCarregado = false;
                 tratarErro(err, 'Erro ao carregar formulário');
                 return false;
             });
+    }
+
+    function _aguardarBootstrap(tentativas) {
+        return new Promise(function (resolve, reject) {
+            var restante = tentativas || 20;
+            function checar() {
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    resolve(true);
+                    return;
+                }
+                restante--;
+                if (restante <= 0) {
+                    reject(new Error('Bootstrap não foi carregado a tempo.'));
+                    return;
+                }
+                setTimeout(checar, 100);
+            }
+            checar();
+        });
+    }
+
+    function abrirForm(it, readOnly) {
+        carregarFormHTML().then(function (ok) {
+            if (!ok) return;
+
+            var modalEl = document.getElementById('modalFormAdmin');
+            if (!modalEl) {
+                mostrarErro('Não foi possível localizar o formulário no DOM. Tente novamente.', 'Erro ao abrir formulário');
+                return;
+            }
+
+            _aguardarBootstrap()
+                .then(function () {
+                    try {
+                        limparForm();
+                        state.idEdicao = it ? it.id : null;
+                        state.modoVisualizar = !!readOnly;
+                        alternarBlocoForm();
+
+                        var isCliente = (state.origem === 'clientes');
+                        var tituloEl = document.getElementById('form-admin-titulo');
+                        var tipoLabel = isCliente ? 'Cliente' : 'Colaborador';
+                        if (tituloEl) tituloEl.textContent = readOnly ? ('Visualizar ' + tipoLabel) : (it ? ('Editar ' + tipoLabel) : ('Novo ' + tipoLabel));
+
+                        if (it) {
+                            if (isCliente) preencherClientes(it);
+                            else preencherColaboradores(it);
+                        }
+
+                        setCamposReadOnly(readOnly);
+
+                        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                        modal.show();
+                    } catch (err) {
+                        tratarErro(err, 'Erro ao abrir formulário');
+                    }
+                })
+                .catch(function (err) {
+                    tratarErro(err, 'Erro ao abrir formulário');
+                });
+        });
     }
 
     function alternarCampoFechamento() {
@@ -750,39 +818,6 @@
         // Exibe campo comissão se "Motoboy" estiver entre as funções
         var div = document.getElementById('div-comissao');
         if (div) div.classList.toggle('d-none', funcoesSalvas.indexOf('Motoboy') === -1);
-    }
-
-    function abrirForm(it, readOnly) {
-        carregarFormHTML().then(function (ok) {
-            if (!ok) return;
-            try {
-                limparForm();
-                state.idEdicao = it ? it.id : null;
-                state.modoVisualizar = !!readOnly;
-                alternarBlocoForm();
-
-                var isCliente = (state.origem === 'clientes');
-                var tituloEl = document.getElementById('form-admin-titulo');
-                var tipoLabel = isCliente ? 'Cliente' : 'Colaborador';
-                if (tituloEl) tituloEl.textContent = readOnly ? ('Visualizar ' + tipoLabel) : (it ? ('Editar ' + tipoLabel) : ('Novo ' + tipoLabel));
-
-                if (it) {
-                    if (isCliente) preencherClientes(it);
-                    else preencherColaboradores(it);
-                }
-
-                setCamposReadOnly(readOnly);
-                var modalEl = document.getElementById('modalFormAdmin');
-                if (modalEl && window.bootstrap) {
-                    var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
-                    modal.show();
-                } else {
-                    throw new Error('Modal ou Bootstrap não disponíveis.');
-                }
-            } catch (err) {
-                tratarErro(err, 'Erro ao abrir formulário');
-            }
-        });
     }
 
     function coletarDadosClientes() {
