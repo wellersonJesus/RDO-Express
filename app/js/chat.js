@@ -1103,7 +1103,6 @@ window.iniciarFluxoCheckout = function () {
 
     window.AppRDO._mapaModalAberto = true;
     window.AppRDO.isProcessingCheckout = true;
-    var meuTokenCheckout = (window.AppRDO._checkoutToken = (window.AppRDO._checkoutToken || 0) + 1);
 
     function _falharAbertura(mensagem) {
         window.AppRDO._mapaModalAberto = false;
@@ -1125,6 +1124,8 @@ window.iniciarFluxoCheckout = function () {
                 _falharAbertura('Falha ao carregar o arquivo do modal de mapa (mapa_clientes.html).');
                 return;
             }
+
+            var meuTokenCheckout = window.AppRDO._checkoutToken;
 
             var modalEl = document.getElementById('modalMapa');
             if (!modalEl) {
