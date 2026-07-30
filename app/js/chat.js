@@ -1,3 +1,4 @@
+
 window._storageComExpiracao = (function () {
     var VALIDADE_MS = 24 * 60 * 60 * 1000;
 
@@ -127,6 +128,7 @@ window.AppRDO.mensagensCache = window.AppRDO.mensagensCache || [];
 window.AppRDO.isMasterOn = localStorage.getItem('bot_master_active') === 'true';
 window.AppRDO._mapaModalAberto = false;
 window.AppRDO.notificacoes = window.AppRDO.notificacoes || [];
+window.AppRDO._chatRequestToken = window.AppRDO._chatRequestToken || 0;
 
 window.dadosPedidoAtual = window.dadosPedidoAtual || {};
 
@@ -766,7 +768,34 @@ window.loadModal = function (arquivo) {
         var container = document.getElementById('modal-container');
         if (!container) { resolve(false); return; }
 
-        var abertos = Array.prototype.slice.call(document.querySelectorAll('#modal-container .modal.show'));
+        function _removerModaisOrfaosPorId(html) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            var idsNovos = Array.prototype.slice.call(tempDiv.querySelectorAll('.modal[id]'))
+                .map(function (el) { return el.id; });
+
+            idsNovos.forEach(function (id) {
+                document.querySelectorAll('#' + id).forEach(function (modalEl) {
+                    try {
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) { try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal órfão ' + id); } try { inst.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal órfão ' + id); } }
+                    } catch (e) { window._exibirErroGlobal(e, 'obter instância de modal órfão ' + id); }
+                    try { modalEl.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover modal órfão ' + id); }
+                });
+            });
+        }
+
+        function _abortarCalculosPendentes() {
+            window.AppRDO._mapaModalAberto = false;
+            window.AppRDO.isProcessingCheckout = false;
+            window.AppRDO._checkoutToken = (window.AppRDO._checkoutToken || 0) + 1;
+            if (window._leafletMapInstance) {
+                try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa ao trocar de modal'); }
+                window._leafletMapInstance = null;
+            }
+        }
+
+        var abertos = Array.prototype.slice.call(document.querySelectorAll('.modal.show'));
         var pendentes = abertos.length;
 
         function _carregarHtml() {
@@ -778,29 +807,32 @@ window.loadModal = function (arquivo) {
                     return resp.text();
                 })
                 .then(function (html) {
+                    _abortarCalculosPendentes();
+                    _removerModaisOrfaosPorId(html);
                     _limparBackdrop();
+                    _limparModalContainer();
                     container.innerHTML = html;
                     setTimeout(function () { resolve(true); }, 80);
                 })
                 .catch(function (e) { window._exibirErroGlobal(e, 'carregar modal ' + arquivo); resolve(false); });
         }
 
-        if (pendentes === 0) { _limparBackdrop(); _limparModalContainer(); _carregarHtml(); return; }
+        if (pendentes === 0) { _carregarHtml(); return; }
 
         abertos.forEach(function (modalEl) {
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (!inst) {
                 try { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } catch (e) { window._exibirErroGlobal(e, 'fechar modal'); }
                 pendentes--;
-                if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
+                if (pendentes === 0) _carregarHtml();
                 return;
             }
             modalEl.addEventListener('hidden.bs.modal', function () {
                 try { inst.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal'); }
                 pendentes--;
-                if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); }
+                if (pendentes === 0) _carregarHtml();
             }, { once: true });
-            try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal'); pendentes--; if (pendentes === 0) { _limparBackdrop(); _carregarHtml(); } }
+            try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal'); pendentes--; if (pendentes === 0) _carregarHtml(); }
         });
     });
 };
@@ -1071,6 +1103,7 @@ window.iniciarFluxoCheckout = function () {
 
     window.AppRDO._mapaModalAberto = true;
     window.AppRDO.isProcessingCheckout = true;
+    var meuTokenCheckout = (window.AppRDO._checkoutToken = (window.AppRDO._checkoutToken || 0) + 1);
 
     function _falharAbertura(mensagem) {
         window.AppRDO._mapaModalAberto = false;
@@ -1184,35 +1217,16 @@ window.iniciarFluxoCheckout = function () {
                         var num = parseFloat(String(valor).replace(',', '.'));
                         if (isNaN(num)) return null;
 
-                        // Corrige coordenadas sem ponto decimal (ex: -197616228 -> -19.7616228)
                         if (Math.abs(num) > 180) {
                             var str = String(Math.trunc(num));
                             var negativo = str.startsWith('-');
                             var digitos = negativo ? str.slice(1) : str;
-                            // Assume 2 dígitos antes da vírgula para lat/lng no Brasil
                             var parteInteira = digitos.slice(0, 2);
                             var parteDecimal = digitos.slice(2);
                             num = parseFloat((negativo ? '-' : '') + parteInteira + '.' + parteDecimal);
                         }
 
                         return isNaN(num) ? null : num;
-                    }
-
-                    function _geocodificarTodosUnicos(rotas) {
-                        var enderecosUnicos = _coletarEnderecosUnicos(rotas);
-                        return Promise.all(
-                            enderecosUnicos.map(function (end) {
-                                return window.buscarCoordenadasEndereco(end).then(function (coords) {
-                                    return { endereco: end, coords: coords };
-                                });
-                            })
-                        ).then(function (resultados) {
-                            var mapaCoords = {};
-                            resultados.forEach(function (r) {
-                                mapaCoords[String(r.endereco || '').trim().toLowerCase()] = r.coords;
-                            });
-                            return mapaCoords;
-                        });
                     }
 
                     function _fetchComTimeout(url, ms) {
@@ -1298,6 +1312,8 @@ window.iniciarFluxoCheckout = function () {
                             }));
                         })
                         .then(function () {
+                            if (meuTokenCheckout !== window.AppRDO._checkoutToken) return;
+
                             if (listaCaminhos.length === 0) {
                                 var motivoPrincipal = (rotasComFalha[0] && rotasComFalha[0].motivo) || 'Verifique se a Rua, Número, Bairro e Cidade estão corretos.';
                                 if (loaderEl) {
@@ -1349,6 +1365,8 @@ window.iniciarFluxoCheckout = function () {
                             }
                         })
                         .catch(function (e) {
+                            if (meuTokenCheckout !== window.AppRDO._checkoutToken) return;
+
                             window._exibirErroGlobal(e, 'calcular rotas do pedido');
                             window.AppRDO.isProcessingCheckout = false;
                             if (loaderEl) {
@@ -1627,9 +1645,14 @@ window.formatarDataSeparador = function (dataStr) {
 
 window.carregarPedidosDoCliente = async function (clienteId) {
     if (!clienteId) return;
+
+    var meuToken = (window.AppRDO._chatRequestToken = (window.AppRDO._chatRequestToken || 0) + 1);
+
     try {
         var todosPedidos = await API.call('getpedidos');
         var todasMensagens = await API.call('getchat');
+
+        if (meuToken !== window.AppRDO._chatRequestToken) return;
 
         var pedidosCliente = todosPedidos.filter(function (p) {
             return String(p.id_cliente).trim() === String(clienteId).trim();
@@ -1657,6 +1680,7 @@ window.carregarPedidosDoCliente = async function (clienteId) {
 
         window.renderizarMensagens(mensagensCliente, pedidosCliente);
     } catch (err) {
+        if (meuToken !== window.AppRDO._chatRequestToken) return;
         window._exibirErroGlobal(err, 'carregar pedidos do cliente');
         _mostrarChatEmptyState('Erro ao carregar mensagens');
     }
@@ -1941,6 +1965,8 @@ window.remitirPedido = async function () {
         if (!resposta || resposta.status !== 'success')
             throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
 
+        window.AppRDO._chatRequestToken = (window.AppRDO._chatRequestToken || 0) + 1;
+
         var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
         var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
 
@@ -1987,6 +2013,8 @@ window.remitirPedido = async function () {
             msgInput.style.height = 'auto';
             msgInput.setAttribute('placeholder', 'Digite o pedido...');
         }
+
+        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
 
         setTimeout(function () { _limparBackdrop(); }, 350);
 
@@ -2226,6 +2254,9 @@ window.enviarMensagemParaChat = function (texto, isRecebida, pedidoId) {
 
     var emptyState = container.querySelector('.chat-empty-state');
     if (emptyState) emptyState.remove();
+
+    var loadingState = container.querySelector('.chat-loading-text');
+    if (loadingState) container.innerHTML = '';
 
     var hojeLabel = 'HOJE';
     var ultimoSep = container.querySelector('.chat-date-separator:last-of-type .chat-date-badge');
