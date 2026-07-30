@@ -22,6 +22,7 @@
     --z-modal-backdrop: 20049;
     --z-modal: 20050;
     --z-swal: 20060;
+    --z-input-expandido: 20070;
 }
 
 #chat {
@@ -1275,6 +1276,7 @@
 
     .btn-menu-contatos-mobile {
         display: flex;
+        font-size: 1.5rem;
     }
 
     .drawer-overlay-mobile {
@@ -1369,6 +1371,55 @@
     #view-valor-final {
         font-size: 1.2rem !important;
     }
+
+    .contact-name {
+        font-size: .8rem !important;
+    }
+
+    .contact-status,
+    #chat-header-status {
+        font-size: .72rem !important;
+    }
+
+    .contact-avatar {
+        width: 34px;
+        height: 34px;
+    }
+
+    .btn-icon-chat,
+    .btn-notifications,
+    .btn-dropdown-pedidos,
+    .btn-sound-toggle,
+    .btn-sync-chat {
+        width: 34px;
+        height: 34px;
+    }
+
+    .btn-icon-chat,
+    .btn-notifications,
+    .btn-sound-toggle {
+        font-size: .95rem;
+    }
+
+    .btn-sync-chat i {
+        font-size: .95rem;
+    }
+
+    .pedido-item-id {
+        font-size: .8rem;
+    }
+
+    .pedido-item-rota {
+        font-size: .75rem;
+    }
+
+    .notif-item .fw-semibold {
+        font-size: .78rem;
+    }
+
+    .notif-item .text-muted {
+        font-size: .72rem;
+    }
 }
 
 .modal,
@@ -1403,4 +1454,106 @@ body.modal-open .modal-backdrop {
 
 .resumo-valor-preco {
     font-size: 1rem !important;
+}
+
+.overlay-input-expandido {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .45);
+    z-index: var(--z-input-expandido);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s ease;
+}
+
+.overlay-input-expandido.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.caixa-input-expandido {
+    width: calc(100% - 8px);
+    max-width: calc(100% - 8px);
+    margin: 0 4px;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, .25);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+    max-height: 80vh;
+}
+
+.overlay-input-expandido.show .caixa-input-expandido {
+    transform: translateY(0);
+}
+
+.header-input-expandido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: .85rem;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.btn-fechar-input-expandido {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 1.1rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color .2s ease, background .2s ease;
+}
+
+.btn-fechar-input-expandido:hover {
+    color: var(--vermelho-rdo);
+    background: rgba(220, 53, 69, .08);
+}
+
+.corpo-input-expandido {
+    flex: 1;
+    min-height: 200px;
+    max-height: 55vh;
+    padding: 12px 16px;
+    overflow-y: auto;
+    display: flex;
+}
+
+.textarea-modo-expandido {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 180px !important;
+    max-height: none !important;
+    resize: none;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    font-size: .95rem !important;
+    line-height: 1.5;
+    padding: 0 !important;
+}
+
+.footer-input-expandido {
+    padding: 12px 16px 18px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+    .overlay-input-expandido {
+        display: none !important;
+    }
 }

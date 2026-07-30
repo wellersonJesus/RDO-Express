@@ -1,3 +1,8 @@
+var _expandidoAtivo = false;
+var _overlayExpandido = null;
+var _textareaOriginalParent = null;
+var _textareaOriginalNextSibling = null;
+
 window._storageComExpiracao = (function () {
     var VALIDADE_MS = 24 * 60 * 60 * 1000;
 
@@ -1169,6 +1174,116 @@ window.formatarTempoHumano = function (minutos) {
     var m = Math.round(minutos % 60);
     return h > 0 ? h + 'h ' + m + 'min' : m + 'min';
 };
+
+function _criarOverlayExpandido() {
+    var overlay = document.createElement('div');
+    overlay.id = 'overlay-input-expandido';
+    overlay.className = 'overlay-input-expandido';
+
+    var caixa = document.createElement('div');
+    caixa.className = 'caixa-input-expandido';
+
+    var header = document.createElement('div');
+    header.className = 'header-input-expandido';
+    header.innerHTML = '<span>Digite o pedido</span><button type="button" class="btn-fechar-input-expandido"><i class="bi bi-x-lg"></i></button>';
+
+    var corpo = document.createElement('div');
+    corpo.className = 'corpo-input-expandido';
+
+    var footer = document.createElement('div');
+    footer.className = 'footer-input-expandido';
+    var btnEnviar = document.createElement('button');
+    btnEnviar.type = 'button';
+    btnEnviar.className = 'btn btn-danger rounded-pill px-4';
+    btnEnviar.innerHTML = '<i class="bi bi-send-fill me-2"></i>Enviar Pedido';
+    footer.appendChild(btnEnviar);
+
+    caixa.appendChild(header);
+    caixa.appendChild(corpo);
+    caixa.appendChild(footer);
+    overlay.appendChild(caixa);
+    document.body.appendChild(overlay);
+
+    header.querySelector('.btn-fechar-input-expandido').addEventListener('click', _fecharExpandido);
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) _fecharExpandido();
+    });
+    btnEnviar.addEventListener('click', function () {
+        _fecharExpandido();
+        setTimeout(function () { window.enviarMensagemGeral(); }, 150);
+    });
+
+    return { overlay: overlay, corpo: corpo };
+}
+
+function _abrirExpandido() {
+    if (_expandidoAtivo) return;
+    var textarea = document.getElementById('msg-input');
+    if (!textarea) return;
+
+    _expandidoAtivo = true;
+    _textareaOriginalParent = textarea.parentElement;
+    _textareaOriginalNextSibling = textarea.nextSibling;
+
+    var refs = _criarOverlayExpandido();
+    _overlayExpandido = refs.overlay;
+
+    textarea.classList.add('textarea-modo-expandido');
+    refs.corpo.appendChild(textarea);
+
+    requestAnimationFrame(function () {
+        _overlayExpandido.classList.add('show');
+        textarea.focus();
+        var len = textarea.value.length;
+        textarea.setSelectionRange(len, len);
+    });
+
+    document.addEventListener('keydown', _escListener);
+}
+
+function _fecharExpandido() {
+    if (!_expandidoAtivo) return;
+    var textarea = document.getElementById('msg-input');
+    if (!_overlayExpandido || !textarea) { _expandidoAtivo = false; return; }
+
+    _overlayExpandido.classList.remove('show');
+
+    setTimeout(function () {
+        textarea.classList.remove('textarea-modo-expandido');
+        if (_textareaOriginalNextSibling) {
+            _textareaOriginalParent.insertBefore(textarea, _textareaOriginalNextSibling);
+        } else {
+            _textareaOriginalParent.appendChild(textarea);
+        }
+        if (_overlayExpandido && _overlayExpandido.parentElement) {
+            _overlayExpandido.parentElement.removeChild(_overlayExpandido);
+        }
+        _overlayExpandido = null;
+        _expandidoAtivo = false;
+        document.removeEventListener('keydown', _escListener);
+    }, 250);
+}
+
+function _escListener(e) {
+    if (e.key === 'Escape') _fecharExpandido();
+}
+
+function _registrarListenerFoco() {
+    var textarea = document.getElementById('msg-input');
+    if (!textarea) { setTimeout(_registrarListenerFoco, 300); return; }
+    if (textarea._listenerExpandidoRegistrado) return;
+    textarea._listenerExpandidoRegistrado = true;
+
+    textarea.addEventListener('focus', function () {
+        if (window.innerWidth <= 768) _abrirExpandido();
+    });
+}
+
+window._abrirInputExpandido = _abrirExpandido;
+window._fecharInputExpandido = _fecharExpandido;
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _registrarListenerFoco);
+else _registrarListenerFoco();
 
 window.formatarDataSeparador = function (dataStr) {
     if (!dataStr) return null;
