@@ -1,3 +1,14 @@
+:root {
+    --rdo-lista-font-size: 0.75rem;
+    --rdo-lista-font-size-mobile: 0.75rem;
+    --rdo-lista-btn-size: 32px;
+    --rdo-lista-btn-size-mobile: 32px;
+    --rdo-lista-btn-icon-size: 0.9rem;
+    --rdo-lista-btn-icon-size-mobile: 0.9rem;
+    --rdo-lista-badge-font-size: 0.62rem;
+    --rdo-lista-badge-font-size-mobile: 0.65rem;
+}
+
 .pedidos-page-wrapper {
     padding: 0;
 }
@@ -227,7 +238,7 @@
 }
 
 #tabela-pedidos td {
-    font-size: 0.75rem;
+    font-size: var(--rdo-lista-font-size);
     font-weight: 400;
     color: #333;
     vertical-align: middle;
@@ -264,7 +275,7 @@
     gap: 4px;
     padding: 3px 10px;
     border-radius: 50px;
-    font-size: 0.62rem;
+    font-size: var(--rdo-lista-badge-font-size);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.2px;
@@ -937,8 +948,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: var(--rdo-lista-btn-size);
+    height: var(--rdo-lista-btn-size);
     padding: 0;
     border-radius: 8px;
     background: transparent;
@@ -952,7 +963,7 @@
 .btn-pedido-view i,
 .btn-pedido-edit i,
 .btn-pedido-delete i {
-    font-size: 0.9rem;
+    font-size: var(--rdo-lista-btn-icon-size);
     color: #6c757d;
     transition: all 0.2s ease;
     position: relative;
@@ -1128,7 +1139,7 @@
     #modalEditarPedido .modal-pedido-field-label,
     #modalNovoPedido .modal-pedido-field-label,
     #modalPedidoDetalhes .modal-pedido-field-label {
-        font-size: 0.62rem;
+        font-size: 0.68rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1137,8 +1148,8 @@
     #modalEditarPedido .modal-pedido-input,
     #modalNovoPedido .modal-pedido-input,
     #modalPedidoDetalhes .modal-pedido-input {
-        font-size: 0.68rem;
-        padding: 0.25rem 0.4rem;
+        font-size: 0.78rem;
+        padding: 0.35rem 0.5rem;
     }
 }
 
@@ -1174,7 +1185,7 @@
         min-width: 0;
         padding-left: 10px;
         padding-right: 24px;
-        font-size: 0.72rem;
+        font-size: 0.75rem;
     }
 
     .pedidos-content-area .btn-limpar-busca {
@@ -1196,8 +1207,8 @@
     }
 
     .status-badges-row .status-badge {
-        font-size: 0.55rem;
-        padding: 2px 6px;
+        font-size: var(--rdo-lista-badge-font-size-mobile);
+        padding: 3px 8px;
     }
 
     .dropdown-filtro-menu {
@@ -1228,14 +1239,18 @@
     .btn-pedido-view,
     .btn-pedido-edit,
     .btn-pedido-delete {
-        width: 30px;
-        height: 30px;
+        width: var(--rdo-lista-btn-size-mobile);
+        height: var(--rdo-lista-btn-size-mobile);
     }
 
     .btn-pedido-view i,
     .btn-pedido-edit i,
     .btn-pedido-delete i {
-        font-size: 0.8rem;
+        font-size: var(--rdo-lista-btn-icon-size-mobile);
+    }
+
+    #tabela-pedidos td {
+        font-size: var(--rdo-lista-font-size-mobile);
     }
 
     #tabela-pedidos .td-mobile-hide,
