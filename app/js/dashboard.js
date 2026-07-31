@@ -823,37 +823,281 @@ function _agruparPedidosPendentesPorCliente(pedidosPendentes) {
     return grupos;
 }
 
+function _diaSemanaFromTexto(texto) {
+    var t = _normalizarTexto(texto);
+    if (t.indexOf('SEGUNDA') !== -1) return 1;
+    if (t.indexOf('TERCA') !== -1) return 2;
+    if (t.indexOf('QUARTA') !== -1) return 3;
+    if (t.indexOf('QUINTA') !== -1) return 4;
+    if (t.indexOf('SEXTA') !== -1) return 5;
+    if (t.indexOf('SABADO') !== -1) return 6;
+    if (t.indexOf('DOMINGO') !== -1) return 0;
+    return 1;
+}
+
+function _fimDoDia(data) {
+    return new Date(data.getFullYear(), data.getMonth(), data.getDate(), 23, 59, 59, 999);
+}
+
+function _ultimoDiaDoMes(ano, mes) {
+    return new Date(ano, mes + 1, 0).getDate();
+}
+
+function _proximoFechamento(cliente, dataRef) {
+    var pagamento = _normalizarTexto(cliente ? cliente.pagamento : '');
+    var diaFechamentoTexto = cliente ? cliente.dia_fechamento : '';
+
+    if (pagamento === 'SEMANAL') {
+        var diaSemanaAlvo = _diaSemanaFromTexto(diaFechamentoTexto);
+        var d = new Date(dataRef.getFullYear(), dataRef.getMonth(), dataRef.getDate());
+        while (d.getDay() !== diaSemanaAlvo) d.setDate(d.getDate() + 1);
+        return _fimDoDia(d);
+    }
+
+    if (pagamento === 'QUINZENAL') {
+        var ano = dataRef.getFullYear();
+        var mes = dataRef.getMonth();
+        var dia = dataRef.getDate();
+        var ultimoDia = _ultimoDiaDoMes(ano, mes);
+        if (dia <= 15) return _fimDoDia(new Date(ano, mes, 15));
+        if (dia <= ultimoDia) return _fimDoDia(new Date(ano, mes, ultimoDia));
+        return _fimDoDia(new Date(ano, mes + 1, 15));
+    }
+
+    if (pagamento === 'MENSAL') {
+        var anoM = dataRef.getFullYear();
+        var mesM = dataRef.getMonth();
+        var ultimoDiaM = _ultimoDiaDoMes(anoM, mesM);
+        if (dataRef.getDate() <= ultimoDiaM) return _fimDoDia(new Date(anoM, mesM, ultimoDiaM));
+        return _fimDoDia(new Date(anoM, mesM + 1, _ultimoDiaDoMes(anoM, mesM + 1)));
+    }
+
+    return _fimDoDia(dataRef);
+}
+
+function _statusPedidoPeriodico(cliente, dataPedido, hoje) {
+    var fechamento = _proximoFechamento(cliente, dataPedido);
+    if (!fechamento) return 'AVENCER';
+    return fechamento.getTime() < hoje.getTime() ? 'VENCIDO' : 'AVENCER';
+}
+
 function _calcularPedidosAguardandoPagamento(pedidos, clientes) {
     var mapaClientes = _obterMapaClientesPorId(clientes);
-    var hoje = new Date();
 
-    var pedidosPendentes = pedidos.filter(function (p) {
+    return pedidos.filter(function (p) {
         if (_statusPedidoCancelado(p.status)) return false;
-        return _situacaoFinanceiraPendente(p);
+        if (!_situacaoFinanceiraPendente(p)) return false;
+        var chave = String(p.id_cliente || '').trim();
+        if (!chave || !mapaClientes[chave]) return true;
+        return true;
     });
+}
 
-    var gruposPorCliente = _agruparPedidosPendentesPorCliente(pedidosPendentes);
-    var resultado = [];
+function _construirItensListaNotifPagamento(pedidosAbertos) {
+    var dados = window.dashboardState.dados || {};
+    var clientes = dados.clientes || [];
+    var mapaClientes = _obterMapaClientesPorId(clientes);
+    var hoje = new Date();
+    var vistos = {};
 
-    Object.keys(gruposPorCliente).forEach(function (idCliente) {
-        var pedidosDoCliente = gruposPorCliente[idCliente];
-        var cliente = mapaClientes[idCliente];
-        var pagamento = cliente ? cliente.pagamento : 'DIÁRIO';
-        var diasLimite = _diasLimitePagamento(pagamento);
-        var ultimaData = _ultimaDataPedidoCliente(idCliente, pedidosDoCliente);
+    return pedidosAbertos.reduce(function (acc, pedido) {
+        var idPedido = pedido.id || pedido.id_pedido;
+        if (vistos[idPedido]) return acc;
+        vistos[idPedido] = true;
 
-        if (diasLimite === 0) {
-            pedidosDoCliente.forEach(function (p) { resultado.push(p); });
-            return;
+        var cliente = mapaClientes[String(pedido.id_cliente || '').trim()];
+        var pagamentoNorm = _normalizarTexto(cliente ? cliente.pagamento : 'DIARIO') || 'DIARIO';
+        var statusPagamento;
+
+        if (pagamentoNorm === 'DIARIO') {
+            statusPagamento = 'DIARIO';
+        } else {
+            var dataPedido = _parseDataBR(pedido.data);
+            statusPagamento = isNaN(dataPedido.getTime()) ? 'AVENCER' : _statusPedidoPeriodico(cliente, dataPedido, hoje);
         }
 
-        if (!ultimaData) return;
+        acc.push({
+            pedido: pedido,
+            idPedido: idPedido,
+            idCliente: pedido.id_cliente || '',
+            nome: cliente ? (cliente.nome || cliente.username) : (pedido.solicitante || 'Cliente não identificado'),
+            pagamento: pagamentoNorm,
+            statusPagamento: statusPagamento,
+            dataFormatada: _formatarDataPedido(pedido.data)
+        });
+        return acc;
+    }, []);
+}
 
-        var diasDecorridos = _diasEntreDatas(ultimaData, hoje);
-        if (diasDecorridos >= diasLimite) pedidosDoCliente.forEach(function (p) { resultado.push(p); });
+function _rotuloStatusPagamento(statusPagamento) {
+    if (statusPagamento === 'VENCIDO') return 'Vencido';
+    if (statusPagamento === 'AVENCER') return 'A vencer';
+    return 'Diário';
+}
+
+function _rotuloCombinado(pagamento, statusPagamento) {
+    if (pagamento === 'DIARIO') return 'Diário';
+    var rotuloTipo = pagamento === 'SEMANAL' ? 'Semanal' : pagamento === 'QUINZENAL' ? 'Quinzenal' : pagamento === 'MENSAL' ? 'Mensal' : pagamento;
+    var rotuloStatus = statusPagamento === 'VENCIDO' ? 'Vencido' : 'A vencer';
+    return rotuloTipo + ' • ' + rotuloStatus;
+}
+
+function _corCombinada(pagamento, statusPagamento) {
+    if (pagamento === 'DIARIO') return { bg: '#eaf1fd', text: '#4a7fd6' };
+    if (statusPagamento === 'VENCIDO') return { bg: '#fdecec', text: '#d9534f' };
+    return { bg: '#fef3e6', text: '#e08c3e' };
+}
+
+function _renderizarItemNotifPagamento(itemDados) {
+    var idPedido = itemDados.idPedido;
+    var idClientePedido = itemDados.idCliente;
+
+    var item = document.createElement('div');
+    item.className = 'modal-notif-pagamento-item';
+
+    var info = document.createElement('div');
+    info.className = 'modal-notif-pagamento-item-info';
+
+    var nome = document.createElement('span');
+    nome.className = 'modal-notif-pagamento-item-nome';
+    nome.textContent = itemDados.nome;
+
+    var detalhe = document.createElement('span');
+    detalhe.className = 'modal-notif-pagamento-item-detalhe';
+    detalhe.textContent = 'Pedido #' + idPedido + (itemDados.dataFormatada ? ' • ' + itemDados.dataFormatada : '');
+
+    info.appendChild(nome);
+    info.appendChild(detalhe);
+
+    var acoes = document.createElement('div');
+    acoes.className = 'modal-notif-pagamento-item-acoes';
+    acoes.style.display = 'flex';
+    acoes.style.alignItems = 'center';
+    acoes.style.gap = '8px';
+
+    var cor = _corCombinada(itemDados.pagamento, itemDados.statusPagamento);
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'font-size:.68rem;font-weight:600;color:' + cor.text + ';background:' + cor.bg + ';padding:3px 10px;border-radius:10px;white-space:nowrap;';
+    badge.textContent = _rotuloCombinado(itemDados.pagamento, itemDados.statusPagamento);
+
+    var btnVer = document.createElement('button');
+    btnVer.type = 'button';
+    btnVer.className = 'modal-notif-pagamento-item-btn-ver';
+    btnVer.title = 'Ver detalhes do pedido';
+    btnVer.innerHTML = '<i class="bi bi-eye"></i><span class="btn-notif-texto"> Ver Pedido</span>';
+    btnVer.style.cssText = 'border:none;background:rgba(13,110,253,.12);color:#0d6efd;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+    btnVer.addEventListener('click', function () {
+        btnVer.blur();
+        abrirPedidoDaNotificacao(idPedido);
     });
 
-    return resultado;
+    var btnRelatorio = document.createElement('button');
+    btnRelatorio.type = 'button';
+    btnRelatorio.className = 'modal-notif-pagamento-item-btn-relatorio';
+    btnRelatorio.title = 'Gerar relatório deste cliente';
+    btnRelatorio.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span class="btn-notif-texto"> Relatório</span>';
+    btnRelatorio.style.cssText = 'border:none;background:rgba(111,66,193,.12);color:#6f42c1;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+    btnRelatorio.addEventListener('click', function () {
+        btnRelatorio.blur();
+        abrirRelatorioDaNotificacao(idPedido, idClientePedido);
+    });
+
+    acoes.appendChild(badge);
+    acoes.appendChild(btnVer);
+    acoes.appendChild(btnRelatorio);
+
+    item.appendChild(info);
+    item.appendChild(acoes);
+    return item;
+}
+
+function inicializarBuscaModalNotifPagamento() {
+    var input = document.getElementById('modal-notif-busca-input');
+    var filtroCombinado = document.getElementById('modal-notif-filtro-combinado');
+    if (!filtroCombinado) return;
+
+    function filtrar() {
+        var termo = input ? _normalizarTexto(input.value) : '';
+        var valorFiltro = filtroCombinado.value;
+        var base = window.dashboardState._itensNotifPagamento || [];
+
+        var filtrado = base.filter(function (item) {
+            var bateTexto = !termo ||
+                _normalizarTexto(item.nome).indexOf(termo) !== -1 ||
+                String(item.idPedido).indexOf(termo) !== -1;
+
+            if (!valorFiltro) return bateTexto;
+            if (valorFiltro === 'DIARIO') return bateTexto && item.pagamento === 'DIARIO';
+
+            var partes = valorFiltro.split('_');
+            var tipoFiltro = partes[0];
+            var statusFiltro = partes[1];
+            var bateCombinado = item.pagamento === tipoFiltro && item.statusPagamento === statusFiltro;
+            return bateTexto && bateCombinado;
+        });
+
+        _renderizarListaFiltradaNotifPagamento(filtrado);
+    }
+
+    if (input && !input._bound) {
+        input._bound = true;
+        input.addEventListener('input', filtrar);
+    }
+    if (!filtroCombinado._bound) {
+        filtroCombinado._bound = true;
+        filtroCombinado.addEventListener('change', filtrar);
+    }
+}
+
+function abrirModalNotifPagamento() {
+    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+    if (!modalEl || typeof bootstrap === 'undefined') {
+        window.dashboardState.modalNotifJaExibido = false;
+        return;
+    }
+
+    var inputBusca = document.getElementById('modal-notif-busca-input');
+    var filtroCombinado = document.getElementById('modal-notif-filtro-combinado');
+    if (inputBusca) inputBusca.value = '';
+    if (filtroCombinado) filtroCombinado.value = '';
+
+    var pedidosAbertos = window.dashboardState.pedidosAbertosPagamento || [];
+    preencherModalNotifPagamento(pedidosAbertos);
+
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+function _renderizarListaFiltradaNotifPagamento(itens) {
+    var listaEl = document.getElementById('modal-notif-pagamento-lista');
+    if (!listaEl) return;
+
+    listaEl.innerHTML = '';
+
+    if (!itens.length) {
+        listaEl.innerHTML = '<div class="text-center py-3" style="color:#999;font-size:.82rem;">Nenhum pedido encontrado.</div>';
+        return;
+    }
+
+    itens.forEach(function (itemDados) {
+        listaEl.appendChild(_renderizarItemNotifPagamento(itemDados));
+    });
+}
+
+function preencherModalNotifPagamento(pedidosAbertos) {
+    var resumoEl = document.getElementById('modal-notif-pagamento-resumo');
+    var listaEl = document.getElementById('modal-notif-pagamento-lista');
+    if (!listaEl) return;
+
+    var total = pedidosAbertos.length;
+    if (resumoEl) {
+        resumoEl.textContent = total === 1 ? '1 pedido aguardando pagamento' : total + ' pedido(s) aguardando pagamento';
+    }
+
+    window.dashboardState._itensNotifPagamento = _construirItensListaNotifPagamento(pedidosAbertos);
+    _renderizarListaFiltradaNotifPagamento(window.dashboardState._itensNotifPagamento);
+    inicializarBuscaModalNotifPagamento();
 }
 
 function _obterTodosPedidosAbertosDoClienteDash(idCliente) {
@@ -890,178 +1134,6 @@ function _obterPeriodoTodosPedidosAbertosDash(idCliente) {
         totalPedidos: abertos.length,
         pedidosIds: abertos.map(function (p) { return p.id || p.id_pedido; })
     };
-}
-
-function _construirItensListaNotifPagamento(pedidosAbertos) {
-    var dados = window.dashboardState.dados || {};
-    var clientes = dados.clientes || [];
-    var mapaClientes = _obterMapaClientesPorId(clientes);
-    var vistos = {};
-
-    return pedidosAbertos.reduce(function (acc, pedido) {
-        var idPedido = pedido.id || pedido.id_pedido;
-        if (vistos[idPedido]) return acc;
-        vistos[idPedido] = true;
-
-        var cliente = mapaClientes[String(pedido.id_cliente)];
-        acc.push({
-            pedido: pedido,
-            idPedido: idPedido,
-            idCliente: pedido.id_cliente || '',
-            nome: cliente ? (cliente.nome || cliente.username) : (pedido.solicitante || 'Cliente não identificado'),
-            pagamento: _normalizarTexto(cliente ? cliente.pagamento : 'DIARIO'),
-            dataFormatada: _formatarDataPedido(pedido.data)
-        });
-        return acc;
-    }, []);
-}
-
-function _renderizarItemNotifPagamento(itemDados) {
-    var idPedido = itemDados.idPedido;
-    var idClientePedido = itemDados.idCliente;
-
-    var item = document.createElement('div');
-    item.className = 'modal-notif-pagamento-item';
-
-    var info = document.createElement('div');
-    info.className = 'modal-notif-pagamento-item-info';
-
-    var nome = document.createElement('span');
-    nome.className = 'modal-notif-pagamento-item-nome';
-    nome.textContent = itemDados.nome;
-
-    var detalhe = document.createElement('span');
-    detalhe.className = 'modal-notif-pagamento-item-detalhe';
-    detalhe.textContent = 'Pedido #' + idPedido + (itemDados.dataFormatada ? ' • ' + itemDados.dataFormatada : '');
-
-    info.appendChild(nome);
-    info.appendChild(detalhe);
-
-    var acoes = document.createElement('div');
-    acoes.className = 'modal-notif-pagamento-item-acoes';
-    acoes.style.display = 'flex';
-    acoes.style.alignItems = 'center';
-    acoes.style.gap = '8px';
-
-    var badge = document.createElement('span');
-    badge.className = 'modal-notif-pagamento-item-badge';
-    badge.textContent = 'Pendente';
-
-    var badgePagamento = document.createElement('span');
-    badgePagamento.style.cssText = 'font-size:.68rem;color:#888;background:#f5f5f5;padding:3px 8px;border-radius:10px;white-space:nowrap;';
-    badgePagamento.textContent = itemDados.pagamento;
-
-    var btnVer = document.createElement('button');
-    btnVer.type = 'button';
-    btnVer.className = 'modal-notif-pagamento-item-btn-ver';
-    btnVer.title = 'Ver detalhes do pedido';
-    btnVer.innerHTML = '<i class="bi bi-eye"></i><span class="btn-notif-texto"> Ver Pedido</span>';
-    btnVer.style.cssText = 'border:none;background:rgba(13,110,253,.12);color:#0d6efd;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
-    btnVer.addEventListener('click', function () {
-        btnVer.blur();
-        abrirPedidoDaNotificacao(idPedido);
-    });
-
-    var btnRelatorio = document.createElement('button');
-    btnRelatorio.type = 'button';
-    btnRelatorio.className = 'modal-notif-pagamento-item-btn-relatorio';
-    btnRelatorio.title = 'Gerar relatório deste cliente';
-    btnRelatorio.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i><span class="btn-notif-texto"> Relatório</span>';
-    btnRelatorio.style.cssText = 'border:none;background:rgba(111,66,193,.12);color:#6f42c1;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
-    btnRelatorio.addEventListener('click', function () {
-        btnRelatorio.blur();
-        abrirRelatorioDaNotificacao(idPedido, idClientePedido);
-    });
-
-    acoes.appendChild(badgePagamento);
-    acoes.appendChild(badge);
-    acoes.appendChild(btnVer);
-    acoes.appendChild(btnRelatorio);
-
-    item.appendChild(info);
-    item.appendChild(acoes);
-    return item;
-}
-
-function _renderizarListaFiltradaNotifPagamento(itens) {
-    var listaEl = document.getElementById('modal-notif-pagamento-lista');
-    if (!listaEl) return;
-
-    listaEl.innerHTML = '';
-
-    if (!itens.length) {
-        listaEl.innerHTML = '<div class="text-center py-3" style="color:#999;font-size:.82rem;">Nenhum pedido encontrado.</div>';
-        return;
-    }
-
-    itens.forEach(function (itemDados) {
-        listaEl.appendChild(_renderizarItemNotifPagamento(itemDados));
-    });
-}
-
-function preencherModalNotifPagamento(pedidosAbertos) {
-    var resumoEl = document.getElementById('modal-notif-pagamento-resumo');
-    var listaEl = document.getElementById('modal-notif-pagamento-lista');
-    if (!listaEl) return;
-
-    var total = pedidosAbertos.length;
-    if (resumoEl) {
-        resumoEl.textContent = total === 1 ? '1 pedido aguardando pagamento' : total + ' pedido(s) aguardando pagamento';
-    }
-
-    window.dashboardState._itensNotifPagamento = _construirItensListaNotifPagamento(pedidosAbertos);
-    _renderizarListaFiltradaNotifPagamento(window.dashboardState._itensNotifPagamento);
-    inicializarBuscaModalNotifPagamento();
-}
-
-function inicializarBuscaModalNotifPagamento() {
-    var input = document.getElementById('modal-notif-busca-input');
-    var filtroPagamento = document.getElementById('modal-notif-filtro-pagamento');
-    if (!input) return;
-
-    function filtrar() {
-        var termo = _normalizarTexto(input.value);
-        var tipoSelecionado = filtroPagamento ? filtroPagamento.value : '';
-        var base = window.dashboardState._itensNotifPagamento || [];
-
-        var filtrado = base.filter(function (item) {
-            var bateTexto = !termo ||
-                _normalizarTexto(item.nome).indexOf(termo) !== -1 ||
-                String(item.idPedido).indexOf(termo) !== -1;
-            var batePagamento = !tipoSelecionado || item.pagamento === tipoSelecionado;
-            return bateTexto && batePagamento;
-        });
-
-        _renderizarListaFiltradaNotifPagamento(filtrado);
-    }
-
-    if (!input._bound) {
-        input._bound = true;
-        input.addEventListener('input', filtrar);
-    }
-    if (filtroPagamento && !filtroPagamento._bound) {
-        filtroPagamento._bound = true;
-        filtroPagamento.addEventListener('change', filtrar);
-    }
-}
-
-function abrirModalNotifPagamento() {
-    var modalEl = document.getElementById('modalNotifPagamentoDashboard');
-    if (!modalEl || typeof bootstrap === 'undefined') {
-        window.dashboardState.modalNotifJaExibido = false;
-        return;
-    }
-
-    var inputBusca = document.getElementById('modal-notif-busca-input');
-    var filtroPagamento = document.getElementById('modal-notif-filtro-pagamento');
-    if (inputBusca) inputBusca.value = '';
-    if (filtroPagamento) filtroPagamento.value = '';
-
-    var pedidosAbertos = window.dashboardState.pedidosAbertosPagamento || [];
-    preencherModalNotifPagamento(pedidosAbertos);
-
-    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
 }
 
 function abrirPedidoDaNotificacao(pedidoId) {

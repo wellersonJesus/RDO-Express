@@ -171,22 +171,24 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body pt-1">
-                    <p class="text-muted mb-3" id="modal-notif-pagamento-resumo">0 pedido(s) aguardando pagamento</p>
-
-                    <div class="rel-search-wrapper" style="display:flex;gap:8px;margin-bottom:14px;">
-                        <input type="text" id="modal-notif-busca-input" class="form-control"
-                            placeholder="Buscar por nome do cliente ou nº do pedido...">
-                        <select id="modal-notif-filtro-pagamento" class="form-select" style="max-width:170px;">
-                            <option value="">Todos os tipos</option>
+                    <div class="modal-notif-toolbar">
+                        <p class="text-muted mb-0" id="modal-notif-pagamento-resumo">0 pedido(s) aguardando pagamento
+                        </p>
+                        <select id="modal-notif-filtro-combinado" class="form-select modal-notif-filtro-select">
+                            <option value="">Todos</option>
                             <option value="DIARIO">Diário</option>
-                            <option value="SEMANAL">Semanal</option>
-                            <option value="QUINZENAL">Quinzenal</option>
-                            <option value="MENSAL">Mensal</option>
+                            <option value="SEMANAL_VENCIDO">Semanal - Vencido</option>
+                            <option value="SEMANAL_AVENCER">Semanal - A vencer</option>
+                            <option value="QUINZENAL_VENCIDO">Quinzenal - Vencido</option>
+                            <option value="QUINZENAL_AVENCER">Quinzenal - A vencer</option>
+                            <option value="MENSAL_VENCIDO">Mensal - Vencido</option>
+                            <option value="MENSAL_AVENCER">Mensal - A vencer</option>
                         </select>
                     </div>
 
                     <div id="modal-notif-pagamento-lista" class="modal-notif-pagamento-lista"></div>
                 </div>
+
                 <div class="modal-footer border-0 justify-content-end">
                     <button type="button" class="btn btn-light rounded-pill px-4"
                         data-bs-dismiss="modal">Fechar</button>

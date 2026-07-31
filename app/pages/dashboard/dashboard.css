@@ -1432,3 +1432,16 @@ img.avatar:not([src]) {
         max-width: 100% !important;
     }
 }
+
+.modal-notif-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.modal-notif-filtro-select {
+    max-width: 220px;
+    margin-left: auto;
+}
