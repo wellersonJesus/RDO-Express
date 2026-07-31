@@ -199,90 +199,60 @@
         </div>
       </div>
 
-      <!-- ✅ BLOCO REFATORADO: mesmo padrão compacto da Carteira (ícone + label + painel oculto ao clicar) -->
       <div class="row g-2 mb-3 caixa-mini-cards-row">
-        <div class="col-4">
+        <div class="col-6">
           <div class="caixa-mini-card" data-filtro-caixa="entrada">
             <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#198754,#146c43);">
               <i class="bi bi-arrow-down-circle-fill"></i>
             </div>
             <span class="caixa-mini-card-label">Receitas</span>
             <div class="caixa-mini-card-info">
-              <span class="info-desc">Total de Receitas</span>
+              <span class="info-desc">Receitas do período</span>
               <span class="info-valor fin-valor-caixa" id="caixa-card-entradas" data-valor-real="R$ 0,00">R$ ****</span>
             </div>
           </div>
         </div>
 
-        <div class="col-4">
+        <div class="col-6">
           <div class="caixa-mini-card" data-filtro-caixa="saida">
             <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
               <i class="bi bi-arrow-up-circle-fill"></i>
             </div>
             <span class="caixa-mini-card-label">Despesas</span>
             <div class="caixa-mini-card-info">
-              <span class="info-desc">Total de Despesas</span>
+              <span class="info-desc">Despesas do período</span>
               <span class="info-valor fin-valor-caixa" id="caixa-card-saidas" data-valor-real="R$ 0,00">R$ ****</span>
             </div>
           </div>
         </div>
 
-        <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="empresa">
-            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#6f42c1,#59359a);">
-              <i class="bi bi-building"></i>
-            </div>
-            <span class="caixa-mini-card-label">Empresa</span>
-            <div class="caixa-mini-card-info">
-              <span class="info-desc">Empresa (20%)</span>
-              <span class="info-valor fin-valor-caixa" id="caixa-card-empresa" data-valor-real="R$ 0,00"
-                style="color:#6f42c1;">R$ ****</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-4">
-          <div class="caixa-mini-card" data-filtro-caixa="colaborador">
-            <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);">
-              <i class="bi bi-person-fill"></i>
-            </div>
-            <span class="caixa-mini-card-label">Colaborador</span>
-            <div class="caixa-mini-card-info">
-              <span class="info-desc">Colaborador (80%)</span>
-              <span class="info-valor fin-valor-caixa" id="caixa-card-colaboradores" data-valor-real="R$ 0,00"
-                style="color:#0d6efd;">R$ ****</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-4">
+        <div class="col-6">
           <div class="caixa-mini-card" data-filtro-caixa="registros">
             <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#ffc107,#d39e00);color:#5c4700;">
               <i class="bi bi-list-check"></i>
             </div>
             <span class="caixa-mini-card-label">Registros</span>
             <div class="caixa-mini-card-info">
-              <span class="info-desc">Total de Registros</span>
+              <span class="info-desc">Lançamentos no período</span>
               <span class="info-valor" id="caixa-card-registros" style="color:#856404;">0</span>
             </div>
           </div>
         </div>
 
-        <div class="col-4">
+        <div class="col-6">
           <div class="caixa-mini-card" data-filtro-caixa="saldo">
             <div class="caixa-mini-card-icon" style="background:linear-gradient(135deg,#6c757d,#495057);">
               <i class="bi bi-piggy-bank-fill"></i>
             </div>
             <span class="caixa-mini-card-label">Saldo Total</span>
             <div class="caixa-mini-card-info">
-              <span class="info-desc">Saldo Total do Período</span>
+              <span class="info-desc">Saldo do período</span>
               <span class="info-valor fin-valor-caixa" id="caixa-card-saldo-total" data-valor-real="R$ 0,00">R$
                 ****</span>
             </div>
           </div>
         </div>
       </div>
-      <!-- ✅ FIM DO BLOCO REFATORADO -->
 
       <div class="row g-3">
         <div class="col-12">

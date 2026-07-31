@@ -225,17 +225,43 @@ if (!window.EventBus) {
     });
   }
 
-  function aplicarFiltroCaixaMini(tipo, card) {
-    var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
-    if (filtroCaixaAtivo === tipo) {
-      filtroCaixaAtivo = null;
-      cards.forEach(function (c) { c.classList.remove('active'); });
-    } else {
-      filtroCaixaAtivo = tipo;
-      cards.forEach(function (c) { c.classList.remove('active'); });
-      card.classList.add('active');
+  function aplicarFiltroCaixaLocal() {
+    var base = state.caixa.dadosFiltrados;
+    var filtrados = filtrarLogicoCaixa(base, state.caixa.filtroDescricao, state.caixa.filtroValor);
+
+    // Totais dos mini-cards sempre refletem o PERÍODO COMPLETO (carteira gerada)
+    var totais = calcularTotaisRegistros(filtrados);
+    var saldoTotal = totais.entradas - totais.saidas;
+
+    var valores = {
+      caixaCardEntradas: totais.entradas,
+      caixaCardSaidas: totais.saidas,
+      caixaCardEmpresa: totais.empresa,
+      caixaCardColaboradores: totais.colaboradores,
+      caixaCardSaldoTotal: saldoTotal
+    };
+
+    Object.keys(valores).forEach(function (k) {
+      if (els[k]) {
+        els[k].setAttribute('data-valor-real', formatarMoeda(valores[k]));
+        els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(valores[k]) : 'R$ ****';
+      }
+    });
+
+    if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = totais.qtd;
+
+    // 🔽 NOVO: aplica o filtro do mini-card clicado somente na LISTA exibida
+    var listaParaExibir = filtrados;
+    if (filtroCaixaAtivo === 'entrada') {
+      listaParaExibir = filtrados.filter(function (r) { return r.tipo === 'entrada'; });
+    } else if (filtroCaixaAtivo === 'saida') {
+      listaParaExibir = filtrados.filter(function (r) { return r.tipo === 'saida'; });
     }
-    filtrarListaDiariaPorTipo(filtroCaixaAtivo);
+    // 'registros' e 'saldo' (ou null) => mantém todos os lançamentos
+
+    state.caixa.listaFiltradaAtual = listaParaExibir;
+    state.caixa.pagina = 1;
+    renderCaixaListaDiaria();
   }
 
   function bindFiltrosMiniCaixa() {
@@ -286,18 +312,6 @@ if (!window.EventBus) {
 
   function obterPorPaginaFin() {
     return window.innerWidth <= 576 ? 5 : 5;
-  }
-
-  function filtrarListaDiariaPorTipo(tipo) {
-    var itens = document.querySelectorAll('#caixa-lista-diaria [data-tipo-item]');
-    if (!itens.length) return;
-    itens.forEach(function (item) {
-      if (!tipo) {
-        item.style.display = '';
-      } else {
-        item.style.display = item.getAttribute('data-tipo-item') === tipo ? '' : 'none';
-      }
-    });
   }
 
   function bindDropdownFiltroCaixa() {
@@ -2353,7 +2367,10 @@ if (!window.EventBus) {
       els.tbodyTodos.innerHTML = pagina.map(function (r) {
         var badgeTipo = getTipoBadge(r.tipo);
         var badgeSituacao = getStatusBadge(r.situacao);
-        var celulaTipoCombinada = '<div class="d-flex flex-nowrap gap-1 align-items-center" style="overflow-x:auto;">' + badgeTipo + badgeSituacao + '</div>';
+        var celulaTipoCombinada = '<div class="d-flex flex-nowrap gap-1 align-items-center" style="overflow-x:auto;">' +
+          '<span class="fin-badge-tipo-desktop">' + badgeTipo + '</span>' +
+          badgeSituacao +
+          '</div>';
 
         return '<tr class="fin-row" data-id="' + escapeHtml(r.id) + '" style="cursor:pointer;">' +
           '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
@@ -3943,8 +3960,8 @@ if (!window.EventBus) {
     _bindBuscaFin();
     registrarEventos();
     bindNotifCardsFin();
-    bindOlhinhoRdo();        
-    bindFiltrosRdo();        
+    bindOlhinhoRdo();
+    bindFiltrosRdo();
     initExtratoFluxo();
     initExtratoListaDelegacao();
     bindEventoAbrirPedidoFinanceiro();
