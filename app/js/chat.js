@@ -1048,7 +1048,7 @@ window.abrirModalMensagemPadrao = function (config) {
             '<div style="font-size:.82rem;color:#1c4e80;line-height:1.55;">' +
             'Para que a mensagem possa ser enviada, é importante preencher os campos obrigatórios: ' +
             '<strong>SOLICITANTE</strong>, <strong>CONTATO</strong> e <strong>ROTA(s)</strong>.<br>' +
-            'Em <strong>ROTA(s)</strong>, informe <strong>Endereço, Número, Bairro e Complemento</strong> de origem e destino.' +
+            'Em <span style="white-space:nowrap;"><strong>ROTA(s)</strong>,</span> informe <strong>Endereço, Número, Bairro e Complemento</strong> de origem e destino.' +
             '</div>' +
             '</div>' +
             '<div class="small text-muted mb-2" style="font-size:.75rem;">Segue o modelo da mensagem padrão:</div>' +
