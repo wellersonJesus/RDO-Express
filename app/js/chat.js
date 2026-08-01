@@ -1005,27 +1005,193 @@ window.PedidosDropdown = (function () {
 })();
 
 window.MODELO_PADRAO = [
-    '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
-    '',
     'SOLICITANTE: ',
     'CONTATO: ',
-    'HORÁRIO ESTIMADO P/ COLETA:  ',
+    'HORÁRIO ESTIMADO P/ COLETA: ',
     'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)',
     '',
-    'ROTA(s): Informe Rua, Número, Bairro e Cidade completos (origem e destino)',
-    '📍1. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
-    '📍2. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
-    '📍3. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+    'ROTA(s):',
+    '📍1. De: Rua, Número, Bairro, Complemento | Para: Rua, Número, Bairro, Complemento',
+    '📍2. De: Rua, Número, Bairro, Complemento | Para: Rua, Número, Bairro, Complemento',
+    '📍3. De: Rua, Número, Bairro, Complemento | Para: Rua, Número, Bairro, Complemento',
     '',
-    'RETORNO:  (SIM /NÃO)',
-    'PRIORIDADE: (Normal, Agendado, Urgente) ',
-    'OBSERVAÇÃO: Descreva a observação aqui se necessario',
-    '',
-    '⚠️ Endereços incompletos podem atrasar o cálculo da taxa.',
-    '',
-    'Assim que enviar esta mensagem preenchida, ',
-    'calcularemos á sua taxa! 🏁'
+    'RETORNO: (SIM/NÃO)',
+    'PRIORIDADE: (Normal, Agendado, Urgente)',
+    'OBSERVAÇÃO: '
 ].join('\n');
+
+window.abrirModalMensagemPadrao = function (config) {
+    config = config || {};
+
+    function _gerarHtmlModeloDestacado(textoModelo) {
+        var linhas = String(textoModelo || '').split('\n');
+        var htmlLinhas = linhas.map(function (linha) {
+            var linhaEscapada = linha
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            linhaEscapada = linhaEscapada.replace(
+                /^(SOLICITANTE|CONTATO|ROTA\(s\))(\s*:)/i,
+                '<strong style="color:#dc3545;font-weight:900;">$1$2</strong>'
+            );
+
+            return linhaEscapada;
+        });
+        return htmlLinhas.join('<br>');
+    }
+
+    function _gerarHtmlBlocoInfo() {
+        return '<div id="modal-mensagem-info-wrapper">' +
+            '<div class="d-flex align-items-start gap-2 mb-3" style="background-color:#eaf4ff;border:1px solid #cfe6ff;border-radius:.65rem;padding:.75rem 1rem;">' +
+            '<i class="bi bi-info-circle-fill text-primary" style="font-size:1.15rem;margin-top:1px;"></i>' +
+            '<div style="font-size:.82rem;color:#1c4e80;line-height:1.55;">' +
+            'Para que a mensagem possa ser enviada, é importante preencher os campos obrigatórios: ' +
+            '<strong>SOLICITANTE</strong>, <strong>CONTATO</strong> e <strong>ROTA(s)</strong>.<br>' +
+            'Em <strong>ROTA(s)</strong>, informe <strong>Endereço, Número, Bairro e Complemento</strong> de origem e destino.' +
+            '</div>' +
+            '</div>' +
+            '<div class="small text-muted mb-2" style="font-size:.75rem;">Segue o modelo da mensagem padrão:</div>' +
+            '</div>';
+    }
+
+    function _montarEExibir() {
+        var modalEl = document.getElementById('modalMensagemPadrao');
+        if (!modalEl) return;
+
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        var existing = bootstrap.Modal.getInstance(modalEl);
+        if (existing) {
+            try { existing.dispose(); }
+            catch (e) { window._exibirErroGlobal(e, 'liberar modal de mensagem padrão'); }
+        }
+        if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
+        var isErro = !!config.erro;
+        var tituloEl = modalEl.querySelector('#modal-mensagem-titulo, .modal-title');
+        var iconeEl = modalEl.querySelector('#modal-mensagem-icone');
+        var textareaEl = modalEl.querySelector('#texto-modelo');
+        var btnCopiar = modalEl.querySelector('#btn-copiar-modelo');
+        var alertaErroEl = modalEl.querySelector('#modal-mensagem-erro-box');
+        var infoWrapperExistente = modalEl.querySelector('#modal-mensagem-info-wrapper');
+
+        if (isErro) {
+            if (infoWrapperExistente) infoWrapperExistente.remove();
+
+            if (tituloEl) tituloEl.textContent = config.titulo || 'Ocorreu um erro';
+            if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-exclamation-triangle-fill') + ' text-danger';
+            if (textareaEl) {
+                var wrapperTextarea = textareaEl.closest('.mb-3, .form-group');
+                if (wrapperTextarea) wrapperTextarea.classList.add('d-none');
+                else textareaEl.style.display = 'none';
+            }
+            var previewErro = modalEl.querySelector('#texto-modelo-preview');
+            if (previewErro) previewErro.classList.add('d-none');
+            if (btnCopiar) btnCopiar.classList.add('d-none');
+            if (alertaErroEl) {
+                alertaErroEl.classList.remove('d-none');
+                alertaErroEl.innerHTML =
+                    '<i class="bi bi-exclamation-circle-fill me-2"></i>' +
+                    (config.erro || 'Algo deu errado. Tente novamente.');
+            }
+        } else {
+            if (tituloEl) tituloEl.textContent = config.titulo || 'Mensagem Padrão';
+            if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-chat-left-text-fill') + ' text-secondary';
+
+            var textoFinal = config.texto || window.MODELO_PADRAO || '';
+
+            if (textareaEl) {
+                var wrapperTextarea2 = textareaEl.closest('.mb-3, .form-group');
+                if (wrapperTextarea2) wrapperTextarea2.classList.remove('d-none');
+                else textareaEl.style.display = '';
+                textareaEl.value = textoFinal;
+                textareaEl.style.position = 'absolute';
+                textareaEl.style.left = '-9999px';
+                textareaEl.style.opacity = '0';
+                textareaEl.style.height = '1px';
+                textareaEl.style.pointerEvents = 'none';
+            }
+
+            if (infoWrapperExistente) {
+                infoWrapperExistente.outerHTML = _gerarHtmlBlocoInfo();
+            } else if (textareaEl) {
+                textareaEl.insertAdjacentHTML('beforebegin', _gerarHtmlBlocoInfo());
+            }
+
+            var previewEl = modalEl.querySelector('#texto-modelo-preview');
+            if (!previewEl && textareaEl) {
+                previewEl = document.createElement('div');
+                previewEl.id = 'texto-modelo-preview';
+                previewEl.style.whiteSpace = 'pre-wrap';
+                previewEl.style.fontFamily = 'inherit';
+                previewEl.style.fontSize = '0.85rem';
+                previewEl.style.lineHeight = '1.5';
+                previewEl.style.background = '#f8f9fa';
+                previewEl.style.border = '1px solid #dee2e6';
+                previewEl.style.borderRadius = '.5rem';
+                previewEl.style.padding = '.75rem 1rem';
+                previewEl.style.maxHeight = '320px';
+                previewEl.style.overflowY = 'auto';
+                textareaEl.insertAdjacentElement('afterend', previewEl);
+            }
+            if (previewEl) {
+                previewEl.classList.remove('d-none');
+                previewEl.innerHTML = _gerarHtmlModeloDestacado(textoFinal);
+            }
+
+            if (btnCopiar) btnCopiar.classList.remove('d-none');
+            if (alertaErroEl) alertaErroEl.classList.add('d-none');
+        }
+
+        modalEl.classList.add('modal-prioridade-maxima');
+
+        var modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
+
+        modalEl.addEventListener('hide.bs.modal', function () {
+            if (document.activeElement && modalEl.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        });
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            var backdrops = document.querySelectorAll('.modal-backdrop');
+            var ultimoBackdrop = backdrops[backdrops.length - 1];
+            if (ultimoBackdrop) ultimoBackdrop.classList.add('modal-prioridade-maxima');
+        }, { once: true });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            modalEl.classList.remove('modal-prioridade-maxima');
+        }, { once: true });
+
+        modal.show();
+    }
+
+    if (window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible()) {
+        Swal.close();
+        setTimeout(_montarEExibir, 300);
+    } else {
+        _montarEExibir();
+    }
+};
+
+window.copiarModelo = function () {
+    var texto = document.getElementById('texto-modelo');
+    if (!texto) return;
+    texto.select();
+    document.execCommand('copy');
+    Swal.fire({
+        icon: 'success', title: 'Sucesso!', text: 'Modelo copiado com sucesso!',
+        toast: true, position: 'top-end', showConfirmButton: false,
+        timer: 2000, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
+    });
+};
 
 window.validarMensagemModelo = function (texto) {
     if (!texto || !texto.trim()) return { valido: false, tipo: 'vazio' };
@@ -2682,148 +2848,6 @@ window.abrirModalEdicao = function (msgId) {
             else if (result.isDenied) window.MasterAuth.abrir(msgId);
         }, 150);
     }).catch(function (e) { window._exibirErroGlobal(e, 'abrir modal de edição'); });
-};
-
-window.abrirModalMensagemPadrao = function (config) {
-    config = config || {};
-
-    function _gerarHtmlModeloDestacado(textoModelo) {
-        var linhas = String(textoModelo || '').split('\n');
-        var htmlLinhas = linhas.map(function (linha) {
-            var linhaEscapada = linha
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-
-            // Destaca apenas o rótulo (antes dos ":") dos 3 campos obrigatórios:
-            // SOLICITANTE, CONTATO e ROTA(s)
-            linhaEscapada = linhaEscapada.replace(
-                /^(SOLICITANTE|CONTATO|ROTA\(s\))(\s*:)/i,
-                '<strong style="color:#dc3545;font-weight:900;">$1$2</strong>'
-            );
-
-            return linhaEscapada;
-        });
-        return htmlLinhas.join('<br>');
-    }
-
-    function _montarEExibir() {
-        var modalEl = document.getElementById('modalMensagemPadrao');
-        if (!modalEl) return;
-
-        if (modalEl.parentElement !== document.body) {
-            document.body.appendChild(modalEl);
-        }
-
-        var existing = bootstrap.Modal.getInstance(modalEl);
-        if (existing) {
-            try { existing.dispose(); }
-            catch (e) { window._exibirErroGlobal(e, 'liberar modal de mensagem padrão'); }
-        }
-        if (typeof _limparBackdrop === 'function') _limparBackdrop();
-
-        var isErro = !!config.erro;
-        var tituloEl = modalEl.querySelector('#modal-mensagem-titulo, .modal-title');
-        var iconeEl = modalEl.querySelector('#modal-mensagem-icone');
-        var textareaEl = modalEl.querySelector('#texto-modelo');
-        var btnCopiar = modalEl.querySelector('#btn-copiar-modelo');
-        var alertaErroEl = modalEl.querySelector('#modal-mensagem-erro-box');
-
-        if (isErro) {
-            if (tituloEl) tituloEl.textContent = config.titulo || 'Ocorreu um erro';
-            if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-exclamation-triangle-fill') + ' text-danger';
-            if (textareaEl) {
-                var wrapperTextarea = textareaEl.closest('.mb-3, .form-group');
-                if (wrapperTextarea) wrapperTextarea.classList.add('d-none');
-                else textareaEl.style.display = 'none';
-            }
-            var previewErro = modalEl.querySelector('#texto-modelo-preview');
-            if (previewErro) previewErro.classList.add('d-none');
-            if (btnCopiar) btnCopiar.classList.add('d-none');
-            if (alertaErroEl) {
-                alertaErroEl.classList.remove('d-none');
-                alertaErroEl.innerHTML =
-                    '<i class="bi bi-exclamation-circle-fill me-2"></i>' +
-                    (config.erro || 'Algo deu errado. Tente novamente.');
-            }
-        } else {
-            if (tituloEl) tituloEl.textContent = config.titulo || 'Mensagem Padrão';
-            if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-chat-left-text-fill') + ' text-secondary';
-
-            var textoFinal = config.texto || window.MODELO_PADRAO || '';
-
-            // Mantém a textarea (para cópia real via seleção), mas escondida visualmente
-            if (textareaEl) {
-                var wrapperTextarea2 = textareaEl.closest('.mb-3, .form-group');
-                if (wrapperTextarea2) wrapperTextarea2.classList.remove('d-none');
-                else textareaEl.style.display = '';
-                textareaEl.value = textoFinal;
-                textareaEl.style.position = 'absolute';
-                textareaEl.style.left = '-9999px';
-                textareaEl.style.opacity = '0';
-                textareaEl.style.height = '1px';
-                textareaEl.style.pointerEvents = 'none';
-            }
-
-            // Cria (ou reutiliza) um preview visual com o destaque em bold + vermelho
-            var previewEl = modalEl.querySelector('#texto-modelo-preview');
-            if (!previewEl && textareaEl) {
-                previewEl = document.createElement('div');
-                previewEl.id = 'texto-modelo-preview';
-                previewEl.style.whiteSpace = 'pre-wrap';
-                previewEl.style.fontFamily = 'inherit';
-                previewEl.style.fontSize = '0.85rem';
-                previewEl.style.lineHeight = '1.5';
-                previewEl.style.background = '#f8f9fa';
-                previewEl.style.border = '1px solid #dee2e6';
-                previewEl.style.borderRadius = '.5rem';
-                previewEl.style.padding = '.75rem 1rem';
-                previewEl.style.maxHeight = '320px';
-                previewEl.style.overflowY = 'auto';
-                textareaEl.insertAdjacentElement('afterend', previewEl);
-            }
-            if (previewEl) {
-                previewEl.classList.remove('d-none');
-                previewEl.innerHTML = _gerarHtmlModeloDestacado(textoFinal);
-            }
-
-            if (btnCopiar) btnCopiar.classList.remove('d-none');
-            if (alertaErroEl) alertaErroEl.classList.add('d-none');
-        }
-
-        modalEl.classList.add('modal-prioridade-maxima');
-
-        var modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
-
-        modalEl.addEventListener('hide.bs.modal', function () {
-            if (document.activeElement && modalEl.contains(document.activeElement)) {
-                document.activeElement.blur();
-            }
-        });
-
-        modalEl.addEventListener('shown.bs.modal', function () {
-            var backdrops = document.querySelectorAll('.modal-backdrop');
-            var ultimoBackdrop = backdrops[backdrops.length - 1];
-            if (ultimoBackdrop) ultimoBackdrop.classList.add('modal-prioridade-maxima');
-        }, { once: true });
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            if (typeof _limparBackdrop === 'function') _limparBackdrop();
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-            modalEl.classList.remove('modal-prioridade-maxima');
-        }, { once: true });
-
-        modal.show();
-    }
-
-    if (window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible()) {
-        Swal.close();
-        setTimeout(_montarEExibir, 300);
-    } else {
-        _montarEExibir();
-    }
 };
 
 window.exibirErroModalPadrao = function (mensagemErro, titulo) {
