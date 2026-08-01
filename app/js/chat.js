@@ -1045,10 +1045,10 @@ window.abrirModalMensagemPadrao = function (config) {
         return '<div id="modal-mensagem-info-wrapper">' +
             '<div class="d-flex align-items-start gap-2 mb-3" style="background-color:#eaf4ff;border:1px solid #cfe6ff;border-radius:.65rem;padding:.75rem 1rem;">' +
             '<i class="bi bi-info-circle-fill text-primary" style="font-size:1.15rem;margin-top:1px;"></i>' +
-            '<div style="font-size:.82rem;color:#1c4e80;line-height:1.55;overflow-wrap:break-word;">' +
+            '<div style="font-size:.82rem;color:#1c4e80;line-height:1.55;">' +
             'Para que a mensagem possa ser enviada, é importante preencher os campos obrigatórios: ' +
-            '<strong>SOLICITANTE</strong>, <strong>CONTATO</strong> e <span style="white-space:nowrap;"><strong>ROTA(s)</strong></span>.<br>' +
-            'Em <span style="white-space:nowrap;"><strong>ROTA(s)</strong>,</span> informe <strong>Endereço, Número, Bairro e Complemento</strong> de origem e destino.' +
+            '<strong>SOLICITANTE</strong>, <strong>CONTATO</strong> e <strong>ROTA(s)</strong>.<br>' +
+            'Em <strong>ROTA(s)</strong>, informe <strong>Endereço, Número, Bairro e Complemento</strong> de origem e destino.' +
             '</div>' +
             '</div>' +
             '<div class="small text-muted mb-2" style="font-size:.75rem;">Segue o modelo da mensagem padrão:</div>' +
