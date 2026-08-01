@@ -2687,6 +2687,26 @@ window.abrirModalEdicao = function (msgId) {
 window.abrirModalMensagemPadrao = function (config) {
     config = config || {};
 
+    function _gerarHtmlModeloDestacado(textoModelo) {
+        var linhas = String(textoModelo || '').split('\n');
+        var htmlLinhas = linhas.map(function (linha) {
+            var linhaEscapada = linha
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Destaca apenas o rótulo (antes dos ":") dos 3 campos obrigatórios:
+            // SOLICITANTE, CONTATO e ROTA(s)
+            linhaEscapada = linhaEscapada.replace(
+                /^(SOLICITANTE|CONTATO|ROTA\(s\))(\s*:)/i,
+                '<strong style="color:#dc3545;font-weight:900;">$1$2</strong>'
+            );
+
+            return linhaEscapada;
+        });
+        return htmlLinhas.join('<br>');
+    }
+
     function _montarEExibir() {
         var modalEl = document.getElementById('modalMensagemPadrao');
         if (!modalEl) return;
@@ -2717,6 +2737,8 @@ window.abrirModalMensagemPadrao = function (config) {
                 if (wrapperTextarea) wrapperTextarea.classList.add('d-none');
                 else textareaEl.style.display = 'none';
             }
+            var previewErro = modalEl.querySelector('#texto-modelo-preview');
+            if (previewErro) previewErro.classList.add('d-none');
             if (btnCopiar) btnCopiar.classList.add('d-none');
             if (alertaErroEl) {
                 alertaErroEl.classList.remove('d-none');
@@ -2727,12 +2749,44 @@ window.abrirModalMensagemPadrao = function (config) {
         } else {
             if (tituloEl) tituloEl.textContent = config.titulo || 'Mensagem Padrão';
             if (iconeEl) iconeEl.className = 'bi ' + (config.icone || 'bi-chat-left-text-fill') + ' text-secondary';
+
+            var textoFinal = config.texto || window.MODELO_PADRAO || '';
+
+            // Mantém a textarea (para cópia real via seleção), mas escondida visualmente
             if (textareaEl) {
                 var wrapperTextarea2 = textareaEl.closest('.mb-3, .form-group');
                 if (wrapperTextarea2) wrapperTextarea2.classList.remove('d-none');
                 else textareaEl.style.display = '';
-                textareaEl.value = config.texto || window.MODELO_PADRAO || '';
+                textareaEl.value = textoFinal;
+                textareaEl.style.position = 'absolute';
+                textareaEl.style.left = '-9999px';
+                textareaEl.style.opacity = '0';
+                textareaEl.style.height = '1px';
+                textareaEl.style.pointerEvents = 'none';
             }
+
+            // Cria (ou reutiliza) um preview visual com o destaque em bold + vermelho
+            var previewEl = modalEl.querySelector('#texto-modelo-preview');
+            if (!previewEl && textareaEl) {
+                previewEl = document.createElement('div');
+                previewEl.id = 'texto-modelo-preview';
+                previewEl.style.whiteSpace = 'pre-wrap';
+                previewEl.style.fontFamily = 'inherit';
+                previewEl.style.fontSize = '0.85rem';
+                previewEl.style.lineHeight = '1.5';
+                previewEl.style.background = '#f8f9fa';
+                previewEl.style.border = '1px solid #dee2e6';
+                previewEl.style.borderRadius = '.5rem';
+                previewEl.style.padding = '.75rem 1rem';
+                previewEl.style.maxHeight = '320px';
+                previewEl.style.overflowY = 'auto';
+                textareaEl.insertAdjacentElement('afterend', previewEl);
+            }
+            if (previewEl) {
+                previewEl.classList.remove('d-none');
+                previewEl.innerHTML = _gerarHtmlModeloDestacado(textoFinal);
+            }
+
             if (btnCopiar) btnCopiar.classList.remove('d-none');
             if (alertaErroEl) alertaErroEl.classList.add('d-none');
         }
