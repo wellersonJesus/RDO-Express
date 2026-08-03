@@ -957,7 +957,7 @@
             var tituloEl = document.getElementById('detalhe-titulo');
             if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
 
-            _s('det-pedido-id', _formatarIdServico(id));
+            _s('det-pedido-id-raw', id);
             _s('det-data', _formatarDataExibicao(_extrairDataPedido(pedido)));
             _s('det-horario', _resolverHoraPedido(pedido));
             _s('det-contato', pedido.contato || '—');
@@ -1492,6 +1492,24 @@
             }
         }, { passive: true });
     }
+
+    window.RDO_PEDIDOS.abrirEdicaoDoDetalhe = function () {
+        var idEl = document.getElementById('det-pedido-id-raw');
+        var id = idEl ? String(idEl.value || '').trim() : '';
+
+        if (!id) {
+            console.error('[pedidos.js] ❌ ID não encontrado no modal de detalhes');
+            return;
+        }
+
+        var modalDetalhe = document.getElementById('modalPedidoDetalhes');
+        if (modalDetalhe) {
+            var inst = bootstrap.Modal.getInstance(modalDetalhe);
+            if (inst) inst.hide();
+        }
+
+        window.editarPedido(id);
+    };
 
     window.initPedidos = function () {
         console.log('[pedidos.js] ========== initPedidos ==========');

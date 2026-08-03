@@ -305,89 +305,120 @@
                     aria-label="Fechar"></button>
             </div>
             <div class="modal-pedido-body">
-                <input type="hidden" id="novo-id-chat">
-                <div id="novo-error-msg" class="alert alert-danger d-none rounded-3 py-2 px-3 mb-3"
-                    style="font-size:0.8rem;"></div>
-
+                <input type="hidden" id="det-pedido-id-raw">
                 <div class="modal-pedido-section-label">
                     <i class="bi bi-person-fill me-1 text-danger"></i>Dados do Solicitante
                 </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-12 col-sm-6">
-                        <label class="modal-pedido-field-label">Cliente / Solicitante</label>
-                        <input type="text" id="novo-solicitante" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="Nome do solicitante">
+                <div class="row g-2 mb-2 row-det-cliente-info">
+                    <div class="col-6 col-sm-6">
+                        <label class="modal-pedido-field-label">Cliente</label>
+                        <input type="text" id="det-cliente" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
-                    <div class="col-12 col-sm-6">
-                        <label class="modal-pedido-field-label">Contato</label>
-                        <input type="text" id="novo-contato" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="(00) 00000-0000">
-                    </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-12 col-sm-4">
-                        <label class="modal-pedido-field-label">Hora</label>
-                        <input type="text" id="novo-horario" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="Ex: 14:30" maxlength="5">
-                    </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-6 col-sm-2">
                         <label class="modal-pedido-field-label">Mercadoria</label>
-                        <select id="novo-mercadoria" class="form-select form-select-sm modal-pedido-input">
-                            <option value="">Selecione...</option>
-                            <option value="Sacola">Sacola</option>
-                            <option value="Coleta">Coleta</option>
-                            <option value="Bolsa">Bolsa</option>
-                            <option value="Envelope">Envelope</option>
-                        </select>
+                        <input type="text" id="det-mercadoria" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-6 col-sm-2">
                         <label class="modal-pedido-field-label">Retorno</label>
-                        <select id="novo-retorno" class="form-select form-select-sm modal-pedido-input">
-                            <option value="Não">Não</option>
-                            <option value="Sim">Sim</option>
-                        </select>
+                        <input type="text" id="det-retorno" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-12 col-sm-4">
+                    <div class="col-6 col-sm-2">
                         <label class="modal-pedido-field-label">Prioridade</label>
-                        <select id="novo-prioridade" class="form-select form-select-sm modal-pedido-input">
-                            <option value="0">Normal</option>
-                            <option value="5">Agendado</option>
-                            <option value="10">Urgente</option>
-                        </select>
+                        <input type="text" id="det-prioridade" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
                     </div>
                 </div>
 
                 <div class="modal-pedido-section-label mt-3">
-                    <i class="bi bi-signpost-split-fill me-1 text-danger"></i>Rota
+                    <i class="bi bi-signpost-split-fill me-1 text-danger"></i>Rota & Entrega
                 </div>
                 <div class="row g-2 mb-2">
                     <div class="col-12 col-sm-6">
-                        <label class="modal-pedido-field-label">Origem (De)</label>
-                        <input type="text" id="novo-de" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="Endereço de origem">
+                        <label class="modal-pedido-field-label">De</label>
+                        <input type="text" id="det-de" class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
                     <div class="col-12 col-sm-6">
-                        <label class="modal-pedido-field-label">Destino (Para)</label>
-                        <input type="text" id="novo-para" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="Endereço de destino">
+                        <label class="modal-pedido-field-label">Para</label>
+                        <input type="text" id="det-para" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                </div>
+                <div class="row g-2 mb-2 row-det-motoboy-status">
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Motoboy</label>
+                        <input type="text" id="det-motoboy" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="modal-pedido-field-label">Status</label>
+                        <input type="text" id="det-status" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                </div>
+
+                <div id="det-cancelamento-box" class="mb-2" style="display:none;">
+                    <div class="modal-pedido-section-label mt-3">
+                        <i class="bi bi-x-circle-fill me-1 text-danger"></i>Motivo do Cancelamento
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <input type="text" id="det-motivo-cancelamento"
+                                class="form-control form-control-sm modal-pedido-input" readonly
+                                style="color:#dc3545;font-weight:600;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-cash-stack me-1 text-danger"></i>Valores & Espera
+                </div>
+                <div class="row g-2 mb-2 row-det-valores">
+                    <div class="col-12 col-sm-4">
+                        <label class="modal-pedido-field-label">Valor Original</label>
+                        <input type="text" id="det-valor-original"
+                            class="form-control form-control-sm modal-pedido-input" readonly
+                            style="font-weight:700;color:#28a745!important;background:#f6fff8!important;border-color:#c3e6cb!important;">
+                    </div>
+                    <div class="col-12 col-sm-4">
+                        <label class="modal-pedido-field-label">Taxa de Espera</label>
+                        <input type="text" id="det-taxa-espera" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                    <div class="col-12 col-sm-4">
+                        <label class="modal-pedido-field-label">Valor Final</label>
+                        <input type="text" id="det-valor-final" class="form-control form-control-sm modal-pedido-input"
+                            readonly style="font-weight:700;color:#dc3545!important;">
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-sm-6">
+                        <label class="modal-pedido-field-label">Tipo de Espera</label>
+                        <input type="text" id="det-espera-tipo" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                    <div class="col-6 col-sm-6">
+                        <label class="modal-pedido-field-label">Minutos de Espera</label>
+                        <input type="text" id="det-espera-minutos"
+                            class="form-control form-control-sm modal-pedido-input" readonly>
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="modal-pedido-field-label">Observação</label>
-                    <textarea id="novo-obs" rows="2" class="form-control form-control-sm modal-pedido-input"
-                        placeholder="Observações adicionais..."></textarea>
+                    <textarea id="det-obs" rows="2" class="form-control form-control-sm modal-pedido-input"
+                        readonly></textarea>
                 </div>
 
                 <div class="d-flex gap-2 mt-4">
                     <button type="button" class="btn btn-cancelar-pedido flex-fill" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i>Fechar
                     </button>
-                    <button type="button" id="btn-reabrir-pedido" class="btn btn-salvar-pedido flex-fill d-none"
-                        data-id="" onclick="window.RDO_PEDIDOS.reabrirPedido()">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Pedido
+                    <button type="button" id="btn-editar-pedido-detalhes" class="btn btn-salvar-pedido flex-fill"
+                        onclick="window.RDO_PEDIDOS.abrirEdicaoDoDetalhe()">
+                        <i class="bi bi-pencil-square me-1"></i>Editar
                     </button>
                 </div>
             </div>
