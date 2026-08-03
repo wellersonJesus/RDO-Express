@@ -2972,20 +2972,33 @@ function _geocodificarExterno(busca) {
     });
 }
 
+function _limparComplementoParaGeocoding(endereco) {
+    return String(endereco || '')
+        .replace(/,?\s*\b(sl|sala|apto|ap|bloco|bl|cs|casa|fundos|lj|loja)\b\s*[\w\/\-]*/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/,\s*,/g, ',')
+        .trim();
+}
+
 function _geocodificarComFallback(enderecoCompleto) {
-    return _geocodificarExterno(enderecoCompleto).then(function (resultado) {
+    var enderecoLimpo = _limparComplementoParaGeocoding(enderecoCompleto);
+
+    return _geocodificarExterno(enderecoLimpo).then(function (resultado) {
         if (resultado && !resultado.erro) return resultado;
 
-        // Fallback: remove o número da rua e tenta de novo
-        var enderecoSemNumero = enderecoCompleto.replace(/,?\s*\d+\s*,/, ',');
-        if (enderecoSemNumero === enderecoCompleto) return resultado; // não havia número pra remover
+        return _geocodificarExterno(enderecoCompleto).then(function (resultadoOriginal) {
+            if (resultadoOriginal && !resultadoOriginal.erro) return resultadoOriginal;
 
-        return _geocodificarExterno(enderecoSemNumero).then(function (resultadoSemNumero) {
-            if (resultadoSemNumero && !resultadoSemNumero.erro) {
-                resultadoSemNumero.aproximado = true; // marca que é aproximado (sem número exato)
-                return resultadoSemNumero;
-            }
-            return resultado; // mantém o erro original se nem isso funcionou
+            var enderecoSemNumero = enderecoLimpo.replace(/,?\s*\d+\s*,/, ',');
+            if (enderecoSemNumero === enderecoLimpo) return resultadoOriginal;
+
+            return _geocodificarExterno(enderecoSemNumero).then(function (resultadoSemNumero) {
+                if (resultadoSemNumero && !resultadoSemNumero.erro) {
+                    resultadoSemNumero.aproximado = true;
+                    return resultadoSemNumero;
+                }
+                return resultadoOriginal;
+            });
         });
     });
 }
