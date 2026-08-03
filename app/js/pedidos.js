@@ -22,7 +22,6 @@
     var FRANQUIA_MIN = 10;
     var TARIFA_MIN = 0.60;
     var spinFeedbackTimer = null;
-
     var MOTIVOS_CANCELAMENTO = [
         { value: 'cliente_desistiu', label: 'Cliente desistiu' },
         { value: 'endereco_incorreto', label: 'Endereço incorreto' },
@@ -32,7 +31,6 @@
         { value: 'problema_pagamento', label: 'Problema no pagamento' },
         { value: 'outro', label: 'Outro' }
     ];
-
     var els = {
         tbody: null, btnSync: null, iconSync: null, inputBusca: null,
         filtroData: null, btnFiltroTipo: null, dropdownFiltroMenu: null,
@@ -40,8 +38,121 @@
         infoPaginacao: null, filtrosStatus: [], thead: null, iconSortData: null,
         loadingOverlay: null
     };
+    var PEDIDOS_LS_KEY = 'rdo_pedidos_cache_v1';
+    var _renderEmAndamento = false;
+    var _spinOffPendente = false;
 
     window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
+
+    function _renderizarTabelaComTravaSpin(pedidos) {
+        _renderEmAndamento = true;
+        _renderizarTabela(pedidos);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                _renderEmAndamento = false;
+                _spinOffSeLivre();
+            });
+        });
+    }
+
+    function _spinOffSeLivre() {
+        if (_renderEmAndamento || window.pedidosState.isFetching) {
+            _spinOffPendente = true;
+            return;
+        }
+        _spinOffPendente = false;
+        _spinOff();
+    }
+
+    async function _fetchPedidos(opts) {
+        opts = opts || {};
+        var silencioso = !!opts.silencioso;
+
+        if (window.pedidosState.isFetching) return;
+        if (window.pedidosState.dadosCarregados && !window.pedidosState.emAcao && !silencioso) return;
+
+        window.pedidosState.isFetching = true;
+        window.pedidosState.emAcao = false;
+
+        _spinOn();
+
+        if (!silencioso) _mostrarLoading();
+
+        var loadingContent = document.getElementById('pedidos-loading-state');
+        var errorContent = document.getElementById('pedidos-error-state');
+        var errorText = document.getElementById('pedidos-error-text');
+        var btnRetry = document.getElementById('btn-retry-pedidos');
+
+        if (!silencioso && loadingContent) loadingContent.classList.remove('d-none');
+        if (errorContent) errorContent.classList.add('d-none');
+
+        try {
+            if (typeof API === 'undefined' || typeof API.call !== 'function')
+                throw new Error('API.call indefinido');
+
+            var resultados = await Promise.all([
+                _fetchComRetry('getchat'),
+                _fetchComRetry('getpedidos')
+            ]);
+
+            var respChat = resultados[0];
+            var respPedidos = resultados[1];
+
+            var chatsNovos = Array.isArray(respChat) ? respChat : [];
+
+            var pedidosNovos = [];
+            if (Array.isArray(respPedidos)) {
+                pedidosNovos = respPedidos;
+            } else if (respPedidos && typeof respPedidos === 'object') {
+                pedidosNovos = Array.isArray(respPedidos.pedidos) ? respPedidos.pedidos :
+                    Array.isArray(respPedidos.data) ? respPedidos.data : [];
+            }
+
+            window.AppRDO.chatsCache = chatsNovos;
+            window.AppRDO.pedidosCache = pedidosNovos;
+            window.pedidosState.dadosCarregados = true;
+
+            _salvarCacheLocal(pedidosNovos, chatsNovos);
+
+            _renderizarTabelaComTravaSpin(pedidosNovos);
+
+            _esconderLoading();
+
+        } catch (e) {
+            console.error('[pedidos.js] ❌ Erro no fetch:', e);
+            var msg = e && e.message ? e.message : 'Erro desconhecido ao buscar pedidos.';
+
+            if (silencioso && window.pedidosState.dadosCarregados) {
+                console.warn('[pedidos.js] ⚠️ Sync silencioso falhou, mantendo dados do cache local:', msg);
+            } else {
+                if (loadingContent) loadingContent.classList.add('d-none');
+                if (errorContent) errorContent.classList.remove('d-none');
+                if (errorText) errorText.textContent = msg;
+
+                if (btnRetry) {
+                    btnRetry.onclick = function () {
+                        window.pedidosState.dadosCarregados = false;
+                        window.pedidosState.emAcao = true;
+                        _fetchPedidos();
+                    };
+                }
+
+                if (window.PedidosErro && typeof window.PedidosErro.mostrar === 'function') {
+                    window.PedidosErro.mostrar(msg);
+                }
+
+                if (els.tbody && window.pedidosState.dadosCarregados === false) {
+                    els.tbody.innerHTML =
+                        '<tr><td colspan="6" class="text-center text-danger py-4">' +
+                        '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>' +
+                        'Erro: ' + _escHtml(msg) + '</td></tr>';
+                }
+            }
+        } finally {
+            window.pedidosState.isFetching = false;
+            _spinOffSeLivre();
+        }
+    }
 
     function _bind() {
         els.tbody = document.getElementById('corpo-tabela-pedidos');
@@ -75,35 +186,6 @@
         if (!els.btnClearBusca) return;
         var temTexto = els.inputBusca && els.inputBusca.value.trim().length > 0;
         els.btnClearBusca.classList.toggle('d-none', !temTexto);
-    }
-
-    function _bindBuscaPedidos() {
-        els.btnClearBusca = document.getElementById('btn-limpar-busca-pedidos');
-        els.inputBusca = document.getElementById('filtro-pedidos');
-
-        if (els.inputBusca) {
-            els.inputBusca.oninput = function () {
-                window.pedidosState.busca = els.inputBusca.value;
-                window.pedidosState.paginaAtual = 1;
-                _toggleBtnClearBusca();
-                _renderizarTabela(window.AppRDO.pedidosCache);
-            };
-        }
-
-        if (els.btnClearBusca) {
-            els.btnClearBusca.onclick = function () {
-                els.inputBusca.value = '';
-                window.pedidosState.busca = '';
-                window.pedidosState.paginaAtual = 1;
-                window.pedidosState.emAcao = true;
-                _toggleBtnClearBusca();
-                els.inputBusca.focus();
-                _spinFeedback();
-                _renderizarTabela(window.AppRDO.pedidosCache);
-            };
-        }
-
-        _toggleBtnClearBusca();
     }
 
     function _normalizarStatus(s) {
@@ -288,42 +370,56 @@
         if (els.loadingOverlay) els.loadingOverlay.classList.add('d-none');
     }
 
+    function _primeiroNome(nomeCompleto) {
+        var nome = String(nomeCompleto || '—').trim();
+        if (!nome || nome === '—') return '—';
+        return nome.split(/\s+/)[0];
+    }
+
+    function _labelPrioridade(valor) {
+        var v = String(valor != null ? valor : '0').trim();
+        if (v === '5') return 'Agendado';
+        if (v === '10') return 'Urgente';
+        return 'Normal';
+    }
+
+    function _resolverSituacaoFinanceira(pedido) {
+        var sf = String(pedido.situacao_financeira || 'pendente').trim().toLowerCase();
+        if (sf === 'pago' || sf === 'recebido') {
+            return { label: 'Pago', classe: 'bg-status-done' };
+        }
+        return { label: 'A Receber', classe: 'bg-status-pending' };
+    }
+
     function _criarLinhaTabela(pedido) {
         var statusNorm = _normalizarStatus(pedido.status);
-        var corStatus = statusNorm === 'PENDENTE' ? 'warning' :
-            statusNorm === 'EM_ROTA' ? 'info' :
-                statusNorm === 'CANCELADO' ? 'danger' : 'success';
+
+        var classeStatus = statusNorm === 'PENDENTE' ? 'bg-status-pending' :
+            statusNorm === 'EM_ROTA' ? 'bg-status-route' :
+                statusNorm === 'CANCELADO' ? 'bg-status-cancel' : 'bg-status-done';
+
         var statusLabel = statusNorm === 'EM_ROTA' ? 'Em Rota' :
             statusNorm === 'CONCLUIDO' ? 'Concluído' :
                 statusNorm === 'CANCELADO' ? 'Cancelado' : 'Pendente';
 
-        var badgeStatusHtml = '<span class="badge bg-' + corStatus + '">' + _escHtml(statusLabel) + '</span>';
+        var financeiro = _resolverSituacaoFinanceira(pedido);
 
-        var badgeFinanceiroHtml = '';
-        if (statusNorm !== 'CANCELADO') {
-            var sitFin = String(pedido.situacao_financeira || 'pendente').trim().toLowerCase();
-
-            if (sitFin === 'pago') {
-                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#d1e7dd; color:#0f5132;"><i class="bi bi-cash-coin"></i> Pago</span>';
-            } else if (sitFin === 'recebido') {
-                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#cfe2ff; color:#084298;"><i class="bi bi-cash-coin"></i> Recebido</span>';
-            } else if (sitFin === 'cancelado') {
-                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#e2e3e5; color:#41464b;">Financ. Cancelado</span>';
-            } else {
-                badgeFinanceiroHtml = '<span class="badge ms-1" style="background-color:#fff3cd; color:#664d03;"><i class="bi bi-clock"></i> Pendente</span>';
-            }
-        }
-
-        // Bloco de badges: Status (principal) + situação financeira -> pertence à coluna "Status"
-        var badgeCombinadoHtml = '<div class="d-flex flex-nowrap gap-1 status-badges-row">' + badgeStatusHtml + badgeFinanceiroHtml + '</div>';
+        var badgesHtml =
+            '<div class="status-badges-row">' +
+            '<span class="status-badge ' + classeStatus + '">' + _escHtml(statusLabel) + '</span>' +
+            (statusNorm !== 'CANCELADO'
+                ? '<span class="status-badge status-badge-financeiro ' + financeiro.classe + '">' + _escHtml(financeiro.label) + '</span>'
+                : '') +
+            '</div>';
 
         var idPedido = String(pedido.id || pedido._id || 'S/N');
         var idFmt = _formatarIdServico(idPedido);
-        var solicitante = _resolverNomeCliente(pedido);
+        var solicitanteCompleto = _resolverNomeCliente(pedido);
+        var solicitantePrimeiro = _primeiroNome(solicitanteCompleto);
         var dataPedido = _formatarDataExibicao(_extrairDataPedido(pedido));
+        var motoboy = _resolverMotoboy(pedido) || '—';
         var finalizado = ['CONCLUIDO', 'CANCELADO'].includes(statusNorm);
         var idSafe = _escAttr(idPedido);
-        var motoboyNome = _resolverMotoboy(pedido); // pertence à coluna "Motoboy"
 
         var acoes = finalizado
             ? '<button class="btn-pedido-view" data-id="' + idSafe + '" title="Visualizar"><i class="bi bi-eye"></i></button>'
@@ -332,13 +428,12 @@
             '<button class="btn-pedido-delete" data-id="' + idSafe + '" title="Excluir"><i class="bi bi-trash"></i></button>' +
             '</div>';
 
-        // Ordem das colunas conforme HTML: N.Serviço | Data | Cliente | Motoboy | Status | Ações
         return '<tr data-pedido-id="' + idSafe + '">' +
-            '<td class="ps-3 td-mobile-hide"><span class="fw-semibold text-danger">' + _escHtml(idFmt) + '</span></td>' +
-            '<td>' + _escHtml(dataPedido) + '</td>' +
-            '<td>' + _escHtml(solicitante) + '</td>' +
-            '<td class="text-muted small td-mobile-hide">' + (motoboyNome ? _escHtml(motoboyNome) : '<span class="text-muted">—</span>') + '</td>' +
-            '<td class="td-mobile-hide">' + badgeCombinadoHtml + '</td>' +
+            '<td class="ps-3">' + _escHtml(dataPedido) + '</td>' +
+            '<td title="' + _escAttr(solicitanteCompleto) + '">' + _escHtml(solicitantePrimeiro) + '</td>' +
+            '<td class="d-none d-md-table-cell">' + _escHtml(idFmt) + '</td>' +
+            '<td class="d-none d-md-table-cell">' + _escHtml(motoboy) + '</td>' +
+            '<td>' + badgesHtml + '</td>' +
             '<td class="text-end pe-3">' + acoes + '</td></tr>';
     }
 
@@ -406,6 +501,30 @@
         _set('pendente_financeiro', pendFin, total > 0 ? Math.round((pendFin / total) * 100) + '%' : '0%');
     }
 
+    function renderLinhaPedido(pedido) {
+        return `
+        <tr>
+            <td class="ps-3">${pedido.dataFormatada}</td>
+            <td>${pedido.cliente}</td>
+            <td class="d-none d-md-table-cell">${pedido.numeroServico}</td>
+            <td class="d-none d-md-table-cell">${pedido.motoboy ?? '-'}</td>
+            <td>
+                <div class="status-badges-row">
+                    <span class="status-badge ${classeStatusPedido}">${labelStatusPedido}</span>
+                    <span class="status-badge ${classeStatusFinanceiro}">${labelStatusFinanceiro}</span>
+                </div>
+            </td>
+            <td class="text-end pe-3">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn-pedido-view"><i class="bi bi-eye"></i></button>
+                    <button class="btn-pedido-edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn-pedido-delete"><i class="bi bi-trash"></i></button>
+                </div>
+            </td>
+        </tr>
+    `;
+    }
+
     function _renderizarTabela(pedidos) {
         if (!els.tbody) { console.error('[pedidos.js] ❌ tbody não encontrado'); return; }
 
@@ -431,7 +550,7 @@
             els.tbody.innerHTML =
                 '<tr><td colspan="6" class="text-center text-muted py-4">' +
                 '<i class="bi bi-inbox d-block mb-2" style="font-size:2rem;"></i>' +
-                'Nenhum pedido encontrado</td></tr>';
+                'Nenhum pedido encontrado.</td></tr>';
 
             if (els.infoPaginacao) els.infoPaginacao.textContent = 'Pág 0 de 0';
             if (els.btnPrev) els.btnPrev.disabled = true;
@@ -463,6 +582,16 @@
         _spinFeedback();
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     }
+
+    document.getElementById('btn-abrir-calendario-pedidos').addEventListener('click', () => {
+        const input = document.getElementById('filtro-data-pedidos');
+        if (input.showPicker) {
+            input.showPicker();
+        } else {
+            input.focus();
+            input.click();
+        }
+    });
 
     window.RDO_PEDIDOS.reabrirPedido = function () {
         var btn = document.getElementById('btn-reabrir-pedido');
@@ -860,7 +989,7 @@
             _s('det-cliente', _resolverNomeCliente(pedido));
             _s('det-mercadoria', pedido.mercadoria || '—');
             _s('det-retorno', pedido.retorno || 'Não');
-            _s('det-prioridade', pedido.prioridade || '0');
+            _s('det-prioridade', _labelPrioridade(pedido.prioridade));
             _s('det-de', pedido.de || '—');
             _s('det-para', pedido.para || '—');
             _s('det-motoboy', _resolverMotoboy(pedido) || '—');
@@ -945,6 +1074,11 @@
             _s('edit-espera-tipo', pedido.espera_tipo || 'sem_espera');
             _s('edit-espera-minutos', pedido.espera_minutos || '');
 
+            _s('esp-cliente', _resolverNomeCliente(pedido));
+            _s('esp-mercadoria', pedido.mercadoria || '—');
+            _s('esp-retorno', pedido.retorno || 'Não');
+            _s('esp-prioridade', _labelPrioridade(pedido.prioridade));
+
             var tituloEl = document.getElementById('editar-titulo');
             if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
 
@@ -978,77 +1112,6 @@
             }
         }
         throw ultimoErro;
-    }
-
-    async function _fetchPedidos() {
-        if (window.pedidosState.isFetching) return;
-        if (window.pedidosState.dadosCarregados && !window.pedidosState.emAcao) return;
-
-        window.pedidosState.isFetching = true;
-        window.pedidosState.emAcao = false;
-        _spinOn();
-        _mostrarLoading();
-
-        var loadingContent = document.getElementById('pedidos-loading-state');
-        var errorContent = document.getElementById('pedidos-error-state');
-        var errorText = document.getElementById('pedidos-error-text');
-        var btnRetry = document.getElementById('btn-retry-pedidos');
-
-        if (loadingContent) loadingContent.classList.remove('d-none');
-        if (errorContent) errorContent.classList.add('d-none');
-
-        try {
-            if (typeof API === 'undefined' || typeof API.call !== 'function')
-                throw new Error('API.call indefinido');
-
-            var respChat = await _fetchComRetry('getchat');
-            window.AppRDO.chatsCache = Array.isArray(respChat) ? respChat : [];
-
-            var respPedidos = await _fetchComRetry('getpedidos');
-            var pedidos = [];
-            if (Array.isArray(respPedidos)) {
-                pedidos = respPedidos;
-            } else if (respPedidos && typeof respPedidos === 'object') {
-                pedidos = Array.isArray(respPedidos.pedidos) ? respPedidos.pedidos :
-                    Array.isArray(respPedidos.data) ? respPedidos.data : [];
-            }
-
-            window.AppRDO.pedidosCache = pedidos;
-            window.pedidosState.dadosCarregados = true;
-            _renderizarTabela(pedidos);
-            _esconderLoading();
-
-        } catch (e) {
-            console.error('[pedidos.js] ❌ Erro no fetch:', e);
-
-            var msg = e && e.message ? e.message : 'Erro desconhecido ao buscar pedidos.';
-
-            if (loadingContent) loadingContent.classList.add('d-none');
-            if (errorContent) errorContent.classList.remove('d-none');
-            if (errorText) errorText.textContent = msg;
-
-            if (btnRetry) {
-                btnRetry.onclick = function () {
-                    window.pedidosState.dadosCarregados = false;
-                    window.pedidosState.emAcao = true;
-                    _fetchPedidos();
-                };
-            }
-
-            if (window.PedidosErro && typeof window.PedidosErro.mostrar === 'function') {
-                window.PedidosErro.mostrar(msg);
-            }
-
-            if (els.tbody && window.pedidosState.dadosCarregados === false) {
-                els.tbody.innerHTML =
-                    '<tr><td colspan="6" class="text-center text-danger py-4">' +
-                    '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>' +
-                    'Erro: ' + _escHtml(msg) + '</td></tr>';
-            }
-        } finally {
-            window.pedidosState.isFetching = false;
-            _spinOff();
-        }
     }
 
     function _registrarEventos() {
@@ -1124,7 +1187,6 @@
                 if (!menu) return;
                 var isMobile = window.innerWidth <= 576;
                 if (!isMobile) {
-                    // Desktop: limpa estilos inline, volta ao comportamento normal do CSS (absolute)
                     menu.style.position = '';
                     menu.style.top = '';
                     menu.style.left = '';
@@ -1137,8 +1199,7 @@
                 var menuWidth = Math.min(window.innerWidth * 0.92, 260);
                 var margem = 8;
 
-                var left = rectBtn.left; // tenta alinhar à esquerda do botão
-                // Clampa para não sair da tela nem à direita nem à esquerda
+                var left = rectBtn.left;
                 if (left + menuWidth > window.innerWidth - margem) {
                     left = window.innerWidth - menuWidth - margem;
                 }
@@ -1243,7 +1304,6 @@
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
-        // 🔗 Ouve a baixa/atualização feita no financeiro e reflete no pedido
         window.EventBus.on('financeiro:situacaoAtualizada', function (dados) {
             if (!dados || !dados.idPedido) return;
             var idStr = String(dados.idPedido).trim();
@@ -1256,7 +1316,6 @@
             if (!pedido) return;
 
             pedido.situacao_financeira = dados.situacaoFinanceira;
-            // ❌ REMOVIDO: pedido.status = dados.statusPedido;
 
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
@@ -1276,7 +1335,6 @@
             _dispararSync();
         });
 
-        // 🔴 NOVO: exclusão lógica do chat (disparada ao cancelar um pedido)
         window.EventBus.on('chat:excluidoLogico', function (dados) {
             if (!window.AppRDO || !Array.isArray(window.AppRDO.chatsCache)) return;
             var idStr = String((dados && dados.pedidoId) || '').trim();
@@ -1378,12 +1436,37 @@
         };
     }
 
+    function _salvarCacheLocal(pedidos, chats) {
+        try {
+            localStorage.setItem(PEDIDOS_LS_KEY, JSON.stringify({
+                pedidos: pedidos || [],
+                chats: chats || [],
+                salvoEm: Date.now()
+            }));
+        } catch (e) {
+            console.warn('[pedidos.js] ⚠️ Falha ao salvar cache local:', e);
+        }
+    }
+
+    function _lerCacheLocal() {
+        try {
+            var raw = localStorage.getItem(PEDIDOS_LS_KEY);
+            if (!raw) return null;
+            var parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.pedidos)) return null;
+            return parsed;
+        } catch (e) {
+            console.warn('[pedidos.js] ⚠️ Cache local corrompido, ignorando:', e);
+            return null;
+        }
+    }
+
     function _configurarInfoHoverStatus() {
         var itens = Array.prototype.slice.call(document.querySelectorAll('.ped-status-action-item'));
         if (!itens.length) return;
 
         function _isMobile() {
-            return window.innerWidth <= 576;
+            return window.innerWidth <= 767; // era 576
         }
 
         itens.forEach(function (item) {
@@ -1437,7 +1520,17 @@
         _registrarEventosEventBus();
         _configurarBotaoCalendario();
         _configurarInfoHoverStatus();
-        _fetchPedidos();
+
+        var cacheLocal = _lerCacheLocal();
+        if (cacheLocal) {
+            window.AppRDO.pedidosCache = cacheLocal.pedidos;
+            window.AppRDO.chatsCache = cacheLocal.chats;
+            window.pedidosState.dadosCarregados = true;
+            _renderizarTabela(window.AppRDO.pedidosCache);
+            _fetchPedidos({ silencioso: true });
+        } else {
+            _fetchPedidos();
+        }
 
         console.log('[pedidos.js] Pronto!');
     };

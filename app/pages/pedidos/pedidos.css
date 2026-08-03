@@ -87,13 +87,10 @@
 }
 
 @keyframes pedidosLoadingSpin {
-
-    0%,
-    100% {
+    0%, 100% {
         transform: scale(1);
         opacity: 0.7;
     }
-
     50% {
         transform: scale(1.15);
         opacity: 1;
@@ -124,13 +121,9 @@
 }
 
 @keyframes pedidosLoadingDots {
-
-    0%,
-    80%,
-    100% {
+    0%, 80%, 100% {
         opacity: 0;
     }
-
     40% {
         opacity: 1;
     }
@@ -185,7 +178,6 @@
         opacity: 0;
         transform: translateX(20px);
     }
-
     to {
         opacity: 1;
         transform: translateX(0);
@@ -285,10 +277,9 @@
 .status-badges-row {
     display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 4px;
-    overflow-x: auto;
 }
 
 .status-badges-row .status-badge {
@@ -329,7 +320,6 @@
     from {
         transform: rotate(0deg);
     }
-
     to {
         transform: rotate(360deg);
     }
@@ -395,7 +385,6 @@
     from {
         opacity: 0;
     }
-
     to {
         opacity: 1;
     }
@@ -768,10 +757,7 @@
 .ped-status-row {
     display: flex;
     gap: 10px;
-}
-
-.ped-status-row .ped-status-action-item {
-    flex: 1;
+    position: relative;
 }
 
 .ped-status-action-item {
@@ -1052,297 +1038,66 @@
 }
 
 @media (max-width: 767.98px) {
-
-    #modalEditarPedido .modal-pedido-body .row,
-    #modalNovoPedido .modal-pedido-body .row,
-    #modalPedidoDetalhes .modal-pedido-body .row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        margin-right: -6px;
-        margin-left: -6px;
+    .ped-status-action-info {
+        display: none;
     }
 
-    #modalEditarPedido .modal-pedido-body .row>[class*="col-"],
-    #modalNovoPedido .modal-pedido-body .row>[class*="col-"],
-    #modalPedidoDetalhes .modal-pedido-body .row>[class*="col-"] {
-        flex: 0 0 auto !important;
-        width: auto !important;
-        max-width: none !important;
-        padding-right: 6px;
-        padding-left: 6px;
-        box-sizing: border-box;
+    .ped-status-action-item.mostrar-info {
+        z-index: 30;
     }
 
-    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-2,
-    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-2,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-2 {
-        flex-basis: 16.6667% !important;
-        width: 16.6667% !important;
+    .ped-status-action-item.mostrar-info .ped-status-action-info {
+        display: block;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        white-space: normal;
+        overflow: visible;
+        z-index: 31;
     }
+}
 
-    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-3,
-    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-3,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-3 {
-        flex-basis: 25% !important;
-        width: 25% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-4,
-    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-4,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-4 {
-        flex-basis: 33.3333% !important;
-        width: 33.3333% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-12.col-sm-6,
-    #modalNovoPedido .modal-pedido-body .row>.col-12.col-sm-6,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-12.col-sm-6 {
-        flex-basis: 50% !important;
-        width: 50% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-3,
-    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-3,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-3 {
-        flex-basis: 25% !important;
-        width: 25% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-4,
-    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-4,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-4 {
-        flex-basis: 33.3333% !important;
-        width: 33.3333% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-6.col-sm-6,
-    #modalNovoPedido .modal-pedido-body .row>.col-6.col-sm-6,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-6.col-sm-6 {
-        flex-basis: 50% !important;
-        width: 50% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-4.col-sm-4,
-    #modalNovoPedido .modal-pedido-body .row>.col-4.col-sm-4,
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-4.col-sm-4 {
-        flex-basis: 33.3333% !important;
-        width: 33.3333% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-body .row>.col-12:not([class*="col-sm-"]),
-    #modalNovoPedido .modal-pedido-body .row>.col-12:not([class*="col-sm-"]),
-    #modalPedidoDetalhes .modal-pedido-body .row>.col-12:not([class*="col-sm-"]) {
-        flex-basis: 100% !important;
-        width: 100% !important;
-    }
-
-    #modalEditarPedido .modal-pedido-field-label,
-    #modalNovoPedido .modal-pedido-field-label,
-    #modalPedidoDetalhes .modal-pedido-field-label {
-        font-size: 0.68rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    #modalEditarPedido .modal-pedido-input,
-    #modalNovoPedido .modal-pedido-input,
-    #modalPedidoDetalhes .modal-pedido-input {
-        font-size: 0.78rem;
-        padding: 0.35rem 0.5rem;
+@media (min-width: 768px) {
+    #tabela-pedidos th.d-none.d-md-table-cell,
+    #tabela-pedidos td.d-none.d-md-table-cell {
+        display: table-cell !important;
     }
 }
 
 @media (max-width: 576px) {
-    .pedidos-content-area .d-flex.align-items-center.justify-content-end.gap-2.flex-wrap {
+    .row-det-cliente-info {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+
+    .row-det-cliente-info > [class*="col-"] {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+
+    .row-det-motoboy-status,
+    .row-det-valores {
+        display: flex !important;
         flex-wrap: nowrap !important;
-        gap: 6px;
-        width: 100%;
     }
 
-    .dropdown-filtro-wrapper {
-        flex-shrink: 0;
+    .row-det-motoboy-status > [class*="col-"] {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
     }
 
-    .btn-filtro-inteligente {
-        padding: 4px 6px;
-        gap: 3px;
-    }
-
-    .btn-filtro-inteligente span {
-        display: none;
-    }
-
-    .posicao-busca-wrapper {
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: none;
-    }
-
-    .input-filtro-pedidos {
-        max-width: none;
-        width: 100%;
-        min-width: 0;
-        padding-left: 10px;
-        padding-right: 24px;
-        font-size: 0.75rem;
-    }
-
-    .pedidos-content-area .btn-limpar-busca {
-        right: 6px;
-    }
-
-    .calendario-btn-wrapper {
-        flex-shrink: 0;
-    }
-
-    .btn-icon-calendario {
-        width: 31px;
-        height: 31px;
-        font-size: 0.8rem;
-    }
-
-    .status-badges-row {
-        gap: 3px;
-    }
-
-    .status-badges-row .status-badge {
-        font-size: var(--rdo-lista-badge-font-size-mobile);
-        padding: 3px 8px;
-    }
-
-    .dropdown-filtro-menu {
-        right: 0;
-        left: auto;
-        width: 180px;
-        max-width: 180px;
-    }
-
-    .dropdown-filtro-item {
-        padding: 6px 10px;
-        font-size: 0.7rem;
-    }
-
-    .modal-pedido-espera-resumo-body {
-        flex-wrap: wrap;
-    }
-
-    .modal-pedido-espera-resumo-item {
-        min-width: 45%;
-        border-bottom: 1px solid #f5e6e8;
-    }
-
-    .modal-pedido-espera-resumo-sep {
-        display: none;
-    }
-
-    .btn-pedido-view,
-    .btn-pedido-edit,
-    .btn-pedido-delete {
-        width: var(--rdo-lista-btn-size-mobile);
-        height: var(--rdo-lista-btn-size-mobile);
-    }
-
-    .btn-pedido-view i,
-    .btn-pedido-edit i,
-    .btn-pedido-delete i {
-        font-size: var(--rdo-lista-btn-icon-size-mobile);
-    }
-
-    #tabela-pedidos td {
-        font-size: var(--rdo-lista-font-size-mobile);
-    }
-
-    #tabela-pedidos .td-mobile-hide,
-    #tabela-pedidos thead th.td-mobile-hide {
-        display: none;
-    }
-
-    #tabela-pedidos td:nth-child(1) {
-        white-space: nowrap;
-    }
-
-    .pedidos-error-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        max-width: none;
-    }
-
-    .ped-status-card {
-        padding: 10px 8px;
-    }
-
-    .ped-status-grid {
-        gap: 8px;
-    }
-
-    .ped-status-row {
-        gap: 6px;
-    }
-
-    .ped-status-action-item {
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 2px;
-        padding: 8px 4px;
-    }
-
-    .ped-icon-lg {
-        width: 40px;
-        height: 40px;
-        font-size: 1.15rem;
-    }
-
-    .ped-status-action-info {
-        display: none;
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%);
-        flex-direction: row;
-        align-items: baseline;
-        gap: 6px;
-        background: #fff;
-        border: 1px solid #f0d0d3;
-        border-radius: 10px;
-        padding: 6px 12px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        z-index: 25;
-        white-space: nowrap;
-    }
-
-    .ped-status-action-item.mostrar-info .ped-status-action-info {
-        display: flex;
-        animation: pedInfoMobilePop 0.15s ease;
-    }
-
-    .ped-status-row .ped-status-action-item:last-child .ped-status-action-info {
-        left: auto;
-        right: 0;
-        transform: none;
-    }
-
-    .ped-status-row .ped-status-action-item:first-child .ped-status-action-info {
-        left: 0;
-        transform: none;
-    }
-
-    .ped-status-action-label {
-        white-space: nowrap;
-        overflow: visible;
-    }
-
-    @keyframes pedInfoMobilePop {
-        from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-4px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
+    .row-det-valores > [class*="col-"] {
+        flex: 0 0 33.3333% !important;
+        max-width: 33.3333% !important;
     }
 }
+
+

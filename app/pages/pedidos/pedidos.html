@@ -27,24 +27,30 @@
                             <div class="ped-status-card">
                                 <div class="ped-status-card-inner ped-status-grid">
                                     <div class="ped-status-row">
-                                        <div class="ped-status-action-item active" id="ped-filter-todos" data-status-filter="todos">
-                                            <div class="ped-status-action-icon ped-icon-todos ped-icon-lg"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                                        <div class="ped-status-action-item active" id="ped-filter-todos"
+                                            data-status-filter="todos">
+                                            <div class="ped-status-action-icon ped-icon-todos ped-icon-lg"><i
+                                                    class="bi bi-grid-3x3-gap-fill"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">Todos</span>
                                                 <span class="ped-status-action-count" id="ped-count-todos">0</span>
                                                 <span class="ped-status-action-pct" id="ped-pct-todos">de 0</span>
                                             </div>
                                         </div>
-                                        <div class="ped-status-action-item" id="ped-filter-pendente" data-status-filter="pendente">
-                                            <div class="ped-status-action-icon ped-icon-pendente ped-icon-lg"><i class="bi bi-hourglass-split"></i></div>
+                                        <div class="ped-status-action-item" id="ped-filter-pendente"
+                                            data-status-filter="pendente">
+                                            <div class="ped-status-action-icon ped-icon-pendente ped-icon-lg"><i
+                                                    class="bi bi-hourglass-split"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">Pendentes</span>
                                                 <span class="ped-status-action-count" id="ped-count-pendente">0</span>
                                                 <span class="ped-status-action-pct" id="ped-pct-pendente">0%</span>
                                             </div>
                                         </div>
-                                        <div class="ped-status-action-item" id="ped-filter-em_rota" data-status-filter="em_rota">
-                                            <div class="ped-status-action-icon ped-icon-em-rota ped-icon-lg"><i class="bi bi-signpost-split-fill"></i></div>
+                                        <div class="ped-status-action-item" id="ped-filter-em_rota"
+                                            data-status-filter="em_rota">
+                                            <div class="ped-status-action-icon ped-icon-em-rota ped-icon-lg"><i
+                                                    class="bi bi-signpost-split-fill"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">Em Rota</span>
                                                 <span class="ped-status-action-count" id="ped-count-em_rota">0</span>
@@ -53,28 +59,36 @@
                                         </div>
                                     </div>
                                     <div class="ped-status-row">
-                                        <div class="ped-status-action-item" id="ped-filter-concluido" data-status-filter="concluido">
-                                            <div class="ped-status-action-icon ped-icon-concluido ped-icon-lg"><i class="bi bi-check-circle-fill"></i></div>
+                                        <div class="ped-status-action-item" id="ped-filter-concluido"
+                                            data-status-filter="concluido">
+                                            <div class="ped-status-action-icon ped-icon-concluido ped-icon-lg"><i
+                                                    class="bi bi-check-circle-fill"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">Concluídos</span>
                                                 <span class="ped-status-action-count" id="ped-count-concluido">0</span>
                                                 <span class="ped-status-action-pct" id="ped-pct-concluido">0%</span>
                                             </div>
                                         </div>
-                                        <div class="ped-status-action-item" id="ped-filter-cancelado" data-status-filter="cancelado">
-                                            <div class="ped-status-action-icon ped-icon-cancelado ped-icon-lg"><i class="bi bi-x-circle-fill"></i></div>
+                                        <div class="ped-status-action-item" id="ped-filter-cancelado"
+                                            data-status-filter="cancelado">
+                                            <div class="ped-status-action-icon ped-icon-cancelado ped-icon-lg"><i
+                                                    class="bi bi-x-circle-fill"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">Cancelados</span>
                                                 <span class="ped-status-action-count" id="ped-count-cancelado">0</span>
                                                 <span class="ped-status-action-pct" id="ped-pct-cancelado">0%</span>
                                             </div>
                                         </div>
-                                        <div class="ped-status-action-item" id="ped-filter-pendente_financeiro" data-status-filter="pendente_financeiro">
-                                            <div class="ped-status-action-icon ped-icon-financeiro ped-icon-lg"><i class="bi bi-cash-coin"></i></div>
+                                        <div class="ped-status-action-item" id="ped-filter-pendente_financeiro"
+                                            data-status-filter="pendente_financeiro">
+                                            <div class="ped-status-action-icon ped-icon-financeiro ped-icon-lg"><i
+                                                    class="bi bi-cash-coin"></i></div>
                                             <div class="ped-status-action-info">
                                                 <span class="ped-status-action-label">A Receber</span>
-                                                <span class="ped-status-action-count" id="ped-count-pendente_financeiro">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-pendente_financeiro">0%</span>
+                                                <span class="ped-status-action-count"
+                                                    id="ped-count-pendente_financeiro">0</span>
+                                                <span class="ped-status-action-pct"
+                                                    id="ped-pct-pendente_financeiro">0%</span>
                                             </div>
                                         </div>
                                     </div>
@@ -105,14 +119,17 @@
                                     <input type="text" id="filtro-pedidos"
                                         class="form-control form-control-sm rounded-pill input-filtro-pedidos"
                                         placeholder="Buscar..." autocomplete="off">
-                                    <button type="button" id="btn-limpar-busca-pedidos" class="btn-limpar-busca d-none" title="Limpar busca">
+                                    <button type="button" id="btn-limpar-busca-pedidos" class="btn-limpar-busca d-none"
+                                        title="Limpar busca">
                                         <i class="bi bi-x-circle-fill"></i>
                                     </button>
                                 </div>
 
                                 <div class="calendario-btn-wrapper">
-                                    <input type="date" id="filtro-data-pedidos" class="input-filtro-data-pedidos-hidden" title="Filtrar por data">
-                                    <button type="button" id="btn-abrir-calendario-pedidos" class="btn-icon-calendario" title="Filtrar por data">
+                                    <input type="date" id="filtro-data-pedidos" class="input-filtro-data-pedidos-hidden"
+                                        title="Filtrar por data">
+                                    <button type="button" id="btn-abrir-calendario-pedidos" class="btn-icon-calendario"
+                                        title="Filtrar por data">
                                         <i class="bi bi-calendar3"></i>
                                     </button>
                                 </div>
@@ -124,11 +141,13 @@
                         <div id="pedidos-loading-overlay" class="pedidos-loading-overlay">
                             <div class="pedidos-loading-content" id="pedidos-loading-state">
                                 <i class="bi bi-search pedidos-loading-spin"></i>
-                                <span class="pedidos-loading-text">Buscando pedidos<span class="pedidos-loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                <span class="pedidos-loading-text">Buscando pedidos<span
+                                        class="pedidos-loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
                             </div>
                             <div class="pedidos-error-content d-none" id="pedidos-error-state">
                                 <i class="bi bi-exclamation-triangle-fill pedidos-error-icon-overlay"></i>
-                                <span class="pedidos-error-text" id="pedidos-error-text">Ocorreu um erro ao buscar os pedidos.</span>
+                                <span class="pedidos-error-text" id="pedidos-error-text">Ocorreu um erro ao buscar os
+                                    pedidos.</span>
                                 <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="btn-retry-pedidos">
                                     <i class="bi bi-arrow-clockwise"></i> Tentar novamente
                                 </button>
@@ -149,16 +168,16 @@
                         <table class="table table-hover align-middle border-0 mb-0" id="tabela-pedidos">
                             <thead class="text-uppercase tabela-pedidos-head">
                                 <tr>
-                                    <th class="border-0 fw-normal td-mobile-hide">
-                                        <button class="btn-sort-data" id="btn-sort-data-pedidos" title="Ordenar por N.Serviço">
-                                            <i class="bi bi-arrow-down" id="icon-sort-data-pedidos"></i>
+                                    <th class="ps-3 border-0 fw-normal">
+                                        <button id="btn-sort-data-pedidos"
+                                            class="btn btn-link p-0 text-decoration-none text-dark d-flex align-items-center gap-1">
+                                            Data <i id="icon-sort-data-pedidos" class="bi bi-arrow-down"></i>
                                         </button>
-                                        N.Serviço
                                     </th>
-                                    <th class="border-0 fw-normal">Data</th>
                                     <th class="border-0 fw-normal">Cliente</th>
-                                    <th class="border-0 fw-normal td-mobile-hide">Motoboy</th>
-                                    <th class="border-0 fw-normal td-mobile-hide">Status</th>
+                                    <th class="border-0 fw-normal d-none d-md-table-cell">N. Serviço</th>
+                                    <th class="border-0 fw-normal d-none d-md-table-cell">Motoboy</th>
+                                    <th class="border-0 fw-normal">Status</th>
                                     <th class="text-end pe-3 border-0 fw-normal">Ações</th>
                                 </tr>
                             </thead>
