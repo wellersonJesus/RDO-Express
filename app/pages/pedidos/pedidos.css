@@ -312,8 +312,14 @@
 }
 
 .spinner-rotate {
+    animation: spin-rotate 0.8s linear infinite;
     display: inline-block;
-    animation: spin-loop 0.8s linear infinite;
+}
+
+
+@keyframes spin-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 @keyframes spin-loop {

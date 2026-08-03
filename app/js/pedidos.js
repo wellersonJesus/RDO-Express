@@ -362,6 +362,20 @@
         spinFeedbackTimer = setTimeout(_spinOff, 500);
     }
 
+    function _setBotaoLoading(btn, loading, iconClassDefault, textoDefault) {
+        if (!btn) return;
+        if (loading) {
+            btn.disabled = true;
+            btn.setAttribute('data-html-original', btn.innerHTML);
+            btn.innerHTML = '<i class="bi bi-arrow-repeat spinner-rotate me-1"></i>Salvando...';
+        } else {
+            btn.disabled = false;
+            var original = btn.getAttribute('data-html-original');
+            btn.innerHTML = original || ('<i class="' + iconClassDefault + ' me-1"></i>' + textoDefault);
+            btn.removeAttribute('data-html-original');
+        }
+    }
+
     function _mostrarLoading() {
         if (els.loadingOverlay) els.loadingOverlay.classList.remove('d-none');
     }
@@ -787,14 +801,13 @@
             espera_tipo: tipo,
             espera_minutos: minutos,
             taxa_espera: taxa,
+            // 🔧 Envia TODOS os campos de valor que o backend/frontend podem consultar
+            valor_corrida: valorFinal,
             valor_total: valorFinal,
             valor_final: valorFinal
         };
 
-        if (btnSalvar) {
-            btnSalvar.disabled = true;
-            btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-        }
+        _setBotaoLoading(btnSalvar, true);
 
         API.call('updatepedido', payload)
             .then(function (res) {
@@ -815,11 +828,15 @@
                         espera_tipo: payload.espera_tipo,
                         espera_minutos: payload.espera_minutos,
                         taxa_espera: payload.taxa_espera,
+                        // 🔧 Atualiza também valor_corrida no cache local,
+                        // pois _resolverValor() prioriza esse campo
+                        valor_corrida: payload.valor_corrida,
                         valor_total: payload.valor_total,
                         valor_final: payload.valor_final
                     });
                 }
 
+                // só renderiza a tabela DEPOIS da confirmação do backend
                 _renderizarTabela(window.AppRDO.pedidosCache);
 
                 var modalEl = document.getElementById('modalEditarPedido');
@@ -831,6 +848,7 @@
                 if (typeof window.EventBus !== 'undefined')
                     window.EventBus.emit('pedido:atualizado', {
                         id: pedidoId,
+                        valor_corrida: valorFinal,
                         valor_total: valorFinal,
                         valor_final: valorFinal
                     });
@@ -846,10 +864,7 @@
                 if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
             })
             .finally(function () {
-                if (btnSalvar) {
-                    btnSalvar.disabled = false;
-                    btnSalvar.innerHTML = '<i class="bi bi-check-lg me-1"></i>SALVAR';
-                }
+                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
             });
     };
 
@@ -879,10 +894,7 @@
             return;
         }
 
-        if (btnSalvar) {
-            btnSalvar.disabled = true;
-            btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
-        }
+        _setBotaoLoading(btnSalvar, true);
 
         API.call('createpedido', payload)
             .then(function (res) {
@@ -915,10 +927,7 @@
                 if (errEl) { errEl.textContent = err.message || 'Falha ao criar.'; errEl.classList.remove('d-none'); }
             })
             .finally(function () {
-                if (btnSalvar) {
-                    btnSalvar.disabled = false;
-                    btnSalvar.innerHTML = '<i class="bi bi-plus-lg me-1"></i>CRIAR PEDIDO';
-                }
+                _setBotaoLoading(btnSalvar, false, 'bi bi-plus-lg', 'CRIAR PEDIDO');
             });
     };
 
@@ -1069,7 +1078,19 @@
     };
 
     window.RDO_PEDIDOS.salvarValorPedido = function () {
+        var btn = document.getElementById('btn-salvar-valor-pedido');
+        _setBotaoLoading(btn, true);
+        // salvarEdicao já cuida do loading do btn-salvar-edicao;
+        // aqui só espelhamos visualmente no botão específico, se existir
         window.RDO_PEDIDOS.salvarEdicao();
+        // libera o botão específico quando o modal fechar (edição concluída)
+        var modalEl = document.getElementById('modalEditarPedido');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function onHide() {
+                _setBotaoLoading(btn, false, 'bi bi-check-lg', 'SALVAR');
+                modalEl.removeEventListener('hidden.bs.modal', onHide);
+            });
+        }
     };
 
     async function _fetchComRetry(endpoint, tentativas) {
@@ -1368,11 +1389,13 @@
                 return String(p.id || '').trim() === idStr;
             });
             if (pedido) {
+                if (dados.valor_corrida !== undefined) pedido.valor_corrida = dados.valor_corrida; // 🔧 novo
                 if (dados.valor_total !== undefined) pedido.valor_total = dados.valor_total;
                 if (dados.valor_final !== undefined) pedido.valor_final = dados.valor_final;
             }
             _renderizarTabela(window.AppRDO.pedidosCache);
         });
+
     }
 
     function _configurarBotaoCalendario() {
