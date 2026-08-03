@@ -84,6 +84,78 @@ window.PERMISSOES_PADRAO = {
     'SRE Architect': ['Dashboard', 'Chat', 'Pedidos', 'Administração', 'Financeiro', 'Relatórios', 'Bot']
 };
 
+window.SUBABAS_RELATORIO_PADRAO = {
+    'Atendente': ['motoboys', 'clientes'],
+    'Financeiro': ['motoboys', 'clientes', 'financeiro', 'global'],
+    'Gestor': ['motoboys', 'clientes', 'financeiro', 'global'],
+    'Administrativo': ['motoboys', 'clientes', 'financeiro', 'global'],
+    'SRE Architect': ['motoboys', 'clientes', 'financeiro', 'global']
+};
+
+function _obterSubAbasRelatorioEfetivas(usuario) {
+    if (!usuario) return [];
+    var padrao = window.SUBABAS_RELATORIO_PADRAO[usuario.cargo] || [];
+
+    if (usuario.id) {
+        try {
+            var storageKey = 'subabas_relatorio_usuario_' + usuario.id;
+            var stored = localStorage.getItem(storageKey);
+            if (stored) {
+                var parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) { }
+    }
+
+    return padrao;
+}
+
+function _usuarioAtualSubAbasRelatorio() {
+    var usuario = _usuarioLogadoBot();
+    return _obterSubAbasRelatorioEfetivas(usuario);
+}
+
+window.aplicarControleAbasRelatorio = function () {
+    var abasNav = document.querySelectorAll('.rel-tab[data-tab]');
+    if (!abasNav.length) return;
+
+    var primeiraPermitidaTab = null;
+    var abaAtivaBloqueada = false;
+    var tabAtivo = null;
+
+    abasNav.forEach(function (aba) {
+        var chave = aba.getAttribute('data-tab');
+        var permitido = subAbasPermitidas.indexOf(chave) !== -1;
+
+        aba.classList.remove('aba-relatorio-bloqueada');
+        var cadeadoExistente = aba.querySelector('.icone-cadeado-aba-relatorio');
+        if (cadeadoExistente) cadeadoExistente.remove();
+
+        if (permitido) {
+            aba.style.display = '';
+            if (!primeiraPermitidaTab) primeiraPermitidaTab = chave;
+            if (aba.classList.contains('active')) tabAtivo = chave;
+        } else {
+            aba.style.display = 'none';
+            aba.classList.add('aba-relatorio-bloqueada');
+            if (aba.classList.contains('active')) abaAtivaBloqueada = true;
+        }
+    });
+
+    if ((abaAtivaBloqueada || !tabAtivo) && primeiraPermitidaTab) {
+        _ativarAbaRelatorio(primeiraPermitidaTab);
+    }
+};
+
+function _ativarAbaRelatorio(tab) {
+    document.querySelectorAll('.rel-tab[data-tab]').forEach(function (aba) {
+        aba.classList.toggle('active', aba.getAttribute('data-tab') === tab);
+    });
+    document.querySelectorAll('.rel-tab-content').forEach(function (conteudo) {
+        conteudo.classList.toggle('active', conteudo.id === 'rel-tab-content-' + tab);
+    });
+}
+
 function normalizeStatus(val, fallback) {
     fallback = fallback || 'FALSE';
     if (val === true || val === 1) return 'TRUE';
@@ -872,7 +944,7 @@ window.salvarUsuarioBot = async function () {
             payload.id = id;
             resultado = await window.API.call('updateusuarios', payload);
         } else {
-            resultado = await window.API.call('addusuarios', payload); 
+            resultado = await window.API.call('addusuarios', payload);
         }
 
         var idFinal = id || (resultado && (resultado.id || (resultado.data && resultado.data.id))) || '';
@@ -1180,6 +1252,7 @@ window.aplicarControleWidgetsDashboard = function () {
 window.aplicarPermissoesUsuario = function () {
     window.aplicarControleAcessoModulos();
     window.aplicarControleWidgetsDashboard();
+    window.aplicarControleAbasRelatorio();
 };
 
 if (!window._bloqueioModuloDelegado) {
@@ -1197,6 +1270,23 @@ if (!window._bloqueioModuloDelegado) {
         });
     }, true);
     window._bloqueioModuloDelegado = true;
+}
+
+if (!window._bloqueioAbaRelatorioDelegado) {
+    document.addEventListener('click', function (e) {
+        var abaBloqueada = e.target.closest('.rel-tab.aba-relatorio-bloqueada');
+        if (!abaBloqueada) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acesso restrito',
+            text: 'Você não tem acesso a essa aba do relatório.',
+            confirmButtonColor: '#dc3545'
+        });
+    }, true);
+    window._bloqueioAbaRelatorioDelegado = true;
 }
 
 document.addEventListener('DOMContentLoaded', function () {
