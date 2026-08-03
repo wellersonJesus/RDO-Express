@@ -138,10 +138,9 @@
 
             </div>
             <div class="user-area d-flex align-items-center gap-3">
-                <div class="text-end d-none d-md-block">
-                    <div id="display-username" class="fw-bold small text-dark">...</div>
-                    <div id="display-cargo" class="text-danger small" style="font-size:0.7rem;font-weight:600;">...
-                    </div>
+                <div class="text-end user-info-header">
+                    <div id="display-username" class="user-info-nome">...</div>
+                    <div id="display-cargo" class="user-info-cargo">...</div>
                 </div>
                 <div id="avatar-container"
                     style="width:40px;height:40px;border-radius:50%;overflow:hidden;cursor:pointer;background:#dc3545;display:flex;align-items:center;justify-content:center;">
@@ -206,6 +205,88 @@
             if (el) bootstrap.Modal.getOrCreateInstance(el).show();
         }
 
+        window.mostrarHeaderLoading = function () {
+            var wrap = document.getElementById('header-loading-wrap');
+            var texto = document.getElementById('header-subtitle-text');
+            if (wrap) wrap.classList.remove('d-none');
+            if (texto) texto.classList.add('d-none');
+        };
+
+        window.ocultarHeaderLoading = function (subtitulo) {
+            var wrap = document.getElementById('header-loading-wrap');
+            var texto = document.getElementById('header-subtitle-text');
+            if (wrap) wrap.classList.add('d-none');
+            if (texto) {
+                texto.textContent = subtitulo || texto.textContent;
+                texto.classList.remove('d-none');
+            }
+        };
+
+        window.atualizarHeaderUsuario = function () {
+            try {
+                var elUsername = document.getElementById('display-username');
+                var elCargo = document.getElementById('display-cargo');
+
+                if (!elUsername || !elCargo) {
+                    console.error('[HEADER-USER] Elementos não encontrados no DOM.', {
+                        elUsername: elUsername,
+                        elCargo: elCargo
+                    });
+                    return;
+                }
+
+                var username = localStorage.getItem('username');
+                var tipo = localStorage.getItem('tipo');
+                var cargo = localStorage.getItem('cargo');
+                var userCargo = localStorage.getItem('user_cargo');
+                var role = localStorage.getItem('role');
+
+                console.log('[HEADER-USER] Valores brutos do localStorage:', {
+                    username: username,
+                    tipo: tipo,
+                    cargo: cargo,
+                    user_cargo: userCargo,
+                    role: role
+                });
+
+                var cargoFinal = tipo || cargo || userCargo || role || '';
+                var usernameFinal = username || '';
+
+                if (typeof usernameFinal !== 'string') {
+                    usernameFinal = String(usernameFinal);
+                }
+                if (typeof cargoFinal !== 'string') {
+                    cargoFinal = String(cargoFinal);
+                }
+
+                usernameFinal = usernameFinal.trim();
+                cargoFinal = cargoFinal.trim();
+
+                if (!usernameFinal) {
+                    console.warn('[HEADER-USER] Nenhum "username" encontrado no localStorage. Verifique se o login está gravando essa chave corretamente.');
+                }
+                if (!cargoFinal) {
+                    console.warn('[HEADER-USER] Nenhum "tipo/cargo/user_cargo/role" encontrado no localStorage. Verifique se o login está gravando essa chave corretamente.');
+                }
+
+                elUsername.textContent = usernameFinal || 'Usuário';
+                elCargo.textContent = cargoFinal || 'Sem cargo definido';
+
+                console.log('[HEADER-USER] Header atualizado com sucesso:', {
+                    usernameExibido: elUsername.textContent,
+                    cargoExibido: elCargo.textContent
+                });
+
+            } catch (erro) {
+                console.error('[HEADER-USER] Erro inesperado ao atualizar header do usuário:', erro);
+
+                var elUsernameFallback = document.getElementById('display-username');
+                var elCargoFallback = document.getElementById('display-cargo');
+                if (elUsernameFallback) elUsernameFallback.textContent = 'Erro ao carregar';
+                if (elCargoFallback) elCargoFallback.textContent = '—';
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function () {
             if (!localStorage.getItem('rdo_auth')) {
                 window.location.replace('/pages/login/login.html');
@@ -216,6 +297,7 @@
                 window.atualizarAvatar();
             }
 
+            window.atualizarHeaderUsuario();
             var btnToggle = document.getElementById('btn-toggle-sidebar');
             var sidebarEl = document.getElementById('sidebar');
             var overlayEl = document.getElementById('sidebar-overlay');
@@ -307,22 +389,6 @@
             });
         });
 
-        window.mostrarHeaderLoading = function () {
-            var wrap = document.getElementById('header-loading-wrap');
-            var texto = document.getElementById('header-subtitle-text');
-            if (wrap) wrap.classList.remove('d-none');
-            if (texto) texto.classList.add('d-none');
-        };
-
-        window.ocultarHeaderLoading = function (subtitulo) {
-            var wrap = document.getElementById('header-loading-wrap');
-            var texto = document.getElementById('header-subtitle-text');
-            if (wrap) wrap.classList.add('d-none');
-            if (texto) {
-                texto.textContent = subtitulo || texto.textContent;
-                texto.classList.remove('d-none');
-            }
-        };
     </script>
 
 </body>

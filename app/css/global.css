@@ -52,6 +52,45 @@ body {
     overflow: hidden;
 }
 
+.user-info-header {
+    line-height: 1.15;
+    display: block;
+    max-width: 140px;
+    overflow: hidden;
+}
+
+.user-info-nome {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #212529;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-info-cargo {
+    font-weight: 400;
+    font-style: italic;
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+    .user-info-header {
+        max-width: 90px;
+    }
+    .user-info-nome {
+        font-size: 0.72rem;
+    }
+    .user-info-cargo {
+        font-size: 0.6rem;
+    }
+}
+
 body.sidebar-collapsed .main-content {
     margin-left: var(--sidebar-c);
     width: calc(100% - var(--sidebar-c));
@@ -156,21 +195,6 @@ body.sidebar-collapsed .main-content {
     display: flex;
     align-items: center;
     gap: 15px;
-}
-
-#display-username {
-    font-weight: 600;
-    color: #212529;
-    font-size: 0.9rem;
-}
-
-#display-cargo {
-    font-weight: 400 !important;
-    font-size: 0.75rem;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-style: italic;
 }
 
 .sidebar.collapsed .sidebar-logout-wrapper {

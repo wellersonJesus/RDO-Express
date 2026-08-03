@@ -130,13 +130,6 @@ function _aplicarVisibilidadeBloco(blocoId, usuario, modoOu) {
     return temAcesso;
 }
 
-function atualizarHeaderUsuario(usuario) {
-    var elNome = document.getElementById('user-display-name');
-    var elCargo = document.getElementById('user-display-cargo');
-    if (elNome) elNome.textContent = usuario.username;
-    if (elCargo) elCargo.textContent = usuario.cargo || '';
-}
-
 function syncStartDashboard() {
     var icon = document.getElementById('icon-refresh-dashboard');
     if (icon) icon.classList.add('spinner-rotate');
@@ -1354,9 +1347,12 @@ window.initDashboard = function () {
 
     var usuario = window.dashboardState.usuario || obterUsuarioLogado();
     window.dashboardState.usuario = usuario;
-    atualizarHeaderUsuario(usuario);
 
-    iniciarHeartbeat(); 
+    if (typeof window.atualizarHeaderUsuario === 'function') {
+        window.atualizarHeaderUsuario();
+    }
+
+    iniciarHeartbeat();
 
     var cacheLocal = _lerCacheLocalDashboard();
 
