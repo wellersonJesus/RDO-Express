@@ -501,30 +501,6 @@
         _set('pendente_financeiro', pendFin, total > 0 ? Math.round((pendFin / total) * 100) + '%' : '0%');
     }
 
-    function renderLinhaPedido(pedido) {
-        return `
-        <tr>
-            <td class="ps-3">${pedido.dataFormatada}</td>
-            <td>${pedido.cliente}</td>
-            <td class="d-none d-md-table-cell">${pedido.numeroServico}</td>
-            <td class="d-none d-md-table-cell">${pedido.motoboy ?? '-'}</td>
-            <td>
-                <div class="status-badges-row">
-                    <span class="status-badge ${classeStatusPedido}">${labelStatusPedido}</span>
-                    <span class="status-badge ${classeStatusFinanceiro}">${labelStatusFinanceiro}</span>
-                </div>
-            </td>
-            <td class="text-end pe-3">
-                <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn-pedido-view"><i class="bi bi-eye"></i></button>
-                    <button class="btn-pedido-edit"><i class="bi bi-pencil"></i></button>
-                    <button class="btn-pedido-delete"><i class="bi bi-trash"></i></button>
-                </div>
-            </td>
-        </tr>
-    `;
-    }
-
     function _renderizarTabela(pedidos) {
         if (!els.tbody) { console.error('[pedidos.js] ❌ tbody não encontrado'); return; }
 
@@ -582,16 +558,6 @@
         _spinFeedback();
         _renderizarTabela(window.AppRDO.pedidosCache || []);
     }
-
-    document.getElementById('btn-abrir-calendario-pedidos').addEventListener('click', () => {
-        const input = document.getElementById('filtro-data-pedidos');
-        if (input.showPicker) {
-            input.showPicker();
-        } else {
-            input.focus();
-            input.click();
-        }
-    });
 
     window.RDO_PEDIDOS.reabrirPedido = function () {
         var btn = document.getElementById('btn-reabrir-pedido');
@@ -709,7 +675,7 @@
         }).join(', ');
     }
 
-    window.RDO_PEDIDOS.calcularEspera = function () {
+    window.RDO_PEDIDOS.calcularEspera = function (skipDisplayUpdate) {
         var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
         var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
         var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
@@ -719,7 +685,7 @@
         var elFinal = document.getElementById('edit-espera-valor-final');
         var elDisplay = document.getElementById('edit-valor-pedido-display');
 
-        if (elDisplay) elDisplay.value = _formatarMoeda(valorBase);
+        if (!skipDisplayUpdate && elDisplay) elDisplay.value = _formatarMoeda(valorBase);
         if (boxMin) boxMin.style.display = tipo === 'sem_espera' ? 'none' : 'block';
 
         if (tipo === 'sem_espera' || minutos <= 0) {
@@ -1060,6 +1026,7 @@
             var hora = _resolverHoraPedido(pedido);
             var rotaDe = String(pedido.de || pedido.origem || pedido.endereco_coleta || '').trim();
             var rotaPara = String(pedido.para || pedido.destino || pedido.endereco_entrega || '').trim();
+            var statusAtual = _normalizarStatus(pedido.status) || 'PENDENTE';
 
             _s('edit-pedido-id', id);
             _s('edit-valor-base', valor.toFixed(2));
@@ -1071,6 +1038,7 @@
             _s('edit-para', rotaPara);
             _s('edit-obs', pedido.observacao || '');
             _s('edit-valor-pedido-display', _formatarMoeda(valor));
+            _s('edit-status-atual', statusAtual);
             _s('edit-espera-tipo', pedido.espera_tipo || 'sem_espera');
             _s('edit-espera-minutos', pedido.espera_minutos || '');
 
@@ -1091,6 +1059,17 @@
                 bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }, 50);
         });
+    };
+
+    window.RDO_PEDIDOS.onEditarValorInput = function (input) {
+        var valor = _parseMoeda(input.value);
+        var elBase = document.getElementById('edit-valor-base');
+        if (elBase) elBase.value = valor;
+        window.RDO_PEDIDOS.calcularEspera(true);
+    };
+
+    window.RDO_PEDIDOS.salvarValorPedido = function () {
+        window.RDO_PEDIDOS.salvarEdicao();
     };
 
     async function _fetchComRetry(endpoint, tentativas) {
@@ -1466,7 +1445,7 @@
         if (!itens.length) return;
 
         function _isMobile() {
-            return window.innerWidth <= 767; // era 576
+            return window.innerWidth <= 767;
         }
 
         itens.forEach(function (item) {

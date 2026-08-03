@@ -1,3 +1,4 @@
+window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 
 window._storageComExpiracao = (function () {
     var VALIDADE_MS = 24 * 60 * 60 * 1000;
@@ -1638,22 +1639,6 @@ window.exibirModalValidacao = function (mensagem, opcoes) {
     }
 };
 
-window.copiarModeloValidacao = function () {
-    var texto = document.getElementById('modal-validacao-textarea');
-    if (!texto) return;
-    texto.select();
-    document.execCommand('copy');
-    var btn = texto.nextElementSibling;
-    if (!btn) return;
-    var original = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Copiado!';
-    btn.classList.replace('btn-outline-danger', 'btn-success');
-    setTimeout(function () {
-        btn.innerHTML = original;
-        btn.classList.replace('btn-success', 'btn-outline-danger');
-    }, 2000);
-};
-
 window.filtrarContatos = function () {
     clearTimeout(window.AppRDO.debounceTimer);
     window.AppRDO.debounceTimer = setTimeout(function () {
@@ -2971,6 +2956,243 @@ function _geocodificarExterno(busca) {
         return { lat: null, lng: null, erro: e.message || 'Falha de comunicação com o servidor.' };
     });
 }
+
+function _parseMoeda(valor) {
+    return window._parseMoedaSeguro(valor);
+}
+
+function _formatarMoedaBR(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _resolverValor(pedido) {
+    return _parseMoeda(pedido.valor_total || pedido.valor_corrida || pedido.valor_final || 0);
+}
+
+function _normalizarStatus(status) {
+    var s = String(status || '').trim();
+    return s.includes('/') ? s.split('/').pop().trim() : s;
+}
+
+function _formatarIdServico(id) {
+    return typeof window._formatarNomeServico === 'function' ? window._formatarNomeServico(id) : String(id);
+}
+
+function _garantirModal(modalId, callback) {
+    var modalEl = document.getElementById(modalId);
+    if (modalEl) { callback(true); return; }
+    callback(false);
+}
+
+function _renderizarTabela(pedidos) {
+    if (typeof window._renderizarTabelaPedidos === 'function') window._renderizarTabelaPedidos(pedidos);
+}
+
+window.RDO_PEDIDOS.onEditarValorInput = function (input) {
+    var valor = _parseMoeda(input.value);
+    document.getElementById('edit-valor-base').value = valor;
+    window.RDO_PEDIDOS.calcularEspera();
+};
+
+window.RDO_PEDIDOS.calcularEspera = function () {
+    var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+    var minutos = parseFloat((document.getElementById('edit-espera-minutos') || {}).value) || 0;
+    var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+
+    var boxMinutos = document.getElementById('box-espera-minutos');
+    var boxResumo = document.getElementById('box-espera-resumo');
+    var elFinal = document.getElementById('edit-espera-valor-final');
+
+    var TARIFA_MIN = 0.60;
+    var FRANQUIA_MIN = 10;
+
+    if (tipo === 'sem_espera') {
+        if (boxMinutos) boxMinutos.style.display = 'none';
+        if (boxResumo) boxResumo.style.display = 'none';
+        if (elFinal) elFinal.textContent = 'R$ ' + _formatarMoedaBR(valorBase);
+        window.RDO_PEDIDOS._valorFinalCalculado = valorBase;
+        window.RDO_PEDIDOS._taxaEsperaCalculada = 0;
+        return;
+    }
+
+    if (boxMinutos) boxMinutos.style.display = 'block';
+
+    var franquiaTotal = tipo === 'ambos' ? FRANQUIA_MIN * 2 : FRANQUIA_MIN;
+    var minutosExcedentes = Math.max(0, minutos - franquiaTotal);
+    var taxaEspera = minutosExcedentes * TARIFA_MIN;
+    var valorFinal = valorBase + taxaEspera;
+
+    if (elFinal) elFinal.textContent = 'R$ ' + _formatarMoedaBR(valorFinal);
+
+    if (boxResumo) {
+        boxResumo.style.display = 'block';
+        var elOriginal = document.getElementById('resumo-valor-original');
+        var elMin = document.getElementById('resumo-minutos');
+        var elTaxa = document.getElementById('resumo-taxa');
+        var elTotal = document.getElementById('resumo-total');
+        if (elOriginal) elOriginal.textContent = 'R$ ' + _formatarMoedaBR(valorBase);
+        if (elMin) elMin.textContent = minutosExcedentes + ' min';
+        if (elTaxa) elTaxa.textContent = 'R$ ' + _formatarMoedaBR(taxaEspera);
+        if (elTotal) elTotal.textContent = 'R$ ' + _formatarMoedaBR(valorFinal);
+    }
+
+    window.RDO_PEDIDOS._valorFinalCalculado = valorFinal;
+    window.RDO_PEDIDOS._taxaEsperaCalculada = taxaEspera;
+};
+
+window.editarPedido = function (id) {
+    var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+        return String(p.id || p._id || '').trim() === String(id).trim();
+    });
+    if (!pedido) { console.error('[pedidos.js] ❌ Pedido não encontrado:', id); return; }
+
+    _garantirModal('modalEditarPedido', function (ok) {
+        if (!ok) { console.error('[pedidos.js] ❌ #modalEditarPedido indisponível'); return; }
+
+        var modalEl = document.getElementById('modalEditarPedido');
+
+        document.querySelectorAll('.modal.show').forEach(function (m) {
+            var inst = bootstrap.Modal.getInstance(m);
+            if (inst) inst.hide();
+        });
+
+        var valor = _resolverValor(pedido);
+
+        document.getElementById('edit-pedido-id').value = id;
+        document.getElementById('edit-valor-base').value = valor;
+        document.getElementById('edit-valor-pedido-display').value = valor.toFixed(2).replace('.', ',');
+
+        var statusBruto = _normalizarStatus(pedido.status);
+        var statusExibicao = statusBruto && statusBruto.trim() ? statusBruto.toUpperCase() : 'PENDENTE';
+        document.getElementById('edit-status-atual').value = statusExibicao;
+
+        document.getElementById('edit-de').value = pedido.de || '';
+        document.getElementById('edit-para').value = pedido.para || '';
+        document.getElementById('edit-obs').value = pedido.obs || '';
+
+        var elCliente = document.getElementById('esp-cliente');
+        var elMercadoria = document.getElementById('esp-mercadoria');
+        var elRetorno = document.getElementById('esp-retorno');
+        var elPrioridade = document.getElementById('esp-prioridade');
+        if (elCliente) elCliente.value = pedido.solicitante || pedido.cliente || '';
+        if (elMercadoria) elMercadoria.value = pedido.mercadoria || '';
+        if (elRetorno) elRetorno.value = pedido.retorno || 'Não';
+        if (elPrioridade) elPrioridade.value = pedido.prioridade || 'Normal';
+
+        var tipoEsperaSalvo = pedido.espera_tipo || 'sem_espera';
+        var minutosEsperaSalvo = pedido.espera_minutos || 0;
+        document.getElementById('edit-espera-tipo').value = tipoEsperaSalvo;
+        document.getElementById('edit-espera-minutos').value = minutosEsperaSalvo;
+
+        window.RDO_PEDIDOS.calcularEspera();
+
+        var tituloEl = document.getElementById('editar-titulo');
+        if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
+
+        var errEl = document.getElementById('edit-error-msg');
+        if (errEl) errEl.classList.add('d-none');
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+};
+
+window.RDO_PEDIDOS.salvarValorPedido = function () {
+    var btnSalvar = document.getElementById('btn-salvar-valor-pedido');
+    if (btnSalvar && btnSalvar.disabled) return;
+
+    var errEl = document.getElementById('edit-error-msg');
+    if (errEl) errEl.classList.add('d-none');
+
+    window.RDO_PEDIDOS.calcularEspera();
+
+    var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
+    var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+    var tipoEspera = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+    var minutosEspera = parseFloat((document.getElementById('edit-espera-minutos') || {}).value) || 0;
+    var taxaEspera = window.RDO_PEDIDOS._taxaEsperaCalculada || 0;
+    var valorFinal = window.RDO_PEDIDOS._valorFinalCalculado != null
+        ? window.RDO_PEDIDOS._valorFinalCalculado
+        : valorBase;
+    var de = (document.getElementById('edit-de') || {}).value || '';
+    var para = (document.getElementById('edit-para') || {}).value || '';
+    var obs = (document.getElementById('edit-obs') || {}).value || '';
+
+    if (!pedidoId) {
+        if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
+        return;
+    }
+    if (!valorBase || valorBase <= 0) {
+        if (errEl) { errEl.textContent = 'Informe um valor válido.'; errEl.classList.remove('d-none'); }
+        return;
+    }
+
+    var textoOriginalBtn = btnSalvar ? btnSalvar.innerHTML : '';
+    if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Salvando...';
+    }
+
+    API.call('updatepedido', {
+        id: pedidoId,
+        valor_total: valorBase,
+        valor_corrida: valorBase,
+        valor_final: valorFinal,
+        taxa_espera: taxaEspera,
+        espera_tipo: tipoEspera,
+        espera_minutos: minutosEspera,
+        de: de,
+        para: para,
+        obs: obs
+    })
+        .then(function (res) {
+            if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+
+            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+            var pedido = cache.find(function (p) {
+                return String(p.id || '').trim() === String(pedidoId).trim();
+            });
+            if (pedido) {
+                pedido.valor_total = valorBase;
+                pedido.valor_final = valorFinal;
+                pedido.valor_corrida = valorBase;
+                pedido.taxa_espera = taxaEspera;
+                pedido.espera_tipo = tipoEspera;
+                pedido.espera_minutos = minutosEspera;
+                pedido.de = de;
+                pedido.para = para;
+                pedido.obs = obs;
+            }
+
+            _renderizarTabela(window.AppRDO.pedidosCache);
+
+            var modalEl = document.getElementById('modalEditarPedido');
+            if (modalEl) {
+                var inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            }
+
+            if (typeof window.EventBus !== 'undefined')
+                window.EventBus.emit('pedido:atualizado', {
+                    id: pedidoId, valor_total: valorBase, valor_final: valorFinal
+                });
+
+            if (typeof Swal !== 'undefined')
+                Swal.fire({
+                    icon: 'success', title: 'Pedido atualizado!',
+                    toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
+                });
+        })
+        .catch(function (err) {
+            console.error('[pedidos.js] ❌ salvarValorPedido:', err);
+            if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
+        })
+        .finally(function () {
+            if (btnSalvar) {
+                btnSalvar.disabled = false;
+                btnSalvar.innerHTML = textoOriginalBtn || '<i class="bi bi-check-lg me-1"></i>Salvar';
+            }
+        });
+};
 
 function _limparComplementoParaGeocoding(endereco) {
     return String(endereco || '')
