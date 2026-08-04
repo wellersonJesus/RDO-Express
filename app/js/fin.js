@@ -106,9 +106,32 @@ if (!window.EventBus) {
       '}' +
 
       /* Cabeçalho */
-      '.relatorio-header { margin-bottom: 18px; }' +
-      '.relatorio-titulo { font-size: 15px; font-weight: 400; color: #444; letter-spacing: .2px; }' +
-      '.relatorio-periodo { font-size: 11px; font-weight: 400; color: #888; margin-top: 2px; }' +
+      '.relatorio-header {' +
+      'margin-bottom: 16px;' +
+      'padding-bottom: 10px;' +
+      'border-bottom: 1px solid #eee;' +
+      'display:flex;flex-direction:column;gap:2px;' +
+      '}' +
+      '.relatorio-titulo {' +
+      'font-size: 13px;' +
+      'font-weight: 600;' +
+      'color: #333;' +
+      'letter-spacing: .1px;' +
+      'line-height: 1.3;' +
+      'word-break: break-word;' +
+      'max-width: 100%;' +
+      '}' +
+      '.relatorio-periodo {' +
+      'font-size: 10.5px;' +
+      'font-weight: 400;' +
+      'color: #999;' +
+      'text-transform: uppercase;' +
+      'letter-spacing: .3px;' +
+      '}' +
+      '@media (max-width: 480px) {' +
+      '.relatorio-titulo { font-size: 12px; }' +
+      '.relatorio-periodo { font-size: 10px; }' +
+      '}' +
 
       /* Tabela */
       'table { width: 100%; border-collapse: collapse; }' +
@@ -312,6 +335,21 @@ if (!window.EventBus) {
 
   function obterPorPaginaFin() {
     return window.innerWidth <= 576 ? 5 : 5;
+  }
+
+  function aplicarFiltroCaixaMini(tipo, cardEl) {
+    if (filtroCaixaAtivo === tipo) {
+      filtroCaixaAtivo = null;
+      if (cardEl) cardEl.classList.remove('active');
+    } else {
+      filtroCaixaAtivo = tipo;
+      document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]').forEach(function (c) {
+        c.classList.remove('active');
+      });
+      if (cardEl) cardEl.classList.add('active');
+    }
+
+    aplicarFiltroCaixaLocal();
   }
 
   function bindDropdownFiltroCaixa() {
@@ -1361,6 +1399,17 @@ if (!window.EventBus) {
     var modalInst = new bootstrap.Modal(modalEl);
     var container = document.getElementById(OLD_ID + '-lista');
     mostrarLupinha(OLD_ID + '-lista', 'Carregando extratos');
+
+    function abrirExtratoESuperpor(ext) {
+      if (!ext) return;
+      modalInst.hide();
+      var onHidden = function () {
+        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        abrirExtratoModal(ext);
+      };
+      modalEl.addEventListener('hidden.bs.modal', onHidden);
+    }
+
     var extratos = carregarExtratosStorage();
     if (!extratos.length) {
       container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i><div>Nenhum extrato gerado ainda.</div><small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar relatórios</small></div>';
@@ -1376,13 +1425,13 @@ if (!window.EventBus) {
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
           var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
-          if (ext) abrirExtratoModal(ext);
+          abrirExtratoESuperpor(ext);
         });
       });
       container.querySelectorAll('.extrato-item-card').forEach(function (card) {
         card.addEventListener('click', function () {
           var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
-          if (ext) abrirExtratoModal(ext);
+          abrirExtratoESuperpor(ext);
         });
       });
     }
@@ -2944,6 +2993,7 @@ if (!window.EventBus) {
       finToast('Componente de modal de extrato não encontrado na página.', 'danger');
       return;
     }
+
     var totais = calcularTotaisRegistros(extrato.registros);
     if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = (extrato.origem || '-') + ' · ' + (extrato.periodoLabel || '-');
     var linhas = (extrato.registros || []).slice().sort(function (a, b) { return a.dataISO < b.dataISO ? -1 : 1; }).map(function (r) {
@@ -2958,6 +3008,7 @@ if (!window.EventBus) {
     if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { abrirJanelaPdfExtrato('Extrato - ' + (extrato.origem || '-'), extrato.periodoLabel, extrato.registros); };
     if (els.extratoModalFechar) els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
 
+    document.body.appendChild(els.extratoModalOverlay);
     els.extratoModalOverlay.style.display = 'flex';
   }
 
@@ -3836,12 +3887,18 @@ if (!window.EventBus) {
       var lista = (state.cache || []).filter(function (r) { return r.dataISO >= inicio && r.dataISO <= fim; });
       var label = 'Caixa Geral';
 
+      function limparLabelOrigem(arr) {
+        return (arr || [])
+          .filter(function (n) { return n && n.trim() && n.trim() !== '-'; })
+          .join(', ');
+      }
+
       if (fluxo.tipo === 'colaboradores') {
         lista = lista.filter(function (r) { return fluxo.selecionados.indexOf(r.motoboy) !== -1; });
-        label = fluxo.selecionados.join(', ');
+        label = limparLabelOrigem(fluxo.selecionados) || 'Colaboradores';
       } else if (fluxo.tipo === 'clientes') {
         lista = lista.filter(function (r) { return fluxo.selecionados.indexOf(r.cliente) !== -1; });
-        label = fluxo.selecionados.join(', ');
+        label = limparLabelOrigem(fluxo.selecionados) || 'Clientes';
       }
 
       if (!lista.length) { finToast('Nenhum registro encontrado para essa seleção no período.', 'warning'); return; }
