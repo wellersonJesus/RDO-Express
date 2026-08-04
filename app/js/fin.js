@@ -38,6 +38,7 @@ if (!window.EventBus) {
   var _tokenAbrirPedidoFinanceiro = 0;
 
   var _repassesAbrindoAgora = false;
+  var _extratosCaixaAbrindoAgora = false;
   var _rdoValoresVisiveis = false;
 
   var state = {
@@ -1390,53 +1391,95 @@ if (!window.EventBus) {
   }
 
   function abrirModalExtratosCaixa() {
+    if (_extratosCaixaAbrindoAgora) return;
+    _extratosCaixaAbrindoAgora = true;
+
     var OLD_ID = 'modalExtratosCaixaDyn';
     var old = document.getElementById(OLD_ID);
-    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
-    var html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:480px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#0dcaf0 0%,#0aa2c0 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-file-earmark-bar-graph-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Extratos Salvos</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Histórico de relatórios gerados</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-3 py-3" id="' + OLD_ID + '-lista"><div class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button></div></div></div></div>';
-    document.body.insertAdjacentHTML('beforeend', html);
-    var modalEl = document.getElementById(OLD_ID);
-    var modalInst = new bootstrap.Modal(modalEl);
-    var container = document.getElementById(OLD_ID + '-lista');
-    mostrarLupinha(OLD_ID + '-lista', 'Carregando extratos');
 
-    function abrirExtratoESuperpor(ext) {
-      if (!ext) return;
-      modalInst.hide();
-      var onHidden = function () {
-        modalEl.removeEventListener('hidden.bs.modal', onHidden);
-        abrirExtratoModal(ext);
-      };
-      modalEl.addEventListener('hidden.bs.modal', onHidden);
+    function montarEExibir() {
+      document.querySelectorAll('.modal-backdrop').forEach(function (bd) {
+        if (bd.parentNode) bd.parentNode.removeChild(bd);
+      });
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+
+      var html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:480px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#0dcaf0 0%,#0aa2c0 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-file-earmark-bar-graph-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Extratos Salvos</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Histórico de relatórios gerados</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-3 py-3" id="' + OLD_ID + '-lista"><div class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button></div></div></div></div>';
+      document.body.insertAdjacentHTML('beforeend', html);
+
+      var modalEl = document.getElementById(OLD_ID);
+      if (!modalEl) { _extratosCaixaAbrindoAgora = false; return; }
+
+      var modalInst = new bootstrap.Modal(modalEl);
+      var container = document.getElementById(OLD_ID + '-lista');
+      mostrarLupinha(OLD_ID + '-lista', 'Carregando extratos');
+
+      function abrirExtratoESuperpor(ext) {
+        if (!ext) return;
+        var onHidden = function () {
+          modalEl.removeEventListener('hidden.bs.modal', onHidden);
+          setTimeout(function () { abrirExtratoModal(ext); }, 50);
+        };
+        modalEl.addEventListener('hidden.bs.modal', onHidden);
+        modalInst.hide();
+      }
+
+      var extratos = carregarExtratosStorage();
+      if (!extratos.length) {
+        container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i><div>Nenhum extrato gerado ainda.</div><small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar relatórios</small></div>';
+      } else {
+        container.innerHTML = extratos.map(function (ex) {
+          var totais = calcularTotaisRegistros(ex.registros);
+          var totalRegs = (ex.registros || []).length;
+          var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
+          var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
+          return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '" style="cursor:pointer;"><div class="extrato-item-left"><div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div><div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div><div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div><div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;"><span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span><button class="extrato-item-btn extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button></div></div>';
+        }).join('');
+        container.querySelectorAll('.extrato-item-btn-ver-modal').forEach(function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
+            if (ext) abrirExtratoESuperpor(ext);
+          });
+        });
+        container.querySelectorAll('.extrato-item-card').forEach(function (card) {
+          card.addEventListener('click', function () {
+            var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
+            if (ext) abrirExtratoESuperpor(ext);
+          });
+        });
+      }
+
+      modalEl.addEventListener('hidden.bs.modal', function () {
+        modalInst.dispose();
+        if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+        document.querySelectorAll('.modal-backdrop').forEach(function (bd) {
+          if (bd.parentNode) bd.parentNode.removeChild(bd);
+        });
+        _extratosCaixaAbrindoAgora = false;
+      });
+
+      modalInst.show();
     }
 
-    var extratos = carregarExtratosStorage();
-    if (!extratos.length) {
-      container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-file-earmark-bar-graph" style="font-size:2rem;opacity:.4;display:block;margin-bottom:12px;"></i><div>Nenhum extrato gerado ainda.</div><small class="opacity-75">Acesse a aba <strong>Extrato</strong> para gerar relatórios</small></div>';
+    if (old) {
+      var oldInst = bootstrap.Modal.getInstance(old);
+      if (oldInst) {
+        old.addEventListener('hidden.bs.modal', function onOldHidden() {
+          old.removeEventListener('hidden.bs.modal', onOldHidden);
+          oldInst.dispose();
+          if (old.parentNode) old.parentNode.removeChild(old);
+          setTimeout(montarEExibir, 50);
+        });
+        oldInst.hide();
+      } else {
+        old.remove();
+        setTimeout(montarEExibir, 50);
+      }
     } else {
-      container.innerHTML = extratos.map(function (ex) {
-        var totais = calcularTotaisRegistros(ex.registros);
-        var totalRegs = (ex.registros || []).length;
-        var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
-        var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
-        return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '" style="cursor:pointer;"><div class="extrato-item-left"><div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div><div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div><div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div><div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;"><span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span><button class="extrato-item-btn extrato-item-btn-ver-modal" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button></div></div>';
-      }).join('');
-      container.querySelectorAll('.extrato-item-btn-ver-modal').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
-          abrirExtratoESuperpor(ext);
-        });
-      });
-      container.querySelectorAll('.extrato-item-card').forEach(function (card) {
-        card.addEventListener('click', function () {
-          var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
-          abrirExtratoESuperpor(ext);
-        });
-      });
+      montarEExibir();
     }
-    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
-    modalInst.show();
   }
 
   function abrirModalEditar(reg) {
@@ -2033,6 +2076,7 @@ if (!window.EventBus) {
     modalEl.addEventListener('hidden.bs.modal', function () {
       modalInst.dispose();
       if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+      _limparModalsBackdropOrfaos(); // 🔧 limpeza extra ao fechar
     });
     modalInst.show();
   }
@@ -3006,7 +3050,10 @@ if (!window.EventBus) {
 
     if (els.extratoModalCopiar) els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(gerarTextoExtrato(extrato)); };
     if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { abrirJanelaPdfExtrato('Extrato - ' + (extrato.origem || '-'), extrato.periodoLabel, extrato.registros); };
-    if (els.extratoModalFechar) els.extratoModalFechar.onclick = function () { els.extratoModalOverlay.style.display = 'none'; };
+    if (els.extratoModalFechar) els.extratoModalFechar.onclick = function () {
+      els.extratoModalOverlay.style.display = 'none';
+      document.querySelectorAll('.modal-backdrop').forEach(function (bd) { if (bd.parentNode) bd.parentNode.removeChild(bd); });
+    };
 
     document.body.appendChild(els.extratoModalOverlay);
     els.extratoModalOverlay.style.display = 'flex';
@@ -3101,6 +3148,15 @@ if (!window.EventBus) {
     var valorColab = valor * (pct / 100);
     var valorEmpresa = valor - valorColab;
     previewEl.innerHTML = '<small class="text-muted">Colaborador (' + pct + '%): <strong>' + formatarMoeda(valorColab) + '</strong> · Empresa: <strong>' + formatarMoeda(valorEmpresa) + '</strong></small>';
+  }
+
+  function _limparModalsBackdropOrfaos() {
+    document.querySelectorAll('.modal-backdrop').forEach(function (bd) {
+      if (bd.parentNode) bd.parentNode.removeChild(bd);
+    });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
   }
 
   function obterHoraRegistro(reg) {
