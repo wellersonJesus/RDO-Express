@@ -468,6 +468,12 @@
   color: var(--fin-red);
 }
 
+#icon-sort-data-todos {
+  font-size: 0.6rem !important;
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+
 .fin-badge-tipo,
 .fin-badge-situacao {
   display: inline-flex;
@@ -512,6 +518,22 @@
 .fin-badge-pendente {
   background: rgba(255, 193, 7, 0.15);
   color: #cc8800;
+}
+
+.fin-badges-combo {
+  overflow: visible;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+.fin-badges-combo .fin-badge-tipo,
+.fin-badges-combo .fin-badge-situacao {
+  font-size: 0.5rem;
+  padding: 2px 5px;
+  gap: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .fin-btn-action,
@@ -948,6 +970,36 @@
   border-color: transparent;
 }
 
+.caixa-mini-card[data-filtro-caixa="entrada"] .caixa-mini-card-icon {
+  background: rgba(25, 135, 84, .12) !important;
+  color: #198754 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="saida"] .caixa-mini-card-icon {
+  background: rgba(220, 53, 69, .12) !important;
+  color: #dc3545 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="empresa"] .caixa-mini-card-icon {
+  background: rgba(111, 66, 193, .15) !important;
+  color: #6f42c1 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="colaborador"] .caixa-mini-card-icon {
+  background: rgba(13, 110, 253, .12) !important;
+  color: #0d6efd !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="registros"] .caixa-mini-card-icon {
+  background: rgba(255, 193, 7, .2) !important;
+  color: #856404 !important;
+}
+
+.caixa-mini-card[data-filtro-caixa="saldo"] .caixa-mini-card-icon {
+  background: rgba(108, 117, 125, .12) !important;
+  color: #6c757d !important;
+}
+
 .caixa-lista-diaria-wrapper,
 .detalhe-dia-table-wrapper,
 #extrato-lista-caixa {
@@ -1083,8 +1135,9 @@
 .caixa-filtro-row {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  grid-template-columns: 1fr 1fr;
 }
 
 .caixa-filtro-campo {
@@ -1098,18 +1151,21 @@
 }
 
 .caixa-filtro-label {
-  font-size: 0.6rem;
+  font-size: 0.56rem;
   font-weight: 700;
   color: #999;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: block;
   margin-bottom: 3px;
+  white-space: nowrap;
 }
 
 .caixa-filtro-input {
-  font-size: 0.72rem;
-  height: 32px;
+  font-size: 0.68rem;
+  height: 30px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .caixa-btn-filtrar-wrap {
@@ -1118,8 +1174,8 @@
 }
 
 .caixa-btn-filtrar {
-  font-size: 0.7rem;
-  height: 32px;
+  font-size: 0.68rem !important;
+  height: 32px !important;
   white-space: nowrap;
 }
 
@@ -1647,7 +1703,7 @@
   flex-shrink: 0;
 }
 
-.extrato-item-left > div:last-child {
+.extrato-item-left>div:last-child {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -1674,8 +1730,8 @@
   display: block;
 }
 
-.extrato-item-card > div:last-child,
-.extrato-item-card-modal > div:last-child {
+.extrato-item-card>div:last-child,
+.extrato-item-card-modal>div:last-child {
   flex-shrink: 0;
   flex-basis: auto;
   min-width: 92px;
@@ -1976,6 +2032,22 @@
   z-index: 30;
 }
 
+.fin-status-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.fin-status-card-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .fin-status-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2015,39 +2087,6 @@
 
 .fin-status-action-item.mostrar-info {
   z-index: 999;
-}
-
-@media (min-width: 769px) {
-  .fin-status-action-item {
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
-    text-align: left;
-    gap: 10px;
-    padding: 8px 10px;
-  }
-
-  .fin-status-action-item .fin-status-action-info {
-    display: flex !important;
-    position: static;
-    top: auto;
-    left: auto;
-    right: auto;
-    transform: none;
-    flex-direction: column;
-    align-items: flex-start;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    z-index: auto;
-    white-space: nowrap;
-    animation: none;
-  }
-
-  .fin-status-action-item.mostrar-info .fin-status-action-info {
-    animation: none;
-  }
 }
 
 .fin-status-action-item:hover {
@@ -2229,6 +2268,32 @@
 .fin-status-action-item:hover .fin-icon-cancelado {
   background: rgba(220, 53, 69, 0.2);
   color: var(--fin-red-dark);
+}
+
+.fin-status-action-item[data-filtro-caixa="entrada"].active {
+  background: linear-gradient(135deg, #d1e7dd 0%, #e8f5ee 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="saida"].active {
+  background: linear-gradient(135deg, #f8d7da 0%, #fdecee 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="empresa"].active {
+  background: linear-gradient(135deg, #e2d9f3 0%, #f0ecf8 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="colaborador"].active {
+  background: linear-gradient(135deg, #cfe2ff 0%, #e8f1ff 100%);
+  border-color: transparent;
+}
+
+.fin-status-action-item[data-filtro-caixa="registros"].active,
+.fin-status-action-item[data-filtro-caixa="saldo"].active {
+  background: linear-gradient(135deg, #fff3cd 0%, #fffbeb 100%);
+  border-color: transparent;
 }
 
 .fin-mini-icon {
@@ -2670,86 +2735,15 @@
   border-width: 2px;
 }
 
-.fin-badges-combo {
-  overflow: visible;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 3px;
+.fin-desc-linha-mobile {
+  display: block;
+  font-size: 0.6rem;
+  line-height: 1.3;
+  color: #444;
 }
 
-.fin-badges-combo .fin-badge-tipo,
-.fin-badges-combo .fin-badge-situacao {
-  font-size: 0.5rem;
-  padding: 2px 5px;
-  gap: 2px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .caixa-filtro-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    grid-template-areas:
-      "de ate"
-      "btn btn" !important;
-    gap: 8px !important;
-    align-items: end !important;
-  }
-
-  .caixa-filtro-campo:nth-of-type(1) {
-    grid-area: de !important;
-    width: 100% !important;
-  }
-
-  .caixa-filtro-campo:nth-of-type(2) {
-    grid-area: ate !important;
-    width: 100% !important;
-  }
-
-  .caixa-btn-filtrar-wrap {
-    grid-area: btn !important;
-    display: block !important;
-    /* garante que ocupe a área toda */
-    width: 100% !important;
-  }
-
-  .caixa-btn-filtrar {
-    display: block !important;
-    width: 100% !important;
-    height: 34px !important;
-    font-size: 0.7rem !important;
-    font-weight: 500 !important;
-    border-radius: 50px !important;
-  }
-}
-
-@media (max-width: 576px) {
-  .fin-col-tipo .fin-badge-tipo {
-    display: none !important;
-  }
-}
-
-.caixa-filtro-row {
-  grid-template-columns: 1fr 1fr !important;
-  gap: 6px !important;
-}
-
-.caixa-filtro-label {
-  font-size: 0.56rem;
-  white-space: nowrap;
-}
-
-.caixa-filtro-input {
-  font-size: 0.68rem;
-  height: 30px;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-.caixa-btn-filtrar {
-  height: 32px !important;
-  font-size: 0.68rem !important;
+.fin-desc-linha-mobile:not(:last-child) {
+  margin-bottom: 1px;
 }
 
 #caixa-relatorios-salvos-lista>* {
@@ -2842,74 +2836,110 @@
   }
 }
 
-.fin-status-card-header {
+@media (max-width: 768px) {
+  .caixa-filtro-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-areas:
+      "de ate"
+      "btn btn" !important;
+    gap: 8px !important;
+    align-items: end !important;
+  }
+
+  .caixa-filtro-campo:nth-of-type(1) {
+    grid-area: de !important;
+    width: 100% !important;
+  }
+
+  .caixa-filtro-campo:nth-of-type(2) {
+    grid-area: ate !important;
+    width: 100% !important;
+  }
+
+  .caixa-btn-filtrar-wrap {
+    grid-area: btn !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .caixa-btn-filtrar {
+    display: block !important;
+    width: 100% !important;
+    height: 34px !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    border-radius: 50px !important;
+  }
+}
+
+.fin-td-descricao-mobile {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+@media (max-width: 576px) {
+  .fin-tipo-cell-item.fin-tipo-item-tipo {
+    display: none;
+  }
+
+  .fin-tipo-cell {
+    justify-content: center; 
+  }
+}
+
+.fin-col-descricao {
+  min-width: 110px;
+}
+
+@media (max-width: 400px) {
+
+  .fin-table-todos thead th:nth-child(2),
+  .fin-table-todos tbody td:nth-child(2) {
+    width: 38% !important;
+    font-size: 0.56rem !important;
+  }
+
+  .fin-table-todos thead th:nth-child(1),
+  .fin-table-todos tbody td:nth-child(1) {
+    width: 28% !important;
+    font-size: 0.54rem !important;
+  }
+}
+
+.fin-col-tipo {
+  width: 190px;
+  min-width: 170px;
+  white-space: normal;
+}
+
+.fin-tipo-cell {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  padding: 0 4px;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
-.fin-status-card-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.fin-tipo-cell-item {
+  white-space: nowrap;
 }
 
-.fin-status-action-item[data-filtro-caixa="entrada"].active {
-  background: linear-gradient(135deg, #d1e7dd 0%, #e8f5ee 100%);
-  border-color: transparent;
+.fin-tipo-cell .fin-badge-tipo,
+.fin-tipo-cell .fin-badge-situacao {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.fin-status-action-item[data-filtro-caixa="saida"].active {
-  background: linear-gradient(135deg, #f8d7da 0%, #fdecee 100%);
-  border-color: transparent;
-}
-
-.fin-status-action-item[data-filtro-caixa="empresa"].active {
-  background: linear-gradient(135deg, #e2d9f3 0%, #f0ecf8 100%);
-  border-color: transparent;
-}
-
-.fin-status-action-item[data-filtro-caixa="colaborador"].active {
-  background: linear-gradient(135deg, #cfe2ff 0%, #e8f1ff 100%);
-  border-color: transparent;
-}
-
-.fin-status-action-item[data-filtro-caixa="registros"].active,
-.fin-status-action-item[data-filtro-caixa="saldo"].active {
-  background: linear-gradient(135deg, #fff3cd 0%, #fffbeb 100%);
-  border-color: transparent;
-}
-
-.caixa-mini-card[data-filtro-caixa="entrada"] .caixa-mini-card-icon {
-  background: rgba(25, 135, 84, .12) !important;
-  color: #198754 !important;
-}
-
-.caixa-mini-card[data-filtro-caixa="saida"] .caixa-mini-card-icon {
-  background: rgba(220, 53, 69, .12) !important;
-  color: #dc3545 !important;
-}
-
-.caixa-mini-card[data-filtro-caixa="empresa"] .caixa-mini-card-icon {
-  background: rgba(111, 66, 193, .15) !important;
-  color: #6f42c1 !important;
-}
-
-.caixa-mini-card[data-filtro-caixa="colaborador"] .caixa-mini-card-icon {
-  background: rgba(13, 110, 253, .12) !important;
-  color: #0d6efd !important;
-}
-
-.caixa-mini-card[data-filtro-caixa="registros"] .caixa-mini-card-icon {
-  background: rgba(255, 193, 7, .2) !important;
-  color: #856404 !important;
-}
-
-.caixa-mini-card[data-filtro-caixa="saldo"] .caixa-mini-card-icon {
-  background: rgba(108, 117, 125, .12) !important;
-  color: #6c757d !important;
+.fin-tipo-cell-linha {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  text-align: center;
 }

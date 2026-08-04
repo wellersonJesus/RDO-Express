@@ -2460,14 +2460,15 @@ if (!window.EventBus) {
       els.tbodyTodos.innerHTML = pagina.map(function (r) {
         var badgeTipo = getTipoBadge(r.tipo);
         var badgeSituacao = getStatusBadge(r.situacao);
-        var celulaTipoCombinada = '<div class="d-flex flex-nowrap gap-1 align-items-center" style="overflow-x:auto;">' +
-          '<span class="fin-badge-tipo-desktop">' + badgeTipo + '</span>' +
-          badgeSituacao +
+        var celulaTipoCombinada =
+          '<div class="fin-tipo-cell">' +
+          '<span class="fin-tipo-cell-item fin-tipo-item-tipo">' + badgeTipo + '</span>' +
+          '<span class="fin-tipo-cell-item fin-tipo-item-situacao">' + badgeSituacao + '</span>' +
           '</div>';
 
         return '<tr class="fin-row" data-id="' + escapeHtml(r.id) + '" style="cursor:pointer;">' +
           '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-          '<td title="' + escapeHtml(r.descricao || '-') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
+          '<td class="fin-td-descricao-mobile" title="' + escapeHtml(r.descricao || '-') + '">' + formatarDescricaoMobile(r.descricao) + '</td>' +
           '<td class="fin-col-tipo">' + celulaTipoCombinada + '</td>' +
           '<td class="text-end"><div class="fin-actions-group">' +
           '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-id="' + escapeHtml(r.id) + '"><i class="bi bi-eye"></i></button>' +
@@ -3320,8 +3321,12 @@ if (!window.EventBus) {
     modalInst.show();
   }
 
-  function resumirDescricao(desc) {
+  function resumirDescricao(desc, limiteChars) {
     if (!desc) return '-';
+    if (limiteChars) {
+      desc = desc.trim();
+      return desc.length > limiteChars ? desc.slice(0, limiteChars).trim() + '…' : desc;
+    }
     var preposicoes = ['de', 'da', 'do', 'das', 'dos', 'em', 'no', 'na', 'nos', 'nas', 'para', 'pra', 'com', 'a', 'o', 'e'];
     var palavras = desc.trim().split(/\s+/);
     if (palavras.length <= 2) return desc;
@@ -3329,7 +3334,6 @@ if (!window.EventBus) {
     var resultado = [palavras[0]];
     var idx = 1;
 
-    // se a segunda palavra for preposição, inclui ela + a próxima palavra
     if (preposicoes.indexOf(palavras[1].toLowerCase()) !== -1 && palavras.length > 2) {
       resultado.push(palavras[1]);
       resultado.push(palavras[2]);
@@ -3343,6 +3347,44 @@ if (!window.EventBus) {
       return resultado.join(' ') + '...';
     }
     return resultado.join(' ');
+  }
+
+  function bindSortDataTodos() {
+    var th = els.btnSortData ? els.btnSortData.closest('th') : null;
+
+    function executarOrdenacao(e) {
+      if (e) e.stopPropagation();
+      state.sortDataDesc = !state.sortDataDesc;
+      if (els.iconSortData) els.iconSortData.className = state.sortDataDesc ? 'bi bi-arrow-down' : 'bi bi-arrow-up';
+      state.todos.pagina = 1;
+      renderTodos();
+    }
+
+    if (els.btnSortData && !els.btnSortData._sortBound) {
+      els.btnSortData._sortBound = true;
+      els.btnSortData.addEventListener('click', executarOrdenacao);
+    }
+
+    if (els.iconSortData && !els.iconSortData._sortBound) {
+      els.iconSortData._sortBound = true;
+      els.iconSortData.addEventListener('click', executarOrdenacao);
+    }
+
+    if (th && !th._sortBound) {
+      th._sortBound = true;
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', executarOrdenacao);
+    }
+  }
+
+  function formatarDescricaoMobile(desc) {
+    if (!desc) return '-';
+    var isMobile = window.innerWidth <= 576;
+    if (!isMobile) return escapeHtml(resumirDescricao(desc, 22));
+    var palavras = String(desc).trim().split(/\s+/);
+    var resumo = palavras.slice(0, 3).join(' ');
+    if (palavras.length > 3) resumo += '...';
+    return escapeHtml(resumo);
   }
 
   function bindNotifCardsFin() {
@@ -4067,6 +4109,7 @@ if (!window.EventBus) {
   window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
 
   function init() {
+    if (_finJaInicializado) return;
     _finJaInicializado = true;
 
     bind();
