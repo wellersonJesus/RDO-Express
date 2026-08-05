@@ -4,6 +4,7 @@
   window.addEventListener('error', function (e) {
     relToast('Erro: ' + e.message, 'danger');
   });
+
   window.addEventListener('unhandledrejection', function (e) {
     const msg = (e.reason && e.reason.message) ? e.reason.message : e.reason;
     relToast('Erro assíncrono: ' + msg, 'danger');
@@ -21,7 +22,7 @@
       campos: {
         id_pedido: 'Pedido', data: 'Data', tipo: 'Tipo', cliente: 'Cliente', descricao: 'Descrição',
         motoboy: 'Motoboy', vlr_servico: 'Valor Serviço', colaborador: 'Colaborador',
-        observacao: 'Observação', situacao: 'Situação'
+        observacao: 'Observação', situacao: ['situacao', 'status_pagamento', 'status']
       }
     },
     clientes: {
@@ -51,7 +52,7 @@
   };
 
   const GRUPOS_CLIENTE_ALIAS = {
-    'ELISA ATHENIENSE': ['HXQ9VBU59DG', 'CI2APULJN8V', '3KYTEFJ6TOJ']
+    'ELISA ATHENIENSE': ['HXQ9VBU59DG', 'BR463K2KU06', 'MR34XBA3RKE', 'V70K6ETW0B3']
   };
 
   function normalizarIdCliente(id) {
@@ -618,6 +619,7 @@
     if (!els.builderResumo) return;
     let totalCampos = 0;
     let html = '';
+
     bancosDoBuilder().forEach(function (banco) {
       const qtd = contarSelecionados(banco);
       if (qtd > 0) {
@@ -625,16 +627,23 @@
         html += '<div><strong>' + escapeHtml(BANCOS[banco].label) + ':</strong> ' + qtd + ' campo(s)</div>';
       }
     });
+
     html += '<div style="margin-top:8px;"><strong>Período:</strong> ' + formatDateBR(state.builder.periodo.inicio) + ' a ' + formatDateBR(state.builder.periodo.fim) + '</div>';
 
     const fx = state.builder.filtroExtra;
     if (fx && Array.isArray(fx.valor) && fx.valor.indexOf('__todos__') === -1 && fx.valor.length) {
       let labels = [];
+
       if (fx.campo === 'motoboy_id') {
-        labels = state.motoboys.filter(function (m) { return fx.valor.indexOf(String(m.id)) !== -1; }).map(function (m) { return resolverValor('colaborador', 'username', m); });
+        labels = state.motoboys
+          .filter(function (m) { return fx.valor.indexOf(String(m.id)) !== -1; })
+          .map(function (m) { return resolverValor('colaborador', 'username', m); });
       } else if (fx.campo === 'cliente_id') {
-        labels = state.clientes.filter(function (c) { return fx.valor.indexOf(String(c.id)) !== -1; }).map(function (c) { return resolverValor('clientes', 'username', c); });
+        labels = state.clientes
+          .filter(function (c) { return fx.valor.indexOf(String(c.id)) !== -1; })
+          .map(function (c) { return resolverValor('clientes', 'username', c); });
       }
+
       if (labels.length) html += '<div><strong>Filtro:</strong> ' + escapeHtml(labels.join(', ')) + '</div>';
     }
 
@@ -665,13 +674,64 @@
     return normalizarComparacao(v).split(' ').filter(function (t) { return t.length > 0; });
   }
 
+  function nomeAlvoEhSeguroParaFuzzy(nome) {
+    return tokensSignificativos(nome).length >= 2;
+  }
 
+  function idClientePertenceAOutroCliente(idClienteRegistro, idsExpandidosAlvo) {
+    const idNorm = normalizarIdCliente(idClienteRegistro);
+    if (!idNorm) return false;
+
+    const clienteEncontrado = state.clientes.find(function (c) {
+      return normalizarIdCliente(c.id) === idNorm;
+    });
+    if (!clienteEncontrado) return false; // id não reconhecido, não bloqueia
+
+    return idsExpandidosAlvo.indexOf(idNorm) === -1;
+  }
+
+  function extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados) {
+    const nomesTexto = [];
+
+    valoresBrutos.forEach(function (v) {
+      const canonico = nomeCanonicoDoGrupo(v) || canonicoPorNomeExato(v);
+      if (canonico && nomesTexto.indexOf(canonico) === -1) nomesTexto.push(canonico);
+    });
+
+    clientesSelecionados.forEach(function (c) {
+      const username = resolverValor('clientes', 'username', c);
+      const canonico = nomeCanonicoDoGrupo(c.id) || canonicoPorNomeExato(username);
+
+      if (canonico) {
+        if (nomesTexto.indexOf(canonico) === -1) nomesTexto.push(canonico);
+        return;
+      }
+
+      if (username && nomesTexto.indexOf(username) === -1) nomesTexto.push(username);
+
+      // ⚠️ CORRIGIDO: "responsavel" só entra como nome-alvo se for um nome
+      // completo (2+ tokens significativos). Nomes curtos/genéricos (ex: só
+      // "Camila") são descartados aqui para evitar contaminação entre clientes.
+      const responsavel = resolverValor('clientes', 'responsavel', c);
+      if (responsavel && nomeAlvoEhSeguroParaFuzzy(responsavel) && nomesTexto.indexOf(responsavel) === -1) {
+        nomesTexto.push(responsavel);
+      }
+    });
+
+    return nomesTexto;
+  }
 
   function ehAbreviacaoDeterministica(nomeCurto, nomeCompleto) {
     const tCurto = tokenizar(nomeCurto);
     const tCompleto = tokenizar(nomeCompleto);
     if (!tCurto.length || !tCompleto.length) return false;
     if (tCurto.length !== tCompleto.length) return false;
+
+    // ⚠️ CORRIGIDO: nomes de um único token nunca são tratados como
+    // "abreviação determinística" — o risco de colisão por inicial única
+    // entre pessoas diferentes é alto demais (ex: "M" casando com "Marcio"
+    // e também com "Mariana").
+    if (tCurto.length === 1) return false;
 
     for (let i = 0; i < tCurto.length; i++) {
       const a = tCurto[i].replace(/\.$/, '');
@@ -681,6 +741,128 @@
       return false;
     }
     return true;
+  }
+
+  function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
+    const idPed = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedido));
+
+    const idsExpandidos = [];
+    idsStr.forEach(function (v) {
+      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
+        if (idsExpandidos.indexOf(id) === -1) idsExpandidos.push(id);
+      });
+    });
+
+    if (idPed) {
+      if (idsExpandidos.indexOf(idPed) !== -1) return true;
+
+      const canonicoPedido = nomeCanonicoDoGrupo(idPed);
+      if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
+
+      // 🔒 Muro de proteção: se o pedido já pertence comprovadamente a OUTRO
+      // cliente cadastrado, nenhum match por nome/texto pode sobrepor essa
+      // informação. Evita que um pedido da Camila apareça no relatório da Elisa.
+      if (idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
+    }
+
+    // Fallback por nome do solicitante — só aplicado quando o pedido NÃO tem
+    // um id_cliente confiável apontando para outro cliente já cadastrado, e
+    // apenas usando nomes-alvo "seguros" (2+ tokens significativos) para
+    // evitar colisões por palavra única.
+    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+    if (solicitante) {
+      const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+      if (nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
+    }
+
+    return false;
+  }
+
+  function financeiroCorrespondeCliente(registro, nomesAlvo) {
+    const idsExpandidos = [];
+    nomesAlvo.forEach(function (v) {
+      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
+        if (idsExpandidos.indexOf(id) === -1) idsExpandidos.push(id);
+      });
+    });
+
+    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+
+    if (pedidoVinculado) {
+      const idCliente = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedidoVinculado));
+
+      if (idCliente) {
+        const canonicoPedido = nomeCanonicoDoGrupo(idCliente);
+        if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
+
+        const cli = state.clientes.find(function (c) {
+          return normalizarIdCliente(c.id) === idCliente;
+        });
+        if (cli) {
+          const username = resolverValor('clientes', 'username', cli);
+          if (valorCorrespondeNomesAlvo(username, nomesAlvo)) return true;
+
+          // 🔒 Muro de proteção: registro já vinculado a outro cliente
+          // cadastrado de forma inequívoca — bloqueia qualquer match por texto.
+          if (idsExpandidos.indexOf(idCliente) === -1) return false;
+        }
+      }
+
+      const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
+      if (solicitante) {
+        const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+        if (nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
+      }
+    }
+
+    const nomeFin = resolverValor('financeiro', 'cliente', registro);
+    if (nomeFin && valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
+
+    // ⚠️ Matching por descrição/observação agora só usa nomes-alvo "seguros"
+    // (2+ tokens significativos). Nomes de 1 palavra (ex: "CAMILA", "MARCIO")
+    // não disparam mais match por simplesmente aparecerem no texto — essa era
+    // a principal causa de contaminação entre clientes.
+    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+    if (!nomesAlvoSeguros.length) return false;
+
+    const descricao = resolverValor('financeiro', 'descricao', registro);
+    if (descricao) {
+      const nomeExtraidoDescricao = extrairNomeClienteDescricao(descricao);
+      if (nomeExtraidoDescricao && valorCorrespondeNomesAlvo(nomeExtraidoDescricao, nomesAlvoSeguros)) return true;
+
+      const { clienteTexto } = extrairSolicitanteEClienteDescricao(descricao);
+      if (clienteTexto && valorCorrespondeNomesAlvo(clienteTexto, nomesAlvoSeguros)) return true;
+
+      if (nomesAlvoSeguros.some(function (nome) {
+        return tokensEmComum(descricao, nome) >= tokensSignificativos(nome).length;
+      })) return true;
+    }
+
+    const observacao = resolverValor('financeiro', 'observacao', registro);
+    if (observacao && nomesAlvoSeguros.some(function (nome) {
+      return tokensEmComum(observacao, nome) >= tokensSignificativos(nome).length;
+    })) return true;
+
+    return false;
+  }
+
+  function chatCorrespondeCliente(registroChat, idsStr, nomesAlvo) {
+    const idChat = normalizarIdCliente(resolverValor('chat', 'id_cliente', registroChat));
+    const idsExpandidos = [];
+    idsStr.forEach(function (v) {
+      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
+        if (idsExpandidos.indexOf(id) === -1) idsExpandidos.push(id);
+      });
+    });
+    if (idChat && idsExpandidos.indexOf(idChat) !== -1) return true;
+
+    // 🔒 Muro de proteção: se o chat tem id_cliente reconhecido mas apontando
+    // para outro cliente cadastrado, bloqueia o fallback por pedido vinculado.
+    if (idChat && idClientePertenceAOutroCliente(idChat, idsExpandidos)) return false;
+
+    const pedidoVinculado = buscarPedidoDoChat(registroChat);
+    if (!pedidoVinculado) return false;
+    return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
   }
 
   function tokensSignificativos(v) {
@@ -706,7 +888,22 @@
       if (nomeAlvoUnico) return nomeAlvoUnico;
 
       if (valor) return valor;
+
+      const descricao = resolverValor('financeiro', 'descricao', registro);
+      if (descricao) {
+        const { solicitante } = extrairSolicitanteEClienteDescricao(descricao);
+        if (solicitante) return solicitante.toUpperCase();
+      }
+
       return '';
+    }
+
+    if (campo === 'motoboy' && !valor) {
+      const pedido = buscarPedidoDoFinanceiro(registro);
+      if (pedido) {
+        const mbPedido = resolverValor('pedidos', 'motoboy', pedido);
+        if (mbPedido) valor = mbPedido;
+      }
     }
 
     if (campo === 'vlr_servico' && !valorNumericoValido(valor)) {
@@ -738,13 +935,15 @@
       totais.temValor = true;
       totais.temSituacao = true;
       dadosOriginais.forEach(function (r) {
+        const tipo = normalizarComparacao(resolverValor('financeiro', 'tipo', r));
+        if (tipo && tipo !== 'RECEITA' && tipo !== 'CORRIDA' && tipo !== 'SERVICO') return;
+
         const v = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r, nomesAlvo));
         if (!isNaN(v)) totais.somaValor += v;
         const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
         if (sit === 'PAGO' && !isNaN(v)) totais.somaPagos += v;
       });
     }
-
     return totais;
   }
 
@@ -774,26 +973,6 @@
     });
   }
 
-  function extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados) {
-    const nomesTexto = [];
-    valoresBrutos.forEach(function (v) {
-      const canonico = nomeCanonicoDoGrupo(v) || canonicoPorNomeExato(v);
-      if (canonico && nomesTexto.indexOf(canonico) === -1) nomesTexto.push(canonico);
-    });
-    clientesSelecionados.forEach(function (c) {
-      const username = resolverValor('clientes', 'username', c);
-      const canonico = nomeCanonicoDoGrupo(c.id) || canonicoPorNomeExato(username);
-      if (canonico) {
-        if (nomesTexto.indexOf(canonico) === -1) nomesTexto.push(canonico);
-        return;
-      }
-      if (username && nomesTexto.indexOf(username) === -1) nomesTexto.push(username);
-      const responsavel = resolverValor('clientes', 'responsavel', c);
-      if (responsavel && nomesTexto.indexOf(responsavel) === -1) nomesTexto.push(responsavel);
-    });
-    return nomesTexto;
-  }
-
   function nomesCorrespondem(a, b) {
     if (!a || !b) return false;
     return normalizarComparacao(a) === normalizarComparacao(b);
@@ -820,60 +999,6 @@
     return nomesAlvo.some(function (nome) {
       return nomesRelacionados(valor, nome) || valorContemNome(valor, nome);
     });
-  }
-
-  function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
-    const idPed = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedido));
-    if (!idPed) return false;
-
-    const idsExpandidosSelecionados = [];
-    idsStr.forEach(function (v) {
-      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
-        if (idsExpandidosSelecionados.indexOf(id) === -1) idsExpandidosSelecionados.push(id);
-      });
-    });
-
-    if (idsExpandidosSelecionados.indexOf(idPed) !== -1) return true;
-
-    const canonicoPedido = nomeCanonicoDoGrupo(idPed);
-    if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
-
-    return false;
-  }
-
-  function financeiroCorrespondeCliente(registro, nomesAlvo) {
-    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
-    if (pedidoVinculado) {
-      const idCliente = resolverValor('pedidos', 'id_cliente', pedidoVinculado);
-      const canonicoPedido = nomeCanonicoDoGrupo(idCliente);
-      if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
-
-      const cli = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idCliente); });
-      if (cli) {
-        const username = resolverValor('clientes', 'username', cli);
-        if (nomesAlvo.some(function (nome) { return nomesCorrespondem(username, nome); })) return true;
-      }
-    }
-
-    const nomeFin = resolverValor('financeiro', 'cliente', registro);
-    if (nomeFin && nomesAlvo.some(function (nome) { return nomesCorrespondem(nomeFin, nome); })) return true;
-
-    return false;
-  }
-
-  function chatCorrespondeCliente(registroChat, idsStr, nomesAlvo) {
-    const idChat = normalizarIdCliente(resolverValor('chat', 'id_cliente', registroChat));
-    const idsExpandidos = [];
-    idsStr.forEach(function (v) {
-      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
-        if (idsExpandidos.indexOf(id) === -1) idsExpandidos.push(id);
-      });
-    });
-    if (idChat && idsExpandidos.indexOf(idChat) !== -1) return true;
-
-    const pedidoVinculado = buscarPedidoDoChat(registroChat);
-    if (!pedidoVinculado) return false;
-    return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
   }
 
   function dentroPeriodo(dataStr, inicio, fim) {
@@ -944,7 +1069,10 @@
     }
     else if (banco === 'financeiro') {
       dados = state.financeiro.filter(function (r) {
-        return dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
+        const tipo = normalizarComparacao(resolverValor('financeiro', 'tipo', r));
+        const dentroPeriodoOk = dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
+        const tipoValido = !tipo || tipo === 'RECEITA' || tipo === 'CORRIDA' || tipo === 'SERVICO';
+        return dentroPeriodoOk && tipoValido;
       });
     }
 
@@ -962,12 +1090,11 @@
     }
 
     if (fx.campo === 'motoboy_id') {
-      const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
-
       if (banco === 'colaborador') {
         return dados.filter(function (r) { return idBate(r.id); });
       }
       if (banco === 'pedidos') {
+        const nomesSelecionados = idsParaNomes(valoresBrutos, state.motoboys, 'colaborador');
         return dados.filter(function (r) {
           const mb = normalizarComparacao(resolverValor('pedidos', 'motoboy', r));
           return nomesSelecionados.indexOf(mb) !== -1;
@@ -975,9 +1102,8 @@
       }
       if (banco === 'financeiro') {
         return dados.filter(function (r) {
-          const mb = normalizarComparacao(resolverValor('financeiro', 'motoboy', r));
-          const colab = normalizarComparacao(resolverValor('financeiro', 'colaborador', r));
-          return nomesSelecionados.indexOf(mb) !== -1 || nomesSelecionados.indexOf(colab) !== -1;
+          const colabId = String(resolverValor('financeiro', 'colaborador_id', r)).trim();
+          return valoresStr.indexOf(colabId) !== -1;
         });
       }
       return dados;
@@ -1083,15 +1209,22 @@
     return resolverValor('chat', campo, registro);
   }
 
-  function agruparPorMotoboy(pedidos) {
+  const MOTOBOY_INVALIDOS = ['CANCELADO', 'CONCLUIDO', 'PENDENTE', 'SEM MOTOBOY', ''];
+
+  function agruparPorMotoboyFinanceiro(registrosFinanceiro, nomesAlvo) {
     const mapa = {};
 
-    pedidos.forEach(function (p) {
-      const nome = resolverValor('pedidos', 'motoboy', p) || 'Sem motoboy';
-      const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
-      const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
+    registrosFinanceiro.forEach(function (r) {
+      const nomeRaw = obterValorCampoFinanceiro('motoboy', r, nomesAlvo);
+      const nomeNorm = normalizarComparacao(nomeRaw);
+
+      if (!nomeRaw || MOTOBOY_INVALIDOS.indexOf(nomeNorm) !== -1) return;
+
+      const nome = nomeRaw;
+      const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
+      const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r, nomesAlvo));
       const valorValido = !isNaN(valor) ? valor : 0;
-      const concluido = (status === 'CONCLUIDO' || status === 'CONCLUÍDO');
+      const pago = (sit === 'PAGO');
 
       if (!mapa[nome]) {
         mapa[nome] = { nome: nome, qtd: 0, qtdPendente: 0, receitaTotal: 0, receitaPendente: 0 };
@@ -1100,7 +1233,7 @@
       mapa[nome].qtd++;
       mapa[nome].receitaTotal += valorValido;
 
-      if (!concluido) {
+      if (!pago) {
         mapa[nome].qtdPendente++;
         mapa[nome].receitaPendente += valorValido;
       }
@@ -1128,6 +1261,20 @@
     }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
   }
 
+  function tokensTotais(v) {
+    return tokenizar(v);
+  }
+
+  function tokensFortes(v) {
+    return tokenizar(v).filter(function (t) { return t.length >= 5; });
+  }
+
+  function nomeAlvoEhSeguroParaFuzzy(nome) {
+    const todos = tokensTotais(nome);
+    const fortes = tokensFortes(nome);
+    return todos.length >= 2 && fortes.length >= 1;
+  }
+
   function agruparPorCliente(pedidos) {
     const mapa = {};
     pedidos.forEach(function (p) {
@@ -1152,8 +1299,10 @@
     const nomes = [];
     lista.forEach(function (item) {
       if (idsStr.indexOf(String(item.id).trim()) !== -1) {
-        const nome = resolverValor(banco, 'username', item);
-        if (nome) nomes.push(normalizarComparacao(nome));
+        const username = resolverValor(banco, 'username', item);
+        const nomeColab = resolverValor(banco, 'colaborador', item);
+        if (username) nomes.push(normalizarComparacao(username));
+        if (nomeColab) nomes.push(normalizarComparacao(nomeColab));
       }
     });
     return nomes;
@@ -1265,53 +1414,6 @@
     }
   }
 
-  function agruparPorMotoboyFinanceiro(registrosFinanceiro, nomesAlvo) {
-    const mapa = {};
-
-    registrosFinanceiro.forEach(function (r) {
-      const nome = resolverValor('financeiro', 'motoboy', r) ||
-        resolverValor('financeiro', 'colaborador', r) ||
-        'Sem motoboy';
-      const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
-      const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r, nomesAlvo));
-      const valorValido = !isNaN(valor) ? valor : 0;
-      const pago = (sit === 'PAGO');
-
-      if (!mapa[nome]) {
-        mapa[nome] = { nome: nome, qtd: 0, qtdPendente: 0, receitaTotal: 0, receitaPendente: 0 };
-      }
-
-      mapa[nome].qtd++;
-      mapa[nome].receitaTotal += valorValido;
-
-      if (!pago) {
-        mapa[nome].qtdPendente++;
-        mapa[nome].receitaPendente += valorValido;
-      }
-    });
-
-    return Object.keys(mapa).map(function (k) {
-      const m = mapa[k];
-      const valorMotoboy = m.receitaTotal * PERCENTUAL_MOTOBOY;
-      const valorRdo = m.receitaTotal * PERCENTUAL_RDO;
-      const valorMotoboyPendente = m.receitaPendente * PERCENTUAL_MOTOBOY;
-      const valorRdoPendente = m.receitaPendente * PERCENTUAL_RDO;
-
-      return {
-        nome: m.nome,
-        qtd: m.qtd,
-        qtdPendente: m.qtdPendente,
-        receitaTotal: m.receitaTotal,
-        receitaPendente: m.receitaPendente,
-        valorMotoboy: valorMotoboy,
-        valorRdo: valorRdo,
-        valorMotoboyPendente: valorMotoboyPendente,
-        valorRdoPendente: valorRdoPendente,
-        valorTotalCalculado: valorMotoboy + valorRdo
-      };
-    }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
-  }
-
   function montarSnapshot() {
     const snapshot = { bancos: {}, meta: {}, resumos: {} };
 
@@ -1375,7 +1477,7 @@
       baseDados.forEach(function (registro) {
         const nomeMotoboy = pedidosSelecionado
           ? obterValorCampoPedido('motoboy', registro)
-          : (resolverValor('financeiro', 'motoboy', registro) || resolverValor('financeiro', 'colaborador', registro));
+          : obterValorCampoFinanceiro('motoboy', registro, nomesAlvoAtivo);
         if (!nomeMotoboy) return;
 
         const dataBruta = pedidosSelecionado
@@ -1620,7 +1722,6 @@
     relToast('Relatório excluído com sucesso!', 'success');
   }
 
-  // Helpers
   const LS_KEY = 'rdo_relatorios_salvos';
 
   function persistirRelatoriosLocal() {
@@ -2324,13 +2425,15 @@
 
   function abreviarNome(nomeCompleto) {
     if (!nomeCompleto) return '';
-    const partes = String(nomeCompleto).trim().split(/\s+/).filter(Boolean);
+    const texto = String(nomeCompleto).trim();
 
+    if (/^sem\s/i.test(texto)) return texto;
+
+    const partes = texto.split(/\s+/).filter(Boolean);
     if (partes.length <= 1) return partes[0] || '';
 
     const primeiro = partes[0];
     const ultimo = partes[partes.length - 1];
-
     return primeiro.charAt(0).toUpperCase() + '. ' + ultimo;
   }
 
