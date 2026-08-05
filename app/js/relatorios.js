@@ -1753,6 +1753,32 @@
     }
   }
 
+  function agruparLinhasPorData(linhas, chaveData) {
+    const mapa = {};
+    const ordemDatas = [];
+
+    linhas.forEach(function (linha) {
+      const dataRaw = linha[chaveData];
+      const dataISO = normalizarDataISO(dataRaw);
+      const chave = dataISO || 'sem-data';
+      const label = dataISO ? formatDateBR(dataISO) : 'Sem data';
+
+      if (!mapa[chave]) {
+        mapa[chave] = { chave: chave, label: label, linhas: [], subtotal: 0 };
+        ordemDatas.push(chave);
+      }
+      mapa[chave].linhas.push(linha);
+    });
+
+    ordemDatas.sort(function (a, b) {
+      if (a === 'sem-data') return 1;
+      if (b === 'sem-data') return -1;
+      return a.localeCompare(b);
+    });
+
+    return ordemDatas.map(function (k) { return mapa[k]; });
+  }
+
   function construirConteudoRelatorio(relatorio, snapshot) {
     let html = '<div class="rel-modal-content-inner">';
 
@@ -1772,13 +1798,22 @@
     Object.keys(bancos).forEach(function (banco) {
       const info = bancos[banco];
       if (!info || !info.campos || !info.campos.length) return;
+
       html += '<div class="rel-modal-divider"></div>';
       html += '<div class="rel-modal-section">';
       html += '<div class="rel-modal-section-title"><i class="bi bi-table"></i> ' + escapeHtml(info.label) + ' (' + info.linhas.length + ')</div>';
 
       if (!info.linhas.length) {
         html += '<div style="font-size:.75rem;color:#999;">Nenhum registro no período.</div>';
-      } else {
+        html += '</div>';
+        return;
+      }
+
+      const temCampoData = info.campos.some(function (c) { return c.chave === 'data'; });
+      const temCampoValor = info.campos.some(function (c) { return c.chave === 'vlr_servico' || c.chave === 'valor_corrida'; });
+      const chaveValor = info.campos.some(function (c) { return c.chave === 'vlr_servico'; }) ? 'vlr_servico' : 'valor_corrida';
+
+      if (!temCampoData) {
         html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
         html += '<thead><tr>';
         info.campos.forEach(function (c) { html += '<th>' + escapeHtml(c.label) + '</th>'; });
@@ -1788,31 +1823,75 @@
           html += '<tr>';
           info.campos.forEach(function (c) {
             let valor = linha[c.chave];
-            if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') {
-              valor = formatarMoeda(valor);
-            } else if (c.chave === 'horario') {
-              valor = extrairHora(valor);
-            } else if (c.chave === 'solicitante') {
-              valor = abreviarNome(valor); // <-- abreviação aplicada aqui
-            }
+            if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
+            else if (c.chave === 'horario') valor = extrairHora(valor);
+            else if (c.chave === 'solicitante') valor = abreviarNome(valor);
             html += '<td class="rel-td-nowrap">' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
           });
           html += '</tr>';
         });
         html += '</tbody></table></div>';
+      } else {
+        const blocos = agruparLinhasPorData(info.linhas, 'data');
+        let somaGeralBanco = 0;
 
-        if (info.totais && (info.totais.temValor || info.totais.temSituacao)) {
-          html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;">';
-          html += '<div class="rel-modal-card" style="background:#f0f7ff;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + info.totais.qtd + '</div></div>';
-          if (info.totais.temValor) {
-            html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
+        blocos.forEach(function (bloco) {
+          let subtotalBloco = 0;
+          if (temCampoValor) {
+            bloco.linhas.forEach(function (linha) {
+              const v = parseMoeda(linha[chaveValor]);
+              if (!isNaN(v)) subtotalBloco += v;
+            });
           }
-          if (info.totais.temSituacao) {
-            html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaPagos) + '</div></div>';
-          }
+          somaGeralBanco += subtotalBloco;
+
+          html += '<div style="margin-bottom:16px;border:1px solid #dee2e6;border-radius:10px;overflow:hidden;">';
+          html += '<div style="background:#eef2f7;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dee2e6;">';
+          html += '<span style="font-size:.8rem;font-weight:700;color:#1c3d5a;"><i class="bi bi-calendar3-fill" style="margin-right:6px;"></i>' + escapeHtml(bloco.label) + '</span>';
+          html += '<span style="font-size:.75rem;color:#555;">' + bloco.linhas.length + (bloco.linhas.length === 1 ? ' registro' : ' registros') +
+            (temCampoValor ? ' · Subtotal: <strong style="color:#0a7d2c;">' + formatarMoeda(subtotalBloco) + '</strong>' : '') + '</span>';
+          html += '</div>';
+
+          html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered mb-0" style="font-size:.72rem;background:#fff;">';
+          html += '<thead><tr>';
+          info.campos.forEach(function (c) { if (c.chave !== 'data') html += '<th>' + escapeHtml(c.label) + '</th>'; });
+          html += '</tr></thead><tbody>';
+
+          bloco.linhas.forEach(function (linha) {
+            html += '<tr>';
+            info.campos.forEach(function (c) {
+              if (c.chave === 'data') return;
+              let valor = linha[c.chave];
+              if (c.chave === 'vlr_servico' || c.chave === 'valor_corrida') valor = formatarMoeda(valor);
+              else if (c.chave === 'horario') valor = extrairHora(valor);
+              else if (c.chave === 'solicitante') valor = abreviarNome(valor);
+              html += '<td class="rel-td-nowrap">' + escapeHtml(valor === undefined || valor === null ? '' : valor) + '</td>';
+            });
+            html += '</tr>';
+          });
+          html += '</tbody></table></div></div>';
+        });
+
+        if (temCampoValor) {
+          html += '<div style="background:#fff9f0;border:2px solid #ffc107;border-radius:10px;padding:10px 16px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;">';
+          html += '<span style="font-size:.85rem;font-weight:700;color:#444;">TOTAL GERAL (todas as datas)</span>';
+          html += '<span style="font-size:.95rem;font-weight:700;color:#0a7d2c;">' + formatarMoeda(somaGeralBanco) + '</span>';
           html += '</div>';
         }
       }
+
+      if (info.totais && (info.totais.temValor || info.totais.temSituacao)) {
+        html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;">';
+        html += '<div class="rel-modal-card" style="background:#f0f7ff;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + info.totais.qtd + '</div></div>';
+        if (info.totais.temValor) {
+          html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
+        }
+        if (info.totais.temSituacao) {
+          html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaPagos) + '</div></div>';
+        }
+        html += '</div>';
+      }
+
       html += '</div>';
     });
 
