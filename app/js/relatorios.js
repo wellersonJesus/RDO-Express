@@ -674,10 +674,6 @@
     return normalizarComparacao(v).split(' ').filter(function (t) { return t.length > 0; });
   }
 
-  function nomeAlvoEhSeguroParaFuzzy(nome) {
-    return tokensSignificativos(nome).length >= 2;
-  }
-
   function idClientePertenceAOutroCliente(idClienteRegistro, idsExpandidosAlvo) {
     const idNorm = normalizarIdCliente(idClienteRegistro);
     if (!idNorm) return false;
@@ -743,6 +739,22 @@
     return true;
   }
 
+  function textoContemNomeForte(texto, nomesAlvoSeguros) {
+    if (!texto || !nomesAlvoSeguros || !nomesAlvoSeguros.length) return false;
+    return nomesAlvoSeguros.some(function (nome) {
+      return tokensEmComum(texto, nome) >= tokensSignificativos(nome).length;
+    });
+  }
+
+  function pedidoContemNomeAlvoEmCampos(pedido, nomesAlvoSeguros) {
+    if (!nomesAlvoSeguros || !nomesAlvoSeguros.length) return false;
+    const campos = ['de', 'para', 'mercadoria', 'observacao', 'solicitante'];
+    return campos.some(function (campo) {
+      const v = resolverValor('pedidos', campo, pedido);
+      return v && textoContemNomeForte(v, nomesAlvoSeguros);
+    });
+  }
+
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
     const idPed = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedido));
 
@@ -755,25 +767,18 @@
 
     if (idPed) {
       if (idsExpandidos.indexOf(idPed) !== -1) return true;
-
       const canonicoPedido = nomeCanonicoDoGrupo(idPed);
       if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
-
-      // 🔒 Muro de proteção: se o pedido já pertence comprovadamente a OUTRO
-      // cliente cadastrado, nenhum match por nome/texto pode sobrepor essa
-      // informação. Evita que um pedido da Camila apareça no relatório da Elisa.
-      if (idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
     }
 
-    // Fallback por nome do solicitante — só aplicado quando o pedido NÃO tem
-    // um id_cliente confiável apontando para outro cliente já cadastrado, e
-    // apenas usando nomes-alvo "seguros" (2+ tokens significativos) para
-    // evitar colisões por palavra única.
+    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+
+    if (nomesAlvoSeguros.length && pedidoContemNomeAlvoEmCampos(pedido, nomesAlvoSeguros)) return true;
+
+    if (idPed && idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
+
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
-    if (solicitante) {
-      const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
-      if (nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
-    }
+    if (solicitante && nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
 
     return false;
   }
@@ -786,7 +791,18 @@
       });
     });
 
+    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
     const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+
+    if (nomesAlvoSeguros.length) {
+      const descricao0 = resolverValor('financeiro', 'descricao', registro);
+      if (descricao0 && textoContemNomeForte(descricao0, nomesAlvoSeguros)) return true;
+
+      const observacao0 = resolverValor('financeiro', 'observacao', registro);
+      if (observacao0 && textoContemNomeForte(observacao0, nomesAlvoSeguros)) return true;
+
+      if (pedidoVinculado && pedidoContemNomeAlvoEmCampos(pedidoVinculado, nomesAlvoSeguros)) return true;
+    }
 
     if (pedidoVinculado) {
       const idCliente = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedidoVinculado));
@@ -801,28 +817,17 @@
         if (cli) {
           const username = resolverValor('clientes', 'username', cli);
           if (valorCorrespondeNomesAlvo(username, nomesAlvo)) return true;
-
-          // 🔒 Muro de proteção: registro já vinculado a outro cliente
-          // cadastrado de forma inequívoca — bloqueia qualquer match por texto.
           if (idsExpandidos.indexOf(idCliente) === -1) return false;
         }
       }
 
       const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
-      if (solicitante) {
-        const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
-        if (nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
-      }
+      if (solicitante && nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
     }
 
     const nomeFin = resolverValor('financeiro', 'cliente', registro);
     if (nomeFin && valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
 
-    // ⚠️ Matching por descrição/observação agora só usa nomes-alvo "seguros"
-    // (2+ tokens significativos). Nomes de 1 palavra (ex: "CAMILA", "MARCIO")
-    // não disparam mais match por simplesmente aparecerem no texto — essa era
-    // a principal causa de contaminação entre clientes.
-    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
     if (!nomesAlvoSeguros.length) return false;
 
     const descricao = resolverValor('financeiro', 'descricao', registro);
@@ -832,16 +837,7 @@
 
       const { clienteTexto } = extrairSolicitanteEClienteDescricao(descricao);
       if (clienteTexto && valorCorrespondeNomesAlvo(clienteTexto, nomesAlvoSeguros)) return true;
-
-      if (nomesAlvoSeguros.some(function (nome) {
-        return tokensEmComum(descricao, nome) >= tokensSignificativos(nome).length;
-      })) return true;
     }
-
-    const observacao = resolverValor('financeiro', 'observacao', registro);
-    if (observacao && nomesAlvoSeguros.some(function (nome) {
-      return tokensEmComum(observacao, nome) >= tokensSignificativos(nome).length;
-    })) return true;
 
     return false;
   }
@@ -856,11 +852,14 @@
     });
     if (idChat && idsExpandidos.indexOf(idChat) !== -1) return true;
 
-    // 🔒 Muro de proteção: se o chat tem id_cliente reconhecido mas apontando
-    // para outro cliente cadastrado, bloqueia o fallback por pedido vinculado.
+    const pedidoVinculado = buscarPedidoDoChat(registroChat);
+    if (pedidoVinculado) {
+      const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+      if (nomesAlvoSeguros.length && pedidoContemNomeAlvoEmCampos(pedidoVinculado, nomesAlvoSeguros)) return true;
+    }
+
     if (idChat && idClientePertenceAOutroCliente(idChat, idsExpandidos)) return false;
 
-    const pedidoVinculado = buscarPedidoDoChat(registroChat);
     if (!pedidoVinculado) return false;
     return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
   }
@@ -1334,9 +1333,23 @@
 
     function filtrar(termo) {
       const t = normalizarComparacao(termo);
-      filtrados = !t ? itens : itens.filter(function (it) {
-        return normalizarComparacao(it.nome).indexOf(t) !== -1 || nomesRelacionados(it.nome, termo);
-      });
+      if (!t) {
+        filtrados = itens;
+      } else {
+        filtrados = itens.filter(function (it) {
+          const nomeNorm = normalizarComparacao(it.nome);
+          return nomeNorm === t || nomeNorm.indexOf(t) === 0 || nomesRelacionados(it.nome, termo);
+        });
+
+        filtrados.sort(function (a, b) {
+          const na = normalizarComparacao(a.nome);
+          const nb = normalizarComparacao(b.nome);
+          const aExato = na === t ? 0 : 1;
+          const bExato = nb === t ? 0 : 1;
+          if (aExato !== bExato) return aExato - bExato;
+          return na.localeCompare(nb);
+        });
+      }
       ativo = -1;
       render();
     }
