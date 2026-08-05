@@ -990,6 +990,30 @@
         });
     };
 
+    function _ativarDestaqueValor() {
+        var elValor = document.getElementById('edit-valor-pedido-display');
+        if (!elValor) return;
+
+        elValor.classList.add('valor-destaque-piscando');
+
+        function _removerDestaque() {
+            elValor.classList.remove('valor-destaque-piscando');
+            elValor.removeEventListener('focus', _removerDestaque);
+            elValor.removeEventListener('mousedown', _removerDestaque);
+        }
+
+        elValor.addEventListener('focus', _removerDestaque);
+        elValor.addEventListener('mousedown', _removerDestaque);
+
+        var modalEl = document.getElementById('modalEditarPedido');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function onHide() {
+                _removerDestaque();
+                modalEl.removeEventListener('hidden.bs.modal', onHide);
+            });
+        }
+    }
+
     window.editarPedido = function (id) {
         var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
             return String(p.id || p._id || '').trim() === String(id).trim();
@@ -1066,6 +1090,7 @@
                 if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
                     window.RDO_PEDIDOS.calcularEspera();
                 bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                _ativarDestaqueValor();
             }, 50);
         });
     };
