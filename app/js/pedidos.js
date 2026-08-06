@@ -768,106 +768,6 @@
         _renderizarTabela(window.AppRDO.pedidosCache);
     };
 
-    window.RDO_PEDIDOS.salvarEdicao = function () {
-        var btnSalvar = document.getElementById('btn-salvar-edicao');
-        var errEl = document.getElementById('edit-error-msg');
-
-        if (errEl) errEl.classList.add('d-none');
-
-        var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
-        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
-        var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
-        var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
-
-        if (!pedidoId) {
-            if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
-            return;
-        }
-
-        var pontos = tipo === 'ambos' ? 2 : 1;
-        var franquiaTotal = FRANQUIA_MIN * pontos;
-        var excedente = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
-        var taxa = excedente * TARIFA_MIN;
-        var valorFinal = valorBase + taxa;
-
-        var payload = {
-            id: pedidoId,
-            solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
-            contato: (document.getElementById('edit-contato') || {}).value || '',
-            horario: (document.getElementById('edit-horario') || {}).value || '',
-            de: (document.getElementById('edit-de') || {}).value || '',
-            para: (document.getElementById('edit-para') || {}).value || '',
-            observacao: (document.getElementById('edit-obs') || {}).value || '',
-            espera_tipo: tipo,
-            espera_minutos: minutos,
-            taxa_espera: taxa,
-            // 🔧 Envia TODOS os campos de valor que o backend/frontend podem consultar
-            valor_corrida: valorFinal,
-            valor_total: valorFinal,
-            valor_final: valorFinal
-        };
-
-        _setBotaoLoading(btnSalvar, true);
-
-        API.call('updatepedido', payload)
-            .then(function (res) {
-                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
-
-                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-                var pedido = cache.find(function (p) {
-                    return String(p.id || '').trim() === String(pedidoId).trim();
-                });
-                if (pedido) {
-                    Object.assign(pedido, {
-                        solicitante: payload.solicitante,
-                        contato: payload.contato,
-                        horario: payload.horario,
-                        de: payload.de,
-                        para: payload.para,
-                        observacao: payload.observacao,
-                        espera_tipo: payload.espera_tipo,
-                        espera_minutos: payload.espera_minutos,
-                        taxa_espera: payload.taxa_espera,
-                        // 🔧 Atualiza também valor_corrida no cache local,
-                        // pois _resolverValor() prioriza esse campo
-                        valor_corrida: payload.valor_corrida,
-                        valor_total: payload.valor_total,
-                        valor_final: payload.valor_final
-                    });
-                }
-
-                // só renderiza a tabela DEPOIS da confirmação do backend
-                _renderizarTabela(window.AppRDO.pedidosCache);
-
-                var modalEl = document.getElementById('modalEditarPedido');
-                if (modalEl) {
-                    var inst = bootstrap.Modal.getInstance(modalEl);
-                    if (inst) inst.hide();
-                }
-
-                if (typeof window.EventBus !== 'undefined')
-                    window.EventBus.emit('pedido:atualizado', {
-                        id: pedidoId,
-                        valor_corrida: valorFinal,
-                        valor_total: valorFinal,
-                        valor_final: valorFinal
-                    });
-
-                if (typeof Swal !== 'undefined')
-                    Swal.fire({
-                        icon: 'success', title: 'Pedido atualizado!',
-                        toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
-                    });
-            })
-            .catch(function (err) {
-                console.error('[pedidos.js] ❌ salvarEdicao:', err);
-                if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
-            })
-            .finally(function () {
-                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
-            });
-    };
-
     window.RDO_PEDIDOS.salvarNovo = function () {
         var btnSalvar = document.getElementById('btn-salvar-novo');
         var errEl = document.getElementById('novo-error-msg');
@@ -1075,10 +975,13 @@
             _s('edit-espera-tipo', pedido.espera_tipo || 'sem_espera');
             _s('edit-espera-minutos', pedido.espera_minutos || '');
 
-            _s('esp-cliente', _resolverNomeCliente(pedido));
-            _s('esp-mercadoria', pedido.mercadoria || '—');
-            _s('esp-retorno', pedido.retorno || 'Não');
-            _s('esp-prioridade', _labelPrioridade(pedido.prioridade));
+            // Campos agora editáveis (antes eram somente-leitura via esp-*)
+            _s('edit-cliente', _resolverNomeCliente(pedido));
+            _s('edit-mercadoria', pedido.mercadoria || '');
+            _s('edit-retorno', String(pedido.retorno || 'Não').trim());
+            _s('edit-prioridade', String(pedido.prioridade != null ? pedido.prioridade : '0').trim());
+            _s('edit-motoboy', _resolverMotoboy(pedido) || '');
+            _s('edit-status', statusAtual);
 
             var tituloEl = document.getElementById('editar-titulo');
             if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
@@ -1093,6 +996,117 @@
                 _ativarDestaqueValor();
             }, 50);
         });
+    };
+
+    window.RDO_PEDIDOS.salvarEdicao = function () {
+        var btnSalvar = document.getElementById('btn-salvar-edicao');
+        var errEl = document.getElementById('edit-error-msg');
+
+        if (errEl) errEl.classList.add('d-none');
+
+        var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
+        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+        var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+        var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
+
+        if (!pedidoId) {
+            if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
+            return;
+        }
+
+        var pontos = tipo === 'ambos' ? 2 : 1;
+        var franquiaTotal = FRANQUIA_MIN * pontos;
+        var excedente = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
+        var taxa = excedente * TARIFA_MIN;
+        var valorFinal = valorBase + taxa;
+
+        var novoStatusEl = document.getElementById('edit-status');
+        var novoStatus = novoStatusEl ? String(novoStatusEl.value || '').trim().toUpperCase() : '';
+
+        var payload = {
+            id: pedidoId,
+            solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
+            contato: (document.getElementById('edit-contato') || {}).value || '',
+            horario: (document.getElementById('edit-horario') || {}).value || '',
+            de: (document.getElementById('edit-de') || {}).value || '',
+            para: (document.getElementById('edit-para') || {}).value || '',
+            observacao: (document.getElementById('edit-obs') || {}).value || '',
+            espera_tipo: tipo,
+            espera_minutos: minutos,
+            taxa_espera: taxa,
+            valor_corrida: valorFinal,
+            valor_total: valorFinal,
+            valor_final: valorFinal,
+            // Campos completos do formulário
+            mercadoria: (document.getElementById('edit-mercadoria') || {}).value || '',
+            retorno: (document.getElementById('edit-retorno') || {}).value || 'Não',
+            prioridade: (document.getElementById('edit-prioridade') || {}).value || '0',
+            motoboy: (document.getElementById('edit-motoboy') || {}).value || ''
+        };
+
+        if (novoStatus) payload.status = novoStatus;
+
+        _setBotaoLoading(btnSalvar, true);
+
+        API.call('updatepedido', payload)
+            .then(function (res) {
+                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+
+                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+                var pedido = cache.find(function (p) {
+                    return String(p.id || '').trim() === String(pedidoId).trim();
+                });
+                if (pedido) {
+                    Object.assign(pedido, {
+                        solicitante: payload.solicitante,
+                        contato: payload.contato,
+                        horario: payload.horario,
+                        de: payload.de,
+                        para: payload.para,
+                        observacao: payload.observacao,
+                        espera_tipo: payload.espera_tipo,
+                        espera_minutos: payload.espera_minutos,
+                        taxa_espera: payload.taxa_espera,
+                        valor_corrida: payload.valor_corrida,
+                        valor_total: payload.valor_total,
+                        valor_final: payload.valor_final,
+                        mercadoria: payload.mercadoria,
+                        retorno: payload.retorno,
+                        prioridade: payload.prioridade,
+                        motoboy: payload.motoboy
+                    });
+                    if (payload.status) pedido.status = payload.status;
+                }
+
+                _renderizarTabela(window.AppRDO.pedidosCache);
+
+                var modalEl = document.getElementById('modalEditarPedido');
+                if (modalEl) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+
+                if (typeof window.EventBus !== 'undefined')
+                    window.EventBus.emit('pedido:atualizado', {
+                        id: pedidoId,
+                        valor_corrida: valorFinal,
+                        valor_total: valorFinal,
+                        valor_final: valorFinal
+                    });
+
+                if (typeof Swal !== 'undefined')
+                    Swal.fire({
+                        icon: 'success', title: 'Pedido atualizado!',
+                        toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
+                    });
+            })
+            .catch(function (err) {
+                console.error('[pedidos.js] ❌ salvarEdicao:', err);
+                if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
+            })
+            .finally(function () {
+                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
+            });
     };
 
     window.RDO_PEDIDOS.onEditarValorInput = function (input) {
