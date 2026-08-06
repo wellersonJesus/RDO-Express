@@ -426,18 +426,21 @@ window.reloadBot = function () {
                 usr.origem = 'usuarios';
                 usr.status = normalizeStatus(usr.status, 'FALSE');
 
+                var permsApi = null;
                 try {
-                    var storageKey = 'permissoes_usuario_' + usr.id;
-                    var storedPerms = localStorage.getItem(storageKey);
-                    if (storedPerms) {
-                        var parsed = JSON.parse(storedPerms);
-                        usr.permissoes = Array.isArray(parsed) && parsed.length > 0 ? parsed : (window.PERMISSOES_PADRAO[usr.cargo] || []);
-                    } else {
-                        usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
+                    if (usr.permissoes) {
+                        var parsedApi = typeof usr.permissoes === 'string'
+                            ? JSON.parse(usr.permissoes)
+                            : usr.permissoes;
+                        if (Array.isArray(parsedApi) && parsedApi.length > 0) permsApi = parsedApi;
                     }
-                } catch (e) {
-                    usr.permissoes = window.PERMISSOES_PADRAO[usr.cargo] || [];
-                }
+                } catch (e) { }
+
+                usr.permissoes = permsApi || window.PERMISSOES_PADRAO[usr.cargo] || [];
+
+                try {
+                    localStorage.setItem('permissoes_usuario_' + usr.id, JSON.stringify(usr.permissoes));
+                } catch (e) { }
 
                 if (!String(usr.id || '').trim()) continue;
                 todosDados.push(usr);
