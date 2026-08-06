@@ -10,26 +10,17 @@ O ecossistema **RDO-Express** foi projetado para centralizar o fluxo operacional
 - **WhatsApp:** Gateway Evolution API (v1.6.1) via Webhook.
 - **Infra:** Docker & Docker Compose para orquestração de serviços.
 
-##### Execução (Local Development)
-
-- Instalar dependencia
-
-```bash
-# Instalar dependências e subir servidor (Acesse: http://localhost:3000)
-npm install && npm start 
-```
-
-- Gerar hash
+##### Gerar senha master
 
 ```bash
 # Instala o pacote localmente apenas para gerar o hash inicial
 npm install bcryptjs
 
 # Gera o Hash na tela de forma limpa
-node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("master@123", 10));'
+node -e 'const bcrypt = require("bcryptjs"); console.log(bcrypt.hashSync("nova_senha", 10));'
 ```
 
-- Baixar mapa para docker
+# Baixar mapa para docker
 
 ```bash
 #link para dowunload
