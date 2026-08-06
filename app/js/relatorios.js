@@ -783,6 +783,42 @@
     return false;
   }
 
+  const ENDERECOS_CLIENTE_ALIAS = {
+    'PLURAL': ['AV DO CONTORNO 2316', 'AVENIDA DO CONTORNO 2316', 'DIAMOND MALL']
+  };
+
+  function normalizarEndereco(v) {
+    return normalizarComparacao(v)
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function enderecoPertenceAoCliente(nomeCanonico, textoEndereco) {
+    const enderecos = ENDERECOS_CLIENTE_ALIAS[nomeCanonico];
+    if (!enderecos || !textoEndereco) return false;
+    const endNorm = normalizarEndereco(textoEndereco);
+    return enderecos.some(function (e) {
+      return endNorm.indexOf(normalizarEndereco(e)) !== -1;
+    });
+  }
+
+  function pedidoBateEnderecoAlvo(pedido, nomesAlvo) {
+    if (!pedido || !nomesAlvo || !nomesAlvo.length) return false;
+    const de = resolverValor('pedidos', 'de', pedido);
+    const para = resolverValor('pedidos', 'para', pedido);
+    return nomesAlvo.some(function (nome) {
+      return enderecoPertenceAoCliente(nome, de) || enderecoPertenceAoCliente(nome, para);
+    });
+  }
+
+  function textoContemEnderecoAlvo(texto, nomesAlvo) {
+    if (!texto || !nomesAlvo || !nomesAlvo.length) return false;
+    return nomesAlvo.some(function (nome) {
+      return enderecoPertenceAoCliente(nome, texto);
+    });
+  }
+
   function financeiroCorrespondeCliente(registro, nomesAlvo) {
     const idsExpandidos = [];
     nomesAlvo.forEach(function (v) {
@@ -803,6 +839,11 @@
 
       if (pedidoVinculado && pedidoContemNomeAlvoEmCampos(pedidoVinculado, nomesAlvoSeguros)) return true;
     }
+
+    if (pedidoVinculado && pedidoBateEnderecoAlvo(pedidoVinculado, nomesAlvo)) return true;
+
+    const descricaoRegistro = resolverValor('financeiro', 'descricao', registro);
+    if (descricaoRegistro && textoContemEnderecoAlvo(descricaoRegistro, nomesAlvo)) return true;
 
     if (pedidoVinculado) {
       const idCliente = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedidoVinculado));
