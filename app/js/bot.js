@@ -763,21 +763,15 @@ function renderizarTabela() {
 
 function _obterPermissoesEfetivas(usuario) {
     if (!usuario) return [];
-
-    var padraoCargo = window.PERMISSOES_PADRAO[usuario.cargo] || [];
-
-    if (usuario.id) {
+    if (usuario.permissoes) {
         try {
-            var storageKey = 'permissoes_usuario_' + usuario.id;
-            var storedPerms = localStorage.getItem(storageKey);
-            if (storedPerms) {
-                var parsed = JSON.parse(storedPerms);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-            }
-        } catch (e) { /* ignora e cai no fallback */ }
+            var parsed = typeof usuario.permissoes === 'string'
+                ? JSON.parse(usuario.permissoes)
+                : usuario.permissoes;
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) { }
     }
-
-    return padraoCargo;
+    return window.PERMISSOES_PADRAO[usuario.cargo] || [];
 }
 
 function _usuarioLogadoBot() {
@@ -931,7 +925,8 @@ window.salvarUsuarioBot = async function () {
         username: username,
         contato: contato,
         imagem: imagem,
-        cargo: cargo
+        cargo: cargo,
+        permissoes: JSON.stringify(permissoes) // 👈 enviar ao backend
     };
     if (password) payload.password = password;
 
