@@ -49,6 +49,19 @@
         msg.textContent = '';
     }
 
+    function limparPermissoesAntigas(idAtual) {
+        var chaves = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var chave = localStorage.key(i);
+            if (chave && chave.indexOf('permissoes_usuario_') === 0 && chave !== 'permissoes_usuario_' + idAtual) {
+                chaves.push(chave);
+            }
+        }
+        for (var j = 0; j < chaves.length; j++) {
+            localStorage.removeItem(chaves[j]);
+        }
+    }
+
     function salvarSessao(userData) {
         var username = String(userData.username || userData.user || '').trim();
         var tipo = String(userData.tipo || userData.cargo || userData.role || '').trim();
@@ -58,6 +71,7 @@
             userData.imagem || userData.foto || userData.avatar || userData.image ||
             userData.picture || userData.photo || userData.profile_image || ''
         ).trim();
+        var permissoes = userData.permissoes || userData.permissions || userData.perms;
 
         localStorage.setItem('rdo_auth', 'true');
         localStorage.setItem('username', username);
@@ -65,6 +79,16 @@
         localStorage.setItem('id_usuario', idUsuario);
         localStorage.setItem('user_id', idUsuario);
         localStorage.setItem('user_cargo', cargo);
+
+        if (idUsuario) {
+            limparPermissoesAntigas(idUsuario);
+            try {
+                localStorage.removeItem('permissoes_usuario_' + idUsuario);
+                if (Array.isArray(permissoes)) {
+                    localStorage.setItem('permissoes_usuario_' + idUsuario, JSON.stringify(permissoes));
+                }
+            } catch (e) {}
+        }
 
         if (imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.length >= 10) {
             localStorage.setItem('imagem', imagem);
