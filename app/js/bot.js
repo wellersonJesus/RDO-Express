@@ -779,21 +779,31 @@ function _obterPermissoesEfetivas(usuario) {
 
 function _usuarioLogadoBot() {
     var usuario = null;
-
     if (window.dashboardState && window.dashboardState.usuario) {
         usuario = window.dashboardState.usuario;
     } else if (typeof obterUsuarioLogado === 'function') {
         usuario = obterUsuarioLogado();
     }
-
     if (!usuario || !usuario.cargo) {
+        var idUsuario = localStorage.getItem('user_id') || localStorage.getItem('id_usuario') || '';
+        var permissoesSalvas = null;
+
+        // ✅ Lê as permissões customizadas do usuário logado
+        try {
+            var stored = localStorage.getItem('permissoes_usuario_' + idUsuario);
+            if (stored) {
+                var parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) permissoesSalvas = parsed;
+            }
+        } catch (e) { }
+
         usuario = {
-            id: localStorage.getItem('user_id') || localStorage.getItem('id_usuario') || '',
+            id: idUsuario,
             username: localStorage.getItem('username') || 'Usuário',
-            cargo: localStorage.getItem('user_cargo') || localStorage.getItem('tipo') || ''
+            cargo: localStorage.getItem('user_cargo') || localStorage.getItem('tipo') || '',
+            permissoes: permissoesSalvas // 👈 agora existe!
         };
     }
-
     usuario = Object.assign({}, usuario);
     usuario.permissoes = _obterPermissoesEfetivas(usuario);
     return usuario;
