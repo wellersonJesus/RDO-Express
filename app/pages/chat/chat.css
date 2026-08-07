@@ -1621,3 +1621,57 @@ body.modal-open .modal-backdrop {
 #footer-resumo-dados .vr {
     height: 34px !important;
 }
+
+.rota-rapida-content { border-radius: 1rem; }
+
+.rr-autocomplete-wrapper { position: relative; }
+
+.rr-dropdown-lista {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: .5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  display: none;
+  margin-top: 4px;
+}
+
+.rr-dropdown-lista.show { display: block; }
+
+.rr-item {
+  padding: .55rem .8rem;
+  font-size: .85rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f1f1;
+}
+.rr-item:last-child { border-bottom: none; }
+.rr-item:hover { background: #fff5f5; }
+
+.rr-item .rr-item-tag {
+  font-size: .68rem;
+  color: #dc3545;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+
+.rr-item-novo {
+  color: #0d6efd;
+  font-weight: 600;
+}
+
+.rr-autocomplete-wrapper {
+    min-width: 0;
+}
+.rr-autocomplete-wrapper .form-label {
+    display: block;
+}
+.rr-autocomplete-wrapper input.form-control {
+    width: 100%;
+}

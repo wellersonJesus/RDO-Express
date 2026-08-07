@@ -872,8 +872,21 @@ function _inicializarListenersGlobaisChat() {
 
     document.addEventListener('keydown', function (e) {
         if (!e.target || e.target.id !== 'msg-input') return;
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.enviarMensagemGeral(); }
-    });
+        if (e.isComposing) return;
+        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof window.enviarMensagemGeral === 'function') window.enviarMensagemGeral();
+        }
+    }, true);
+
+    document.addEventListener('keypress', function (e) {
+        if (!e.target || e.target.id !== 'msg-input') return;
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
 
     document.addEventListener('click', function (e) {
         if (!e.target || !e.target.closest || !e.target.closest('#btn-sync-chat')) return;
@@ -2883,17 +2896,39 @@ window.excluirPedido = async function (pedidoId) {
     }
 };
 
-window.extrairRotasDaMensagem = function (texto) {
+window._extrairRotasParciais = function (texto) {
     var rotas = [];
-    texto.split('\n').forEach(function (linha) {
+    String(texto || '').split('\n').forEach(function (linha) {
         linha = linha.trim();
         if (!linha) return;
-        var m = linha.match(/De:\s*(.+?)\s*(?:\||–|—|-|→)\s*Para:\s*(.+)/i);
-        if (m) { rotas.push({ de: m[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m[2].trim() }); return; }
-        var m2 = linha.match(/De:\s*(.+?)\s+Para:\s*(.+)/i);
-        if (m2) rotas.push({ de: m2[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: m2[2].trim() });
+
+        // Linha completa: "De: X | Para: Y" (com qualquer separador)
+        var mCompleta = linha.match(/De\s*:\s*(.+?)\s*(?:\||–|—|-|→)\s*Para\s*:\s*(.+)/i);
+        if (mCompleta) {
+            rotas.push({ de: mCompleta[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: mCompleta[2].trim(), parcial: false });
+            return;
+        }
+        var mCompleta2 = linha.match(/De\s*:\s*(.+?)\s+Para\s*:\s*(.+)/i);
+        if (mCompleta2) {
+            rotas.push({ de: mCompleta2[1].replace(/^\d+[\.\)\-]\s*/, '').trim(), para: mCompleta2[2].trim(), parcial: false });
+            return;
+        }
+
+        // ✅ NOVO: linha só com "Para:"
+        var mPara = linha.match(/^(?:\d+[\.\)\-]\s*)?Para\s*:\s*(.+)/i);
+        if (mPara) { rotas.push({ de: '', para: mPara[1].trim(), parcial: true }); return; }
+
+        // ✅ NOVO: linha só com "De:"
+        var mDe = linha.match(/^(?:\d+[\.\)\-]\s*)?De\s*:\s*(.+)/i);
+        if (mDe) { rotas.push({ de: mDe[1].trim(), para: '', parcial: true }); return; }
     });
     return rotas;
+};
+
+window.extrairRotasDaMensagem = function (texto) {
+    return window._extrairRotasParciais(texto).filter(function (r) {
+        return r.de && r.para;
+    });
 };
 
 window._cacheGeocodificacao = window._cacheGeocodificacao || {};
@@ -3194,6 +3229,621 @@ window.RDO_PEDIDOS.salvarValorPedido = function () {
         });
 };
 
+window.processarRotasEAbrirMapa = function (dadosBase, rotasExtraidas) {
+    if (window.AppRDO._mapaModalAberto) return;
+    if (window.AppRDO.isProcessingCheckout) return;
+
+    if (!rotasExtraidas || rotasExtraidas.length === 0) {
+        window.exibirModalValidacao(
+            'Nenhuma rota informada.<br>Selecione ao menos um endereço de <strong>De</strong> e <strong>Para</strong>.',
+            { titulo: 'Rota inválida', icone: 'bi-signpost-split-fill' }
+        );
+        return;
+    }
+
+    var solicitante = String(dadosBase.solicitante || 'Não informado').trim();
+    var contato = String(dadosBase.contato || '').trim();
+    var horario = String(dadosBase.horario || '').trim();
+    var mercadoria = String(dadosBase.mercadoria || 'ENTREGA').trim().toUpperCase();
+    var obs = String(dadosBase.obs || '').trim();
+
+    window.AppRDO._mapaModalAberto = true;
+    window.AppRDO.isProcessingCheckout = true;
+
+    function _falharAbertura(mensagem) {
+        window.AppRDO._mapaModalAberto = false;
+        window.AppRDO.isProcessingCheckout = false;
+        try {
+            Swal.fire({
+                icon: 'error', title: 'Erro ao abrir mapa',
+                html: '<div style="font-size:.9rem;">' + (mensagem || 'Não foi possível abrir o modal de rotas.') + '</div>',
+                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
+                customClass: { popup: 'rounded-4' }
+            });
+        } catch (_) { alert(mensagem || 'Erro ao abrir modal de rotas.'); }
+    }
+
+    window.loadModal('mapa_clientes.html').then(function (carregou) {
+        try {
+            if (!carregou) { _falharAbertura('Falha ao carregar mapa_clientes.html.'); return; }
+
+            var meuTokenCheckout = window.AppRDO._checkoutToken;
+            var modalEl = document.getElementById('modalMapa');
+            if (!modalEl) { _falharAbertura('#modalMapa não encontrado.'); return; }
+
+            if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+            try {
+                var existente = bootstrap.Modal.getInstance(modalEl);
+                if (existente) existente.dispose();
+            } catch (e) { window._exibirErroGlobal(e, 'liberar modal de mapa'); }
+            if (typeof _limparBackdrop === 'function') _limparBackdrop();
+
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                window.AppRDO._mapaModalAberto = false;
+                window.AppRDO.isProcessingCheckout = false;
+                if (window._leafletMapInstance) {
+                    try { window._leafletMapInstance.remove(); } catch (e) { window._exibirErroGlobal(e, 'remover mapa'); }
+                    window._leafletMapInstance = null;
+                }
+            }, { once: true });
+
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                if (typeof _limparBackdrop === 'function') _limparBackdrop();
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, { once: true });
+
+            var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+            modalEl.addEventListener('shown.bs.modal', function () {
+                try {
+                    modalEl.style.zIndex = '1075';
+                    var backdrops = document.querySelectorAll('.modal-backdrop');
+                    var ultimoBackdrop = backdrops[backdrops.length - 1];
+                    if (ultimoBackdrop) ultimoBackdrop.style.zIndex = '1070';
+
+                    var elSolicitante = document.getElementById('header-nome-solicitante');
+                    var loaderEl = document.getElementById('mapa-loader');
+                    if (elSolicitante) elSolicitante.innerText = solicitante;
+                    if (loaderEl) {
+                        loaderEl.style.display = '';
+                        loaderEl.innerHTML = '<div class="spinner-border spinner-border-sm text-danger"></div><p class="text-muted small mb-0 mt-2">Calculando rotas...</p>';
+                    }
+
+                    var footer = document.getElementById('footer-resumo-dados');
+                    if (footer) footer.innerHTML = '';
+
+                    var kmTotal = 0, minTotal = 0, listaCaminhos = [];
+                    var rotasComFalha = [];
+
+                    function _coletarEnderecosUnicos(rotas) {
+                        var mapa = {}, lista = [];
+                        rotas.forEach(function (rota) {
+                            [rota.de, rota.para].forEach(function (end) {
+                                var chave = String(end || '').trim().toLowerCase();
+                                if (chave && !mapa[chave]) { mapa[chave] = true; lista.push(end); }
+                            });
+                        });
+                        return lista;
+                    }
+
+                    function _geocodificarTodosUnicos(rotas) {
+                        var enderecosUnicos = _coletarEnderecosUnicos(rotas);
+                        return Promise.all(
+                            enderecosUnicos.map(function (end) {
+                                return window.buscarCoordenadasEndereco(end).then(function (coords) {
+                                    return { endereco: end, coords: coords };
+                                });
+                            })
+                        ).then(function (resultados) {
+                            var mapaCoords = {};
+                            resultados.forEach(function (r) { mapaCoords[String(r.endereco || '').trim().toLowerCase()] = r.coords; });
+                            return mapaCoords;
+                        });
+                    }
+
+                    function _sanitizarCoord(valor) {
+                        var num = parseFloat(String(valor).replace(',', '.'));
+                        if (isNaN(num)) return null;
+                        if (Math.abs(num) > 180) {
+                            var str = String(Math.trunc(num));
+                            var negativo = str.startsWith('-');
+                            var digitos = negativo ? str.slice(1) : str;
+                            num = parseFloat((negativo ? '-' : '') + digitos.slice(0, 2) + '.' + digitos.slice(2));
+                        }
+                        return isNaN(num) ? null : num;
+                    }
+
+                    function _fetchComTimeout(url, ms) { return fetch(url, { signal: AbortSignal.timeout(ms) }); }
+
+                    var _filaOsrm = Promise.resolve();
+                    function _enfileirarOsrm(fn) {
+                        var resultado = _filaOsrm.then(function () {
+                            return fn().then(function (r) {
+                                return new Promise(function (resolve) { setTimeout(function () { resolve(r); }, 300); });
+                            });
+                        });
+                        _filaOsrm = resultado.catch(function () { return null; });
+                        return resultado;
+                    }
+
+                    function _processarRota(rota, idx, mapaCoords) {
+                        var p1raw = mapaCoords[String(rota.de || '').trim().toLowerCase()];
+                        var p2raw = mapaCoords[String(rota.para || '').trim().toLowerCase()];
+                        var p1 = p1raw ? { lat: _sanitizarCoord(p1raw.lat), lng: _sanitizarCoord(p1raw.lng) } : null;
+                        var p2 = p2raw ? { lat: _sanitizarCoord(p2raw.lat), lng: _sanitizarCoord(p2raw.lng) } : null;
+
+                        if (!p1 || p1.lat === null || p1.lng === null) {
+                            rotasComFalha.push({ indice: idx + 1, endereco: rota.de, motivo: (p1raw && p1raw.erro) || 'Endereço de origem não localizado.' });
+                            return Promise.resolve();
+                        }
+                        if (!p2 || p2.lat === null || p2.lng === null) {
+                            rotasComFalha.push({ indice: idx + 1, endereco: rota.para, motivo: (p2raw && p2raw.erro) || 'Endereço de destino não localizado.' });
+                            return Promise.resolve();
+                        }
+
+                        return _enfileirarOsrm(function () {
+                            return _fetchComTimeout(
+                                'https://router.project-osrm.org/route/v1/driving/' +
+                                p1.lng.toFixed(6) + ',' + p1.lat.toFixed(6) + ';' + p2.lng.toFixed(6) + ',' + p2.lat.toFixed(6) +
+                                '?overview=full&geometries=geojson', 6000
+                            );
+                        })
+                            .then(function (resp) {
+                                if (!resp || !resp.ok) {
+                                    return (resp ? resp.json().catch(function () { return null; }) : Promise.resolve(null)).then(function (body) {
+                                        var motivo = (body && body.code === 'NoRoute')
+                                            ? 'Nenhuma rota rodoviária encontrada.'
+                                            : 'HTTP ' + (resp ? resp.status : '?') + ' ao calcular rota ' + (idx + 1);
+                                        throw new Error(motivo);
+                                    });
+                                }
+                                return resp.json();
+                            })
+                            .then(function (data) {
+                                if (data && data.routes && data.routes[0]) {
+                                    kmTotal += data.routes[0].distance / 1000;
+                                    minTotal += data.routes[0].duration / 60;
+                                    listaCaminhos.push(data.routes[0].geometry.coordinates.map(function (c) { return [c[1], c[0]]; }));
+                                } else {
+                                    rotasComFalha.push({ indice: idx + 1, endereco: rota.de + ' → ' + rota.para, motivo: 'Rota não encontrada pelo serviço de mapas.' });
+                                }
+                            })
+                            .catch(function (e) {
+                                window._exibirErroGlobal(e, 'calcular rota ' + (idx + 1));
+                                rotasComFalha.push({ indice: idx + 1, endereco: rota.de + ' → ' + rota.para, motivo: e.message || 'Erro ao calcular rota.' });
+                            });
+                    }
+
+                    _geocodificarTodosUnicos(rotasExtraidas)
+                        .then(function (mapaCoords) {
+                            return Promise.all(rotasExtraidas.map(function (rota, idx) { return _processarRota(rota, idx, mapaCoords); }));
+                        })
+                        .then(function () {
+                            if (meuTokenCheckout !== window.AppRDO._checkoutToken) return;
+
+                            if (listaCaminhos.length === 0) {
+                                var motivoPrincipal = (rotasComFalha[0] && rotasComFalha[0].motivo) || 'Verifique os endereços.';
+                                if (loaderEl) {
+                                    loaderEl.style.display = '';
+                                    loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>' + motivoPrincipal + '</p>';
+                                }
+                                window.AppRDO.isProcessingCheckout = false;
+                                return;
+                            }
+
+                            var kmArredondado = Math.round(kmTotal);
+                            var valorCalculado = kmArredondado * 3.00;
+
+                            window.dadosPedidoAtual = {
+                                solicitante: solicitante,
+                                contato: contato,
+                                horario: horario,
+                                mercadoria: mercadoria,
+                                obs: obs,
+                                cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
+                                distanciaTotal: kmArredondado,
+                                tempoTotal: Math.round(minTotal),
+                                coordenadas: listaCaminhos,
+                                valorEstimado: valorCalculado,
+                                rotasProcessadas: rotasExtraidas,
+                                rawInput: dadosBase.rawInput || ''
+                            };
+
+                            if (loaderEl) loaderEl.style.display = 'none';
+
+                            window._renderizarResumo(kmArredondado, minTotal, valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+                            window.renderizarMapaUnificado();
+                            window.AppRDO.isProcessingCheckout = false;
+
+                            if (rotasComFalha.length > 0) {
+                                var listaErros = rotasComFalha.map(function (f) {
+                                    return '• Rota ' + f.indice + ' (<strong>' + (f.endereco || 'endereço') + '</strong>): ' + f.motivo;
+                                }).join('<br>');
+                                Swal.fire({
+                                    icon: 'warning', title: 'Não foi possível geolocalizar algumas rotas',
+                                    html: '<div style="font-size:.85rem;text-align:left;">' + listaErros + '</div><hr>O valor exibido considera apenas as rotas encontradas.',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(function (e) {
+                            if (meuTokenCheckout !== window.AppRDO._checkoutToken) return;
+                            window._exibirErroGlobal(e, 'calcular rotas do pedido');
+                            window.AppRDO.isProcessingCheckout = false;
+                            if (loaderEl) {
+                                loaderEl.style.display = '';
+                                loaderEl.innerHTML = '<p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Erro ao calcular rotas.</p>';
+                            }
+                        });
+                } catch (eShown) {
+                    window._exibirErroGlobal(eShown, 'preparar exibição do modal de mapa');
+                    window.AppRDO.isProcessingCheckout = false;
+                }
+            }, { once: true });
+
+            modal.show();
+        } catch (eCarregou) {
+            window._exibirErroGlobal(eCarregou, 'processar carregamento do modal de mapa');
+            _falharAbertura(eCarregou.message);
+        }
+    }).catch(function (eLoad) {
+        window._exibirErroGlobal(eLoad, 'carregar modal de mapa (Promise rejeitada)');
+        _falharAbertura(eLoad.message);
+    });
+};
+
+window.RotaRapida = (function () {
+    var enderecosCache = [];
+    var enderecosPorCliente = {};
+    var carregado = false;
+
+    function _normalizar(str) {
+        return String(str || '').trim().toLowerCase();
+    }
+
+    async function _carregarEnderecos() {
+        if (carregado) return;
+        try {
+            var resp = await API.call('getenderecosgeo');
+
+            // ✅ Aceita tanto array direto quanto { data: [...] }
+            var lista;
+            if (Array.isArray(resp)) {
+                lista = resp;
+            } else if (resp && Array.isArray(resp.data)) {
+                lista = resp.data;
+            } else {
+                lista = [];
+            }
+
+            enderecosCache = lista;
+
+            console.log('[RotaRapida] Endereços carregados:', enderecosCache.length, enderecosCache);
+
+            enderecosPorCliente = {};
+            enderecosCache.forEach(function (e) {
+                var cli = _normalizar(e.cliente_solicitante);
+                if (!cli) return;
+                if (!enderecosPorCliente[cli]) enderecosPorCliente[cli] = [];
+                enderecosPorCliente[cli].push(e);
+            });
+
+            carregado = true;
+        } catch (e) {
+            window._exibirErroGlobal(e, 'carregar endereços salvos');
+            carregado = false; // ✅ permite tentar novamente na próxima abertura do modal
+        }
+    }
+
+    function _listaEnderecosCliente(nomeCliente) {
+        var chave = _normalizar(nomeCliente);
+        var lista = enderecosPorCliente[chave] || [];
+        return lista.slice().sort(function (a, b) {
+            return (parseInt(b.qtd_usos, 10) || 0) - (parseInt(a.qtd_usos, 10) || 0);
+        });
+    }
+
+    function _sugerirDeParaIndice(nomeCliente, indice) {
+        var lista = _listaEnderecosCliente(nomeCliente);
+        if (lista.length === 0) return '';
+        var item = lista[indice % lista.length];
+        return item ? item.endereco_original : '';
+    }
+
+    function _renderizarLista(listaEl, termo, inputEl) {
+        var termoNorm = _normalizar(termo);
+        var resultados = enderecosCache.filter(function (e) {
+            return _normalizar(e.endereco_original).includes(termoNorm);
+        }).slice(0, 8);
+
+        var html = '';
+        resultados.forEach(function (e) {
+            var tag = e.cliente_solicitante ? '<span class="rr-item-tag">' + e.cliente_solicitante + '</span>' : '';
+            html += '<div class="rr-item" data-endereco="' + e.endereco_original.replace(/"/g, '&quot;') + '" data-lat="' + (e.lat || '') + '" data-lng="' + (e.lng || '') + '">' + tag + e.endereco_original + '</div>';
+        });
+
+        if (termo && termo.trim().length > 2) {
+            html += '<div class="rr-item rr-item-novo" data-endereco="' + termo.replace(/"/g, '&quot;') + '"><i class="bi bi-plus-circle me-1"></i>Usar endereço: "' + termo + '"</div>';
+        }
+
+        listaEl.innerHTML = html || '<div class="rr-item text-muted">Nenhum endereço encontrado</div>';
+        if (html) listaEl.classList.add('show');
+
+        listaEl.querySelectorAll('.rr-item[data-endereco]').forEach(function (item) {
+            item.addEventListener('click', function () {
+                inputEl.value = item.getAttribute('data-endereco');
+                inputEl.dataset.lat = item.getAttribute('data-lat') || '';
+                inputEl.dataset.lng = item.getAttribute('data-lng') || '';
+                listaEl.classList.remove('show');
+            });
+        });
+    }
+
+    function _ativarAutocomplete(inputEl, listaEl) {
+        if (!inputEl || !listaEl) return;
+        inputEl.addEventListener('input', function () {
+            inputEl.dataset.lat = '';
+            inputEl.dataset.lng = '';
+            _renderizarLista(listaEl, inputEl.value, inputEl);
+        });
+        inputEl.addEventListener('focus', function () { _renderizarLista(listaEl, inputEl.value, inputEl); });
+        document.addEventListener('click', function (e) {
+            if (!listaEl.contains(e.target) && e.target !== inputEl) listaEl.classList.remove('show');
+        });
+    }
+
+    function _criarLinhaRota(de, para) {
+        var container = document.getElementById('rr-rotas-container');
+        if (!container) return;
+
+        var item = document.createElement('div');
+        item.className = 'rr-rota-item border rounded-3 p-3 mb-3 position-relative';
+        item.innerHTML =
+            '<button type="button" class="btn-close btn-sm position-absolute top-0 end-0 m-2 rr-btn-remover-rota"></button>' +
+            '<div class="row g-2 align-items-start">' +
+            '<div class="col-6 position-relative rr-autocomplete-wrapper d-flex flex-column">' +
+            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">📍 De</label>' +
+            '<input type="text" class="form-control form-control-sm rr-de-input" autocomplete="off">' +
+            '<div class="rr-dropdown-lista rr-de-lista"></div>' +
+            '</div>' +
+            '<div class="col-6 position-relative rr-autocomplete-wrapper d-flex flex-column">' +
+            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">📍 Para</label>' +
+            '<input type="text" class="form-control form-control-sm rr-para-input" autocomplete="off">' +
+            '<div class="rr-dropdown-lista rr-para-lista"></div>' +
+            '</div>' +
+            '</div>';
+
+        container.appendChild(item);
+
+        var deInput = item.querySelector('.rr-de-input');
+        var paraInput = item.querySelector('.rr-para-input');
+        var deLista = item.querySelector('.rr-de-lista');
+        var paraLista = item.querySelector('.rr-para-lista');
+
+        deInput.value = de || '';
+        paraInput.value = para || '';
+
+        _ativarAutocomplete(deInput, deLista);
+        _ativarAutocomplete(paraInput, paraLista);
+
+        item.querySelector('.rr-btn-remover-rota').addEventListener('click', function () {
+            if (container.querySelectorAll('.rr-rota-item').length <= 1) return;
+            item.remove();
+        });
+
+        return item;
+    }
+
+    function _limparRotas() {
+        var container = document.getElementById('rr-rotas-container');
+        if (container) container.innerHTML = '';
+    }
+
+    function _coletarRotas() {
+        var itens = document.querySelectorAll('#rr-rotas-container .rr-rota-item');
+        var rotas = [];
+        itens.forEach(function (item) {
+            var de = (item.querySelector('.rr-de-input') || {}).value || '';
+            var para = (item.querySelector('.rr-para-input') || {}).value || '';
+            if (de.trim() && para.trim()) rotas.push({ de: de.trim(), para: para.trim() });
+        });
+        return rotas;
+    }
+
+    function parseMensagem(texto) {
+        var dados = { solicitante: '', contato: '', mercadoria: '', observacao: '', rotas: [] };
+        var linhas = String(texto || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+        var linhasRestantes = [];
+
+        linhas.forEach(function (linha) {
+            if (/^SOLICITANTE\s*:/i.test(linha)) dados.solicitante = linha.split(':').slice(1).join(':').trim();
+            else if (/^CONTATO\s*:/i.test(linha)) dados.contato = linha.split(':').slice(1).join(':').trim();
+            else if (/^MERCADORIA\s*:/i.test(linha)) dados.mercadoria = linha.split(':').slice(1).join(':').trim();
+            else if (/^OBSERVA[ÇC][ÃA]O\s*:/i.test(linha)) dados.observacao = linha.split(':').slice(1).join(':').trim();
+            else linhasRestantes.push(linha);
+        });
+
+        // ✅ NOVO: se não veio "SOLICITANTE:", usa a 1ª linha que não seja rota
+        if (!dados.solicitante) {
+            var candidata = linhasRestantes.find(function (l) {
+                return !/de\s*:/i.test(l) && !/para\s*:/i.test(l);
+            });
+            if (candidata) dados.solicitante = candidata;
+        }
+
+        dados.rotas = window._extrairRotasParciais(texto); // ✅ agora traz parciais também
+        return dados;
+    }
+
+    function preencherFormulario(dados) {
+        var elSolic = document.getElementById('rr-solicitante');
+        var elContato = document.getElementById('rr-contato');
+        var elMerc = document.getElementById('rr-mercadoria');
+        var elObs = document.getElementById('rr-obs');
+
+        if (elSolic) elSolic.value = dados.solicitante || '';
+        if (elContato) elContato.value = dados.contato || '';
+        if (elMerc) elMerc.value = dados.mercadoria || 'ENTREGA';
+        if (elObs) elObs.value = dados.observacao || '';
+
+        _limparRotas();
+
+        var nomeCliente = dados.solicitante || '';
+        var rotas = dados.rotas && dados.rotas.length > 0 ? dados.rotas : [{ de: '', para: '' }];
+
+        rotas.forEach(function (rota, idx) {
+            var de = rota.de || '';
+            var para = rota.para || '';
+
+            // ✅ Regra: o lado que faltar é buscado no banco pelo nome do cliente
+            if (!de && !para) {
+                de = _sugerirDeParaIndice(nomeCliente, idx);
+                para = _sugerirDeParaIndice(nomeCliente, idx + 1);
+            } else if (!de) {
+                de = _sugerirDeParaIndice(nomeCliente, idx);
+            } else if (!para) {
+                para = _sugerirDeParaIndice(nomeCliente, idx);
+            }
+
+            _criarLinhaRota(de, para);
+        });
+    }
+
+    async function abrir(mensagemTexto) {
+        await _carregarEnderecos();
+
+        var carregou = await window.loadModal('modal_rota_rapida.html');
+        if (!carregou) {
+            window._exibirErroGlobal('Falha ao carregar modal_rota_rapida.html', 'abrir rota rápida');
+            return;
+        }
+
+        var modalEl = document.getElementById('modalRotaRapida');
+        if (!modalEl) {
+            window._exibirErroGlobal('Modal não encontrado no DOM após loadModal', 'abrir rota rápida');
+            return;
+        }
+
+        if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+        try { var ex = bootstrap.Modal.getInstance(modalEl); if (ex) ex.dispose(); } catch (e) { window._exibirErroGlobal(e, 'liberar modal existente'); }
+
+        document.getElementById('rr-erro-box').classList.add('d-none');
+
+        var nomeAtual = (window.AppRDO && window.AppRDO.clienteSelecionado) || '';
+
+        if (mensagemTexto && mensagemTexto.trim()) {
+            var dados = parseMensagem(mensagemTexto);
+            if (!dados.solicitante && nomeAtual) dados.solicitante = nomeAtual;
+            preencherFormulario(dados);
+        } else {
+            document.getElementById('rr-solicitante').value = nomeAtual;
+            document.getElementById('rr-contato').value = '';
+            document.getElementById('rr-mercadoria').value = 'ENTREGA';
+            document.getElementById('rr-obs').value = '';
+            _limparRotas();
+
+            var deSugerido = _sugerirDeParaIndice(nomeAtual, 0);
+            _criarLinhaRota(deSugerido, '');
+        }
+
+        var solicitanteInput = document.getElementById('rr-solicitante');
+        solicitanteInput.addEventListener('blur', function () {
+            var itens = document.querySelectorAll('#rr-rotas-container .rr-rota-item');
+            itens.forEach(function (item, idx) {
+                var deInput = item.querySelector('.rr-de-input');
+                if (deInput && !deInput.value.trim()) {
+                    deInput.value = _sugerirDeParaIndice(solicitanteInput.value, idx);
+                }
+            });
+        });
+
+        var btnAdd = document.getElementById('rr-btn-add-rota');
+        if (btnAdd) btnAdd.addEventListener('click', function () {
+            var qtd = document.querySelectorAll('#rr-rotas-container .rr-rota-item').length;
+            var deSugerido = _sugerirDeParaIndice(solicitanteInput.value, qtd);
+            _criarLinhaRota(deSugerido, '');
+        });
+
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+        modal.show();
+    }
+
+    async function _salvarEnderecoSeNovo(inputEl, clienteSolicitante) {
+        var valor = (inputEl.value || '').trim();
+        if (!valor) return;
+        if (inputEl.dataset.lat && inputEl.dataset.lng) return;
+
+        try {
+            var geo = await API.call('geocodificarendereco', { endereco: valor });
+            if (geo && geo.encontrado) {
+                await API.call('salvarenderecogeo', {
+                    endereco_original: valor,
+                    lat: geo.lat,
+                    lng: geo.lng,
+                    cliente_solicitante: clienteSolicitante,
+                    origem_resolucao: geo.fonte || 'geocodificado'
+                });
+                carregado = false;
+            }
+        } catch (e) {
+            window._exibirErroGlobal(e, 'salvar endereço geocodificado');
+        }
+    }
+
+    function avancar() {
+        var solicitante = (document.getElementById('rr-solicitante') || {}).value || '';
+        var erroBox = document.getElementById('rr-erro-box');
+
+        if (!solicitante.trim()) {
+            window.marcarCampoFormInvalido(document.getElementById('rr-solicitante'));
+            erroBox.textContent = 'Informe o nome do cliente.';
+            erroBox.classList.remove('d-none');
+            return;
+        }
+
+        var rotas = _coletarRotas();
+        if (rotas.length === 0) {
+            erroBox.textContent = 'Preencha ao menos uma rota completa (De e Para).';
+            erroBox.classList.remove('d-none');
+            return;
+        }
+
+        erroBox.classList.add('d-none');
+
+        var modalEl = document.getElementById('modalRotaRapida');
+        var inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) try { inst.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de rota rápida'); }
+
+        document.querySelectorAll('#rr-rotas-container .rr-rota-item').forEach(function (item) {
+            var deInput = item.querySelector('.rr-de-input');
+            var paraInput = item.querySelector('.rr-para-input');
+            _salvarEnderecoSeNovo(deInput, solicitante);
+            _salvarEnderecoSeNovo(paraInput, solicitante);
+        });
+
+        setTimeout(function () {
+            window.processarRotasEAbrirMapa({
+                solicitante: solicitante,
+                contato: (document.getElementById('rr-contato') || {}).value,
+                mercadoria: (document.getElementById('rr-mercadoria') || {}).value,
+                obs: (document.getElementById('rr-obs') || {}).value,
+                rawInput: ''
+            }, rotas);
+        }, 350);
+    }
+
+    return {
+        abrir: abrir,
+        avancar: avancar,
+        parseMensagem: parseMensagem,
+        preencherFormulario: preencherFormulario
+    };
+})();
+
 function _limparComplementoParaGeocoding(endereco) {
     return String(endereco || '')
         .replace(/,?\s*\b(sl|sala|apto|ap|bloco|bl|cs|casa|fundos|lj|loja)\b\s*[\w\/\-]*/gi, '')
@@ -3408,6 +4058,16 @@ function _renderizarMapaUnificadoInterno() {
     setTimeout(function () { map.invalidateSize(); }, 200);
 }
 
+async function _esperarModal(timeoutMs) {
+    var tentativas = 0;
+    var maxTentativas = (timeoutMs || 3000) / 100;
+    while (!document.getElementById('modalRotaRapida') && tentativas < maxTentativas) {
+        await new Promise(function (r) { setTimeout(r, 100); });
+        tentativas++;
+    }
+    return document.getElementById('modalRotaRapida');
+}
+
 window._renderizarResumo = function (km, min, valor) {
     var footer = document.getElementById('footer-resumo-dados');
     if (!footer) return;
@@ -3424,19 +4084,13 @@ window._renderizarResumo = function (km, min, valor) {
 };
 
 window.enviarMensagemGeral = function () {
-    var input = document.getElementById('msg-input');
     if (!window.AppRDO || !window.AppRDO.clienteId) { window.exibirModalValidacao('Selecione um cliente na lista primeiro.'); return; }
-    if (!input || !input.value.trim()) { window.marcarCampoInvalido(); return; }
     if (!window.AppRDO.isMasterOn) { window.exibirModalValidacao('O sistema está desligado.<br><strong>Contate o administrador.</strong>'); return; }
 
-    var clienteAtual = (window.AppRDO.clientesCache || []).find(function (c) {
-        return String(c.id) === String(window.AppRDO.clienteId);
-    });
-    if (clienteAtual && String(clienteAtual.status || '').toUpperCase() !== 'TRUE') {
-        window.exibirModalValidacao('Por favor, entre em contato com o seu administrador.<br><strong>O cliente está offline.</strong>');
-        return;
-    }
-    window.iniciarFluxoCheckout();
+    var msgInput = document.getElementById('msg-input');
+    var texto = msgInput ? (msgInput.value || '').trim() : '';
+
+    window.RotaRapida.abrir(texto); // ✅ agora envia o texto digitado
 };
 
 window.prosseguirParaFormulario = function () {

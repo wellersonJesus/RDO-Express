@@ -1,0 +1,51 @@
+<div class="modal fade" id="modalRotaRapida" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content rota-rapida-content">
+      <div class="modal-header border-0 bg-danger text-white rounded-top-4">
+        <h6 class="modal-title fw-bold mb-0">
+          <i class="bi bi-lightning-charge-fill me-2"></i>Fast RDO Express
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-danger">Nome do Cliente *</label>
+          <input type="text" id="rr-solicitante" class="form-control" placeholder="Ex: Ammis, Mauricio, São Manoel..." autocomplete="off">
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small text-muted">Contato</label>
+            <input type="text" id="rr-contato" class="form-control" placeholder="(opcional)">
+          </div>
+          <div class="col-6">
+            <label class="form-label small text-muted">Mercadoria</label>
+            <input type="text" id="rr-mercadoria" class="form-control" placeholder="ENTREGA">
+          </div>
+        </div>
+
+        <hr class="my-2">
+
+        <div id="rr-rotas-container"></div>
+
+        <button type="button" id="rr-btn-add-rota" class="btn btn-sm btn-outline-danger w-100 mb-3">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Rota
+        </button>
+
+        <div class="mb-2">
+          <label class="form-label small text-muted">Observação</label>
+          <textarea id="rr-obs" class="form-control" rows="2" placeholder="(opcional)"></textarea>
+        </div>
+
+        <div id="rr-erro-box" class="alert alert-danger small py-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-danger fw-bold" onclick="window.RotaRapida.avancar()">
+          Avançar <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
