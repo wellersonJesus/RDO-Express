@@ -101,6 +101,21 @@
     }
 }
 
+.icone-rota {
+    display: inline-block;
+    font-size: 1rem;
+    margin-right: 4px;
+    vertical-align: -2px;
+}
+
+.icone-rota-de {
+    filter: hue-rotate(180deg) saturate(4) brightness(0.95);
+}
+
+.message-body {
+    line-height: 1.6;
+}
+
 .chat-wrapper {
     display: flex;
     flex-direction: row;
@@ -1675,3 +1690,4 @@ body.modal-open .modal-backdrop {
 .rr-autocomplete-wrapper input.form-control {
     width: 100%;
 }
+

@@ -2234,7 +2234,7 @@ function _criarWrapperMensagem(pedidoId, texto, hora, temStatus, statusPuro, too
         '<div class="message-sent" data-pedido-id="' + pedidoId + '" ' +
         'data-texto-original="' + textoEscapadoAttr + '" ' +
         'onclick="window.abrirModalEdicao(\'' + pedidoId + '\')">' +
-        '<div class="message-body">' + textoSeguro.replace(/\n/g, '<br>') + '</div>' +
+        '<div class="message-body">' + _estilizarRotasNaMensagem(textoSeguro.replace(/\n/g, '<br>')) + '</div>' +
         '<div class="status-icon ' + (temStatus ? 'status-updated' : 'status-pending') + '" ' +
         'onclick="event.stopPropagation();window.abrirModalStatus(\'' + pedidoId + '\')" ' +
         'data-tooltip="' + tooltipTexto + '">' +
@@ -3605,12 +3605,12 @@ window.RotaRapida = (function () {
             '<button type="button" class="btn-close btn-sm position-absolute top-0 end-0 m-2 rr-btn-remover-rota"></button>' +
             '<div class="row g-2 align-items-start">' +
             '<div class="col-6 position-relative rr-autocomplete-wrapper d-flex flex-column">' +
-            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">📍 De</label>' +
+            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">🚩 De</label>' +
             '<input type="text" class="form-control form-control-sm rr-de-input" autocomplete="off">' +
             '<div class="rr-dropdown-lista rr-de-lista"></div>' +
             '</div>' +
             '<div class="col-6 position-relative rr-autocomplete-wrapper d-flex flex-column">' +
-            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">📍 Para</label>' +
+            '<label class="form-label small fw-bold mb-1" style="min-height:20px;line-height:20px;">🏁 Para</label>' +
             '<input type="text" class="form-control form-control-sm rr-para-input" autocomplete="off">' +
             '<div class="rr-dropdown-lista rr-para-lista"></div>' +
             '</div>' +
@@ -3851,6 +3851,14 @@ function _limparComplementoParaGeocoding(endereco) {
         .replace(/,\s*,/g, ',')
         .trim();
 }
+
+function _estilizarRotasNaMensagem(textoEscapado) {
+    return textoEscapado
+        .replace(/(^|\s)De:/g, '$1<span class="icone-rota icone-rota-de">🛵</span>De:')
+        .replace(/(^|\s)Para:/g, '$1<span class="icone-rota icone-rota-para">🏁</span>Para:');
+}
+
+window._estilizarRotasNaMensagem = _estilizarRotasNaMensagem;
 
 function _geocodificarComFallback(enderecoCompleto) {
     var enderecoLimpo = _limparComplementoParaGeocoding(enderecoCompleto);
