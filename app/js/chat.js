@@ -873,16 +873,34 @@ function _inicializarListenersGlobaisChat() {
     document.addEventListener('keydown', function (e) {
         if (!e.target || e.target.id !== 'msg-input') return;
         if (e.isComposing) return;
-        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+
+        if (e.key === 'Enter') {
+            // Nunca envia com Enter — sempre quebra linha (edição livre).
             e.preventDefault();
             e.stopPropagation();
-            if (typeof window.enviarMensagemGeral === 'function') window.enviarMensagemGeral();
+
+            var el = e.target;
+            var inicio = el.selectionStart;
+            var fim = el.selectionEnd;
+            var valorAtual = el.value;
+
+            el.value = valorAtual.slice(0, inicio) + '\n' + valorAtual.slice(fim);
+
+            var novaPosicao = inicio + 1;
+            el.selectionStart = el.selectionEnd = novaPosicao;
+
+            // Dispara o evento 'input' manualmente para acionar
+            // auto-expansão da caixa e outros listeners dependentes.
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Garante que a área visível role até o cursor/nova linha.
+            el.scrollTop = el.scrollHeight;
         }
     }, true);
 
     document.addEventListener('keypress', function (e) {
         if (!e.target || e.target.id !== 'msg-input') return;
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
         }
@@ -3891,10 +3909,10 @@ window.RotaRapida = (function () {
 
     function parseMensagem(texto) {
         var dados = { solicitante: '', contato: '', mercadoria: '', observacao: '', rotas: [] };
-        var linhas = String(texto || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+        var linhasBrutas = String(texto || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
         var linhasRestantes = [];
 
-        linhas.forEach(function (linha) {
+        linhasBrutas.forEach(function (linha) {
             if (/^SOLICITANTE\s*:/i.test(linha)) dados.solicitante = linha.split(':').slice(1).join(':').trim();
             else if (/^CONTATO\s*:/i.test(linha)) dados.contato = linha.split(':').slice(1).join(':').trim();
             else if (/^MERCADORIA\s*:/i.test(linha)) dados.mercadoria = linha.split(':').slice(1).join(':').trim();
@@ -3902,15 +3920,32 @@ window.RotaRapida = (function () {
             else linhasRestantes.push(linha);
         });
 
-        // ✅ NOVO: se não veio "SOLICITANTE:", usa a 1ª linha que não seja rota
-        if (!dados.solicitante) {
-            var candidata = linhasRestantes.find(function (l) {
-                return !/de\s*:/i.test(l) && !/para\s*:/i.test(l);
-            });
-            if (candidata) dados.solicitante = candidata;
+        function _pareceLinhaDeRota(linha) {
+            return /de\s*:/i.test(linha) || /para\s*:/i.test(linha);
         }
 
-        dados.rotas = window._extrairRotasParciais(texto); // ✅ agora traz parciais também
+        if (!dados.solicitante) {
+            var idxCandidata = linhasRestantes.findIndex(function (l) { return !_pareceLinhaDeRota(l); });
+            if (idxCandidata !== -1) {
+                dados.solicitante = linhasRestantes[idxCandidata];
+                linhasRestantes.splice(idxCandidata, 1);
+            }
+        }
+
+        var temFormatoExplicito = linhasRestantes.some(_pareceLinhaDeRota);
+
+        if (temFormatoExplicito) {
+            dados.rotas = window._extrairRotasParciais(linhasRestantes.join('\n'));
+        } else if (linhasRestantes.length > 0) {
+            var rotasSequenciais = [];
+            for (var i = 0; i < linhasRestantes.length; i += 2) {
+                var de = linhasRestantes[i] || '';
+                var para = linhasRestantes[i + 1] || '';
+                rotasSequenciais.push({ de: de, para: para, parcial: !para });
+            }
+            dados.rotas = rotasSequenciais;
+        }
+
         return dados;
     }
 
