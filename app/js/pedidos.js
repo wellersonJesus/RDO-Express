@@ -295,18 +295,35 @@
     }
 
     function _resolverNomeCliente(pedido) {
-        try {
-            var idChat = String(pedido.id_chat || pedido.id_cliente || '').trim();
-            if (!idChat) return String(pedido.solicitante || '—');
-            var clientes = Array.isArray(window.AppRDO.clientesCache) ? window.AppRDO.clientesCache : [];
-            if (window.adminState && Array.isArray(window.adminState.dados)) clientes = window.adminState.dados;
-            for (var i = 0; i < clientes.length; i++) {
-                var c = clientes[i];
-                if (String(c.id_chat || c.id || '').trim() === idChat)
-                    return String(c.nome || c.name || c.username || c.solicitante || '—');
-            }
-            return String(pedido.solicitante || '—');
-        } catch (_) { return String(pedido.solicitante || '—'); }
+        var chat = _chatDoPedido(pedido.id);
+        return String(
+            pedido.cliente ||
+            pedido.solicitante ||
+            (chat && chat.cliente) ||
+            (chat && chat.solicitante) ||
+            window.AppRDO.clienteSelecionado ||
+            '—'
+        ).trim();
+    }
+
+    function _resolverMercadoria(pedido) {
+        var chat = _chatDoPedido(pedido.id);
+        return pedido.mercadoria || (chat && chat.mercadoria) || '';
+    }
+
+    function _resolverRetorno(pedido) {
+        var chat = _chatDoPedido(pedido.id);
+        return pedido.retorno || (chat && chat.retorno) || 'Não';
+    }
+
+    function _resolverPrioridade(pedido) {
+        var chat = _chatDoPedido(pedido.id);
+        return pedido.prioridade != null ? pedido.prioridade : (chat && chat.prioridade != null ? chat.prioridade : '0');
+    }
+
+    function _labelPrioridade(valor) {
+        var mapa = { '0': 'Normal', '1': 'Agendado', '2': 'Urgente' };
+        return mapa[String(valor)] || 'Normal';
     }
 
     function _formatarIdServico(id) {
@@ -388,13 +405,6 @@
         var nome = String(nomeCompleto || '—').trim();
         if (!nome || nome === '—') return '—';
         return nome.split(/\s+/)[0];
-    }
-
-    function _labelPrioridade(valor) {
-        var v = String(valor != null ? valor : '0').trim();
-        if (v === '5') return 'Agendado';
-        if (v === '10') return 'Urgente';
-        return 'Normal';
     }
 
     function _resolverSituacaoFinanceira(pedido) {
@@ -844,20 +854,19 @@
             var valorBase = _resolverValor(pedido);
             var taxaNum = _parseMoeda(pedido.taxa_espera);
             var finalNum = _parseMoeda(pedido.valor_final) || valorBase;
+            var statusAtual = _normalizarStatus(pedido.status);
 
             function _s(elId, val) {
                 var el = document.getElementById(elId);
-                if (!el) { console.warn('[pedidos.js] ⚠️ Campo ausente:', elId); return; }
-                if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')
-                    el.value = val != null ? String(val) : '';
-                else
-                    el.textContent = val != null ? String(val) : '';
+                if (el) el.value = val != null ? String(val) : '';
+                else console.warn('[pedidos.js] ⚠️ Campo ausente:', elId);
             }
 
             var tituloEl = document.getElementById('detalhe-titulo');
             if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
 
             _s('det-pedido-id-raw', id);
+            _s('det-status-raw', statusAtual);
             _s('det-data', _formatarDataExibicao(_extrairDataPedido(pedido)));
             _s('det-horario', _resolverHoraPedido(pedido));
             _s('det-contato', pedido.contato || '—');
@@ -868,7 +877,7 @@
             _s('det-de', pedido.de || '—');
             _s('det-para', pedido.para || '—');
             _s('det-motoboy', _resolverMotoboy(pedido) || '—');
-            _s('det-status', _normalizarStatus(pedido.status));
+            _s('det-status', statusAtual);
             _s('det-valor-original', _formatarMoeda(valorBase));
             _s('det-taxa-espera', _formatarMoeda(taxaNum));
             _s('det-valor-final', _formatarMoeda(finalNum));
@@ -878,7 +887,7 @@
 
             var cancelamentoBox = document.getElementById('det-cancelamento-box');
             if (cancelamentoBox) {
-                if (_normalizarStatus(pedido.status) === 'CANCELADO') {
+                if (statusAtual === 'CANCELADO') {
                     _s('det-motivo-cancelamento', _resolverMotivoCancelamento(pedido) || 'Não informado');
                     cancelamentoBox.style.display = 'block';
                 } else {
@@ -886,9 +895,31 @@
                 }
             }
 
+            _toggleBotaoEditarDetalhes(statusAtual);
+
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         });
     };
+
+    function _toggleBotaoEditarDetalhes(statusAtual) {
+        var btnEditar = document.getElementById('btn-editar-pedido-detalhes');
+        if (!btnEditar) return;
+
+        var podeEditar = statusAtual === 'PENDENTE' || statusAtual === 'EM_ROTA';
+
+        btnEditar.classList.toggle('d-none', !podeEditar);
+        btnEditar.disabled = !podeEditar;
+    }
+
+    function _toggleBotaoSalvarEdicao(statusAtual) {
+        var btnSalvar = document.getElementById('btn-salvar-edicao');
+        if (!btnSalvar) return;
+
+        var podeEditar = statusAtual === 'PENDENTE' || statusAtual === 'EM_ROTA';
+
+        btnSalvar.classList.toggle('d-none', !podeEditar);
+        btnSalvar.disabled = !podeEditar;
+    }
 
     function _ativarDestaqueValor() {
         var elValor = document.getElementById('edit-valor-pedido-display');
@@ -960,6 +991,7 @@
             var rotaDe = String(pedido.de || pedido.origem || pedido.endereco_coleta || '').trim();
             var rotaPara = String(pedido.para || pedido.destino || pedido.endereco_entrega || '').trim();
             var statusAtual = _normalizarStatus(pedido.status) || 'PENDENTE';
+            _toggleBotaoSalvarEdicao(statusAtual);
 
             _s('edit-pedido-id', id);
             _s('edit-valor-base', valor.toFixed(2));
@@ -1534,10 +1566,24 @@
 
     window.RDO_PEDIDOS.abrirEdicaoDoDetalhe = function () {
         var idEl = document.getElementById('det-pedido-id-raw');
+        var statusEl = document.getElementById('det-status-raw');
         var id = idEl ? String(idEl.value || '').trim() : '';
+        var status = statusEl ? String(statusEl.value || '').trim().toUpperCase() : '';
 
         if (!id) {
             console.error('[pedidos.js] ❌ ID não encontrado no modal de detalhes');
+            return;
+        }
+
+        // 🔒 Trava de segurança: impede edição de pedidos finalizados
+        if (status === 'CONCLUIDO' || status === 'CANCELADO') {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Pedido finalizado',
+                    text: 'Não é possível editar um pedido Concluído ou Cancelado.'
+                });
+            }
             return;
         }
 
