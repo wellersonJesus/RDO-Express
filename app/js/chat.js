@@ -1195,18 +1195,6 @@ window.abrirModalMensagemPadrao = function (config) {
     }
 };
 
-window.copiarModelo = function () {
-    var texto = document.getElementById('texto-modelo');
-    if (!texto) return;
-    texto.select();
-    document.execCommand('copy');
-    Swal.fire({
-        icon: 'success', title: 'Sucesso!', text: 'Modelo copiado com sucesso!',
-        toast: true, position: 'top-end', showConfirmButton: false,
-        timer: 2000, timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
-    });
-};
-
 window.validarMensagemModelo = function (texto) {
     if (!texto || !texto.trim()) return { valido: false, tipo: 'vazio' };
 
@@ -2931,8 +2919,165 @@ window.extrairRotasDaMensagem = function (texto) {
     });
 };
 
+window._promessasGeocodificacaoEmAndamento = window._promessasGeocodificacaoEmAndamento || {};
 window._cacheGeocodificacao = window._cacheGeocodificacao || {};
-window._filaNominatim = window._filaNominatim || Promise.resolve();
+
+function _limparComplementoParaGeocoding(endereco) {
+    return String(endereco || '')
+        .replace(/,?\s*\b(sl|sala|apto|ap|bloco|bl|cs|casa|fundos|lj|loja)\b\s*[\w\/\-]*/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/,\s*,/g, ',')
+        .trim();
+}
+
+function _gerarVariacoesEndereco(enderecoOriginal) {
+    var variacoes = [];
+    var limpo = _limparComplementoParaGeocoding(enderecoOriginal);
+
+    variacoes.push(limpo);
+    if (limpo !== enderecoOriginal) variacoes.push(enderecoOriginal);
+
+    var semNumero = limpo.replace(/,?\s*\d+\s*,/, ',').replace(/,\s*,/g, ',').trim();
+    if (semNumero && semNumero !== limpo) variacoes.push(semNumero);
+
+    var partes = limpo.split(',').map(function (p) { return p.trim(); }).filter(Boolean);
+    if (partes.length > 2) {
+        var semUltimaParte = partes.slice(0, -1).join(', ');
+        if (semUltimaParte && variacoes.indexOf(semUltimaParte) === -1) variacoes.push(semUltimaParte);
+    }
+    if (partes.length > 1) {
+        var soPrimeiraEsegunda = partes.slice(0, 2).join(', ');
+        if (soPrimeiraEsegunda && variacoes.indexOf(soPrimeiraEsegunda) === -1) variacoes.push(soPrimeiraEsegunda);
+    }
+
+    var comCidade = limpo.toLowerCase().includes('belo horizonte') || limpo.toLowerCase().includes(' mg')
+        ? null
+        : limpo + ', Belo Horizonte, MG';
+    if (comCidade && variacoes.indexOf(comCidade) === -1) variacoes.push(comCidade);
+
+    return variacoes.filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
+}
+
+function _tentarUmaVariacao(endereco) {
+    return _geocodificarExterno(endereco).then(function (resultado) {
+        if (resultado && !resultado.erro) return resultado;
+
+        return _tentarPhoton(endereco, 8000).then(function (coordsPhoton) {
+            if (coordsPhoton) return { lat: coordsPhoton.lat, lng: coordsPhoton.lng, erro: null, fonte: 'photon' };
+
+            return _tentarNominatim(endereco, 8000).then(function (coordsNomi) {
+                if (coordsNomi) return { lat: coordsNomi.lat, lng: coordsNomi.lng, erro: null, fonte: 'nominatim' };
+                return resultado;
+            });
+        });
+    });
+}
+
+function _geocodificarComFallback(enderecoCompleto) {
+    var variacoes = _gerarVariacoesEndereco(enderecoCompleto);
+    var ultimoErro = null;
+
+    function _tentarProxima(idx) {
+        if (idx >= variacoes.length) {
+            return Promise.resolve(ultimoErro || { lat: null, lng: null, erro: 'Endereço não encontrado em nenhuma variação.' });
+        }
+        return _tentarUmaVariacao(variacoes[idx]).then(function (resultado) {
+            if (resultado && !resultado.erro) {
+                if (idx > 0) resultado.aproximado = true;
+                return resultado;
+            }
+            ultimoErro = resultado;
+            return _tentarProxima(idx + 1);
+        });
+    }
+
+    return _tentarProxima(0);
+}
+
+window.buscarCoordenadasEndereco = function (endereco) {
+    var busca = String(endereco || '').trim();
+    if (!busca) return Promise.resolve(null);
+
+    var chaveCache = busca.toLowerCase();
+    if (window._cacheGeocodificacao[chaveCache] !== undefined) {
+        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
+    }
+    if (window._promessasGeocodificacaoEmAndamento[chaveCache]) {
+        return window._promessasGeocodificacaoEmAndamento[chaveCache];
+    }
+
+    function _tentarBackendInterno() {
+        return API.call('buscarenderecogeo', { endereco: busca })
+            .then(function (resp) {
+                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
+                    return { coords: { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng), erro: null }, resolvidoInterno: true };
+                }
+                var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
+                return { enderecoParaBuscar: enderecoParaBuscar, resolvidoInterno: false };
+            })
+            .catch(function (e) {
+                window._exibirErroGlobal(e, 'consultar endereço "' + busca + '" no backend');
+                return { enderecoParaBuscar: busca, resolvidoInterno: false };
+            });
+    }
+
+    function _comTimeoutDeSeguranca(promiseOriginal, ms) {
+        var timeoutId;
+        var promiseTimeout = new Promise(function (resolve) {
+            timeoutId = setTimeout(function () {
+                resolve({
+                    lat: null, lng: null,
+                    erro: 'Tempo limite excedido ao consultar o endereço (backend não respondeu em ' + (ms / 1000) + 's).',
+                    enderecoOriginal: busca
+                });
+            }, ms);
+        });
+
+        return Promise.race([promiseOriginal, promiseTimeout]).finally(function () {
+            clearTimeout(timeoutId);
+        });
+    }
+
+    var promessaReal = _tentarBackendInterno().then(function (resultadoInterno) {
+        if (resultadoInterno.resolvidoInterno) {
+            window._cacheGeocodificacao[chaveCache] = resultadoInterno.coords;
+            return resultadoInterno.coords;
+        }
+
+        return _geocodificarComFallback(resultadoInterno.enderecoParaBuscar).then(function (resultadoExterno) {
+            if (!resultadoExterno || resultadoExterno.erro) {
+                var falha = { lat: null, lng: null, erro: (resultadoExterno && resultadoExterno.erro) || 'Endereço não encontrado.', enderecoOriginal: busca };
+                window._cacheGeocodificacao[chaveCache] = falha;
+                return falha;
+            }
+
+            window._cacheGeocodificacao[chaveCache] = resultadoExterno;
+
+            _salvarGeoSerializado({
+                endereco_original: busca,
+                lat: resultadoExterno.lat,
+                lng: resultadoExterno.lng,
+                cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
+                origem_resolucao: resultadoExterno.fonte || 'geocodificado'
+            });
+
+            return resultadoExterno;
+        });
+    }).catch(function (e) {
+        window._exibirErroGlobal(e, 'buscar/geocodificar endereço "' + busca + '"');
+        var falha = { lat: null, lng: null, erro: e.message || 'Erro inesperado.', enderecoOriginal: busca };
+        window._cacheGeocodificacao[chaveCache] = falha;
+        return falha;
+    });
+
+    var promessa = _comTimeoutDeSeguranca(promessaReal, 35000).then(function (resultado) {
+        delete window._promessasGeocodificacaoEmAndamento[chaveCache];
+        return resultado;
+    });
+
+    window._promessasGeocodificacaoEmAndamento[chaveCache] = promessa;
+    return promessa;
+};
 
 function _fetchGeoComTimeout(url, ms, headers) {
     return fetch(url, { signal: AbortSignal.timeout(ms), headers: headers || {} });
@@ -2954,6 +3099,8 @@ function _tentarPhoton(query, ms) {
         .catch(function (e) { window._exibirErroGlobal(e, 'geocodificar via Photon'); return null; });
 }
 
+window._filaNominatim = window._filaNominatim || Promise.resolve();
+
 function _tentarNominatimReal(query, ms) {
     return _fetchGeoComTimeout(
         'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
@@ -2971,7 +3118,7 @@ function _tentarNominatim(query, ms) {
     var resultado = window._filaNominatim.then(function () {
         return _tentarNominatimReal(query, ms).then(function (r) {
             return new Promise(function (resolve) {
-                setTimeout(function () { resolve(r); }, 1100); // respeita rate-limit p/ próxima chamada
+                setTimeout(function () { resolve(r); }, 600);
             });
         });
     });
@@ -3844,14 +3991,6 @@ window.RotaRapida = (function () {
     };
 })();
 
-function _limparComplementoParaGeocoding(endereco) {
-    return String(endereco || '')
-        .replace(/,?\s*\b(sl|sala|apto|ap|bloco|bl|cs|casa|fundos|lj|loja)\b\s*[\w\/\-]*/gi, '')
-        .replace(/\s{2,}/g, ' ')
-        .replace(/,\s*,/g, ',')
-        .trim();
-}
-
 function _estilizarRotasNaMensagem(textoEscapado) {
     return textoEscapado
         .replace(/(^|\s)De:/g, '$1<span class="icone-rota icone-rota-de">🛵</span>De:')
@@ -3860,31 +3999,7 @@ function _estilizarRotasNaMensagem(textoEscapado) {
 
 window._estilizarRotasNaMensagem = _estilizarRotasNaMensagem;
 
-function _geocodificarComFallback(enderecoCompleto) {
-    var enderecoLimpo = _limparComplementoParaGeocoding(enderecoCompleto);
-
-    return _geocodificarExterno(enderecoLimpo).then(function (resultado) {
-        if (resultado && !resultado.erro) return resultado;
-
-        return _geocodificarExterno(enderecoCompleto).then(function (resultadoOriginal) {
-            if (resultadoOriginal && !resultadoOriginal.erro) return resultadoOriginal;
-
-            var enderecoSemNumero = enderecoLimpo.replace(/,?\s*\d+\s*,/, ',');
-            if (enderecoSemNumero === enderecoLimpo) return resultadoOriginal;
-
-            return _geocodificarExterno(enderecoSemNumero).then(function (resultadoSemNumero) {
-                if (resultadoSemNumero && !resultadoSemNumero.erro) {
-                    resultadoSemNumero.aproximado = true;
-                    return resultadoSemNumero;
-                }
-                return resultadoOriginal;
-            });
-        });
-    });
-}
-
 window._filaSalvarGeo = window._filaSalvarGeo || Promise.resolve();
-window._promessasGeocodificacaoEmAndamento = window._promessasGeocodificacaoEmAndamento || {};
 
 function _salvarGeoSerializado(payload) {
     var resultado = window._filaSalvarGeo.then(function () {
@@ -3896,97 +4011,6 @@ function _salvarGeoSerializado(payload) {
     window._filaSalvarGeo = resultado.catch(function () { return null; });
     return resultado;
 }
-
-window.buscarCoordenadasEndereco = function (endereco) {
-    var busca = String(endereco || '').trim();
-    if (!busca) return Promise.resolve(null);
-
-    var chaveCache = busca.toLowerCase();
-    if (window._cacheGeocodificacao[chaveCache] !== undefined) {
-        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
-    }
-    if (window._promessasGeocodificacaoEmAndamento[chaveCache]) {
-        return window._promessasGeocodificacaoEmAndamento[chaveCache];
-    }
-
-    function _tentarBackendInterno() {
-        return API.call('buscarenderecogeo', { endereco: busca })
-            .then(function (resp) {
-                if (resp && resp.status === 'success' && resp.encontrado && !resp.precisaGeocodificar && resp.lat && resp.lng) {
-                    return { coords: { lat: parseFloat(resp.lat), lng: parseFloat(resp.lng), erro: null }, resolvidoInterno: true };
-                }
-                var enderecoParaBuscar = (resp && resp.endereco_sugerido) ? resp.endereco_sugerido : busca;
-                return { enderecoParaBuscar: enderecoParaBuscar, resolvidoInterno: false };
-            })
-            .catch(function (e) {
-                window._exibirErroGlobal(e, 'consultar endereço "' + busca + '" no backend');
-                return { enderecoParaBuscar: busca, resolvidoInterno: false };
-            });
-    }
-
-    // 🔑 Timeout de segurança — GARANTE que a promise sempre resolve em até 15s
-    function _comTimeoutDeSeguranca(promiseOriginal, ms) {
-        var timeoutId;
-        var promiseTimeout = new Promise(function (resolve) {
-            timeoutId = setTimeout(function () {
-                resolve({
-                    lat: null, lng: null,
-                    erro: 'Tempo limite excedido ao consultar o endereço (backend não respondeu em ' + (ms / 1000) + 's).',
-                    enderecoOriginal: busca
-                });
-            }, ms);
-        });
-
-        return Promise.race([promiseOriginal, promiseTimeout]).finally(function () {
-            clearTimeout(timeoutId);
-        });
-    }
-
-    var promessaReal = _tentarBackendInterno().then(function (resultadoInterno) {
-        if (resultadoInterno.resolvidoInterno) {
-            window._cacheGeocodificacao[chaveCache] = resultadoInterno.coords;
-            return resultadoInterno.coords;
-        }
-
-        return _geocodificarComFallback(resultadoInterno.enderecoParaBuscar).then(function (resultadoExterno) {
-            if (!resultadoExterno || resultadoExterno.erro) {
-                var falha = { lat: null, lng: null, erro: (resultadoExterno && resultadoExterno.erro) || 'Endereço não encontrado.', enderecoOriginal: busca };
-                window._cacheGeocodificacao[chaveCache] = falha;
-                return falha;
-            }
-
-            window._cacheGeocodificacao[chaveCache] = resultadoExterno;
-
-            _salvarGeoSerializado({
-                endereco_original: busca,
-                lat: resultadoExterno.lat,
-                lng: resultadoExterno.lng,
-                cliente_solicitante: (window.AppRDO && window.AppRDO.clienteSelecionado) || '',
-                origem_resolucao: 'geocodificado'
-            });
-
-            return resultadoExterno;
-        });
-    }).catch(function (e) {
-        window._exibirErroGlobal(e, 'buscar/geocodificar endereço "' + busca + '"');
-        var falha = { lat: null, lng: null, erro: e.message || 'Erro inesperado.', enderecoOriginal: busca };
-        window._cacheGeocodificacao[chaveCache] = falha;
-        return falha;
-    });
-
-    var promessa = _comTimeoutDeSeguranca(promessaReal, 15000).then(function (resultado) {
-        // Se o resultado veio do timeout (não foi cacheado ainda), NÃO fixa no cache definitivo
-        // — assim, se o backend real responder depois, a próxima tentativa pode tentar de novo.
-        if (window._cacheGeocodificacao[chaveCache] === undefined) {
-            // não grava no cache permanente em caso de timeout, só limpa o "em andamento"
-        }
-        delete window._promessasGeocodificacaoEmAndamento[chaveCache];
-        return resultado;
-    });
-
-    window._promessasGeocodificacaoEmAndamento[chaveCache] = promessa;
-    return promessa;
-};
 
 window.exibirErro = function (erro, contexto) {
     contexto = contexto || 'Erro desconhecido';
