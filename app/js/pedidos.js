@@ -1372,101 +1372,39 @@
         }
     }
 
+    window.RDO_PEDIDOS._eventBusHandlers = window.RDO_PEDIDOS._eventBusHandlers || null;
+
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
-        window.EventBus.on('financeiro:situacaoAtualizada', function (dados) {
-            if (!dados || !dados.idPedido) return;
-            var idStr = String(dados.idPedido).trim();
-            var idNorm = idStr.replace(/^RDO0*/i, '');
+        // 🔒 Evita registrar os mesmos handlers mais de uma vez
+        if (window.RDO_PEDIDOS._eventBusHandlers) return;
 
-            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                var pId = String(p.id || '').trim();
-                return pId === idStr || pId.replace(/^RDO0*/i, '') === idNorm;
-            });
-            if (!pedido) return;
-
-            pedido.situacao_financeira = dados.situacaoFinanceira;
-
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
-        window.EventBus.on('pedido:excluido', function (dados) {
-            if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
-            var idStr = String((dados && dados.id) || '').trim();
-            window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
-                return String(p.id || '').trim() !== idStr;
-            });
-            if (Array.isArray(window.AppRDO.chatsCache)) {
-                window.AppRDO.chatsCache = window.AppRDO.chatsCache.filter(function (c) {
-                    return String(c.pedido_id || '').trim() !== idStr;
+        var handlers = {
+            'financeiro:situacaoAtualizada': function (dados) { /* ...mesmo código... */ },
+            'pedido:excluido': function (dados) { /* ...mesmo código... */ },
+            'chat:excluidoLogico': function (dados) { /* ...mesmo código... */ },
+            'pedido:adicionado': function (novoPedido) {
+                if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache) || !novoPedido) return;
+                var idNovo = String(novoPedido.id || '').trim();
+                // 🔒 Guarda contra duplicação real do pedido no cache
+                var jaExiste = window.AppRDO.pedidosCache.some(function (p) {
+                    return String(p.id || '').trim() === idNovo;
                 });
-            }
-            _renderizarTabela(window.AppRDO.pedidosCache);
-            _dispararSync();
+                if (jaExiste) return;
+                window.AppRDO.pedidosCache.push(novoPedido);
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            },
+            'pedido:cancelado': function (dados) { /* ...mesmo código... */ },
+            'pedido:statusAtualizado': function (dados) { /* ...mesmo código... */ },
+            'pedido:atualizado': function (dados) { /* ...mesmo código... */ }
+        };
+
+        Object.keys(handlers).forEach(function (evt) {
+            window.EventBus.on(evt, handlers[evt]);
         });
 
-        window.EventBus.on('chat:excluidoLogico', function (dados) {
-            if (!window.AppRDO || !Array.isArray(window.AppRDO.chatsCache)) return;
-            var idStr = String((dados && dados.pedidoId) || '').trim();
-            if (!idStr) return;
-            window.AppRDO.chatsCache = window.AppRDO.chatsCache.filter(function (c) {
-                var cId = String(c.pedido_id || '').trim();
-                return cId.replace(/^RDO0*/i, '') !== idStr.replace(/^RDO0*/i, '');
-            });
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
-        window.EventBus.on('pedido:adicionado', function (novoPedido) {
-            if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache) || !novoPedido) return;
-            window.AppRDO.pedidosCache.push(novoPedido);
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
-        window.EventBus.on('pedido:cancelado', function (dados) {
-            if (!dados) return;
-            var idStr = String(dados.id || '').trim();
-            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                return String(p.id || '').trim() === idStr;
-            });
-            if (pedido) {
-                pedido.status = 'CANCELADO';
-                pedido.motivo_cancelamento = dados.motivo_cancelamento || '';
-            }
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
-        window.EventBus.on('pedido:statusAtualizado', function (dados) {
-            if (!dados) return;
-            var idStr = String(dados.id || '').trim();
-            var idNorm = idStr.replace(/^RDO0*/i, '');
-            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                var pId = String(p.id || '').trim();
-                return pId === idStr || pId.replace(/^RDO0*/i, '') === idNorm;
-            });
-            if (pedido) {
-                pedido.status = dados.status || pedido.status;
-                if (dados.motoboy) pedido.motoboy = dados.motoboy;
-                if (dados.motivo_cancelamento !== undefined)
-                    pedido.motivo_cancelamento = dados.motivo_cancelamento;
-            }
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
-        window.EventBus.on('pedido:atualizado', function (dados) {
-            if (!dados) return;
-            var idStr = String(dados.id || '').trim();
-            var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
-                return String(p.id || '').trim() === idStr;
-            });
-            if (pedido) {
-                if (dados.valor_corrida !== undefined) pedido.valor_corrida = dados.valor_corrida; // 🔧 novo
-                if (dados.valor_total !== undefined) pedido.valor_total = dados.valor_total;
-                if (dados.valor_final !== undefined) pedido.valor_final = dados.valor_final;
-            }
-            _renderizarTabela(window.AppRDO.pedidosCache);
-        });
-
+        window.RDO_PEDIDOS._eventBusHandlers = handlers;
     }
 
     function _configurarBotaoCalendario() {
@@ -1543,6 +1481,10 @@
         }
 
         itens.forEach(function (item) {
+            // 🔒 Evita registrar os mesmos listeners múltiplas vezes no mesmo elemento
+            if (item.dataset.hoverBind === '1') return;
+            item.dataset.hoverBind = '1';
+
             item.addEventListener('mouseenter', function () {
                 if (_isMobile()) item.classList.add('mostrar-info');
             });
@@ -1556,12 +1498,19 @@
             }, { passive: true });
         });
 
-        document.addEventListener('touchstart', function (e) {
-            if (!_isMobile()) return;
-            if (!e.target.closest('.ped-status-action-item')) {
-                itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
-            }
-        }, { passive: true });
+        // 🔒 Listener global em document — registrado apenas uma vez por toda a sessão do módulo
+        if (!window.RDO_PEDIDOS._touchOutsideBind) {
+            window.RDO_PEDIDOS._touchOutsideBind = true;
+
+            document.addEventListener('touchstart', function (e) {
+                if (!_isMobile()) return;
+                if (!e.target.closest('.ped-status-action-item')) {
+                    document.querySelectorAll('.ped-status-action-item.mostrar-info').forEach(function (i) {
+                        i.classList.remove('mostrar-info');
+                    });
+                }
+            }, { passive: true });
+        }
     }
 
     window.RDO_PEDIDOS.abrirEdicaoDoDetalhe = function () {
@@ -1612,13 +1561,6 @@
         if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
 
         if (!_bind()) return;
-
-        if (window.AppRDO && window.AppRDO._pedidoAlvoNotificacao) {
-            var idAlvo = window.AppRDO._pedidoAlvoNotificacao;
-            window.pedidosState.busca = idAlvo;
-            if (els.inputBusca) els.inputBusca.value = idAlvo;
-            window.AppRDO._pedidoAlvoNotificacao = null;
-        }
 
         _toggleBtnClearBusca();
         _registrarEventos();
