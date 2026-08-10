@@ -23,6 +23,7 @@
         if (!url || typeof url !== 'string') return false;
         var s = url.trim();
         if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
+        if (s.indexOf('blob:') === 0) return false;
         return (
             s.indexOf('data:image/') === 0 ||
             s.indexOf('/') === 0 ||
@@ -35,7 +36,8 @@
     function _normalizarCaminho(url) {
         if (!url) return url;
         var s = url.trim();
-        if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0 || s.indexOf('data:image/') === 0) return s;
+        if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0 ||
+            s.indexOf('data:image/') === 0 || s.indexOf('blob:') === 0) return s;
         if (s.indexOf('/') !== 0) return '/' + s;
         return s;
     }

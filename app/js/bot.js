@@ -119,6 +119,7 @@ window.aplicarControleAbasRelatorio = function () {
     var abasNav = document.querySelectorAll('.rel-tab[data-tab]');
     if (!abasNav.length) return;
 
+    var subAbasPermitidas = _usuarioAtualSubAbasRelatorio();
     var primeiraPermitidaTab = null;
     var abaAtivaBloqueada = false;
     var tabAtivo = null;
@@ -378,6 +379,8 @@ window.initBot = function () {
                 });
             }
 
+            window._registrarTodosUploadsImagemBot();
+
             window.botState._listenersRegistrados = true;
         }
 
@@ -545,7 +548,17 @@ function _labelOrigem(origem) {
 
 function _resolverAvatar(item) {
     var imagem = (item.imagem || '').trim();
-    if (imagem && imagem !== 'null' && imagem !== 'undefined' && imagem.length > 10) return imagem;
+    if (!imagem) return null;
+    if (imagem === 'null' || imagem === 'undefined') return null;
+    if (imagem.indexOf('blob:') === 0) return null;
+    if (imagem.length < 10) return null;
+    if (
+        imagem.indexOf('data:image/') === 0 ||
+        imagem.indexOf('http://') === 0 ||
+        imagem.indexOf('https://') === 0
+    ) {
+        return imagem;
+    }
     return null;
 }
 
@@ -586,6 +599,7 @@ function _abrirModalUsuario(item) {
     if (iconToggle) iconToggle.className = 'bi bi-eye-slash';
     if (btnToggle) btnToggle.classList.toggle('oculto', !(item.password));
     if (imgEl) imgEl.value = item.imagem || '';
+    _atualizarPreviewAvatar('usuario-bot-imagem-preview', item.imagem || '');
     if (cargoEl) cargoEl.value = item.cargo || '';
 
     _preencherCargoDisplay(item.cargo);
@@ -623,7 +637,6 @@ async function _abrirFormAdminBot(item, origem) {
 
 function renderizarTabela() {
     var tbody = document.getElementById('bot-list');
-    var tdTipo = document.createElement('td');
     var infoPag = document.getElementById('info-paginacao');
     var infoTotal = document.getElementById('info-total');
     var isMasterOn = window.checkMaster();
@@ -848,6 +861,7 @@ window.abrirModalCadastro = function () {
         document.getElementById('usuario-bot-contato').value = '';
         document.getElementById('usuario-bot-password').value = '';
         document.getElementById('usuario-bot-imagem').value = '';
+        _atualizarPreviewAvatar('usuario-bot-imagem-preview', '');
         document.getElementById('usuario-bot-cargo').value = '';
 
         var display = document.getElementById('cargo-selecionado-display');
@@ -906,6 +920,14 @@ function _btnLoadingStop(btn) {
     btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
 }
 
+function _imagemInvalidaParaSalvar(imagem) {
+    if (!imagem) return false;
+    var s = imagem.trim();
+    if (s.indexOf('blob:') === 0) return true;
+    if (s.indexOf('data:image/') === 0 && s.length > 500000) return true;
+    return false;
+}
+
 window.salvarUsuarioBot = async function () {
     var btn = document.getElementById('btn-salvar-usuario-bot');
 
@@ -928,6 +950,10 @@ window.salvarUsuarioBot = async function () {
         Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe uma senha para o novo usuário.', confirmButtonColor: '#dc3545' });
         return;
     }
+    if (_imagemInvalidaParaSalvar(imagem)) {
+        Swal.fire({ icon: 'warning', title: 'Imagem inválida', text: 'Essa imagem foi capturada de forma temporária e não pode ser salva. Faça upload de um arquivo ou informe uma URL pública.', confirmButtonColor: '#dc3545' });
+        return;
+    }
 
     var permissoes = [];
     document.querySelectorAll('.permissao-checkbox:checked').forEach(function (cb) {
@@ -939,7 +965,7 @@ window.salvarUsuarioBot = async function () {
         contato: contato,
         imagem: imagem,
         cargo: cargo,
-        permissoes: JSON.stringify(permissoes) // 👈 enviar ao backend
+        permissoes: JSON.stringify(permissoes)
     };
     if (password) payload.password = password;
 
@@ -991,6 +1017,10 @@ window.salvarClienteBot = async function () {
         Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe o nome do responsável.', confirmButtonColor: '#dc3545' });
         return;
     }
+    if (_imagemInvalidaParaSalvar(imagem)) {
+        Swal.fire({ icon: 'warning', title: 'Imagem inválida', text: 'Essa imagem foi capturada de forma temporária e não pode ser salva. Faça upload de um arquivo ou informe uma URL pública.', confirmButtonColor: '#dc3545' });
+        return;
+    }
 
     var payload = { responsavel: responsavel, contato: contato, endereco: endereco, cidade: cidade, imagem: imagem };
 
@@ -1031,6 +1061,10 @@ window.salvarColaboradorBot = async function () {
 
     if (!colaborador) {
         Swal.fire({ icon: 'warning', title: 'Campo obrigatório', text: 'Informe o nome do colaborador.', confirmButtonColor: '#dc3545' });
+        return;
+    }
+    if (_imagemInvalidaParaSalvar(imagem)) {
+        Swal.fire({ icon: 'warning', title: 'Imagem inválida', text: 'Essa imagem foi capturada de forma temporária e não pode ser salva. Faça upload de um arquivo ou informe uma URL pública.', confirmButtonColor: '#dc3545' });
         return;
     }
 
@@ -1094,6 +1128,7 @@ window.visualizarBot = async function (id, origem) {
         document.getElementById('usuario-bot-contato').value = item.contato || '';
         document.getElementById('usuario-bot-imagem').value = item.imagem || '';
         document.getElementById('usuario-bot-password').value = item.password || '';
+        _atualizarPreviewAvatar('usuario-bot-imagem-preview', item.imagem || '');
 
         var campoUltimoAcesso = document.getElementById('usuario-bot-ultimo-acesso');
         if (campoUltimoAcesso) campoUltimoAcesso.value = item.ultimo_acesso || '';
@@ -1123,6 +1158,8 @@ window.visualizarBot = async function (id, origem) {
         document.getElementById('cliente-bot-endereco').value = item.endereco || '';
         document.getElementById('cliente-bot-cidade').value = item.cidade || '';
         document.getElementById('cliente-bot-imagem').value = item.imagem || '';
+        _atualizarPreviewAvatar('cliente-bot-imagem-preview', item.imagem || '');
+
         var modalCliente = document.getElementById('modalCliente');
         var instC = bootstrap.Modal.getInstance(modalCliente);
         if (instC) instC.dispose();
@@ -1136,6 +1173,8 @@ window.visualizarBot = async function (id, origem) {
         document.getElementById('colaborador-bot-cargo').value = item.cargo || '';
         document.getElementById('colaborador-bot-contato').value = item.contato || item.telefone || '';
         document.getElementById('colaborador-bot-imagem').value = item.imagem || '';
+        _atualizarPreviewAvatar('colaborador-bot-imagem-preview', item.imagem || '');
+
         var modalColaborador = document.getElementById('modalColaborador');
         var instK = bootstrap.Modal.getInstance(modalColaborador);
         if (instK) instK.dispose();
@@ -1314,3 +1353,108 @@ window.addEventListener('storage', function (e) {
         window.aplicarPermissoesUsuario();
     }
 });
+
+function _converterArquivoParaBase64(file, callback) {
+    var reader = new FileReader();
+    reader.onload = function () {
+        callback(reader.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+function _redimensionarBase64(base64, maxLargura, callback) {
+    var img = new Image();
+    img.onload = function () {
+        var escala = Math.min(1, maxLargura / img.width);
+        var canvas = document.createElement('canvas');
+        canvas.width = img.width * escala;
+        canvas.height = img.height * escala;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        callback(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.src = base64;
+}
+
+function _imagemValidaParaExibir(valor) {
+    if (!valor) return false;
+    var s = valor.trim();
+    if (!s || s === 'null' || s === 'undefined' || s.length < 10) return false;
+    if (s.indexOf('blob:') === 0) return false;
+    return s.indexOf('data:image/') === 0 || s.indexOf('http://') === 0 || s.indexOf('https://') === 0;
+}
+
+function _atualizarPreviewAvatar(previewId, valorImagem) {
+    var box = document.getElementById(previewId);
+    if (!box) return;
+    if (_imagemValidaParaExibir(valorImagem)) {
+        box.innerHTML = '<img src="' + valorImagem + '" alt="preview">';
+    } else {
+        box.innerHTML = '<i class="bi bi-person-fill"></i>';
+    }
+}
+
+function _registrarUploadImagem(inputId, campoDestinoId, previewId) {
+    var input = document.getElementById(inputId);
+    if (!input || input.dataset.uploadRegistrado === 'true') return;
+    input.dataset.uploadRegistrado = 'true';
+
+    input.addEventListener('change', function () {
+        var file = input.files[0];
+        if (!file) return;
+        _converterArquivoParaBase64(file, function (base64Original) {
+            _redimensionarBase64(base64Original, 400, function (base64Final) {
+                var campo = document.getElementById(campoDestinoId);
+                if (campo) {
+                    campo.value = base64Final;
+                    campo.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                _atualizarPreviewAvatar(previewId, base64Final);
+                Swal.fire({ icon: 'success', title: 'Imagem carregada', text: 'Pronta para salvar.', confirmButtonColor: '#198754', timer: 1500, showConfirmButton: false });
+            });
+        });
+        input.value = '';
+    });
+}
+
+window._registrarTodosUploadsImagemBot = function () {
+    _registrarUploadImagem('usuario-bot-imagem-upload', 'usuario-bot-imagem', 'usuario-bot-imagem-preview');
+    _registrarUploadImagem('cliente-bot-imagem-upload', 'cliente-bot-imagem', 'cliente-bot-imagem-preview');
+    _registrarUploadImagem('colaborador-bot-imagem-upload', 'colaborador-bot-imagem', 'colaborador-bot-imagem-preview');
+};
+
+if (!window._pasteImagemBotRegistrado) {
+    var camposImagemPreviewMap = {
+        'usuario-bot-imagem': 'usuario-bot-imagem-preview',
+        'cliente-bot-imagem': 'cliente-bot-imagem-preview',
+        'colaborador-bot-imagem': 'colaborador-bot-imagem-preview'
+    };
+
+    document.addEventListener('paste', function (e) {
+        var ativo = document.activeElement;
+        if (!ativo || !camposImagemPreviewMap.hasOwnProperty(ativo.id)) return;
+
+        var items = (e.clipboardData || window.clipboardData).items;
+        if (!items) return;
+
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                var file = items[i].getAsFile();
+                _converterArquivoParaBase64(file, function (base64Original) {
+                    _redimensionarBase64(base64Original, 400, function (base64Final) {
+                        ativo.value = base64Final;
+                        ativo.dispatchEvent(new Event('input', { bubbles: true }));
+                        _atualizarPreviewAvatar(camposImagemPreviewMap[ativo.id], base64Final);
+                        Swal.fire({ icon: 'success', title: 'Imagem colada', text: 'Imagem pronta para salvar.', confirmButtonColor: '#198754', timer: 1500, showConfirmButton: false });
+                    });
+                });
+                return;
+            }
+        }
+    });
+
+    window._pasteImagemBotRegistrado = true;
+}
+
+

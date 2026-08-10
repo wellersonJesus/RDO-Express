@@ -1,7 +1,7 @@
 import express           from 'express';
 import cors              from 'cors';
 import dotenv            from 'dotenv';
-import path              from 'path';
+import path               from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt            from 'bcryptjs';
 import { rateLimit }     from 'express-rate-limit';
@@ -93,12 +93,26 @@ async function fetchGAS(payload) {
 
 async function buscarDadosMasterNoGAS(masterLogin) {
     try {
-        const usuarios = await fetchGAS({ action: 'getusuarios', apiKey: process.env.SECRET_KEY });
-        if (!Array.isArray(usuarios)) return null;
-        return usuarios.find(u =>
-            String(u.username || u.user || u.login || u.nome || '').trim() === masterLogin
+        const resultado = await fetchGAS({ action: 'getusuarios', apiKey: process.env.SECRET_KEY });
+        const usuarios = Array.isArray(resultado) ? resultado : resultado?.data;
+        if (!Array.isArray(usuarios)) {
+            console.warn('[MASTER] getusuarios não retornou array válido:', resultado);
+            return null;
+        }
+        const alvo = String(masterLogin || '').trim().toLowerCase();
+        const encontrado = usuarios.find(u =>
+            String(u.username || u.user || u.login || u.nome || '').trim().toLowerCase() === alvo
         ) || null;
-    } catch {
+
+        if (!encontrado) {
+            console.warn('[MASTER] Usuário não encontrado no GAS:', masterLogin);
+        } else {
+            console.log('[MASTER] Usuário encontrado | imagem presente:', !!encontrado.imagem);
+        }
+
+        return encontrado;
+    } catch (err) {
+        console.error('[MASTER] Erro ao buscar dados no GAS:', err.message);
         return null;
     }
 }
@@ -297,6 +311,7 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
     console.log('=========================================');
     console.log(`  Servidor:    http://localhost:${PORT}`);
