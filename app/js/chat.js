@@ -1,5 +1,239 @@
 window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 
+var MAPA_BAIRRO_CIDADE = {
+  "savassi": "belo horizonte",
+  "funcionarios": "belo horizonte",
+  "lourdes": "belo horizonte",
+  "santo agostinho": "belo horizonte",
+  "cidade jardim": "belo horizonte",
+  "sion": "belo horizonte",
+  "belvedere": "belo horizonte",
+  "mangabeiras": "belo horizonte",
+  "anchieta": "belo horizonte",
+  "cruzeiro": "belo horizonte",
+  "carmo": "belo horizonte",
+  "serra": "belo horizonte",
+  "santa lucia": "belo horizonte",
+  "buritis": "belo horizonte",
+  "estoril": "belo horizonte",
+  "jardim america": "belo horizonte",
+  "gutierrez": "belo horizonte",
+  "prado": "belo horizonte",
+  "calafate": "belo horizonte",
+  "barroca": "belo horizonte",
+  "nova suica": "belo horizonte",
+  "salgado filho": "belo horizonte",
+  "havai": "belo horizonte",
+  "betania": "belo horizonte",
+  "camargos": "belo horizonte",
+  "barreiro": "belo horizonte",
+  "diamante": "belo horizonte",
+  "milionarios": "belo horizonte",
+  "flavio marques lisboa": "belo horizonte",
+  "tirol": "belo horizonte",
+  "pilar": "belo horizonte",
+  "vale do jatoba": "belo horizonte",
+  "pampulha": "belo horizonte",
+  "sao luiz": "belo horizonte",
+  "ouro preto": "belo horizonte",
+  "planalto": "belo horizonte",
+  "castelo": "belo horizonte",
+  "itapoa": "belo horizonte",
+  "braunas": "belo horizonte",
+  "santa amelia": "belo horizonte",
+  "santa branca": "belo horizonte",
+  "engenho nogueira": "belo horizonte",
+  "san pedro": "belo horizonte",
+  "trevo": "belo horizonte",
+  "dona clara": "belo horizonte",
+  "liberdade": "belo horizonte",
+  "urca": "belo horizonte",
+  "jaragua": "belo horizonte",
+  "venda nova": "belo horizonte",
+  "sao joao batista": "belo horizonte",
+  "candelaria": "belo horizonte",
+  "mantiqueira": "belo horizonte",
+  "leticia": "belo horizonte",
+  "rio branco": "belo horizonte",
+  "piratininga": "belo horizonte",
+  "europa": "belo horizonte",
+  "copacabana": "belo horizonte",
+  "vila cloris": "belo horizonte",
+  "cachoeirinha": "belo horizonte",
+  "floresta": "belo horizonte",
+  "sagrada familia": "belo horizonte",
+  "colegio batista": "belo horizonte",
+  "horto": "belo horizonte",
+  "sao geraldo": "belo horizonte",
+  "pompeia": "belo horizonte",
+  "concordia": "belo horizonte",
+  "goiania": "belo horizonte",
+  "conjunto taquaril": "belo horizonte",
+  "taquaril": "belo horizonte",
+  "granja de freitas": "belo horizonte",
+  "boa vista": "belo horizonte",
+  "santa efigenia": "belo horizonte",
+  "santa tereza": "belo horizonte",
+  "pompeu": "belo horizonte",
+  "esplanada": "belo horizonte",
+  "gameleira": "belo horizonte",
+  "olhos dagua": "belo horizonte",
+  "coracao eucaristico": "belo horizonte",
+  "vera cruz": "belo horizonte",
+  "santa ines": "belo horizonte",
+  "cidade nova": "belo horizonte",
+  "lagoinha": "belo horizonte",
+  "caicaras": "belo horizonte",
+  "bonfim": "belo horizonte",
+  "riacho das pedras": "contagem",
+  "eldorado": "contagem",
+  "cinco": "contagem",
+  "bela vista": "contagem",
+  "santa terezinha": "contagem",
+  "bernardo monteiro": "contagem",
+  "bitacula": "contagem",
+  "40 alqueires": "contagem",
+  "fonte grande": "contagem",
+  "santa helena": "contagem",
+  "vila belem": "contagem",
+  "canada": "contagem",
+  "nossa senhora do carmo": "contagem",
+  "vila panama": "contagem",
+  "lucio de abreu": "contagem",
+  "praia": "contagem",
+  "sapucaias": "contagem",
+  "petrolandia": "contagem",
+  "ressaca": "contagem",
+  "industrial": "contagem",
+  "vila oeste": "contagem",
+  "vila perus": "contagem",
+  "jardim riacho das pedras": "contagem",
+  "nacoes unidas": "contagem",
+  "icaivera": "betim",
+  "citrolandia": "betim",
+  "terezopolis": "betim",
+  "imbirucu": "betim",
+  "ptb": "betim",
+  "alterosa": "betim",
+  "alterosas": "betim",
+  "vianopolis": "betim",
+  "petrovale": "betim",
+  "acude": "betim",
+  "alta villa": "betim",
+  "alto das flores": "betim",
+  "alvorada": "betim",
+  "amarante": "betim",
+  "amazonas": "betim",
+  "amoras": "betim",
+  "angola": "betim",
+  "aroeiras": "betim",
+  "arquipelago verde": "betim",
+  "bandeirinhas": "betim",
+  "betim industrial": "betim",
+  "bodoco": "betim",
+  "bom repouso": "betim",
+  "bom retiro": "betim",
+  "brasileia": "betim",
+  "brodoski": "betim",
+  "cachoeira": "betim",
+  "california": "betim",
+  "campos eliseos": "betim",
+  "campos elisios": "betim",
+  "capelinha": "betim",
+  "casa amarela": "betim",
+  "chacara": "betim",
+  "chacaras": "betim",
+  "chacaras arapua": "betim",
+  "charneca": "betim",
+  "cidade verde": "betim",
+  "colonia santa isabel": "betim",
+  "cruzeiro do sul": "betim",
+  "decamao": "betim",
+  "dom bosco": "betim",
+  "duque de caxias": "betim",
+  "espirito santo": "betim",
+  "estancia do sereno": "betim",
+  "filadelfia": "betim",
+  "flores e florestas": "betim",
+  "gentileza": "betim",
+  "granja santo afonso": "betim",
+  "granja sao joao": "betim",
+  "granja verde": "betim",
+  "guanabara": "betim",
+  "guaruja": "betim",
+  "guaruja mansoes": "betim",
+  "inga": "betim",
+  "itacolomi": "betim",
+  "jardim alterosa": "betim",
+  "jardim brasilia": "betim",
+  "jardim casa branca": "betim",
+  "jardim cidade": "betim",
+  "jardim das acacias": "betim",
+  "jardim piemont": "betim",
+  "novo horizonte betim": "betim",
+  "santa luzia": "santa luzia",
+  "ribeirao das neves": "ribeirão das neves",
+  "vespasiano": "vespasiano",
+  "nova lima": "nova lima",
+  "sabara": "sabará",
+  "sarzedo": "sarzedo",
+  "ibirite": "ibirité",
+  "mario campos": "mário campos",
+  "esmeraldas": "esmeraldas",
+  "mateus leme": "mateus leme",
+  "juatuba": "juatuba",
+  "brumadinho": "brumadinho",
+  "caete": "caeté",
+  "raposos": "raposos",
+  "rio acima": "rio acima",
+  "nova uniao": "nova união"
+};
+
+function normalizarParaGeocodificacao(enderecoOriginal) {
+  var texto = String(enderecoOriginal || "");
+
+  // Expande abreviações comuns (com ou sem espaço/ponto)
+  texto = texto.replace(/\bR\.?\s*/gi, "Rua ");
+  texto = texto.replace(/\bAv\.?\s*/gi, "Avenida ");
+  texto = texto.replace(/\bAl\.?\s*/gi, "Alameda ");
+  texto = texto.replace(/\bPç\.?\s*/gi, "Praça ");
+  texto = texto.replace(/\bPc\.?\s*/gi, "Praça ");
+  texto = texto.replace(/\bTv\.?\s*/gi, "Travessa ");
+  texto = texto.replace(/\bRod\.?\s*/gi, "Rodovia ");
+
+  // Remove complemento de apto/bloco/sala que confunde a API (fica só número da rua)
+  // Ex: "64/902,Bl2,Buritis" -> pega só "64"
+  texto = texto.replace(/(\d+)\/\d+[a-zA-Z]*(,?\s*Bl\.?\d*)?/gi, "$1");
+  texto = texto.replace(/,?\s*(sl|sala|apto|apt|bl|bloco|loja|lj)\.?\s*\d+[a-zA-Z]*/gi, "");
+
+  // Remove rotas múltiplas (fica só o primeiro trecho, antes de "→" ou "De:"/"Para:")
+  if (texto.indexOf("→") !== -1) texto = texto.split("→")[0];
+  texto = texto.replace(/^De:\s*/i, "").replace(/\s*Para:.*$/i, "");
+
+  // Garante espaço após vírgulas e pontos
+  texto = texto.replace(/,(?=\S)/g, ", ");
+
+  // Remove múltiplos espaços
+  texto = texto.replace(/\s+/g, " ").trim();
+
+  return texto;
+}
+
+function completarEnderecoComCidadePadrao(enderecoOriginal) {
+  var limpo = limparSeparadoresEndereco(enderecoOriginal);
+  var norm = normalizarEnderecoParaBusca(limpo);
+
+  if (enderecoContemCidade(norm)) return limpo;
+
+  var bairroEncontrado = Object.keys(MAPA_BAIRRO_CIDADE)
+    .sort(function (a, b) { return b.length - a.length; })
+    .find(function (chave) { return norm.indexOf(chave) !== -1; });
+
+  var cidade = bairroEncontrado ? MAPA_BAIRRO_CIDADE[bairroEncontrado] : "Belo Horizonte";
+
+  return limpo + ", " + cidade + ", MG";
+}
+
 window._storageComExpiracao = (function () {
     var VALIDADE_MS = 24 * 60 * 60 * 1000;
 
@@ -2991,6 +3225,19 @@ function _tentarUmaVariacao(endereco) {
     });
 }
 
+function pareceEndereco(valor) {
+  var norm = valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  return /\b(rua|av|avenida|alameda|al|praca|travessa|rodovia|estrada|rod)\b/.test(norm) && /\d/.test(norm);
+}
+
+function extrairEnderecosDoTexto(textoBruto) {
+  return String(textoBruto || "")
+    .split("\n")
+    .map(function (l) { return l.trim(); })
+    .filter(function (l) { return l && pareceEndereco(l); });
+}
+
 function _geocodificarComFallback(enderecoCompleto) {
     var variacoes = _gerarVariacoesEndereco(enderecoCompleto);
     var ultimoErro = null;
@@ -3924,11 +4171,23 @@ window.RotaRapida = (function () {
             return /de\s*:/i.test(linha) || /para\s*:/i.test(linha);
         }
 
+        function _pareceEndereco(linha) {
+            return /\d/.test(linha);
+        }
+
         if (!dados.solicitante) {
             var idxCandidata = linhasRestantes.findIndex(function (l) { return !_pareceLinhaDeRota(l); });
             if (idxCandidata !== -1) {
                 dados.solicitante = linhasRestantes[idxCandidata];
                 linhasRestantes.splice(idxCandidata, 1);
+            }
+        }
+
+        if (!dados.contato && linhasRestantes.length > 0) {
+            var candidataContato = linhasRestantes[0];
+            if (!_pareceLinhaDeRota(candidataContato) && !_pareceEndereco(candidataContato)) {
+                dados.contato = candidataContato;
+                linhasRestantes.splice(0, 1);
             }
         }
 
