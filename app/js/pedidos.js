@@ -778,22 +778,23 @@
         _renderizarTabela(window.AppRDO.pedidosCache);
     };
 
-    window.RDO_PEDIDOS.salvarNovo = function () {
-        var btnSalvar = document.getElementById('btn-salvar-novo');
+    window.RDO_PEDIDOS.salvarNovoPedido = function () {
+        var btnSalvar = document.getElementById('btn-salvar-novo-pedido');
         var errEl = document.getElementById('novo-error-msg');
 
         if (errEl) errEl.classList.add('d-none');
 
         var payload = {
-            id_chat: (document.getElementById('novo-id-chat') || {}).value || '',
             solicitante: (document.getElementById('novo-solicitante') || {}).value || '',
             contato: (document.getElementById('novo-contato') || {}).value || '',
-            horario: (document.getElementById('novo-horario') || {}).value || '',
+            cliente: (document.getElementById('novo-cliente') || {}).value || '',
             mercadoria: (document.getElementById('novo-mercadoria') || {}).value || '',
             retorno: (document.getElementById('novo-retorno') || {}).value || 'Não',
             prioridade: (document.getElementById('novo-prioridade') || {}).value || '0',
             de: (document.getElementById('novo-de') || {}).value || '',
             para: (document.getElementById('novo-para') || {}).value || '',
+            motoboy: (document.getElementById('novo-motoboy') || {}).value || '',
+            valor_corrida: _parseMoeda((document.getElementById('novo-valor-pedido') || {}).value),
             observacao: (document.getElementById('novo-obs') || {}).value || '',
             status: 'PENDENTE',
             situacao_financeira: 'pendente'
@@ -833,11 +834,11 @@
                     });
             })
             .catch(function (err) {
-                console.error('[pedidos.js] ❌ salvarNovo:', err);
+                console.error('[pedidos.js] ❌ salvarNovoPedido:', err);
                 if (errEl) { errEl.textContent = err.message || 'Falha ao criar.'; errEl.classList.remove('d-none'); }
             })
             .finally(function () {
-                _setBotaoLoading(btnSalvar, false, 'bi bi-plus-lg', 'CRIAR PEDIDO');
+                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'Salvar');
             });
     };
 
