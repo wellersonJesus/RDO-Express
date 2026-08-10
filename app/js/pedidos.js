@@ -1286,7 +1286,8 @@
                 menu.style.transform = 'none';
             }
 
-            els.btnFiltroTipo.addEventListener('click', function (e) {
+            // 🔒 onclick direto no botão -> seguro, sempre substitui o anterior
+            els.btnFiltroTipo.onclick = function (e) {
                 e.stopPropagation();
                 if (!menu) return;
                 var aberto = menu.classList.contains('show');
@@ -1295,30 +1296,43 @@
                 }
                 menu.classList.toggle('show', !aberto);
                 els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
-            });
+            };
 
-            window.addEventListener('resize', function () {
-                if (menu && menu.classList.contains('show')) _posicionarMenuMobile();
-            });
+            // 🔒 Listeners globais registrados apenas 1x por sessão do módulo
+            if (!window.RDO_PEDIDOS._globalFiltroBind) {
+                window.RDO_PEDIDOS._globalFiltroBind = true;
 
-            document.addEventListener('click', function (e) {
-                if (!menu) return;
-                if (!els.btnFiltroTipo.contains(e.target) && !menu.contains(e.target)) {
-                    menu.classList.remove('show');
-                    els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
-                }
-            });
+                window.addEventListener('resize', function () {
+                    var menuAtual = document.getElementById('dropdown-filtro-menu');
+                    var btnAtual = document.getElementById('btn-filtro-tipo');
+                    if (menuAtual && btnAtual && menuAtual.classList.contains('show')) {
+                        _posicionarMenuMobile();
+                    }
+                });
 
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && menu) {
-                    menu.classList.remove('show');
-                    els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
-                }
-            });
+                document.addEventListener('click', function (e) {
+                    var menuAtual = document.getElementById('dropdown-filtro-menu');
+                    var btnAtual = document.getElementById('btn-filtro-tipo');
+                    if (!menuAtual || !btnAtual) return;
+                    if (!btnAtual.contains(e.target) && !menuAtual.contains(e.target)) {
+                        menuAtual.classList.remove('show');
+                        btnAtual.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key !== 'Escape') return;
+                    var menuAtual = document.getElementById('dropdown-filtro-menu');
+                    var btnAtual = document.getElementById('btn-filtro-tipo');
+                    if (menuAtual) menuAtual.classList.remove('show');
+                    if (btnAtual) btnAtual.setAttribute('aria-expanded', 'false');
+                });
+            }
 
             if (menu) {
                 menu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
-                    item.addEventListener('click', function (e) {
+                    // 🔒 onclick direto -> seguro, sempre substitui
+                    item.onclick = function (e) {
                         e.stopPropagation();
                         var filtro = item.getAttribute('data-filtro');
                         window.pedidosState.filtroCategoria = filtro;
@@ -1335,7 +1349,7 @@
                         window.pedidosState.emAcao = true;
                         _spinFeedback();
                         _renderizarTabela(window.AppRDO.pedidosCache);
-                    });
+                    };
                 });
             }
         }
@@ -1545,22 +1559,45 @@
         window.editarPedido(id);
     };
 
+    window.RDO_PEDIDOS._initEmAndamento = false;
+    window.RDO_PEDIDOS._jaInicializado = false;
+
     window.initPedidos = function () {
         console.log('[pedidos.js] ========== initPedidos ==========');
+
+        // 🔒 Guarda contra chamadas concorrentes/duplicadas (ex.: scroll, resize,
+        // reflow, router disparando o init da página mais de uma vez)
+        if (window.RDO_PEDIDOS._initEmAndamento) {
+            console.warn('[pedidos.js] ⚠️ initPedidos já está em execução — chamada ignorada');
+            return;
+        }
+
         if (!document.getElementById('corpo-tabela-pedidos')) {
             console.warn('[pedidos.js] Tabela não encontrada — abortando init');
             return;
         }
 
-        window.pedidosState.paginaAtual = 1;
-        window.pedidosState.isFetching = false;
-        window.pedidosState.dadosCarregados = false;
-        window.pedidosState.emAcao = false;
-        window.pedidosState.sortDesc = true;
+        window.RDO_PEDIDOS._initEmAndamento = true;
+
+        // 🔒 Se já foi inicializado antes, apenas garante que os binds e eventos
+        // ainda apontam para os elementos corretos (idempotente), sem resetar
+        // o estado de paginação/filtros do usuário e sem forçar novo loading visual.
+        var reinicializacao = window.RDO_PEDIDOS._jaInicializado;
+
+        if (!reinicializacao) {
+            window.pedidosState.paginaAtual = 1;
+            window.pedidosState.isFetching = false;
+            window.pedidosState.dadosCarregados = false;
+            window.pedidosState.emAcao = false;
+            window.pedidosState.sortDesc = true;
+        }
 
         if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
 
-        if (!_bind()) return;
+        if (!_bind()) {
+            window.RDO_PEDIDOS._initEmAndamento = false;
+            return;
+        }
 
         _toggleBtnClearBusca();
         _registrarEventos();
@@ -1568,19 +1605,33 @@
         _configurarBotaoCalendario();
         _configurarInfoHoverStatus();
 
+        if (reinicializacao) {
+            // ✅ Já tínhamos dados carregados antes: apenas re-renderiza a tabela
+            // existente no cache, SEM mostrar overlay de loading e SEM refetch.
+            console.log('[pedidos.js] Reinicialização detectada — usando cache em memória, sem novo fetch.');
+            _renderizarTabela(window.AppRDO.pedidosCache || []);
+            window.RDO_PEDIDOS._initEmAndamento = false;
+            return;
+        }
+
         var cacheLocal = _lerCacheLocal();
         if (cacheLocal) {
             window.AppRDO.pedidosCache = cacheLocal.pedidos;
             window.AppRDO.chatsCache = cacheLocal.chats;
             window.pedidosState.dadosCarregados = true;
             _renderizarTabela(window.AppRDO.pedidosCache);
-            _fetchPedidos({ silencioso: true });
+            _fetchPedidos({ silencioso: true }).finally(function () {
+                window.RDO_PEDIDOS._jaInicializado = true;
+                window.RDO_PEDIDOS._initEmAndamento = false;
+            });
         } else {
-            _fetchPedidos();
+            _fetchPedidos().finally(function () {
+                window.RDO_PEDIDOS._jaInicializado = true;
+                window.RDO_PEDIDOS._initEmAndamento = false;
+            });
         }
 
         console.log('[pedidos.js] Pronto!');
     };
 
-    console.log('[pedidos.js] Script carregado e pronto.');
 })();
