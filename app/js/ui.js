@@ -27,8 +27,17 @@
             s.indexOf('data:image/') === 0 ||
             s.indexOf('/') === 0 ||
             s.indexOf('http://') === 0 ||
-            s.indexOf('https://') === 0
+            s.indexOf('https://') === 0 ||
+            /^[a-zA-Z0-9_\-]+\/.+\.(png|jpe?g|gif|webp|svg)$/i.test(s)
         );
+    }
+
+    function _normalizarCaminho(url) {
+        if (!url) return url;
+        var s = url.trim();
+        if (s.indexOf('http://') === 0 || s.indexOf('https://') === 0 || s.indexOf('data:image/') === 0) return s;
+        if (s.indexOf('/') !== 0) return '/' + s;
+        return s;
     }
 
     function _proxificarUrl(url) {
@@ -99,7 +108,7 @@
     window.atualizarAvatar = function () {
         var username = localStorage.getItem('username') || 'Usuário';
         var tipo = localStorage.getItem('tipo') || '';
-        var imagem = localStorage.getItem('imagem') || '';
+        var imagem = _normalizarCaminho(localStorage.getItem('imagem') || '');
 
         var iniciais = _iniciais(username);
         var svg = _gerarSVG(iniciais);
