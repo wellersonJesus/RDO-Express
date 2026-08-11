@@ -705,9 +705,6 @@
 
       if (username && nomesTexto.indexOf(username) === -1) nomesTexto.push(username);
 
-      // ⚠️ CORRIGIDO: "responsavel" só entra como nome-alvo se for um nome
-      // completo (2+ tokens significativos). Nomes curtos/genéricos (ex: só
-      // "Camila") são descartados aqui para evitar contaminação entre clientes.
       const responsavel = resolverValor('clientes', 'responsavel', c);
       if (responsavel && nomeAlvoEhSeguroParaFuzzy(responsavel) && nomesTexto.indexOf(responsavel) === -1) {
         nomesTexto.push(responsavel);
@@ -722,11 +719,6 @@
     const tCompleto = tokenizar(nomeCompleto);
     if (!tCurto.length || !tCompleto.length) return false;
     if (tCurto.length !== tCompleto.length) return false;
-
-    // ⚠️ CORRIGIDO: nomes de um único token nunca são tratados como
-    // "abreviação determinística" — o risco de colisão por inicial única
-    // entre pessoas diferentes é alto demais (ex: "M" casando com "Marcio"
-    // e também com "Mariana").
     if (tCurto.length === 1) return false;
 
     for (let i = 0; i < tCurto.length; i++) {
@@ -831,68 +823,154 @@
     });
   }
 
-  function financeiroCorrespondeCliente(registro, nomesAlvo) {
-    const idsExpandidos = [];
-    nomesAlvo.forEach(function (v) {
-      idsDoGrupoPorNomeOuId(v).forEach(function (id) {
-        if (idsExpandidos.indexOf(id) === -1) idsExpandidos.push(id);
-      });
+  function tokensSignificativos(v) {
+    return tokenizar(v).filter(function (t) { return t.length >= 3; });
+  }
+
+  function tokensEmComum(a, b) {
+    const tA = tokensSignificativos(a);
+    const tB = tokensSignificativos(b);
+    if (!tA.length || !tB.length) return 0;
+    let count = 0;
+    tA.forEach(function (t) {
+      if (tB.indexOf(t) !== -1) count++;
+    });
+    return count;
+  }
+
+  function tokensTotais(v) {
+    return tokenizar(v);
+  }
+
+  function tokensFortes(v) {
+    return tokenizar(v).filter(function (t) { return t.length >= 5; });
+  }
+
+  function nomeAlvoEhSeguroParaFuzzy(nome) {
+    const todos = tokensTotais(nome);
+    const fortes = tokensFortes(nome);
+    return todos.length >= 1 && fortes.length >= 1;
+  }
+
+  function extrairSolicitanteEClienteDescricao(descricao) {
+    if (!descricao) return { solicitante: '', clienteTexto: '' };
+    const texto = String(descricao).trim();
+    const mPara = texto.match(/(?:de\s+)?(.+?)\s+para\s+(.+?)(?:\s*[—-]|\s*\[|$)/i);
+    if (mPara) return { solicitante: mPara[1].trim(), clienteTexto: mPara[2].trim() };
+    return { solicitante: '', clienteTexto: '' };
+  }
+
+  function extrairNomeClienteDescricao(descricao) {
+    if (!descricao) return '';
+    const texto = String(descricao);
+    const padroes = [
+      /cliente\s*:?\s*([^\-\|\n,]+)/i,
+      /para\s+o\s+cliente\s+([^\-\|\n,]+)/i,
+      /ref\.?\s*cliente\s*:?\s*([^\-\|\n,]+)/i
+    ];
+    for (let i = 0; i < padroes.length; i++) {
+      const m = texto.match(padroes[i]);
+      if (m && m[1]) return m[1].trim();
+    }
+    return '';
+  }
+
+  let _cacheNomesClientesReais = null;
+  let _cacheNomesClientesRealsHash = null;
+
+  function _construirIndiceNomesClientesReais() {
+    const hashAtual = state.clientes.length + '|' + state.clientes.map(function (c) { return c.id; }).join(',');
+    if (_cacheNomesClientesReais && _cacheNomesClientesRealsHash === hashAtual) {
+      return _cacheNomesClientesReais;
+    }
+
+    const indice = [];
+
+    // Grupos de alias (ex: ELISA ATHENIENSE) entram como nomes-alvo válidos
+    Object.keys(GRUPOS_CLIENTE_ALIAS).forEach(function (nomeCanonico) {
+      if (nomeAlvoEhSeguroParaFuzzy(nomeCanonico)) {
+        indice.push({ nome: nomeCanonico, cliente: null, canonico: nomeCanonico });
+      }
     });
 
-    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
-    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+    state.clientes.forEach(function (c) {
+      const username = resolverValor('clientes', 'username', c);
+      const canonicoGrupo = nomeCanonicoDoGrupo(c.id) || canonicoPorNomeExato(username);
 
-    if (nomesAlvoSeguros.length) {
-      const descricao0 = resolverValor('financeiro', 'descricao', registro);
-      if (descricao0 && textoContemNomeForte(descricao0, nomesAlvoSeguros)) return true;
-
-      const observacao0 = resolverValor('financeiro', 'observacao', registro);
-      if (observacao0 && textoContemNomeForte(observacao0, nomesAlvoSeguros)) return true;
-
-      if (pedidoVinculado && pedidoContemNomeAlvoEmCampos(pedidoVinculado, nomesAlvoSeguros)) return true;
-    }
-
-    if (pedidoVinculado && pedidoBateEnderecoAlvo(pedidoVinculado, nomesAlvo)) return true;
-
-    const descricaoRegistro = resolverValor('financeiro', 'descricao', registro);
-    if (descricaoRegistro && textoContemEnderecoAlvo(descricaoRegistro, nomesAlvo)) return true;
-
-    if (pedidoVinculado) {
-      const idCliente = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedidoVinculado));
-
-      if (idCliente) {
-        const canonicoPedido = nomeCanonicoDoGrupo(idCliente);
-        if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
-
-        const cli = state.clientes.find(function (c) {
-          return normalizarIdCliente(c.id) === idCliente;
-        });
-        if (cli) {
-          const username = resolverValor('clientes', 'username', cli);
-          if (valorCorrespondeNomesAlvo(username, nomesAlvo)) return true;
-          if (idsExpandidos.indexOf(idCliente) === -1) return false;
-        }
+      if (canonicoGrupo) {
+        // já coberto pelo grupo-alias acima; não duplica
+        return;
       }
 
-      const solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
-      if (solicitante && nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
-    }
+      if (username && nomeAlvoEhSeguroParaFuzzy(username)) {
+        indice.push({ nome: username, cliente: c, canonico: null });
+      }
 
-    const nomeFin = resolverValor('financeiro', 'cliente', registro);
-    if (nomeFin && valorCorrespondeNomesAlvo(nomeFin, nomesAlvo)) return true;
+      const responsavel = resolverValor('clientes', 'responsavel', c);
+      if (responsavel && nomeAlvoEhSeguroParaFuzzy(responsavel)) {
+        indice.push({ nome: responsavel, cliente: c, canonico: null });
+      }
+    });
 
-    if (!nomesAlvoSeguros.length) return false;
+    _cacheNomesClientesReais = indice;
+    _cacheNomesClientesRealsHash = hashAtual;
+    return indice;
+  }
 
+  function identificarClienteRealPorTexto(texto) {
+    const nomePadrao = normalizarNomeClienteRegex(texto);
+    if (!nomePadrao || nomePadrao === 'CLIENTE AVULSO') return null;
+    const idPadrao = obterIdPadraoCliente(nomePadrao);
+    const cliente = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idPadrao); }) || null;
+    return { nome: nomePadrao, cliente: cliente, canonico: nomePadrao };
+  }
+
+  function identificarClienteRealDoRegistroFinanceiro(registro, pedidoVinculado) {
     const descricao = resolverValor('financeiro', 'descricao', registro);
-    if (descricao) {
-      const nomeExtraidoDescricao = extrairNomeClienteDescricao(descricao);
-      if (nomeExtraidoDescricao && valorCorrespondeNomesAlvo(nomeExtraidoDescricao, nomesAlvoSeguros)) return true;
+    const observacao = resolverValor('financeiro', 'observacao', registro);
+    const cliente = resolverValor('financeiro', 'cliente', registro);
 
-      const { clienteTexto } = extrairSolicitanteEClienteDescricao(descricao);
-      if (clienteTexto && valorCorrespondeNomesAlvo(clienteTexto, nomesAlvoSeguros)) return true;
+    let de = '', para = '', mercadoria = '', obsPed = '', solicitante = '';
+    if (pedidoVinculado) {
+      de = resolverValor('pedidos', 'de', pedidoVinculado);
+      para = resolverValor('pedidos', 'para', pedidoVinculado);
+      mercadoria = resolverValor('pedidos', 'mercadoria', pedidoVinculado);
+      obsPed = resolverValor('pedidos', 'observacao', pedidoVinculado);
+      solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
     }
 
-    return false;
+    const nomePadrao = resolverNomeClienteComFallback(descricao, observacao, para, mercadoria, obsPed, cliente, solicitante, de);
+    if (nomePadrao === 'CLIENTE AVULSO') return null;
+
+    const idPadrao = obterIdPadraoCliente(nomePadrao);
+    const clienteCadastro = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idPadrao); }) || null;
+    return { nome: nomePadrao, cliente: clienteCadastro, canonico: nomePadrao };
+  }
+
+  function nomeExibicaoDaEntradaCliente(entrada) {
+    if (!entrada) return '';
+    if (entrada.canonico) return entrada.canonico;
+    if (entrada.cliente) {
+      const username = resolverValor('clientes', 'username', entrada.cliente);
+      return username || entrada.nome;
+    }
+    return entrada.nome;
+  }
+
+  function pedidoContemNomeAlvoEmCampos_OLD_UNUSED() { /* mantido apenas para não quebrar referências antigas, se existirem */ }
+
+  function financeiroCorrespondeCliente(registro, nomesAlvo) {
+    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+    const clienteRealIdentificado = identificarClienteRealDoRegistroFinanceiro(registro, pedidoVinculado);
+    const nomeReal = clienteRealIdentificado ? clienteRealIdentificado.nome : 'CLIENTE AVULSO';
+
+    const nomesAlvoNorm = nomesAlvo.map(function (n) { return normalizarComparacao(n); });
+    return nomesAlvoNorm.indexOf(normalizarComparacao(nomeReal)) !== -1;
+  }
+
+  function financeiroEhClienteAvulso(registro) {
+    const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
+    return identificarClienteRealDoRegistroFinanceiro(registro, pedidoVinculado) === null;
   }
 
   function chatCorrespondeCliente(registroChat, idsStr, nomesAlvo) {
@@ -917,37 +995,13 @@
     return pedidoCorrespondeCliente(pedidoVinculado, [], idsStr, nomesAlvo);
   }
 
-  function tokensSignificativos(v) {
-    return tokenizar(v).filter(function (t) { return t.length >= 3; });
-  }
-
-  function extrairSolicitanteEClienteDescricao(descricao) {
-    if (!descricao) return { solicitante: '', clienteTexto: '' };
-    const texto = String(descricao).trim();
-    const mPara = texto.match(/(?:de\s+)?(.+?)\s+para\s+(.+?)(?:\s*[—-]|\s*\[|$)/i);
-    if (mPara) return { solicitante: mPara[1].trim(), clienteTexto: mPara[2].trim() };
-    return { solicitante: '', clienteTexto: '' };
-  }
-
   function obterValorCampoFinanceiro(campo, registro, nomesAlvo) {
     let valor = resolverValor('financeiro', campo, registro);
 
     if (campo === 'cliente') {
       const pedido = buscarPedidoDoFinanceiro(registro);
-      if (pedido) return obterNomeClienteDoPedido(pedido);
-
-      const nomeAlvoUnico = (Array.isArray(nomesAlvo) && nomesAlvo.length) ? nomesAlvo[0] : null;
-      if (nomeAlvoUnico) return nomeAlvoUnico;
-
-      if (valor) return valor;
-
-      const descricao = resolverValor('financeiro', 'descricao', registro);
-      if (descricao) {
-        const { solicitante } = extrairSolicitanteEClienteDescricao(descricao);
-        if (solicitante) return solicitante.toUpperCase();
-      }
-
-      return '';
+      const identificado = identificarClienteRealDoRegistroFinanceiro(registro, pedido);
+      return identificado ? identificado.nome : 'CLIENTE AVULSO';
     }
 
     if (campo === 'motoboy' && !valor) {
@@ -997,17 +1051,6 @@
       });
     }
     return totais;
-  }
-
-  function tokensEmComum(a, b) {
-    const tA = tokensSignificativos(a);
-    const tB = tokensSignificativos(b);
-    if (!tA.length || !tB.length) return 0;
-    let count = 0;
-    tA.forEach(function (t) {
-      if (tB.indexOf(t) !== -1) count++;
-    });
-    return count;
   }
 
   const PERCENTUAL_MOTOBOY = 0.80;
@@ -1125,13 +1168,6 @@
         const tipoValido = !tipo || tipo === 'RECEITA' || tipo === 'CORRIDA' || tipo === 'SERVICO';
         if (!tipoValido) return false;
 
-        // ⚠️ CORRIGIDO: antes, se a data não fosse resolvida (ex: vínculo
-        // id_pedido quebrado), o registro era descartado silenciosamente
-        // do relatório inteiro, mesmo pertencendo ao período correto.
-        // Agora: se não há data resolvível, mantemos o registro na lista
-        // (para não perder receita real) e deixamos o filtro por cliente
-        // decidir sua relevância; ele só será exibido/agrupado como
-        // "sem data" ao invés de simplesmente desaparecer.
         const dataResolvida = obterValorCampoFinanceiro('data', r);
         if (!dataResolvida) return true; // mantém — será tratado como fallback
 
@@ -1175,6 +1211,7 @@
     if (fx.campo === 'cliente_id') {
       const clientesSelecionados = idsParaClientesSelecionados(valoresBrutos);
       const nomesAlvo = extrairNomesAlvoCliente(valoresBrutos, clientesSelecionados);
+      const ehFiltroAvulso = valoresStr.length === 1 && (valoresStr[0] === 'AVULSO' || valoresStr[0] === '__avulso__' || valoresStr[0] === 'CLIENTE_AVULSO');
 
       if (banco === 'clientes') {
         return dados.filter(function (r) { return idBate(r.id); });
@@ -1189,6 +1226,12 @@
       }
 
       if (banco === 'financeiro') {
+        // 🔑 Filtro dedicado para "Cliente Avulso": usa a mesma verificação
+        // rigorosa que impede um lançamento com cliente real identificado
+        // na descrição de aparecer indevidamente como avulso.
+        if (ehFiltroAvulso) {
+          return dados.filter(function (r) { return financeiroEhClienteAvulso(r); });
+        }
         return dados.filter(function (r) { return financeiroCorrespondeCliente(r, nomesAlvo); });
       }
     }
@@ -1213,7 +1256,6 @@
     const idPedido = String(resolverValor('financeiro', 'id_pedido', registro)).trim();
     return state.pedidos.find(function (p) {
       const idP = String(resolverValor('pedidos', 'id', p)).trim();
-      // ⚠️ CORRIGIDO: comparação tolerante a prefixo "RDO" e zeros à esquerda
       return idP === idPedido ||
         idP.replace(/^RDO0*/i, '') === idPedido.replace(/^RDO0*/i, '');
     });
@@ -1253,21 +1295,6 @@
       }
     }
     return valor;
-  }
-
-  function extrairNomeClienteDescricao(descricao) {
-    if (!descricao) return '';
-    const texto = String(descricao);
-    const padroes = [
-      /cliente\s*:?\s*([^\-\|\n,]+)/i,
-      /para\s+o\s+cliente\s+([^\-\|\n,]+)/i,
-      /ref\.?\s*cliente\s*:?\s*([^\-\|\n,]+)/i
-    ];
-    for (let i = 0; i < padroes.length; i++) {
-      const m = texto.match(padroes[i]);
-      if (m && m[1]) return m[1].trim();
-    }
-    return '';
   }
 
   function obterValorCampoChat(campo, registro) {
@@ -1326,24 +1353,6 @@
         valorTotalCalculado: valorMotoboy + valorRdo
       };
     }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
-  }
-
-  function tokensTotais(v) {
-    return tokenizar(v);
-  }
-
-  function tokensFortes(v) {
-    return tokenizar(v).filter(function (t) { return t.length >= 5; });
-  }
-
-  function nomeAlvoEhSeguroParaFuzzy(nome) {
-    const todos = tokensTotais(nome);
-    const fortes = tokensFortes(nome); // já filtra tokens com >= 5 letras
-    // Antes exigia 2+ tokens totais, bloqueando nomes únicos e fortes
-    // (ex: "OPMINAS"). Agora: basta existir pelo menos 1 token forte
-    // (>=5 letras) — isso já elimina o risco de colisão por iniciais,
-    // que são sempre tokens curtos (1-2 letras) e nunca entram em "fortes".
-    return todos.length >= 1 && fortes.length >= 1;
   }
 
   function agruparPorCliente(pedidos) {
@@ -1499,116 +1508,265 @@
     }
   }
 
-  function montarSnapshot() {
-    const snapshot = { bancos: {}, meta: {}, resumos: {} };
+  function adicionarClienteSeNaoExistir(novoCliente) {
+    const jaExiste = state.clientes.some(function (c) {
+      return normalizarTexto(resolverValor('clientes', 'username', c)) === normalizarTexto(novoCliente.username);
+    });
 
-    const fx = state.builder.filtroExtra;
-    let nomesAlvoAtivo = null;
-    if (fx && fx.campo === 'cliente_id' && Array.isArray(fx.valor) && fx.valor.indexOf('__todos__') === -1) {
-      const clientesSel = idsParaClientesSelecionados(fx.valor);
-      if (clientesSel.length === 1) {
-        nomesAlvoAtivo = [resolverValor('clientes', 'username', clientesSel[0])];
-      }
+    if (jaExiste) {
+      console.warn('Cliente já cadastrado, inserção ignorada:', novoCliente.username);
+      return false;
     }
 
+    state.clientes.push(novoCliente);
+    console.info('Cliente adicionado com sucesso:', novoCliente.username);
+
+    // Se seu app persiste em backend/planilha, dispare aqui a chamada
+    // ex: salvarClienteNoBanco(novoCliente);
+
+    return true;
+  }
+
+  function normalizarTexto(txt) {
+    if (!txt) return '';
+    return String(txt)
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .replace(/[^A-Z0-9\s]/g, ' ')    // remove hífens, & , etc.
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // ------------------- INÍCIO DO PORT (normalização de clientes) -------------------
+
+  const NOME_CLIENTE_AVULSO = 'CLIENTE AVULSO';
+  const ID_CLIENTE_AVULSO = 'AVULSO';
+
+  const CESTA_TEXT_PATTERN = /\bcesta\b/i;
+
+  const MAPA_NORMALIZACAO_CLIENTES = [
+    [/\bm\.?\s*pitanga\b|\bmaria\s*pitanga\b/i, 'MARIA PITANGA'],
+    [/\bcacau\s*show\b|\bcacaushow\b/i, 'CACAU SHOW'],
+    [/\bbreno\b/i, 'BRENO'],
+    [/\bval\s*fortunatt?o\b/i, 'VAL FORTUNATO'],
+    [/\bnatu\s*pet\b|\bnatupet\b/i, 'NATUPET'],
+    [/\bcpap\s*minas\b/i, 'CPAP MINAS'],
+    [/\bammis\b/i, 'AMMIS'],
+    [/\bescrit[oó]rio\s*incloset\b/i, 'INCLOSET'],
+    [/\bin\s*closet\b|\bincloset\b/i, 'INCLOSET'],
+    [/\bdeluza\b/i, 'DELUZA'],
+    [/\bop\s*i?\s*minas\b|\bopminas\b/i, 'OPMINAS'],
+    [/\btelecom\b/i, 'TELECOM'],
+    [/\bs[\.\s]?manoel\b|\bs[ãa]o\s+manoel\b/i, 'S MANOEL'],
+    [/\bff\s*fashion\b|\bffashion\b/i, 'FF FASHION'],
+    [/\bkopenhagen\b/i, 'KOPENHAGEN'],
+    [/\bjosi\s*fraga\b|\bjosifraga\b/i, 'JOSI FRAGA'],
+    [/\bmari\s*dant\b|\bmarileni\s*dant\b/i, 'MARI DANT'],
+    [/\bbasique\b/i, 'BASIQUE'],
+    [/\bmima[\s\-]?me\b/i, 'MIMA-ME'],
+    [/\blepo[eh]h?\b/i, 'LEPOEH'],
+    [/\bmiss\s*dele\b/i, 'MISS DELE'],
+    [/\bjacira\b/i, 'JACIRA'],
+    [/\bag3\s*alimentos\b|\bag3\b/i, 'AG3 ALIMENTOS'],
+    [/\bsara\s*santos\b/i, 'SARA SANTOS'],
+    [/\bbete\s*plural\s*(diamond\s*mall)?\b/i, 'PLURAL'],
+    [/\bplural\b/i, 'PLURAL'],
+    [/\bcpap\s*aire\b/i, 'CPAP AIRE'],
+    [/\barte\s*em\s*comemorar\b/i, 'ARTE EM COMEMORAR'],
+    [/\bp\s*&\s*p\s*distribuidora\b|\bp&p\b/i, 'P&P DISTRIBUIDORA'],
+    [/\belisa\s*athenien[cs]e\b/i, 'ELISA ATHENIENSE'],
+    [/\barya[nm]?ne\b/i, 'ARYANNE'],
+    [/\bhop+e\b/i, 'HOPPE'],
+    [CESTA_TEXT_PATTERN, 'ARTE EM COMEMORAR']
+  ];
+
+  const IDS_CLIENTES_PADRAO = {
+    'MARIA PITANGA': 'ZEX40L56SJD',
+    'CACAU SHOW': 'R2Q6K7H7OSY',
+    'BRENO': 'GQ2H8MLYPTW',
+    'VAL FORTUNATO': 'BQVEGBEA07N',
+    'NATUPET': 'Z9T82O4CVGA',
+    'CPAP MINAS': '7NDXMET4BY1',
+    'AMMIS': '8OXAGYGBNZ2',
+    'INCLOSET': '5ZKL0IHDIIY',
+    'DELUZA': 'ZZOVKXPIBAT',
+    'OPMINAS': 'QYURDAK3F7H',
+    'TELECOM': 'PJ117O5LI4G',
+    'S MANOEL': '7RZBKEC257F',
+    'FF FASHION': 'VDC7X7XTBYD',
+    'KOPENHAGEN': 'RO08OGQ25F3',
+    'JOSI FRAGA': 'PVRJ2ZGDDVN',
+    'MARI DANT': 'OHPF1U95H77',
+    'BASIQUE': 'AXYXC04TUOA',
+    'MIMA-ME': '9ZY1FW6IQ54',
+    'LEPOEH': 'XN1YYCY4D7X',
+    'MISS DELE': 'S7PB7KTZ8Z1',
+    'JACIRA': 'B700EX1CX17',
+    'AG3 ALIMENTOS': 'THGG3ITLFAY',
+    'SARA SANTOS': 'RVWHRWM6KGD',
+    'PLURAL': 'NF10JRBK7BR',
+    'CPAP AIRE': 'MTCU5ORJWCA',
+    'ARTE EM COMEMORAR': 'UM679H0784H',
+    'P&P DISTRIBUIDORA': 'OWVY3N7YZWS',
+    'ELISA ATHENIENSE': 'HXQ9VBU59DG',
+    'ARYANNE': '7OQRUCKFK3E',
+    'HOPPE': 'G6MZPAIC52V'
+  };
+  IDS_CLIENTES_PADRAO[NOME_CLIENTE_AVULSO] = ID_CLIENTE_AVULSO;
+
+  function normalizarNomeClienteRegex(texto) {
+    const t = String(texto == null ? '' : texto).trim();
+    if (!t) return '';
+    for (let i = 0; i < MAPA_NORMALIZACAO_CLIENTES.length; i++) {
+      const [padrao, nomePadrao] = MAPA_NORMALIZACAO_CLIENTES[i];
+      if (padrao.test(t)) return nomePadrao;
+    }
+    return '';
+  }
+
+  function resolverNomeClienteComFallback() {
+    for (let i = 0; i < arguments.length; i++) {
+      const nomePadrao = normalizarNomeClienteRegex(arguments[i]);
+      if (nomePadrao) return nomePadrao;
+    }
+    return NOME_CLIENTE_AVULSO;
+  }
+
+  function obterIdPadraoCliente(nomePadrao, idAtual) {
+    const idConhecido = IDS_CLIENTES_PADRAO[nomePadrao];
+    return idConhecido ? idConhecido : String(idAtual == null ? '' : idAtual).trim();
+  }
+
+  function tokensDe(txt) {
+    return normalizarTexto(txt).split(' ').filter(Boolean);
+  }
+
+  function tokensCombinam(tokenA, tokenB) {
+    if (!tokenA || !tokenB) return false;
+    if (tokenA === tokenB) return true;
+    // abreviação: token de 1-2 letras é prefixo do outro
+    if (tokenA.length <= 2 && tokenB.startsWith(tokenA)) return true;
+    if (tokenB.length <= 2 && tokenA.startsWith(tokenB)) return true;
+    return false;
+  }
+
+  function nomeBateComDescricao(nomeCliente, tokensDescricao) {
+    const tokensNome = tokensDe(nomeCliente);
+    if (!tokensNome.length) return false;
+
+    let acertos = 0;
+    for (const tNome of tokensNome) {
+      const achou = tokensDescricao.some(function (tDesc) {
+        return tokensCombinam(tNome, tDesc);
+      });
+      if (achou) acertos++;
+    }
+
+    // Exige que pelo menos 60% dos tokens do nome do cliente
+    // (ou todos, se o nome tiver só 1 token) estejam presentes
+    const minimoNecessario = tokensNome.length === 1 ? 1 : Math.ceil(tokensNome.length * 0.6);
+    return acertos >= minimoNecessario;
+  }
+
+  function nomesSaoParecidos(nomeA, nomeB) {
+    const a = normalizarTexto(nomeA).replace(/\s+/g, '');
+    const b = normalizarTexto(nomeB).replace(/\s+/g, '');
+    if (!a || !b) return false;
+    if (a === b) return true;
+    // um contém o outro (ex.: MIMAME contém em MIMAMI parcialmente)
+    const menor = a.length <= b.length ? a : b;
+    const maior = a.length <= b.length ? b : a;
+    if (menor.length >= 4 && maior.includes(menor.slice(0, Math.max(4, Math.floor(menor.length * 0.7))))) {
+      return true;
+    }
+    return false;
+  }
+
+  function montarSnapshot() {
+    const snapshot = { bancos: {}, resumos: {}, meta: {} };
+    const preset = PRESETS[state.builder.tipo] || PRESETS.global;
+    const nomesAlvo = state.builder.filtroExtra && state.builder.filtroExtra.campo === 'cliente_id'
+      ? extrairNomesAlvoCliente(
+        state.builder.filtroExtra.valor,
+        idsParaClientesSelecionados(state.builder.filtroExtra.valor)
+      )
+      : [];
+
     bancosDoBuilder().forEach(function (banco) {
-      const camposSel = Object.keys(state.builder.selecionados[banco]).filter(function (c) { return state.builder.selecionados[banco][c]; });
-      if (!camposSel.length) return;
-      const dados = coletarDadosBanco(banco);
-      const linhas = dados.map(function (registro) {
+      const camposSelecionados = Object.keys(state.builder.selecionados[banco] || {})
+        .filter(function (c) { return state.builder.selecionados[banco][c]; });
+      if (!camposSelecionados.length) return;
+
+      const dadosOriginais = coletarDadosBanco(banco);
+      const info = BANCOS[banco];
+
+      const linhas = dadosOriginais.map(function (registro) {
         const linha = {};
-        camposSel.forEach(function (campo) {
-          if (banco === 'pedidos') {
-            linha[campo] = obterValorCampoPedido(campo, registro);
-          }
-          else if (banco === 'financeiro') {
-            linha[campo] = obterValorCampoFinanceiro(campo, registro, nomesAlvoAtivo);
-          } else if (banco === 'chat') {
-            linha[campo] = obterValorCampoChat(campo, registro);
-          } else {
-            linha[campo] = resolverValor(banco, campo, registro);
-          }
+        camposSelecionados.forEach(function (campo) {
+          if (banco === 'financeiro') linha[campo] = obterValorCampoFinanceiro(campo, registro, nomesAlvo);
+          else if (banco === 'pedidos') linha[campo] = obterValorCampoPedido(campo, registro);
+          else if (banco === 'chat') linha[campo] = obterValorCampoChat(campo, registro);
+          else linha[campo] = resolverValor(banco, campo, registro);
         });
         return linha;
       });
+
       snapshot.bancos[banco] = {
-        label: BANCOS[banco].label,
-        campos: camposSel.map(function (c) { return { chave: c, label: BANCOS[banco].campos[c] }; }),
+        label: info.label,
+        campos: camposSelecionados.map(function (c) { return { chave: c, label: info.campos[c] }; }),
         linhas: linhas,
-        totais: calcularTotaisBanco(banco, dados, nomesAlvoAtivo)
+        totais: calcularTotaisBanco(banco, dadosOriginais, nomesAlvo)
       };
+
+      if (banco === 'pedidos') snapshot.resumos.clientes = agruparPorCliente(dadosOriginais);
+      if (banco === 'financeiro' && state.builder.tipo === 'motoboys') {
+        snapshot.resumos.motoboys = agruparPorMotoboyFinanceiro(dadosOriginais, nomesAlvo);
+      }
     });
 
-    const pedidosSelecionado = !!snapshot.bancos.pedidos;
-    const financeiroSelecionado = !!snapshot.bancos.financeiro;
-
-    if (pedidosSelecionado || financeiroSelecionado) {
-      let resumoMotoboys, baseDados;
-
-      if (pedidosSelecionado) {
-        baseDados = coletarDadosBanco('pedidos');
-        resumoMotoboys = agruparPorMotoboy(baseDados);
-      } else {
-        baseDados = coletarDadosBanco('financeiro');
-        resumoMotoboys = agruparPorMotoboyFinanceiro(baseDados, nomesAlvoAtivo);
-      }
-
-      snapshot.resumos.motoboys = resumoMotoboys;
-
-      if (pedidosSelecionado) {
-        snapshot.resumos.clientes = agruparPorCliente(baseDados);
-      }
-
-      const datasPorMotoboy = {};
-      baseDados.forEach(function (registro) {
-        const nomeMotoboy = pedidosSelecionado
-          ? obterValorCampoPedido('motoboy', registro)
-          : obterValorCampoFinanceiro('motoboy', registro, nomesAlvoAtivo);
-        if (!nomeMotoboy) return;
-
-        const dataBruta = pedidosSelecionado
-          ? obterDataPedidoComFallback(registro)
-          : obterValorCampoFinanceiro('data', registro, nomesAlvoAtivo);
-
-        const dataISO = normalizarDataISO(dataBruta);
-        const dataFormatada = dataISO ? formatDateBR(dataISO) : null;
-        if (!dataFormatada) return;
-        if (!datasPorMotoboy[nomeMotoboy]) datasPorMotoboy[nomeMotoboy] = [];
-        if (datasPorMotoboy[nomeMotoboy].indexOf(dataFormatada) === -1) {
-          datasPorMotoboy[nomeMotoboy].push(dataFormatada);
-        }
-      });
-
-      const totalChamados = baseDados.length;
-      const valorTotalGeral = resumoMotoboys.reduce(function (acc, m) { return acc + m.receitaTotal; }, 0);
-      const valorTotalMotoboys = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorMotoboy; }, 0);
-      const valorTotalRdo = resumoMotoboys.reduce(function (acc, m) { return acc + m.valorRdo; }, 0);
-      const totalPendentes = resumoMotoboys.reduce(function (acc, m) { return acc + m.qtdPendente; }, 0);
-
-      snapshot.resumos.geral = {
-        totalChamados: totalChamados,
-        totalMotoboysDistintos: resumoMotoboys.length,
-        valorTotalGeral: valorTotalGeral,
-        valorTotalMotoboys: valorTotalMotoboys,
-        valorTotalRdo: valorTotalRdo,
-        totalPendentes: totalPendentes,
-        motoboys: resumoMotoboys.map(function (m) {
-          return {
-            nome: m.nome,
-            qtd: m.qtd,
-            receitaTotal: m.receitaTotal,
-            valorMotoboy: m.valorMotoboy,
-            datas: (datasPorMotoboy[m.nome] || []).sort(function (a, b) {
-              return new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-'));
-            })
-          };
-        })
-      };
-    }
-
-    snapshot.meta.usuarioGerador = obterUsuarioLogado();
-    snapshot.meta.horaGeracao = obterHoraAtualBR();
     return snapshot;
+  }
+
+  function agruparPorMotoboy(pedidos) {
+    const mapa = {};
+    pedidos.forEach(function (p) {
+      const nomeRaw = obterValorCampoPedido('motoboy', p);
+      const nomeNorm = normalizarComparacao(nomeRaw);
+      const nome = (!nomeRaw || MOTOBOY_INVALIDOS.indexOf(nomeNorm) !== -1) ? 'SEM MOTOBOY ATRIBUÍDO' : nomeRaw;
+
+      const status = normalizarComparacao(resolverValor('pedidos', 'status', p));
+      const valor = parseMoeda(obterValorCampoPedido('valor_corrida', p));
+      const valorValido = !isNaN(valor) ? valor : 0;
+      const pendente = (status !== 'CONCLUIDO' && status !== 'CONCLUÍDO');
+
+      if (!mapa[nome]) {
+        mapa[nome] = { nome: nome, qtd: 0, qtdPendente: 0, receitaTotal: 0, receitaPendente: 0 };
+      }
+
+      mapa[nome].qtd++;
+      mapa[nome].receitaTotal += valorValido;
+      if (pendente) {
+        mapa[nome].qtdPendente++;
+        mapa[nome].receitaPendente += valorValido;
+      }
+    });
+
+    return Object.keys(mapa).map(function (k) {
+      const m = mapa[k];
+      const valorMotoboy = m.receitaTotal * PERCENTUAL_MOTOBOY;
+      const valorRdo = m.receitaTotal * PERCENTUAL_RDO;
+      return {
+        nome: m.nome,
+        qtd: m.qtd,
+        qtdPendente: m.qtdPendente,
+        receitaTotal: m.receitaTotal,
+        receitaPendente: m.receitaPendente,
+        valorMotoboy: valorMotoboy,
+        valorRdo: valorRdo,
+        valorTotalCalculado: valorMotoboy + valorRdo
+      };
+    }).sort(function (a, b) { return b.receitaTotal - a.receitaTotal; });
   }
 
   function finalizarGeracao() {
@@ -2353,18 +2511,18 @@
   let _eventosGlobaisRegistrados = false;
 
   function initRelatorios() {
-    bind(); // sempre rebind, pois o DOM pode ter sido recriado pelo loadPage
+    bind();
 
     if (!inicializado) {
       inicializado = true;
       carregarRelatoriosLocal();
     }
 
-    registrarEventosLocais(); // eventos ligados aos elementos da página (sempre re-executa, DOM é novo)
+    registrarEventosLocais();
 
     if (!_eventosGlobaisRegistrados) {
       _eventosGlobaisRegistrados = true;
-      registrarEventosGlobais(); // document/window - só uma vez
+      registrarEventosGlobais();
     }
 
     if (state.motoboys.length || state.clientes.length || state.pedidos.length) {
@@ -2495,7 +2653,6 @@
   }
 
   function _obterPeriodoParaPedido(pedido) {
-    // Usa o mês do pedido como período padrão do relatório
     const dataPedido = normalizarDataISO(resolverValor('pedidos', 'data', pedido));
     const base = dataPedido ? new Date(dataPedido) : new Date();
 
@@ -2512,7 +2669,7 @@
     _executarAberturaAutomatica(pedidoId, clienteId, periodoExterno, meuToken);
   }
 
-  window._abrirRelatorioAutomaticoDoPedido = abrirRelatorioAutomaticoDoPedido; // ✅ agora está aqui
+  window._abrirRelatorioAutomaticoDoPedido = abrirRelatorioAutomaticoDoPedido;
 
   function _executarAberturaAutomatica(pedidoId, clienteId, periodoExterno, meuToken) {
     if (meuToken !== _tokenRelatorioAutomatico) return;
@@ -2580,8 +2737,6 @@
 
       if (typeof window.initRelatorios === 'function') window.initRelatorios();
 
-      // Sempre delega para a função MAIS RECENTE exposta em window,
-      // nunca para a closure antiga desta execução do script.
       if (typeof window._abrirRelatorioAutomaticoDoPedido === 'function') {
         window._abrirRelatorioAutomaticoDoPedido(pedidoId, clienteId, periodo);
       }
