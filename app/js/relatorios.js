@@ -741,8 +741,20 @@
 
   function textoContemNomeForte(texto, nomesAlvoSeguros) {
     if (!texto || !nomesAlvoSeguros || !nomesAlvoSeguros.length) return false;
+    const tokensTexto = tokensSignificativos(texto);
+    if (!tokensTexto.length) return false;
+
     return nomesAlvoSeguros.some(function (nome) {
-      return tokensEmComum(texto, nome) >= tokensSignificativos(nome).length;
+      const tokensNome = tokensSignificativos(nome);
+      if (!tokensNome.length) return false;
+
+      const comuns = tokensEmComum(texto, nome);
+      if (comuns >= tokensNome.length) return true;
+
+      const primeiroToken = tokensNome[0];
+      if (primeiroToken.length >= 3 && tokensTexto.indexOf(primeiroToken) !== -1) return true;
+
+      return false;
     });
   }
 
@@ -1110,9 +1122,20 @@
     else if (banco === 'financeiro') {
       dados = state.financeiro.filter(function (r) {
         const tipo = normalizarComparacao(resolverValor('financeiro', 'tipo', r));
-        const dentroPeriodoOk = dentroPeriodo(obterValorCampoFinanceiro('data', r), p.inicio, p.fim);
         const tipoValido = !tipo || tipo === 'RECEITA' || tipo === 'CORRIDA' || tipo === 'SERVICO';
-        return dentroPeriodoOk && tipoValido;
+        if (!tipoValido) return false;
+
+        // ⚠️ CORRIGIDO: antes, se a data não fosse resolvida (ex: vínculo
+        // id_pedido quebrado), o registro era descartado silenciosamente
+        // do relatório inteiro, mesmo pertencendo ao período correto.
+        // Agora: se não há data resolvível, mantemos o registro na lista
+        // (para não perder receita real) e deixamos o filtro por cliente
+        // decidir sua relevância; ele só será exibido/agrupado como
+        // "sem data" ao invés de simplesmente desaparecer.
+        const dataResolvida = obterValorCampoFinanceiro('data', r);
+        if (!dataResolvida) return true; // mantém — será tratado como fallback
+
+        return dentroPeriodo(dataResolvida, p.inicio, p.fim);
       });
     }
 
@@ -1187,9 +1210,12 @@
   }
 
   function buscarPedidoDoFinanceiro(registro) {
-    const idPedido = resolverValor('financeiro', 'id_pedido', registro);
+    const idPedido = String(resolverValor('financeiro', 'id_pedido', registro)).trim();
     return state.pedidos.find(function (p) {
-      return String(resolverValor('pedidos', 'id', p)) === String(idPedido);
+      const idP = String(resolverValor('pedidos', 'id', p)).trim();
+      // ⚠️ CORRIGIDO: comparação tolerante a prefixo "RDO" e zeros à esquerda
+      return idP === idPedido ||
+        idP.replace(/^RDO0*/i, '') === idPedido.replace(/^RDO0*/i, '');
     });
   }
 
@@ -1258,9 +1284,10 @@
       const nomeRaw = obterValorCampoFinanceiro('motoboy', r, nomesAlvo);
       const nomeNorm = normalizarComparacao(nomeRaw);
 
-      if (!nomeRaw || MOTOBOY_INVALIDOS.indexOf(nomeNorm) !== -1) return;
+      const nome = (!nomeRaw || MOTOBOY_INVALIDOS.indexOf(nomeNorm) !== -1)
+        ? 'SEM MOTOBOY ATRIBUÍDO'
+        : nomeRaw;
 
-      const nome = nomeRaw;
       const sit = normalizarComparacao(resolverValor('financeiro', 'situacao', r));
       const valor = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r, nomesAlvo));
       const valorValido = !isNaN(valor) ? valor : 0;
@@ -1311,8 +1338,12 @@
 
   function nomeAlvoEhSeguroParaFuzzy(nome) {
     const todos = tokensTotais(nome);
-    const fortes = tokensFortes(nome);
-    return todos.length >= 2 && fortes.length >= 1;
+    const fortes = tokensFortes(nome); // já filtra tokens com >= 5 letras
+    // Antes exigia 2+ tokens totais, bloqueando nomes únicos e fortes
+    // (ex: "OPMINAS"). Agora: basta existir pelo menos 1 token forte
+    // (>=5 letras) — isso já elimina o risco de colisão por iniciais,
+    // que são sempre tokens curtos (1-2 letras) e nunca entram em "fortes".
+    return todos.length >= 1 && fortes.length >= 1;
   }
 
   function agruparPorCliente(pedidos) {
@@ -1489,7 +1520,8 @@
         camposSel.forEach(function (campo) {
           if (banco === 'pedidos') {
             linha[campo] = obterValorCampoPedido(campo, registro);
-          } else if (banco === 'financeiro') {
+          }
+          else if (banco === 'financeiro') {
             linha[campo] = obterValorCampoFinanceiro(campo, registro, nomesAlvoAtivo);
           } else if (banco === 'chat') {
             linha[campo] = obterValorCampoChat(campo, registro);
