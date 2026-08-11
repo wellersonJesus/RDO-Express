@@ -1976,11 +1976,14 @@ window._parseMoedaSeguro = _parseMoedaSeguro;
 function _formatarNomeServico(idBruto) {
     if (!idBruto) return 'N/D';
     var s = String(idBruto).trim();
+    if (s === '[ID_GERADO]') return s;
     if (s.toUpperCase().startsWith('RDO')) return s.toUpperCase();
     var num = parseInt(s, 10);
     if (!isNaN(num)) return 'RDO' + (num < 1000 ? String(num).padStart(3, '0') : String(num));
     return 'RDO' + s;
 }
+
+window._formatarNomeServico = _formatarNomeServico;
 
 window._formatarNomeServico = _formatarNomeServico;
 
@@ -4380,6 +4383,61 @@ function _estilizarRotasNaMensagem(textoEscapado) {
         .replace(/(^|\s)Para:/g, '$1<span class="icone-rota icone-rota-para">🏁</span>Para:');
 }
 
+function _normIdChat(id) {
+    return String(id || '').trim().replace(/^RDO0*/i, '').toUpperCase();
+}
+
+function _sincronizarValorNoChat(dados) {
+    var pedidoId = String(dados && dados.id || '').trim();
+    if (!pedidoId) return;
+
+    var valorBruto = dados.valor_final != null ? dados.valor_final
+        : dados.valor_total != null ? dados.valor_total
+        : dados.valor_corrida;
+    if (valorBruto == null || valorBruto === '') return;
+
+    var novoValor = typeof valorBruto === 'number'
+        ? valorBruto
+        : parseFloat(String(valorBruto).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3},)/g, '').replace(',', '.'));
+    if (isNaN(novoValor)) return;
+
+    var idNorm = _normIdChat(pedidoId);
+
+    var cacheMsgs = Array.isArray(window.AppRDO.mensagensCache) ? window.AppRDO.mensagensCache : [];
+    var msg = cacheMsgs.find(function (m) { return _normIdChat(m.pedido_id) === idNorm; });
+    if (!msg || !msg.texto) return;
+
+    var valorFormatado = novoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    var regexValor = /💰\s*R\$\s*[\d.,]+/;
+    if (!regexValor.test(msg.texto)) return;
+
+    var textoAtualizado = msg.texto.replace(regexValor, '💰 ' + valorFormatado);
+    if (textoAtualizado === msg.texto) return;
+
+    msg.texto = textoAtualizado;
+
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+    if (msgEl) {
+        var bodyEl = msgEl.querySelector('.message-body');
+        if (bodyEl) {
+            bodyEl.innerHTML = _estilizarRotasNaMensagem(
+                textoAtualizado.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+            );
+        }
+        msgEl.setAttribute('data-texto-original', textoAtualizado.replace(/&/g, '&amp;').replace(/"/g, '&quot;'));
+    }
+
+    API.call('updatechat', { id: msg.id, texto: textoAtualizado })
+        .then(function (res) {
+            if (!res || res.status === 'error') throw new Error((res && res.message) || 'Falha ao sincronizar valor no chat');
+        })
+        .catch(function (e) {
+            window._exibirErroGlobal(e, 'sincronizar valor do pedido no chat');
+        });
+}
+
+window._sincronizarValorNoChat = _sincronizarValorNoChat;
+
 window._estilizarRotasNaMensagem = _estilizarRotasNaMensagem;
 
 window._filaSalvarGeo = window._filaSalvarGeo || Promise.resolve();
@@ -4721,6 +4779,10 @@ window.fecharParaChat = function (modalId) {
 
     setTimeout(function () { _limparBackdrop(); var inp = document.getElementById('msg-input'); if (inp) inp.focus(); }, 400);
 };
+
+window.EventBus.on('pedido:atualizado', function (dados) {
+    _sincronizarValorNoChat(dados);
+});
 
 (function () {
     function _tentarInit() {

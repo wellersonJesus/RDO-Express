@@ -290,6 +290,9 @@
     }
 
     function _resolverValor(pedido) {
+        if (pedido.valor_base != null && pedido.valor_base !== '') {
+            return _parseMoeda(pedido.valor_base);
+        }
         var raw = pedido.valor_corrida || pedido.valor_total || pedido.valor_final || 0;
         return _parseMoeda(raw);
     }
@@ -1067,10 +1070,10 @@
             espera_tipo: tipo,
             espera_minutos: minutos,
             taxa_espera: taxa,
-            valor_corrida: valorFinal,
-            valor_total: valorFinal,
+            valor_base: valorBase,
+            valor_corrida: valorBase,
+            valor_total: valorBase,
             valor_final: valorFinal,
-            // Campos completos do formulário
             mercadoria: (document.getElementById('edit-mercadoria') || {}).value || '',
             retorno: (document.getElementById('edit-retorno') || {}).value || 'Não',
             prioridade: (document.getElementById('edit-prioridade') || {}).value || '0',
@@ -1100,6 +1103,7 @@
                         espera_tipo: payload.espera_tipo,
                         espera_minutos: payload.espera_minutos,
                         taxa_espera: payload.taxa_espera,
+                        valor_base: payload.valor_base,
                         valor_corrida: payload.valor_corrida,
                         valor_total: payload.valor_total,
                         valor_final: payload.valor_final,
@@ -1122,8 +1126,8 @@
                 if (typeof window.EventBus !== 'undefined')
                     window.EventBus.emit('pedido:atualizado', {
                         id: pedidoId,
-                        valor_corrida: valorFinal,
-                        valor_total: valorFinal,
+                        valor_corrida: valorBase,
+                        valor_total: valorBase,
                         valor_final: valorFinal
                     });
 
