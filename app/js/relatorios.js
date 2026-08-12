@@ -243,6 +243,13 @@
       'AV DO CONTORNO 2316', 'AVENIDA DO CONTORNO 2316', 'DIAMOND MALL',
       'R MIGUEL GOMES DA COSTA 52', 'RUA MIGUEL GOMES DA COSTA 52',
       'MIGUEL GOMES DA COSTA 52 MANTIQUEIRA'
+    ],
+    'VAL FORTUNATO': [
+      'R TIRADENTES 140', 'RUA TIRADENTES 140',           // Gloria / Costura Glorinha
+      'RUA TURFA 1254', 'R TURFA 1254',                    // Fernanda Belonne, Prado
+      'BERNARDINO DE LIMA 321', 'BERNARDINO DE LIMA N 321', // LN Kassinha, Gutierrez
+      'RUA TURFA 620', 'R TURFA 620',                       // Santa Luz, Prado
+      'MARIA DE LOURDES CAMELO 150', 'MARIA DE LOURDES CAMELO N 150' // Caiçaras
     ]
   };
 
@@ -787,6 +794,9 @@
 
     if (nomesAlvoSeguros.length && pedidoContemNomeAlvoEmCampos(pedido, nomesAlvoSeguros)) return true;
 
+    // ✅ NOVO: checagem por endereço fixo cadastrado (resolve pedidos sem "VAL" no texto)
+    if (nomesAlvo.length && pedidoBateEnderecoAlvo(pedido, nomesAlvo)) return true;
+
     if (idPed && idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
 
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
@@ -934,17 +944,26 @@
     const observacao = resolverValor('financeiro', 'observacao', registro);
     const cliente = resolverValor('financeiro', 'cliente', registro);
 
-    let de = '', para = '', mercadoria = '', obsPed = '', solicitante = '';
+    let mercadoria = '', obsPed = '', solicitante = '';
     if (pedidoVinculado) {
-      de = resolverValor('pedidos', 'de', pedidoVinculado);
-      para = resolverValor('pedidos', 'para', pedidoVinculado);
       mercadoria = resolverValor('pedidos', 'mercadoria', pedidoVinculado);
       obsPed = resolverValor('pedidos', 'observacao', pedidoVinculado);
       solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
     }
 
-    const nomePadrao = resolverNomeClienteComFallback(descricao, observacao, para, mercadoria, obsPed, cliente, solicitante, de);
-    if (nomePadrao === 'CLIENTE AVULSO') return null;
+    // ❌ REMOVIDO "de" e "para" daqui — endereço não deve alimentar regex de 1 token
+    let nomePadrao = resolverNomeClienteComFallback(descricao, observacao, mercadoria, obsPed, cliente, solicitante);
+
+    // ✅ Endereço só entra via correspondência exata na lista fixa (mais seguro)
+    if (nomePadrao === NOME_CLIENTE_AVULSO && pedidoVinculado) {
+      Object.keys(ENDERECOS_CLIENTE_ALIAS).forEach(function (nomeCanonico) {
+        if (nomePadrao === NOME_CLIENTE_AVULSO && pedidoBateEnderecoAlvo(pedidoVinculado, [nomeCanonico])) {
+          nomePadrao = nomeCanonico;
+        }
+      });
+    }
+
+    if (nomePadrao === NOME_CLIENTE_AVULSO) return null;
 
     const idPadrao = obterIdPadraoCliente(nomePadrao);
     const clienteCadastro = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idPadrao); }) || null;
@@ -960,8 +979,6 @@
     }
     return entrada.nome;
   }
-
-  function pedidoContemNomeAlvoEmCampos_OLD_UNUSED() { /* mantido apenas para não quebrar referências antigas, se existirem */ }
 
   function financeiroCorrespondeCliente(registro, nomesAlvo) {
     const pedidoVinculado = buscarPedidoDoFinanceiro(registro);
@@ -1548,10 +1565,14 @@
   const CESTA_TEXT_PATTERN = /\bcesta\b/i;
 
   const MAPA_NORMALIZACAO_CLIENTES = [
+    [/\brosa\s*d[áa]lia\b/i, 'ROSA DALIA'],
     [/\bm\.?\s*pitanga\b|\bmaria\s*pitanga\b/i, 'MARIA PITANGA'],
     [/\bcacau\s*show\b|\bcacaushow\b/i, 'CACAU SHOW'],
     [/\bbreno\b/i, 'BRENO'],
-    [/\bval\s*fortunatt?o\b/i, 'VAL FORTUNATO'],
+
+    // ✅ CORRIGIDO: \bval\$ -> \bval\b (o bug impedia "Val" isolado de bater)
+    [/\bval\s*fortunatt?o\b|\bcasa\s*da\s*val\b|\bcasa\s*da\s*av[oó]\b|\bval\b/i, 'VAL FORTUNATO'],
+
     [/\bnatu\s*pet\b|\bnatupet\b/i, 'NATUPET'],
     [/\bcpap\s*minas\b/i, 'CPAP MINAS'],
     [/\bammis\b/i, 'AMMIS'],
@@ -1568,10 +1589,17 @@
     [/\bbasique\b/i, 'BASIQUE'],
     [/\bmima[\s\-]?me\b/i, 'MIMA-ME'],
     [/\blepo[eh]h?\b/i, 'LEPOEH'],
-    [/\bmiss\s*dele\b/i, 'MISS DELE'],
+
+    // ✅ NOVO: cobre "Miis Dele" e "Misder" (variações de digitação de MISS DELE)
+    [/\bmiss?\s*dele\b|\bmiis\s*dele\b|\bmisder\b/i, 'MISS DELE'],
+
     [/\bjacira\b/i, 'JACIRA'],
     [/\bag3\s*alimentos\b|\bag3\b/i, 'AG3 ALIMENTOS'],
+
+    // ✅ NOVO: "Sara" isolado agora aponta para SARA SANTOS
     [/\bsara\s*santos\b/i, 'SARA SANTOS'],
+    [/\bsara\b/i, 'SARA SANTOS'],
+
     [/\bbete\s*plural\s*(diamond\s*mall)?\b/i, 'PLURAL'],
     [/\bplural\b/i, 'PLURAL'],
     [/\bcpap\s*aire\b/i, 'CPAP AIRE'],
@@ -1590,7 +1618,9 @@
     'VAL FORTUNATO': 'BQVEGBEA07N',
     'NATUPET': 'Z9T82O4CVGA',
     'CPAP MINAS': '7NDXMET4BY1',
-    'AMMIS': '8OXAGYGBNZ2',
+    'AMMIS': '4L2M5M6XUYW',
+    'PLURAL': 'I4EO7EU76SR',
+    'ROSA DALIA': 'RD5A7L1MNSY',
     'INCLOSET': '5ZKL0IHDIIY',
     'DELUZA': 'ZZOVKXPIBAT',
     'OPMINAS': 'QYURDAK3F7H',
@@ -1607,7 +1637,6 @@
     'JACIRA': 'B700EX1CX17',
     'AG3 ALIMENTOS': 'THGG3ITLFAY',
     'SARA SANTOS': 'RVWHRWM6KGD',
-    'PLURAL': 'NF10JRBK7BR',
     'CPAP AIRE': 'MTCU5ORJWCA',
     'ARTE EM COMEMORAR': 'UM679H0784H',
     'P&P DISTRIBUIDORA': 'OWVY3N7YZWS',
@@ -1627,11 +1656,25 @@
     return '';
   }
 
+  const PADRAO_CLIENTE_AVULSO_EXPLICITO = /\bcliente\s*avuls[oa]\b/i;
+
   function resolverNomeClienteComFallback() {
+    // 1) Primeiro, tenta achar um cliente REAL cadastrado em qualquer candidato
+    //    (descricao, observacao, para, mercadoria, obsPed, cliente, solicitante, de).
+    //    Isso tem prioridade sobre o texto literal "CLIENTE AVULSO".
     for (let i = 0; i < arguments.length; i++) {
       const nomePadrao = normalizarNomeClienteRegex(arguments[i]);
       if (nomePadrao) return nomePadrao;
     }
+
+    // 2) Só se NENHUM cliente real foi identificado, aí sim verifica se o texto
+    //    menciona explicitamente "cliente avulso" (reforça a classificação).
+    const descricao = arguments[0];
+    const observacao = arguments[1];
+    if (PADRAO_CLIENTE_AVULSO_EXPLICITO.test(String(descricao || ''))) return NOME_CLIENTE_AVULSO;
+    if (PADRAO_CLIENTE_AVULSO_EXPLICITO.test(String(observacao || ''))) return NOME_CLIENTE_AVULSO;
+
+    // 3) Fallback final: avulso.
     return NOME_CLIENTE_AVULSO;
   }
 
