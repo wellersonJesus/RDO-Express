@@ -52,7 +52,7 @@
   };
 
   const GRUPOS_CLIENTE_ALIAS = {
-    'ELISA ATHENIENSE': ['HXQ9VBU59DG', 'BR463K2KU06', 'MR34XBA3RKE', 'V70K6ETW0B3']
+    'ELISA ATHENIENSE': ['HXQ9VBU59DG']
   };
 
   function normalizarIdCliente(id) {
@@ -236,6 +236,14 @@
     itensPorPagina: 10,
     ordenacao: { motoboys: 'desc', clientes: 'desc', financeiro: 'desc', global: 'desc' },
     builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
+  };
+
+  const ENDERECOS_CLIENTE_ALIAS = {
+    'PLURAL': [
+      'AV DO CONTORNO 2316', 'AVENIDA DO CONTORNO 2316', 'DIAMOND MALL',
+      'R MIGUEL GOMES DA COSTA 52', 'RUA MIGUEL GOMES DA COSTA 52',
+      'MIGUEL GOMES DA COSTA 52 MANTIQUEIRA'
+    ]
   };
 
   const els = {};
@@ -786,10 +794,6 @@
 
     return false;
   }
-
-  const ENDERECOS_CLIENTE_ALIAS = {
-    'PLURAL': ['AV DO CONTORNO 2316', 'AVENIDA DO CONTORNO 2316', 'DIAMOND MALL']
-  };
 
   function normalizarEndereco(v) {
     return normalizarComparacao(v)
@@ -1538,10 +1542,8 @@
       .trim();
   }
 
-  // ------------------- INÍCIO DO PORT (normalização de clientes) -------------------
-
   const NOME_CLIENTE_AVULSO = 'CLIENTE AVULSO';
-  const ID_CLIENTE_AVULSO = 'AVULSO';
+  const ID_CLIENTE_AVULSO = 'AVUL5O0000X';
 
   const CESTA_TEXT_PATTERN = /\bcesta\b/i;
 
