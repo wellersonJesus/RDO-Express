@@ -626,23 +626,9 @@
 <script>
   (function () {
     'use strict';
-    function bindBotaoAbrirFluxoExtrato() {
-      var btn = document.getElementById('btn-abrir-fluxo-extrato');
-      var overlay = document.getElementById('extrato-fluxo-overlay');
-      var btnFechar = document.getElementById('extrato-fluxo-fechar');
-      if (btn && overlay && !btn._bound) {
-        btn._bound = true;
-        btn.addEventListener('click', function () { overlay.style.display = 'flex'; });
-      }
-      if (btnFechar && overlay && !btnFechar._bound) {
-        btnFechar._bound = true;
-        btnFechar.addEventListener('click', function () { overlay.style.display = 'none'; });
-      }
-    }
     function _aguardarFinJs() {
       if (typeof window.initFinanceiro === 'function') {
         window.initFinanceiro();
-        bindBotaoAbrirFluxoExtrato();
       } else {
         setTimeout(_aguardarFinJs, 100);
       }

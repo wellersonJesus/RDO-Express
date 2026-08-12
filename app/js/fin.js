@@ -1428,6 +1428,8 @@ if (!window.EventBus) {
     var isEntrada = reg.tipo === 'entrada';
     var corHeader = isEntrada ? 'linear-gradient(135deg,#198754 0%,#146c43 100%)' : 'linear-gradient(135deg,#dc3545 0%,#c82333 100%)';
     var valorFormatado = (reg.valor || 0).toFixed(2).replace('.', ',');
+    // ID de exibição: sempre prioriza o ID do financeiro (mesmo critério do modal Visualizar)
+    var idExibicao = reg.idFinanceiro || reg.id || '';
 
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
@@ -1447,14 +1449,14 @@ if (!window.EventBus) {
 
       '<div class="fin-extrato-status-bar">' +
       '<div>' + getStatusBadge(reg.situacao) + '</div>' +
-      '<span class="fin-extrato-id">#' + escapeHtml((reg.id || '').toString().slice(-6)) + '</span>' +
+      '<span class="fin-extrato-id">#' + escapeHtml(idExibicao) + '</span>' +
       '</div>' +
 
       '<div id="fin-editar-erro" class="alert alert-danger d-none mx-3 mt-3 py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>' +
 
       '<div class="fin-extrato-body">' +
 
-      '<div class="fin-view-valor-destaque ' + (isEntrada ? 'fin-valor-footer-entrada' : 'fin-valor-footer-saida') + '">' +
+      '<div class="fin-view-valor-destaque ' + (isEntrada ? 'fin-valor-footer-entrada' : 'fin-valor-footer-saida') + '" id="fin-valor-editar-wrapper" style="position:relative;">' +
       '<div class="fin-view-valor-destaque-label"><i class="bi bi-cash-coin"></i><span>VALOR DO LANÇAMENTO</span></div>' +
       '<input type="text" id="fin-edit-valor" class="fin-edit-valor-input" value="' + valorFormatado + '" inputmode="decimal">' +
       '</div>' +
@@ -1528,7 +1530,6 @@ if (!window.EventBus) {
 
     mascaraValor(document.getElementById('fin-edit-valor'));
 
-    // ✅ CORRIGIDO: agora pega o botão certo DENTRO do modal recém-criado
     var btnSalvar = document.getElementById('fin-btn-salvar-editar');
     var btnCancelar = document.getElementById('fin-btn-cancelar-editar');
     var btnIcon = document.getElementById('fin-btn-salvar-editar-icon');
@@ -1575,6 +1576,18 @@ if (!window.EventBus) {
 
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
+
+    var wrapperValor = document.getElementById('fin-valor-editar-wrapper');
+    var inputValor = document.getElementById('fin-edit-valor');
+    if (wrapperValor && inputValor) {
+      inputValor.classList.add('fin-input-valor-piscando');
+      if (!wrapperValor.querySelector('.fin-seta-editar-valor')) {
+        var seta = document.createElement('i');
+        seta.className = 'bi bi-arrow-left-circle-fill fin-seta-editar-valor';
+        seta.setAttribute('title', 'Você pode editar este valor');
+        wrapperValor.appendChild(seta);
+      }
+    }
   }
 
   function _atualizarContadoresFin() {
@@ -3197,6 +3210,7 @@ if (!window.EventBus) {
     var valorFooterIcon = isEntrada ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill';
     var valorFooterTitulo = isEntrada ? 'VALOR DA RECEITA' : 'VALOR DA DESPESA';
     var footerClasse = isEntrada ? 'fin-valor-footer-entrada' : 'fin-valor-footer-saida';
+    var idExibicao = reg.id || reg.idFinanceiro || '';
 
     var pedidoHtml = reg.idPedido ? ('#' + escapeHtml(reg.idPedido)) : '-';
     var obsRowHtml = reg.observacao
@@ -3224,9 +3238,8 @@ if (!window.EventBus) {
 
       '<div class="fin-extrato-status-bar">' +
       '<div>' + situacaoBadge + '</div>' +
-      '<span class="fin-extrato-id">#' + escapeHtml((reg.id || '').toString().slice(-6)) + '</span>' +
+      '<span class="fin-extrato-id">#' + escapeHtml(idExibicao) + '</span>' +
       '</div>' +
-
       '<div id="fin-view-erro-excluir" class="alert alert-danger d-none mx-3 mt-3 py-2 px-3" style="font-size:.74rem;border-radius:10px;"></div>' +
 
       '<div class="fin-extrato-body">' +
@@ -3282,7 +3295,6 @@ if (!window.EventBus) {
       setTimeout(function () { abrirModalEditar(reg); }, 250);
     });
 
-    // ✅ Botão Excluir do lançamento visualizado
     document.getElementById('fin-view-btn-excluir').addEventListener('click', function () {
       var id = this.getAttribute('data-id');
       var erroEl = document.getElementById('fin-view-erro-excluir');
@@ -4249,16 +4261,14 @@ if (!window.EventBus) {
     if (tipo === 'financeiro') origemLabel = 'Financeiro (RDO)';
     if (tipo === 'caixa') origemLabel = tituloBanco || 'Relatório de Caixa';
 
-    // ✅ Agora usa a geração real de HTML (mesma lógica da carteira), em vez de window.print() puro
     if (tipo === 'caixa') {
       abrirJanelaPdfFinanceiro(origemLabel, periodoLabel, lista);
     }
 
     if (tipo === 'extrato') {
-      abrirJanelaPdfExtrato({ origem: label, periodoLabel: periodoLabel, registros: lista });
+      abrirJanelaPdfExtrato({ origem: origemLabel, periodoLabel: periodoLabel, registros: lista });
     }
 
-    // Salva no histórico de extratos também (mantém seu comportamento anterior)
     salvarExtratoStorage({
       id: gerarIdExtrato(),
       origem: origemLabel,
@@ -4269,7 +4279,6 @@ if (!window.EventBus) {
 
     renderizarListaExtratos();
     finToast('Relatório gerado com sucesso!', 'success');
-
   }
 
   function _garantirModuloRelatorioFin() {
