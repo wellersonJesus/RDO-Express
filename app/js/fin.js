@@ -58,8 +58,17 @@ if (!window.EventBus) {
     caixa: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
+  window._debugFinState = state;
 
   window.financeiroState = state;
+
+  function normalizarIdComparacao(valor) {
+    if (valor === null || valor === undefined) return null;
+    var digitos = String(valor).replace(/\D/g, "");
+    if (!digitos) return null;
+    var semZeros = digitos.replace(/^0+/, "");
+    return semZeros || "0";
+  }
 
   /**
  * Gera o HTML completo do relatório de extrato para impressão/PDF.
@@ -133,7 +142,7 @@ if (!window.EventBus) {
   }
 
   function abrirJanelaPdfExtrato(ext) {
-    var html = gerarHtmlRelatorioExtrato(ext);
+    var html = gerarHtmlRelatorioExtrato(ext); // usa a versão "bonita" com blocos por data
     var win = window.open('', '_blank', 'width=900,height=700');
     if (!win) { finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups.', 'warning'); return; }
     win.document.open();
@@ -941,7 +950,6 @@ if (!window.EventBus) {
   }
 
   function salvarRegistroFinanceiro(id, dados) {
-    // ── Validação de entrada ──────────────────────────────
     if (!id) {
       return Promise.reject(new Error('ID do registro não informado.'));
     }
@@ -967,7 +975,6 @@ if (!window.EventBus) {
 
     return window.API.call('updatefinanceiro', payload)
       .catch(function (errApi) {
-        // Erro de rede / comunicação com o backend
         console.error('[salvarRegistroFinanceiro] Falha na chamada API:', errApi);
         throw new Error('Falha na comunicação com o servidor: ' + (errApi && errApi.message ? errApi.message : 'Erro desconhecido.'));
       })
@@ -991,12 +998,16 @@ if (!window.EventBus) {
           throw new Error(msgErroFin);
         }
 
-        // ── Atualização do cache local ──────────────────────
-        var idx = -1;
-        try {
-          idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
+        var idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
 
-          if (idx !== -1) {
+        if (idx === -1 && dados.id_pedido !== undefined) {
+          idx = state.cache.findIndex(function (r) { return String(r.idPedido) === String(dados.id_pedido); });
+        }
+
+        var idPedidoNotificar = null;
+
+        if (idx !== -1) {
+          try {
             var reg = state.cache[idx];
             if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
             if (dados.tipo !== undefined) reg.tipo = dados.tipo;
@@ -1005,6 +1016,8 @@ if (!window.EventBus) {
             if (dados.observacao !== undefined) reg.observacao = dados.observacao;
             if (dados.colaborador_id !== undefined) reg.colaboradorId = dados.colaborador_id;
             if (dados.motoboy !== undefined) reg.motoboy = dados.motoboy || '-';
+            if (dados.cliente !== undefined) reg.cliente = dados.cliente || '-';
+            if (dados.grupo !== undefined) reg.grupo = dados.grupo || '';
 
             if (reg.tipo === 'entrada') {
               var pctColab = 80;
@@ -1020,51 +1033,48 @@ if (!window.EventBus) {
             }
 
             state.cache[idx] = reg;
+            idPedidoNotificar = reg.idPedido || null;
 
             if (dados.situacao !== undefined && reg.idPedido && state.pedidosCache[reg.idPedido]) {
               state.pedidosCache[reg.idPedido].situacao_financeira = dados.situacao;
             }
-          } else {
-            console.warn('[salvarRegistroFinanceiro] Registro id=' + id + ' não encontrado no cache local. A UI pode não refletir a mudança até o próximo refresh.');
+          } catch (errCache) {
+            console.error('[salvarRegistroFinanceiro] Erro ao atualizar cache local:', errCache);
+            finToast('Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.', 'warning');
           }
-        } catch (errCache) {
-          // Não interrompe o fluxo — o backend já confirmou o sucesso.
-          console.error('[salvarRegistroFinanceiro] Erro ao atualizar cache local:', errCache);
-          finToast('Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.', 'warning');
+        } else {
+          console.warn('[salvarRegistroFinanceiro] Registro id=' + id + ' não encontrado no cache local. Forçando novo carregamento.');
+          carregarDados();
         }
 
-        // ── 🔗 Notifica pedidos.js sobre a mudança de situação financeira ──
-        if (dados.situacao !== undefined) {
+        if (dados.situacao !== undefined && idPedidoNotificar) {
           try {
-            var idPedidoNotificar = idx !== -1 ? state.cache[idx].idPedido : null;
-            if (idPedidoNotificar) {
-              notificarSituacaoFinanceiraAtualizada(idPedidoNotificar, dados.situacao);
-            } else {
-              console.warn('[salvarRegistroFinanceiro] Não foi possível notificar: id_pedido ausente no registro id=' + id);
-            }
+            notificarSituacaoFinanceiraAtualizada(idPedidoNotificar, dados.situacao);
           } catch (errNotify) {
             console.error('[salvarRegistroFinanceiro] Erro ao emitir evento financeiro:situacaoAtualizada:', errNotify);
             finToast('Situação salva, mas a tela de pedidos pode não atualizar automaticamente.', 'warning');
           }
         }
 
-        return resFin;
+        return { resultado: resFin, idxAtualizado: idx };
       })
-      .then(function (resultado) {
-        // ── Re-render das telas (isolado em try/catch para não mascarar sucesso) ──
+      .then(function (contexto) {
         try {
-          if (typeof renderTodos === 'function') renderTodos();
-          if (typeof renderCaixa === 'function') renderCaixa();
-          if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
+          if (contexto.idxAtualizado !== -1) {
+            if (typeof renderTodos === 'function') renderTodos();
+            if (typeof renderRdoContadores === 'function') renderRdoContadores();
+            if (typeof renderCaixa === 'function') renderCaixa();
+            if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
+          }
         } catch (errRender) {
           console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar telas:', errRender);
           finToast('Dados salvos, mas houve um erro ao atualizar a tela. Recarregue se necessário.', 'warning');
         }
 
-        if (!resultado || resultado.status !== 'partial_error') {
+        if (!contexto.resultado || contexto.resultado.status !== 'partial_error') {
           finToast('Lançamento atualizado com sucesso!', 'success');
         }
-        return resultado;
+        return contexto.resultado;
       })
       .catch(function (err) {
         console.error('[salvarRegistroFinanceiro] Erro:', err);
@@ -1073,7 +1083,6 @@ if (!window.EventBus) {
         } catch (errRenderErro) {
           console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar após falha:', errRenderErro);
         }
-        // Repassa o erro para quem chamou (ex: modal de edição) exibir a mensagem correta
         throw err instanceof Error ? err : new Error(String(err));
       });
   }
@@ -1428,8 +1437,31 @@ if (!window.EventBus) {
     var isEntrada = reg.tipo === 'entrada';
     var corHeader = isEntrada ? 'linear-gradient(135deg,#198754 0%,#146c43 100%)' : 'linear-gradient(135deg,#dc3545 0%,#c82333 100%)';
     var valorFormatado = (reg.valor || 0).toFixed(2).replace('.', ',');
-    // ID de exibição: sempre prioriza o ID do financeiro (mesmo critério do modal Visualizar)
     var idExibicao = reg.idFinanceiro || reg.id || '';
+
+    var listaClientes = Object.keys(state.clientesCache || {}).map(function (k) { return state.clientesCache[k]; });
+    listaClientes.sort(function (a, b) { return (a.nome || a.username || '').localeCompare(b.nome || b.username || ''); });
+
+    var clienteAtualId = reg.clienteId || reg.cliente_id || '';
+    var opcoesCliente = '<option value="">Cliente avulso / Nenhum</option>' + listaClientes.map(function (c) {
+      var selecionado = (String(c.id) === String(clienteAtualId)) ? 'selected' : '';
+      return '<option value="' + escapeHtml(c.id) + '" ' + selecionado + '>' + escapeHtml(c.nome || c.username || '-') + '</option>';
+    }).join('');
+
+    var listaColaboradores = state.colaboradores || [];
+    var colaboradorAtualId = reg.colaboradorId || reg.colaborador_id || '';
+    var opcoesColaborador = '<option value="">Nenhum</option>' + listaColaboradores.map(function (c) {
+      var selecionado = (String(c.id) === String(colaboradorAtualId)) ? 'selected' : '';
+      return '<option value="' + escapeHtml(c.id) + '" ' + selecionado + '>' + escapeHtml(c.username || c.nome || '-') + '</option>';
+    }).join('');
+
+    var listaGrupos = Object.keys(state.gruposCache || {}).map(function (k) { return state.gruposCache[k]; });
+    listaGrupos.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+    var grupoAtualId = reg.grupoId || reg.grupo_id || '';
+    var opcoesGrupo = '<option value="">Nenhum</option>' + listaGrupos.map(function (g) {
+      var selecionado = (String(g.id) === String(grupoAtualId)) ? 'selected' : '';
+      return '<option value="' + escapeHtml(g.id) + '" ' + selecionado + '>' + escapeHtml(g.nome || '-') + '</option>';
+    }).join('');
 
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
@@ -1466,13 +1498,13 @@ if (!window.EventBus) {
       '<div class="fin-view-grid-2x2">' +
 
       '<div class="fin-view-grid-item">' +
-      '<div class="fin-view-grid-label"><i class="bi bi-person"></i> Cliente <span class="text-muted" style="font-size:.6rem;">(via pedido)</span></div>' +
-      '<input type="text" class="form-control form-control-sm fin-edit-input" value="' + escapeHtml(reg.cliente || '-') + '" disabled>' +
+      '<div class="fin-view-grid-label"><i class="bi bi-person"></i> Cliente</div>' +
+      '<select id="fin-edit-cliente" class="form-select form-select-sm fin-edit-input">' + opcoesCliente + '</select>' +
       '</div>' +
 
       '<div class="fin-view-grid-item">' +
       '<div class="fin-view-grid-label"><i class="bi bi-person-badge"></i> Colaborador</div>' +
-      '<input type="text" id="fin-edit-colaborador" class="form-control form-control-sm fin-edit-input" value="' + escapeHtml(reg.motoboy || '') + '">' +
+      '<select id="fin-edit-colaborador" class="form-select form-select-sm fin-edit-input">' + opcoesColaborador + '</select>' +
       '</div>' +
 
       '<div class="fin-view-grid-item">' +
@@ -1490,6 +1522,11 @@ if (!window.EventBus) {
       '<option value="recebido" ' + (reg.situacao === 'recebido' ? 'selected' : '') + '>Recebido</option>' +
       '<option value="cancelado" ' + (reg.situacao === 'cancelado' ? 'selected' : '') + '>Cancelado</option>' +
       '</select></div>' +
+
+      '<div class="fin-view-grid-item">' +
+      '<div class="fin-view-grid-label"><i class="bi bi-collection"></i> Grupo</div>' +
+      '<select id="fin-edit-grupo" class="form-select form-select-sm fin-edit-input">' + opcoesGrupo + '</select>' +
+      '</div>' +
 
       '</div></div>' +
 
@@ -1542,14 +1579,25 @@ if (!window.EventBus) {
       var valorStr = document.getElementById('fin-edit-valor').value.trim();
       var valorNum = parseValor(valorStr);
       var descricao = document.getElementById('fin-edit-descricao').value.trim();
+      var clienteId = document.getElementById('fin-edit-cliente').value;
+      var colaboradorId = document.getElementById('fin-edit-colaborador').value;
+      var grupoId = document.getElementById('fin-edit-grupo').value;
 
       if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); return; }
       if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
 
+      var clienteObj = clienteId ? state.clientesCache[clienteId] : null;
+      var colaboradorObj = colaboradorId ? state.colaboradoresCache[colaboradorId] : null;
+      var grupoObj = grupoId ? (state.gruposCache ? state.gruposCache[grupoId] : null) : null;
+
       var dadosAtualizados = {
         valor: valorNum,
-        motoboy: document.getElementById('fin-edit-colaborador').value.trim(),
-        colaborador_id: reg.colaboradorId || '',
+        motoboy: colaboradorObj ? (colaboradorObj.username || colaboradorObj.nome || '') : '',
+        colaborador_id: colaboradorId || '',
+        cliente: clienteObj ? (clienteObj.nome || clienteObj.username || '') : '',
+        cliente_id: clienteId || '',
+        grupo: grupoObj ? (grupoObj.nome || '') : '',
+        grupo_id: grupoId || '',
         tipo: document.getElementById('fin-edit-tipo').value,
         situacao: document.getElementById('fin-edit-situacao').value,
         descricao: descricao,
@@ -1588,6 +1636,15 @@ if (!window.EventBus) {
         wrapperValor.appendChild(seta);
       }
     }
+  }
+
+  function editarPorId(id) {
+    var reg = encontrarRegistroPorIdExato(id); // reaproveita a função que já criamos
+    if (!reg) {
+      console.error('Registro não encontrado para o ID:', id);
+      return;
+    }
+    abrirModalEditar(reg);
   }
 
   function _atualizarContadoresFin() {
@@ -2211,39 +2268,6 @@ if (!window.EventBus) {
       '</body></html>';
   }
 
-  function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
-    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
-    var win = window.open('', '_blank', 'width=900,height=700');
-
-    if (!win) {
-      finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups para este site.', 'warning');
-      return;
-    }
-
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-
-    win.onload = function () {
-      win.focus();
-      setTimeout(function () { win.print(); }, 300);
-    };
-  }
-
-  function baixarHtmlFinanceiro(titulo, periodoLabel, registros) {
-    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
-    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (titulo || 'relatorio').replace(/[^\w\-]+/g, '_') + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
-  }
-
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var idModal = 'modal-visualizar-caixa-' + periodo.id;
     var registros = periodo.registros || [];
@@ -2367,7 +2391,12 @@ if (!window.EventBus) {
   }
 
   function _normalizarIdPedidoBusca(valor) {
-    return String(valor || '').trim().toUpperCase().replace(/^RDO0*/, '').replace(/^0+/, '');
+    if (valor === null || valor === undefined) return null;
+    // Remove QUALQUER caractere que não seja dígito, em qualquer posição
+    var digitos = String(valor).replace(/\D/g, '');
+    if (!digitos) return null;
+    var semZerosEsquerda = digitos.replace(/^0+/, '');
+    return semZerosEsquerda || '0';
   }
 
   function dadosFiltradosTodos() {
@@ -2384,17 +2413,25 @@ if (!window.EventBus) {
       var termos = termoOriginal.split(/\s+/).filter(Boolean);
       var termoIdNormalizado = _normalizarIdPedidoBusca(state.filtroBusca);
 
+      // ✅ Se o termo digitado é puramente numérico (ou RDO+número),
+      // tratamos como busca EXCLUSIVA por ID de pedido.
+      var pareceIdPedido = /^(rdo)?\d+$/i.test(state.filtroBusca.trim());
+
       lista = lista.filter(function (r) {
         var idPedidoRaw = (r.idPedido || '').toString();
         var idPedidoNormalizado = _normalizarIdPedidoBusca(idPedidoRaw);
-        var idPedidoComPrefixo = 'RDO' + idPedidoNormalizado;
 
-        if (termoIdNormalizado && idPedidoNormalizado && termoIdNormalizado === idPedidoNormalizado) {
-          return true;
-        }
+        // Match exato de ID (com ou sem prefixo RDO, com ou sem zeros à esquerda)
+        var matchId = !!(termoIdNormalizado && idPedidoNormalizado && termoIdNormalizado === idPedidoNormalizado);
+
+        if (matchId) return true;
+
+        // ✅ Se o usuário buscou algo que "parece" um ID de pedido,
+        // NÃO cai no fallback de texto — retorna false direto (evita falso positivo).
+        if (pareceIdPedido) return false;
 
         var pool = removerAcentos(
-          [r.descricao, r.motoboy, r.observacao, idPedidoRaw, idPedidoComPrefixo, r.cliente, r.solicitante, r.dataBR, r.dataDisplay, r.grupo]
+          [r.descricao, r.motoboy, r.observacao, idPedidoRaw, 'RDO' + idPedidoNormalizado, r.cliente, r.solicitante, r.dataBR, r.dataDisplay, r.grupo]
             .map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
         );
 
@@ -2436,13 +2473,13 @@ if (!window.EventBus) {
           '<span class="fin-tipo-cell-item fin-tipo-item-situacao">' + badgeSituacao + '</span>' +
           '</div>';
 
-        return '<tr class="fin-row" data-id="' + escapeHtml(r.id) + '" style="cursor:pointer;">' +
+        return '<tr class="fin-row" data-idpedido="' + escapeHtml(r.idPedido || '') + '" style="cursor:pointer;">' +
           '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
           '<td class="fin-td-descricao-mobile" title="' + escapeHtml(r.descricao || '-') + '">' + formatarDescricaoMobile(r.descricao) + '</td>' +
           '<td class="fin-col-tipo">' + celulaTipoCombinada + '</td>' +
           '<td class="text-end"><div class="fin-actions-group">' +
-          '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-id="' + escapeHtml(r.id) + '"><i class="bi bi-eye"></i></button>' +
-          '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-id="' + escapeHtml(r.id) + '"><i class="bi bi-pencil-square"></i></button>' +
+          '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-eye"></i></button>' +
+          '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-pencil-square"></i></button>' +
           '</div></td>' +
           '</tr>';
       }).join('');
@@ -2450,8 +2487,8 @@ if (!window.EventBus) {
       els.tbodyTodos.querySelectorAll('.fin-btn-ver, .fin-row').forEach(function (el) {
         el.addEventListener('click', function (e) {
           e.stopPropagation();
-          var id = this.getAttribute('data-id');
-          var reg = state.cache.find(function (r) { return r.id === id; });
+          var idPedido = this.getAttribute('data-idpedido');
+          var reg = state.cache.find(function (r) { return r.idPedido === idPedido; });
           if (reg) abrirModalVisualizar(reg);
         });
       });
@@ -2459,8 +2496,8 @@ if (!window.EventBus) {
       els.tbodyTodos.querySelectorAll('.fin-btn-editar').forEach(function (el) {
         el.addEventListener('click', function (e) {
           e.stopPropagation();
-          var id = this.getAttribute('data-id');
-          var reg = state.cache.find(function (r) { return r.id === id; });
+          var idPedido = this.getAttribute('data-idpedido');
+          var reg = state.cache.find(function (r) { return r.idPedido === idPedido; });
           if (reg) abrirModalEditar(reg);
         });
       });
@@ -2589,95 +2626,6 @@ if (!window.EventBus) {
     renderPeriodosSalvosCaixa();
     configurarInfoHoverCaixa();
     bindFiltrosMiniCaixa();
-  }
-
-  function aplicarFiltroCaixaLocal() {
-    var base = state.caixa.dadosFiltrados;
-    var filtrados = filtrarLogicoCaixa(base, state.caixa.filtroDescricao, state.caixa.filtroValor);
-
-    var totais = calcularTotaisRegistros(filtrados);
-    var saldoTotal = totais.entradas - totais.saidas;
-
-    var valores = {
-      caixaCardEntradas: totais.entradas,
-      caixaCardSaidas: totais.saidas,
-      caixaCardEmpresa: totais.empresa,
-      caixaCardColaboradores: totais.colaboradores,
-      caixaCardSaldoTotal: saldoTotal
-    };
-
-    Object.keys(valores).forEach(function (k) {
-      if (els[k]) {
-        els[k].setAttribute('data-valor-real', formatarMoeda(valores[k]));
-        els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(valores[k]) : 'R$ ****';
-      }
-    });
-
-    if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = totais.qtd;
-
-    state.caixa.listaFiltradaAtual = filtrados;
-    renderCaixaListaDiaria();
-  }
-
-  function gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros) {
-    var totais = calcularTotaisRegistros(registros);
-    var ordenados = (registros || []).slice().sort(function (a, b) {
-      return a.dataISO < b.dataISO ? 1 : -1;
-    });
-
-    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
-      return '<tr>' +
-        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
-        '<td>' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + '</td>' +
-        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
-        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
-        '<td style="text-align:center;">' + escapeHtml((r.situacao || '-').toUpperCase()) + '</td>' +
-        '</tr>';
-    }).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
-
-    var agora = new Date().toLocaleString('pt-BR');
-
-    var html =
-      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
-      '<title>' + escapeHtml(titulo) + '</title>' +
-      '<style>' +
-      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
-      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
-      'h1 span{color:#222;}' +
-      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
-      '.resumo{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}' +
-      '.resumo div{flex:1;min-width:140px;border:1px solid #eee;border-radius:8px;padding:10px 14px;}' +
-      '.resumo .label{font-size:10px;text-transform:uppercase;color:#999;font-weight:700;letter-spacing:.04em;}' +
-      '.resumo .valor{font-size:15px;font-weight:700;margin-top:2px;}' +
-      '.entrada{color:#198754;} .saida{color:#dc3545;} .saldo{color:#0d6efd;}' +
-      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
-      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
-      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
-      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
-      '@media print{ body{margin:10mm;} }' +
-      '</style></head><body>' +
-
-      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Financeiro</span></h1>' +
-      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
-
-      '<div class="resumo">' +
-      '<div><div class="label">Receitas</div><div class="valor entrada">' + formatarMoeda(totais.entradas) + '</div></div>' +
-      '<div><div class="label">Despesas</div><div class="valor saida">' + formatarMoeda(totais.saidas) + '</div></div>' +
-      '<div><div class="label">Empresa (20%)</div><div class="valor">' + formatarMoeda(totais.empresa) + '</div></div>' +
-      '<div><div class="label">Colaboradores (80%)</div><div class="valor">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
-      '<div><div class="label">Saldo do Período</div><div class="valor saldo">' + formatarMoeda(totais.saldo) + '</div></div>' +
-      '</div>' +
-
-      '<table><thead><tr>' +
-      '<th>Data</th><th>Descrição</th><th>Tipo</th><th>Colaborador</th><th style="text-align:right;">Valor</th><th style="text-align:center;">Situação</th>' +
-      '</tr></thead><tbody>' + linhasHtml + '</tbody></table>' +
-
-      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
-
-      '</body></html>';
-
-    return html;
   }
 
   function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
@@ -3210,7 +3158,7 @@ if (!window.EventBus) {
     var valorFooterIcon = isEntrada ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill';
     var valorFooterTitulo = isEntrada ? 'VALOR DA RECEITA' : 'VALOR DA DESPESA';
     var footerClasse = isEntrada ? 'fin-valor-footer-entrada' : 'fin-valor-footer-saida';
-    var idExibicao = reg.id || reg.idFinanceiro || '';
+    var idExibicao = reg.idFinanceiro || reg.id || '';
 
     var pedidoHtml = reg.idPedido ? ('#' + escapeHtml(reg.idPedido)) : '-';
     var obsRowHtml = reg.observacao
@@ -4028,7 +3976,7 @@ if (!window.EventBus) {
 
       renderizarListaExtratos();
       fecharOverlay();
-      abrirJanelaPdfExtrato('Extrato - ' + label, periodoLabel, lista);
+      abrirJanelaPdfExtrato({ origem: label, periodoLabel: periodoLabel, registros: lista });
       finToast('Extrato gerado com sucesso!', 'success');
     });
 
@@ -4059,12 +4007,17 @@ if (!window.EventBus) {
 
     if (meuToken !== _tokenAbrirPedidoFinanceiro) return;
 
-    var idNorm = String(pedidoId).trim();
-    var idNormSemPrefixo = idNorm.replace(/^RDO0*/i, '');
+    var idBuscaNormalizado = _normalizarIdPedidoBusca(pedidoId);
+
+    if (!idBuscaNormalizado) {
+      finToast('ID de pedido inválido: ' + pedidoId, 'warning');
+      window.AppRDO._pedidoAlvoFinanceiro = null;
+      return;
+    }
 
     var reg = state.cache.find(function (r) {
-      var idReg = String(r.idPedido || '').trim();
-      return idReg === idNorm || idReg.replace(/^RDO0*/i, '') === idNormSemPrefixo;
+      var idRegNormalizado = _normalizarIdPedidoBusca(r.idPedido);
+      return idRegNormalizado !== null && idRegNormalizado === idBuscaNormalizado;
     });
 
     window.AppRDO._pedidoAlvoFinanceiro = null;
@@ -4074,12 +4027,18 @@ if (!window.EventBus) {
       return;
     }
 
+    var idRegConfirmacao = _normalizarIdPedidoBusca(reg.idPedido);
+    if (idRegConfirmacao !== idBuscaNormalizado) {
+      finToast('Erro ao localizar o pedido correto.', 'danger');
+      return;
+    }
+
     var tabRDO = document.querySelector('.fin-tab[data-tab="todos"]');
     if (tabRDO && !tabRDO.classList.contains('active')) {
       tabRDO.click();
     }
 
-    var termoFiltro = reg.idPedido || pedidoId;
+    var termoFiltro = idRegConfirmacao;
     state.filtroBusca = termoFiltro;
 
     var inputBusca = document.getElementById('filtro-busca-fin');
@@ -4121,8 +4080,6 @@ if (!window.EventBus) {
     });
   }
 
-  window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
-
   function init() {
     if (_finJaInicializado) return;
     _finJaInicializado = true;
@@ -4160,7 +4117,6 @@ if (!window.EventBus) {
     tentarAbrirPedidoFinanceiro: tentarAbrirPedidoFinanceiro,
     init: init
   };
-
   window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
   window.initFinanceiro = init;
 
@@ -4309,7 +4265,5 @@ if (!window.EventBus) {
       .finally(function () { _relatorioFinCarregando = null; });
     return _relatorioFinCarregando;
   }
-
-  window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
 
 })();
