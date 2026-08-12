@@ -2461,11 +2461,70 @@
 
   function obterUsuarioLogado() {
     try {
-      const sess = JSON.parse(sessionStorage.getItem('usuario') || localStorage.getItem('usuario') || 'null');
-      if (sess && sess.username) return sess.username;
-      if (sess && sess.nome) return sess.nome;
-    } catch (e) { }
+      const nome = localStorage.getItem('username');
+      if (nome && nome.trim() && nome.trim() !== 'null' && nome.trim() !== 'undefined') {
+        return nome.trim();
+      }
+    } catch (e) {
+      // localStorage indisponível — ignora
+    }
+
     return 'Não identificado';
+  }
+
+  function _extrairNomeDeObjetoUsuario(obj) {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj.trim();
+
+    const candidatos = [
+      obj.username, obj.nome, obj.nome_completo, obj.name,
+      obj.login, obj.usuario, obj.colaborador, obj.email
+    ];
+
+    for (let i = 0; i < candidatos.length; i++) {
+      if (candidatos[i] && String(candidatos[i]).trim()) {
+        return String(candidatos[i]).trim();
+      }
+    }
+    return '';
+  }
+
+  function _tentarObterDeStorage(storage, chave) {
+    try {
+      const raw = storage.getItem(chave);
+      if (!raw) return '';
+
+      // Tenta como JSON primeiro
+      try {
+        const parsed = JSON.parse(raw);
+        const nome = _extrairNomeDeObjetoUsuario(parsed);
+        if (nome) return nome;
+      } catch (eJson) {
+        // Não é JSON — pode ser uma string pura com o nome do usuário
+        if (raw.trim() && raw.trim() !== 'null' && raw.trim() !== 'undefined') {
+          return raw.trim();
+        }
+      }
+    } catch (e) {
+      // Storage bloqueado/indisponível — ignora silenciosamente
+    }
+    return '';
+  }
+
+  function _obterUsuarioDeCookie() {
+    try {
+      const match = document.cookie.match(/(?:^|;\s*)(usuario|usuarioLogado|user)=([^;]+)/);
+      if (!match) return '';
+      const valor = decodeURIComponent(match[2]);
+      try {
+        const parsed = JSON.parse(valor);
+        return _extrairNomeDeObjetoUsuario(parsed);
+      } catch (e) {
+        return valor.trim();
+      }
+    } catch (e) {
+      return '';
+    }
   }
 
   function obterHoraAtualBR() {
