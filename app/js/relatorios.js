@@ -12,10 +12,12 @@
 
   const ALIASES = {
     pedidos: {
-      id: ['id'], id_cliente: ['id_cliente'], solicitante: ['solicitante'], contato: ['contato'],
-      data: ['data'], horario: ['horario', 'hora'], mercadoria: ['mercadoria'], de: ['de'], para: ['para'],
-      retorno: ['retorno'], prioridade: ['prioridade'], valor_corrida: ['valor_corrida', 'vlr_servico'],
-      motoboy: ['motoboy'], status: ['status'], observacao: ['observacao']
+      label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
+      campos: {
+        id: 'ID', cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', data: 'Data', horario: 'Horário',
+        mercadoria: 'Descrição', de: 'De', para: 'Endereço', retorno: 'Retorno', prioridade: 'Prioridade',
+        valor_corrida: 'Valor', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
+      }
     },
     financeiro: {
       label: 'Financeiro', icon: 'bi-wallet2', endpoint: 'getfinanceirocompleto',
@@ -29,15 +31,15 @@
       bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
       campos: {
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
-        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        pedidos: ['id', 'cliente', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado'],
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
       defaults: {
         clientes: ['username'],
-        pedidos: ['id', 'data', 'horario', 'de', 'para', 'valor_corrida', 'motoboy', 'status'],
+        pedidos: ['data', 'cliente', 'solicitante', 'para', 'valor_corrida'],
         chat: [],
-        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
+        financeiro: []
       }
     },
     colaborador: {
@@ -54,6 +56,70 @@
   const GRUPOS_CLIENTE_ALIAS = {
     'ELISA ATHENIENSE': ['HXQ9VBU59DG']
   };
+
+  function montarCabecalhoCampos(camposOriginais) {
+    const temCliente = camposOriginais.some(function (c) { return c.chave === 'cliente'; });
+    const temSolicitante = camposOriginais.some(function (c) { return c.chave === 'solicitante'; });
+    const temMercadoria = camposOriginais.some(function (c) { return c.chave === 'mercadoria'; });
+    const temEndereco = camposOriginais.some(function (c) { return c.chave === 'para'; });
+
+    const combinaClienteSolicitante = temCliente && temSolicitante;
+    const combinaDescricaoEndereco = temMercadoria && temEndereco;
+
+    const idCampo = camposOriginais.find(function (c) { return c.chave === 'id'; });
+    const demaisCampos = camposOriginais.filter(function (c) {
+      return c.chave !== 'id' && c.chave !== 'data' && c.chave !== 'cliente' && c.chave !== 'solicitante' &&
+        c.chave !== 'mercadoria' && c.chave !== 'para';
+    });
+
+    const ordemFinal = [];
+    if (idCampo) ordemFinal.push(idCampo);
+
+    if (combinaClienteSolicitante) {
+      ordemFinal.push({ chave: '__cliente_solicitante__', label: 'Cliente / Solicitante' });
+    } else if (temCliente) {
+      ordemFinal.push(camposOriginais.find(function (c) { return c.chave === 'cliente'; }));
+    } else if (temSolicitante) {
+      ordemFinal.push(camposOriginais.find(function (c) { return c.chave === 'solicitante'; }));
+    }
+
+    demaisCampos.forEach(function (c) { ordemFinal.push(c); });
+
+    if (combinaDescricaoEndereco) {
+      ordemFinal.push({ chave: '__descricao_endereco__', label: 'Descrição / Endereço' });
+    } else if (temMercadoria) {
+      ordemFinal.push(camposOriginais.find(function (c) { return c.chave === 'mercadoria'; }));
+    } else if (temEndereco) {
+      ordemFinal.push(camposOriginais.find(function (c) { return c.chave === 'para'; }));
+    }
+
+    return ordemFinal;
+  }
+
+  function valorClienteSolicitante(linha) {
+    const cliente = linha.cliente || '';
+    const solicitante = linha.solicitante || '';
+    if (cliente && solicitante && normalizarComparacao(cliente) !== normalizarComparacao(solicitante)) {
+      return cliente + ' - ' + solicitante;
+    }
+    return cliente || solicitante || '';
+  }
+
+  function valorDescricaoEndereco(linha) {
+    const mercadoria = linha.mercadoria || '';
+    const endereco = linha.para || '';
+    if (mercadoria && endereco) return mercadoria + ' - ' + endereco;
+    return mercadoria || endereco || '';
+  }
+
+  function obterValorCelula(chave, linha) {
+    if (chave === '__cliente_solicitante__') return valorClienteSolicitante(linha);
+    if (chave === '__descricao_endereco__') return valorDescricaoEndereco(linha);
+    let valor = linha[chave];
+    if (chave === 'vlr_servico' || chave === 'valor_corrida') return formatarMoeda(valor);
+    if (chave === 'horario') return extrairHora(valor);
+    return valor === undefined || valor === null ? '' : valor;
+  }
 
   function normalizarIdCliente(id) {
     return String(id == null ? '' : id).trim().toUpperCase();
@@ -146,8 +212,8 @@
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
       campos: {
-        id: 'ID', solicitante: 'Solicitante', contato: 'Contato', data: 'Data', horario: 'Horário',
-        mercadoria: 'Mercadoria', de: 'De', para: 'Para', retorno: 'Retorno', prioridade: 'Prioridade',
+        id: 'ID', cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', data: 'Data', horario: 'Horário',
+        mercadoria: 'Descrição', de: 'De', para: 'Endereço', retorno: 'Retorno', prioridade: 'Prioridade',
         valor_corrida: 'Valor Corrida', motoboy: 'Motoboy', status: 'Status', observacao: 'Observação'
       }
     },
@@ -171,7 +237,7 @@
       bancos: ['colaborador', 'pedidos', 'financeiro'],
       campos: {
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
-        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        pedidos: ['id', 'cliente', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
       defaults: {
@@ -184,22 +250,22 @@
       bancos: ['clientes', 'pedidos', 'chat', 'financeiro'],
       campos: {
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
-        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        pedidos: ['id', 'cliente', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado'],
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao']
       },
       defaults: {
         clientes: ['username'],
-        pedidos: [],
+        pedidos: ['data', 'cliente', 'solicitante', 'para', 'valor_corrida'],
         chat: [],
-        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
+        financeiro: []
       }
     },
     financeiro: {
       bancos: ['financeiro', 'pedidos'],
       campos: {
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
-        pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'solicitante']
+        pedidos: ['id', 'motoboy', 'valor_corrida', 'status', 'data', 'cliente', 'solicitante']
       },
       defaults: {
         financeiro: ['data', 'tipo', 'descricao', 'vlr_servico'],
@@ -211,14 +277,14 @@
       campos: {
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
-        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        pedidos: ['id', 'cliente', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       },
       defaults: {
         colaborador: ['username', 'colaborador', 'cpf_cnpj', 'placa', 'email', 'endereco', 'bairro', 'chave_pix', 'comissao', 'status'],
         clientes: ['username', 'responsavel', 'contato', 'pagamento', 'status'],
-        pedidos: ['id', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
+        pedidos: ['id', 'cliente', 'solicitante', 'contato', 'data', 'horario', 'mercadoria', 'de', 'para', 'retorno', 'prioridade', 'valor_corrida', 'motoboy', 'status', 'observacao'],
         financeiro: ['id_pedido', 'data', 'tipo', 'cliente', 'descricao', 'motoboy', 'vlr_servico', 'colaborador', 'observacao', 'situacao'],
         chat: ['pedido_id', 'texto', 'hora', 'data', 'finalizado']
       }
@@ -245,11 +311,11 @@
       'MIGUEL GOMES DA COSTA 52 MANTIQUEIRA'
     ],
     'VAL FORTUNATO': [
-      'R TIRADENTES 140', 'RUA TIRADENTES 140',           // Gloria / Costura Glorinha
-      'RUA TURFA 1254', 'R TURFA 1254',                    // Fernanda Belonne, Prado
-      'BERNARDINO DE LIMA 321', 'BERNARDINO DE LIMA N 321', // LN Kassinha, Gutierrez
-      'RUA TURFA 620', 'R TURFA 620',                       // Santa Luz, Prado
-      'MARIA DE LOURDES CAMELO 150', 'MARIA DE LOURDES CAMELO N 150' // Caiçaras
+      'R TIRADENTES 140', 'RUA TIRADENTES 140',
+      'RUA TURFA 1254', 'R TURFA 1254',
+      'BERNARDINO DE LIMA 321', 'BERNARDINO DE LIMA N 321',
+      'RUA TURFA 620', 'R TURFA 620',
+      'MARIA DE LOURDES CAMELO 150', 'MARIA DE LOURDES CAMELO N 150'
     ]
   };
 
@@ -696,7 +762,7 @@
     const clienteEncontrado = state.clientes.find(function (c) {
       return normalizarIdCliente(c.id) === idNorm;
     });
-    if (!clienteEncontrado) return false; // id não reconhecido, não bloqueia
+    if (!clienteEncontrado) return false;
 
     return idsExpandidosAlvo.indexOf(idNorm) === -1;
   }
@@ -794,7 +860,6 @@
 
     if (nomesAlvoSeguros.length && pedidoContemNomeAlvoEmCampos(pedido, nomesAlvoSeguros)) return true;
 
-    // ✅ NOVO: checagem por endereço fixo cadastrado (resolve pedidos sem "VAL" no texto)
     if (nomesAlvo.length && pedidoBateEnderecoAlvo(pedido, nomesAlvo)) return true;
 
     if (idPed && idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
@@ -900,7 +965,6 @@
 
     const indice = [];
 
-    // Grupos de alias (ex: ELISA ATHENIENSE) entram como nomes-alvo válidos
     Object.keys(GRUPOS_CLIENTE_ALIAS).forEach(function (nomeCanonico) {
       if (nomeAlvoEhSeguroParaFuzzy(nomeCanonico)) {
         indice.push({ nome: nomeCanonico, cliente: null, canonico: nomeCanonico });
@@ -911,10 +975,7 @@
       const username = resolverValor('clientes', 'username', c);
       const canonicoGrupo = nomeCanonicoDoGrupo(c.id) || canonicoPorNomeExato(username);
 
-      if (canonicoGrupo) {
-        // já coberto pelo grupo-alias acima; não duplica
-        return;
-      }
+      if (canonicoGrupo) return;
 
       if (username && nomeAlvoEhSeguroParaFuzzy(username)) {
         indice.push({ nome: username, cliente: c, canonico: null });
@@ -951,10 +1012,8 @@
       solicitante = resolverValor('pedidos', 'solicitante', pedidoVinculado);
     }
 
-    // ❌ REMOVIDO "de" e "para" daqui — endereço não deve alimentar regex de 1 token
     let nomePadrao = resolverNomeClienteComFallback(descricao, observacao, mercadoria, obsPed, cliente, solicitante);
 
-    // ✅ Endereço só entra via correspondência exata na lista fixa (mais seguro)
     if (nomePadrao === NOME_CLIENTE_AVULSO && pedidoVinculado) {
       Object.keys(ENDERECOS_CLIENTE_ALIAS).forEach(function (nomeCanonico) {
         if (nomePadrao === NOME_CLIENTE_AVULSO && pedidoBateEnderecoAlvo(pedidoVinculado, [nomeCanonico])) {
@@ -1128,23 +1187,13 @@
     const canonico = nomeCanonicoDoGrupo(idCliente);
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
 
-    if (canonico) {
-      if (solicitante && normalizarComparacao(solicitante) !== normalizarComparacao(canonico)) {
-        return canonico + ' (' + String(solicitante).toUpperCase() + ')';
-      }
-      return canonico;
-    }
+    if (canonico) return canonico;
 
     if (idCliente) {
       const cli = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idCliente); });
       if (cli) {
         const username = resolverValor('clientes', 'username', cli);
-        if (username) {
-          if (solicitante && normalizarComparacao(solicitante) !== normalizarComparacao(username)) {
-            return username.toUpperCase() + ' (' + String(solicitante).toUpperCase() + ')';
-          }
-          return username;
-        }
+        if (username) return username;
       }
     }
 
@@ -1190,7 +1239,7 @@
         if (!tipoValido) return false;
 
         const dataResolvida = obterValorCampoFinanceiro('data', r);
-        if (!dataResolvida) return true; // mantém — será tratado como fallback
+        if (!dataResolvida) return true;
 
         return dentroPeriodo(dataResolvida, p.inicio, p.fim);
       });
@@ -1247,9 +1296,6 @@
       }
 
       if (banco === 'financeiro') {
-        // 🔑 Filtro dedicado para "Cliente Avulso": usa a mesma verificação
-        // rigorosa que impede um lançamento com cliente real identificado
-        // na descrição de aparecer indevidamente como avulso.
         if (ehFiltroAvulso) {
           return dados.filter(function (r) { return financeiroEhClienteAvulso(r); });
         }
@@ -1308,6 +1354,23 @@
     let valor = resolverValor('pedidos', campo, pedido);
     if (campo === 'horario') return extrairHora(valor);
     if (campo === 'data' && !valor) return obterDataPedidoComFallback(pedido);
+
+    if (campo === 'cliente') {
+      return obterNomeClienteDoPedido(pedido);
+    }
+
+    if (campo === 'solicitante') {
+      return resolverValor('pedidos', 'solicitante', pedido);
+    }
+
+    if (campo === 'mercadoria') {
+      return resolverValor('pedidos', 'mercadoria', pedido);
+    }
+
+    if (campo === 'para') {
+      return resolverValor('pedidos', 'para', pedido);
+    }
+
     if (campo === 'valor_corrida' && !valorNumericoValido(valor)) {
       const lanc = buscarFinanceiroDoPedido(pedido);
       if (lanc) {
@@ -1542,9 +1605,6 @@
     state.clientes.push(novoCliente);
     console.info('Cliente adicionado com sucesso:', novoCliente.username);
 
-    // Se seu app persiste em backend/planilha, dispare aqui a chamada
-    // ex: salvarClienteNoBanco(novoCliente);
-
     return true;
   }
 
@@ -1553,8 +1613,8 @@
     return String(txt)
       .toUpperCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // remove acentos
-      .replace(/[^A-Z0-9\s]/g, ' ')    // remove hífens, & , etc.
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1569,10 +1629,7 @@
     [/\bm\.?\s*pitanga\b|\bmaria\s*pitanga\b/i, 'MARIA PITANGA'],
     [/\bcacau\s*show\b|\bcacaushow\b/i, 'CACAU SHOW'],
     [/\bbreno\b/i, 'BRENO'],
-
-    // ✅ CORRIGIDO: \bval\$ -> \bval\b (o bug impedia "Val" isolado de bater)
     [/\bval\s*fortunatt?o\b|\bcasa\s*da\s*val\b|\bcasa\s*da\s*av[oó]\b|\bval\b/i, 'VAL FORTUNATO'],
-
     [/\bnatu\s*pet\b|\bnatupet\b/i, 'NATUPET'],
     [/\bcpap\s*minas\b/i, 'CPAP MINAS'],
     [/\bammis\b/i, 'AMMIS'],
@@ -1589,17 +1646,11 @@
     [/\bbasique\b/i, 'BASIQUE'],
     [/\bmima[\s\-]?me\b/i, 'MIMA-ME'],
     [/\blepo[eh]h?\b/i, 'LEPOEH'],
-
-    // ✅ NOVO: cobre "Miis Dele" e "Misder" (variações de digitação de MISS DELE)
     [/\bmiss?\s*dele\b|\bmiis\s*dele\b|\bmisder\b/i, 'MISS DELE'],
-
     [/\bjacira\b/i, 'JACIRA'],
     [/\bag3\s*alimentos\b|\bag3\b/i, 'AG3 ALIMENTOS'],
-
-    // ✅ NOVO: "Sara" isolado agora aponta para SARA SANTOS
     [/\bsara\s*santos\b/i, 'SARA SANTOS'],
     [/\bsara\b/i, 'SARA SANTOS'],
-
     [/\bbete\s*plural\s*(diamond\s*mall)?\b/i, 'PLURAL'],
     [/\bplural\b/i, 'PLURAL'],
     [/\bcpap\s*aire\b/i, 'CPAP AIRE'],
