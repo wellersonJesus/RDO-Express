@@ -364,6 +364,48 @@
         return '';
     }
 
+    async function _carregarMotoboysDropdown(selectEl, motoboyAtual) {
+        if (!selectEl) return;
+
+        selectEl.innerHTML = '<option value="" disabled selected>Carregando...</option>';
+        selectEl.disabled = true;
+
+        try {
+            var todos = await API.call('getcolaboradores');
+            var lista = Array.isArray(todos) ? todos : [];
+
+            var motoboys = lista.filter(function (c) {
+                return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
+                    String(c.status || '').toUpperCase() === 'TRUE';
+            });
+
+            selectEl.disabled = false;
+
+            if (motoboys.length === 0) {
+                selectEl.innerHTML = '<option value="" selected>Nenhum motoboy disponível</option>';
+                return;
+            }
+
+            var nomeAtualNorm = String(motoboyAtual || '').trim().toLowerCase();
+            var encontrouAtual = false;
+
+            var opcoes = motoboys.map(function (m) {
+                var nome = String(m.username || m.nome || 'Sem nome');
+                var selecionado = nomeAtualNorm && nome.trim().toLowerCase() === nomeAtualNorm;
+                if (selecionado) encontrouAtual = true;
+                return '<option value="' + _escAttr(nome) + '"' + (selecionado ? ' selected' : '') + '>' + _escHtml(nome) + '</option>';
+            }).join('');
+
+            var placeholder = '<option value=""' + (!encontrouAtual ? ' selected' : '') + '>Aguardando motoboy</option>';
+
+            selectEl.innerHTML = placeholder + opcoes;
+        } catch (e) {
+            window._exibirErroGlobal(e, 'carregar motoboys');
+            selectEl.disabled = false;
+            selectEl.innerHTML = '<option value="" selected>Erro ao carregar</option>';
+        }
+    }
+
     function _spinOn() {
         if (els.btnSync) { els.btnSync.classList.add('syncing'); els.btnSync.disabled = true; }
         if (els.iconSync) els.iconSync.classList.add('spinner-rotate');
@@ -1016,7 +1058,12 @@
             _s('edit-mercadoria', pedido.mercadoria || '');
             _s('edit-retorno', String(pedido.retorno || 'Não').trim());
             _s('edit-prioridade', String(pedido.prioridade != null ? pedido.prioridade : '0').trim());
-            _s('edit-motoboy', _resolverMotoboy(pedido) || '');
+            var selectMotoboy = document.getElementById('edit-motoboy');
+            if (selectMotoboy) {
+                _carregarMotoboysDropdown(selectMotoboy, _resolverMotoboy(pedido));
+            } else {
+                console.warn('[pedidos.js] ⚠️ Campo ausente: edit-motoboy');
+            }
             _s('edit-status', statusAtual);
 
             var tituloEl = document.getElementById('editar-titulo');
@@ -1059,6 +1106,9 @@
         var novoStatusEl = document.getElementById('edit-status');
         var novoStatus = novoStatusEl ? String(novoStatusEl.value || '').trim().toUpperCase() : '';
 
+        var selectMotoboy = document.getElementById('edit-motoboy');
+        var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
+
         var payload = {
             id: pedidoId,
             solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
@@ -1077,7 +1127,7 @@
             mercadoria: (document.getElementById('edit-mercadoria') || {}).value || '',
             retorno: (document.getElementById('edit-retorno') || {}).value || 'Não',
             prioridade: (document.getElementById('edit-prioridade') || {}).value || '0',
-            motoboy: (document.getElementById('edit-motoboy') || {}).value || ''
+            motoboy: motoboyNome
         };
 
         if (novoStatus) payload.status = novoStatus;
@@ -1128,7 +1178,8 @@
                         id: pedidoId,
                         valor_corrida: valorBase,
                         valor_total: valorBase,
-                        valor_final: valorFinal
+                        valor_final: valorFinal,
+                        motoboy: payload.motoboy
                     });
 
                 if (typeof Swal !== 'undefined')
@@ -1291,7 +1342,6 @@
                 menu.style.transform = 'none';
             }
 
-            // 🔒 onclick direto no botão -> seguro, sempre substitui o anterior
             els.btnFiltroTipo.onclick = function (e) {
                 e.stopPropagation();
                 if (!menu) return;
@@ -1303,7 +1353,6 @@
                 els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
             };
 
-            // 🔒 Listeners globais registrados apenas 1x por sessão do módulo
             if (!window.RDO_PEDIDOS._globalFiltroBind) {
                 window.RDO_PEDIDOS._globalFiltroBind = true;
 
@@ -1336,7 +1385,6 @@
 
             if (menu) {
                 menu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
-                    // 🔒 onclick direto -> seguro, sempre substitui
                     item.onclick = function (e) {
                         e.stopPropagation();
                         var filtro = item.getAttribute('data-filtro');
@@ -1388,6 +1436,24 @@
                 window.pedidosState.emAcao = true;
                 _renderizarTabela(window.AppRDO.pedidosCache);
             };
+        }
+
+        if (!window.RDO_PEDIDOS._motoboyModalBind) {
+            window.RDO_PEDIDOS._motoboyModalBind = true;
+
+            document.addEventListener('show.bs.modal', function (e) {
+                if (!e.target || e.target.id !== 'modalNovoPedido') return;
+                var sel = document.getElementById('novo-motoboy');
+                if (sel) _carregarMotoboysDropdown(sel, '');
+            });
+
+            document.addEventListener('shown.bs.modal', function (e) {
+                if (!e.target || e.target.id !== 'modalNovoPedido') return;
+                var sel = document.getElementById('novo-motoboy');
+                if (sel && (!sel.options.length || sel.options[0].textContent.includes('Carregando'))) {
+                    _carregarMotoboysDropdown(sel, '');
+                }
+            });
         }
     }
 

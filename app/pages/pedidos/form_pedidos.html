@@ -66,7 +66,10 @@
                     </div>
                     <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">Motoboy</label>
-                        <input type="text" id="edit-motoboy" class="form-control form-control-sm modal-pedido-input">
+                        <select id="edit-motoboy" class="form-select form-select-sm modal-pedido-input"
+                            data-motoboy-atual="">
+                            <option value="" selected>Carregando...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -249,7 +252,7 @@
                     </div>
                 </div>
                 <div class="row g-2 mb-2 row-det-motoboy-status">
-                    <div class="col-12 col-sm-6">
+                    <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">Motoboy</label>
                         <input type="text" id="det-motoboy" class="form-control form-control-sm modal-pedido-input"
                             readonly>
@@ -407,8 +410,9 @@
                 <div class="row g-2 mb-3">
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Motoboy</label>
-                        <input type="text" id="novo-motoboy" class="form-control form-control-sm modal-pedido-input"
-                            placeholder="Atribuir motoboy (opcional)">
+                        <select id="novo-motoboy" class="form-select form-select-sm modal-pedido-input">
+                            <option value="" selected>Carregando...</option>
+                        </select>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label class="modal-pedido-field-label">Valor Original (R$)</label>
