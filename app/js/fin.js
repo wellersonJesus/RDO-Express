@@ -910,10 +910,9 @@ if (!window.EventBus) {
             state.cache.splice(idx, 1);
           }
 
-          // Re-renderiza todas as visualizações afetadas
           if (typeof renderCaixa === 'function') renderCaixa();
           if (typeof renderTodos === 'function') renderTodos();
-          if (typeof renderExtrato === 'function') renderExtrato();
+          if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos(); // corrigido
 
           console.log('[excluirRegistroDefinitivo] Registro ' + id + ' excluído com sucesso.');
         } else {
@@ -1005,10 +1004,16 @@ if (!window.EventBus) {
         }
 
         var idPedidoNotificar = null;
+        var camposAlteradosParaChat = null;
 
         if (idx !== -1) {
           try {
             var reg = state.cache[idx];
+
+            var valorAntes = reg.valor;
+            var motoboyAntes = reg.motoboy;
+            var clienteAntes = reg.cliente;
+
             if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
             if (dados.tipo !== undefined) reg.tipo = dados.tipo;
             if (dados.situacao !== undefined) reg.situacao = dados.situacao;
@@ -1038,6 +1043,25 @@ if (!window.EventBus) {
             if (dados.situacao !== undefined && reg.idPedido && state.pedidosCache[reg.idPedido]) {
               state.pedidosCache[reg.idPedido].situacao_financeira = dados.situacao;
             }
+
+            var valorMudou = valorAntes !== reg.valor;
+            var motoboyMudou = motoboyAntes !== reg.motoboy;
+            var clienteMudou = clienteAntes !== reg.cliente;
+
+            if (idPedidoNotificar && (valorMudou || motoboyMudou || clienteMudou)) {
+              camposAlteradosParaChat = {
+                id: idPedidoNotificar,
+                valor_total: reg.valor,
+                valor_final: reg.valor,
+                valor_corrida: reg.valor
+              };
+              if (motoboyMudou && reg.motoboy && reg.motoboy !== '-') {
+                camposAlteradosParaChat.motoboy = reg.motoboy;
+              }
+              if (clienteMudou && reg.cliente && reg.cliente !== '-') {
+                camposAlteradosParaChat.cliente = reg.cliente;
+              }
+            }
           } catch (errCache) {
             console.error('[salvarRegistroFinanceiro] Erro ao atualizar cache local:', errCache);
             finToast('Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.', 'warning');
@@ -1056,6 +1080,14 @@ if (!window.EventBus) {
           }
         }
 
+        if (camposAlteradosParaChat) {
+          try {
+            window.EventBus.emit('pedido:atualizado', Object.assign({ __origemFinanceiro: true }, camposAlteradosParaChat));
+          } catch (errEmit) {
+            console.error('[salvarRegistroFinanceiro] Erro ao emitir pedido:atualizado:', errEmit);
+            finToast('Financeiro salvo, mas a sincronização com pedido/chat pode ter falhado.', 'warning');
+          }
+        }
         return { resultado: resFin, idxAtualizado: idx };
       })
       .then(function (contexto) {
@@ -1086,6 +1118,56 @@ if (!window.EventBus) {
         throw err instanceof Error ? err : new Error(String(err));
       });
   }
+
+  window.EventBus.on('pedido:atualizado', function (dados) {
+    if (!dados || !dados.id) return;
+    if (dados.__origemFinanceiro) return;
+
+    var idPedidoNormalizado = normalizarIdComparacao(dados.id);
+    if (!idPedidoNormalizado) return;
+
+    var reg = state.cache.find(function (r) {
+      return normalizarIdComparacao(r.idPedido) === idPedidoNormalizado;
+    });
+
+    if (!reg) {
+      console.warn('[EventBus pedido:atualizado] Nenhum lançamento financeiro encontrado para o pedido ' + dados.id + '. Ignorando sincronização.');
+      return;
+    }
+
+    var novoValor = dados.valor_final !== undefined ? dados.valor_final :
+      (dados.valor_total !== undefined ? dados.valor_total :
+        (dados.valor_corrida !== undefined ? dados.valor_corrida : undefined));
+
+    var payloadAtualizacao = {};
+
+    if (novoValor !== undefined) {
+      var valorNum = parseValor(novoValor);
+      if (!isNaN(valorNum)) payloadAtualizacao.valor = valorNum;
+    }
+
+    if (dados.motoboy !== undefined) {
+      payloadAtualizacao.motoboy = dados.motoboy;
+    }
+
+    if (dados.cliente !== undefined) {          // NOVO
+      payloadAtualizacao.cliente = dados.cliente;
+    }
+
+    if (!Object.keys(payloadAtualizacao).length) {
+      console.warn('[EventBus pedido:atualizado] Nenhum dado válido para sincronizar no financeiro do pedido ' + dados.id + '.');
+      return;
+    }
+
+    salvarRegistroFinanceiro(reg.id, payloadAtualizacao)
+      .then(function () {
+        console.log('[EventBus pedido:atualizado] Lançamento financeiro do pedido ' + dados.id + ' sincronizado com sucesso.');
+      })
+      .catch(function (err) {
+        console.error('[EventBus pedido:atualizado] Erro ao sincronizar financeiro do pedido ' + dados.id + ':', err);
+        finToast('Pedido atualizado, mas houve falha ao sincronizar o financeiro: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'warning');
+      });
+  });
 
   function _toggleBtnClearBuscaFin() {
     if (els.btnClearBuscaFin) {
@@ -1551,7 +1633,7 @@ if (!window.EventBus) {
       '</div>' +
 
       '<div class="fin-extrato-footer fin-extrato-footer-actions">' +
-      '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-editar" data-bs-dismiss="modal">Cancelar</button>' +
+      '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-editar" data-bs-dismiss="modal">Fechar</button>' +
       '<button type="button" class="fin-btn-salvar-editar" id="fin-btn-salvar-editar">' +
       '<i class="bi bi-check-lg" id="fin-btn-salvar-editar-icon"></i>' +
       '<span id="fin-btn-salvar-editar-texto">Salvar Alterações</span>' +
@@ -1573,36 +1655,62 @@ if (!window.EventBus) {
     var btnTexto = document.getElementById('fin-btn-salvar-editar-texto');
     var erroEl = document.getElementById('fin-editar-erro');
 
-    btnSalvar.addEventListener('click', function () {
-      erroEl.classList.add('d-none');
+    var elValor = document.getElementById('fin-edit-valor');
+    var elDescricao = document.getElementById('fin-edit-descricao');
+    var elCliente = document.getElementById('fin-edit-cliente');
+    var elColaborador = document.getElementById('fin-edit-colaborador');
+    var elTipo = document.getElementById('fin-edit-tipo');
+    var elSituacao = document.getElementById('fin-edit-situacao');
+    var elGrupo = document.getElementById('fin-edit-grupo');
+    var elObservacao = document.getElementById('fin-edit-observacao');
 
-      var valorStr = document.getElementById('fin-edit-valor').value.trim();
-      var valorNum = parseValor(valorStr);
-      var descricao = document.getElementById('fin-edit-descricao').value.trim();
-      var clienteId = document.getElementById('fin-edit-cliente').value;
-      var colaboradorId = document.getElementById('fin-edit-colaborador').value;
-      var grupoId = document.getElementById('fin-edit-grupo').value;
+    var _houveAlteracao = false;
+    var _jaSalvouOuFechou = false;
 
-      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); return; }
-      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
+    var _dadosPendentes = {};
 
+    [elValor, elDescricao, elCliente, elColaborador, elTipo, elSituacao, elGrupo, elObservacao].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('input', function () { _houveAlteracao = true; });
+      el.addEventListener('change', function () { _houveAlteracao = true; });
+    });
+
+    function coletarDadosParaSalvar() {
+      var clienteId = elCliente.value;
+      var colaboradorId = elColaborador.value;
+      var grupoId = elGrupo.value;
       var clienteObj = clienteId ? state.clientesCache[clienteId] : null;
       var colaboradorObj = colaboradorId ? state.colaboradoresCache[colaboradorId] : null;
       var grupoObj = grupoId ? (state.gruposCache ? state.gruposCache[grupoId] : null) : null;
 
-      var dadosAtualizados = {
-        valor: valorNum,
+      return {
+        valor: parseValor(elValor.value.trim()),
         motoboy: colaboradorObj ? (colaboradorObj.username || colaboradorObj.nome || '') : '',
         colaborador_id: colaboradorId || '',
         cliente: clienteObj ? (clienteObj.nome || clienteObj.username || '') : '',
         cliente_id: clienteId || '',
         grupo: grupoObj ? (grupoObj.nome || '') : '',
         grupo_id: grupoId || '',
-        tipo: document.getElementById('fin-edit-tipo').value,
-        situacao: document.getElementById('fin-edit-situacao').value,
-        descricao: descricao,
-        observacao: document.getElementById('fin-edit-observacao').value.trim()
+        tipo: elTipo.value,
+        situacao: elSituacao.value,
+        descricao: elDescricao.value.trim(),
+        observacao: elObservacao.value.trim()
       };
+    }
+
+    function persistirEFechar() {
+      if (_jaSalvouOuFechou) return;
+      _jaSalvouOuFechou = true;
+
+      var descricao = elDescricao.value.trim();
+      var valorNum = parseValor(elValor.value.trim());
+
+      if (!_houveAlteracao) { modalInst.hide(); return; }
+
+      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); _jaSalvouOuFechou = false; return; }
+      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); _jaSalvouOuFechou = false; return; }
+
+      var dadosAtualizados = coletarDadosParaSalvar();
 
       btnSalvar.disabled = true;
       btnCancelar.disabled = true;
@@ -1619,10 +1727,30 @@ if (!window.EventBus) {
           btnCancelar.disabled = false;
           btnIcon.className = 'bi bi-check-lg';
           btnTexto.textContent = 'Salvar Alterações';
+          _jaSalvouOuFechou = false;
         });
+    }
+
+    btnSalvar.addEventListener('click', function () {
+      erroEl.classList.add('d-none');
+      persistirEFechar();
     });
 
-    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
+    btnCancelar.addEventListener('click', function () {
+      erroEl.classList.add('d-none');
+      persistirEFechar();
+    });
+
+    modalEl.addEventListener('hide.bs.modal', function () {
+      erroEl.classList.add('d-none');
+      persistirEFechar();
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+    });
+
     modalInst.show();
 
     var wrapperValor = document.getElementById('fin-valor-editar-wrapper');
@@ -1639,9 +1767,10 @@ if (!window.EventBus) {
   }
 
   function editarPorId(id) {
-    var reg = encontrarRegistroPorIdExato(id); // reaproveita a função que já criamos
+    var reg = state.cache.find(function (r) { return String(r.id) === String(id); });
     if (!reg) {
       console.error('Registro não encontrado para o ID:', id);
+      finToast('Lançamento não encontrado.', 'warning');
       return;
     }
     abrirModalEditar(reg);
@@ -2837,65 +2966,6 @@ if (!window.EventBus) {
       var totalRegs = (ex.registros || []).length;
       var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
       var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
-      return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '" style="cursor:pointer;">' +
-        '<div class="extrato-item-left"><div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
-        '<div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
-        '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
-        '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div>' +
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
-        '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
-        '<div style="display:flex;gap:6px;">' +
-        '<button class="btn-icone-retangular btn-visualizar-icone extrato-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
-        '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
-        '</div></div></div>';
-    }).join('');
-
-    els.extratoListaDiaria.querySelectorAll('.extrato-btn-ver').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
-        if (ext) abrirExtratoModal(ext);
-      });
-    });
-
-    els.extratoListaDiaria.querySelectorAll('.extrato-btn-excluir').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        var id = this.getAttribute('data-id');
-        var ext = buscarExtratoStoragePorId(id);
-        if (!ext) { finToast('Extrato não encontrado.', 'warning'); return; }
-        abrirModalAtencaoExclusaoCarteira(
-          'O extrato "' + (ext.origem || '-') + ' · ' + (ext.periodoLabel || '-') + '" será removido. Essa ação apenas exclui o relatório salvo localmente.',
-          function () {
-            removerExtratoStorage(id);
-            renderizarListaExtratos();
-            finToast('Extrato removido com sucesso!', 'success');
-          }
-        );
-      });
-    });
-
-    els.extratoListaDiaria.querySelectorAll('.extrato-item-card').forEach(function (card) {
-      card.addEventListener('click', function (e) {
-        if (e.target.closest('.btn-icone-retangular')) return;
-        var ext = buscarExtratoStoragePorId(this.getAttribute('data-extrato-id'));
-        if (ext) abrirExtratoModal(ext);
-      });
-    });
-  }
-
-  function renderizarListaExtratos() {
-    if (!els.extratoListaDiaria) return;
-    var lista = dadosFiltradosExtratos();
-    if (!lista.length) {
-      els.extratoListaDiaria.innerHTML = '<div class="extrato-placeholder"><i class="bi bi-file-earmark-text"></i><span>Nenhum extrato gerado ainda.<br>Selecione o período, a origem e clique em <strong>Gerar</strong>.</span></div>';
-      return;
-    }
-    els.extratoListaDiaria.innerHTML = lista.map(function (ex) {
-      var totais = calcularTotaisRegistros(ex.registros);
-      var totalRegs = (ex.registros || []).length;
-      var criadoLabel = ex.criadoEm ? new Date(ex.criadoEm).toLocaleString('pt-BR') : '-';
-      var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
       return '<div class="extrato-item-card" data-extrato-id="' + escapeHtml(ex.id) + '">' +
         '<div class="extrato-item-left"><div class="extrato-item-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>' +
         '<div><div class="extrato-item-titulo">' + escapeHtml(ex.origem || '-') + '</div>' +
@@ -2909,66 +2979,6 @@ if (!window.EventBus) {
         '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover"><i class="bi bi-trash"></i></button>' +
         '</div></div></div>';
     }).join('');
-  }
-
-  function initExtratoListaDelegacao() {
-    var container = document.getElementById('extrato-lista');
-    if (!container || container._delegado) return;
-    container._delegado = true;
-
-    container.addEventListener('click', function (e) {
-      var btnToggle = e.target.closest('.btn-toggle-valor-extrato');
-      if (btnToggle) {
-        e.stopPropagation();
-        var card = btnToggle.closest('.extrato-item-card');
-        var span = card ? card.querySelector('.extrato-saldo-valor') : null;
-        var icon = btnToggle.querySelector('i');
-        if (span) {
-          var visivel = span.getAttribute('data-visivel') === '1';
-          if (visivel) {
-            span.textContent = 'R$ ****';
-            span.setAttribute('data-visivel', '0');
-            if (icon) icon.className = 'bi bi-eye-slash';
-          } else {
-            span.textContent = span.getAttribute('data-valor-real');
-            span.setAttribute('data-visivel', '1');
-            if (icon) icon.className = 'bi bi-eye';
-          }
-        }
-        return;
-      }
-
-      var btnVer = e.target.closest('.extrato-btn-ver');
-      if (btnVer) {
-        e.stopPropagation();
-        var ext = buscarExtratoStoragePorId(btnVer.getAttribute('data-id'));
-        if (ext) abrirExtratoModal(ext);
-        return;
-      }
-
-      var btnExcluir = e.target.closest('.extrato-btn-excluir');
-      if (btnExcluir) {
-        e.stopPropagation();
-        var id = btnExcluir.getAttribute('data-id');
-        var extEx = buscarExtratoStoragePorId(id);
-        if (!extEx) { finToast('Extrato não encontrado.', 'warning'); return; }
-        abrirModalAtencaoExclusaoCarteira(
-          'O extrato "' + (extEx.origem || '-') + ' · ' + (extEx.periodoLabel || '-') + '" será removido. Essa ação apenas exclui o relatório salvo localmente.',
-          function () {
-            removerExtratoStorage(id);
-            renderizarListaExtratos();
-            finToast('Extrato removido com sucesso!', 'success');
-          }
-        );
-        return;
-      }
-
-      var card = e.target.closest('.extrato-item-card');
-      if (card) {
-        var extCard = buscarExtratoStoragePorId(card.getAttribute('data-extrato-id'));
-        if (extCard) abrirExtratoModal(extCard);
-      }
-    });
   }
 
   function abrirExtratoModal(extrato) {
@@ -3722,7 +3732,7 @@ if (!window.EventBus) {
       '</body></html>';
   }
 
-  function abrirJanelaPdfExtrato(titulo, periodoLabel, registros) {
+  function abrirJanelaPdfExtratoSimples(titulo, periodoLabel, registros) {
     var html = gerarHtmlExtratoSimples(titulo, periodoLabel, registros);
     var win = window.open('', '_blank', 'width=900,height=700');
     if (!win) { finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups.', 'warning'); return; }
@@ -3796,6 +3806,8 @@ if (!window.EventBus) {
       state.colaboradoresCache = {};
       state.colaboradores = colaboradores;
       colaboradores.forEach(function (c) { if (c.id) state.colaboradoresCache[c.id] = c; });
+
+      state.gruposCache = {}; // ✅ inicializa para evitar referência indefinida em abrirModalEditar
 
       state.cache = financeiro.map(normalizarRegistro);
       resolverClienteSolicitante();
@@ -4054,7 +4066,7 @@ if (!window.EventBus) {
       if (meuToken !== _tokenAbrirPedidoFinanceiro) return;
 
       var tbody = document.getElementById('tabela-fin-body-todos');
-      var linha = tbody ? tbody.querySelector('[data-id="' + reg.id + '"]') : null;
+      var linha = tbody ? tbody.querySelector('[data-idpedido="' + reg.idPedido + '"]') : null;
       if (linha) {
         linha.scrollIntoView({ behavior: 'smooth', block: 'center' });
         linha.classList.add('fin-row-destaque');
@@ -4091,7 +4103,6 @@ if (!window.EventBus) {
     bindOlhinhoRdo();
     bindFiltrosRdo();
     initExtratoFluxo();
-    initExtratoListaDelegacao();
     bindEventoAbrirPedidoFinanceiro();
     carregarDados();
 

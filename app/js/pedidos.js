@@ -1462,17 +1462,15 @@
     function _registrarEventosEventBus() {
         if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
 
-        // 🔒 Evita registrar os mesmos handlers mais de uma vez
         if (window.RDO_PEDIDOS._eventBusHandlers) return;
 
         var handlers = {
-            'financeiro:situacaoAtualizada': function (dados) { /* ...mesmo código... */ },
-            'pedido:excluido': function (dados) { /* ...mesmo código... */ },
-            'chat:excluidoLogico': function (dados) { /* ...mesmo código... */ },
+            'financeiro:situacaoAtualizada': function (dados) { },
+            'pedido:excluido': function (dados) { },
+            'chat:excluidoLogico': function (dados) { },
             'pedido:adicionado': function (novoPedido) {
                 if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache) || !novoPedido) return;
                 var idNovo = String(novoPedido.id || '').trim();
-                // 🔒 Guarda contra duplicação real do pedido no cache
                 var jaExiste = window.AppRDO.pedidosCache.some(function (p) {
                     return String(p.id || '').trim() === idNovo;
                 });
@@ -1480,9 +1478,43 @@
                 window.AppRDO.pedidosCache.push(novoPedido);
                 _renderizarTabela(window.AppRDO.pedidosCache);
             },
-            'pedido:cancelado': function (dados) { /* ...mesmo código... */ },
-            'pedido:statusAtualizado': function (dados) { /* ...mesmo código... */ },
-            'pedido:atualizado': function (dados) { /* ...mesmo código... */ }
+            'pedido:cancelado': function (dados) { },
+            'pedido:statusAtualizado': function (dados) { },
+            'pedido:atualizado': function (dados) {
+                var pedidoId = String(dados && dados.id || '').trim();
+                if (!pedidoId) return;
+
+                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+                var pedido = cache.find(function (p) {
+                    return String(p.id || '').trim() === pedidoId;
+                });
+                if (!pedido) return;
+
+                var novoValor = dados.valor_final != null ? dados.valor_final
+                    : dados.valor_total != null ? dados.valor_total
+                        : dados.valor_corrida;
+
+                if (novoValor != null) {
+                    pedido.valor_total = novoValor;
+                    pedido.valor_final = novoValor;
+                    pedido.valor_corrida = novoValor;
+                }
+                if (dados.solicitante) pedido.solicitante = dados.solicitante;
+                if (dados.cliente) pedido.cliente = dados.cliente;
+                if (dados.motoboy) pedido.motoboy = dados.motoboy;
+                if (dados.status) pedido.status = dados.status;
+                if (dados.situacao_financeira) pedido.situacao_financeira = dados.situacao_financeira;
+
+                var chat = _chatDoPedido(pedidoId);
+                if (chat) {
+                    if (dados.solicitante) chat.cliente = dados.solicitante;
+                    if (dados.cliente) chat.cliente = dados.cliente;
+                    if (dados.motoboy) chat.motoboy = dados.motoboy;
+                    if (novoValor != null) chat.valor_corrida = novoValor;
+                }
+
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            }
         };
 
         Object.keys(handlers).forEach(function (evt) {
