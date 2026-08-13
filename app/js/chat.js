@@ -1,237 +1,237 @@
 window.RDO_PEDIDOS = window.RDO_PEDIDOS || {};
 
 var MAPA_BAIRRO_CIDADE = {
-  "savassi": "belo horizonte",
-  "funcionarios": "belo horizonte",
-  "lourdes": "belo horizonte",
-  "santo agostinho": "belo horizonte",
-  "cidade jardim": "belo horizonte",
-  "sion": "belo horizonte",
-  "belvedere": "belo horizonte",
-  "mangabeiras": "belo horizonte",
-  "anchieta": "belo horizonte",
-  "cruzeiro": "belo horizonte",
-  "carmo": "belo horizonte",
-  "serra": "belo horizonte",
-  "santa lucia": "belo horizonte",
-  "buritis": "belo horizonte",
-  "estoril": "belo horizonte",
-  "jardim america": "belo horizonte",
-  "gutierrez": "belo horizonte",
-  "prado": "belo horizonte",
-  "calafate": "belo horizonte",
-  "barroca": "belo horizonte",
-  "nova suica": "belo horizonte",
-  "salgado filho": "belo horizonte",
-  "havai": "belo horizonte",
-  "betania": "belo horizonte",
-  "camargos": "belo horizonte",
-  "barreiro": "belo horizonte",
-  "diamante": "belo horizonte",
-  "milionarios": "belo horizonte",
-  "flavio marques lisboa": "belo horizonte",
-  "tirol": "belo horizonte",
-  "pilar": "belo horizonte",
-  "vale do jatoba": "belo horizonte",
-  "pampulha": "belo horizonte",
-  "sao luiz": "belo horizonte",
-  "ouro preto": "belo horizonte",
-  "planalto": "belo horizonte",
-  "castelo": "belo horizonte",
-  "itapoa": "belo horizonte",
-  "braunas": "belo horizonte",
-  "santa amelia": "belo horizonte",
-  "santa branca": "belo horizonte",
-  "engenho nogueira": "belo horizonte",
-  "san pedro": "belo horizonte",
-  "trevo": "belo horizonte",
-  "dona clara": "belo horizonte",
-  "liberdade": "belo horizonte",
-  "urca": "belo horizonte",
-  "jaragua": "belo horizonte",
-  "venda nova": "belo horizonte",
-  "sao joao batista": "belo horizonte",
-  "candelaria": "belo horizonte",
-  "mantiqueira": "belo horizonte",
-  "leticia": "belo horizonte",
-  "rio branco": "belo horizonte",
-  "piratininga": "belo horizonte",
-  "europa": "belo horizonte",
-  "copacabana": "belo horizonte",
-  "vila cloris": "belo horizonte",
-  "cachoeirinha": "belo horizonte",
-  "floresta": "belo horizonte",
-  "sagrada familia": "belo horizonte",
-  "colegio batista": "belo horizonte",
-  "horto": "belo horizonte",
-  "sao geraldo": "belo horizonte",
-  "pompeia": "belo horizonte",
-  "concordia": "belo horizonte",
-  "goiania": "belo horizonte",
-  "conjunto taquaril": "belo horizonte",
-  "taquaril": "belo horizonte",
-  "granja de freitas": "belo horizonte",
-  "boa vista": "belo horizonte",
-  "santa efigenia": "belo horizonte",
-  "santa tereza": "belo horizonte",
-  "pompeu": "belo horizonte",
-  "esplanada": "belo horizonte",
-  "gameleira": "belo horizonte",
-  "olhos dagua": "belo horizonte",
-  "coracao eucaristico": "belo horizonte",
-  "vera cruz": "belo horizonte",
-  "santa ines": "belo horizonte",
-  "cidade nova": "belo horizonte",
-  "lagoinha": "belo horizonte",
-  "caicaras": "belo horizonte",
-  "bonfim": "belo horizonte",
-  "riacho das pedras": "contagem",
-  "eldorado": "contagem",
-  "cinco": "contagem",
-  "bela vista": "contagem",
-  "santa terezinha": "contagem",
-  "bernardo monteiro": "contagem",
-  "bitacula": "contagem",
-  "40 alqueires": "contagem",
-  "fonte grande": "contagem",
-  "santa helena": "contagem",
-  "vila belem": "contagem",
-  "canada": "contagem",
-  "nossa senhora do carmo": "contagem",
-  "vila panama": "contagem",
-  "lucio de abreu": "contagem",
-  "praia": "contagem",
-  "sapucaias": "contagem",
-  "petrolandia": "contagem",
-  "ressaca": "contagem",
-  "industrial": "contagem",
-  "vila oeste": "contagem",
-  "vila perus": "contagem",
-  "jardim riacho das pedras": "contagem",
-  "nacoes unidas": "contagem",
-  "icaivera": "betim",
-  "citrolandia": "betim",
-  "terezopolis": "betim",
-  "imbirucu": "betim",
-  "ptb": "betim",
-  "alterosa": "betim",
-  "alterosas": "betim",
-  "vianopolis": "betim",
-  "petrovale": "betim",
-  "acude": "betim",
-  "alta villa": "betim",
-  "alto das flores": "betim",
-  "alvorada": "betim",
-  "amarante": "betim",
-  "amazonas": "betim",
-  "amoras": "betim",
-  "angola": "betim",
-  "aroeiras": "betim",
-  "arquipelago verde": "betim",
-  "bandeirinhas": "betim",
-  "betim industrial": "betim",
-  "bodoco": "betim",
-  "bom repouso": "betim",
-  "bom retiro": "betim",
-  "brasileia": "betim",
-  "brodoski": "betim",
-  "cachoeira": "betim",
-  "california": "betim",
-  "campos eliseos": "betim",
-  "campos elisios": "betim",
-  "capelinha": "betim",
-  "casa amarela": "betim",
-  "chacara": "betim",
-  "chacaras": "betim",
-  "chacaras arapua": "betim",
-  "charneca": "betim",
-  "cidade verde": "betim",
-  "colonia santa isabel": "betim",
-  "cruzeiro do sul": "betim",
-  "decamao": "betim",
-  "dom bosco": "betim",
-  "duque de caxias": "betim",
-  "espirito santo": "betim",
-  "estancia do sereno": "betim",
-  "filadelfia": "betim",
-  "flores e florestas": "betim",
-  "gentileza": "betim",
-  "granja santo afonso": "betim",
-  "granja sao joao": "betim",
-  "granja verde": "betim",
-  "guanabara": "betim",
-  "guaruja": "betim",
-  "guaruja mansoes": "betim",
-  "inga": "betim",
-  "itacolomi": "betim",
-  "jardim alterosa": "betim",
-  "jardim brasilia": "betim",
-  "jardim casa branca": "betim",
-  "jardim cidade": "betim",
-  "jardim das acacias": "betim",
-  "jardim piemont": "betim",
-  "novo horizonte betim": "betim",
-  "santa luzia": "santa luzia",
-  "ribeirao das neves": "ribeirão das neves",
-  "vespasiano": "vespasiano",
-  "nova lima": "nova lima",
-  "sabara": "sabará",
-  "sarzedo": "sarzedo",
-  "ibirite": "ibirité",
-  "mario campos": "mário campos",
-  "esmeraldas": "esmeraldas",
-  "mateus leme": "mateus leme",
-  "juatuba": "juatuba",
-  "brumadinho": "brumadinho",
-  "caete": "caeté",
-  "raposos": "raposos",
-  "rio acima": "rio acima",
-  "nova uniao": "nova união"
+    "savassi": "belo horizonte",
+    "funcionarios": "belo horizonte",
+    "lourdes": "belo horizonte",
+    "santo agostinho": "belo horizonte",
+    "cidade jardim": "belo horizonte",
+    "sion": "belo horizonte",
+    "belvedere": "belo horizonte",
+    "mangabeiras": "belo horizonte",
+    "anchieta": "belo horizonte",
+    "cruzeiro": "belo horizonte",
+    "carmo": "belo horizonte",
+    "serra": "belo horizonte",
+    "santa lucia": "belo horizonte",
+    "buritis": "belo horizonte",
+    "estoril": "belo horizonte",
+    "jardim america": "belo horizonte",
+    "gutierrez": "belo horizonte",
+    "prado": "belo horizonte",
+    "calafate": "belo horizonte",
+    "barroca": "belo horizonte",
+    "nova suica": "belo horizonte",
+    "salgado filho": "belo horizonte",
+    "havai": "belo horizonte",
+    "betania": "belo horizonte",
+    "camargos": "belo horizonte",
+    "barreiro": "belo horizonte",
+    "diamante": "belo horizonte",
+    "milionarios": "belo horizonte",
+    "flavio marques lisboa": "belo horizonte",
+    "tirol": "belo horizonte",
+    "pilar": "belo horizonte",
+    "vale do jatoba": "belo horizonte",
+    "pampulha": "belo horizonte",
+    "sao luiz": "belo horizonte",
+    "ouro preto": "belo horizonte",
+    "planalto": "belo horizonte",
+    "castelo": "belo horizonte",
+    "itapoa": "belo horizonte",
+    "braunas": "belo horizonte",
+    "santa amelia": "belo horizonte",
+    "santa branca": "belo horizonte",
+    "engenho nogueira": "belo horizonte",
+    "san pedro": "belo horizonte",
+    "trevo": "belo horizonte",
+    "dona clara": "belo horizonte",
+    "liberdade": "belo horizonte",
+    "urca": "belo horizonte",
+    "jaragua": "belo horizonte",
+    "venda nova": "belo horizonte",
+    "sao joao batista": "belo horizonte",
+    "candelaria": "belo horizonte",
+    "mantiqueira": "belo horizonte",
+    "leticia": "belo horizonte",
+    "rio branco": "belo horizonte",
+    "piratininga": "belo horizonte",
+    "europa": "belo horizonte",
+    "copacabana": "belo horizonte",
+    "vila cloris": "belo horizonte",
+    "cachoeirinha": "belo horizonte",
+    "floresta": "belo horizonte",
+    "sagrada familia": "belo horizonte",
+    "colegio batista": "belo horizonte",
+    "horto": "belo horizonte",
+    "sao geraldo": "belo horizonte",
+    "pompeia": "belo horizonte",
+    "concordia": "belo horizonte",
+    "goiania": "belo horizonte",
+    "conjunto taquaril": "belo horizonte",
+    "taquaril": "belo horizonte",
+    "granja de freitas": "belo horizonte",
+    "boa vista": "belo horizonte",
+    "santa efigenia": "belo horizonte",
+    "santa tereza": "belo horizonte",
+    "pompeu": "belo horizonte",
+    "esplanada": "belo horizonte",
+    "gameleira": "belo horizonte",
+    "olhos dagua": "belo horizonte",
+    "coracao eucaristico": "belo horizonte",
+    "vera cruz": "belo horizonte",
+    "santa ines": "belo horizonte",
+    "cidade nova": "belo horizonte",
+    "lagoinha": "belo horizonte",
+    "caicaras": "belo horizonte",
+    "bonfim": "belo horizonte",
+    "riacho das pedras": "contagem",
+    "eldorado": "contagem",
+    "cinco": "contagem",
+    "bela vista": "contagem",
+    "santa terezinha": "contagem",
+    "bernardo monteiro": "contagem",
+    "bitacula": "contagem",
+    "40 alqueires": "contagem",
+    "fonte grande": "contagem",
+    "santa helena": "contagem",
+    "vila belem": "contagem",
+    "canada": "contagem",
+    "nossa senhora do carmo": "contagem",
+    "vila panama": "contagem",
+    "lucio de abreu": "contagem",
+    "praia": "contagem",
+    "sapucaias": "contagem",
+    "petrolandia": "contagem",
+    "ressaca": "contagem",
+    "industrial": "contagem",
+    "vila oeste": "contagem",
+    "vila perus": "contagem",
+    "jardim riacho das pedras": "contagem",
+    "nacoes unidas": "contagem",
+    "icaivera": "betim",
+    "citrolandia": "betim",
+    "terezopolis": "betim",
+    "imbirucu": "betim",
+    "ptb": "betim",
+    "alterosa": "betim",
+    "alterosas": "betim",
+    "vianopolis": "betim",
+    "petrovale": "betim",
+    "acude": "betim",
+    "alta villa": "betim",
+    "alto das flores": "betim",
+    "alvorada": "betim",
+    "amarante": "betim",
+    "amazonas": "betim",
+    "amoras": "betim",
+    "angola": "betim",
+    "aroeiras": "betim",
+    "arquipelago verde": "betim",
+    "bandeirinhas": "betim",
+    "betim industrial": "betim",
+    "bodoco": "betim",
+    "bom repouso": "betim",
+    "bom retiro": "betim",
+    "brasileia": "betim",
+    "brodoski": "betim",
+    "cachoeira": "betim",
+    "california": "betim",
+    "campos eliseos": "betim",
+    "campos elisios": "betim",
+    "capelinha": "betim",
+    "casa amarela": "betim",
+    "chacara": "betim",
+    "chacaras": "betim",
+    "chacaras arapua": "betim",
+    "charneca": "betim",
+    "cidade verde": "betim",
+    "colonia santa isabel": "betim",
+    "cruzeiro do sul": "betim",
+    "decamao": "betim",
+    "dom bosco": "betim",
+    "duque de caxias": "betim",
+    "espirito santo": "betim",
+    "estancia do sereno": "betim",
+    "filadelfia": "betim",
+    "flores e florestas": "betim",
+    "gentileza": "betim",
+    "granja santo afonso": "betim",
+    "granja sao joao": "betim",
+    "granja verde": "betim",
+    "guanabara": "betim",
+    "guaruja": "betim",
+    "guaruja mansoes": "betim",
+    "inga": "betim",
+    "itacolomi": "betim",
+    "jardim alterosa": "betim",
+    "jardim brasilia": "betim",
+    "jardim casa branca": "betim",
+    "jardim cidade": "betim",
+    "jardim das acacias": "betim",
+    "jardim piemont": "betim",
+    "novo horizonte betim": "betim",
+    "santa luzia": "santa luzia",
+    "ribeirao das neves": "ribeirão das neves",
+    "vespasiano": "vespasiano",
+    "nova lima": "nova lima",
+    "sabara": "sabará",
+    "sarzedo": "sarzedo",
+    "ibirite": "ibirité",
+    "mario campos": "mário campos",
+    "esmeraldas": "esmeraldas",
+    "mateus leme": "mateus leme",
+    "juatuba": "juatuba",
+    "brumadinho": "brumadinho",
+    "caete": "caeté",
+    "raposos": "raposos",
+    "rio acima": "rio acima",
+    "nova uniao": "nova união"
 };
 
 function normalizarParaGeocodificacao(enderecoOriginal) {
-  var texto = String(enderecoOriginal || "");
+    var texto = String(enderecoOriginal || "");
 
-  // Expande abreviações comuns (com ou sem espaço/ponto)
-  texto = texto.replace(/\bR\.?\s*/gi, "Rua ");
-  texto = texto.replace(/\bAv\.?\s*/gi, "Avenida ");
-  texto = texto.replace(/\bAl\.?\s*/gi, "Alameda ");
-  texto = texto.replace(/\bPç\.?\s*/gi, "Praça ");
-  texto = texto.replace(/\bPc\.?\s*/gi, "Praça ");
-  texto = texto.replace(/\bTv\.?\s*/gi, "Travessa ");
-  texto = texto.replace(/\bRod\.?\s*/gi, "Rodovia ");
+    // Expande abreviações comuns (com ou sem espaço/ponto)
+    texto = texto.replace(/\bR\.?\s*/gi, "Rua ");
+    texto = texto.replace(/\bAv\.?\s*/gi, "Avenida ");
+    texto = texto.replace(/\bAl\.?\s*/gi, "Alameda ");
+    texto = texto.replace(/\bPç\.?\s*/gi, "Praça ");
+    texto = texto.replace(/\bPc\.?\s*/gi, "Praça ");
+    texto = texto.replace(/\bTv\.?\s*/gi, "Travessa ");
+    texto = texto.replace(/\bRod\.?\s*/gi, "Rodovia ");
 
-  // Remove complemento de apto/bloco/sala que confunde a API (fica só número da rua)
-  // Ex: "64/902,Bl2,Buritis" -> pega só "64"
-  texto = texto.replace(/(\d+)\/\d+[a-zA-Z]*(,?\s*Bl\.?\d*)?/gi, "$1");
-  texto = texto.replace(/,?\s*(sl|sala|apto|apt|bl|bloco|loja|lj)\.?\s*\d+[a-zA-Z]*/gi, "");
+    // Remove complemento de apto/bloco/sala que confunde a API (fica só número da rua)
+    // Ex: "64/902,Bl2,Buritis" -> pega só "64"
+    texto = texto.replace(/(\d+)\/\d+[a-zA-Z]*(,?\s*Bl\.?\d*)?/gi, "$1");
+    texto = texto.replace(/,?\s*(sl|sala|apto|apt|bl|bloco|loja|lj)\.?\s*\d+[a-zA-Z]*/gi, "");
 
-  // Remove rotas múltiplas (fica só o primeiro trecho, antes de "→" ou "De:"/"Para:")
-  if (texto.indexOf("→") !== -1) texto = texto.split("→")[0];
-  texto = texto.replace(/^De:\s*/i, "").replace(/\s*Para:.*$/i, "");
+    // Remove rotas múltiplas (fica só o primeiro trecho, antes de "→" ou "De:"/"Para:")
+    if (texto.indexOf("→") !== -1) texto = texto.split("→")[0];
+    texto = texto.replace(/^De:\s*/i, "").replace(/\s*Para:.*$/i, "");
 
-  // Garante espaço após vírgulas e pontos
-  texto = texto.replace(/,(?=\S)/g, ", ");
+    // Garante espaço após vírgulas e pontos
+    texto = texto.replace(/,(?=\S)/g, ", ");
 
-  // Remove múltiplos espaços
-  texto = texto.replace(/\s+/g, " ").trim();
+    // Remove múltiplos espaços
+    texto = texto.replace(/\s+/g, " ").trim();
 
-  return texto;
+    return texto;
 }
 
 function completarEnderecoComCidadePadrao(enderecoOriginal) {
-  var limpo = limparSeparadoresEndereco(enderecoOriginal);
-  var norm = normalizarEnderecoParaBusca(limpo);
+    var limpo = limparSeparadoresEndereco(enderecoOriginal);
+    var norm = normalizarEnderecoParaBusca(limpo);
 
-  if (enderecoContemCidade(norm)) return limpo;
+    if (enderecoContemCidade(norm)) return limpo;
 
-  var bairroEncontrado = Object.keys(MAPA_BAIRRO_CIDADE)
-    .sort(function (a, b) { return b.length - a.length; })
-    .find(function (chave) { return norm.indexOf(chave) !== -1; });
+    var bairroEncontrado = Object.keys(MAPA_BAIRRO_CIDADE)
+        .sort(function (a, b) { return b.length - a.length; })
+        .find(function (chave) { return norm.indexOf(chave) !== -1; });
 
-  var cidade = bairroEncontrado ? MAPA_BAIRRO_CIDADE[bairroEncontrado] : "Belo Horizonte";
+    var cidade = bairroEncontrado ? MAPA_BAIRRO_CIDADE[bairroEncontrado] : "Belo Horizonte";
 
-  return limpo + ", " + cidade + ", MG";
+    return limpo + ", " + cidade + ", MG";
 }
 
 window._storageComExpiracao = (function () {
@@ -1264,10 +1264,196 @@ window.PedidosDropdown = (function () {
             var aberto = painel.classList.contains('show');
             aberto ? fechar() : abrir();
         });
-        inputBusca.addEventListener('input', function (e) { filtrar(e.target.value); });
+        inputBusca.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+
+            var termo = (inputBusca.value || '').trim().toLowerCase();
+            if (!termo) return;
+
+            var encontrado = pedidosAtuais.find(function (p) {
+                var idFmt = (p.idFormatado || '').toLowerCase();
+                var idBruto = String(p.id).toLowerCase();
+                return idFmt === termo || idBruto === termo || idFmt.includes(termo) || idBruto.includes(termo);
+            });
+
+            if (encontrado) {
+                irParaPedidoNoChat(encontrado.id);
+                fechar();
+            } else {
+                inputBusca.style.border = '2px solid #dc3545';
+                inputBusca.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
+                setTimeout(function () {
+                    inputBusca.style.border = '';
+                    inputBusca.style.boxShadow = '';
+                }, 1500);
+            }
+        });
     }
 
     return { init: init, setPedidos: setPedidos, abrir: abrir, fechar: fechar, close: fechar };
+})();
+
+window.PedidoSearch = (function () {
+    var aberto = false;
+    var inicializado = false;
+
+    function _elWrapper() { return document.getElementById('wrapper-pesquisa-pedido'); }
+    function _elDropdown() { return document.getElementById('pedido-search-dropdown'); }
+    function _elInput() { return document.getElementById('pedido-search-input'); }
+    function _elLista() { return document.getElementById('pedido-search-lista'); }
+    function _elClose() { return document.getElementById('pedido-search-close'); }
+
+    function _garantirListeners() {
+        if (inicializado) return;
+
+        var wrapper = _elWrapper();
+        var dropdown = _elDropdown();
+        var input = _elInput();
+        var closeBtn = _elClose();
+
+        if (!wrapper || !dropdown || !input) {
+            // Elementos ainda não existem no DOM (ex: header não carregado). Tenta de novo depois.
+            setTimeout(_garantirListeners, 300);
+            return;
+        }
+
+        inicializado = true;
+
+        if (closeBtn) closeBtn.addEventListener('click', fechar);
+
+        input.addEventListener('input', function (e) {
+            filtrar(e.target.value);
+        });
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var primeiro = dropdown.querySelector('.pedido-search-item');
+                if (primeiro) primeiro.click();
+            }
+            if (e.key === 'Escape') fechar();
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!aberto) return;
+            var btn = document.getElementById('btn-pesquisar-pedido');
+            if (!dropdown.contains(e.target) && e.target !== btn && (!btn || !btn.contains(e.target))) {
+                fechar();
+            }
+        });
+    }
+
+    function obterPedidosDoCliente() {
+        if (!window.AppRDO) return [];
+
+        var clienteId = window.AppRDO.clienteId;
+        if (!clienteId) return [];
+
+        var pedidos = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+
+        var pedidosDoCliente = pedidos.filter(function (p) {
+            return String(p.id_cliente || '').trim() === String(clienteId).trim();
+        });
+
+        return pedidosDoCliente.map(function (p) {
+            var id = String(p.id || '').trim();
+            var idFormatado = typeof window._formatarNomeServico === 'function'
+                ? window._formatarNomeServico(id)
+                : ('#' + id);
+            var resumo = (String(p.de || '').trim() && String(p.para || '').trim())
+                ? p.de + ' → ' + p.para
+                : (p.status || '');
+            return { id: id, idFormatado: idFormatado, resumo: resumo };
+        });
+    }
+
+    function renderizarLista(lista) {
+        var box = _elLista();
+        if (!box) return;
+
+        if (!lista.length) {
+            box.innerHTML = '<div class="pedido-search-vazio">Nenhum pedido encontrado</div>';
+            return;
+        }
+
+        box.innerHTML = lista.map(function (p) {
+            return '<div class="pedido-search-item" data-id="' + p.id + '">' +
+                '<span class="pedido-search-idbadge">' + p.idFormatado + '</span>' +
+                '<span class="pedido-search-resumo">' + (p.resumo || '') + '</span>' +
+                '</div>';
+        }).join('');
+
+        Array.prototype.forEach.call(box.querySelectorAll('.pedido-search-item'), function (item) {
+            item.addEventListener('click', function () {
+                var id = item.getAttribute('data-id');
+                irParaPedido(id);
+                fechar();
+            });
+        });
+    }
+
+    function filtrar(termo) {
+        termo = (termo || '').trim().toLowerCase();
+        var todos = obterPedidosDoCliente();
+
+        if (!termo) { renderizarLista(todos); return; }
+
+        var filtrados = todos.filter(function (p) {
+            var idFmt = (p.idFormatado || '').toLowerCase();
+            var idBruto = String(p.id).toLowerCase();
+            return idFmt.includes(termo) || idBruto.includes(termo);
+        });
+
+        renderizarLista(filtrados);
+    }
+
+    function irParaPedido(id) {
+        var el = document.querySelector('[data-pedido-id="' + id + '"]');
+        if (!el) {
+            window.exibirModalValidacao && window.exibirModalValidacao('Pedido não encontrado no chat atual.');
+            return;
+        }
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var wrapper = el.closest('.message-wrapper') || el;
+        wrapper.classList.add('pedido-highlight');
+        setTimeout(function () { wrapper.classList.remove('pedido-highlight'); }, 1600);
+    }
+
+    function abrir() {
+        if (!window.AppRDO || !window.AppRDO.clienteId) {
+            window.exibirModalValidacao && window.exibirModalValidacao('Selecione um cliente na lista primeiro.');
+            return;
+        }
+
+        _garantirListeners();
+
+        var dropdown = _elDropdown();
+        if (!dropdown) return;
+
+        dropdown.classList.add('show');
+        aberto = true;
+        filtrar('');
+
+        setTimeout(function () {
+            var input = _elInput();
+            if (input) { input.value = ''; input.focus(); }
+        }, 50);
+    }
+
+    function fechar() {
+        var dropdown = _elDropdown();
+        if (dropdown) dropdown.classList.remove('show');
+        aberto = false;
+    }
+
+    function toggle() {
+        aberto ? fechar() : abrir();
+    }
+
+    _garantirListeners();
+
+    return { abrir: abrir, fechar: fechar, toggle: toggle };
 })();
 
 window.MODELO_PADRAO = [
@@ -2229,26 +2415,54 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
 window.abrirMenuHeaderCliente = function () {
     Swal.fire({
         title: 'Opções da Conversa',
-        showDenyButton: true,
-        showCancelButton: true,
-        confirmButtonText: 'Mensagem Padrão',
-        denyButtonText: 'Sincronizar Chat',
-        cancelButtonText: 'Fechar',
-        customClass: {
-            confirmButton: 'btn btn-outline-danger btn-lg w-100 mb-2',
-            denyButton: 'btn btn-outline-danger btn-lg w-100 mb-2',
-            cancelButton: 'btn btn-outline-dark btn-lg w-100',
-            popup: 'p-4'
-        },
-        buttonsStyling: false
-    })
-        .then(function (result) {
-            setTimeout(function () {
-                _limparBackdrop();
-                if (result.isConfirmed) window.abrirModalMensagemPadrao();
-                else if (result.isDenied) window.carregarDados();
-            }, 150);
-        }).catch(function (e) { window._exibirErroGlobal(e, 'abrir menu do cabeçalho'); });
+        html:
+            '<div class="d-flex flex-column gap-2 mt-2">' +
+            '<button class="btn btn-outline-danger btn-lg w-100" id="btn-menu-msg-padrao">' +
+            '<i class="bi bi-chat-left-text-fill me-2"></i>Mensagem Padrão</button>' +
+            '<button class="btn btn-outline-danger btn-lg w-100" id="btn-menu-sync-chat">' +
+            '<i class="bi bi-arrow-repeat me-2"></i>Sincronizar Chat</button>' +
+            '<button class="btn btn-outline-dark btn-lg w-100" id="btn-menu-fechar">' +
+            '<i class="bi bi-x-lg me-2"></i>Fechar</button>' +
+            '</div>',
+        showConfirmButton: false,
+        showCancelButton: false,
+        showCloseButton: true,
+        customClass: { popup: 'p-4' },
+        didOpen: function () {
+            var elMsgPadrao = document.getElementById('btn-menu-msg-padrao');
+            var elSync = document.getElementById('btn-menu-sync-chat');
+            var elFechar = document.getElementById('btn-menu-fechar');
+
+            if (elMsgPadrao) elMsgPadrao.addEventListener('click', function () {
+                Swal.close();
+                setTimeout(function () { _limparBackdrop(); window.abrirModalMensagemPadrao(); }, 150);
+            });
+
+            if (elSync) elSync.addEventListener('click', function () {
+                Swal.close();
+                setTimeout(function () { _limparBackdrop(); window.carregarDados(); }, 150);
+            });
+
+            if (elFechar) elFechar.addEventListener('click', function () {
+                Swal.close();
+                setTimeout(function () { _limparBackdrop(); }, 150);
+            });
+        }
+    });
+};
+
+window.abrirPesquisaPedido = function () {
+    if (!window.AppRDO || !window.AppRDO.clienteId) {
+        window.exibirModalValidacao('Selecione um cliente na lista primeiro.');
+        return;
+    }
+
+    // Garante que o dropdown está inicializado e populado com os pedidos do cliente atual
+    if (window.PedidosDropdown && typeof window.PedidosDropdown.abrir === 'function') {
+        window.PedidosDropdown.abrir();
+    } else {
+        window._exibirErroGlobal('PedidosDropdown não disponível', 'abrir pesquisa de pedido');
+    }
 };
 
 function _resolverTextoMensagem(msg, pedido) {
@@ -3229,16 +3443,16 @@ function _tentarUmaVariacao(endereco) {
 }
 
 function pareceEndereco(valor) {
-  var norm = valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  return /\b(rua|av|avenida|alameda|al|praca|travessa|rodovia|estrada|rod)\b/.test(norm) && /\d/.test(norm);
+    var norm = valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    return /\b(rua|av|avenida|alameda|al|praca|travessa|rodovia|estrada|rod)\b/.test(norm) && /\d/.test(norm);
 }
 
 function extrairEnderecosDoTexto(textoBruto) {
-  return String(textoBruto || "")
-    .split("\n")
-    .map(function (l) { return l.trim(); })
-    .filter(function (l) { return l && pareceEndereco(l); });
+    return String(textoBruto || "")
+        .split("\n")
+        .map(function (l) { return l.trim(); })
+        .filter(function (l) { return l && pareceEndereco(l); });
 }
 
 function _geocodificarComFallback(enderecoCompleto) {
@@ -4391,50 +4605,113 @@ function _sincronizarValorNoChat(dados) {
     var pedidoId = String(dados && dados.id || '').trim();
     if (!pedidoId) return;
 
-    var valorBruto = dados.valor_final != null ? dados.valor_final
-        : dados.valor_total != null ? dados.valor_total
-        : dados.valor_corrida;
-    if (valorBruto == null || valorBruto === '') return;
-
-    var novoValor = typeof valorBruto === 'number'
-        ? valorBruto
-        : parseFloat(String(valorBruto).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3},)/g, '').replace(',', '.'));
-    if (isNaN(novoValor)) return;
-
     var idNorm = _normIdChat(pedidoId);
+    var houveAlteracao = false;
+
+    var cachePedidos = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    var pedidoCache = cachePedidos.find(function (p) { return _normIdChat(p.id) === idNorm; });
 
     var cacheMsgs = Array.isArray(window.AppRDO.mensagensCache) ? window.AppRDO.mensagensCache : [];
     var msg = cacheMsgs.find(function (m) { return _normIdChat(m.pedido_id) === idNorm; });
     if (!msg || !msg.texto) return;
 
-    var valorFormatado = novoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    var regexValor = /💰\s*R\$\s*[\d.,]+/;
-    if (!regexValor.test(msg.texto)) return;
+    var textoAtualizado = msg.texto;
 
-    var textoAtualizado = msg.texto.replace(regexValor, '💰 ' + valorFormatado);
-    if (textoAtualizado === msg.texto) return;
+    var valorBruto = dados.valor_final != null ? dados.valor_final
+        : dados.valor_total != null ? dados.valor_total
+            : dados.valor_corrida;
+
+    if (valorBruto != null && valorBruto !== '') {
+        var novoValor = typeof valorBruto === 'number'
+            ? valorBruto
+            : parseFloat(String(valorBruto).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3},)/g, '').replace(',', '.'));
+
+        if (!isNaN(novoValor)) {
+            var valorFormatado = novoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            var regexValor = /💰\s*R\$\s*[\d.,]+/;
+            if (regexValor.test(textoAtualizado)) {
+                var textoComValor = textoAtualizado.replace(regexValor, '💰 ' + valorFormatado);
+                if (textoComValor !== textoAtualizado) {
+                    textoAtualizado = textoComValor;
+                    houveAlteracao = true;
+                }
+            }
+        }
+    }
+
+    if (dados.cliente !== undefined) {
+        var clienteNovo = String(dados.cliente || '').trim();
+        if (clienteNovo && clienteNovo !== '-') {
+            var regexCliente = /(👤\s*:\s*)([^📞\n]+)/;
+            if (regexCliente.test(textoAtualizado)) {
+                var textoComCliente = textoAtualizado.replace(regexCliente, '$1' + clienteNovo + ' ');
+                if (textoComCliente !== textoAtualizado) {
+                    textoAtualizado = textoComCliente;
+                    houveAlteracao = true;
+                }
+            }
+            if (pedidoCache) pedidoCache.cliente = clienteNovo;
+        }
+    }
+
+    var motoboyNovo = '';
+    if (dados.motoboy !== undefined) {
+        motoboyNovo = String(dados.motoboy || '').trim();
+        if (motoboyNovo && motoboyNovo !== '-') {
+            if (pedidoCache) pedidoCache.motoboy = motoboyNovo;
+            houveAlteracao = true;
+        }
+    }
+
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+    if (msgEl) {
+        var iconEl = msgEl.querySelector('.status-icon');
+        if (iconEl && pedidoCache) {
+            var statusBrutoAtual = String(pedidoCache.status || '').trim();
+            var statusPuroAtual = statusBrutoAtual.includes('/') ? statusBrutoAtual.split('/').pop().trim() : statusBrutoAtual;
+            var statusLabelAtual = statusPuroAtual.replace(/_/g, ' ');
+            var motoboyParaTooltip = motoboyNovo || pedidoCache.motoboy || '';
+            var novoTooltip = motoboyParaTooltip ? motoboyParaTooltip + ' • ' + statusLabelAtual : statusLabelAtual;
+            iconEl.setAttribute('data-tooltip', novoTooltip);
+            iconEl.setAttribute('title', novoTooltip);
+        }
+    }
+
+    if (!houveAlteracao || textoAtualizado === msg.texto) return;
 
     msg.texto = textoAtualizado;
 
-    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
     if (msgEl) {
         var bodyEl = msgEl.querySelector('.message-body');
         if (bodyEl) {
             bodyEl.innerHTML = _estilizarRotasNaMensagem(
-                textoAtualizado.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+                textoAtualizado
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\n/g, '<br>')
             );
         }
-        msgEl.setAttribute('data-texto-original', textoAtualizado.replace(/&/g, '&amp;').replace(/"/g, '&quot;'));
+        msgEl.setAttribute(
+            'data-texto-original',
+            textoAtualizado.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        );
     }
 
     API.call('updatechat', { id: msg.id, texto: textoAtualizado })
         .then(function (res) {
-            if (!res || res.status === 'error') throw new Error((res && res.message) || 'Falha ao sincronizar valor no chat');
+            if (!res || res.status === 'error') {
+                throw new Error((res && res.message) || 'Falha ao sincronizar dados no banco de chat');
+            }
         })
         .catch(function (e) {
-            window._exibirErroGlobal(e, 'sincronizar valor do pedido no chat');
+            window._exibirErroGlobal(e, 'sincronizar dados do pedido no chat');
         });
 }
+
+window._sincronizarValorNoChat = _sincronizarValorNoChat;
+
+window._sincronizarValorNoChat = _sincronizarValorNoChat;
 
 window._sincronizarValorNoChat = _sincronizarValorNoChat;
 

@@ -98,6 +98,26 @@
           <div id="chat-header-status" class="contact-status text-muted small"></div>
         </div>
 
+        <div class="position-relative flex-shrink-0" id="wrapper-pesquisa-pedido">
+          <button type="button" id="btn-pesquisar-pedido" class="btn-icon-chat" title="Pesquisar Pedido"
+            onclick="window.PedidoSearch.toggle()">
+            <i class="bi bi-search"></i>
+          </button>
+
+          <div id="pedido-search-dropdown" class="pedido-search-dropdown">
+            <div class="pedido-search-header">
+              <i class="bi bi-search"></i>
+              <input type="text" id="pedido-search-input" placeholder="Buscar pedido por ID..." autocomplete="off">
+              <button type="button" id="pedido-search-close" title="Fechar">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div id="pedido-search-lista" class="pedido-search-lista">
+              <div class="pedido-search-vazio">Nenhum pedido encontrado</div>
+            </div>
+          </div>
+        </div>
+
         <button id="btn-header-menu" class="btn-icon-chat" title="Opções" onclick="window.abrirMenuHeaderCliente()">
           <i class="bi bi-three-dots-vertical"></i>
         </button>
