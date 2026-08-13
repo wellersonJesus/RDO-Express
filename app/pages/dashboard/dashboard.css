@@ -1445,3 +1445,24 @@ img.avatar:not([src]) {
     max-width: 220px;
     margin-left: auto;
 }
+
+.notificacao-pagamento-ultimo-lancado {
+    display: block;
+    font-size: .72rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+.notificacao-pagamento-ultimo-lancado strong {
+    color: #444;
+}
+
+.notificacao-pagamento-ultimo-lancado {
+    display: block;
+    font-size: .72rem;
+    color: #6c757d;
+    margin-top: 6px;
+    line-height: 1.5;
+}
+.notificacao-pagamento-ultimo-lancado strong {
+    color: #444;
+}

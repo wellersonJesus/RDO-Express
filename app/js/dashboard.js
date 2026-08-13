@@ -922,6 +922,50 @@ function _construirItensListaNotifPagamento(pedidosAbertos) {
     }, []);
 }
 
+function _obterHoraPedido(pedido) {
+    var hora = pedido.horario || pedido.hora || '';
+    return String(hora).trim();
+}
+
+function _timestampOrdenacaoPedido(pedido) {
+    var data = _parseDataBR(pedido.data);
+    if (isNaN(data.getTime())) return -Infinity;
+    var horaTexto = _obterHoraPedido(pedido);
+    var m = horaTexto.match(/^(\d{1,2}):(\d{1,2})/);
+    if (m) {
+        data.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    }
+    return data.getTime();
+}
+
+function _obterUltimoPedidoLancado(pedidos, clientes) {
+    if (!pedidos || !pedidos.length) return null;
+
+    var mapaClientes = _obterMapaClientesPorId(clientes);
+    var ultimo = null;
+    var maiorTs = -Infinity;
+
+    pedidos.forEach(function (p) {
+        var ts = _timestampOrdenacaoPedido(p);
+        if (ts > maiorTs) {
+            maiorTs = ts;
+            ultimo = p;
+        }
+    });
+
+    if (!ultimo) return null;
+
+    var cliente = mapaClientes[String(ultimo.id_cliente || '').trim()];
+    var nomeCliente = cliente ? (cliente.nome || cliente.username) : (ultimo.solicitante || 'Cliente não identificado');
+
+    return {
+        idPedido: ultimo.id || ultimo.id_pedido || '-',
+        dataFormatada: _formatarDataPedido(ultimo.data) || '-',
+        hora: _obterHoraPedido(ultimo) || '-',
+        nomeCliente: nomeCliente
+    };
+}
+
 function _rotuloStatusPagamento(statusPagamento) {
     if (statusPagamento === 'VENCIDO') return 'Vencido';
     if (statusPagamento === 'AVENCER') return 'A vencer';
@@ -1272,6 +1316,23 @@ function renderizarBlocoNotificacaoPagamento(dados) {
     if (titleEl) titleEl.textContent = total === 1 ? 'Você possui 1 pedido em aberto' : 'Você possui ' + total + ' pedidos em aberto';
     if (subtitleEl) subtitleEl.textContent = total === 1 ? '1 pedido aguardando pagamento' : total + ' pedidos aguardando pagamento';
 
+        var ultimoLancEl = document.getElementById('notif-pagamento-ultimo-lancado');
+    if (ultimoLancEl) {
+        var ultimo = _obterUltimoPedidoLancado(pedidos, clientes);
+        if (ultimo) {
+            ultimoLancEl.innerHTML =
+                '<i class="bi bi-clock-history"></i> Último pedido gerado: ' +
+                '<strong>' + escapeHtmlDash(ultimo.dataFormatada) + '</strong> às ' +
+                '<strong>' + escapeHtmlDash(ultimo.hora) + '</strong>' +
+                '&nbsp;&nbsp;Cliente: <strong>' + escapeHtmlDash(ultimo.nomeCliente) + '</strong>' +
+                '&nbsp;&nbsp;&nbsp;</br>N.serviço: <strong>' + escapeHtmlDash(ultimo.idPedido) + '</strong>';
+            ultimoLancEl.classList.remove('d-none');
+        } else {
+            ultimoLancEl.classList.add('d-none');
+        }
+    }
+
+    bloco.classList.remove('d-none');
     bloco.classList.remove('d-none');
 
     var btnVerPedidosNotif = document.getElementById('btn-notif-pagamento-ver-pedidos');
@@ -1287,6 +1348,12 @@ function renderizarBlocoNotificacaoPagamento(dados) {
         window.dashboardState.modalNotifJaExibido = true;
         setTimeout(function () { abrirModalNotifPagamento(); }, 400);
     }
+}
+
+function escapeHtmlDash(v) {
+    return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function navegarParaPedidosDaNotificacao() {
