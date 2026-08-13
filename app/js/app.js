@@ -67,7 +67,6 @@ var PAGES_SEM_HEADER = [];
 
 var PAGE_MODALS = {
     pedidos: ['/pages/pedidos/form_pedidos.html'],
-    fin: ['/pages/fin/form_fin.html', '/pages/fin/view_fin.html'],
     relatorio: ['/pages/relatorio/modal_relatorio.html']
 };
 
@@ -360,15 +359,7 @@ window.loadPage = function (page, title, subtitle) {
             if (MODULE_INITS[page]) MODULE_INITS[page]();
         })
         .catch(function (err) {
-            if (window.AppRDO._navToken !== meuToken) return;
-            if (headerEl) headerEl.style.display = '';
-            container.innerHTML =
-                '<div class="text-center py-5" style="min-height:300px;">' +
-                '<i class="bi bi-exclamation-triangle text-warning" style="font-size:2rem;"></i>' +
-                '<div class="mt-2 text-muted" style="font-size:.82rem;">Falha ao carregar o módulo <strong>' + page + '</strong>.</div>' +
-                '<button class="btn btn-outline-danger btn-sm rounded-pill mt-3" ' +
-                'onclick="loadPage(\'' + page + '\',\'' + (title || '').replace(/'/g, "\\'") + '\',\'' + (subtitle || '').replace(/'/g, "\\'") + '\')">Tentar novamente</button>' +
-                '</div>';
+            console.error('[carregarModaisDaPagina] Falha ao buscar modal:', url, err);
         });
 };
 

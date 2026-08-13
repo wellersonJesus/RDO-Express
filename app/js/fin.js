@@ -3790,12 +3790,14 @@ if (!window.EventBus) {
       window.API.call('listfinanceiro', {}),
       window.API.call('listpedidos', {}),
       window.API.call('listclientes', {}),
-      window.API.call('listcolaboradores', {})
+      window.API.call('listcolaboradores', {}),
+      window.API.call('listgrupos', {}).catch(function () { return []; })
     ]).then(function (results) {
       var financeiro = extrairArray(results[0]);
       var pedidos = extrairArray(results[1]);
       var clientes = extrairArray(results[2]);
       var colaboradores = extrairArray(results[3]);
+      var grupos = extrairArray(results[4]);
 
       state.pedidosCache = {};
       pedidos.forEach(function (p) { if (p.id) state.pedidosCache[p.id] = p; });
@@ -3807,7 +3809,8 @@ if (!window.EventBus) {
       state.colaboradores = colaboradores;
       colaboradores.forEach(function (c) { if (c.id) state.colaboradoresCache[c.id] = c; });
 
-      state.gruposCache = {}; // ✅ inicializa para evitar referência indefinida em abrirModalEditar
+      state.gruposCache = {};
+      grupos.forEach(function (g) { if (g.id) state.gruposCache[g.id] = g; });
 
       state.cache = financeiro.map(normalizarRegistro);
       resolverClienteSolicitante();
@@ -3820,9 +3823,7 @@ if (!window.EventBus) {
       renderizarListaExtratos();
       tentarAbrirPedidoFinanceiro();
 
-    }).catch(function (err) {
-      finToast('Erro ao carregar dados financeiros.', 'danger');
-      if (els.tbodyTodos) els.tbodyTodos.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>';
+    }).catch(function () {
     }).finally(function () {
       state.fetching = false;
       spinOff();
