@@ -1524,9 +1524,10 @@ if (!window.EventBus) {
     var listaClientes = Object.keys(state.clientesCache || {}).map(function (k) { return state.clientesCache[k]; });
     listaClientes.sort(function (a, b) { return (a.nome || a.username || '').localeCompare(b.nome || b.username || ''); });
 
-    var clienteAtualId = reg.clienteId || reg.cliente_id || '';
+    var clienteAtualNome = (reg.cliente || '').toString().trim().toLowerCase();
     var opcoesCliente = '<option value="">Cliente avulso / Nenhum</option>' + listaClientes.map(function (c) {
-      var selecionado = (String(c.id) === String(clienteAtualId)) ? 'selected' : '';
+      var nomeC = (c.nome || c.username || '').toString().trim().toLowerCase();
+      var selecionado = (clienteAtualNome && nomeC === clienteAtualNome) ? 'selected' : '';
       return '<option value="' + escapeHtml(c.id) + '" ' + selecionado + '>' + escapeHtml(c.nome || c.username || '-') + '</option>';
     }).join('');
 
