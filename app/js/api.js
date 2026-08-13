@@ -2,7 +2,11 @@ window.API = (function () {
 
     var ENDPOINT = '/api/proxy';
     var TIMEOUT_MS = 20000;
-    var TIMEOUT_ESPECIAL = { getpedidos: 30000 };
+    
+    var TIMEOUT_ESPECIAL = {
+        getpedidos: 30000,
+        updatefinanceiro: 30000
+    };
 
     var MAX_RETRIES = 3;
     var RETRY_DELAY_MS = 1500;
