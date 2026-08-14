@@ -74,15 +74,21 @@
                 </div>
 
                 <div class="row g-2 mb-3">
-                    <div class="col-6 col-sm-4">
-                        <label class="modal-pedido-field-label">Data</label>
-                        <input type="text" id="edit-data" class="form-control form-control-sm modal-pedido-input">
+                    <div class="col-6 col-sm-3">
+                        <label class="modal-pedido-field-label">Data lançamento</label>
+                        <input type="text" id="edit-data-lancamento"
+                            class="form-control form-control-sm modal-pedido-input">
                     </div>
-                    <div class="col-6 col-sm-4">
+                    <div class="col-6 col-sm-3">
+                        <label class="modal-pedido-field-label">Data pedido</label>
+                        <input type="text" id="edit-data-pedido" class="form-control form-control-sm modal-pedido-input"
+                            readonly style="background:#f1f1f1;">
+                    </div>
+                    <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">Horário</label>
                         <input type="text" id="edit-horario" class="form-control form-control-sm modal-pedido-input">
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-6 col-sm-3">
                         <label class="modal-pedido-field-label">Status</label>
                         <select id="edit-status" class="form-select form-select-sm modal-pedido-input">
                             <option value="PENDENTE">Pendente</option>
@@ -233,6 +239,29 @@
                     <div class="col-6 col-sm-2">
                         <label class="modal-pedido-field-label">Prioridade</label>
                         <input type="text" id="det-prioridade" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                </div>
+
+                <div class="modal-pedido-section-label mt-3">
+                    <i class="bi bi-calendar3 me-1 text-danger"></i>Datas & Horário
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="row g-2 mb-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="modal-pedido-field-label">Data do Pedido</label>
+                            <input type="date" id="novo-data-pedido"
+                                class="form-control form-control-sm modal-pedido-input">
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-4">
+                        <label class="modal-pedido-field-label">Data do Lançamento</label>
+                        <input type="text" id="det-data" class="form-control form-control-sm modal-pedido-input"
+                            readonly>
+                    </div>
+                    <div class="col-12 col-sm-4">
+                        <label class="modal-pedido-field-label">Horário</label>
+                        <input type="text" id="det-horario" class="form-control form-control-sm modal-pedido-input"
                             readonly>
                     </div>
                 </div>

@@ -233,7 +233,7 @@
                 return p[2] + '-' + p[1] + '-' + p[0];
             }
         }
-        var camposData = [pedido.data, pedido.data_pedido, pedido.created_at];
+        var camposData = [pedido.data_pedido, pedido.created_at]; // 🔧 removido pedido.data
         for (var i = 0; i < camposData.length; i++) {
             if (!camposData[i]) continue;
             var d = String(camposData[i]).trim();
@@ -248,6 +248,32 @@
             }
         }
         return '';
+    }
+
+    function _resolverDataFallback(pedido) {
+        var rawData = String(pedido.data_pedido || pedido.created_at || '').trim(); // 🔧 removido pedido.data
+        if (!rawData) return '';
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(rawData)) return rawData.substring(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}/.test(rawData)) {
+            var dp = rawData.substring(0, 10).split('-');
+            return dp[2] + '/' + dp[1] + '/' + dp[0];
+        }
+        if (rawData.includes('T')) {
+            var pd = rawData.split('T')[0].split('-');
+            if (pd.length === 3) return pd[2] + '/' + pd[1] + '/' + pd[0];
+        }
+        return '';
+    }
+
+    function _resolverDataLancamento(pedido) {
+        var raw = String(pedido.data_lancamento || '').trim(); // 🔧 antes era pedido.data
+        if (!raw) return '';
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(raw)) return raw.substring(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+            var p = raw.substring(0, 10).split('-');
+            return p[2] + '/' + p[1] + '/' + p[0];
+        }
+        return raw;
     }
 
     function _formatarDataExibicao(isoDate) {
@@ -829,6 +855,9 @@
 
         if (errEl) errEl.classList.add('d-none');
 
+        var dataPedidoInput = (document.getElementById('novo-data-pedido') || {}).value || '';
+        var dataPedidoFormatada = dataPedidoInput ? dataPedidoInput.split('-').reverse().join('/') : '';
+
         var payload = {
             solicitante: (document.getElementById('novo-solicitante') || {}).value || '',
             contato: (document.getElementById('novo-contato') || {}).value || '',
@@ -841,6 +870,7 @@
             motoboy: (document.getElementById('novo-motoboy') || {}).value || '',
             valor_corrida: _parseMoeda((document.getElementById('novo-valor-pedido') || {}).value),
             observacao: (document.getElementById('novo-obs') || {}).value || '',
+            data_pedido: dataPedidoFormatada,
             status: 'PENDENTE',
             situacao_financeira: 'pendente'
         };
@@ -1014,24 +1044,16 @@
             }
 
             var valor = _resolverValor(pedido);
-            var dataISO = _extrairDataPedido(pedido);
-            var dataExibicao = _formatarDataExibicao(dataISO);
 
-            if (!dataExibicao || dataExibicao === '—') {
-                var rawData = String(pedido.data || pedido.data_pedido || pedido.created_at || '').trim();
-                if (rawData) {
-                    if (/^\d{2}\/\d{2}\/\d{4}/.test(rawData)) {
-                        dataExibicao = rawData.substring(0, 10);
-                    } else if (/^\d{4}-\d{2}-\d{2}/.test(rawData)) {
-                        var dp = rawData.substring(0, 10).split('-');
-                        dataExibicao = dp[2] + '/' + dp[1] + '/' + dp[0];
-                    } else if (rawData.includes('T')) {
-                        var parteData = rawData.split('T')[0].split('-');
-                        if (parteData.length === 3)
-                            dataExibicao = parteData[2] + '/' + parteData[1] + '/' + parteData[0];
-                    }
-                }
+            // 🔒 Data do Pedido: fixa, imutável, resolvida a partir do chat/registro original
+            var dataPedidoISO = _extrairDataPedido(pedido);
+            var dataPedidoExibicao = _formatarDataExibicao(dataPedidoISO);
+            if (!dataPedidoExibicao || dataPedidoExibicao === '—') {
+                dataPedidoExibicao = _resolverDataFallback(pedido);
             }
+
+            // ✏️ Data do Lançamento: campo editável (armazenado na coluna "data" da planilha)
+            var dataLancamentoExibicao = _resolverDataLancamento(pedido) || dataPedidoExibicao;
 
             var hora = _resolverHoraPedido(pedido);
             var rotaDe = String(pedido.de || pedido.origem || pedido.endereco_coleta || '').trim();
@@ -1043,7 +1065,8 @@
             _s('edit-valor-base', valor.toFixed(2));
             _s('edit-solicitante', pedido.solicitante || '');
             _s('edit-contato', pedido.contato || '');
-            _s('edit-data', dataExibicao || '');
+            _s('edit-data-pedido', dataPedidoExibicao || '');          // 🆕 somente leitura
+            _s('edit-data-lancamento', dataLancamentoExibicao || '');   // 🆕 editável
             _s('edit-horario', hora !== '—' ? hora : '');
             _s('edit-de', rotaDe);
             _s('edit-para', rotaPara);
@@ -1053,11 +1076,11 @@
             _s('edit-espera-tipo', pedido.espera_tipo || 'sem_espera');
             _s('edit-espera-minutos', pedido.espera_minutos || '');
 
-            // Campos agora editáveis (antes eram somente-leitura via esp-*)
             _s('edit-cliente', _resolverNomeCliente(pedido));
             _s('edit-mercadoria', pedido.mercadoria || '');
             _s('edit-retorno', String(pedido.retorno || 'Não').trim());
             _s('edit-prioridade', String(pedido.prioridade != null ? pedido.prioridade : '0').trim());
+
             var selectMotoboy = document.getElementById('edit-motoboy');
             if (selectMotoboy) {
                 _carregarMotoboysDropdown(selectMotoboy, _resolverMotoboy(pedido));
@@ -1109,10 +1132,14 @@
         var selectMotoboy = document.getElementById('edit-motoboy');
         var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
 
+        // 🆕 Data do Lançamento — editável, vai para a coluna "data" no backend
+        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
+
         var payload = {
             id: pedidoId,
             solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
             contato: (document.getElementById('edit-contato') || {}).value || '',
+            data_lancamento: dataLancamento, // 🔧 chave corrigida
             horario: (document.getElementById('edit-horario') || {}).value || '',
             de: (document.getElementById('edit-de') || {}).value || '',
             para: (document.getElementById('edit-para') || {}).value || '',
@@ -1146,6 +1173,7 @@
                     Object.assign(pedido, {
                         solicitante: payload.solicitante,
                         contato: payload.contato,
+                        data_lancamento: payload.data_lancamento,
                         horario: payload.horario,
                         de: payload.de,
                         para: payload.para,
@@ -1287,7 +1315,7 @@
 
             _toggleBtnClearBusca();
         }
-        
+
         if (els.btnFiltroTipo) {
             var menu = document.getElementById('dropdown-filtro-menu');
 
