@@ -1287,26 +1287,7 @@
 
             _toggleBtnClearBusca();
         }
-
-        if (els.filtroData) {
-            els.filtroData.onchange = function () {
-                window.pedidosState.filtroData = els.filtroData.value || '';
-                window.pedidosState.paginaAtual = 1;
-                window.pedidosState.emAcao = true;
-                _spinFeedback();
-                _renderizarTabela(window.AppRDO.pedidosCache);
-            };
-            els.filtroData.oninput = function () {
-                if (!els.filtroData.value) {
-                    window.pedidosState.filtroData = '';
-                    window.pedidosState.paginaAtual = 1;
-                    window.pedidosState.emAcao = true;
-                    _spinFeedback();
-                    _renderizarTabela(window.AppRDO.pedidosCache);
-                }
-            };
-        }
-
+        
         if (els.btnFiltroTipo) {
             var menu = document.getElementById('dropdown-filtro-menu');
 
@@ -1533,6 +1514,15 @@
             return window.innerWidth <= 576;
         }
 
+        function _aplicarFiltroData(valor) {
+            window.pedidosState.filtroData = valor || '';
+            window.pedidosState.paginaAtual = 1;
+            window.pedidosState.emAcao = true;
+            btnCalendario.classList.toggle('tem-data', !!valor);
+            _spinFeedback();
+            _renderizarTabela(window.AppRDO.pedidosCache || []);
+        }
+
         btnCalendario.onclick = function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1560,7 +1550,13 @@
         };
 
         inputData.onchange = function () {
-            btnCalendario.classList.toggle('tem-data', !!inputData.value);
+            _aplicarFiltroData(inputData.value);
+        };
+
+        inputData.oninput = function () {
+            if (!inputData.value) {
+                _aplicarFiltroData('');
+            }
         };
     }
 
