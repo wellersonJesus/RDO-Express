@@ -3118,25 +3118,11 @@ window.StatusModal = (function () {
     }
 
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
-        var motoboyNome = '';
-        var statusFmt = String(status || '');
-
-        if (motoboyId) {
-            try {
-                var select = _el('select-motoboy');
-                if (select && select.selectedIndex >= 0)
-                    motoboyNome = String(select.options[select.selectedIndex].text || '').trim();
-            } catch (e) { window._exibirErroGlobal(e, 'obter nome do motoboy'); motoboyNome = ''; }
-        }
-
-        // 🔒 TRAVA DE SEGURANÇA: nunca permite enviar CONCLUIDO sem motoboy definido
-        // (revalida direto no cache, independente da checagem anterior em processar())
+        // 🔒 ÚNICA ADIÇÃO: bloqueia conclusão sem motoboy definido (nem no cache, nem selecionado agora)
         if (status === 'CONCLUIDO') {
             var pedidoCheck = _obterPedidoDoCache(_pedidoId);
             var motoboyJaExistente = pedidoCheck ? String(pedidoCheck.motoboy || '').trim() : '';
-            var motoboyValidoAgora = motoboyNome || motoboyJaExistente;
-
-            if (!motoboyValidoAgora) {
+            if (!motoboyJaExistente) {
                 try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
                 setTimeout(function () {
                     try {
@@ -3150,10 +3136,20 @@ window.StatusModal = (function () {
                         window._exibirErroGlobal(e, 'exibir aviso de motoboy obrigatório');
                     }
                 }, 300);
-                return; // 🚫 Interrompe aqui — nunca chama a API
+                return;
             }
         }
 
+        var motoboyNome = '';
+        var statusFmt = String(status || '');
+
+        if (motoboyId) {
+            try {
+                var select = _el('select-motoboy');
+                if (select && select.selectedIndex >= 0)
+                    motoboyNome = String(select.options[select.selectedIndex].text || '').trim();
+            } catch (e) { window._exibirErroGlobal(e, 'obter nome do motoboy'); motoboyNome = ''; }
+        }
         if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
