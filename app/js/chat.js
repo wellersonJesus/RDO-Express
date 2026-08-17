@@ -2625,17 +2625,6 @@ window.remitirPedido = async function () {
                     hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                     data: new Date().toISOString()
                 });
-
-            if (typeof window.EventBus !== 'undefined') {
-                window.EventBus.emit('pedido:adicionado', novoPedidoCache);
-                window.EventBus.emit('pedido:atualizado', {
-                    id: novoPedidoId,
-                    valor_corrida: valorTotal,
-                    valor_total: valorTotal,
-                    valor_final: valorTotal,
-                    cliente: (window.AppRDO && window.AppRDO.clienteSelecionado) || ''
-                });
-            }
         }
 
         window.dadosPedidoAtual = {};
@@ -3065,8 +3054,7 @@ window.StatusModal = (function () {
             var todos = await API.call('getcolaboradores');
             var lista = Array.isArray(todos) ? todos : [];
             var motoboys = lista.filter(function (c) {
-                return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                    String(c.status || '').toUpperCase() === 'TRUE';
+                return String(c.status || '').toUpperCase() === 'TRUE';
             });
             select.disabled = false;
             select.innerHTML = motoboys.length > 0
@@ -3121,6 +3109,14 @@ window.StatusModal = (function () {
         }
     }
 
+    function _obterPedidoDoCache(id) {
+        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+        var idNorm = _normalizarId(id);
+        return cache.find(function (p) {
+            return _normalizarId(String(p.id || '').trim()) === idNorm;
+        }) || null;
+    }
+
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
         var motoboyNome = '';
         var statusFmt = String(status || '');
@@ -3132,6 +3128,32 @@ window.StatusModal = (function () {
                     motoboyNome = String(select.options[select.selectedIndex].text || '').trim();
             } catch (e) { window._exibirErroGlobal(e, 'obter nome do motoboy'); motoboyNome = ''; }
         }
+
+        // 🔒 TRAVA DE SEGURANÇA: nunca permite enviar CONCLUIDO sem motoboy definido
+        // (revalida direto no cache, independente da checagem anterior em processar())
+        if (status === 'CONCLUIDO') {
+            var pedidoCheck = _obterPedidoDoCache(_pedidoId);
+            var motoboyJaExistente = pedidoCheck ? String(pedidoCheck.motoboy || '').trim() : '';
+            var motoboyValidoAgora = motoboyNome || motoboyJaExistente;
+
+            if (!motoboyValidoAgora) {
+                try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
+                setTimeout(function () {
+                    try {
+                        Swal.fire({
+                            icon: 'warning', title: 'Motoboy não selecionado',
+                            html: '<div style="font-size:.9rem;color:#555;">Este pedido ainda não tem um <strong>motoboy</strong> definido.<br>Selecione um motoboy (status "Em Rota") antes de concluir o pedido.</div>',
+                            confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545',
+                            customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
+                        });
+                    } catch (e) {
+                        window._exibirErroGlobal(e, 'exibir aviso de motoboy obrigatório');
+                    }
+                }, 300);
+                return; // 🚫 Interrompe aqui — nunca chama a API
+            }
+        }
+
         if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
@@ -3157,6 +3179,7 @@ window.StatusModal = (function () {
                         (motivosCancelamento && motivosCancelamento.length > 0) ? motivosCancelamento.join(' | ') : undefined
                     );
                 }
+
                 if (typeof window.EventBus !== 'undefined') {
                     window.EventBus.emit('pedido:statusAtualizado', {
                         id: _pedidoId,
@@ -3164,7 +3187,42 @@ window.StatusModal = (function () {
                         motoboy: motoboyNome,
                         motivo_cancelamento: motivosCancelamento ? motivosCancelamento.join(' | ') : ''
                     });
+
+                    if (status === 'CONCLUIDO') {
+                        var pedidoConcluido = _obterPedidoDoCache(_pedidoId);
+
+                        function parseValorMoeda(str) {
+                            if (!str) return 0;
+                            if (typeof str === 'number') return str;
+                            var limpo = String(str)
+                                .replace(/[^\d,.-]/g, '')
+                                .replace(/\./g, '')
+                                .replace(',', '.');
+                            var num = parseFloat(limpo);
+                            return isNaN(num) ? 0 : num;
+                        }
+
+                        var valorFinalPedido = pedidoConcluido
+                            ? parseValorMoeda(pedidoConcluido.valor_corrida)
+                            : 0;
+
+                        var dataPedidoFinal = pedidoConcluido
+                            ? (pedidoConcluido.data_pedido || pedidoConcluido.dataPedido ||
+                                pedidoConcluido.data_lancamento || pedidoConcluido.dataLancamento ||
+                                pedidoConcluido.updated_at || '')
+                            : '';
+
+                        window.EventBus.emit('pedido:atualizado', {
+                            id: _pedidoId,
+                            valor_final: valorFinalPedido,
+                            valor_total: valorFinalPedido,
+                            valor_corrida: valorFinalPedido,
+                            motoboy: motoboyNome,
+                            data_pedido: dataPedidoFinal
+                        });
+                    }
                 }
+
             } else {
                 throw new Error((resposta && resposta.message) || 'Falha na API');
             }
@@ -3187,12 +3245,28 @@ window.StatusModal = (function () {
     function abrir(pedidoId) {
         try {
             _pedidoId = String(pedidoId).trim();
+
+            var pedidoAtual = _obterPedidoDoCache(_pedidoId);
+            var statusAtual = pedidoAtual ? String(pedidoAtual.status || '') : '';
+            var statusPuroAtual = statusAtual.includes('/') ? statusAtual.split('/').pop().trim() : statusAtual;
+
+            if (statusPuroAtual.toUpperCase() === 'CONCLUIDO') {
+                window.MasterAuth.abrir(_pedidoId, 'alterarMotoboyConcluido');
+                return;
+            }
+
+            _abrirModalReal(_pedidoId);
+        } catch (e) { window._exibirErroGlobal(e, 'abrir modal de status'); }
+    }
+
+    function _abrirModalReal(pedidoId) {
+        try {
+            _pedidoId = String(pedidoId).trim();
             _resetar();
 
             var modalEl = _el('modalStatus');
-            if (!modalEl) return;
+            if (!modalEl) return false;
 
-            // 🔑 PORTAL: escapa do stacking context do #chat
             if (modalEl.parentElement !== document.body) {
                 document.body.appendChild(modalEl);
             }
@@ -3223,7 +3297,11 @@ window.StatusModal = (function () {
             }, { once: true });
 
             _modalBS.show();
-        } catch (e) { window._exibirErroGlobal(e, 'abrir modal de status'); }
+            return true;
+        } catch (e) {
+            window._exibirErroGlobal(e, 'abrir modal de status desbloqueado');
+            return false;
+        }
     }
 
     function processar(status) {
@@ -3248,6 +3326,30 @@ window.StatusModal = (function () {
                 return;
             }
             if (status === 'CONCLUIDO') {
+                var pedidoAtual = _obterPedidoDoCache(_pedidoId);
+                var temMotoboy = pedidoAtual && String(pedidoAtual.motoboy || '').trim() !== '';
+
+                if (!temMotoboy) {
+                    try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
+                    setTimeout(function () {
+                        try {
+                            var resultado = Swal.fire({
+                                icon: 'warning', title: 'Motoboy não selecionado',
+                                html: '<div style="font-size:.9rem;color:#555;">Este pedido ainda não tem um <strong>motoboy</strong> definido.<br>Selecione um motoboy (status "Em Rota") antes de concluir o pedido.</div>',
+                                confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545',
+                                customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
+                            });
+                            // Só chama .catch se realmente for uma Promise
+                            if (resultado && typeof resultado.catch === 'function') {
+                                resultado.catch(function (e) { window._exibirErroGlobal(e, 'exibir aviso de motoboy obrigatório'); });
+                            }
+                        } catch (e) {
+                            window._exibirErroGlobal(e, 'exibir aviso de motoboy obrigatório');
+                        }
+                    }, 300);
+                    return;
+                }
+
                 try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
                 setTimeout(function () {
                     Swal.fire({
@@ -3859,10 +3961,14 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
 
             if (typeof window.EventBus !== 'undefined')
                 window.EventBus.emit('pedido:atualizado', {
-                    id: pedidoId,
-                    valor_corrida: valorFinal,
-                    valor_total: valorFinal,
-                    valor_final: valorFinal
+                    id: _pedidoId,
+                    valor_final: valorFinalPedido,
+                    valor_total: valorFinalPedido,
+                    valor_corrida: valorFinalPedido,
+                    motoboy: motoboyNome,
+                    data_pedido: pedidoConcluido
+                        ? (pedidoConcluido.data_lancamento || pedidoConcluido.dataLancamento || pedidoConcluido.updated_at || '')
+                        : ''
                 });
 
             if (typeof Swal !== 'undefined')

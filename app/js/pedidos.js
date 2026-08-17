@@ -895,7 +895,20 @@
                 }
 
                 if (typeof window.EventBus !== 'undefined') {
-                    window.EventBus.emit('pedido:adicionado', novoPedido);
+                    var chaveEmit = pedidoId + '_' + valorFinal;
+                    window._ultimosEmitsPedido = window._ultimosEmitsPedido || {};
+                    var agora = Date.now();
+
+                    if (!window._ultimosEmitsPedido[chaveEmit] || (agora - window._ultimosEmitsPedido[chaveEmit]) > 1000) {
+                        window._ultimosEmitsPedido[chaveEmit] = agora;
+                        window.EventBus.emit('pedido:atualizado', {
+                            id: pedidoId,
+                            valor_corrida: valorBase,
+                            valor_total: valorBase,
+                            valor_final: valorFinal,
+                            motoboy: payload.motoboy
+                        });
+                    }
                 } else {
                     if (Array.isArray(window.AppRDO.pedidosCache))
                         window.AppRDO.pedidosCache.push(novoPedido);
@@ -1109,6 +1122,8 @@
         var btnSalvar = document.getElementById('btn-salvar-edicao');
         var errEl = document.getElementById('edit-error-msg');
 
+        if (btnSalvar && btnSalvar.disabled) return;
+
         if (errEl) errEl.classList.add('d-none');
 
         var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
@@ -1133,14 +1148,13 @@
         var selectMotoboy = document.getElementById('edit-motoboy');
         var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
 
-        // 🆕 Data do Lançamento — editável, vai para a coluna "data" no backend
         var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
 
         var payload = {
             id: pedidoId,
             solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
             contato: (document.getElementById('edit-contato') || {}).value || '',
-            data_lancamento: dataLancamento, // 🔧 chave corrigida
+            data_lancamento: dataLancamento,
             horario: (document.getElementById('edit-horario') || {}).value || '',
             de: (document.getElementById('edit-de') || {}).value || '',
             para: (document.getElementById('edit-para') || {}).value || '',
@@ -1202,14 +1216,22 @@
                     if (inst) inst.hide();
                 }
 
-                if (typeof window.EventBus !== 'undefined')
-                    window.EventBus.emit('pedido:atualizado', {
-                        id: pedidoId,
-                        valor_corrida: valorBase,
-                        valor_total: valorBase,
-                        valor_final: valorFinal,
-                        motoboy: payload.motoboy
-                    });
+                if (typeof window.EventBus !== 'undefined') {
+                    var chaveEmit = pedidoId + '_' + valorFinal;
+                    window._ultimosEmitsPedido = window._ultimosEmitsPedido || {};
+                    var agora = Date.now();
+
+                    if (!window._ultimosEmitsPedido[chaveEmit] || (agora - window._ultimosEmitsPedido[chaveEmit]) > 1000) {
+                        window._ultimosEmitsPedido[chaveEmit] = agora;
+                        window.EventBus.emit('pedido:atualizado', {
+                            id: pedidoId,
+                            valor_corrida: valorBase,
+                            valor_total: valorBase,
+                            valor_final: valorFinal,
+                            motoboy: payload.motoboy
+                        });
+                    }
+                }
 
                 if (typeof Swal !== 'undefined')
                     Swal.fire({

@@ -202,14 +202,24 @@ window.MasterAuth = (function () {
             }
 
             console.log('[MasterAuth] ✅ Senha validada');
-            var idExcluir = _pedidoId;
-            var senhaExcluir = senha;
+            var idAlvo = _pedidoId;
+            var senhaValidada = senha;
+            var origemAtual = _origem;
             _pedidoId = null;
 
             try { if (_modalBS) _modalBS.hide(); } catch (_) { }
             _resetar();
 
-            await _executarExclusao(idExcluir, senhaExcluir);
+            if (origemAtual === 'alterarMotoboyConcluido') {
+                if (window.StatusModal && typeof window.StatusModal.abrirSemBloqueio === 'function') {
+                    setTimeout(function () { window.StatusModal.abrirSemBloqueio(idAlvo); }, 350);
+                }
+                _origem = null;
+                return;
+            }
+
+            await _executarExclusao(idAlvo, senhaValidada);
+            _origem = null;
 
         } catch (err) {
             console.error('[MasterAuth] ❌ erro:', err);

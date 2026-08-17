@@ -401,7 +401,7 @@ if (!window.EventBus) {
     var tipoNorm = (d.tipo || '').toString().trim().toLowerCase() === 'entrada' ? 'entrada' : 'saida';
     var valorNum = _parseValor(d.vlr_servico || d.valor || 0);
     var situacaoNorm = (d.situacao || 'pendente').toString().trim().toLowerCase();
-    var colaboradorId = (d.colaborador_id || '').toString().trim();
+    var colaboradorId = (d.colaborador_id || d.colaboradorId || '').toString().trim();
 
     return {
       id: (d.id || '').toString().trim(),
@@ -418,7 +418,7 @@ if (!window.EventBus) {
       descricao: (d.descricao || '').toString().trim(),
       valor: valorNum,
       situacao: situacaoNorm,
-      motoboy: (d.colaborador || '').toString().trim() || '-',
+      motoboy: (d.colaborador || d.nome_colaborador || d.colaborador_nome || '').toString().trim() || '-',
       cliente: '',
       solicitante: '',
       observacao: (d.observacao || '').toString().trim(),
@@ -430,6 +430,12 @@ if (!window.EventBus) {
     for (var i = 0; i < state.cache.length; i++) {
       var reg = state.cache[i];
       var idPedido = (reg.idPedido || '').toString().trim();
+
+      if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && (!reg.motoboy || reg.motoboy === '-')) {
+        var cAtual = state.colaboradoresCache[reg.colaboradorId];
+        reg.motoboy = (cAtual.username || cAtual.nome || '').toString().trim() || '-';
+      }
+
       if (!idPedido) {
         if (!reg.cliente || reg.cliente === '') reg.cliente = '-';
         if (!reg.solicitante || reg.solicitante === '') reg.solicitante = '-';
@@ -449,10 +455,12 @@ if (!window.EventBus) {
           ? (state.clientesCache[idCliente].username || '').toString().trim() || '-'
           : '-';
       }
-      if (!reg.colaboradorId && (reg.motoboy === '-' || reg.motoboy === '')) {
+      if (!reg.motoboy || reg.motoboy === '-') {
         var colabIdPedido = (pedido.colaborador_id || '').toString().trim();
         if (colabIdPedido && state.colaboradoresCache[colabIdPedido]) {
-          reg.motoboy = state.colaboradoresCache[colabIdPedido].username || '-';
+          var cPedido = state.colaboradoresCache[colabIdPedido];
+          reg.motoboy = (cPedido.username || cPedido.nome || '').toString().trim() || '-';
+          if (!reg.colaboradorId) reg.colaboradorId = colabIdPedido;
         }
       }
 
@@ -1057,58 +1065,60 @@ if (!window.EventBus) {
       });
   }
 
-  window.EventBus.on('pedido:atualizado', function (dados) {
-    if (!dados || !dados.id) return;
-    if (dados.__origemFinanceiro) return;
+  if (!window._finListenerPedidoAtualizadoBind) {
+    window._finListenerPedidoAtualizadoBind = true;
 
-    var idPedidoNormalizado = normalizarIdComparacao(dados.id);
-    if (!idPedidoNormalizado) return;
+    window.EventBus.on('pedido:atualizado', function (dados) {
+      if (!dados || !dados.id) return;
 
-    var reg = state.cache.find(function (r) {
-      return normalizarIdComparacao(r.idPedido) === idPedidoNormalizado;
-    });
+      var idFormatado = typeof window._formatarNomeServico === 'function'
+        ? window._formatarNomeServico(dados.id)
+        : String(dados.id);
 
-    var novoValor = dados.valor_final !== undefined ? dados.valor_final :
-      (dados.valor_total !== undefined ? dados.valor_total :
-        (dados.valor_corrida !== undefined ? dados.valor_corrida : undefined));
-    var valorNum = novoValor !== undefined ? parseValor(novoValor) : 0;
+      // 🛑 GUARDA CONTRA DUPLICAÇÃO
+      // Verifica se já existe um lançamento financeiro para este pedido
+      var jaExiste = (window.financeiroState?.cache || []).some(function (r) {
+        return String(r.idPedido || '').trim() === String(idFormatado).trim();
+      });
 
-    if (!reg) {
-      if (!valorNum || valorNum <= 0) return;
+      if (jaExiste) {
+        console.log('[Financeiro] Ignorando criação duplicada para pedido:', idFormatado);
+        return; // Já existe, não cria de novo
+      }
+
+      var valorNum = window._parseMoedaSeguro(dados.valor_final || dados.valor_total || dados.valor_corrida || 0);
+
+      var dataLancamentoFinal = String(dados.data_pedido || '').trim();
+      if (!dataLancamentoFinal) {
+        var hoje = new Date();
+        dataLancamentoFinal =
+          String(hoje.getDate()).padStart(2, '0') + '/' +
+          String(hoje.getMonth() + 1).padStart(2, '0') + '/' +
+          hoje.getFullYear();
+      }
+
+      var nomeColaboradorEvento = (dados.motoboy || dados.colaborador || dados.nome_colaborador || dados.colaborador_nome || '').toString().trim();
+      var idColaboradorEvento = (dados.colaborador_id || dados.colaboradorId || '').toString().trim();
+
+      if (!nomeColaboradorEvento && idColaboradorEvento && state.colaboradoresCache[idColaboradorEvento]) {
+        var cEvento = state.colaboradoresCache[idColaboradorEvento];
+        nomeColaboradorEvento = (cEvento.username || cEvento.nome || '').toString().trim();
+      }
 
       window.API.call('addfinanceiro', {
         tipo: 'entrada',
-        data: toISO(new Date()),
-        descricao: 'Pedido ' + dados.id,
+        data_lancamento: dataLancamentoFinal,
+        descricao: 'Pedido ' + idFormatado,
         vlr_servico: valorNum,
         situacao: 'pendente',
-        colaborador: dados.motoboy || '',
-        colaborador_id: dados.colaborador_id || '',
+        colaborador: nomeColaboradorEvento,
+        colaborador_id: idColaboradorEvento,
         observacao: '',
-        id_pedido: dados.id
-      }).then(function (res) {
-        if (isRespostaSucesso(res)) {
-          carregarDados();
-        } else {
-          finToast('Falha ao criar lançamento financeiro do pedido ' + dados.id + '.', 'warning');
-        }
-      }).catch(function (err) {
-        finToast('Erro ao criar lançamento financeiro: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'danger');
+        id_pedido: idFormatado
       });
-      return;
-    }
+    });
 
-    var payloadAtualizacao = {};
-    if (valorNum) payloadAtualizacao.valor = valorNum;
-    if (dados.motoboy !== undefined) payloadAtualizacao.motoboy = dados.motoboy;
-    if (dados.cliente !== undefined) payloadAtualizacao.cliente = dados.cliente;
-    if (!Object.keys(payloadAtualizacao).length) return;
-
-    salvarRegistroFinanceiro(reg.id, payloadAtualizacao)
-      .catch(function (err) {
-        finToast('Pedido atualizado, mas houve falha ao sincronizar o financeiro: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'warning');
-      });
-  });
+  }
 
   function _toggleBtnClearBuscaFin() {
     if (els.btnClearBuscaFin) {
@@ -1483,17 +1493,26 @@ if (!window.EventBus) {
   }
 
   function abrirModalEditar(reg) {
+    console.log('🔍 REG RECEBIDO NO MODAL:', reg);
     var OLD_ID = 'modalEditarFinDyn';
     var old = document.getElementById(OLD_ID);
-    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+    if (old) {
+      var oi = bootstrap.Modal.getInstance(old);
+      if (oi) oi.dispose();
+      old.remove();
+    }
 
     var isEntrada = reg.tipo === 'entrada';
-    var corHeader = isEntrada ? 'linear-gradient(135deg,#198754 0%,#146c43 100%)' : 'linear-gradient(135deg,#dc3545 0%,#c82333 100%)';
+    var corHeader = isEntrada
+      ? 'linear-gradient(135deg,#198754 0%,#146c43 100%)'
+      : 'linear-gradient(135deg,#dc3545 0%,#c82333 100%)';
     var valorFormatado = (reg.valor || 0).toFixed(2).replace('.', ',');
     var idExibicao = reg.idFinanceiro || reg.id || '';
 
     var listaClientes = Object.keys(state.clientesCache || {}).map(function (k) { return state.clientesCache[k]; });
-    listaClientes.sort(function (a, b) { return (a.nome || a.username || '').localeCompare(b.nome || b.username || ''); });
+    listaClientes.sort(function (a, b) {
+      return (a.nome || a.username || '').localeCompare(b.nome || b.username || '');
+    });
 
     var clienteAtualNome = (reg.cliente || '').toString().trim().toLowerCase();
     var opcoesCliente = '<option value="">Cliente avulso / Nenhum</option>' + listaClientes.map(function (c) {
@@ -1670,8 +1689,16 @@ if (!window.EventBus) {
       var descricao = elDescricao.value.trim();
       var valorNum = parseValor(elValor.value.trim());
 
-      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); return; }
-      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
+      if (!descricao) {
+        erroEl.textContent = 'Informe a descrição.';
+        erroEl.classList.remove('d-none');
+        return;
+      }
+      if (valorNum <= 0) {
+        erroEl.textContent = 'Informe um valor válido.';
+        erroEl.classList.remove('d-none');
+        return;
+      }
 
       _jaSalvouOuFechou = true;
 
@@ -2499,41 +2526,48 @@ if (!window.EventBus) {
       els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>Nenhum registro encontrado.</td></tr>';
     } else {
       els.tbodyTodos.innerHTML = pagina.map(function (r) {
-        var badgeTipo = getTipoBadge(r.tipo);
         var badgeSituacao = getStatusBadge(r.situacao);
-        var celulaTipoCombinada =
-          '<div class="fin-tipo-cell">' +
-          '<span class="fin-tipo-cell-item fin-tipo-item-tipo">' + badgeTipo + '</span>' +
-          '<span class="fin-tipo-cell-item fin-tipo-item-situacao">' + badgeSituacao + '</span>' +
-          '</div>';
 
         return '<tr class="fin-row" data-idpedido="' + escapeHtml(r.idPedido || '') + '" style="cursor:pointer;">' +
           '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
           '<td class="fin-td-descricao-mobile" title="' + escapeHtml(r.descricao || '-') + '">' + formatarDescricaoMobile(r.descricao) + '</td>' +
-          '<td class="fin-col-tipo">' + celulaTipoCombinada + '</td>' +
-          '<td class="text-end"><div class="fin-actions-group">' +
+          '<td class="fin-col-tipo">' + badgeSituacao + '</td>' +
+          '<td class="text-end">' +
+          '<div class="fin-actions-group">' +
           '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-eye"></i></button>' +
           '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-pencil-square"></i></button>' +
-          '</div></td>' +
+          '</div>' +
+          '</td>' +
           '</tr>';
       }).join('');
 
-      els.tbodyTodos.querySelectorAll('.fin-btn-ver, .fin-row').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var idPedido = this.getAttribute('data-idpedido');
-          var reg = state.cache.find(function (r) { return r.idPedido === idPedido; });
-          if (reg) abrirModalVisualizar(reg);
-        });
-      });
+      var linhasDom = els.tbodyTodos.querySelectorAll('tr.fin-row');
 
-      els.tbodyTodos.querySelectorAll('.fin-btn-editar').forEach(function (el) {
-        el.addEventListener('click', function (e) {
+      linhasDom.forEach(function (linhaEl, index) {
+        var reg = pagina[index];
+        if (!reg) return;
+
+        var btnVer = linhaEl.querySelector('.fin-btn-ver');
+        var btnEditar = linhaEl.querySelector('.fin-btn-editar');
+
+        linhaEl.addEventListener('click', function (e) {
           e.stopPropagation();
-          var idPedido = this.getAttribute('data-idpedido');
-          var reg = state.cache.find(function (r) { return r.idPedido === idPedido; });
-          if (reg) abrirModalEditar(reg);
+          abrirModalVisualizar(reg);
         });
+
+        if (btnVer) {
+          btnVer.addEventListener('click', function (e) {
+            e.stopPropagation();
+            abrirModalVisualizar(reg);
+          });
+        }
+
+        if (btnEditar) {
+          btnEditar.addEventListener('click', function (e) {
+            e.stopPropagation();
+            abrirModalEditar(reg);
+          });
+        }
       });
     }
 
@@ -2762,6 +2796,8 @@ if (!window.EventBus) {
     }
 
     var totais = calcularTotaisRegistros(extrato.registros);
+    var blocos = agruparRegistrosPorData(extrato.registros);
+
     if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = (extrato.origem || '-') + ' · ' + (extrato.periodoLabel || '-');
 
     var blocosHtml = blocos.map(function (bloco, idx) {
@@ -3027,8 +3063,10 @@ if (!window.EventBus) {
 
     document.getElementById('fin-view-btn-excluir').addEventListener('click', function () {
       var id = this.getAttribute('data-id');
+      var idPedido = reg.idPedido;
       var erroEl = document.getElementById('fin-view-erro-excluir');
       var btn = this;
+      var btnHtmlOriginal = btn.innerHTML;
 
       if (!id) {
         erroEl.textContent = 'Não foi possível identificar o lançamento.';
@@ -3036,29 +3074,64 @@ if (!window.EventBus) {
         return;
       }
 
-      var confirmar = window.confirm('Tem certeza que deseja excluir este lançamento?\nEssa ação não pode ser desfeita.');
-      if (!confirmar) return;
+      abrirModalConfirmarExclusaoFin({
+        titulo: 'Excluir lançamento',
+        mensagem: 'Tem certeza que deseja excluir este lançamento? Essa ação não pode ser desfeita.',
+        subtitulo: reg.descricao ? resumirDescricao(reg.descricao, 40) : '',
+        onConfirmar: function () {
+          abrirModalSenhaMaster(function (senha) {
+            window.API.call('validarSenhaMaster', { senha: senha }).then(function (resSenha) {
+              var senhaOk = resSenha && (resSenha.status === 'success' || resSenha.valido === true);
 
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Excluindo...';
+              if (!senhaOk) {
+                finToast('Senha incorreta. Exclusão cancelada.', 'danger');
+                return;
+              }
 
-      excluirRegistroDefinitivo(id).then(function (res) {
-        var sucesso = res && (res.status === 'success' || res.success === true || res.ok === true);
-        if (sucesso) {
-          finToast('Lançamento excluído com sucesso!', 'success');
-          modalInst.hide();
-        } else {
-          erroEl.textContent = 'Erro ao excluir. Tente novamente.';
-          erroEl.classList.remove('d-none');
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-trash3"></i><span>Excluir</span>';
+              btn.disabled = true;
+              btn.innerHTML = '<i class="bi bi-search fin-loading-spin"></i>';
+              erroEl.classList.add('d-none');
+
+              // ✅ delpedido já cai em cascata para o chat — não chamar delchat separadamente
+              Promise.allSettled([
+                excluirRegistroDefinitivo(id),                                                          // [0] financeiro
+                idPedido ? window.API.call('delpedido', { id: idPedido }) : Promise.resolve({ status: 'success' }) // [1] pedido + chat (cascata no backend)
+              ]).then(function (resultados) {
+                var finRes = resultados[0], pedidoRes = resultados[1];
+
+                var finOk = finRes.status === 'fulfilled';
+                var pedidoOk = pedidoRes.status === 'fulfilled';
+
+                if (finOk && pedidoOk) {
+                  finToast('Lançamento excluído com sucesso do financeiro, pedidos e chat!', 'success');
+                  modalInst.hide();
+
+                  if (typeof window.EventBus !== 'undefined') {
+                    window.EventBus.emit('pedido:excluido', { id: idPedido });
+                    window.EventBus.emit('financeiro:excluido', { id: id });
+                  }
+                } else {
+                  var falhas = [];
+                  if (!finOk) falhas.push('financeiro (' + (finRes.reason && finRes.reason.message || finRes.reason) + ')');
+                  if (!pedidoOk) falhas.push('pedidos/chat (' + (pedidoRes.reason && pedidoRes.reason.message || pedidoRes.reason) + ')');
+
+                  console.error('[exclusao em cascata] Falhas detalhadas:', { finRes, pedidoRes });
+                  erroEl.textContent = 'Falha ao excluir: ' + falhas.join('; ') + '. Verifique manualmente.';
+                  erroEl.classList.remove('d-none');
+                  btn.disabled = false;
+                  btn.innerHTML = btnHtmlOriginal;
+
+                  if (finOk && typeof window.EventBus !== 'undefined') {
+                    window.EventBus.emit('financeiro:excluido', { id: id });
+                  }
+                }
+              });
+            }).catch(function (err) {
+              console.error('[validarSenhaMaster]', err);
+              finToast('Erro ao validar senha.', 'danger');
+            });
+          });
         }
-      }).catch(function (err) {
-        console.error('[fin-view-btn-excluir]', err);
-        erroEl.textContent = 'Falha na comunicação com o servidor.';
-        erroEl.classList.remove('d-none');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-trash3"></i><span>Excluir</span>';
       });
     });
 
@@ -3092,6 +3165,77 @@ if (!window.EventBus) {
       return resultado.join(' ') + '...';
     }
     return resultado.join(' ');
+  }
+
+  function abrirModalSenhaMaster(onConfirmar) {
+    var OLD_ID = 'modalSenhaMasterDyn';
+    var old = document.getElementById(OLD_ID);
+    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+
+    var html =
+      '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
+      '<div class="modal-dialog modal-dialog-centered" style="max-width:380px;">' +
+      '<div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">' +
+      '<div style="background:linear-gradient(135deg,#dc3545 0%,#b02a37 100%);padding:20px 24px 16px;">' +
+      '<div class="d-flex align-items-center gap-3">' +
+      '<div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+      '<i class="bi bi-shield-lock-fill" style="font-size:1.1rem;color:#fff;"></i></div>' +
+      '<div><h6 class="fw-bold mb-0 text-white" style="font-size:.9rem;">Confirmação Necessária</h6>' +
+      '<small style="color:rgba(255,255,255,.75);font-size:.72rem;">Digite a senha master para continuar</small></div></div></div>' +
+      '<div class="modal-body px-4 py-4">' +
+      '<div id="senha-master-erro" class="alert alert-danger d-none py-2 px-3 mb-3" style="font-size:.74rem;border-radius:10px;"></div>' +
+      '<label class="fin-field-label">Senha Master</label>' +
+      '<div style="position:relative;">' +
+      '<input type="password" id="senha-master-input" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="••••••••" autocomplete="off" style="padding-right:38px;">' +
+      '<button type="button" id="senha-master-toggle-olho" tabindex="-1" style="position:absolute;top:50%;right:12px;transform:translateY(-50%);background:none;border:none;padding:0;color:#888;cursor:pointer;font-size:.95rem;line-height:1;">' +
+      '<i class="bi bi-eye-slash"></i></button>' +
+      '</div>' +
+      '</div>' +
+      '<div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end">' +
+      '<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;">' +
+      '<i class="bi bi-x-lg me-1"></i>Cancelar</button>' +
+      '<button type="button" class="btn btn-danger rounded-pill px-4" id="senha-master-btn-confirmar" style="font-size:.78rem;height:38px;font-weight:600;">' +
+      '<i class="bi bi-check-lg me-1"></i>Confirmar</button>' +
+      '</div></div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    var modalEl = document.getElementById(OLD_ID);
+    var modalInst = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+    var input = document.getElementById('senha-master-input');
+    var erroEl = document.getElementById('senha-master-erro');
+    var btnConfirmar = document.getElementById('senha-master-btn-confirmar');
+    var btnToggleOlho = document.getElementById('senha-master-toggle-olho');
+
+    btnConfirmar.addEventListener('click', function () {
+      var senha = input.value.trim();
+      if (!senha) {
+        erroEl.textContent = 'Informe a senha.';
+        erroEl.classList.remove('d-none');
+        return;
+      }
+      erroEl.classList.add('d-none');
+      modalInst.hide();
+      onConfirmar(senha);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') btnConfirmar.click();
+    });
+
+    btnToggleOlho.addEventListener('click', function () {
+      var visivel = input.type === 'text';
+      input.type = visivel ? 'password' : 'text';
+      this.querySelector('i').className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+    });
+
+    modalInst.show();
+    setTimeout(function () { input.focus(); }, 300);
   }
 
   function bindSortDataTodos() {
