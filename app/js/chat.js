@@ -2594,6 +2594,7 @@ window.remitirPedido = async function () {
 
         var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
         var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
+        var novoChatId = String(resposta.chat_id || resposta.id_chat || '').trim();
 
         var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
 
@@ -2617,6 +2618,7 @@ window.remitirPedido = async function () {
 
             if (Array.isArray(window.AppRDO.mensagensCache))
                 window.AppRDO.mensagensCache.push({
+                    id: novoChatId || null,
                     id_cliente: payload.id_cliente,
                     pedido_id: novoPedidoId,
                     texto: mensagemFinal,
@@ -2624,8 +2626,16 @@ window.remitirPedido = async function () {
                     data: new Date().toISOString()
                 });
 
-            if (typeof window.EventBus !== 'undefined')
+            if (typeof window.EventBus !== 'undefined') {
                 window.EventBus.emit('pedido:adicionado', novoPedidoCache);
+                window.EventBus.emit('pedido:atualizado', {
+                    id: novoPedidoId,
+                    valor_corrida: valorTotal,
+                    valor_total: valorTotal,
+                    valor_final: valorTotal,
+                    cliente: (window.AppRDO && window.AppRDO.clienteSelecionado) || ''
+                });
+            }
         }
 
         window.dadosPedidoAtual = {};
@@ -4691,7 +4701,7 @@ function _sincronizarValorNoChat(dados) {
 
     var cacheMsgs = Array.isArray(window.AppRDO.mensagensCache) ? window.AppRDO.mensagensCache : [];
     var msg = cacheMsgs.find(function (m) { return _normIdChat(m.pedido_id) === idNorm; });
-    if (!msg || !msg.texto) return;
+    if (!msg || !msg.texto || !msg.id) return;
 
     var textoAtualizado = msg.texto;
 
@@ -4757,6 +4767,9 @@ function _sincronizarValorNoChat(dados) {
 
     if (!houveAlteracao || textoAtualizado === msg.texto) return;
 
+    var chatId = msg.id;
+    if (!chatId) return;
+
     msg.texto = textoAtualizado;
 
     if (msgEl) {
@@ -4776,7 +4789,7 @@ function _sincronizarValorNoChat(dados) {
         );
     }
 
-    API.call('updatechat', { id: msg.id, texto: textoAtualizado })
+    API.call('updatechat', { id: chatId, texto: textoAtualizado })
         .then(function (res) {
             if (!res || res.status === 'error') {
                 throw new Error((res && res.message) || 'Falha ao sincronizar dados no banco de chat');

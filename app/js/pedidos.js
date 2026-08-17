@@ -943,7 +943,8 @@
 
             _s('det-pedido-id-raw', id);
             _s('det-status-raw', statusAtual);
-            _s('det-data', _formatarDataExibicao(_extrairDataPedido(pedido)));
+            _s('det-data-pedido', _formatarDataExibicao(_extrairDataPedido(pedido)));
+            _s('det-data', _resolverDataLancamento(pedido) || _formatarDataExibicao(pedido.updated_at));
             _s('det-horario', _resolverHoraPedido(pedido));
             _s('det-contato', pedido.contato || '—');
             _s('det-cliente', _resolverNomeCliente(pedido));

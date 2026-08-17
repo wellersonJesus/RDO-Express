@@ -49,7 +49,7 @@ if (!window.EventBus) {
     colaboradores: [],
     caixaValoresVisiveis: false,
     tabAtual: 'todos',
-    filtroTipo: 'entrada',
+    filtroTipo: 'todos',
     filtroSituacao: 'todos',
     filtroBusca: '',
     fetching: false,
@@ -185,45 +185,6 @@ if (!window.EventBus) {
         itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
       }
     });
-  }
-
-  function aplicarFiltroCaixaLocal() {
-    var base = state.caixa.dadosFiltrados;
-    var filtrados = filtrarLogicoCaixa(base, state.caixa.filtroDescricao, state.caixa.filtroValor);
-
-    // Totais dos mini-cards sempre refletem o PERÍODO COMPLETO (carteira gerada)
-    var totais = calcularTotaisRegistros(filtrados);
-    var saldoTotal = totais.entradas - totais.saidas;
-
-    var valores = {
-      caixaCardEntradas: totais.entradas,
-      caixaCardSaidas: totais.saidas,
-      caixaCardEmpresa: totais.empresa,
-      caixaCardColaboradores: totais.colaboradores,
-      caixaCardSaldoTotal: saldoTotal
-    };
-
-    Object.keys(valores).forEach(function (k) {
-      if (els[k]) {
-        els[k].setAttribute('data-valor-real', formatarMoeda(valores[k]));
-        els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(valores[k]) : 'R$ ****';
-      }
-    });
-
-    if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = totais.qtd;
-
-    // 🔽 NOVO: aplica o filtro do mini-card clicado somente na LISTA exibida
-    var listaParaExibir = filtrados;
-    if (filtroCaixaAtivo === 'entrada') {
-      listaParaExibir = filtrados.filter(function (r) { return r.tipo === 'entrada'; });
-    } else if (filtroCaixaAtivo === 'saida') {
-      listaParaExibir = filtrados.filter(function (r) { return r.tipo === 'saida'; });
-    }
-    // 'registros' e 'saldo' (ou null) => mantém todos os lançamentos
-
-    state.caixa.listaFiltradaAtual = listaParaExibir;
-    state.caixa.pagina = 1;
-    renderCaixaListaDiaria();
   }
 
   function bindFiltrosMiniCaixa() {
@@ -435,59 +396,33 @@ if (!window.EventBus) {
   }
 
   function normalizarRegistro(d) {
-    var tipoRaw = (d.tipo || '').toString().trim().toUpperCase();
-    var tipoNorm = (tipoRaw === 'RECEITA' || tipoRaw === 'ENTRADA' || tipoRaw === 'INCOME') ? 'entrada' : 'saida';
-    var dataObj = parseData(d.data);
-    var valorNorm = parseCurrencyField(d.valor !== undefined ? d.valor : d.vlr_servico);
-    if (isNaN(valorNorm)) valorNorm = 0;
-    var situacao = (d.situacao || 'pendente').toString().trim().toLowerCase();
-    var idPedido = (d.id_pedido || '').toString().trim();
+    var idPedido = (d.id_pedido || d.idPedido || '').toString().trim();
+    var dataObj = parseData(d.data_lancamento || d.data);
+    var tipoNorm = (d.tipo || '').toString().trim().toLowerCase() === 'entrada' ? 'entrada' : 'saida';
+    var valorNum = _parseValor(d.vlr_servico || d.valor || 0);
+    var situacaoNorm = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var colaboradorId = (d.colaborador_id || '').toString().trim();
-    var motoboyRaw = (d.motoboy || d.colaborador || '').toString().trim();
-    var motoboyNome = motoboyRaw;
-    if (colaboradorId && state.colaboradoresCache[colaboradorId]) {
-      motoboyNome = state.colaboradoresCache[colaboradorId].username || motoboyRaw;
-    }
-    var observacao = (d.observacao || '').toString().trim();
-    var pctColab = 80;
-    if (colaboradorId && state.colaboradoresCache[colaboradorId] && state.colaboradoresCache[colaboradorId].percentual_comissao) {
-      pctColab = parseFloat(state.colaboradoresCache[colaboradorId].percentual_comissao) || 80;
-    }
-    var pctEmpresa = 100 - pctColab;
-    var valorColab = 0, valorEmpresa = 0;
-    if (tipoNorm === 'entrada') {
-      var colabVal = parseCurrencyField(d.colaborador_valor !== undefined ? d.colaborador_valor : d.colaborador);
-      var rdoVal = parseCurrencyField(d.rdo);
-      if (!isNaN(colabVal) && colabVal > 0) {
-        valorColab = colabVal;
-        valorEmpresa = !isNaN(rdoVal) && rdoVal > 0 ? rdoVal : (valorNorm - colabVal);
-      } else if (colaboradorId || motoboyNome) {
-        valorColab = valorNorm * (pctColab / 100);
-        valorEmpresa = valorNorm * (pctEmpresa / 100);
-      } else {
-        valorColab = 0;
-        valorEmpresa = valorNorm;
-      }
-    }
+
     return {
       id: (d.id || '').toString().trim(),
+      idFinanceiro: (d.id || '').toString().trim(),
       idPedido: idPedido,
+      colaboradorId: colaboradorId,
       dataISO: dataObj.iso,
       dataBR: dataObj.br,
       dataDisplay: dataObj.display,
+      dataPedidoISO: '',
+      dataPedidoBR: '',
+      dataPedidoDisplay: '',
       tipo: tipoNorm,
       descricao: (d.descricao || '').toString().trim(),
-      valor: valorNorm,
-      valorColaborador: valorColab,
-      valorEmpresa: valorEmpresa,
-      percentualComissao: pctColab,
-      colaboradorId: colaboradorId,
-      motoboy: motoboyNome || '-',
-      situacao: situacao,
-      observacao: observacao,
-      grupo: (d.grupo || '').toString().trim(),
-      cliente: (d.cliente || '').toString().trim(),
-      solicitante: (d.solicitante || '').toString().trim()
+      valor: valorNum,
+      situacao: situacaoNorm,
+      motoboy: (d.colaborador || '').toString().trim() || '-',
+      cliente: '',
+      solicitante: '',
+      observacao: (d.observacao || '').toString().trim(),
+      updatedAt: d.updated_at || ''
     };
   }
 
@@ -519,6 +454,13 @@ if (!window.EventBus) {
         if (colabIdPedido && state.colaboradoresCache[colabIdPedido]) {
           reg.motoboy = state.colaboradoresCache[colabIdPedido].username || '-';
         }
+      }
+
+      if (pedido.data_pedido) {
+        var dpObj = parseData(pedido.data_pedido);
+        reg.dataPedidoISO = dpObj.iso;
+        reg.dataPedidoBR = dpObj.br;
+        reg.dataPedidoDisplay = dpObj.display;
       }
     }
   }
@@ -868,15 +810,11 @@ if (!window.EventBus) {
   }
 
   function spinOn() {
-    if (els.btnRefresh) { els.btnRefresh.classList.add('syncing'); els.btnRefresh.disabled = true; }
-    if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat';
+    if (els.syncIcon) els.syncIcon.classList.add('fin-spin-icon');
   }
 
   function spinOff() {
-    setTimeout(function () {
-      if (els.btnRefresh) { els.btnRefresh.classList.remove('syncing'); els.btnRefresh.disabled = false; }
-      if (els.syncIcon) els.syncIcon.className = 'bi bi-arrow-repeat';
-    }, 500);
+    if (els.syncIcon) els.syncIcon.classList.remove('fin-spin-icon');
   }
 
   function _mostrarLoadingFin() {
@@ -1130,41 +1068,44 @@ if (!window.EventBus) {
       return normalizarIdComparacao(r.idPedido) === idPedidoNormalizado;
     });
 
-    if (!reg) {
-      console.warn('[EventBus pedido:atualizado] Nenhum lançamento financeiro encontrado para o pedido ' + dados.id + '. Ignorando sincronização.');
-      return;
-    }
-
     var novoValor = dados.valor_final !== undefined ? dados.valor_final :
       (dados.valor_total !== undefined ? dados.valor_total :
         (dados.valor_corrida !== undefined ? dados.valor_corrida : undefined));
+    var valorNum = novoValor !== undefined ? parseValor(novoValor) : 0;
 
-    var payloadAtualizacao = {};
+    if (!reg) {
+      if (!valorNum || valorNum <= 0) return;
 
-    if (novoValor !== undefined) {
-      var valorNum = parseValor(novoValor);
-      if (!isNaN(valorNum)) payloadAtualizacao.valor = valorNum;
-    }
-
-    if (dados.motoboy !== undefined) {
-      payloadAtualizacao.motoboy = dados.motoboy;
-    }
-
-    if (dados.cliente !== undefined) {          // NOVO
-      payloadAtualizacao.cliente = dados.cliente;
-    }
-
-    if (!Object.keys(payloadAtualizacao).length) {
-      console.warn('[EventBus pedido:atualizado] Nenhum dado válido para sincronizar no financeiro do pedido ' + dados.id + '.');
+      window.API.call('addfinanceiro', {
+        tipo: 'entrada',
+        data: toISO(new Date()),
+        descricao: 'Pedido ' + dados.id,
+        vlr_servico: valorNum,
+        situacao: 'pendente',
+        colaborador: dados.motoboy || '',
+        colaborador_id: dados.colaborador_id || '',
+        observacao: '',
+        id_pedido: dados.id
+      }).then(function (res) {
+        if (isRespostaSucesso(res)) {
+          carregarDados();
+        } else {
+          finToast('Falha ao criar lançamento financeiro do pedido ' + dados.id + '.', 'warning');
+        }
+      }).catch(function (err) {
+        finToast('Erro ao criar lançamento financeiro: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'danger');
+      });
       return;
     }
 
+    var payloadAtualizacao = {};
+    if (valorNum) payloadAtualizacao.valor = valorNum;
+    if (dados.motoboy !== undefined) payloadAtualizacao.motoboy = dados.motoboy;
+    if (dados.cliente !== undefined) payloadAtualizacao.cliente = dados.cliente;
+    if (!Object.keys(payloadAtualizacao).length) return;
+
     salvarRegistroFinanceiro(reg.id, payloadAtualizacao)
-      .then(function () {
-        console.log('[EventBus pedido:atualizado] Lançamento financeiro do pedido ' + dados.id + ' sincronizado com sucesso.');
-      })
       .catch(function (err) {
-        console.error('[EventBus pedido:atualizado] Erro ao sincronizar financeiro do pedido ' + dados.id + ':', err);
         finToast('Pedido atualizado, mas houve falha ao sincronizar o financeiro: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'warning');
       });
   });
@@ -1310,7 +1251,17 @@ if (!window.EventBus) {
   function abrirModalAdicionarDinheiro() {
     var OLD_ID = 'modalAdicionarDinheiroDyn';
     var old = document.getElementById(OLD_ID);
-    if (old) { var oi = bootstrap.Modal.getInstance(old); if (oi) oi.dispose(); old.remove(); }
+    if (old) {
+      var oi = bootstrap.Modal.getInstance(old);
+      if (oi) {
+        old.addEventListener('hidden.bs.modal', function () {
+          if (old && old.parentNode) old.remove();
+        }, { once: true });
+        oi.hide();
+      } else {
+        old.remove();
+      }
+    }
     var html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered" style="max-width:400px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#198754 0%,#146c43 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-plus-circle-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Adicionar Dinheiro</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">Registrar entrada manual no caixa</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-4 py-4"><div id="add-dinheiro-erro-dyn" class="alert alert-danger d-none py-2 px-3 mb-3" style="font-size:.74rem;border-radius:10px;"></div><div class="mb-3"><label class="fin-field-label">Valor (R$)</label><input type="text" id="add-dinheiro-valor-dyn" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="0,00" inputmode="decimal"></div><div class="mb-3"><label class="fin-field-label">Descrição</label><input type="text" id="add-dinheiro-descricao-dyn" class="form-control form-control-sm rounded-pill fin-field-input" placeholder="Ex: Depósito, Aporte..."></div></div><div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2 d-flex justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Cancelar</button><button type="button" class="btn btn-success rounded-pill px-4" id="btn-add-dinheiro-confirmar-dyn" style="font-size:.78rem;height:38px;font-weight:600;"><i class="bi bi-check-lg me-1"></i>Confirmar</button></div></div></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
@@ -1325,16 +1276,26 @@ if (!window.EventBus) {
       var valorStr = valorEl ? valorEl.value.trim() : '';
       if (!valorStr) { erroEl.textContent = 'Informe o valor.'; erroEl.classList.remove('d-none'); return; }
       var valorNum = parseValor(valorStr);
-      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
+      if (isNaN(valorNum) || valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
       var desc = descEl ? descEl.value.trim() : '';
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-      window.API.call('addfinanceiro', { tipo: 'entrada', data: toISO(new Date()), descricao: desc || 'Entrada manual', valor: valorNum, situacao: 'recebido', motoboy: '', colaborador_id: '', observacao: '' }).then(function (res) {
+      window.API.call('addfinanceiro', {
+        tipo: 'entrada',
+        data: toISO(new Date()),
+        descricao: desc || 'Entrada manual',
+        vlr_servico: valorNum,
+        situacao: 'recebido',
+        motoboy: '',
+        colaborador_id: '',
+        observacao: ''
+      }).then(function (res) {
         if (isRespostaSucesso(res)) { finToast('Depósito adicionado!', 'success'); modalInst.hide(); carregarDados(); }
-        else { erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.'); erroEl.classList.remove('d-none'); }
+        else { erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.'); erroEl.classList.remove('d-none'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; }
       }).catch(function () {
         erroEl.textContent = 'Falha na comunicação com o servidor.'; erroEl.classList.remove('d-none');
-      }).finally(function () { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; });
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar';
+      });
     });
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
@@ -1361,16 +1322,26 @@ if (!window.EventBus) {
       if (!valorStr) { erroEl.textContent = 'Informe o valor.'; erroEl.classList.remove('d-none'); return; }
       if (!destino) { erroEl.textContent = 'Informe o destino.'; erroEl.classList.remove('d-none'); return; }
       var valorNum = parseValor(valorStr);
-      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
+      if (isNaN(valorNum) || valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
       var desc = descEl ? descEl.value.trim() : '';
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-      window.API.call('addfinanceiro', { tipo: 'saida', data: toISO(new Date()), descricao: (desc || 'Transferência') + (destino ? ' → ' + destino : ''), valor: valorNum, situacao: 'pago', motoboy: '', colaborador_id: '', observacao: '' }).then(function (res) {
+      window.API.call('addfinanceiro', {
+        tipo: 'saida',
+        data: toISO(new Date()),
+        descricao: (desc || 'Transferência') + (destino ? ' → ' + destino : ''),
+        vlr_servico: valorNum,
+        situacao: 'pago',
+        motoboy: '',
+        colaborador_id: '',
+        observacao: ''
+      }).then(function (res) {
         if (isRespostaSucesso(res)) { finToast('Transferência realizada!', 'success'); modalInst.hide(); carregarDados(); }
-        else { erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.'); erroEl.classList.remove('d-none'); }
+        else { erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.'); erroEl.classList.remove('d-none'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; }
       }).catch(function () {
         erroEl.textContent = 'Falha na comunicação com o servidor.'; erroEl.classList.remove('d-none');
-      }).finally(function () { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; });
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar';
+      });
     });
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
@@ -1538,14 +1509,6 @@ if (!window.EventBus) {
       return '<option value="' + escapeHtml(c.id) + '" ' + selecionado + '>' + escapeHtml(c.username || c.nome || '-') + '</option>';
     }).join('');
 
-    var listaGrupos = Object.keys(state.gruposCache || {}).map(function (k) { return state.gruposCache[k]; });
-    listaGrupos.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
-    var grupoAtualId = reg.grupoId || reg.grupo_id || '';
-    var opcoesGrupo = '<option value="">Nenhum</option>' + listaGrupos.map(function (g) {
-      var selecionado = (String(g.id) === String(grupoAtualId)) ? 'selected' : '';
-      return '<option value="' + escapeHtml(g.id) + '" ' + selecionado + '>' + escapeHtml(g.nome || '-') + '</option>';
-    }).join('');
-
     var html =
       '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true">' +
       '<div class="modal-dialog modal-dialog-centered modal-md">' +
@@ -1606,11 +1569,6 @@ if (!window.EventBus) {
       '<option value="cancelado" ' + (reg.situacao === 'cancelado' ? 'selected' : '') + '>Cancelado</option>' +
       '</select></div>' +
 
-      '<div class="fin-view-grid-item">' +
-      '<div class="fin-view-grid-label"><i class="bi bi-collection"></i> Grupo</div>' +
-      '<select id="fin-edit-grupo" class="form-select form-select-sm fin-edit-input">' + opcoesGrupo + '</select>' +
-      '</div>' +
-
       '</div></div>' +
 
       '<div class="fin-extrato-divider"></div>' +
@@ -1634,7 +1592,7 @@ if (!window.EventBus) {
       '</div>' +
 
       '<div class="fin-extrato-footer fin-extrato-footer-actions">' +
-      '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-editar" data-bs-dismiss="modal">Fechar</button>' +
+      '<button type="button" class="fin-btn-cancelar-editar" id="fin-btn-cancelar-editar">Fechar</button>' +
       '<button type="button" class="fin-btn-salvar-editar" id="fin-btn-salvar-editar">' +
       '<i class="bi bi-check-lg" id="fin-btn-salvar-editar-icon"></i>' +
       '<span id="fin-btn-salvar-editar-texto">Salvar Alterações</span>' +
@@ -1655,6 +1613,7 @@ if (!window.EventBus) {
     var btnIcon = document.getElementById('fin-btn-salvar-editar-icon');
     var btnTexto = document.getElementById('fin-btn-salvar-editar-texto');
     var erroEl = document.getElementById('fin-editar-erro');
+    var btnClose = modalEl.querySelector('.btn-close');
 
     var elValor = document.getElementById('fin-edit-valor');
     var elDescricao = document.getElementById('fin-edit-descricao');
@@ -1662,15 +1621,13 @@ if (!window.EventBus) {
     var elColaborador = document.getElementById('fin-edit-colaborador');
     var elTipo = document.getElementById('fin-edit-tipo');
     var elSituacao = document.getElementById('fin-edit-situacao');
-    var elGrupo = document.getElementById('fin-edit-grupo');
     var elObservacao = document.getElementById('fin-edit-observacao');
 
     var _houveAlteracao = false;
     var _jaSalvouOuFechou = false;
+    var _fechamentoForcado = false;
 
-    var _dadosPendentes = {};
-
-    [elValor, elDescricao, elCliente, elColaborador, elTipo, elSituacao, elGrupo, elObservacao].forEach(function (el) {
+    [elValor, elDescricao, elCliente, elColaborador, elTipo, elSituacao, elObservacao].forEach(function (el) {
       if (!el) return;
       el.addEventListener('input', function () { _houveAlteracao = true; });
       el.addEventListener('change', function () { _houveAlteracao = true; });
@@ -1679,10 +1636,8 @@ if (!window.EventBus) {
     function coletarDadosParaSalvar() {
       var clienteId = elCliente.value;
       var colaboradorId = elColaborador.value;
-      var grupoId = elGrupo.value;
       var clienteObj = clienteId ? state.clientesCache[clienteId] : null;
       var colaboradorObj = colaboradorId ? state.colaboradoresCache[colaboradorId] : null;
-      var grupoObj = grupoId ? (state.gruposCache ? state.gruposCache[grupoId] : null) : null;
 
       return {
         valor: parseValor(elValor.value.trim()),
@@ -1690,8 +1645,6 @@ if (!window.EventBus) {
         colaborador_id: colaboradorId || '',
         cliente: clienteObj ? (clienteObj.nome || clienteObj.username || '') : '',
         cliente_id: clienteId || '',
-        grupo: grupoObj ? (grupoObj.nome || '') : '',
-        grupo_id: grupoId || '',
         tipo: elTipo.value,
         situacao: elSituacao.value,
         descricao: elDescricao.value.trim(),
@@ -1699,52 +1652,71 @@ if (!window.EventBus) {
       };
     }
 
-    function persistirEFechar() {
+    function fecharModal() {
+      if (_fechamentoForcado) return;
+      _fechamentoForcado = true;
+      modalInst.hide();
+    }
+
+    function persistirESolicitarFechamento() {
       if (_jaSalvouOuFechou) return;
-      _jaSalvouOuFechou = true;
+
+      if (!_houveAlteracao) {
+        _jaSalvouOuFechou = true;
+        fecharModal();
+        return;
+      }
 
       var descricao = elDescricao.value.trim();
       var valorNum = parseValor(elValor.value.trim());
 
-      if (!_houveAlteracao) { modalInst.hide(); return; }
+      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); return; }
+      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); return; }
 
-      if (!descricao) { erroEl.textContent = 'Informe a descrição.'; erroEl.classList.remove('d-none'); _jaSalvouOuFechou = false; return; }
-      if (valorNum <= 0) { erroEl.textContent = 'Informe um valor válido.'; erroEl.classList.remove('d-none'); _jaSalvouOuFechou = false; return; }
+      _jaSalvouOuFechou = true;
 
       var dadosAtualizados = coletarDadosParaSalvar();
 
       btnSalvar.disabled = true;
       btnCancelar.disabled = true;
+      if (btnClose) btnClose.disabled = true;
       btnIcon.className = 'bi bi-arrow-repeat fin-spin-icon';
       btnTexto.textContent = 'Salvando...';
 
       salvarRegistroFinanceiro(reg.id, dadosAtualizados)
-        .then(function () { modalInst.hide(); })
+        .then(function () { fecharModal(); })
         .catch(function (err) {
           console.error('Erro ao salvar registro financeiro:', err);
           erroEl.textContent = err.message || 'Não foi possível salvar as alterações.';
           erroEl.classList.remove('d-none');
           btnSalvar.disabled = false;
           btnCancelar.disabled = false;
+          if (btnClose) btnClose.disabled = false;
           btnIcon.className = 'bi bi-check-lg';
           btnTexto.textContent = 'Salvar Alterações';
           _jaSalvouOuFechou = false;
         });
     }
 
+    function fecharSemSalvar() {
+      erroEl.classList.add('d-none');
+      _jaSalvouOuFechou = true;
+      fecharModal();
+    }
+
     btnSalvar.addEventListener('click', function () {
       erroEl.classList.add('d-none');
-      persistirEFechar();
+      persistirESolicitarFechamento();
     });
 
-    btnCancelar.addEventListener('click', function () {
-      erroEl.classList.add('d-none');
-      persistirEFechar();
-    });
+    btnCancelar.addEventListener('click', fecharSemSalvar);
+    if (btnClose) btnClose.addEventListener('click', fecharSemSalvar);
 
-    modalEl.addEventListener('hide.bs.modal', function () {
+    modalEl.addEventListener('hide.bs.modal', function (e) {
+      if (_fechamentoForcado) return;
+      e.preventDefault();
       erroEl.classList.add('d-none');
-      persistirEFechar();
+      persistirESolicitarFechamento();
     });
 
     modalEl.addEventListener('hidden.bs.modal', function () {
@@ -2145,37 +2117,22 @@ if (!window.EventBus) {
     });
   }
 
-  function bindFiltrosRdo() {
-    var itens = document.querySelectorAll('#fin-tab-content-todos .fin-status-action-item[data-filtro-caixa]');
-    itens.forEach(function (item) {
-      if (item._rdoFiltroBound) return;
-      item._rdoFiltroBound = true;
-
-      item.addEventListener('click', function () {
-        var tipo = item.getAttribute('data-filtro-caixa');
-
-        // se clicar de novo no mesmo ativo, volta pra "todos"
-        var jaAtivo = item.classList.contains('active');
-
-        itens.forEach(function (i) { i.classList.remove('active'); });
-
-        if (jaAtivo) {
-          state.filtroTipo = 'todos';
-        } else {
-          item.classList.add('active');
-          if (tipo === 'entrada' || tipo === 'empresa' || tipo === 'colaborador') {
-            state.filtroTipo = 'entrada';
-          } else if (tipo === 'saida') {
-            state.filtroTipo = 'saida';
-          } else {
-            state.filtroTipo = 'todos'; // registros, saldo
-          }
-        }
-
-        state.todos.pagina = 1;
-        renderTodos();
-      });
+  function atualizarCardsCaixa(valores) {
+    Object.keys(valores).forEach(function (k) {
+      if (!els[k]) return;
+      els[k].setAttribute('data-valor-real', formatarMoeda(valores[k]));
+      els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(valores[k]) : 'R$ ****';
     });
+  }
+
+  function agruparPorDia(registros) {
+    var porDia = {};
+    registros.forEach(function (r) {
+      var dia = r.dataISO || 'sem-data';
+      if (!porDia[dia]) porDia[dia] = [];
+      porDia[dia].push(r);
+    });
+    return porDia;
   }
 
   var btnFecharErroFin = document.getElementById('fin-view-erro-fechar');
@@ -2347,57 +2304,6 @@ if (!window.EventBus) {
     });
   }
 
-  function gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros) {
-    var totais = calcularTotaisRegistros(registros);
-    var ordenados = (registros || []).slice().sort(function (a, b) {
-      return a.dataISO < b.dataISO ? 1 : -1;
-    });
-
-    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
-      return '<tr>' +
-        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-        '<td>' + escapeHtml(r.descricao || '-') + '</td>' +
-        '<td>' + (r.tipo === 'entrada' ? 'Receita' : 'Despesa') + '</td>' +
-        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
-        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
-        '<td style="text-align:center;">' + escapeHtml((r.situacao || '-').toUpperCase()) + '</td>' +
-        '</tr>';
-    }).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
-
-    var agora = new Date().toLocaleString('pt-BR');
-
-    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' +
-      '<style>' +
-      'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222;}' +
-      'h1{font-size:18px;margin:0 0 2px;color:#dc3545;}' +
-      'h1 span{color:#222;}' +
-      '.sub{font-size:12px;color:#777;margin-bottom:16px;}' +
-      '.resumo{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}' +
-      '.resumo div{flex:1;min-width:140px;border:1px solid #eee;border-radius:8px;padding:10px 14px;}' +
-      '.resumo .label{font-size:10px;text-transform:uppercase;color:#999;font-weight:700;letter-spacing:.04em;}' +
-      '.resumo .valor{font-size:15px;font-weight:700;margin-top:2px;}' +
-      '.entrada{color:#198754;} .saida{color:#dc3545;} .saldo{color:#0d6efd;}' +
-      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}' +
-      'thead th{background:#f8f9fa;text-align:left;padding:8px;border-bottom:2px solid #ddd;font-size:11px;text-transform:uppercase;color:#666;}' +
-      'tbody td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}' +
-      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
-      '@media print{ body{margin:10mm;} }' +
-      '</style></head><body>' +
-      '<h1><span style="color:#dc3545;">RDO</span><span> Express - Financeiro</span></h1>' +
-      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
-      '<div class="resumo">' +
-      '<div><div class="label">Receitas</div><div class="valor entrada">' + formatarMoeda(totais.entradas) + '</div></div>' +
-      '<div><div class="label">Despesas</div><div class="valor saida">' + formatarMoeda(totais.saidas) + '</div></div>' +
-      '<div><div class="label">Empresa (20%)</div><div class="valor">' + formatarMoeda(totais.empresa) + '</div></div>' +
-      '<div><div class="label">Colaboradores (80%)</div><div class="valor">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
-      '<div><div class="label">Saldo do Período</div><div class="valor saldo">' + formatarMoeda(totais.saldo) + '</div></div>' +
-      '</div>' +
-      '<table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Colaborador</th><th style="text-align:right;">Valor</th><th style="text-align:center;">Situação</th></tr></thead>' +
-      '<tbody>' + linhasHtml + '</tbody></table>' +
-      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
-      '</body></html>';
-  }
-
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var idModal = 'modal-visualizar-caixa-' + periodo.id;
     var registros = periodo.registros || [];
@@ -2542,27 +2448,25 @@ if (!window.EventBus) {
       var termoOriginal = removerAcentos(state.filtroBusca.toLowerCase().trim());
       var termos = termoOriginal.split(/\s+/).filter(Boolean);
       var termoIdNormalizado = _normalizarIdPedidoBusca(state.filtroBusca);
-
-      // ✅ Se o termo digitado é puramente numérico (ou RDO+número),
-      // tratamos como busca EXCLUSIVA por ID de pedido.
       var pareceIdPedido = /^(rdo)?\d+$/i.test(state.filtroBusca.trim());
 
       lista = lista.filter(function (r) {
         var idPedidoRaw = (r.idPedido || '').toString();
         var idPedidoNormalizado = _normalizarIdPedidoBusca(idPedidoRaw);
 
-        // Match exato de ID (com ou sem prefixo RDO, com ou sem zeros à esquerda)
         var matchId = !!(termoIdNormalizado && idPedidoNormalizado && termoIdNormalizado === idPedidoNormalizado);
-
         if (matchId) return true;
 
-        // ✅ Se o usuário buscou algo que "parece" um ID de pedido,
-        // NÃO cai no fallback de texto — retorna false direto (evita falso positivo).
         if (pareceIdPedido) return false;
 
+        // NOVO: pool agora inclui as duas datas (lançamento + pedido)
         var pool = removerAcentos(
-          [r.descricao, r.motoboy, r.observacao, idPedidoRaw, 'RDO' + idPedidoNormalizado, r.cliente, r.solicitante, r.dataBR, r.dataDisplay, r.grupo]
-            .map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
+          [
+            r.descricao, r.motoboy, r.observacao, idPedidoRaw, 'RDO' + idPedidoNormalizado,
+            r.cliente, r.solicitante,
+            r.dataBR, r.dataDisplay,
+            r.dataPedidoBR, r.dataPedidoDisplay
+          ].map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
         );
 
         for (var i = 0; i < termos.length; i++) {
@@ -2641,13 +2545,7 @@ if (!window.EventBus) {
     _atualizarContadoresFin();
   }
 
-  var PALETA_CORES_DATA_FIN = ['#eef6ff', '#eefbf1', '#fff8ec', '#fbeeff', '#eefcfa', '#fdf0f0'];
   var PALETA_BORDAS_DATA_FIN = ['#cfe3fb', '#cdeedd', '#f5e3c4', '#e6cdf5', '#c9f0ea', '#f5cccc'];
-
-  function corBlocoDataFin(index) {
-    var i = index % PALETA_CORES_DATA_FIN.length;
-    return { bg: PALETA_CORES_DATA_FIN[i], borda: PALETA_BORDAS_DATA_FIN[i] };
-  }
 
   function agruparRegistrosPorData(registros) {
     var mapa = {};
@@ -2677,107 +2575,6 @@ if (!window.EventBus) {
     return totais;
   }
 
-  function renderCaixa() {
-    if (!els.caixaDataInicio || !els.caixaDataFim) return;
-
-    if (!state.caixa.buscaRealizada) {
-      var buscaSalva = carregarBuscaCaixaSession();
-      if (buscaSalva) {
-        els.caixaDataInicio.value = buscaSalva.inicio;
-        els.caixaDataFim.value = buscaSalva.fim;
-        state.caixa.dataInicio = buscaSalva.inicio;
-        state.caixa.dataFim = buscaSalva.fim;
-        state.caixa.buscaRealizada = true;
-        caixaPeriodoAtual = { inicio: buscaSalva.inicio, fim: buscaSalva.fim, registros: buscaSalva.registros };
-      }
-    }
-
-    if (!state.caixa.buscaRealizada) {
-      state.caixa.dadosFiltrados = [];
-      state.caixa.listaFiltradaAtual = [];
-
-      var periodosExistentes = carregarPeriodosCaixaStorage();
-
-      if (els.caixaListaDiaria) {
-        if (periodosExistentes.length) {
-          els.caixaListaDiaria.innerHTML = '';
-        } else {
-          els.caixaListaDiaria.innerHTML =
-            '<div class="text-center text-muted py-4">' +
-            '<i class="bi bi-calendar-range" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>' +
-            'Selecione o período e clique em <strong>Gerar Caixa</strong> para exibir os lançamentos.' +
-            '</div>';
-        }
-      }
-
-      ['caixaCardEntradas', 'caixaCardSaidas', 'caixaCardEmpresa', 'caixaCardColaboradores', 'caixaCardSaldoTotal'].forEach(function (k) {
-        if (els[k]) {
-          els[k].setAttribute('data-valor-real', formatarMoeda(0));
-          els[k].textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
-        }
-      });
-      if (els.caixaCardRegistros) els.caixaCardRegistros.textContent = '0';
-      if (els.rdoPaySaldo) {
-        els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(0));
-        els.rdoPaySaldo.textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
-      }
-      if (els.rdoPaySaldoColabs) {
-        els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(0));
-        els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(0) : 'R$ ****';
-      }
-
-      renderPeriodosSalvosCaixa();
-      configurarInfoHoverCaixa();
-      bindFiltrosMiniCaixa();
-      return;
-    }
-
-    state.caixa.dataInicio = els.caixaDataInicio.value;
-    state.caixa.dataFim = els.caixaDataFim.value;
-
-    var filtrados = state.cache.filter(function (r) {
-      return r.dataISO >= state.caixa.dataInicio && r.dataISO <= state.caixa.dataFim;
-    });
-    state.caixa.dadosFiltrados = filtrados;
-    state.caixa.pagina = 1;
-    aplicarFiltroCaixaLocal();
-
-    if (els.rdoPaySaldo) {
-      var totalGeral = calcularTotaisRegistros(filtrados);
-      els.rdoPaySaldo.setAttribute('data-valor-real', formatarMoeda(totalGeral.empresa));
-      els.rdoPaySaldo.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral.empresa) : 'R$ ****';
-    }
-    if (els.rdoPaySaldoColabs) {
-      var totalGeral2 = calcularTotaisRegistros(filtrados);
-      els.rdoPaySaldoColabs.setAttribute('data-valor-real', formatarMoeda(totalGeral2.colaboradores));
-      els.rdoPaySaldoColabs.textContent = state.caixaValoresVisiveis ? formatarMoeda(totalGeral2.colaboradores) : 'R$ ****';
-    }
-
-    renderPeriodosSalvosCaixa();
-    configurarInfoHoverCaixa();
-    bindFiltrosMiniCaixa();
-  }
-
-  function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
-    var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
-    var win = window.open('', '_blank', 'width=900,height=700');
-
-    if (!win) {
-      finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups para este site.', 'warning');
-      return;
-    }
-
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-
-    // Aguarda o render completo antes de chamar o print (evita PDF em branco)
-    win.onload = function () {
-      win.focus();
-      setTimeout(function () { win.print(); }, 300);
-    };
-  }
-
   function baixarHtmlFinanceiro(titulo, periodoLabel, registros) {
     var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
     var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -2790,74 +2587,6 @@ if (!window.EventBus) {
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
-  }
-
-  function renderCaixaListaDiaria() {
-    if (!els.caixaListaDiaria) return;
-
-    var lista = (state.caixa.listaFiltradaAtual || []).slice().sort(function (a, b) {
-      if (a.dataISO === b.dataISO) return 0;
-      return a.dataISO < b.dataISO ? 1 : -1;
-    });
-
-    var totalItens = lista.length;
-    state.caixa.totalPag = Math.max(1, Math.ceil(totalItens / state.caixa.porPagina));
-    if (state.caixa.pagina > state.caixa.totalPag) state.caixa.pagina = state.caixa.totalPag;
-
-    var ini = (state.caixa.pagina - 1) * state.caixa.porPagina;
-    var pagina = lista.slice(ini, ini + state.caixa.porPagina);
-
-    if (!pagina.length) {
-      els.caixaListaDiaria.innerHTML = '<div class="text-center text-muted py-4">Nenhum registro encontrado.</div>';
-    } else {
-      var porDia = {};
-      var ordemDias = [];
-      pagina.forEach(function (r) {
-        var dia = r.dataISO || 'sem-data';
-        if (!porDia[dia]) { porDia[dia] = []; ordemDias.push(dia); }
-        porDia[dia].push(r);
-      });
-
-      els.caixaListaDiaria.innerHTML = ordemDias.map(function (dia) {
-        var regsDia = porDia[dia];
-        var totaisDia = calcularTotaisRegistros(regsDia);
-        var labelData = dia !== 'sem-data' ? formatDateBR(dia) : 'Sem data';
-        var labelSemana = dia !== 'sem-data' ? getDiaSemanaCompleto(dia) : '';
-        var saldoClasse = totaisDia.saldo > 0 ? 'positivo' : (totaisDia.saldo < 0 ? 'negativo' : 'neutro');
-
-        return '<div class="caixa-dia-item" data-dia="' + escapeHtml(dia) + '">' +
-          '<div class="caixa-dia-item-left" data-acao="abrir-dia" style="cursor:pointer;">' +
-          '<div class="caixa-dia-icon" style="color:#198754;background:rgba(25,135,84,.12);"><i class="bi bi-cash-coin"></i></div>' +
-          '<div><div class="caixa-dia-info-data">' + labelData + '</div>' +
-          '<div class="caixa-dia-info-semana">' + labelSemana + ' · ' + regsDia.length + ' lanç.</div></div></div>' +
-          '<div class="d-flex align-items-center gap-2">' +
-          '<span class="caixa-dia-saldo ' + saldoClasse + '" data-acao="abrir-dia" style="cursor:pointer;">' + (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
-          '<button type="button" class="btn-icone-retangular btn-visualizar-icone btn-visualizar-dia" data-dia="' + escapeHtml(dia) + '" title="Visualizar este dia"><i class="bi bi-eye"></i></button>' +
-          '</div></div>';
-      }).join('');
-
-      els.caixaListaDiaria.querySelectorAll('[data-acao="abrir-dia"]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          var dia = this.closest('.caixa-dia-item').getAttribute('data-dia');
-          var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
-          abrirModalDetalheDia(dia, regsDoDia);
-        });
-      });
-
-      els.caixaListaDiaria.querySelectorAll('.btn-visualizar-dia').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var dia = this.getAttribute('data-dia');
-          var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
-          abrirModalDetalheDia(dia, regsDoDia);
-        });
-      });
-    }
-
-    if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'Pág ' + state.caixa.pagina + ' de ' + state.caixa.totalPag;
-    if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
-    if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
-    if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= state.caixa.totalPag;
   }
 
   function abrirModalDetalheDia(dia, registros) {
@@ -2982,6 +2711,50 @@ if (!window.EventBus) {
     }).join('');
   }
 
+  function renderBlocoDia(dia, registros) {
+    var totaisDia = calcularTotaisRegistros(registros);
+    var labelData = dia !== 'sem-data' ? formatDateBR(dia) : 'Sem data';
+    var labelSemana = dia !== 'sem-data' ? getDiaSemanaCompleto(dia) : '';
+    var saldoClasse = totaisDia.saldo > 0 ? 'positivo' : (totaisDia.saldo < 0 ? 'negativo' : 'neutro');
+
+    return '<div class="caixa-dia-item" data-dia="' + escapeHtml(dia) + '">' +
+      '<div class="caixa-dia-item-left" data-acao="abrir-dia" style="cursor:pointer;">' +
+      '<div class="caixa-dia-icon" style="color:#198754;background:rgba(25,135,84,.12);"><i class="bi bi-cash-coin"></i></div>' +
+      '<div><div class="caixa-dia-info-data">' + labelData + '</div>' +
+      '<div class="caixa-dia-info-semana">' + labelSemana + ' · ' + registros.length + ' lanç.</div></div></div>' +
+      '<div class="d-flex align-items-center gap-2">' +
+      '<span class="caixa-dia-saldo ' + saldoClasse + '" data-acao="abrir-dia" style="cursor:pointer;">' +
+      (state.caixaValoresVisiveis ? formatarMoeda(totaisDia.saldo) : 'R$ ****') + '</span>' +
+      '<button type="button" class="btn-icone-retangular btn-visualizar-icone btn-visualizar-dia" data-dia="' + escapeHtml(dia) + '" title="Visualizar este dia"><i class="bi bi-eye"></i></button>' +
+      '</div></div>';
+  }
+
+  function bindEventosDiaCaixa() {
+    els.caixaListaDiaria.querySelectorAll('[data-acao="abrir-dia"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var dia = this.closest('.caixa-dia-item').getAttribute('data-dia');
+        var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
+        abrirModalDetalheDia(dia, regsDoDia);
+      });
+    });
+
+    els.caixaListaDiaria.querySelectorAll('.btn-visualizar-dia').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var dia = this.getAttribute('data-dia');
+        var regsDoDia = (state.caixa.listaFiltradaAtual || []).filter(function (r) { return r.dataISO === dia; });
+        abrirModalDetalheDia(dia, regsDoDia);
+      });
+    });
+  }
+
+  function atualizarPaginacaoCaixa(totalItens) {
+    if (els.pagLabelCaixa) els.pagLabelCaixa.textContent = 'Pág ' + state.caixa.pagina + ' de ' + state.caixa.totalPag;
+    if (els.pagInfoCaixa) els.pagInfoCaixa.textContent = totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
+    if (els.pagPrevCaixa) els.pagPrevCaixa.disabled = state.caixa.pagina <= 1;
+    if (els.pagNextCaixa) els.pagNextCaixa.disabled = state.caixa.pagina >= state.caixa.totalPag;
+  }
+
   function abrirExtratoModal(extrato) {
     if (!els.extratoModalOverlay || !els.extratoModalBody) {
       finToast('Componente de modal de extrato não encontrado na página.', 'danger');
@@ -2990,8 +2763,6 @@ if (!window.EventBus) {
 
     var totais = calcularTotaisRegistros(extrato.registros);
     if (els.extratoModalTitulo) els.extratoModalTitulo.textContent = (extrato.origem || '-') + ' · ' + (extrato.periodoLabel || '-');
-
-    var blocos = agruparRegistrosPorData(extrato.registros);
 
     var blocosHtml = blocos.map(function (bloco, idx) {
       var cor = corBlocoDataFin(idx);
@@ -3791,14 +3562,12 @@ if (!window.EventBus) {
       window.API.call('listfinanceiro', {}),
       window.API.call('listpedidos', {}),
       window.API.call('listclientes', {}),
-      window.API.call('listcolaboradores', {}),
-      window.API.call('listgrupos', {}).catch(function () { return []; })
+      window.API.call('listcolaboradores', {})
     ]).then(function (results) {
       var financeiro = extrairArray(results[0]);
       var pedidos = extrairArray(results[1]);
       var clientes = extrairArray(results[2]);
       var colaboradores = extrairArray(results[3]);
-      var grupos = extrairArray(results[4]);
 
       state.pedidosCache = {};
       pedidos.forEach(function (p) { if (p.id) state.pedidosCache[p.id] = p; });
@@ -3811,7 +3580,6 @@ if (!window.EventBus) {
       colaboradores.forEach(function (c) { if (c.id) state.colaboradoresCache[c.id] = c; });
 
       state.gruposCache = {};
-      grupos.forEach(function (g) { if (g.id) state.gruposCache[g.id] = g; });
 
       state.cache = financeiro.map(normalizarRegistro);
       resolverClienteSolicitante();
@@ -3824,7 +3592,9 @@ if (!window.EventBus) {
       renderizarListaExtratos();
       tentarAbrirPedidoFinanceiro();
 
-    }).catch(function () {
+    }).catch(function (err) {
+      console.error('[fin.js] Erro ao carregar dados do financeiro:', err);
+      finToast('Erro ao carregar dados financeiros: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'danger');
     }).finally(function () {
       state.fetching = false;
       spinOff();
@@ -4123,6 +3893,60 @@ if (!window.EventBus) {
     }, 250));
   }
 
+  function bindFiltrosRdo() {
+    var cardsTipo = document.querySelectorAll('[data-filtro-tipo]');
+    cardsTipo.forEach(function (card) {
+      card.addEventListener('click', function () {
+        var valor = card.getAttribute('data-filtro-tipo');
+        state.filtroTipo = valor;
+        atualizarCardAtivoFin();
+        state.todos.pagina = 1;
+        renderTodos();
+      });
+    });
+
+    var cardsSituacao = document.querySelectorAll('[data-filtro-situacao]');
+    cardsSituacao.forEach(function (card) {
+      card.addEventListener('click', function () {
+        var valor = card.getAttribute('data-filtro-situacao');
+        state.filtroSituacao = valor;
+        atualizarCardAtivoFin();
+        state.todos.pagina = 1;
+        renderTodos();
+      });
+    });
+
+    var inputBusca = document.getElementById('filtro-busca-fin');
+    if (inputBusca) {
+      inputBusca.addEventListener('input', function () {
+        state.filtroBusca = inputBusca.value.trim();
+        var btnLimparBusca = document.getElementById('btn-limpar-busca-fin');
+        if (btnLimparBusca) btnLimparBusca.classList.toggle('d-none', !state.filtroBusca);
+        state.todos.pagina = 1;
+        renderTodos();
+      });
+    }
+
+    var btnLimparBusca = document.getElementById('btn-limpar-busca-fin');
+    if (btnLimparBusca) {
+      btnLimparBusca.addEventListener('click', function () {
+        state.filtroBusca = '';
+        if (inputBusca) inputBusca.value = '';
+        btnLimparBusca.classList.add('d-none');
+        state.todos.pagina = 1;
+        renderTodos();
+      });
+    }
+
+    var btnOrdenarData = document.getElementById('btn-ordenar-data-fin');
+    if (btnOrdenarData) {
+      btnOrdenarData.addEventListener('click', function () {
+        state.sortDataDesc = !state.sortDataDesc;
+        renderTodos();
+      });
+    }
+  }
+
   window.FinanceiroModule = {
     carregarDados: carregarDados,
     renderTodos: renderTodos,
@@ -4130,6 +3954,43 @@ if (!window.EventBus) {
     tentarAbrirPedidoFinanceiro: tentarAbrirPedidoFinanceiro,
     init: init
   };
+
+  function renderCaixa() {
+    if (!els.caixaListaDiaria) return;
+
+    var lista = state.caixa.listaFiltradaAtual || state.cache.filter(function (r) {
+      return r.tipo === 'entrada' || r.tipo === 'saida';
+    });
+
+    if (!lista.length) {
+      els.caixaListaDiaria.innerHTML = '<div class="text-center text-muted py-4">Nenhum registro encontrado.</div>';
+      atualizarPaginacaoCaixa(0);
+      return;
+    }
+
+    var agrupado = agruparPorDia(lista);
+    var dias = Object.keys(agrupado).sort(function (a, b) {
+      if (a === 'sem-data') return 1;
+      if (b === 'sem-data') return -1;
+      return state.sortDataDesc ? (a < b ? 1 : -1) : (a < b ? -1 : 1);
+    });
+
+    var totalItens = dias.length;
+    state.caixa.totalPag = Math.max(1, Math.ceil(totalItens / state.caixa.porPagina));
+    if (state.caixa.pagina > state.caixa.totalPag) state.caixa.pagina = state.caixa.totalPag;
+
+    var inicio = (state.caixa.pagina - 1) * state.caixa.porPagina;
+    var diasPagina = dias.slice(inicio, inicio + state.caixa.porPagina);
+
+    var html = diasPagina.map(function (dia) {
+      return renderBlocoDia(dia, agrupado[dia]);
+    }).join('');
+
+    els.caixaListaDiaria.innerHTML = html;
+    bindEventosDiaCaixa();
+    atualizarPaginacaoCaixa(totalItens);
+  }
+
   window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
   window.initFinanceiro = init;
 
@@ -4146,7 +4007,7 @@ if (!window.EventBus) {
     document.getElementById('fin-view-situacao-grid').textContent = item.situacao || '-';
     document.getElementById('fin-view-hora-grid').textContent = item.hora || '-';
 
-    document.getElementById('fin-view-valor').textContent = item.valorFormatado || 'R$ 0,00';
+    document.getElementById('fin-view-valor').textContent = formatarMoeda(item.valor || 0); // ✅ corrigido
 
     aplicarCorValorFin(item.tipo);
   }
@@ -4174,6 +4035,7 @@ if (!window.EventBus) {
   }
 
   function montarSnapshotFinanceiro(registros, tituloBanco) {
+    var totais = calcularTotaisRegistros(registros);
     var linhas = registros.map(function (r) {
       return {
         data: r.dataDisplay,
@@ -4184,8 +4046,6 @@ if (!window.EventBus) {
         situacao: (r.situacao || '-').charAt(0).toUpperCase() + (r.situacao || '-').slice(1)
       };
     });
-
-    var totais = calcularTotaisRegistros(registros);
 
     return {
       bancos: {

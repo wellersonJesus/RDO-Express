@@ -2829,6 +2829,16 @@
   }
 }
 
+@keyframes fin-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fin-spin-icon {
+  display: inline-block;
+  animation: fin-spin 1s linear infinite;
+}
+
 @media (max-width: 576px) {
   .fin-tipo-cell-item.fin-tipo-item-tipo {
     display: none;
