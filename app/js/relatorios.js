@@ -13,6 +13,8 @@
   const ALIASES = {
     pedidos: {
       label: 'Pedidos', icon: 'bi-box-seam', endpoint: 'getpedidos',
+      data: ['data_pedido', 'data_lancamento', 'data'],
+      id_cliente: ['id_cliente', 'cliente_id'],
       campos: {
         id: 'ID', cliente: 'Cliente', solicitante: 'Solicitante', contato: 'Contato', data: 'Data', horario: 'Horário',
         mercadoria: 'Descrição', de: 'De', para: 'Endereço', retorno: 'Retorno', prioridade: 'Prioridade',
@@ -161,10 +163,17 @@
 
   function resolverValor(banco, campo, registro) {
     if (!registro) return '';
-    const chaves = (ALIASES[banco] && ALIASES[banco][campo]) || [campo];
+    let chaves = ALIASES[banco] && ALIASES[banco][campo];
+
+    // Corrige o caso em que o alias é uma string única em vez de array
+    if (typeof chaves === 'string') chaves = [chaves];
+    if (!chaves || !chaves.length) chaves = [campo];
+
     for (let i = 0; i < chaves.length; i++) {
       const k = chaves[i];
-      if (registro[k] !== undefined && registro[k] !== null && registro[k] !== '') return registro[k];
+      if (registro[k] !== undefined && registro[k] !== null && registro[k] !== '') {
+        return registro[k];
+      }
     }
     return '';
   }
@@ -841,7 +850,10 @@
   }
 
   function pedidoCorrespondeCliente(pedido, clientesSelecionados, idsStr, nomesAlvo) {
-    const idPed = normalizarIdCliente(resolverValor('pedidos', 'id_cliente', pedido));
+    const idPed = normalizarIdCliente(
+      resolverValor('pedidos', 'id_cliente', pedido) ||
+      resolverValor('pedidos', 'cliente', pedido)
+    );
 
     const idsExpandidos = [];
     idsStr.forEach(function (v) {
@@ -854,18 +866,26 @@
       if (idsExpandidos.indexOf(idPed) !== -1) return true;
       const canonicoPedido = nomeCanonicoDoGrupo(idPed);
       if (canonicoPedido && nomesAlvo.indexOf(canonicoPedido) !== -1) return true;
+      if (idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
     }
 
-    const nomesAlvoSeguros = nomesAlvo.filter(nomeAlvoEhSeguroParaFuzzy);
+    const nomesAlvoNormalizados = nomesAlvo.map(normalizarComparacao).filter(Boolean);
+    if (!nomesAlvoNormalizados.length) return false;
 
-    if (nomesAlvoSeguros.length && pedidoContemNomeAlvoEmCampos(pedido, nomesAlvoSeguros)) return true;
+    function textoContemNomeAlvoExato(texto) {
+      if (!texto) return false;
+      const textoNorm = normalizarComparacao(texto);
+      return nomesAlvoNormalizados.some(function (nomeAlvo) {
+        const regex = new RegExp('(^|[^A-Z0-9])' + nomeAlvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])', 'i');
+        return regex.test(' ' + textoNorm + ' ');
+      });
+    }
 
-    if (nomesAlvo.length && pedidoBateEnderecoAlvo(pedido, nomesAlvo)) return true;
-
-    if (idPed && idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
-
-    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
-    if (solicitante && nomesAlvoSeguros.length && valorCorrespondeNomesAlvo(solicitante, nomesAlvoSeguros)) return true;
+    const camposTexto = ['cliente', 'solicitante', 'mercadoria', 'de', 'para', 'observacao'];
+    for (let i = 0; i < camposTexto.length; i++) {
+      const valor = resolverValor('pedidos', camposTexto[i], pedido);
+      if (textoContemNomeAlvoExato(valor)) return true;
+    }
 
     return false;
   }
@@ -1183,7 +1203,7 @@
   }
 
   function obterNomeClienteDoPedido(pedido) {
-    const idCliente = resolverValor('pedidos', 'id_cliente', pedido);
+    const idCliente = resolverValor('pedidos', 'id_cliente', pedido) || resolverValor('pedidos', 'cliente', pedido);
     const canonico = nomeCanonicoDoGrupo(idCliente);
     const solicitante = resolverValor('pedidos', 'solicitante', pedido);
 
