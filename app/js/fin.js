@@ -2581,6 +2581,19 @@ if (!window.EventBus) {
 
   var PALETA_BORDAS_DATA_FIN = ['#cfe3fb', '#cdeedd', '#f5e3c4', '#e6cdf5', '#c9f0ea', '#f5cccc'];
 
+  function corBlocoDataFin(indice) {
+    var cores = [
+      { bg: '#eef6ff', borda: '#cfe3fb' },
+      { bg: '#eefaf3', borda: '#cdeedd' },
+      { bg: '#fef8ec', borda: '#f5e3c4' },
+      { bg: '#f8eefb', borda: '#e6cdf5' },
+      { bg: '#eafbf8', borda: '#c9f0ea' },
+      { bg: '#fdeeee', borda: '#f5cccc' }
+    ];
+    var i = ((indice % cores.length) + cores.length) % cores.length;
+    return cores[i];
+  }
+
   function agruparRegistrosPorData(registros) {
     var mapa = {};
     var ordem = [];
@@ -2743,6 +2756,58 @@ if (!window.EventBus) {
         '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover"><i class="bi bi-trash"></i></button>' +
         '</div></div></div>';
     }).join('');
+
+    // ✅ CORREÇÃO: bind dos botões (faltava isso)
+    els.extratoListaDiaria.querySelectorAll('.extrato-btn-ver').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var ext = buscarExtratoStoragePorId(this.getAttribute('data-id'));
+        if (ext) abrirExtratoModal(ext);
+        else finToast('Extrato não encontrado.', 'warning');
+      });
+    });
+
+    els.extratoListaDiaria.querySelectorAll('.extrato-btn-excluir').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        var ext = buscarExtratoStoragePorId(id);
+        if (!ext) { finToast('Extrato não encontrado.', 'warning'); return; }
+
+        abrirModalConfirmarExclusaoFin({
+          titulo: 'Excluir extrato',
+          mensagem: 'Tem certeza que deseja excluir este extrato salvo? Essa ação não pode ser desfeita.',
+          subtitulo: ext.origem || '',
+          onConfirmar: function () {
+            var ok = removerExtratoStorage(id);
+            if (ok) {
+              finToast('Extrato removido com sucesso!', 'success');
+              renderizarListaExtratos();
+            } else {
+              finToast('Erro ao remover extrato.', 'danger');
+            }
+          }
+        });
+      });
+    });
+
+    els.extratoListaDiaria.querySelectorAll('.btn-toggle-valor-extrato').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var card = this.closest('.extrato-item-card');
+        var span = card ? card.querySelector('.extrato-saldo-valor') : null;
+        if (!span) return;
+
+        var visivel = span.getAttribute('data-visivel') === '1';
+        var real = span.getAttribute('data-valor-real');
+
+        span.textContent = visivel ? 'R$ ****' : real;
+        span.setAttribute('data-visivel', visivel ? '0' : '1');
+
+        var icon = this.querySelector('i');
+        if (icon) icon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
+      });
+    });
   }
 
   function renderBlocoDia(dia, registros) {

@@ -398,11 +398,13 @@
 
         try {
             var todos = await API.call('getcolaboradores');
-            var lista = Array.isArray(todos) ? todos : [];
+            var lista = Array.isArray(todos) ? todos : (todos.data || []);
 
+            // 🔧 CORRIGIDO: campo "colaborador" não existe mais na API.
+            // Antes: lista.filter(c => String(c.colaborador||'').toUpperCase().includes('MOTOBOY'))
+            // Agora: todo colaborador ativo é considerado motoboy.
             var motoboys = lista.filter(function (c) {
-                return String(c.colaborador || '').toUpperCase().includes('MOTOBOY') &&
-                    String(c.status || '').toUpperCase() === 'TRUE';
+                return String(c.status || '').toUpperCase() === 'TRUE';
             });
 
             selectEl.disabled = false;
@@ -1148,6 +1150,14 @@
         var selectMotoboy = document.getElementById('edit-motoboy');
         var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
 
+        // 🔒 PROTEÇÃO: nunca sobrescreve o motoboy com vazio se já havia um valor salvo no cache
+        if (!motoboyNome) {
+            var pedidoCacheAtual = (Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [])
+                .find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+            if (pedidoCacheAtual && pedidoCacheAtual.motoboy) {
+                motoboyNome = String(pedidoCacheAtual.motoboy).trim();
+            }
+        }
         var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
 
         var payload = {
@@ -1293,156 +1303,185 @@
     }
 
     function _registrarEventos() {
-        if (els.btnSync) {
-            els.btnSync.onclick = function () {
-                _dispararSync();
-            };
-        }
+        _bindSync();
+        _bindOrdenacao();
+        _bindBusca();
+        _bindFiltroTipo();
+        _bindFiltroStatus();
+        _bindPaginacao();
+        _bindModalMotoboy();
+    }
 
-        if (els.thead) {
-            els.thead.addEventListener('click', function (e) {
-                var btn = e.target.closest('#btn-sort-data-pedidos');
-                if (!btn) return;
-                e.preventDefault();
-                e.stopPropagation();
-                _toggleSort();
-            });
-        }
+    function _bindSync() {
+        if (!els.btnSync) return;
+        els.btnSync.onclick = function () {
+            _dispararSync();
+        };
+    }
 
-        if (els.inputBusca) {
-            var tBusca = null;
-            els.inputBusca.oninput = function () {
-                clearTimeout(tBusca);
-                _spinFeedback();
-                _toggleBtnClearBusca();
-                tBusca = setTimeout(function () {
-                    window.pedidosState.busca = els.inputBusca.value.trim();
-                    window.pedidosState.paginaAtual = 1;
-                    window.pedidosState.emAcao = true;
-                    _renderizarTabela(window.AppRDO.pedidosCache);
-                }, 300);
-            };
+    function _bindOrdenacao() {
+        if (!els.thead) return;
+        els.thead.addEventListener('click', function (e) {
+            var btn = e.target.closest('#btn-sort-data-pedidos');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            _toggleSort();
+        });
+    }
 
-            if (els.btnClearBusca) {
-                els.btnClearBusca.onclick = function () {
-                    els.inputBusca.value = '';
-                    window.pedidosState.busca = '';
-                    window.pedidosState.paginaAtual = 1;
-                    window.pedidosState.emAcao = true;
-                    _toggleBtnClearBusca();
-                    els.inputBusca.focus();
-                    _spinFeedback();
-                    _renderizarTabela(window.AppRDO.pedidosCache);
-                };
-            }
+    function _bindBusca() {
+        if (!els.inputBusca) return;
 
+        var timeoutBusca = null;
+
+        els.inputBusca.oninput = function () {
+            clearTimeout(timeoutBusca);
+            _spinFeedback();
             _toggleBtnClearBusca();
-        }
 
-        if (els.btnFiltroTipo) {
-            var menu = document.getElementById('dropdown-filtro-menu');
+            timeoutBusca = setTimeout(function () {
+                window.pedidosState.busca = els.inputBusca.value.trim();
+                window.pedidosState.paginaAtual = 1;
+                window.pedidosState.emAcao = true;
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            }, 300);
+        };
 
-            function _posicionarMenuMobile() {
-                if (!menu) return;
-                var isMobile = window.innerWidth <= 576;
-                if (!isMobile) {
-                    menu.style.position = '';
-                    menu.style.top = '';
-                    menu.style.left = '';
-                    menu.style.right = '';
-                    menu.style.transform = '';
-                    return;
-                }
-
-                var rectBtn = els.btnFiltroTipo.getBoundingClientRect();
-                var menuWidth = Math.min(window.innerWidth * 0.92, 260);
-                var margem = 8;
-
-                var left = rectBtn.left;
-                if (left + menuWidth > window.innerWidth - margem) {
-                    left = window.innerWidth - menuWidth - margem;
-                }
-                if (left < margem) left = margem;
-
-                var top = rectBtn.bottom + 6;
-
-                menu.style.position = 'fixed';
-                menu.style.top = top + 'px';
-                menu.style.left = left + 'px';
-                menu.style.right = 'auto';
-                menu.style.width = menuWidth + 'px';
-                menu.style.transform = 'none';
-            }
-
-            els.btnFiltroTipo.onclick = function (e) {
-                e.stopPropagation();
-                if (!menu) return;
-                var aberto = menu.classList.contains('show');
-                if (!aberto) {
-                    _posicionarMenuMobile();
-                }
-                menu.classList.toggle('show', !aberto);
-                els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
+        if (els.btnClearBusca) {
+            els.btnClearBusca.onclick = function () {
+                els.inputBusca.value = '';
+                window.pedidosState.busca = '';
+                window.pedidosState.paginaAtual = 1;
+                window.pedidosState.emAcao = true;
+                _toggleBtnClearBusca();
+                els.inputBusca.focus();
+                _spinFeedback();
+                _renderizarTabela(window.AppRDO.pedidosCache);
             };
-
-            if (!window.RDO_PEDIDOS._globalFiltroBind) {
-                window.RDO_PEDIDOS._globalFiltroBind = true;
-
-                window.addEventListener('resize', function () {
-                    var menuAtual = document.getElementById('dropdown-filtro-menu');
-                    var btnAtual = document.getElementById('btn-filtro-tipo');
-                    if (menuAtual && btnAtual && menuAtual.classList.contains('show')) {
-                        _posicionarMenuMobile();
-                    }
-                });
-
-                document.addEventListener('click', function (e) {
-                    var menuAtual = document.getElementById('dropdown-filtro-menu');
-                    var btnAtual = document.getElementById('btn-filtro-tipo');
-                    if (!menuAtual || !btnAtual) return;
-                    if (!btnAtual.contains(e.target) && !menuAtual.contains(e.target)) {
-                        menuAtual.classList.remove('show');
-                        btnAtual.setAttribute('aria-expanded', 'false');
-                    }
-                });
-
-                document.addEventListener('keydown', function (e) {
-                    if (e.key !== 'Escape') return;
-                    var menuAtual = document.getElementById('dropdown-filtro-menu');
-                    var btnAtual = document.getElementById('btn-filtro-tipo');
-                    if (menuAtual) menuAtual.classList.remove('show');
-                    if (btnAtual) btnAtual.setAttribute('aria-expanded', 'false');
-                });
-            }
-
-            if (menu) {
-                menu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
-                    item.onclick = function (e) {
-                        e.stopPropagation();
-                        var filtro = item.getAttribute('data-filtro');
-                        window.pedidosState.filtroCategoria = filtro;
-                        if (els.labelFiltroTipo) {
-                            els.labelFiltroTipo.textContent = item.textContent.trim();
-                        }
-                        menu.querySelectorAll('.dropdown-filtro-item').forEach(function (el) {
-                            el.classList.remove('active');
-                        });
-                        item.classList.add('active');
-                        menu.classList.remove('show');
-                        els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
-                        window.pedidosState.paginaAtual = 1;
-                        window.pedidosState.emAcao = true;
-                        _spinFeedback();
-                        _renderizarTabela(window.AppRDO.pedidosCache);
-                    };
-                });
-            }
         }
 
+        _toggleBtnClearBusca();
+    }
+
+    function _bindFiltroTipo() {
+        if (!els.btnFiltroTipo) return;
+
+        var menu = document.getElementById('dropdown-filtro-menu');
+
+        els.btnFiltroTipo.onclick = function (e) {
+            e.stopPropagation();
+            if (!menu) return;
+            var aberto = menu.classList.contains('show');
+            if (!aberto) _posicionarMenuFiltroMobile(els.btnFiltroTipo, menu);
+            menu.classList.toggle('show', !aberto);
+            els.btnFiltroTipo.setAttribute('aria-expanded', String(!aberto));
+        };
+
+        _bindEventosGlobaisFiltroTipo();
+        _bindItensFiltroTipo(menu);
+    }
+
+    function _posicionarMenuFiltroMobile(btnFiltro, menu) {
+        if (!menu) return;
+        var isMobile = window.innerWidth <= 576;
+
+        if (!isMobile) {
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.transform = '';
+            return;
+        }
+
+        var rectBtn = btnFiltro.getBoundingClientRect();
+        var menuWidth = Math.min(window.innerWidth * 0.92, 260);
+        var margem = 8;
+
+        var left = rectBtn.left;
+        if (left + menuWidth > window.innerWidth - margem) {
+            left = window.innerWidth - menuWidth - margem;
+        }
+        if (left < margem) left = margem;
+
+        var top = rectBtn.bottom + 6;
+
+        menu.style.position = 'fixed';
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+        menu.style.right = 'auto';
+        menu.style.width = menuWidth + 'px';
+        menu.style.transform = 'none';
+    }
+
+    function _bindEventosGlobaisFiltroTipo() {
+        if (window.RDO_PEDIDOS._globalFiltroBind) return;
+        window.RDO_PEDIDOS._globalFiltroBind = true;
+
+        window.addEventListener('resize', function () {
+            var menuAtual = document.getElementById('dropdown-filtro-menu');
+            var btnAtual = document.getElementById('btn-filtro-tipo');
+            if (menuAtual && btnAtual && menuAtual.classList.contains('show')) {
+                _posicionarMenuFiltroMobile(btnAtual, menuAtual);
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            var menuAtual = document.getElementById('dropdown-filtro-menu');
+            var btnAtual = document.getElementById('btn-filtro-tipo');
+            if (!menuAtual || !btnAtual) return;
+            if (!btnAtual.contains(e.target) && !menuAtual.contains(e.target)) {
+                menuAtual.classList.remove('show');
+                btnAtual.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            var menuAtual = document.getElementById('dropdown-filtro-menu');
+            var btnAtual = document.getElementById('btn-filtro-tipo');
+            if (menuAtual) menuAtual.classList.remove('show');
+            if (btnAtual) btnAtual.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    function _bindItensFiltroTipo(menu) {
+        if (!menu) return;
+
+        menu.querySelectorAll('.dropdown-filtro-item').forEach(function (item) {
+            item.onclick = function (e) {
+                e.stopPropagation();
+
+                var filtro = item.getAttribute('data-filtro');
+                window.pedidosState.filtroCategoria = filtro;
+
+                if (els.labelFiltroTipo) {
+                    els.labelFiltroTipo.textContent = item.textContent.trim();
+                }
+
+                menu.querySelectorAll('.dropdown-filtro-item').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+                item.classList.add('active');
+                menu.classList.remove('show');
+                els.btnFiltroTipo.setAttribute('aria-expanded', 'false');
+
+                window.pedidosState.paginaAtual = 1;
+                window.pedidosState.emAcao = true;
+                _spinFeedback();
+                _renderizarTabela(window.AppRDO.pedidosCache);
+            };
+        });
+    }
+
+    function _bindFiltroStatus() {
         els.filtrosStatus.forEach(function (f) {
             if (!f.el) return;
             f.el.onclick = function () {
-                els.filtrosStatus.forEach(function (fi) { if (fi.el) fi.el.classList.remove('active'); });
+                els.filtrosStatus.forEach(function (fi) {
+                    if (fi.el) fi.el.classList.remove('active');
+                });
                 f.el.classList.add('active');
                 window.pedidosState.filtroStatus = f.status;
                 window.pedidosState.paginaAtual = 1;
@@ -1451,7 +1490,9 @@
                 _renderizarTabela(window.AppRDO.pedidosCache);
             };
         });
+    }
 
+    function _bindPaginacao() {
         if (els.btnPrev) {
             els.btnPrev.onclick = function () {
                 if (window.pedidosState.paginaAtual > 1) {
@@ -1469,24 +1510,24 @@
                 _renderizarTabela(window.AppRDO.pedidosCache);
             };
         }
+    }
 
-        if (!window.RDO_PEDIDOS._motoboyModalBind) {
-            window.RDO_PEDIDOS._motoboyModalBind = true;
+    function _bindModalMotoboy() {
+        if (window.RDO_PEDIDOS._motoboyModalBind) return;
+        window.RDO_PEDIDOS._motoboyModalBind = true;
 
-            document.addEventListener('show.bs.modal', function (e) {
-                if (!e.target || e.target.id !== 'modalNovoPedido') return;
-                var sel = document.getElementById('novo-motoboy');
-                if (sel) _carregarMotoboysDropdown(sel, '');
-            });
+        document.addEventListener('show.bs.modal', function (e) {
+            if (!e.target || e.target.id !== 'modalNovoPedido') return;
+            var sel = document.getElementById('novo-motoboy');
+            if (sel) _carregarMotoboysDropdown(sel, '');
+        });
 
-            document.addEventListener('shown.bs.modal', function (e) {
-                if (!e.target || e.target.id !== 'modalNovoPedido') return;
-                var sel = document.getElementById('novo-motoboy');
-                if (sel && (!sel.options.length || sel.options[0].textContent.includes('Carregando'))) {
-                    _carregarMotoboysDropdown(sel, '');
-                }
-            });
-        }
+        document.addEventListener('shown.bs.modal', function (e) {
+            if (!e.target || e.target.id !== 'modalNovoPedido') return;
+            var sel = document.getElementById('novo-motoboy');
+            var aindaCarregando = sel && (!sel.options.length || sel.options[0].textContent.includes('Carregando'));
+            if (aindaCarregando) _carregarMotoboysDropdown(sel, '');
+        });
     }
 
     window.RDO_PEDIDOS._eventBusHandlers = window.RDO_PEDIDOS._eventBusHandlers || null;
