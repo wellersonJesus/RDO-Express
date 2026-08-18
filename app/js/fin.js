@@ -2381,34 +2381,48 @@ if (!window.EventBus) {
     var registros = periodo.registros || [];
     var totais = calcularTotaisRegistros(registros);
 
-    // Cor única e suave para todos os blocos de dia (cinza clarinho)
-    var corBlocoUnica = { bg: '#f7f7f8', borda: '#e4e4e7' };
+    var valorRdoTotal = totais.entradas * 0.20;      // RDO Express (20% das receitas)
+    var valorColabTotal = totais.entradas * 0.80;    // Colaborador (80% das receitas)
 
     var blocos = agruparRegistrosPorData(registros);
 
     var blocosHtml = blocos.map(function (bloco) {
       var totaisDia = calcularTotaisRegistros(bloco.registros);
+      var valorRdo = totaisDia.entradas * 0.20;
+      var valorColaborador = totaisDia.entradas * 0.80;
+
       var labelData = bloco.dataISO !== 'sem-data' ? formatDateBR(bloco.dataISO) : 'Sem data';
       var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
-      var linhas = bloco.registros.map(function (r) {
-        var valorClasse = r.tipo === 'entrada' ? 'text-success' : 'text-danger';
+      var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
+        var ha = (a.hora || '');
+        var hb = (b.hora || '');
+        return ha < hb ? -1 : (ha > hb ? 1 : 0);
+      });
+
+      var linhas = registrosOrdenados.map(function (r) {
+        var cor = r.tipo === 'entrada' ? '#198754' : '#dc3545';
+        var hora = r.hora || obterHoraRegistro(r) || '--:--';
         return '' +
-          '<div style="display:flex;align-items:baseline;gap:6px;padding:6px 4px;">' +
-          '<span style="font-size:.78rem;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%;flex-shrink:0;" title="' + escapeHtml(r.descricao || '-') + '">' + escapeHtml(r.descricao || '-') + '</span>' +
-          '<span style="flex:1;border-bottom:1.5px dotted #b8b8b8;height:1px;margin:0 2px;position:relative;top:-4px;"></span>' +
-          '<span class="' + valorClasse + '" style="font-size:.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">' + formatarMoeda(r.valor) + '</span>' +
+          '<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:.75rem;">' +
+          '<span style="color:#999;white-space:nowrap;flex-shrink:0;width:40px;">' + escapeHtml(hora) + '</span>' +
+          '<span style="flex:1;color:#444;">' + escapeHtml(limparSufixoHoraValorDescricao(r.descricao) || '-') + '</span>' +
+          '<span style="font-weight:700;color:' + cor + ';">' + formatarMoeda(r.valor) + '</span>' +
           '</div>';
       }).join('');
 
       return '' +
-        '<div style="background:' + corBlocoUnica.bg + ';border:1px solid ' + corBlocoUnica.borda + ';border-radius:12px;margin-bottom:10px;overflow:hidden;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid ' + corBlocoUnica.borda + ';">' +
+        '<div style="background:#f7f7f8;border:1px solid #e4e4e7;border-radius:12px;margin-bottom:10px;overflow:hidden;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #e4e4e7;">' +
         '<div><span style="font-size:.78rem;font-weight:700;color:#444;">' + labelData + '</span>' +
         '<span style="font-size:.66rem;color:#888;margin-left:6px;">' + labelSemana + '</span></div>' +
         '<span style="font-size:.74rem;font-weight:700;color:' + (totaisDia.saldo >= 0 ? '#198754' : '#dc3545') + ';">' + formatarMoeda(totaisDia.saldo) + '</span>' +
         '</div>' +
         '<div style="padding:4px 10px;">' + linhas + '</div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 10px 8px;border-top:1px dashed #e4e4e7;font-size:.68rem;">' +
+        '<span style="color:#1565c0;">RDO Express (20%): <strong>' + formatarMoeda(valorRdo) + '</strong></span>' +
+        '<span style="color:#6a1b9a;">Colaborador (80%): <strong>' + formatarMoeda(valorColaborador) + '</strong></span>' +
+        '</div>' +
         '</div>';
     }).join('');
 
@@ -2428,8 +2442,8 @@ if (!window.EventBus) {
       '<div class="d-flex flex-wrap gap-2 mb-3">' +
       '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Receitas</div><div class="fw-bold text-success">' + formatarMoeda(totais.entradas) + '</div></div>' +
       '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Despesas</div><div class="fw-bold text-danger">' + formatarMoeda(totais.saidas) + '</div></div>' +
-      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Empresa (20%)</div><div class="fw-bold">' + formatarMoeda(totais.empresa) + '</div></div>' +
-      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Colaboradores (80%)</div><div class="fw-bold">' + formatarMoeda(totais.colaboradores) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">RDO Express (20%)</div><div class="fw-bold" style="color:#1565c0;">' + formatarMoeda(valorRdoTotal) + '</div></div>' +
+      '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Colaboradores (80%)</div><div class="fw-bold" style="color:#6a1b9a;">' + formatarMoeda(valorColabTotal) + '</div></div>' +
       '<div class="border rounded-3 px-3 py-2 flex-fill"><div class="small text-muted">Saldo</div><div class="fw-bold text-primary">' + formatarMoeda(totais.saldo) + '</div></div>' +
       '</div>' +
       '<div>' + blocosHtml + '</div>' +
@@ -2719,6 +2733,10 @@ if (!window.EventBus) {
       '.bloco-data-semana { font-size: 10px; font-weight: 400; color: #888; margin-left: 6px; }' +
       '.bloco-data-saldo { font-size: 11px; font-weight: 700; }' +
       '.bloco-data-body { padding: 4px 12px 8px; }' +
+      '.bloco-data-body { padding: 4px 12px 8px; }' +
+      '.bloco-data-divisao { display: flex; justify-content: space-between; padding: 6px 12px 8px; border-top: 1px dashed #e4e4e7; font-size: 10.5px; color: #555; }' +
+      '.divisao-rdo { color: #1565c0; }' +
+      '.divisao-colaborador { color: #6a1b9a; }' +
       '.linha-extrato { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; }' +
       '.hora-extrato { font-size: 10.5px; color: #999; white-space: nowrap; flex-shrink: 0; width: 40px; }' +
       '.desc-extrato { font-size: 11.5px; color: #555; white-space: nowrap; flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }' +
@@ -3159,10 +3177,23 @@ if (!window.EventBus) {
   }
 
   function obterHoraRegistro(reg) {
-    if (reg.idPedido && state.pedidosCache[reg.idPedido]) {
-      var pedido = state.pedidosCache[reg.idPedido];
-      return (pedido.horario || pedido.hora || '').toString().trim();
+    // 1ª prioridade: hora já vem do financeiro (r.hora)
+    if (reg.hora) return reg.hora.toString().trim();
+
+    // 2ª prioridade: buscar no chat pelo id_pedido vinculado
+    if (reg.idPedido && state.chatCache) {
+      var msgsDoPedido = Object.values(state.chatCache).filter(function (msg) {
+        return msg.pedido_id === reg.idPedido;
+      });
+      if (msgsDoPedido.length) {
+        // pega a hora da mensagem mais antiga (ou a que fizer sentido pro seu fluxo)
+        var primeira = msgsDoPedido.sort(function (a, b) {
+          return (a.data + a.hora) < (b.data + b.hora) ? -1 : 1;
+        })[0];
+        return (primeira.hora || '').toString().trim();
+      }
     }
+
     return '';
   }
 
@@ -3353,6 +3384,12 @@ if (!window.EventBus) {
 
     modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
     modalInst.show();
+  }
+
+  function extrairHoraDaDescricao(descricao) {
+    if (!descricao) return null;
+    var match = descricao.match(/\[(\d{2}:\d{2})\s*\|/);
+    return match ? match[1] : null;
   }
 
   function resumirDescricao(desc, limiteChars) {
