@@ -70,11 +70,24 @@ if (!window.EventBus) {
     return semZeros || "0";
   }
 
-  /**
- * Gera o HTML completo do relatório de extrato para impressão/PDF.
- * Colunas: Data | Colaborador | Descrição (resumo) | Valor
- * @param {Object} ext - objeto do extrato salvo (origem, periodoLabel, registros, etc.)
- */
+  function limparSufixoHoraValorDescricao(descricao) {
+    if (!descricao) return descricao;
+    return String(descricao).replace(/\s*\[\s*\d{1,2}:\d{2}\s*\|\s*r\$?\s*[\d.,]+\s*\]\s*$/i, '').trim();
+  }
+
+  function montarLinhaExtratoHtml(r, estiloDescricao, estiloValor) {
+    var valorClasse = r.tipo === 'entrada' ? 'text-success' : 'text-danger';
+    var hora = r.hora || obterHoraRegistro(r) || '--:--';
+    var descricaoLimpa = limparSufixoHoraValorDescricao(r.descricao) || '-';
+    return '' +
+      '<div style="display:flex;align-items:baseline;gap:6px;padding:6px 4px;">' +
+      '<span style="font-size:.72rem;color:#999;white-space:nowrap;flex-shrink:0;width:36px;">' + escapeHtml(hora) + '</span>' +
+      '<span style="font-size:.78rem;color:#555;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;max-width:55%;">' + escapeHtml(descricaoLimpa) + '</span>' +
+      '<span style="flex:1;border-bottom:1.5px dotted #b8b8b8;height:1px;margin:0 2px;position:relative;top:-4px;"></span>' +
+      '<span class="' + valorClasse + '" style="font-size:.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">' + formatarMoeda(r.valor) + '</span>' +
+      '</div>';
+  }
+
   function gerarHtmlRelatorioExtrato(ext) {
     var registros = ext.registros || [];
     var totais = calcularTotaisRegistros(registros);
@@ -84,12 +97,21 @@ if (!window.EventBus) {
       var cor = corBlocoDataFin(idx);
       var totaisDia = calcularTotaisRegistros(bloco.registros);
       var labelData = bloco.dataISO !== 'sem-data' ? formatDateBR(bloco.dataISO) : 'Sem data';
+      var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
-      var linhas = bloco.registros.map(function (r) {
+      var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
+        var ha = (a.hora || '');
+        var hb = (b.hora || '');
+        return ha < hb ? -1 : (ha > hb ? 1 : 0);
+      });
+
+      var linhas = registrosOrdenados.map(function (r) {
         var valorClasse = r.valor >= 0 && r.tipo === 'entrada' ? 'positivo' : 'negativo';
+        var hora = r.hora || obterHoraRegistro(r) || '--:--';
         return '' +
           '<div class="linha-extrato">' +
-          '<span class="desc-extrato">' + escapeHtml(r.descricao || '-') + '</span>' +
+          '<span class="hora-extrato">' + escapeHtml(hora) + '</span>' +
+          '<span class="desc-extrato">' + escapeHtml(limparSufixoHoraValorDescricao(r.descricao) || '-') + '</span>' +
           '<span class="pontos-extrato"></span>' +
           '<span class="valor-extrato ' + valorClasse + '">' + formatarMoeda(r.valor) + '</span>' +
           '</div>';
@@ -98,7 +120,7 @@ if (!window.EventBus) {
       return '' +
         '<div class="bloco-data" style="background:' + cor.bg + ';border:1px solid ' + cor.borda + ';">' +
         '<div class="bloco-data-header" style="border-bottom:1px solid ' + cor.borda + ';">' +
-        '<span class="bloco-data-label">' + labelData + '</span>' +
+        '<span class="bloco-data-label">' + labelData + (labelSemana ? ' <span class="bloco-data-semana">' + labelSemana + '</span>' : '') + '</span>' +
         '<span class="bloco-data-saldo" style="color:' + (totaisDia.saldo >= 0 ? '#2e7d32' : '#c62828') + ';">' + formatarMoeda(totaisDia.saldo) + '</span>' +
         '</div>' +
         '<div class="bloco-data-body">' + linhas + '</div>' +
@@ -117,10 +139,12 @@ if (!window.EventBus) {
       '.bloco-data { border-radius: 10px; margin-bottom: 12px; overflow: hidden; }' +
       '.bloco-data-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; }' +
       '.bloco-data-label { font-size: 11.5px; font-weight: 700; color: #444; }' +
+      '.bloco-data-semana { font-size: 10px; font-weight: 400; color: #888; margin-left: 6px; }' +
       '.bloco-data-saldo { font-size: 11px; font-weight: 700; }' +
       '.bloco-data-body { padding: 4px 12px 8px; }' +
       '.linha-extrato { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; }' +
-      '.desc-extrato { font-size: 11.5px; color: #555; white-space: nowrap; flex-shrink: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }' +
+      '.hora-extrato { font-size: 10.5px; color: #999; white-space: nowrap; flex-shrink: 0; width: 40px; }' +
+      '.desc-extrato { font-size: 11.5px; color: #555; white-space: nowrap; flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }' +
       '.pontos-extrato { flex: 1; border-bottom: 1.5px dotted #b0b0b0; height: 1px; margin: 0 2px; position: relative; top: -4px; }' +
       '.valor-extrato { font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }' +
       '.valor-extrato.positivo { color: #2e7d32; }' +
@@ -135,8 +159,9 @@ if (!window.EventBus) {
       '</div>' +
       blocosHtml +
       '<div class="relatorio-total">' +
-      '<span class="relatorio-total-label">Saldo total:</span>' +
-      '<span class="relatorio-total-valor">' + formatarMoeda(totais.saldo) + '</span>' +
+      '<div class="relatorio-total-linha"><span class="relatorio-total-label">Total Receitas:</span><span class="relatorio-total-valor" style="color:#2e7d32;">' + formatarMoeda(totais.entradas) + '</span></div>' +
+      '<div class="relatorio-total-linha"><span class="relatorio-total-label">Total Despesas:</span><span class="relatorio-total-valor" style="color:#c62828;">' + formatarMoeda(totais.saidas) + '</span></div>' +
+      '<div class="relatorio-total-linha relatorio-total-final"><span class="relatorio-total-label">Saldo:</span><span class="relatorio-total-valor" style="color:' + (totais.saldo >= 0 ? '#2e7d32' : '#c62828') + ';">' + formatarMoeda(totais.saldo) + '</span></div>' +
       '</div>' +
       '</body></html>';
   }
@@ -398,7 +423,7 @@ if (!window.EventBus) {
   function normalizarRegistro(d) {
     var idPedido = (d.id_pedido || d.idPedido || '').toString().trim();
     var dataObj = parseData(d.data_lancamento || d.data);
-    var tipoNorm = (d.tipo || '').toString().trim().toLowerCase() === 'entrada' ? 'entrada' : 'saida';
+    var tipoNorm = (d.tipo || '').toString().trim().toLowerCase();
     var valorNum = _parseValor(d.vlr_servico || d.valor || 0);
     var situacaoNorm = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var colaboradorId = (d.colaborador_id || d.colaboradorId || '').toString().trim();
@@ -516,6 +541,20 @@ if (!window.EventBus) {
     return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function ehReceitaFin(tipo) {
+    var t = (tipo || '').toString().trim().toLowerCase();
+    return t === 'corrida' || t === 'entrada';
+  }
+
+  function formatarMoedaComSinal(valor, tipo) {
+    var num = typeof valor === 'number' ? valor : parseCurrencyField(valor);
+    if (isNaN(num)) num = 0;
+    var sinal = ehReceitaFin(tipo) ? '+' : '−';
+    // Remove sinal negativo nativo do toLocaleString (caso valor já venha negativo) para não duplicar
+    var absFormatado = Math.abs(num).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return sinal + ' ' + absFormatado;
+  }
+
   function formatDateBR(iso) {
     if (!iso) return '';
     var p = iso.split('-');
@@ -595,7 +634,8 @@ if (!window.EventBus) {
       var raw = localStorage.getItem(CAIXA_PERIODO_STORAGE_KEY);
       if (!raw) return [];
       var lista = JSON.parse(raw);
-      return Array.isArray(lista) ? lista : [];
+      lista = Array.isArray(lista) ? lista : [];
+      return lista.filter(function (p) { return !p.excluido; });
     } catch (e) { return []; }
   }
 
@@ -970,7 +1010,7 @@ if (!window.EventBus) {
             if (dados.cliente !== undefined) reg.cliente = dados.cliente || '-';
             if (dados.grupo !== undefined) reg.grupo = dados.grupo || '';
 
-            if (reg.tipo === 'entrada') {
+            if (ehReceitaFin(reg.tipo)) {
               var pctColab = 80;
               if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && state.colaboradoresCache[reg.colaboradorId].percentual_comissao) {
                 pctColab = parseFloat(state.colaboradoresCache[reg.colaboradorId].percentual_comissao) || 80;
@@ -1227,8 +1267,13 @@ if (!window.EventBus) {
   function excluirPeriodoCaixaStorage(id) {
     try {
       var periodos = carregarPeriodosCaixaStorage();
-      var novaLista = periodos.filter(function (p) { return p.id !== id; });
-      localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(novaLista)); // ✅ chave correta
+      var idx = periodos.findIndex(function (p) { return p.id === id; });
+      if (idx === -1) return false;
+
+      periodos[idx].excluido = true;
+      periodos[idx].excluidoEm = Date.now();
+
+      localStorage.setItem(CAIXA_PERIODO_STORAGE_KEY, JSON.stringify(periodos));
       return true;
     } catch (e) {
       console.error('[excluirPeriodoCaixaStorage] Erro ao excluir carteira:', e);
@@ -1358,7 +1403,7 @@ if (!window.EventBus) {
   }
 
   function abrirModalRepasses() {
-    if (_repassesAbrindoAgora) return; // ✅ ignora clique duplicado
+    if (_repassesAbrindoAgora) return;
     _repassesAbrindoAgora = true;
 
     var OLD_ID = 'modalRepassesDyn';
@@ -1370,11 +1415,11 @@ if (!window.EventBus) {
     }
 
     var dados = state.caixa.dadosFiltrados.length ? state.caixa.dadosFiltrados : state.cache;
-    var entradas = dados.filter(function (r) { return r.tipo === 'entrada'; });
+    var entradas = dados.filter(function (r) { return ehReceitaFin(r.tipo); });
     var por = {};
     entradas.forEach(function (r) {
       var nome = (r.motoboy && r.motoboy !== '-') ? r.motoboy : 'Sem colaborador';
-      por[nome] = (por[nome] || 0) + (parseFloat(r.valorColaborador) || 0);
+      por[nome] = (por[nome] || 0) + (parseFloat(r.valor) || 0);
     });
     var nomes = Object.keys(por).sort(function (a, b) { return por[b] - por[a]; });
     var listaHtml = nomes.length ? nomes.map(function (nome) {
@@ -1385,7 +1430,7 @@ if (!window.EventBus) {
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
 
-    if (!modalEl) { // ✅ trava defensiva extra
+    if (!modalEl) {
       _repassesAbrindoAgora = false;
       finToast('Erro ao montar o modal de repasses.', 'danger');
       return;
@@ -1395,7 +1440,7 @@ if (!window.EventBus) {
     modalEl.addEventListener('hidden.bs.modal', function () {
       modalInst.dispose();
       if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
-      _repassesAbrindoAgora = false; // ✅ libera para o próximo clique
+      _repassesAbrindoAgora = false;
     });
     modalInst.show();
   }
@@ -2167,7 +2212,7 @@ if (!window.EventBus) {
 
   function periodoJaExisteStorage(inicio, fim) {
     return carregarPeriodosCaixaStorage().some(function (p) {
-      return p.inicio === inicio && p.fim === fim;
+      return !p.excluido && p.inicio === inicio && p.fim === fim;
     });
   }
 
@@ -2393,7 +2438,6 @@ if (!window.EventBus) {
       '</div>' +
       '<div class="modal-footer">' +
       '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>' +
-      '<button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="' + idModal + '-btn-baixar"><i class="bi bi-download me-1"></i>Baixar</button>' +
       '<button type="button" class="btn btn-danger btn-sm rounded-pill px-3" id="' + idModal + '-btn-pdf"><i class="bi bi-file-pdf me-1"></i>Gerar PDF</button>' +
       '</div>' +
       '</div>' +
@@ -2610,7 +2654,7 @@ if (!window.EventBus) {
     var totais = { entradas: 0, saidas: 0, empresa: 0, colaboradores: 0, saldo: 0, qtd: (lista || []).length };
     (lista || []).forEach(function (r) {
       var valor = parseFloat(r.valor) || 0;
-      if (r.tipo === 'entrada') {
+      if (ehReceitaFin(r.tipo)) {
         totais.entradas += valor;
         totais.empresa += parseFloat(r.valorEmpresa) || 0;
         totais.colaboradores += parseFloat(r.valorColaborador) || 0;
@@ -2622,18 +2666,97 @@ if (!window.EventBus) {
     return totais;
   }
 
-  function baixarHtmlFinanceiro(titulo, periodoLabel, registros) {
+  function gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros) {
+    registros = registros || [];
+    var totais = calcularTotaisRegistros(registros);
+    var blocos = agruparRegistrosPorData(registros);
+
+    var blocosHtml = blocos.map(function (bloco) {
+      var totaisDia = calcularTotaisRegistros(bloco.registros);
+      var labelData = bloco.dataISO !== 'sem-data' ? formatDateBR(bloco.dataISO) : 'Sem data';
+      var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
+
+      var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
+        var ha = (a.hora || '');
+        var hb = (b.hora || '');
+        return ha < hb ? -1 : (ha > hb ? 1 : 0);
+      });
+
+      var linhas = registrosOrdenados.map(function (r) {
+        var valorClasse = r.tipo === 'entrada' ? 'positivo' : 'negativo';
+        var hora = r.hora || obterHoraRegistro(r) || '--:--';
+        return '' +
+          '<div class="linha-extrato">' +
+          '<span class="hora-extrato">' + escapeHtml(hora) + '</span>' +
+          '<span class="desc-extrato">' + escapeHtml(limparSufixoHoraValorDescricao(r.descricao) || '-') + '</span>' +
+          '<span class="pontos-extrato"></span>' +
+          '<span class="valor-extrato ' + valorClasse + '">' + formatarMoeda(r.valor) + '</span>' +
+          '</div>';
+      }).join('');
+
+      return '' +
+        '<div class="bloco-data">' +
+        '<div class="bloco-data-header">' +
+        '<span class="bloco-data-label">' + labelData + (labelSemana ? ' <span class="bloco-data-semana">' + labelSemana + '</span>' : '') + '</span>' +
+        '<span class="bloco-data-saldo" style="color:' + (totaisDia.saldo >= 0 ? '#2e7d32' : '#c62828') + ';">' + formatarMoeda(totaisDia.saldo) + '</span>' +
+        '</div>' +
+        '<div class="bloco-data-body">' + linhas + '</div>' +
+        '</div>';
+    }).join('');
+
+    return '' +
+      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>' + escapeHtml(titulo || '-') + '</title>' +
+      '<style>' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body { font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #333; padding: 24px; -webkit-font-smoothing: antialiased; }' +
+      '.relatorio-header { margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #eee; }' +
+      '.relatorio-titulo { font-size: 14px; font-weight: 600; color: #333; }' +
+      '.relatorio-periodo { font-size: 10.5px; font-weight: 400; color: #999; text-transform: uppercase; letter-spacing: .3px; margin-top: 2px; }' +
+      '.bloco-data { border-radius: 10px; margin-bottom: 12px; overflow: hidden; background:#f7f7f8; border:1px solid #e4e4e7; }' +
+      '.bloco-data-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom:1px solid #e4e4e7; }' +
+      '.bloco-data-label { font-size: 11.5px; font-weight: 700; color: #444; }' +
+      '.bloco-data-semana { font-size: 10px; font-weight: 400; color: #888; margin-left: 6px; }' +
+      '.bloco-data-saldo { font-size: 11px; font-weight: 700; }' +
+      '.bloco-data-body { padding: 4px 12px 8px; }' +
+      '.linha-extrato { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; }' +
+      '.hora-extrato { font-size: 10.5px; color: #999; white-space: nowrap; flex-shrink: 0; width: 40px; }' +
+      '.desc-extrato { font-size: 11.5px; color: #555; white-space: nowrap; flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }' +
+      '.pontos-extrato { flex: 1; border-bottom: 1.5px dotted #b0b0b0; height: 1px; margin: 0 2px; position: relative; top: -4px; }' +
+      '.valor-extrato { font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }' +
+      '.valor-extrato.positivo { color: #2e7d32; }' +
+      '.valor-extrato.negativo { color: #c62828; }' +
+      '.relatorio-total { margin-top: 18px; text-align: right; border-top: 1px solid #eee; padding-top: 10px; }' +
+      '.relatorio-total-label { font-size: 11px; color: #666; }' +
+      '.relatorio-total-valor { font-size: 14px; font-weight: 700; color: #333; margin-left: 6px; }' +
+      '</style></head><body>' +
+      '<div class="relatorio-header">' +
+      '<div class="relatorio-titulo">' + escapeHtml(titulo || '-') + '</div>' +
+      '<div class="relatorio-periodo">' + escapeHtml(periodoLabel || '-') + '</div>' +
+      '</div>' +
+      blocosHtml +
+      '<div class="relatorio-total">' +
+      '<div class="relatorio-total-linha"><span class="relatorio-total-label">Total Receitas:</span><span class="relatorio-total-valor" style="color:#2e7d32;">' + formatarMoeda(totais.entradas) + '</span></div>' +
+      '<div class="relatorio-total-linha"><span class="relatorio-total-label">Total Despesas:</span><span class="relatorio-total-valor" style="color:#c62828;">' + formatarMoeda(totais.saidas) + '</span></div>' +
+      '<div class="relatorio-total-linha relatorio-total-final"><span class="relatorio-total-label">Saldo:</span><span class="relatorio-total-valor" style="color:' + (totais.saldo >= 0 ? '#2e7d32' : '#c62828') + ';">' + formatarMoeda(totais.saldo) + '</span></div>' +
+      '</div>' +
+      '</body></html>';
+  }
+
+  function abrirJanelaPdfFinanceiro(titulo, periodoLabel, registros) {
     var html = gerarJanelaImpressaoFinanceira(titulo, periodoLabel, registros);
-    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (titulo || 'relatorio').replace(/[^\w\-]+/g, '_') + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    finToast('Arquivo baixado! Abra-o e use Ctrl+P para gerar o PDF.', 'success');
+    var win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups.', 'warning');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = function () {
+      win.focus();
+      setTimeout(function () { win.print(); }, 300);
+    };
   }
 
   function abrirModalDetalheDia(dia, registros) {
@@ -2658,6 +2781,31 @@ if (!window.EventBus) {
     }
     var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
     modalInst.show();
+  }
+
+  function getInfoTipoFinanceiro(registro) {
+    var tipoNorm = (registro.tipo || '').toString().trim().toLowerCase();
+    var ehReceita = tipoNorm === 'corrida' || tipoNorm === 'entrada';
+    return {
+      ehReceita: ehReceita,
+      label: ehReceita ? 'Corrida' : 'Despesa',
+      badgeClasse: ehReceita ? 'fin-badge-corrida' : 'fin-badge-despesa',
+      valorClasse: ehReceita ? 'fin-valor-positivo' : 'fin-valor-negativo',
+      sinal: ehReceita ? '+' : '−'
+    };
+  }
+
+  function formatarValorComSinal(registro) {
+    var tipoNormalizado = (registro.tipo || '').toString().trim().toLowerCase();
+    var ehReceita = tipoNormalizado === 'corrida' || tipoNormalizado === 'entrada';
+    var valor = parseFloat(registro.valor) || 0;
+
+    return {
+      sinal: ehReceita ? '+' : '−',
+      cor: ehReceita ? '#bde7bf' : '#d5a5a5', // verde / vermelho
+      classe: ehReceita ? 'text-success' : 'text-danger',
+      textoFormatado: (ehReceita ? '+ ' : '− ') + formatarMoeda(valor)
+    };
   }
 
   function carregarExtratosStorage() {
@@ -2871,14 +3019,14 @@ if (!window.EventBus) {
       var labelData = bloco.dataISO !== 'sem-data' ? formatDateBR(bloco.dataISO) : 'Sem data';
       var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
-      var linhas = bloco.registros.map(function (r) {
-        var valorClasse = r.tipo === 'entrada' ? 'text-success' : 'text-danger';
-        return '' +
-          '<div style="display:flex;align-items:baseline;gap:6px;padding:6px 4px;">' +
-          '<span style="font-size:.78rem;color:#555;white-space:nowrap;flex-shrink:0;">' + escapeHtml(r.descricao || '-') + '</span>' +
-          '<span style="flex:1;border-bottom:1.5px dotted #b8b8b8;height:1px;margin:0 2px;position:relative;top:-4px;"></span>' +
-          '<span class="' + valorClasse + '" style="font-size:.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">' + formatarMoeda(r.valor) + '</span>' +
-          '</div>';
+      var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
+        var ha = a.hora || '';
+        var hb = b.hora || '';
+        return ha < hb ? -1 : (ha > hb ? 1 : 0);
+      });
+
+      var linhas = registrosOrdenados.map(function (r) {
+        return montarLinhaExtratoHtml(r);
       }).join('');
 
       return '' +
@@ -2893,8 +3041,11 @@ if (!window.EventBus) {
     }).join('');
 
     els.extratoModalBody.innerHTML = blocosHtml +
-      '<div class="d-flex justify-content-between pt-3 fw-bold" style="font-size:.85rem;border-top:1px solid #eee;margin-top:6px;">' +
-      '<span>Saldo total:</span><span class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span></div>';
+      '<div style="border-top:1px solid #eee;margin-top:6px;padding-top:8px;">' +
+      '<div class="d-flex justify-content-between" style="font-size:.78rem;padding:3px 0;color:#666;"><span>Total Receitas:</span><span class="text-success fw-bold">' + formatarMoeda(totais.entradas) + '</span></div>' +
+      '<div class="d-flex justify-content-between" style="font-size:.78rem;padding:3px 0;color:#666;"><span>Total Despesas:</span><span class="text-danger fw-bold">' + formatarMoeda(totais.saidas) + '</span></div>' +
+      '<div class="d-flex justify-content-between pt-2 fw-bold" style="font-size:.85rem;border-top:1px dashed #ddd;margin-top:4px;"><span>Saldo:</span><span class="' + (totais.saldo >= 0 ? 'text-success' : 'text-danger') + '">' + formatarMoeda(totais.saldo) + '</span></div>' +
+      '</div>';
 
     if (els.extratoModalCopiar) els.extratoModalCopiar.onclick = function () { copiarTextoClipboard(gerarTextoExtrato(extrato)); };
     if (els.extratoModalPdf) els.extratoModalPdf.onclick = function () { abrirJanelaPdfExtrato(extrato); };
@@ -4085,6 +4236,7 @@ if (!window.EventBus) {
     bindFiltrosRdo();
     initExtratoFluxo();
     bindEventoAbrirPedidoFinanceiro();
+    renderPeriodosSalvosCaixa();
     carregarDados();
 
     window.addEventListener('resize', debounce(function () {
@@ -4168,7 +4320,7 @@ if (!window.EventBus) {
     if (!els.caixaListaDiaria) return;
 
     var lista = state.caixa.listaFiltradaAtual || state.cache.filter(function (r) {
-      return r.tipo === 'entrada' || r.tipo === 'saida';
+      return ehReceitaFin(r.tipo) || r.tipo === 'despesa';
     });
 
     if (!lista.length) {
