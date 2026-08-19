@@ -3118,7 +3118,6 @@ window.StatusModal = (function () {
     }
 
     async function _executarAlteracao(status, motoboyId, motivosCancelamento) {
-        // 🔒 ÚNICA ADIÇÃO: bloqueia conclusão sem motoboy definido (nem no cache, nem selecionado agora)
         if (status === 'CONCLUIDO') {
             var pedidoCheck = _obterPedidoDoCache(_pedidoId);
             var motoboyJaExistente = pedidoCheck ? String(pedidoCheck.motoboy || '').trim() : '';
@@ -3150,13 +3149,27 @@ window.StatusModal = (function () {
                     motoboyNome = String(select.options[select.selectedIndex].text || '').trim();
             } catch (e) { window._exibirErroGlobal(e, 'obter nome do motoboy'); motoboyNome = ''; }
         }
+
+        // 🛡️ PROTEÇÃO DEFINITIVA: Se estiver concluindo e o nome do motoboy estiver vazio, resgata do cache do pedido!
+        if (!motoboyNome && status === 'CONCLUIDO') {
+            var pedidoCache = _obterPedidoDoCache(_pedidoId);
+            if (pedidoCache && pedidoCache.motoboy) {
+                motoboyNome = String(pedidoCache.motoboy).trim();
+            }
+        }
+
         if (motoboyNome) statusFmt = motoboyNome + '/' + status;
 
         _setSpinnerNoBotao(_pedidoId);
         try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
 
         try {
-            var payload = { id: _normalizarId(_pedidoId), status: statusFmt, motoboy: motoboyNome };
+            var payload = { 
+                id: _normalizarId(_pedidoId), 
+                status: String(status || '').trim().toUpperCase(), 
+                motoboy: motoboyNome // Agora envia o nome do motoboy resgatado corretamente!
+            };
+            
             if (motivosCancelamento && motivosCancelamento.length > 0)
                 payload.motivo_cancelamento = motivosCancelamento.join(' | ');
 
@@ -3335,7 +3348,6 @@ window.StatusModal = (function () {
                                 confirmButtonText: 'Entendi', confirmButtonColor: '#dc3545',
                                 customClass: { popup: 'rounded-4', confirmButton: 'rounded-3' }
                             });
-                            // Só chama .catch se realmente for uma Promise
                             if (resultado && typeof resultado.catch === 'function') {
                                 resultado.catch(function (e) { window._exibirErroGlobal(e, 'exibir aviso de motoboy obrigatório'); });
                             }
