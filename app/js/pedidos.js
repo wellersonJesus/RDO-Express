@@ -527,9 +527,9 @@
 
         return '<tr data-pedido-id="' + idSafe + '">' +
             '<td class="ps-3">' + _escHtml(dataPedido) + '</td>' +
-            '<td title="' + _escAttr(solicitanteCompleto) + '">' + _escHtml(solicitantePrimeiro) + '</td>' +
+            '<td title="' + _escAttr(solicitanteCompleto) + '">' + _escHtml(solicitanteCompleto) + '</td>' +
             '<td class="d-none d-md-table-cell">' + _escHtml(idFmt) + '</td>' +
-            '<td class="d-none d-md-table-cell">' + _escHtml(motoboy) + '</td>' +
+            '' +
             '<td>' + badgesHtml + '</td>' +
             '<td class="text-end pe-3">' + acoes + '</td></tr>';
     }
@@ -1825,4 +1825,276 @@
         console.log('[pedidos.js] Pronto!');
     };
 
+})();
+
+// [CORREÇÃO DEFINITIVA: DROPDOWN E FILTRO DE MOTOBOYS]
+window.popularDropdownMotoboys = function(pedidos) {
+    var menuEl = document.getElementById("dropdown-filtro-menu") || document.querySelector(".dropdown-filtro-menu");
+    var btnFiltro = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
+    
+    if (!menuEl) return;
+
+    // Extrai motoboys únicos do array de pedidos de forma limpa
+    var motoboysSet = new Set();
+    (pedidos || window.AppRDO && window.AppRDO.pedidosCache || []).forEach(function(p) {
+        var m = String(p.motoboy || p.colaborador || p.nome_motoboy || "").trim();
+        if (m && m.toLowerCase() !== "todos" && m !== "") {
+            motoboysSet.add(m);
+        }
+    });
+
+    var listaMotoboys = Array.from(motoboysSet).sort();
+    console.log("🛵 Motoboys encontrados para o menu:", listaMotoboys);
+
+    // Reconstrói o HTML do dropdown mantendo a opção 'Todos'
+    var htmlDropdown = `<div class="dropdown-filtro-item active" data-filtro="todos"><i class="bi bi-people"></i> Todos os Motoboys</div>`;
+    
+    listaMotoboys.forEach(function(nomeMotoboy) {
+        htmlDropdown += `<div class="dropdown-filtro-item" data-filtro="${nomeMotoboy}"><i class="bi bi-person"></i> ${nomeMotoboy}</div>`;
+    });
+
+    menuEl.innerHTML = htmlDropdown;
+
+    // Adiciona o evento de clique em cada item do dropdown gerado
+    menuEl.querySelectorAll(".dropdown-filtro-item").forEach(function(item) {
+        item.onclick = function(e) {
+            e.stopPropagation();
+            var filtro = item.getAttribute("data-filtro");
+            
+            menuEl.querySelectorAll(".dropdown-filtro-item").forEach(function(el) {
+                el.classList.remove("active");
+            });
+            item.classList.add("active");
+
+            menuEl.classList.remove("show");
+            menuEl.style.display = "none";
+            if (btnFiltro) {
+                btnFiltro.setAttribute("aria-expanded", "false");
+                btnFiltro.innerHTML = '<i class="bi bi-person-badge"></i> ' + (filtro === "todos" ? "Motoboy" : filtro);
+            }
+
+            // Atualiza o estado global e filtra a tabela
+            window.pedidosState = window.pedidosState || {};
+            window.pedidosState.filtroMotoboy = (filtro === "todos") ? "" : filtro;
+            window.pedidosState.paginaAtual = 1;
+
+            if (typeof window._renderizarTabela === "function") {
+                window._renderizarTabela(window.AppRDO.pedidosCache);
+            } else if (typeof window.renderizarTabela === "function") {
+                window.renderizarTabela(window.AppRDO.pedidosCache);
+            }
+        };
+    });
+};
+
+// Vincula a chamada automática logo após o carregamento dos pedidos
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(function() {
+        if (window.AppRDO && window.AppRDO.pedidosCache) {
+            window.popularDropdownMotoboys(window.AppRDO.pedidosCache);
+        }
+    }, 1000);
+});
+
+
+// [INTEGRAÇÃO DEFINITIVA DE MOTOBOYS - RDO EXPRESS]
+window.carregarDropdownMotoboysGarantido = function(pedidos) {
+    var menuEl = document.getElementById("dropdown-filtro-menu") || document.querySelector(".dropdown-filtro-menu") || document.querySelector("[id*='motoboy']");
+    var btnFiltro = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
+    
+    if (!menuEl) {
+        console.warn("⚠️ Elemento do menu dropdown de motoboys não encontrado no DOM.");
+        return;
+    }
+
+    var cache = pedidos || (window.AppRDO && window.AppRDO.pedidosCache) || [];
+    var motoboysSet = new Set();
+
+    cache.forEach(function(p) {
+        var m = String(p.motoboy || p.colaborador || p.nome_motoboy || "").trim();
+        if (m && m.toLowerCase() !== "todos" && m !== "") {
+            motoboysSet.add(m);
+        }
+    });
+
+    var lista = Array.from(motoboysSet).sort();
+    console.log("🛵 Motoboys mapeados para o filtro:", lista);
+
+    var html = '<div class="dropdown-filtro-item active" data-filtro="todos"><i class="bi bi-people"></i> Todos os Motoboys</div>';
+    
+    lista.forEach(function(nome) {
+        html += '<div class="dropdown-filtro-item" data-filtro="' + nome + '"><i class="bi bi-person"></i> ' + nome + '</div>';
+    });
+
+    menuEl.innerHTML = html;
+
+    // Associa o evento de clique a cada item gerado
+    menuEl.querySelectorAll(".dropdown-filtro-item").forEach(function(item) {
+        item.onclick = function(e) {
+            e.stopPropagation();
+            var filtro = item.getAttribute("data-filtro");
+
+            menuEl.querySelectorAll(".dropdown-filtro-item").forEach(function(el) {
+                el.classList.remove("active");
+            });
+            item.classList.add("active");
+
+            menuEl.classList.remove("show");
+            menuEl.style.display = "none";
+            if (btnFiltro) {
+                btnFiltro.setAttribute("aria-expanded", "false");
+                btnFiltro.innerHTML = '<i class="bi bi-person-badge"></i> ' + (filtro === "todos" ? "Motoboy" : filtro);
+            }
+
+            // Atualiza o estado e renderiza a tabela filtrada
+            window.pedidosState = window.pedidosState || {};
+            window.pedidosState.filtroMotoboy = (filtro === "todos") ? "" : filtro;
+            window.pedidosState.paginaAtual = 1;
+
+            if (typeof window._renderizarTabela === "function") {
+                window._renderizarTabela(cache);
+            } else if (typeof window.renderizarTabela === "function") {
+                window.renderizarTabela(cache);
+            }
+        };
+    });
+};
+
+// Dispara o preenchimento assim que o documento estiver pronto
+document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(function() {
+        if (window.AppRDO && window.AppRDO.pedidosCache) {
+            window.carregarDropdownMotoboysGarantido(window.AppRDO.pedidosCache);
+        }
+    }, 800);
+});
+
+
+// [FILTRO DE MOTOBOY DEFINITIVO - RDO EXPRESS]
+document.addEventListener("click", function(e) {
+    var item = e.target.closest(".dropdown-filtro-item, [data-filtro]");
+    if (!item) return;
+
+    var filtro = item.getAttribute("data-filtro");
+    if (filtro === null || filtro === undefined) return;
+
+    // Atualiza o estado do filtro
+    window.pedidosState = window.pedidosState || {};
+    window.pedidosState.filtroMotoboy = (filtro === "todos" || filtro === "") ? "" : filtro;
+    window.pedidosState.paginaAtual = 1;
+
+    console.log("🛵 [FILTRO] Aplicando filtro para o motoboy:", window.pedidosState.filtroMotoboy || "TODOS");
+
+    // Fecha o menu dropdown visualmente
+    var menu = item.closest(".dropdown-menu, .dropdown-filtro-menu");
+    if (menu) {
+        menu.style.display = "none";
+        menu.classList.remove("show");
+    }
+
+    var btn = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
+    if (btn) {
+        btn.setAttribute("aria-expanded", "false");
+        btn.innerHTML = '<i class="bi bi-person-badge"></i> ' + (window.pedidosState.filtroMotoboy ? window.pedidosState.filtroMotoboy : "Motoboy");
+    }
+
+    // Pega o cache de pedidos e aplica a função de renderização existente
+    var cache = (window.AppRDO && window.AppRDO.pedidosCache) || window.pedidosCache || [];
+    if (cache.length > 0) {
+        // Filtra os dados no cache aplicando a regra do motoboy antes de renderizar, caso a função nativa precise
+        var dadosFiltrados = cache.filter(function(p) {
+            if (!window.pedidosState.filtroMotoboy) return true;
+            var mBanco = String(p.motoboy || p.colaborador || p.nome_motoboy || "").trim().toLowerCase();
+            var mDesejado = window.pedidosState.filtroMotoboy.trim().toLowerCase();
+            return mBanco === mDesejado;
+        });
+
+        if (typeof window._renderizarTabela === "function") {
+            window._renderizarTabela(dadosFiltrados);
+        } else if (typeof window.renderizarTabela === "function") {
+            window.renderizarTabela(dadosFiltrados);
+        }
+    }
+}, true);
+
+
+// [SOLUÇÃO DEFINITIVA RDO EXPRESS: DROPDOWN, FILTRO E CLIENTE COMPLETO]
+(function() {
+    // 1. Garante o comportamento limpo do Dropdown e Filtro de Motoboy
+    document.addEventListener("click", function(e) {
+        var btn = e.target.closest("#btn-filtro-tipo, .dropdown-toggle");
+        var item = e.target.closest(".dropdown-filtro-item, [data-filtro]");
+
+        // Se clicou no botão do dropdown, abre/fecha e popula os motoboys
+        if (btn) {
+            e.stopPropagation();
+            var menu = btn.nextElementSibling || document.querySelector(".dropdown-filtro-menu, .dropdown-menu");
+            if (!menu) return;
+
+            var isOpen = menu.style.display === "block" || menu.classList.contains("show");
+            
+            // Fecha outros menus abertos
+            document.querySelectorAll(".dropdown-filtro-menu, .dropdown-menu").forEach(function(m) {
+                m.style.display = "none";
+                m.classList.remove("show");
+            });
+
+            if (!isOpen) {
+                menu.style.display = "block";
+                menu.classList.add("show");
+                
+                // Popula a lista de motoboys dinamicamente a partir do cache
+                var cache = (window.AppRDO && window.AppRDO.pedidosCache) || window.pedidosCache || [];
+                var motoboysSet = new Set();
+                cache.forEach(function(p) {
+                    var m = String(p.motoboy || p.colaborador || p.nome_motoboy || "").trim();
+                    if (m && m.toLowerCase() !== "todos" && m !== "") {
+                        motoboysSet.add(m);
+                    }
+                });
+
+                var lista = Array.from(motoboysSet).sort();
+                var html = '<div class="dropdown-filtro-item active" data-filtro="todos" style="padding: 8px 12px; cursor: pointer;"><i class="bi bi-people"></i> Todos os Motoboys</div>';
+                
+                lista.forEach(function(nome) {
+                    html += '<div class="dropdown-filtro-item" data-filtro="' + nome + '" style="padding: 8px 12px; cursor: pointer;"><i class="bi bi-person"></i> ' + nome + '</div>';
+                });
+                menu.innerHTML = html;
+            } else {
+                menu.style.display = "none";
+                menu.classList.remove("show");
+            }
+            return;
+        }
+
+        // Se clicou em um item da lista de motoboys para filtrar
+        if (item) {
+            e.stopPropagation();
+            var filtro = item.getAttribute("data-filtro");
+            if (filtro === null) return;
+
+            window.pedidosState = window.pedidosState || {};
+            window.pedidosState.filtroMotoboy = (filtro === "todos" || filtro === "") ? "" : filtro;
+            window.pedidosState.paginaAtual = 1;
+
+            var menu = item.closest(".dropdown-menu, .dropdown-filtro-menu");
+            if (menu) {
+                menu.style.display = "none";
+                menu.classList.remove("show");
+            }
+
+            var btnFiltro = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
+            if (btnFiltro) {
+                btnFiltro.innerHTML = '<i class="bi bi-person-badge"></i> ' + (window.pedidosState.filtroMotoboy ? window.pedidosState.filtroMotoboy : "Motoboy");
+            }
+
+            // Dispara a renderização filtrando os dados
+            var cache = (window.AppRDO && window.AppRDO.pedidosCache) || window.pedidosCache || [];
+            if (cache.length > 0 && typeof window._renderizarTabela === "function") {
+                window._renderizarTabela(cache);
+            } else if (cache.length > 0 && typeof window.renderizarTabela === "function") {
+                window.renderizarTabela(cache);
+            }
+        }
+    });
 })();

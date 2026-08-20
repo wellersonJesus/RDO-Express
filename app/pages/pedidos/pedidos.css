@@ -331,9 +331,36 @@
     }
 }
 
+/* --- Correção Definitiva do Dropdown de Filtro / Motoboys --- */
 .dropdown-filtro-wrapper {
-    position: relative;
-    flex-shrink: 0;
+    position: relative !important;
+    display: inline-block !important;
+}
+
+#dropdown-filtro-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: auto;
+    z-index: 1050;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    min-width: 220px;
+    max-width: 260px;
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+#dropdown-filtro-menu.show, 
+#dropdown-filtro-menu.ativo {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 9999 !important;
+    animation: fadeInDropFiltro 0.15s ease;
 }
 
 .btn-filtro-inteligente {
@@ -1043,6 +1070,21 @@
     color: #dc3545;
 }
 
+.dropdown, .btn-group, .filtro-container-pai {
+    position: relative !important;
+}
+
+#dropdown-filtro-menu.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 9999 !important;
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    margin-top: 4px !important;
+}
+
 @media (max-width: 767.98px) {
     .ped-status-action-info {
         display: none;
@@ -1123,3 +1165,12 @@
     background-color: #fff5f5 !important;
 }
 
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}

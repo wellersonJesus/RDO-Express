@@ -869,22 +869,29 @@
       if (idClientePertenceAOutroCliente(idPed, idsExpandidos)) return false;
     }
 
-    const nomesAlvoNormalizados = nomesAlvo.map(normalizarComparacao).filter(Boolean);
+    const nomesAlvoNormalizados = (nomesAlvo || [])
+      .map(function (nome) { return normalizarComparacao(nome); })
+      .filter(Boolean)
+      .filter(function (nome, indice, lista) { return lista.indexOf(nome) === indice; });
+
     if (!nomesAlvoNormalizados.length) return false;
 
-    function textoContemNomeAlvoExato(texto) {
-      if (!texto) return false;
+    function textoContemNomeAlvoExato(texto, nomeAlvo) {
+      if (!texto || !nomeAlvo) return false;
       const textoNorm = normalizarComparacao(texto);
-      return nomesAlvoNormalizados.some(function (nomeAlvo) {
-        const regex = new RegExp('(^|[^A-Z0-9])' + nomeAlvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])', 'i');
-        return regex.test(' ' + textoNorm + ' ');
-      });
+      const nomeNorm = normalizarComparacao(nomeAlvo);
+      if (!textoNorm || !nomeNorm) return false;
+      const regex = new RegExp('(^|[^A-Z0-9])' + nomeNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])', 'i');
+      return regex.test(' ' + textoNorm + ' ');
     }
 
     const camposTexto = ['cliente', 'solicitante', 'mercadoria', 'de', 'para', 'observacao'];
     for (let i = 0; i < camposTexto.length; i++) {
       const valor = resolverValor('pedidos', camposTexto[i], pedido);
-      if (textoContemNomeAlvoExato(valor)) return true;
+      const corresponde = nomesAlvoNormalizados.some(function (nomeAlvo) {
+        return textoContemNomeAlvoExato(valor, nomeAlvo);
+      });
+      if (corresponde) return true;
     }
 
     return false;
@@ -1646,7 +1653,7 @@
 
   const MAPA_NORMALIZACAO_CLIENTES = [
     [/\brosa\s*d[áa]lia\b/i, 'ROSA DALIA'],
-    [/\bm\.?\s*pitanga\b|\bmaria\s*pitanga\b/i, 'MARIA PITANGA'],
+    [/\bMARIA\s+PITANGA\b/i, 'MARIA PITANGA'],
     [/\bcacau\s*show\b|\bcacaushow\b/i, 'CACAU SHOW'],
     [/\bbreno\b/i, 'BRENO'],
     [/\bval\s*fortunatt?o\b|\bcasa\s*da\s*val\b|\bcasa\s*da\s*av[oó]\b|\bval\b/i, 'VAL FORTUNATO'],
@@ -1720,32 +1727,44 @@
   function normalizarNomeClienteRegex(texto) {
     const t = String(texto == null ? '' : texto).trim();
     if (!t) return '';
-    for (let i = 0; i < MAPA_NORMALIZACAO_CLIENTES.length; i++) {
-      const [padrao, nomePadrao] = MAPA_NORMALIZACAO_CLIENTES[i];
-      if (padrao.test(t)) return nomePadrao;
+
+    const textoNormalizado = normalizarComparacao(t);
+    const candidatos = [];
+
+    MAPA_NORMALIZACAO_CLIENTES.forEach(function ([padrao, nomePadrao]) {
+      if (padrao instanceof RegExp && padrao.test(t)) {
+        candidatos.push(nomePadrao);
+      }
+    });
+
+    Object.keys(IDS_CLIENTES_PADRAO).forEach(function (nome) {
+      if (nome !== NOME_CLIENTE_AVULSO) candidatos.push(nome);
+    });
+
+    for (let i = 0; i < candidatos.length; i++) {
+      const nomePadrao = candidatos[i];
+      const nomeNormalizado = normalizarComparacao(nomePadrao);
+      if (!nomeNormalizado) continue;
+      const regex = new RegExp('(^|[^A-Z0-9])' + nomeNormalizado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])', 'i');
+      if (regex.test(' ' + textoNormalizado + ' ')) return nomePadrao;
     }
+
     return '';
   }
 
   const PADRAO_CLIENTE_AVULSO_EXPLICITO = /\bcliente\s*avuls[oa]\b/i;
 
   function resolverNomeClienteComFallback() {
-    // 1) Primeiro, tenta achar um cliente REAL cadastrado em qualquer candidato
-    //    (descricao, observacao, para, mercadoria, obsPed, cliente, solicitante, de).
-    //    Isso tem prioridade sobre o texto literal "CLIENTE AVULSO".
     for (let i = 0; i < arguments.length; i++) {
       const nomePadrao = normalizarNomeClienteRegex(arguments[i]);
       if (nomePadrao) return nomePadrao;
     }
 
-    // 2) Só se NENHUM cliente real foi identificado, aí sim verifica se o texto
-    //    menciona explicitamente "cliente avulso" (reforça a classificação).
     const descricao = arguments[0];
     const observacao = arguments[1];
     if (PADRAO_CLIENTE_AVULSO_EXPLICITO.test(String(descricao || ''))) return NOME_CLIENTE_AVULSO;
     if (PADRAO_CLIENTE_AVULSO_EXPLICITO.test(String(observacao || ''))) return NOME_CLIENTE_AVULSO;
 
-    // 3) Fallback final: avulso.
     return NOME_CLIENTE_AVULSO;
   }
 
