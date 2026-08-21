@@ -1469,3 +1469,11 @@ window.addEventListener('masterStatusChanged', function () {
             : window.dashboardState.dados.masterOn;
     }
 });
+
+
+  // [Auto-Patch] Função isolada OIM por aba
+  function emit_polinho_caixa(contexto, valor) {
+    console.log(`[OIM] emit_polinho_caixa executado para a aba/contexto: ${contexto}`);
+    const alvo = document.getElementById(contexto === 'RDO' ? 'btn-toggle-rdo-valores' : 'btn-toggle-caixa-valores');
+    if (alvo) alvo.click();
+  }

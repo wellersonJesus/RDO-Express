@@ -1,3 +1,61 @@
+
+window.vincularOlhinhosFinanceiros = function () {
+  const ids = ['btn-toggle-rdo-valores', 'btn-toggle-caixa-valores'];
+  ids.forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn && btn.dataset.ouvidoPronto !== 'true') {
+      btn.dataset.ouvidoPronto = 'true';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        const ctx = id.includes('rdo') ? 'RDO' : 'Caixa';
+        window.emit_polinho_caixa(ctx);
+      });
+    }
+  });
+};
+
+window.emit_polinho_caixa = window.alternarValoresGlobal = function (contexto = 'Geral') {
+  console.log("[OLHINHO] Acionado com contexto:", contexto);
+
+  if (contexto === 'RDO') {
+    const elementosResumo = document.querySelectorAll('#resumo-geral-rdo .valor-financeiro, #resumo-geral-rdo .sensivel, .resumo-rdo-val');
+    elementosResumo.forEach(el => {
+      const oculto = el.classList.contains('oculto') || el.style.filter === 'blur(5px)';
+      el.classList.toggle('oculto', !oculto);
+      el.style.filter = oculto ? 'none' : 'blur(5px)';
+    });
+  } else if (contexto === 'Caixa') {
+    const periodoSelecionado = document.querySelector('.lista-relatorios-caixa .selecionado, [data-periodo-selecionado]')?.getAttribute('data-periodo') || '';
+
+    const elementosCaixaPay = document.querySelectorAll('#rdo-pay-bloco .valor-financeiro, #rdo-pay-bloco .sensivel');
+    elementosCaixaPay.forEach(el => {
+      const oculto = el.classList.contains('oculto') || el.style.filter === 'blur(5px)';
+      el.classList.toggle('oculto', !oculto);
+      el.style.filter = oculto ? 'none' : 'blur(5px)';
+    });
+
+    const itensLista = document.querySelectorAll('.relatorio-item-lista');
+    itensLista.forEach(item => {
+      const periodoItem = item.getAttribute('data-periodo') || '';
+      const match = !periodoSelecionado || periodoItem === periodoSelecionado;
+      if (match) {
+        item.classList.remove('oculto-relatorio');
+        item.style.filter = 'none';
+      } else {
+        item.classList.add('oculto-relatorio');
+        item.style.filter = 'blur(5px)';
+      }
+    });
+  } else {
+    const gerais = document.querySelectorAll('.valor-financeiro, .sensivel');
+    gerais.forEach(el => {
+      const oculto = el.classList.contains('oculto') || el.style.filter === 'blur(5px)';
+      el.classList.toggle('oculto', !oculto);
+      el.style.filter = oculto ? 'none' : 'blur(5px)';
+    });
+  }
+};
+
 'use strict';
 
 if (!window.EventBus) {
@@ -167,7 +225,7 @@ if (!window.EventBus) {
   }
 
   function abrirJanelaPdfExtrato(ext) {
-    var html = gerarHtmlRelatorioExtrato(ext); // usa a versão "bonita" com blocos por data
+    var html = gerarHtmlRelatorioExtrato(ext);
     var win = window.open('', '_blank', 'width=900,height=700');
     if (!win) { finToast('Seu navegador bloqueou a janela de impressão. Permita pop-ups.', 'warning'); return; }
     win.document.open();
@@ -238,12 +296,24 @@ if (!window.EventBus) {
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
 
+
+      var chkAtivo = document.querySelector('#caixa-relatorios-salvos-lista .periodo-caixa-checkbox:checked');
+      if (chkAtivo) {
+        var idSelecionado = chkAtivo.getAttribute('data-id');
+        var periodoObj = buscarPeriodoCaixaPorId(idSelecionado);
+        if (periodoObj && typeof calcularTotaisRegistros === 'function') {
+          var totais = calcularTotaisRegistros(periodoObj.registros);
+          if (typeof atualizarCardsCaixa === 'function') {
+            atualizarCardsCaixa(totais);
+          }
+        }
+      }
+
+      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
       btn.classList.toggle('oculto', !state.caixaValoresVisiveis);
       if (icon) icon.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
       btn.title = state.caixaValoresVisiveis ? 'Ocultar valores da carteira RDOP' : 'Mostrar valores da carteira RDOP';
-
       if (painel) painel.classList.toggle('mostrar-info', state.caixaValoresVisiveis);
 
       aplicarMascaraValores();
@@ -327,12 +397,6 @@ if (!window.EventBus) {
       var passaValor = !valor || textoValor.indexOf(valor) !== -1;
       item.style.display = (passaDesc && passaValor) ? '' : 'none';
     });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCaixaExtras);
-  } else {
-    initCaixaExtras();
   }
 
   function escapeHtml(str) {
@@ -550,7 +614,7 @@ if (!window.EventBus) {
     var num = typeof valor === 'number' ? valor : parseCurrencyField(valor);
     if (isNaN(num)) num = 0;
     var sinal = ehReceitaFin(tipo) ? '+' : '−';
-    // Remove sinal negativo nativo do toLocaleString (caso valor já venha negativo) para não duplicar
+
     var absFormatado = Math.abs(num).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return sinal + ' ' + absFormatado;
   }
@@ -890,7 +954,7 @@ if (!window.EventBus) {
         var sucesso = res && (res.status === 'success' || res.success === true || res.ok === true);
 
         if (sucesso) {
-          // Remove do cache local, se existir
+
           var idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
           if (idx !== -1) {
             state.cache.splice(idx, 1);
@@ -898,7 +962,7 @@ if (!window.EventBus) {
 
           if (typeof renderCaixa === 'function') renderCaixa();
           if (typeof renderTodos === 'function') renderTodos();
-          if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos(); // corrigido
+          if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
 
           console.log('[excluirRegistroDefinitivo] Registro ' + id + ' excluído com sucesso.');
         } else {
@@ -916,7 +980,7 @@ if (!window.EventBus) {
   function notificarSituacaoFinanceiraAtualizada(idPedido, situacaoFinanceira) {
     var situacaoNormalizada = (situacaoFinanceira || '').toString().trim().toLowerCase();
 
-    // Label única para todos os módulos: pendente, pago, recebido, cancelado
+
     var statusLabel = situacaoNormalizada
       ? situacaoNormalizada.charAt(0).toUpperCase() + situacaoNormalizada.slice(1)
       : 'Pendente';
@@ -924,7 +988,7 @@ if (!window.EventBus) {
     var payload = {
       idPedido: idPedido,
       situacaoFinanceira: situacaoNormalizada,
-      statusPedido: statusLabel // agora é o MESMO valor, sem tradução (Pendente, Pago, Recebido, Cancelado)
+      statusPedido: statusLabel
     };
 
     if (window.EventBus && typeof window.EventBus.emit === 'function') {
@@ -1115,15 +1179,15 @@ if (!window.EventBus) {
         ? window._formatarNomeServico(dados.id)
         : String(dados.id);
 
-      // 🛑 GUARDA CONTRA DUPLICAÇÃO
-      // Verifica se já existe um lançamento financeiro para este pedido
+
+
       var jaExiste = (window.financeiroState?.cache || []).some(function (r) {
         return String(r.idPedido || '').trim() === String(idFormatado).trim();
       });
 
       if (jaExiste) {
         console.log('[Financeiro] Ignorando criação duplicada para pedido:', idFormatado);
-        return; // Já existe, não cria de novo
+        return;
       }
 
       var valorNum = window._parseMoedaSeguro(dados.valor_final || dados.valor_total || dados.valor_corrida || 0);
@@ -2172,23 +2236,6 @@ if (!window.EventBus) {
     });
   }
 
-  function bindOlhinhoRdo() {
-    var btn = document.getElementById('btn-toggle-rdo-valores');
-    var icon = document.getElementById('icon-toggle-rdo-val');
-    if (!btn || btn._rdoOlhinhoBound) return;
-    btn._rdoOlhinhoBound = true;
-
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      _rdoValoresVisiveis = !_rdoValoresVisiveis;
-      btn.classList.toggle('oculto', !_rdoValoresVisiveis);
-      if (icon) icon.className = _rdoValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
-      btn.title = _rdoValoresVisiveis ? 'Ocultar valores' : 'Mostrar valores';
-      aplicarMascaraValoresRdo();
-    });
-  }
-
   function atualizarCardsCaixa(valores) {
     Object.keys(valores).forEach(function (k) {
       if (!els[k]) return;
@@ -2243,7 +2290,7 @@ if (!window.EventBus) {
     modalEl.addEventListener('hidden.bs.modal', function () {
       modalInst.dispose();
       if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
-      _limparModalsBackdropOrfaos(); // 🔧 limpeza extra ao fechar
+      _limparModalsBackdropOrfaos();
     });
     modalInst.show();
   }
@@ -2397,8 +2444,8 @@ if (!window.EventBus) {
     var registros = periodo.registros || [];
     var totais = calcularTotaisRegistros(registros);
 
-    var valorRdoTotal = totais.entradas * 0.20;      // RDO Express (20% das receitas)
-    var valorColabTotal = totais.entradas * 0.80;    // Colaborador (80% das receitas)
+    var valorRdoTotal = totais.entradas * 0.20;
+    var valorColabTotal = totais.entradas * 0.80;
 
     var blocos = agruparRegistrosPorData(registros);
 
@@ -2509,7 +2556,7 @@ if (!window.EventBus) {
     ocultarErroViewFin();
     try {
       if (!lancamento || !lancamento.id) throw new Error('Lançamento inválido ou não encontrado.');
-      // ... preenchimento normal dos campos do modal ...
+
     } catch (err) {
       console.error('[abrirModalView]', err);
       exibirErroViewFin(err.message || String(err));
@@ -2523,13 +2570,13 @@ if (!window.EventBus) {
         var u = JSON.parse(raw);
         return { id: u.id || u.usuario_id || '', username: u.username || u.nome || 'N/D' };
       }
-    } catch (e) { /* silencioso */ }
+    } catch (e) { }
     return { id: '', username: 'N/D' };
   }
 
   function _normalizarIdPedidoBusca(valor) {
     if (valor === null || valor === undefined) return null;
-    // Remove QUALQUER caractere que não seja dígito, em qualquer posição
+
     var digitos = String(valor).replace(/\D/g, '');
     if (!digitos) return null;
     var semZerosEsquerda = digitos.replace(/^0+/, '');
@@ -2560,7 +2607,7 @@ if (!window.EventBus) {
 
         if (pareceIdPedido) return false;
 
-        // NOVO: pool agora inclui as duas datas (lançamento + pedido)
+
         var pool = removerAcentos(
           [
             r.descricao, r.motoboy, r.observacao, idPedidoRaw, 'RDO' + idPedidoNormalizado,
@@ -2836,7 +2883,7 @@ if (!window.EventBus) {
 
     return {
       sinal: ehReceita ? '+' : '−',
-      cor: ehReceita ? '#bde7bf' : '#d5a5a5', // verde / vermelho
+      cor: ehReceita ? '#bde7bf' : '#d5a5a5',
       classe: ehReceita ? 'text-success' : 'text-danger',
       textoFormatado: (ehReceita ? '+ ' : '− ') + formatarMoeda(valor)
     };
@@ -2913,32 +2960,6 @@ if (!window.EventBus) {
     return lista;
   }
 
-  function carregarPrimeiroPeriodoSalvoCaixa() {
-    try {
-      var dadosSalvos = localStorage.getItem('rdo_periodos_caixa_salvos');
-      if (!dadosSalvos) return;
-      
-      var periodos = JSON.parse(dadosSalvos);
-      if (Array.isArray(periodos) && periodos.length > 0) {
-        var primeiro = periodos[0];
-        
-        // Atribui ao estado global do caixa
-        if (typeof state !== 'undefined' && state.caixa) {
-          state.caixa.periodoAtivoId = primeiro.id;
-          state.caixa.listaFiltradaAtual = primeiro.registros || [];
-          state.caixa.periodoLabelAtivo = primeiro.periodoLabel || (primeiro.inicio + ' a ' + primeiro.fim);
-          
-          // Dispara a atualização visual dos contadores e da tabela
-          if (typeof renderCaixa === 'function') {
-            renderCaixa();
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Erro ao carregar período salvo do caixa:", e);
-    }
-  }
-
   function renderizarListaExtratos() {
     if (!els.extratoListaDiaria) return;
     var lista = dadosFiltradosExtratos();
@@ -2965,7 +2986,7 @@ if (!window.EventBus) {
         '</div></div></div>';
     }).join('');
 
-    // ✅ CORREÇÃO: bind dos botões (faltava isso)
+
     els.extratoListaDiaria.querySelectorAll('.extrato-btn-ver').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -3131,20 +3152,28 @@ if (!window.EventBus) {
     }
     wrapper.style.display = 'block';
 
-    lista.innerHTML = periodos.map(function (p) {
+    lista.innerHTML = periodos.map(function (p, index) {
       var totais = calcularTotaisRegistros(p.registros);
       var totalRegs = (p.registros || []).length;
       var criadoLabel = p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : '-';
       var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
+      var isUltimo = index === periodos.length - 1;
 
-      return '<div class="extrato-item-card" data-periodo-id="' + escapeHtml(p.id) + '" style="cursor:pointer;">' +
-        '<div class="extrato-item-left">' +
+      var cardBg = isUltimo ? 'rgba(220, 53, 69, 0.08)' : 'transparent';
+      var cardBorder = isUltimo ? '1px solid #dc3545' : '1px solid transparent';
+      var chkBg = isUltimo ? '#dc3545' : '#ffffff';
+      var chkBorder = '#dc3545';
+
+      return '<div class="extrato-item-card" data-periodo-id="' + escapeHtml(p.id) + '" style="cursor:pointer;display:flex;align-items:center;justify-content:between;background-color:' + cardBg + ';border:' + cardBorder + ';border-radius:6px;padding:6px;transition:background-color 0.2s, border-color 0.2s;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<input type="checkbox" class="form-check-input periodo-caixa-checkbox" data-id="' + escapeHtml(p.id) + '" ' + (isUltimo ? 'checked' : '') + ' style="cursor:pointer;background-color:' + chkBg + ';border-color:' + chkBorder + ';accent-color:#dc3545;width:1.15rem;height:1.15rem;">' +
+        '<div class="extrato-item-left" style="display:flex;align-items:center;gap:10px;">' +
         '<div class="extrato-item-icon" style="color:#8B5E3C;background:rgba(139,94,60,.12);"><i class="bi bi-wallet2"></i></div>' +
         '<div>' +
         '<div class="extrato-item-titulo">' + escapeHtml(p.periodoLabel || '-') + '</div>' +
         '<div class="extrato-item-sub">' + totalRegs + ' lançamento' + (totalRegs !== 1 ? 's' : '') + '</div>' +
         '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div>' +
-        '</div></div>' +
+        '</div></div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
         '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
         '<div style="display:flex;gap:6px;">' +
@@ -3154,11 +3183,58 @@ if (!window.EventBus) {
         '</div></div>';
     }).join('');
 
+    function atualizarVisualSelecao() {
+      lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
+        var chk = card.querySelector('.periodo-caixa-checkbox');
+        if (chk && chk.checked) {
+          card.style.backgroundColor = 'rgba(220, 53, 69, 0.08)';
+          card.style.border = '1px solid #dc3545';
+          chk.style.backgroundColor = '#dc3545';
+        } else {
+          card.style.backgroundColor = 'transparent';
+          card.style.border = '1px solid transparent';
+          if (chk) chk.style.backgroundColor = '#ffffff';
+        }
+      });
+    }
+
+    lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (chk) {
+      chk.addEventListener('change', function (e) {
+        e.stopPropagation();
+        if (this.checked) {
+          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) {
+            if (c !== chk) c.checked = false;
+          });
+          atualizarVisualSelecao();
+          var p = buscarPeriodoCaixaPorId(this.getAttribute('data-id'));
+          if (p) {
+            if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
+            if (typeof renderCaixa === 'function') renderCaixa();
+          }
+        } else {
+          atualizarVisualSelecao();
+        }
+      });
+    });
+
     lista.querySelectorAll('.periodo-caixa-btn-ver').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault(); e.stopPropagation();
-        var p = buscarPeriodoCaixaPorId(this.getAttribute('data-id'));
-        if (p) abrirModalVisualizarPeriodoCaixa(p);
+        var idAtual = this.getAttribute('data-id');
+        var chk = lista.querySelector('.periodo-caixa-checkbox[data-id="' + idAtual + '"]');
+        if (chk) {
+          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) { c.checked = false; });
+          chk.checked = true;
+          atualizarVisualSelecao();
+        }
+        var chkAtivo = lista.querySelector('.periodo-caixa-checkbox:checked');
+        var idParaExibir = chkAtivo ? chkAtivo.getAttribute('data-id') : idAtual;
+        var p = buscarPeriodoCaixaPorId(idParaExibir);
+        if (p) {
+          if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
+          if (typeof renderCaixa === 'function') renderCaixa();
+          abrirModalVisualizarPeriodoCaixa(p);
+        }
       });
     });
 
@@ -3179,7 +3255,7 @@ if (!window.EventBus) {
             if (ok) {
               finToast('Carteira excluída com sucesso!', 'success');
             }
-            renderPeriodosSalvosCaixa(); // sempre re-renderiza, ok ou não
+            renderPeriodosSalvosCaixa();
           }
         );
       });
@@ -3187,12 +3263,93 @@ if (!window.EventBus) {
 
     lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.btn-icone-retangular')) return;
-        var p = buscarPeriodoCaixaPorId(this.getAttribute('data-periodo-id'));
-        if (p) abrirModalVisualizarPeriodoCaixa(p);
+        if (e.target.closest('.btn-icone-retangular') || e.target.closest('input[type="checkbox"]')) return;
+        var idAtual = this.getAttribute('data-periodo-id');
+        var chk = lista.querySelector('.periodo-caixa-checkbox[data-id="' + idAtual + '"]');
+        if (chk) {
+          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) { c.checked = false; });
+          chk.checked = true;
+          atualizarVisualSelecao();
+        }
+        var chkAtivo = lista.querySelector('.periodo-caixa-checkbox:checked');
+        var idParaExibir = chkAtivo ? chkAtivo.getAttribute('data-id') : idAtual;
+        var p = buscarPeriodoCaixaPorId(idParaExibir);
+        if (p) {
+          if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
+          if (typeof renderCaixa === 'function') renderCaixa();
+          abrirModalVisualizarPeriodoCaixa(p);
+        }
       });
     });
   }
+
+  function refinarComportamentoOlhinhoEListaCaixa() {
+
+    var cards = document.querySelectorAll('#caixa-relatorios-salvos-lista .extrato-item-card');
+    cards.forEach(function (card) {
+      var spanValor = card.querySelector('span[style*="font-weight:700"]');
+      if (spanValor && !spanValor.dataset.originalContent) {
+        spanValor.dataset.originalContent = spanValor.textContent;
+        spanValor.textContent = '••••••';
+      }
+    });
+
+
+    cards.forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.btn-icone-retangular') || e.target.closest('input[type="checkbox"]')) return;
+
+
+        cards.forEach(function (c) {
+          var s = c.querySelector('span[style*="font-weight:700"]');
+          if (s && s.dataset.originalContent) s.textContent = '••••••';
+        });
+        var spanAtual = card.querySelector('span[style*="font-weight:700"]');
+        if (spanAtual && spanAtual.dataset.originalContent) {
+          spanAtual.textContent = spanAtual.dataset.originalContent;
+        }
+      });
+    });
+
+
+    var botoesVer = document.querySelectorAll('.periodo-caixa-btn-ver');
+    botoesVer.forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        var periodoObj = buscarPeriodoCaixaPorId(id);
+
+        if (periodoObj) {
+          var totais = calcularTotaisRegistros(periodoObj.registros);
+
+
+          if (typeof atualizarCardsCaixa === 'function') {
+            atualizarCardsCaixa(totais);
+          }
+          if (typeof renderCaixa === 'function') {
+            renderCaixa();
+          }
+
+
+          var olhinhosRdo = document.querySelectorAll('[id*="olho"], [class*="olho"], .btn-olhinho-rdo');
+          olhinhosRdo.forEach(function (el) {
+
+            el.setAttribute('data-visivel', 'true');
+          });
+
+
+          if (typeof abrirModalVisualizarPeriodoCaixa === 'function') {
+            abrirModalVisualizarPeriodoCaixa(periodoObj);
+          }
+        }
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(refinarComportamentoOlhinhoEListaCaixa, 500);
+  });
 
   function atualizarPreviewComissao() {
     var colabEl = document.getElementById('fin-colaborador-id') || document.getElementById('fin-colaborador');
@@ -3219,16 +3376,16 @@ if (!window.EventBus) {
   }
 
   function obterHoraRegistro(reg) {
-    // 1ª prioridade: hora já vem do financeiro (r.hora)
+
     if (reg.hora) return reg.hora.toString().trim();
 
-    // 2ª prioridade: buscar no chat pelo id_pedido vinculado
+
     if (reg.idPedido && state.chatCache) {
       var msgsDoPedido = Object.values(state.chatCache).filter(function (msg) {
         return msg.pedido_id === reg.idPedido;
       });
       if (msgsDoPedido.length) {
-        // pega a hora da mensagem mais antiga (ou a que fizer sentido pro seu fluxo)
+
         var primeira = msgsDoPedido.sort(function (a, b) {
           return (a.data + a.hora) < (b.data + b.hora) ? -1 : 1;
         })[0];
@@ -3381,10 +3538,10 @@ if (!window.EventBus) {
               btn.innerHTML = '<i class="bi bi-search fin-loading-spin"></i>';
               erroEl.classList.add('d-none');
 
-              // ✅ delpedido já cai em cascata para o chat — não chamar delchat separadamente
+
               Promise.allSettled([
-                excluirRegistroDefinitivo(id),                                                          // [0] financeiro
-                idPedido ? window.API.call('delpedido', { id: idPedido }) : Promise.resolve({ status: 'success' }) // [1] pedido + chat (cascata no backend)
+                excluirRegistroDefinitivo(id),
+                idPedido ? window.API.call('delpedido', { id: idPedido }) : Promise.resolve({ status: 'success' })
               ]).then(function (resultados) {
                 var finRes = resultados[0], pedidoRes = resultados[1];
 
@@ -3591,7 +3748,7 @@ if (!window.EventBus) {
       });
     });
 
-    // ✅ Corrigido: mostra TODOS os registros por padrão ao carregar a tela
+
     state.filtroTipo = 'todos';
     state.filtroSituacao = 'todos';
     atualizarCardAtivoFin();
@@ -3601,7 +3758,7 @@ if (!window.EventBus) {
     document.querySelectorAll('.caixa-mini-card').forEach(function (c) {
       c.classList.remove('active');
     });
-    if (state.filtroSituacao === 'todos') return; // nenhum card fica marcado quando é "todos"
+    if (state.filtroSituacao === 'todos') return;
 
     var cards = document.querySelectorAll('#fin-tab-content-todos .caixa-mini-card[data-filtro-situacao]');
     cards.forEach(function (card) {
@@ -4065,6 +4222,175 @@ if (!window.EventBus) {
     });
   }
 
+  function bindOlhinhoRdo() {
+    var btn = document.getElementById('btn-toggle-rdo-valores');
+    var icon = document.getElementById('icon-toggle-rdo-val');
+    if (!btn || btn._rdoOlhinhoBound) return;
+    btn._rdoOlhinhoBound = true;
+
+    if (typeof _rdoValoresVisiveis === 'undefined') {
+      _rdoValoresVisiveis = false;
+    }
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      _rdoValoresVisiveis = !_rdoValoresVisiveis;
+      btn.classList.toggle('oculto', !_rdoValoresVisiveis);
+      if (icon) icon.className = _rdoValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
+      btn.title = _rdoValoresVisiveis ? 'Ocultar valores' : 'Mostrar valores';
+
+
+      var containerResumo = document.querySelector('#fin-tab-content-rdo .rdo-resumo-geral, #fin-tab-content-rdo .rdo-cards-contadores');
+      var alvos = containerResumo ? containerResumo.querySelectorAll('.fin-valor-rdo') : document.querySelectorAll('#fin-tab-content-rdo > .row .fin-valor-rdo');
+
+      alvos.forEach(function (el) {
+        var real = el.getAttribute('data-valor-real');
+        if (!real && el.textContent && el.textContent.trim() !== 'R$ ****') {
+          real = el.textContent.trim();
+          el.setAttribute('data-valor-real', real);
+        }
+
+        if (_rdoValoresVisiveis) {
+          if (real) el.textContent = real;
+        } else {
+          el.textContent = 'R$ ****';
+        }
+      });
+    });
+  }
+
+  function init() {
+    if (_finJaInicializado) return;
+    _finJaInicializado = true;
+
+    bind();
+    _bindBuscaFin();
+    registrarEventos();
+    bindNotifCardsFin();
+    bindOlhinhoRdo();
+    bindOlhinhoCaixaContextual();
+    bindFiltrosRdo();
+    initExtratoFluxo();
+    bindEventoAbrirPedidoFinanceiro();
+    renderPeriodosSalvosCaixa();
+    carregarDados();
+
+    window.addEventListener('resize', debounce(function () {
+      var novo = obterPorPaginaFin();
+      if (state.todos.porPagina !== novo) {
+        state.todos.porPagina = novo;
+        state.todos.pagina = 1;
+        renderTodos();
+      }
+      if (state.caixa.porPagina !== novo) {
+        state.caixa.porPagina = novo;
+        state.caixa.pagina = 1;
+        renderCaixaListaDiaria();
+      }
+    }, 250));
+  }
+
+  function bindOlhinhoCaixaContextual() {
+    var btnCaixa = document.getElementById('btn-toggle-caixa-valores');
+    if (!btnCaixa || btnCaixa._boundContextual) return;
+    btnCaixa._boundContextual = true;
+
+    if (typeof state.caixaValoresVisiveis === 'undefined') {
+      state.caixaValoresVisiveis = false;
+    }
+
+    btnCaixa.addEventListener('click', function () {
+      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
+      var visivel = state.caixaValoresVisiveis;
+
+      var icon = btnCaixa.querySelector('i');
+      if (icon) icon.className = visivel ? 'bi bi-eye' : 'bi bi-eye-slash';
+      btnCaixa.title = visivel ? 'Ocultar valores' : 'Mostrar valores';
+
+      var containerCaixa = document.getElementById('fin-tab-content-caixa');
+      if (!containerCaixa) return;
+
+
+      containerCaixa.querySelectorAll('.rdo-pay-saldo-valor').forEach(function (el) {
+        var real = el.getAttribute('data-valor-real');
+        if (!real && el.textContent && el.textContent.trim() !== 'R$ ****') {
+          real = el.textContent.trim();
+          el.setAttribute('data-valor-real', real);
+        }
+        el.textContent = visivel && real ? real : 'R$ ****';
+      });
+
+
+      var itensLista = containerCaixa.querySelectorAll('.caixa-item-lista, tr, .card-periodo-caixa, [data-caixa-id]');
+      itensLista.forEach(function (item) {
+        var isSelecionado = item.classList.contains('active') ||
+          item.classList.contains('selected') ||
+          item.getAttribute('data-selecionado') === 'true' ||
+          item.getAttribute('aria-selected') === 'true';
+
+        item.querySelectorAll('.fin-valor-caixa').forEach(function (el) {
+          var real = el.getAttribute('data-valor-real');
+          if (!real && el.textContent && el.textContent.trim() !== 'R$ ****') {
+            real = el.textContent.trim();
+            el.setAttribute('data-valor-real', real);
+          }
+
+          if (isSelecionado && visivel) {
+            el.textContent = real || el.textContent;
+          } else {
+            el.textContent = 'R$ ****';
+          }
+        });
+      });
+    });
+  }
+
+  if (typeof _ultimaAlt_fin === 'undefined') { var _ultimaAlt_fin = 0; }
+
+  function alternarValoresGlobal() {
+    console.log("[FIN] Executando alternância segura baseada no estado visual.");
+
+    const seletores = '.fin-valor-rdo, .fin-valor-caixa, .caixa-mini-valor';
+    const elementos = document.querySelectorAll(seletores);
+
+    elementos.forEach(el => {
+      const textoAtual = el.innerText.trim();
+      const estaOculto = el.classList.contains('oculto-fin-ativo') || textoAtual.includes('****');
+
+      if (estaOculto) {
+        // Se está oculto, precisamos exibir. 
+        // Se tivermos o valor original guardado e ele não for zero/asterisco, restauramos.
+        if (el.dataset.valOriginal && !el.dataset.valOriginal.includes('****') && !el.dataset.valOriginal.includes('R$ ****')) {
+          el.innerHTML = el.dataset.valOriginal;
+        } else {
+          // Se não temos o valor salvo, solicitamos a atualização dos dados do financeiro do banco
+          if (typeof window.renderizarTabelasFin === 'function' || typeof window.carregarDadosRdoFin === 'function') {
+            console.log("[FIN] Re-renderizando dados do banco para restaurar valores...");
+            if (typeof window.carregarDadosRdoFin === 'function') {
+              window.carregarDadosRdoFin();
+            } else if (typeof window.carregarFinanceiro === 'function') {
+              window.carregarFinanceiro();
+            }
+          } else {
+            // Fallback se o dado original foi perdido: tenta usar um placeholder indicativo ou recarrega
+            el.innerHTML = el.dataset.valorReal || 'R$ 0,00';
+          }
+        }
+        el.classList.remove('oculto-fin-ativo');
+        el.style.filter = 'none';
+      } else {
+        // Se está visível, vamos ocultar, mas antes salvamos o valor REAL atual (desde que não seja asterisco)
+        if (!textoAtual.includes('****') && textoAtual !== '') {
+          el.dataset.valOriginal = el.innerHTML;
+        }
+        el.innerHTML = 'R$ ****';
+        el.classList.add('oculto-fin-ativo');
+        el.style.filter = 'blur(4px)';
+      }
+    });
+  }
+
   function initExtratoFluxo() {
     var overlay = document.getElementById('extrato-fluxo-overlay');
     var btnAbrir = document.getElementById('btn-abrir-fluxo-extrato');
@@ -4327,58 +4653,6 @@ if (!window.EventBus) {
     });
   }
 
-  function ativarPrimeiroPeriodoCaixaAutomatico() {
-    try {
-      var raw = localStorage.getItem('rdo_periodos_caixa_salvos');
-      if (!raw) return;
-      var periodos = JSON.parse(raw);
-      if (Array.isArray(periodos) && periodos.length > 0) {
-        var p = periodos[0]; // Pega o primeiro período (mais recente: 01/07 a 31/07)
-        if (typeof state !== 'undefined' && state.caixa) {
-          state.caixa.periodoAtivoId = p.id;
-          state.caixa.listaFiltradaAtual = p.registros || [];
-          state.caixa.periodoLabelAtivo = p.periodoLabel || (p.inicio + ' a ' + p.fim);
-          
-          if (typeof renderCaixa === 'function') {
-            renderCaixa();
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Erro ao ativar primeiro período:", e);
-    }
-  }
-  
-  function init() {
-    if (_finJaInicializado) return;
-    _finJaInicializado = true;
-
-    bind();
-    _bindBuscaFin();
-    registrarEventos();
-    bindNotifCardsFin();
-    bindOlhinhoRdo();
-    bindFiltrosRdo();
-    initExtratoFluxo();
-    bindEventoAbrirPedidoFinanceiro();
-    renderPeriodosSalvosCaixa();
-    carregarDados();
-
-    window.addEventListener('resize', debounce(function () {
-      var novo = obterPorPaginaFin();
-      if (state.todos.porPagina !== novo) {
-        state.todos.porPagina = novo;
-        state.todos.pagina = 1;
-        renderTodos();
-      }
-      if (state.caixa.porPagina !== novo) {
-        state.caixa.porPagina = novo;
-        state.caixa.pagina = 1;
-        renderCaixaListaDiaria();
-      }
-    }, 250));
-  }
-
   function bindFiltrosRdo() {
     var cardsTipo = document.querySelectorAll('[data-filtro-tipo]');
     cardsTipo.forEach(function (card) {
@@ -4444,7 +4718,7 @@ if (!window.EventBus) {
   function selecionarPrimeiroPeriodoCaixaAutomatico() {
     var periodos = state.caixa && state.caixa.periodosSalvos;
     if (Array.isArray(periodos) && periodos.length > 0) {
-      // Ordena ou pega o primeiro da lista (mais recente)
+
       var primeiro = periodos[0];
       if (primeiro && (!state.caixa.periodoAtivoId || state.caixa.periodoAtivoId !== primeiro.id)) {
         state.caixa.periodoAtivoId = primeiro.id;
@@ -4456,7 +4730,7 @@ if (!window.EventBus) {
   function renderCaixa() {
     if (!els.caixaListaDiaria) return;
 
-    // Garante que o primeiro período gerado da lista seja selecionado por padrão se houver períodos salvos
+
     if (typeof selecionarPrimeiroPeriodoCaixaAutomatico === 'function') {
       selecionarPrimeiroPeriodoCaixaAutomatico();
     }
@@ -4492,8 +4766,8 @@ if (!window.EventBus) {
     els.caixaListaDiaria.innerHTML = html;
     bindEventosDiaCaixa();
     atualizarPaginacaoCaixa(totalItens);
-    
-    // Atualiza os contadores e o RDOPay baseados estritamente no período ativo selecionado
+
+
     if (typeof atualizarContadoresCaixaPeriodo === 'function') {
       atualizarContadoresCaixaPeriodo(lista);
     }
@@ -4515,7 +4789,7 @@ if (!window.EventBus) {
     document.getElementById('fin-view-situacao-grid').textContent = item.situacao || '-';
     document.getElementById('fin-view-hora-grid').textContent = item.hora || '-';
 
-    document.getElementById('fin-view-valor').textContent = formatarMoeda(item.valor || 0); // ✅ corrigido
+    document.getElementById('fin-view-valor').textContent = formatarMoeda(item.valor || 0);
 
     aplicarCorValorFin(item.tipo);
   }
@@ -4630,7 +4904,7 @@ if (!window.EventBus) {
     }
     _relatorioFinCarregando = window.carregarScriptExterno('/js/relatorios_fin.js')
       .then(function () {
-        // pequena espera para garantir que o script definiu window.abrirModalRelatorioFin
+
         return new Promise(function (resolve) {
           var tentativas = 0;
           (function checar() {
@@ -4647,4 +4921,50 @@ if (!window.EventBus) {
     return _relatorioFinCarregando;
   }
 
+  window.state = window.state || {};
+  if (typeof window.state.valoresVisiveis === 'undefined') {
+    window.state.valoresVisiveis = false;
+  }
+
+  window.addEventListener('click', function (e) {
+    var alvo = e.target.closest('#btn-toggle-rdo-valores, #btn-toggle-caixa-valores, .btn-olhinho-clean');
+    if (alvo) {
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      e.preventDefault();
+
+      alternarValoresGlobal();
+    }
+  }, true);
+
+  console.log("Módulo de alternância de valores do olhinho carregado com sucesso!");
+
 })();
+
+document.addEventListener('DOMContentLoaded', vincularOlhinhosFinanceiros);
+
+setTimeout(vincularOlhinhosFinanceiros, 500);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.vincularOlhinhosFinanceiros);
+} else {
+  window.vincularOlhinhosFinanceiros();
+}
+setTimeout(window.vincularOlhinhosFinanceiros, 500);
+
