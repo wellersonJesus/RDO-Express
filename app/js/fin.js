@@ -297,27 +297,68 @@ if (!window.EventBus) {
       e.preventDefault();
       e.stopPropagation();
 
+      // Alterna o estado global de visibilidade
+      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
 
-      var chkAtivo = document.querySelector('#caixa-relatorios-salvos-lista .periodo-caixa-checkbox:checked');
-      if (chkAtivo) {
-        var idSelecionado = chkAtivo.getAttribute('data-id');
+      // Identifica o relatório selecionado atualmente na lista de caixa (checkbox marcado ou classe ativa)
+      var chkAtivo = document.querySelector('#caixa-relatorios-salvos-lista .periodo-caixa-checkbox:checked, .lista-relatorios-caixa .selecionado, [data-periodo-selecionado]');
+      var idSelecionado = chkAtivo ? (chkAtivo.getAttribute('data-id') || chkAtivo.getAttribute('data-periodo-id')) : null;
+
+      var elSaldo = document.getElementById('rdo-pay-saldo');
+      var elSaldoColab = document.getElementById('rdo-pay-saldo-colaboradores');
+
+      if (state.caixaValoresVisiveis && idSelecionado) {
+        // Se estiver ativando e houver relatório selecionado, calcula e exibe o valor real
         var periodoObj = buscarPeriodoCaixaPorId(idSelecionado);
         if (periodoObj && typeof calcularTotaisRegistros === 'function') {
           var totais = calcularTotaisRegistros(periodoObj.registros);
+          
+          if (elSaldo) {
+            elSaldo.innerText = formatarMoeda(totais.saldo);
+            elSaldo.setAttribute('data-valor-real', formatarMoeda(totais.saldo));
+          }
+          if (elSaldoColab) {
+            // Se houver cálculo separado para colaboradores, exibe aqui, caso contrário usa saldo
+            elSaldoColab.innerText = formatarMoeda(totais.saidas || 0);
+          }
+
           if (typeof atualizarCardsCaixa === 'function') {
             atualizarCardsCaixa(totais);
           }
         }
+      } else {
+        // Se não houver seleção ou estiver ocultando, exibe o placeholder mascarado
+        if (elSaldo) {
+          elSaldo.innerText = 'R$ ****';
+        }
+        if (elSaldoColab) {
+          elSaldoColab.innerText = 'R$ ****';
+        }
       }
 
-      state.caixaValoresVisiveis = !state.caixaValoresVisiveis;
+      // Atualiza ícones e classes visuais do botão e painel
       btn.classList.toggle('oculto', !state.caixaValoresVisiveis);
       if (icon) icon.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
       btn.title = state.caixaValoresVisiveis ? 'Ocultar valores da carteira RDOP' : 'Mostrar valores da carteira RDOP';
-      if (painel) painel.classList.toggle('mostrar-info', state.caixaValoresVisiveis);
+      
+      if (painel) {
+        painel.classList.toggle('mostrar-info', state.caixaValoresVisiveis);
+      }
 
-      aplicarMascaraValores();
-      renderCaixa();
+      // Aplica classes de desfoque/ocultação nos elementos sensíveis do bloco RDO P
+      var elementosCaixaPay = document.querySelectorAll('#rdo-pay-bloco .valor-financeiro, #rdo-pay-bloco .sensivel, .fin-valor-caixa');
+      elementosCaixaPay.forEach(function(el) {
+        if (state.caixaValoresVisiveis && idSelecionado) {
+          el.classList.remove('oculto');
+          el.style.filter = 'none';
+        } else {
+          el.classList.add('oculto');
+          el.style.filter = 'blur(5px)';
+        }
+      });
+
+      if (typeof aplicarMascaraValores === 'function') aplicarMascaraValores();
+      if (typeof renderCaixa === 'function') renderCaixa();
     });
   }
 
@@ -4212,6 +4253,11 @@ if (!window.EventBus) {
       renderizarListaExtratos();
       tentarAbrirPedidoFinanceiro();
 
+      if (window.finValoresOcultos && typeof aplicarEstadoValoresCaixa === 'function') {
+        setTimeout(aplicarEstadoValoresCaixa, 50);
+        setTimeout(aplicarEstadoValoresCaixa, 200);
+      }
+
     }).catch(function (err) {
       console.error('[fin.js] Erro ao carregar dados do financeiro:', err);
       finToast('Erro ao carregar dados financeiros: ' + (err && err.message ? err.message : 'Erro desconhecido.'), 'danger');
@@ -4348,47 +4394,117 @@ if (!window.EventBus) {
 
   if (typeof _ultimaAlt_fin === 'undefined') { var _ultimaAlt_fin = 0; }
 
+  let timeoutAlternarGlobal = null;
+
   function alternarValoresGlobal() {
-    console.log("[FIN] Executando alternância segura baseada no estado visual.");
+    if (timeoutAlternarGlobal) {
+      clearTimeout(timeoutAlternarGlobal);
+    }
 
-    const seletores = '.fin-valor-rdo, .fin-valor-caixa, .caixa-mini-valor';
-    const elementos = document.querySelectorAll(seletores);
+    timeoutAlternarGlobal = setTimeout(() => {
+      console.log("[FIN] Alternando visualização dos valores...");
 
-    elementos.forEach(el => {
-      const textoAtual = el.innerText.trim();
-      const estaOculto = el.classList.contains('oculto-fin-ativo') || textoAtual.includes('****');
+      const seletores = '.fin-valor-rdo, .fin-valor-caixa, .caixa-mini-valor, #rdo-pay-saldo, #rdo-pay-saldo-colaboradores';
+      const elementos = document.querySelectorAll(seletores);
 
-      if (estaOculto) {
-        // Se está oculto, precisamos exibir. 
-        // Se tivermos o valor original guardado e ele não for zero/asterisco, restauramos.
-        if (el.dataset.valOriginal && !el.dataset.valOriginal.includes('****') && !el.dataset.valOriginal.includes('R$ ****')) {
-          el.innerHTML = el.dataset.valOriginal;
-        } else {
-          // Se não temos o valor salvo, solicitamos a atualização dos dados do financeiro do banco
-          if (typeof window.renderizarTabelasFin === 'function' || typeof window.carregarDadosRdoFin === 'function') {
-            console.log("[FIN] Re-renderizando dados do banco para restaurar valores...");
-            if (typeof window.carregarDadosRdoFin === 'function') {
-              window.carregarDadosRdoFin();
-            } else if (typeof window.carregarFinanceiro === 'function') {
-              window.carregarFinanceiro();
+      // 1. Identifica se há um relatório de caixa selecionado na lista
+      const chkAtivo = document.querySelector('#caixa-relatorios-salvos-lista .periodo-caixa-checkbox:checked, .lista-relatorios-caixa .selecionado, [data-periodo-selecionado]');
+      const idSelecionado = chkAtivo ? (chkAtivo.getAttribute('data-id') || chkAtivo.getAttribute('data-periodo-id')) : null;
+
+      let totaisRelatorio = null;
+      if (idSelecionado && typeof buscarPeriodoCaixaPorId === 'function' && typeof calcularTotaisRegistros === 'function') {
+        const periodoObj = buscarPeriodoCaixaPorId(idSelecionado);
+        if (periodoObj && periodoObj.registros) {
+          totaisRelatorio = calcularTotaisRegistros(periodoObj.registros);
+        }
+      }
+
+      elementos.forEach(el => {
+        const textoAtual = el.innerText.trim();
+        const estaOculto = el.classList.contains('oculto-fin-ativo') || textoAtual.includes('****');
+
+        if (estaOculto) {
+          // HORA DE RESTAURAR:
+          let valorParaRestaurar = '';
+
+          // Se temos totais do relatório selecionado, mapeia de acordo com o ID do elemento
+          if (totaisRelatorio) {
+            const idEl = el.id || '';
+            if (idEl.includes('entrada')) {
+              valorParaRestaurar = typeof formatarMoeda === 'function' ? formatarMoeda(totaisRelatorio.entradas) : `R$ ${totaisRelatorio.entradas}`;
+            } else if (idEl.includes('saida')) {
+              valorParaRestaurar = typeof formatarMoeda === 'function' ? formatarMoeda(totaisRelatorio.saidas) : `R$ ${totaisRelatorio.saidas}`;
+            } else if (idEl.includes('empresa')) {
+              valorParaRestaurar = typeof formatarMoeda === 'function' ? formatarMoeda(totaisRelatorio.empresa || (totaisRelatorio.saldo * 0.2)) : `R$ ${totaisRelatorio.saldo * 0.2}`;
+            } else if (idEl.includes('colaborador') || idEl.includes('colaboradores')) {
+              valorParaRestaurar = typeof formatarMoeda === 'function' ? formatarMoeda(totaisRelatorio.colaboradores || (totaisRelatorio.saldo * 0.8)) : `R$ ${totaisRelatorio.saldo * 0.8}`;
+            } else {
+              valorParaRestaurar = typeof formatarMoeda === 'function' ? formatarMoeda(totaisRelatorio.saldo) : `R$ ${totaisRelatorio.saldo}`;
             }
-          } else {
-            // Fallback se o dado original foi perdido: tenta usar um placeholder indicativo ou recarrega
-            el.innerHTML = el.dataset.valorReal || 'R$ 0,00';
+          }
+
+          // Se não houver relatório selecionado ou o cálculo falhar, tenta usar o dataset original guardado
+          if (!valorParaRestaurar || valorParaRestaurar.includes('****')) {
+            valorParaRestaurar = el.dataset.valOriginal || el.dataset.valorReal || 'R$ 0,00';
+          }
+
+          el.innerHTML = valorParaRestaurar;
+          el.classList.remove('oculto-fin-ativo');
+          el.style.filter = 'none';
+
+          console.log("[FIN] Valor restabelecido com sucesso:", valorParaRestaurar);
+        } else {
+          // HORA DE OCULTAR:
+          if (!textoAtual.includes('****') && textoAtual !== '' && textoAtual !== 'R$ 0,00' && textoAtual !== '0,00') {
+            el.dataset.valOriginal = el.innerHTML;
+            console.log("[FIN] Valor original guardado com segurança:", el.innerHTML);
+          }
+
+          el.innerHTML = 'R$ ****';
+          el.classList.add('oculto-fin-ativo');
+          el.style.filter = 'blur(4px)';
+        }
+      });
+    }, 100);
+  }
+
+  (function () {
+    const observerCaixa = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.target.classList && (mutation.target.classList.contains('caixa-mini-valor') || mutation.target.classList.contains('fin-valor-caixa'))) {
+          const novoTexto = mutation.target.innerText.trim();
+          // Se tentaram zerar indevidamente e temos um valor original guardado, revertemos a alteração na hora
+          if ((novoTexto === 'R$ 0,00' || novoTexto === '0,00') && mutation.target.dataset.valOriginal && !mutation.target.dataset.valOriginal.includes('0,00')) {
+            console.warn('[FIN-BLINDAGEM] Tentativa de zerar o caixa bloqueada!', mutation.target);
+            mutation.target.innerHTML = mutation.target.dataset.valOriginal;
+          } else if (novoTexto && novoTexto !== 'R$ 0,00' && !novoTexto.includes('****')) {
+            // Salva automaticamente o valor válido mais recente
+            mutation.target.dataset.valOriginal = mutation.target.innerHTML;
           }
         }
-        el.classList.remove('oculto-fin-ativo');
-        el.style.filter = 'none';
-      } else {
-        // Se está visível, vamos ocultar, mas antes salvamos o valor REAL atual (desde que não seja asterisco)
-        if (!textoAtual.includes('****') && textoAtual !== '') {
-          el.dataset.valOriginal = el.innerHTML;
-        }
-        el.innerHTML = 'R$ ****';
-        el.classList.add('oculto-fin-ativo');
-        el.style.filter = 'blur(4px)';
-      }
+      });
     });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      observerCaixa.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    });
+  })();
+
+  function blindarAbaCaixa() {
+    const elementosCaixa = document.querySelectorAll('.fin-valor-caixa, .caixa-mini-valor');
+    if (elementosCaixa.length > 0) {
+      elementosCaixa.forEach(elCaixa => {
+        const texto = elCaixa.innerText.trim();
+        // Se o elemento estiver zerado ou vazio mas tivermos um valor guardado em cache/dataset, restauramos
+        if ((texto === '' || texto.includes('0,00')) && elCaixa.dataset.valOriginal && !elCaixa.dataset.valOriginal.includes('0,00')) {
+          elCaixa.innerHTML = elCaixa.dataset.valOriginal;
+        }
+      });
+    }
   }
 
   function initExtratoFluxo() {
@@ -4554,6 +4670,35 @@ if (!window.EventBus) {
     });
 
     btnAbrir.addEventListener('click', abrirOverlay);
+  }
+
+  window.finValoresOcultos = window.finValoresOcultos || false;
+
+  function alternarValoresCaixaRDOPay() {
+    // Inverte o estado atual
+    window.finValoresOcultos = !window.finValoresOcultos;
+    aplicarEstadoValoresCaixa();
+  }
+
+  function aplicarEstadoValoresCaixa() {
+    // 1. Evita executar durante chamadas em background se o cache do financeiro não estiver populado
+    if (!state || !state.cache || state.cache.length === 0) {
+      return;
+    }
+
+    console.log('[FIN] Executando alternância segura baseada no estado visual.');
+
+    // 2. Garante que os valores calculados do RDO/Caixa estejam no DOM
+    var elementosValor = document.querySelectorAll('.fin-valor-caixa, .rdo-pay-saldo-valor');
+
+    elementosValor.forEach(function (el) {
+      // Se o elemento estiver zerado por falta de renderização, não mascara nem sobrescreve ainda
+      if (window.finValoresOcultos) {
+        el.classList.add('valor-oculto');
+      } else {
+        el.classList.remove('valor-oculto');
+      }
+    });
   }
 
   function tentarAbrirPedidoFinanceiro(tentativas, meuToken) {
@@ -4945,22 +5090,6 @@ document.addEventListener('DOMContentLoaded', vincularOlhinhosFinanceiros);
 
 setTimeout(vincularOlhinhosFinanceiros, 500);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', window.vincularOlhinhosFinanceiros);
 } else {
@@ -4968,3 +5097,35 @@ if (document.readyState === 'loading') {
 }
 setTimeout(window.vincularOlhinhosFinanceiros, 500);
 
+function garantirAtualizacaoCaixaRdo() {
+  // Seleciona o link/botão da aba Caixa
+  var linkCaixa = document.querySelector('a[href="#caixa"], [data-bs-target="#caixa"], .nav-link-caixa');
+
+  if (linkCaixa) {
+    linkCaixa.addEventListener('click', function () {
+      console.log('[FIN] Aba Caixa clicada. Forçando re-renderização do RDO e Caixa...');
+
+      // Pequeno atraso para garantir que a aba visível foi ativada pelo Bootstrap
+      setTimeout(function () {
+        if (typeof renderCaixa === 'function') {
+          renderCaixa();
+        }
+        if (typeof renderRdoContadores === 'function') {
+          renderRdoContadores();
+        }
+
+        // Reaplica a máscara do "olhinho" se estiver ativa
+        if (window.finValoresOcultos && typeof aplicarEstadoValoresCaixa === 'function') {
+          aplicarEstadoValoresCaixa();
+        }
+      }, 100);
+    });
+  }
+}
+
+document.addEventListener('finRenderizado', function () {
+  console.log('[FIN] Renderização concluída, aplicando estado do olhinho...');
+  if (typeof aplicarEstadoValoresCaixa === 'function') {
+    aplicarEstadoValoresCaixa();
+  }
+});

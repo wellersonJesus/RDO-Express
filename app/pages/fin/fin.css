@@ -485,6 +485,12 @@
   letter-spacing: .3px;
 }
 
+.valor-oculto {
+    filter: blur(5px);
+    user-select: none;
+    pointer-events: none;
+}
+
 .fin-badge-corrida {
   background: rgba(25,135,84,.12);
   color: #198754;
