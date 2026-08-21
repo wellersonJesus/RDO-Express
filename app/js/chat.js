@@ -3164,12 +3164,12 @@ window.StatusModal = (function () {
         try { if (_modalBS) _modalBS.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de status'); }
 
         try {
-            var payload = { 
-                id: _normalizarId(_pedidoId), 
-                status: String(status || '').trim().toUpperCase(), 
+            var payload = {
+                id: _normalizarId(_pedidoId),
+                status: String(status || '').trim().toUpperCase(),
                 motoboy: motoboyNome // Agora envia o nome do motoboy resgatado corretamente!
             };
-            
+
             if (motivosCancelamento && motivosCancelamento.length > 0)
                 payload.motivo_cancelamento = motivosCancelamento.join(' | ');
 
@@ -4300,12 +4300,14 @@ window.processarRotasEAbrirMapa = function (dadosBase, rotasExtraidas) {
 
                             var kmArredondado = Math.round(kmTotal);
                             var valorCalculado = kmArredondado * 3.00;
+                            var destinoFinal = (rotasExtraidas && rotasExtraidas.length > 0) ? rotasExtraidas[rotasExtraidas.length - 1].para : '';
 
                             window.dadosPedidoAtual = {
                                 solicitante: solicitante,
                                 contato: contato,
                                 horario: horario,
                                 mercadoria: mercadoria,
+                                para: destinoFinal,
                                 obs: obs,
                                 dataPedido: dataPedido,
                                 cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',

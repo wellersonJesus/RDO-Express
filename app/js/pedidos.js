@@ -1121,6 +1121,20 @@
     };
 
     window.RDO_PEDIDOS.salvarEdicao = function () {
+    var numServico = (document.getElementById('edit-numero-servico') || document.getElementById('det-numero-servico') || {}).value || '';
+    var idPedido = (document.getElementById('edit-id-pedido') || {}).value || '';
+    var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
+    
+    if (numServico && idPedido && dataLancamento) {
+        var descricaoFormatada = 'N.Serviço RDO' + numServico + ' - ' + dataLancamento;
+        var observacaoFormatada = 'Pedido ID: ' + idPedido + ' | Serviço: ' + numServico;
+        
+        var elDesc = document.getElementById('edit-descricao');
+        if (elDesc) elDesc.value = descricaoFormatada;
+        
+        var elObs = document.getElementById('edit-observacao');
+        if (elObs) elObs.value = observacaoFormatada;
+    }
         var btnSalvar = document.getElementById('btn-salvar-edicao');
         var errEl = document.getElementById('edit-error-msg');
 

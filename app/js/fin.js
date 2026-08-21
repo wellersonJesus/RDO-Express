@@ -2376,6 +2376,22 @@ if (!window.EventBus) {
     });
   }
 
+  function calcularTotaisDetalhadosCaixa(registros) {
+    var totais = calcularTotaisRegistros(registros);
+    var valorRdoTotal = totais.entradas * 0.20;
+    var valorColabTotal = totais.entradas * 0.80;
+    return {
+      entradas: totais.entradas,
+      saidas: totais.saidas,
+      empresa: totais.empresa,
+      colaboradores: totais.colaboradores,
+      saldo: totais.saldo,
+      qtd: totais.qtd,
+      valorRdoTotal: valorRdoTotal,
+      valorColabTotal: valorColabTotal
+    };
+  }
+
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var idModal = 'modal-visualizar-caixa-' + periodo.id;
     var registros = periodo.registros || [];
@@ -2895,6 +2911,32 @@ if (!window.EventBus) {
       });
     }
     return lista;
+  }
+
+  function carregarPrimeiroPeriodoSalvoCaixa() {
+    try {
+      var dadosSalvos = localStorage.getItem('rdo_periodos_caixa_salvos');
+      if (!dadosSalvos) return;
+      
+      var periodos = JSON.parse(dadosSalvos);
+      if (Array.isArray(periodos) && periodos.length > 0) {
+        var primeiro = periodos[0];
+        
+        // Atribui ao estado global do caixa
+        if (typeof state !== 'undefined' && state.caixa) {
+          state.caixa.periodoAtivoId = primeiro.id;
+          state.caixa.listaFiltradaAtual = primeiro.registros || [];
+          state.caixa.periodoLabelAtivo = primeiro.periodoLabel || (primeiro.inicio + ' a ' + primeiro.fim);
+          
+          // Dispara a atualização visual dos contadores e da tabela
+          if (typeof renderCaixa === 'function') {
+            renderCaixa();
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar período salvo do caixa:", e);
+    }
   }
 
   function renderizarListaExtratos() {
@@ -3949,6 +3991,30 @@ if (!window.EventBus) {
     }).join('');
   }
 
+  function aplicarFiltroCaixaLocal(filtro) {
+    state.caixa.filtroTipo = filtro;
+    state.caixa.pagina = 1;
+    renderCaixa();
+  }
+
+  function corrigirRegistrosAntigosDescricaoObservacao() {
+    if (!Array.isArray(state.cache)) return;
+    state.cache.forEach(function (r) {
+      var desc = (r.descricao || '').trim();
+      var obs = (r.observacao || '').trim();
+
+      if (desc && !obs && desc.indexOf(' - Obs: ') !== -1) {
+        var partes = desc.split(' - Obs: ');
+        r.descricao = partes[0].trim();
+        r.observacao = partes.slice(1).join(' - Obs: ').trim();
+      } else if (desc && !obs && desc.indexOf(' | ') !== -1) {
+        var partesPipe = desc.split(' | ');
+        r.descricao = partesPipe[0].trim();
+        r.observacao = partesPipe.slice(1).join(' | ').trim();
+      }
+    });
+  }
+
   function carregarDados() {
     if (state.fetching) return;
     state.fetching = true;
@@ -4261,6 +4327,28 @@ if (!window.EventBus) {
     });
   }
 
+  function ativarPrimeiroPeriodoCaixaAutomatico() {
+    try {
+      var raw = localStorage.getItem('rdo_periodos_caixa_salvos');
+      if (!raw) return;
+      var periodos = JSON.parse(raw);
+      if (Array.isArray(periodos) && periodos.length > 0) {
+        var p = periodos[0]; // Pega o primeiro período (mais recente: 01/07 a 31/07)
+        if (typeof state !== 'undefined' && state.caixa) {
+          state.caixa.periodoAtivoId = p.id;
+          state.caixa.listaFiltradaAtual = p.registros || [];
+          state.caixa.periodoLabelAtivo = p.periodoLabel || (p.inicio + ' a ' + p.fim);
+          
+          if (typeof renderCaixa === 'function') {
+            renderCaixa();
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao ativar primeiro período:", e);
+    }
+  }
+  
   function init() {
     if (_finJaInicializado) return;
     _finJaInicializado = true;
@@ -4353,8 +4441,25 @@ if (!window.EventBus) {
     init: init
   };
 
+  function selecionarPrimeiroPeriodoCaixaAutomatico() {
+    var periodos = state.caixa && state.caixa.periodosSalvos;
+    if (Array.isArray(periodos) && periodos.length > 0) {
+      // Ordena ou pega o primeiro da lista (mais recente)
+      var primeiro = periodos[0];
+      if (primeiro && (!state.caixa.periodoAtivoId || state.caixa.periodoAtivoId !== primeiro.id)) {
+        state.caixa.periodoAtivoId = primeiro.id;
+        state.caixa.listaFiltradaAtual = primeiro.registros || [];
+      }
+    }
+  }
+
   function renderCaixa() {
     if (!els.caixaListaDiaria) return;
+
+    // Garante que o primeiro período gerado da lista seja selecionado por padrão se houver períodos salvos
+    if (typeof selecionarPrimeiroPeriodoCaixaAutomatico === 'function') {
+      selecionarPrimeiroPeriodoCaixaAutomatico();
+    }
 
     var lista = state.caixa.listaFiltradaAtual || state.cache.filter(function (r) {
       return ehReceitaFin(r.tipo) || r.tipo === 'despesa';
@@ -4387,6 +4492,11 @@ if (!window.EventBus) {
     els.caixaListaDiaria.innerHTML = html;
     bindEventosDiaCaixa();
     atualizarPaginacaoCaixa(totalItens);
+    
+    // Atualiza os contadores e o RDOPay baseados estritamente no período ativo selecionado
+    if (typeof atualizarContadoresCaixaPeriodo === 'function') {
+      atualizarContadoresCaixaPeriodo(lista);
+    }
   }
 
   window.tentarAbrirPedidoFinanceiro = tentarAbrirPedidoFinanceiro;
