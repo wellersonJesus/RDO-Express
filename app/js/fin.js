@@ -2263,9 +2263,12 @@ if (!window.EventBus) {
 
             if (!registrosBrutos.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
 
-            // CORREÇÃO APLICADA AQUI: Normaliza cada registro bruto para garantir que a .hora seja extraída da observação
             var registros = registrosBrutos.map(function (r) {
-              return normalizarRegistro(r);
+              var regNorm = normalizarRegistro(r);
+              if (regNorm && regNorm.observacao) {
+                regNorm.observacao = regNorm.observacao.replace(/^\[\d{2}:\d{2},\s*\d{2}\/\d{2}\/\d{4}\]\s*/, '').trim();
+              }
+              return regNorm;
             });
 
             var origemLabel = (origemSelect === '__caixa__' || !origemSelect) ? 'Caixa Geral' : origemSelect;
@@ -2681,48 +2684,25 @@ if (!window.EventBus) {
       var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
       var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
-        var ha = a.hora || a.horario || '';
-        var hb = b.hora || b.horario || '';
+        var ha = a.hora || a.horario || a.time || '';
+        var hb = b.hora || b.horario || b.time || '';
         return ha < hb ? -1 : (ha > hb ? 1 : 0);
       });
 
       var linhas = registrosOrdenados.map(function (r) {
         var cor = r.tipo === 'entrada' ? '#198754' : '#dc3545';
-
         var horaExtraida = '';
+
         if (r.hora && String(r.hora).trim() !== '' && String(r.hora) !== 'N/A') {
           horaExtraida = String(r.hora).trim();
         } else if (r.horario && String(r.horario).trim() !== '' && String(r.horario) !== 'N/A') {
           horaExtraida = String(r.horario).trim();
-        } else {
-          // Identifica o ID do pedido considerando o formato com prefixo (ex: RDO1709)
-          var idPed = String(r.idPedido || r.id_pedido || '').trim();
-          if (!idPed && r.observacao) {
-            var matchObs = r.observacao.match(/(RDO\d+|\d+)/i);
-            if (matchObs) idPed = matchObs[1];
-          }
-
-          var idLimpoNum = idPed.replace(/\D/g, '');
-          var idCompletoRdo = idPed.toUpperCase().startsWith('RDO') ? idPed.toUpperCase() : 'RDO' + idLimpoNum;
-
-          var pedidosMap = window.pedidosCache || window.todosPedidos || {};
-          var pedidoObj = pedidosMap[idCompletoRdo] || pedidosMap[idPed] || pedidosMap[idLimpoNum] || null;
-
-          if (!pedidoObj && Array.isArray(window.listaPedidosGlobal)) {
-            pedidoObj = window.listaPedidosGlobal.find(function (p) {
-              var pId = String(p.id || '').trim().toUpperCase();
-              var pIdNum = pId.replace(/\D/g, '');
-              return pId === idCompletoRdo || pId === idPed.toUpperCase() || pIdNum === idLimpoNum;
-            });
-          }
-
-          if (pedidoObj) {
-            horaExtraida = String(pedidoObj.horario || pedidoObj.hora || '').trim();
-          }
+        } else if (r.time && String(r.time).trim() !== '' && String(r.time) !== 'N/A') {
+          horaExtraida = String(r.time).trim();
         }
 
         if (!horaExtraida && r.descricao) {
-          var matchHora = r.descricao.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+          var matchHora = r.descricao.match(/^(\d{2}:\d{2})/);
           if (matchHora) {
             horaExtraida = matchHora[1];
           }
@@ -2733,6 +2713,10 @@ if (!window.EventBus) {
         var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function'
           ? limparSufixoHoraValorDescricao(r.descricao)
           : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
+
+        if (descricaoLimpa) {
+          descricaoLimpa = descricaoLimpa.replace(/^\d{2}:\d{2}\s*-\s*/, '').trim();
+        }
 
         return '' +
           '<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:.75rem;">' +
@@ -4316,6 +4300,61 @@ if (!window.EventBus) {
     }
 
     return { registros: lista, label: 'Caixa Geral' };
+  }
+
+  function gerarHtmlExtratoSimples(titulo, periodoLabel, registros) {
+    var ordenados = (registros || []).slice().sort(function (a, b) {
+      return a.dataISO < b.dataISO ? 1 : -1;
+    });
+
+    var totalValor = 0;
+    var linhasHtml = ordenados.length ? ordenados.map(function (r) {
+      totalValor += (parseFloat(r.valor) || 0);
+      var horaBruta = r.hora || (r.created_at ? r.created_at.split(' ')[1] : '') || '';
+      var hora = horaBruta ? horaBruta.substring(0, 5) : '--:--';
+      var descricaoLimpa = (r.descricao || '').replace(/^\[\d{2}:\d{2},?\s*\d{2}\/\d{2}\/\d{4}\]\s*/, '');
+      return '<tr>' +
+        '<td>' + escapeHtml(hora) + '</td>' +
+        '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
+        '<td title="' + escapeHtml(descricaoLimpa) + '">' + escapeHtml(resumirDescricao(descricaoLimpa)) + '</td>' +
+        '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:#888;">Nenhum lançamento neste período.</td></tr>';
+
+    var agora = new Date().toLocaleString('pt-BR');
+    var qtd = ordenados.length;
+
+    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + escapeHtml(titulo) + '</title>' +
+      '<style>' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-weight:400;margin:24px;color:#333;-webkit-font-smoothing:antialiased;}' +
+      'h1{font-size:15px;margin:0 0 2px;font-weight:400;color:#444;}' +
+      'h1 span{color:#dc3545;}' +
+      '.sub{font-size:11px;color:#888;margin-bottom:18px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px;}' +
+      'thead th{text-align:left;padding:6px 4px;border-bottom:1px solid #ddd;font-size:10.5px;font-weight:400;color:#999;text-transform:uppercase;letter-spacing:.3px;}' +
+      'thead th.col-valor{text-align:right;}' +
+      'tbody td{padding:8px 4px;border-bottom:1px solid #eee;font-weight:400;white-space:nowrap;}' +
+      'tbody tr:last-child td{border-bottom:none;}' +
+      'td:nth-child(2){color:#555;width:130px;}' +
+      'td:nth-child(3){color:#555;max-width:240px;overflow:hidden;text-overflow:ellipsis;}' +
+      'td:nth-child(1){color:#999;font-size:10.5px;width:80px;}' +
+      'td:nth-child(4){text-align:right;width:100px;}' +
+      'tfoot td{padding:10px 4px;font-weight:400;border-top:1px solid #ddd;font-size:13px;color:#333;}' +
+      'footer{margin-top:24px;font-size:10px;color:#aaa;text-align:right;}' +
+      '.btn-imprimir-extrato{position:fixed;top:16px;right:16px;background:#dc3545;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:999;}' +
+      '.btn-imprimir-extrato:hover{background:#c82333;}' +
+      '@media print{ body{margin:10mm;} .btn-imprimir-extrato{display:none;} }' +
+      '</style></head><body>' +
+      '<button type="button" class="btn-imprimir-extrato" onclick="window.print()"><i class="bi bi-printer-fill"></i> Imprimir / Salvar PDF</button>' +
+      '<h1><span>RDO</span> Express - Extrato</h1>' +
+      '<div class="sub">' + escapeHtml(titulo) + ' &middot; Período: ' + escapeHtml(periodoLabel || '-') + ' &middot; Gerado em ' + agora + '</div>' +
+      '<table><thead><tr><th>Data</th><th>Colaborador</th><th>Descrição</th><th class="col-valor">Valor</th></tr></thead>' +
+      '<tbody>' + linhasHtml + '</tbody>' +
+      '<tfoot><tr><td colspan="3">Total de lançamentos: ' + qtd + '</td><td style="text-align:right;">' + formatarMoeda(totalValor) + '</td></tr></tfoot>' +
+      '</table>' +
+      '<footer>RDO Express &middot; Relatório gerado automaticamente</footer>' +
+      '</body></html>';
   }
 
   function gerarHtmlExtratoSimples(titulo, periodoLabel, registros) {
