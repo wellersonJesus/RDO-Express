@@ -116,6 +116,7 @@ if (!window.EventBus) {
     caixa: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
+
   window._debugFinState = state;
 
   window.financeiroState = state;
@@ -270,6 +271,34 @@ if (!window.EventBus) {
     });
   }
 
+  function criarRegistroIsolado(r, pedidoEncontrado) {
+    var idPedidoStr = String(r.idPedido || r.id_pedido || '').trim();
+    var horaFinal = '';
+
+    if (pedidoEncontrado) {
+      horaFinal = String(pedidoEncontrado.horario || pedidoEncontrado.hora || '').trim();
+    }
+
+    if (!horaFinal) {
+      horaFinal = String(r.horario || r.hora || '').trim();
+    }
+
+    return {
+      dataISO: r.dataISO,
+      dataDisplay: r.dataDisplay,
+      tipo: r.tipo,
+      descricao: r.descricao,
+      valor: r.valor,
+      motoboy: r.motoboy,
+      valorColaborador: r.valorColaborador,
+      valorEmpresa: r.valorEmpresa,
+      situacao: r.situacao,
+      idPedido: idPedidoStr,
+      id_pedido: idPedidoStr,
+      hora: horaFinal
+    };
+  }
+
   function bindFiltrosMiniCaixa() {
     var cards = document.querySelectorAll('#fin-tab-content-caixa .caixa-mini-card[data-filtro-caixa]');
     cards.forEach(function (card) {
@@ -312,7 +341,7 @@ if (!window.EventBus) {
         var periodoObj = buscarPeriodoCaixaPorId(idSelecionado);
         if (periodoObj && typeof calcularTotaisRegistros === 'function') {
           var totais = calcularTotaisRegistros(periodoObj.registros);
-          
+
           if (elSaldo) {
             elSaldo.innerText = formatarMoeda(totais.saldo);
             elSaldo.setAttribute('data-valor-real', formatarMoeda(totais.saldo));
@@ -340,14 +369,14 @@ if (!window.EventBus) {
       btn.classList.toggle('oculto', !state.caixaValoresVisiveis);
       if (icon) icon.className = state.caixaValoresVisiveis ? 'bi bi-eye' : 'bi bi-eye-slash';
       btn.title = state.caixaValoresVisiveis ? 'Ocultar valores da carteira RDOP' : 'Mostrar valores da carteira RDOP';
-      
+
       if (painel) {
         painel.classList.toggle('mostrar-info', state.caixaValoresVisiveis);
       }
 
       // Aplica classes de desfoque/ocultação nos elementos sensíveis do bloco RDO P
       var elementosCaixaPay = document.querySelectorAll('#rdo-pay-bloco .valor-financeiro, #rdo-pay-bloco .sensivel, .fin-valor-caixa');
-      elementosCaixaPay.forEach(function(el) {
+      elementosCaixaPay.forEach(function (el) {
         if (state.caixaValoresVisiveis && idSelecionado) {
           el.classList.remove('oculto');
           el.style.filter = 'none';
@@ -2039,18 +2068,27 @@ if (!window.EventBus) {
               return;
             }
 
-            var registrosIsolados = registros.map(function (r) {
-              return {
-                dataISO: r.dataISO,
-                dataDisplay: r.dataDisplay,
-                tipo: r.tipo,
-                descricao: r.descricao,
-                valor: r.valor,
-                motoboy: r.motoboy,
-                valorColaborador: r.valorColaborador,
-                valorEmpresa: r.valorEmpresa,
-                situacao: r.situacao
-              };
+            var listaPedidosCache = (typeof cachePedidosGlobal !== 'undefined' && cachePedidosGlobal) ? cachePedidosGlobal : (window.pedidosGlobal || []);
+
+            var registrosIsolados = registros.map(function (r, idx) {
+              var idPed = String(r.idPedido || r.id_pedido || r.idServico || r.id_servico || '').trim();
+              var pedidoEncontrado = null;
+
+              if (idPed && listaPedidosCache.length) {
+                pedidoEncontrado = listaPedidosCache.find(function (p) {
+                  return String(p.id) === idPed;
+                });
+              }
+
+              if (!pedidoEncontrado) {
+                console.log('[DIAGNÓSTICO HORA - FILTRAR]', {
+                  indice: idx,
+                  idPedido: idPed,
+                  pedidoEncontrado: pedidoEncontrado
+                });
+              }
+
+              return criarRegistroIsolado(r, pedidoEncontrado);
             });
 
             var periodoSalvo = {
@@ -2423,15 +2461,26 @@ if (!window.EventBus) {
 
       setTimeout(function () {
         try {
+          var listaPedidosCache = (typeof cachePedidosGlobal !== 'undefined' && cachePedidosGlobal) ? cachePedidosGlobal : (window.pedidosGlobal || []);
+
           var registrosIsolados = caixaPeriodoAtual.registros.map(function (r) {
-            return {
-              dataISO: r.dataISO,
-              dataDisplay: r.dataDisplay,
-              tipo: r.tipo,
-              descricao: r.descricao,
-              valor: r.valor,
-              situacao: r.situacao
-            };
+            var idPedidoStr = String(r.idPedido || r.id_pedido || '').trim();
+            var pedidoEncontrado = null;
+
+            if (idPedidoStr && listaPedidosCache.length) {
+              pedidoEncontrado = listaPedidosCache.find(function (p) {
+                return String(p.id) === idPedidoStr;
+              });
+            }
+
+            if (!pedidoEncontrado) {
+              console.log('[DIAGNÓSTICO HORA]', {
+                idDoPedido: idPedidoStr,
+                pedidoEncontrado: pedidoEncontrado
+              });
+            }
+
+            return criarRegistroIsolado(r, pedidoEncontrado);
           });
 
           var periodoSalvo = {
@@ -2507,10 +2556,11 @@ if (!window.EventBus) {
       var linhas = registrosOrdenados.map(function (r) {
         var cor = r.tipo === 'entrada' ? '#198754' : '#dc3545';
         var hora = r.hora || obterHoraRegistro(r) || '--:--';
+        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function' ? limparSufixoHoraValorDescricao(r.descricao) : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
         return '' +
           '<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:.75rem;">' +
           '<span style="color:#999;white-space:nowrap;flex-shrink:0;width:40px;">' + escapeHtml(hora) + '</span>' +
-          '<span style="flex:1;color:#444;">' + escapeHtml(limparSufixoHoraValorDescricao(r.descricao) || '-') + '</span>' +
+          '<span style="flex:1;color:#444;">' + escapeHtml(descricaoLimpa || '-') + '</span>' +
           '<span style="font-weight:700;color:' + cor + ';">' + formatarMoeda(r.valor) + '</span>' +
           '</div>';
       }).join('');
@@ -2803,10 +2853,11 @@ if (!window.EventBus) {
       var linhas = registrosOrdenados.map(function (r) {
         var valorClasse = r.tipo === 'entrada' ? 'positivo' : 'negativo';
         var hora = r.hora || obterHoraRegistro(r) || '--:--';
+        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function' ? limparSufixoHoraValorDescricao(r.descricao) : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
         return '' +
           '<div class="linha-extrato">' +
           '<span class="hora-extrato">' + escapeHtml(hora) + '</span>' +
-          '<span class="desc-extrato">' + escapeHtml(limparSufixoHoraValorDescricao(r.descricao) || '-') + '</span>' +
+          '<span class="desc-extrato">' + escapeHtml(descricaoLimpa || '-') + '</span>' +
           '<span class="pontos-extrato"></span>' +
           '<span class="valor-extrato ' + valorClasse + '">' + formatarMoeda(r.valor) + '</span>' +
           '</div>';
@@ -2836,7 +2887,6 @@ if (!window.EventBus) {
       '.bloco-data-label { font-size: 11.5px; font-weight: 700; color: #444; }' +
       '.bloco-data-semana { font-size: 10px; font-weight: 400; color: #888; margin-left: 6px; }' +
       '.bloco-data-saldo { font-size: 11px; font-weight: 700; }' +
-      '.bloco-data-body { padding: 4px 12px 8px; }' +
       '.bloco-data-body { padding: 4px 12px 8px; }' +
       '.bloco-data-divisao { display: flex; justify-content: space-between; padding: 6px 12px 8px; border-top: 1px dashed #e4e4e7; font-size: 10.5px; color: #555; }' +
       '.divisao-rdo { color: #1565c0; }' +
@@ -4097,8 +4147,10 @@ if (!window.EventBus) {
     var totalValor = 0;
     var linhasHtml = ordenados.length ? ordenados.map(function (r) {
       totalValor += (parseFloat(r.valor) || 0);
+      var horaBruta = r.hora || (r.created_at ? r.created_at.split(' ')[1] : '') || '';
+      var hora = horaBruta ? horaBruta.substring(0, 5) : '--:--';
       return '<tr>' +
-        '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
+        '<td>' + escapeHtml(hora) + '</td>' +
         '<td>' + escapeHtml(r.motoboy || '-') + '</td>' +
         '<td title="' + escapeHtml(r.descricao || '') + '">' + escapeHtml(resumirDescricao(r.descricao)) + '</td>' +
         '<td style="text-align:right;">' + formatarMoeda(r.valor) + '</td>' +
@@ -5129,3 +5181,4 @@ document.addEventListener('finRenderizado', function () {
     aplicarEstadoValoresCaixa();
   }
 });
+
