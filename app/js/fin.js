@@ -561,7 +561,7 @@ if (!window.EventBus) {
     var valorNum = _parseValor(d.vlr_servico || d.valor || 0);
     var situacaoNorm = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var colaboradorId = (d.colaborador_id || d.colaboradorId || '').toString().trim();
-    
+
     // 1. Captura o texto da observação bruto
     var observacaoTexto = (d.observacao || '').toString().trim();
 
@@ -2255,13 +2255,18 @@ if (!window.EventBus) {
             if (inicio > fim) { finToast('Data inicial maior que a final.', 'warning'); return; }
 
             var origemSelect = els.extratoOrigem ? els.extratoOrigem.value : '__caixa__';
-            var registros = registrosNoPeriodo(inicio, fim);
+            var registrosBrutos = registrosNoPeriodo(inicio, fim);
 
             if (origemSelect && origemSelect !== '__caixa__') {
-              registros = registros.filter(function (r) { return r.motoboy === origemSelect || r.grupo === origemSelect; });
+              registrosBrutos = registrosBrutos.filter(function (r) { return r.motoboy === origemSelect || r.grupo === origemSelect; });
             }
 
-            if (!registros.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
+            if (!registrosBrutos.length) { finToast('Nenhum registro encontrado no período.', 'warning'); return; }
+
+            // CORREÇÃO APLICADA AQUI: Normaliza cada registro bruto para garantir que a .hora seja extraída da observação
+            var registros = registrosBrutos.map(function (r) {
+              return normalizarRegistro(r);
+            });
 
             var origemLabel = (origemSelect === '__caixa__' || !origemSelect) ? 'Caixa Geral' : origemSelect;
             abrirRelatorioFinanceiro('extrato', registros, 'Relatório de Extrato - ' + origemLabel, inicio, fim);
@@ -2537,125 +2542,125 @@ if (!window.EventBus) {
     };
   }
 
-function abrirModalVisualizarRdo(param) {
-  var rdoId = '';
-  var rdoObj = {};
+  function abrirModalVisualizarRdo(param) {
+    var rdoId = '';
+    var rdoObj = {};
 
-  if (typeof param === 'string' || typeof param === 'number') {
-    rdoId = String(param).trim();
-    rdoObj = { id: rdoId };
-  } else if (param && typeof param === 'object') {
-    rdoObj = param;
-    rdoId = String(rdoObj.id || rdoObj.idPedido || rdoObj.id_pedido || '').trim();
-  }
+    if (typeof param === 'string' || typeof param === 'number') {
+      rdoId = String(param).trim();
+      rdoObj = { id: rdoId };
+    } else if (param && typeof param === 'object') {
+      rdoObj = param;
+      rdoId = String(rdoObj.id || rdoObj.idPedido || rdoObj.id_pedido || '').trim();
+    }
 
-  var idModal = 'modal-visualizar-rdo-' + (rdoId || 'generico');
+    var idModal = 'modal-visualizar-rdo-' + (rdoId || 'generico');
 
-  var pedidoRdo = null;
-  try {
-    pedidoRdo = window.financeiroState &&
-                window.financeiroState.pedidosCache &&
-                window.financeiroState.pedidosCache[rdoId];
-  } catch (e) {
-    pedidoRdo = null;
-  }
+    var pedidoRdo = null;
+    try {
+      pedidoRdo = window.financeiroState &&
+        window.financeiroState.pedidosCache &&
+        window.financeiroState.pedidosCache[rdoId];
+    } catch (e) {
+      pedidoRdo = null;
+    }
 
-  var situacaoFinal = rdoObj.situacao || rdoObj.status || 'Pendente';
-  var descricaoFinal = rdoObj.descricao || '';
-  var observacaoFinal = rdoObj.observacao || '';
-  var valorFinal = rdoObj.valor || 0;
+    var situacaoFinal = rdoObj.situacao || rdoObj.status || 'Pendente';
+    var descricaoFinal = rdoObj.descricao || '';
+    var observacaoFinal = rdoObj.observacao || '';
+    var valorFinal = rdoObj.valor || 0;
 
-  if (pedidoRdo) {
-    if (pedidoRdo.descricao) descricaoFinal = pedidoRdo.descricao;
-    if (pedidoRdo.observacao) observacaoFinal = pedidoRdo.observacao;
-    if (pedidoRdo.valor) valorFinal = pedidoRdo.valor;
-    if (pedidoRdo.valor_corrida) valorFinal = pedidoRdo.valor_corrida;
-    if (pedidoRdo.valorCorrida) valorFinal = pedidoRdo.valorCorrida;
-    if (pedidoRdo.situacao) situacaoFinal = pedidoRdo.situacao;
-    else if (pedidoRdo.status) situacaoFinal = pedidoRdo.status;
-  }
+    if (pedidoRdo) {
+      if (pedidoRdo.descricao) descricaoFinal = pedidoRdo.descricao;
+      if (pedidoRdo.observacao) observacaoFinal = pedidoRdo.observacao;
+      if (pedidoRdo.valor) valorFinal = pedidoRdo.valor;
+      if (pedidoRdo.valor_corrida) valorFinal = pedidoRdo.valor_corrida;
+      if (pedidoRdo.valorCorrida) valorFinal = pedidoRdo.valorCorrida;
+      if (pedidoRdo.situacao) situacaoFinal = pedidoRdo.situacao;
+      else if (pedidoRdo.status) situacaoFinal = pedidoRdo.status;
+    }
 
-  // Extrai a hora de dentro do campo observação usando Regex
-  var horaExtraida = '';
-  var textoBuscaHora = (observacaoFinal + ' ' + descricaoFinal).trim();
-  var matchHora = textoBuscaHora.match(/(\d{2}:\d{2}(?::\d{2})?)/);
-  if (matchHora) {
-    horaExtraida = matchHora[1];
-  }
+    // Extrai a hora de dentro do campo observação usando Regex
+    var horaExtraida = '';
+    var textoBuscaHora = (observacaoFinal + ' ' + descricaoFinal).trim();
+    var matchHora = textoBuscaHora.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+    if (matchHora) {
+      horaExtraida = matchHora[1];
+    }
 
-  // Fallback: se não achar na observação, tenta pegar da linha da tabela (DOM)
-  if (!horaExtraida) {
-    var botoes = document.querySelectorAll('[data-idpedido="' + rdoId + '"], [data-id="' + rdoId + '"]');
-    for (var b = 0; b < botoes.length; b++) {
-      var tr = botoes[b].closest('tr');
-      if (tr) {
-        var matchTr = tr.innerText.match(/(\d{2}:\d{2}(?::\d{2})?)/);
-        if (matchTr) {
-          horaExtraida = matchTr[1];
-          break;
+    // Fallback: se não achar na observação, tenta pegar da linha da tabela (DOM)
+    if (!horaExtraida) {
+      var botoes = document.querySelectorAll('[data-idpedido="' + rdoId + '"], [data-id="' + rdoId + '"]');
+      for (var b = 0; b < botoes.length; b++) {
+        var tr = botoes[b].closest('tr');
+        if (tr) {
+          var matchTr = tr.innerText.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+          if (matchTr) {
+            horaExtraida = matchTr[1];
+            break;
+          }
         }
       }
     }
+
+    if (horaExtraida && horaExtraida.includes(':')) {
+      var matchLimpo = horaExtraida.match(/(\d{2}:\d{2})/);
+      if (matchLimpo) horaExtraida = matchLimpo[1];
+    }
+
+    var horaFinal = horaExtraida ? horaExtraida.substring(0, 5) : '00:00';
+
+    var modalHtml =
+      '<div class="modal fade" id="' + idModal + '" tabindex="-1">' +
+      '<div class="modal-dialog modal-dialog-centered">' +
+      '<div class="modal-content">' +
+      '<div class="modal-header">' +
+      '<h5 class="modal-title">Detalhes &middot; ' + escapeHtml(rdoId || '-') + '</h5>' +
+      '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+      '<div class="mb-3">' +
+      '<label class="form-label small text-muted fw-bold">Situação</label>' +
+      '<div class="p-2 bg-light rounded border small">' + escapeHtml(situacaoFinal) + '</div>' +
+      '</div>' +
+      '<div class="mb-3">' +
+      '<label class="form-label small text-muted fw-bold">Horário</label>' +
+      '<input type="text" class="form-control form-control-sm bg-light" value="' + escapeHtml(horaFinal) + '" readonly>' +
+      '</div>' +
+      '<div class="mb-3">' +
+      '<label class="form-label small text-muted fw-bold">Descrição</label>' +
+      '<div class="p-2 bg-light rounded border small">' + escapeHtml(descricaoFinal || '-') + '</div>' +
+      '</div>' +
+      '<div class="mb-3">' +
+      '<label class="form-label small text-muted fw-bold">Observação</label>' +
+      '<div class="p-2 bg-light rounded border small">' + escapeHtml(observacaoFinal || '-') + '</div>' +
+      '</div>' +
+      '<div class="mb-3">' +
+      '<label class="form-label small text-muted fw-bold">Valor</label>' +
+      '<div class="fw-bold text-success">' + formatarMoeda(valorFinal) + '</div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+      '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    var antigo = document.getElementById(idModal);
+    if (antigo) antigo.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    var modalEl = document.getElementById(idModal);
+    var modalInstance = new bootstrap.Modal(modalEl);
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalEl.remove();
+    });
+
+    modalInstance.show();
   }
-
-  if (horaExtraida && horaExtraida.includes(':')) {
-    var matchLimpo = horaExtraida.match(/(\d{2}:\d{2})/);
-    if (matchLimpo) horaExtraida = matchLimpo[1];
-  }
-
-  var horaFinal = horaExtraida ? horaExtraida.substring(0, 5) : '00:00';
-
-  var modalHtml =
-    '<div class="modal fade" id="' + idModal + '" tabindex="-1">' +
-    '<div class="modal-dialog modal-dialog-centered">' +
-    '<div class="modal-content">' +
-    '<div class="modal-header">' +
-    '<h5 class="modal-title">Detalhes &middot; ' + escapeHtml(rdoId || '-') + '</h5>' +
-    '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
-    '</div>' +
-    '<div class="modal-body">' +
-    '<div class="mb-3">' +
-    '<label class="form-label small text-muted fw-bold">Situação</label>' +
-    '<div class="p-2 bg-light rounded border small">' + escapeHtml(situacaoFinal) + '</div>' +
-    '</div>' +
-    '<div class="mb-3">' +
-    '<label class="form-label small text-muted fw-bold">Horário</label>' +
-    '<input type="text" class="form-control form-control-sm bg-light" value="' + escapeHtml(horaFinal) + '" readonly>' +
-    '</div>' +
-    '<div class="mb-3">' +
-    '<label class="form-label small text-muted fw-bold">Descrição</label>' +
-    '<div class="p-2 bg-light rounded border small">' + escapeHtml(descricaoFinal || '-') + '</div>' +
-    '</div>' +
-    '<div class="mb-3">' +
-    '<label class="form-label small text-muted fw-bold">Observação</label>' +
-    '<div class="p-2 bg-light rounded border small">' + escapeHtml(observacaoFinal || '-') + '</div>' +
-    '</div>' +
-    '<div class="mb-3">' +
-    '<label class="form-label small text-muted fw-bold">Valor</label>' +
-    '<div class="fw-bold text-success">' + formatarMoeda(valorFinal) + '</div>' +
-    '</div>' +
-    '</div>' +
-    '<div class="modal-footer">' +
-    '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>' +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '</div>';
-
-  var antigo = document.getElementById(idModal);
-  if (antigo) antigo.remove();
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-  var modalEl = document.getElementById(idModal);
-  var modalInstance = new bootstrap.Modal(modalEl);
-
-  modalEl.addEventListener('hidden.bs.modal', function () {
-    modalEl.remove();
-  });
-
-  modalInstance.show();
-}
 
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var idModal = 'modal-visualizar-caixa-' + periodo.id;
@@ -3363,6 +3368,7 @@ function abrirModalVisualizarRdo(param) {
       var labelData = bloco.dataISO !== 'sem-data' ? formatDateBR(bloco.dataISO) : 'Sem data';
       var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
+      // Ordena os registros cronologicamente pela hora extraída
       var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
         var ha = a.hora || '';
         var hb = b.hora || '';
@@ -3370,6 +3376,7 @@ function abrirModalVisualizarRdo(param) {
       });
 
       var linhas = registrosOrdenados.map(function (r) {
+        // Garante que o registro passado para montagem contenha a hora visível
         return montarLinhaExtratoHtml(r);
       }).join('');
 
