@@ -2548,20 +2548,64 @@ if (!window.EventBus) {
       var labelSemana = bloco.dataISO !== 'sem-data' ? getDiaSemanaCompleto(bloco.dataISO) : '';
 
       var registrosOrdenados = bloco.registros.slice().sort(function (a, b) {
-        var ha = (a.hora || '');
-        var hb = (b.hora || '');
+        var ha = a.hora || a.horario || '';
+        var hb = b.hora || b.horario || '';
         return ha < hb ? -1 : (ha > hb ? 1 : 0);
       });
 
       var linhas = registrosOrdenados.map(function (r) {
         var cor = r.tipo === 'entrada' ? '#198754' : '#dc3545';
-        var hora = r.hora || obterHoraRegistro(r) || '--:--';
-        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function' ? limparSufixoHoraValorDescricao(r.descricao) : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
+        
+        var horaExtraida = '';
+        if (r.hora && String(r.hora).trim() !== '' && String(r.hora) !== 'N/A') {
+          horaExtraida = String(r.hora).trim();
+        } else if (r.horario && String(r.horario).trim() !== '' && String(r.horario) !== 'N/A') {
+          horaExtraida = String(r.horario).trim();
+        } else {
+          // Identifica o ID do pedido considerando o formato com prefixo (ex: RDO1709)
+          var idPed = String(r.idPedido || r.id_pedido || '').trim();
+          if (!idPed && r.observacao) {
+            var matchObs = r.observacao.match(/(RDO\d+|\d+)/i);
+            if (matchObs) idPed = matchObs[1];
+          }
+
+          var idLimpoNum = idPed.replace(/\D/g, '');
+          var idCompletoRdo = idPed.toUpperCase().startsWith('RDO') ? idPed.toUpperCase() : 'RDO' + idLimpoNum;
+
+          var pedidosMap = window.pedidosCache || window.todosPedidos || {};
+          var pedidoObj = pedidosMap[idCompletoRdo] || pedidosMap[idPed] || pedidosMap[idLimpoNum] || null;
+          
+          if (!pedidoObj && Array.isArray(window.listaPedidosGlobal)) {
+            pedidoObj = window.listaPedidosGlobal.find(function(p) {
+              var pId = String(p.id || '').trim().toUpperCase();
+              var pIdNum = pId.replace(/\D/g, '');
+              return pId === idCompletoRdo || pId === idPed.toUpperCase() || pIdNum === idLimpoNum;
+            });
+          }
+
+          if (pedidoObj) {
+            horaExtraida = String(pedidoObj.horario || pedidoObj.hora || '').trim();
+          }
+        }
+
+        if (!horaExtraida && r.descricao) {
+          var matchHora = r.descricao.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+          if (matchHora) {
+            horaExtraida = matchHora[1];
+          }
+        }
+        
+        var horaFinal = horaExtraida && horaExtraida !== 'N/A' ? horaExtraida.substring(0, 5) : '--:--';
+
+        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function' 
+          ? limparSufixoHoraValorDescricao(r.descricao) 
+          : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
+        
         return '' +
           '<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:.75rem;">' +
-          '<span style="color:#999;white-space:nowrap;flex-shrink:0;width:40px;">' + escapeHtml(hora) + '</span>' +
-          '<span style="flex:1;color:#444;">' + escapeHtml(descricaoLimpa || '-') + '</span>' +
-          '<span style="font-weight:700;color:' + cor + ';">' + formatarMoeda(r.valor) + '</span>' +
+          '<span style="color:#333;white-space:nowrap;flex-shrink:0;width:42px;font-weight:700;">' + escapeHtml(horaFinal) + '</span>' +
+          '<span style="flex:1;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(descricaoLimpa || '-') + '</span>' +
+          '<span style="font-weight:700;color:' + cor + ';white-space:nowrap;flex-shrink:0;">' + formatarMoeda(r.valor) + '</span>' +
           '</div>';
       }).join('');
 
