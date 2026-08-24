@@ -561,6 +561,13 @@ if (!window.EventBus) {
     var valorNum = _parseValor(d.vlr_servico || d.valor || 0);
     var situacaoNorm = (d.situacao || 'pendente').toString().trim().toLowerCase();
     var colaboradorId = (d.colaborador_id || d.colaboradorId || '').toString().trim();
+    
+    // 1. Captura o texto da observação bruto
+    var observacaoTexto = (d.observacao || '').toString().trim();
+
+    // 2. Tenta extrair a hora de dentro da observação via Regex (ex: HH:MM ou HH:MM:SS)
+    var matchHora = observacaoTexto.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+    var horaExtraida = matchHora ? matchHora[1].substring(0, 5) : (d.hora || d.horario || '');
 
     return {
       id: (d.id || '').toString().trim(),
@@ -580,7 +587,8 @@ if (!window.EventBus) {
       motoboy: (d.colaborador || d.nome_colaborador || d.colaborador_nome || '').toString().trim() || '-',
       cliente: '',
       solicitante: '',
-      observacao: (d.observacao || '').toString().trim(),
+      observacao: observacaoTexto,
+      hora: horaExtraida, // <-- ADICIONADO: Agora o registro normalizado carrega a hora pronta para o formulário!
       updatedAt: d.updated_at || ''
     };
   }
@@ -2529,6 +2537,126 @@ if (!window.EventBus) {
     };
   }
 
+function abrirModalVisualizarRdo(param) {
+  var rdoId = '';
+  var rdoObj = {};
+
+  if (typeof param === 'string' || typeof param === 'number') {
+    rdoId = String(param).trim();
+    rdoObj = { id: rdoId };
+  } else if (param && typeof param === 'object') {
+    rdoObj = param;
+    rdoId = String(rdoObj.id || rdoObj.idPedido || rdoObj.id_pedido || '').trim();
+  }
+
+  var idModal = 'modal-visualizar-rdo-' + (rdoId || 'generico');
+
+  var pedidoRdo = null;
+  try {
+    pedidoRdo = window.financeiroState &&
+                window.financeiroState.pedidosCache &&
+                window.financeiroState.pedidosCache[rdoId];
+  } catch (e) {
+    pedidoRdo = null;
+  }
+
+  var situacaoFinal = rdoObj.situacao || rdoObj.status || 'Pendente';
+  var descricaoFinal = rdoObj.descricao || '';
+  var observacaoFinal = rdoObj.observacao || '';
+  var valorFinal = rdoObj.valor || 0;
+
+  if (pedidoRdo) {
+    if (pedidoRdo.descricao) descricaoFinal = pedidoRdo.descricao;
+    if (pedidoRdo.observacao) observacaoFinal = pedidoRdo.observacao;
+    if (pedidoRdo.valor) valorFinal = pedidoRdo.valor;
+    if (pedidoRdo.valor_corrida) valorFinal = pedidoRdo.valor_corrida;
+    if (pedidoRdo.valorCorrida) valorFinal = pedidoRdo.valorCorrida;
+    if (pedidoRdo.situacao) situacaoFinal = pedidoRdo.situacao;
+    else if (pedidoRdo.status) situacaoFinal = pedidoRdo.status;
+  }
+
+  // Extrai a hora de dentro do campo observação usando Regex
+  var horaExtraida = '';
+  var textoBuscaHora = (observacaoFinal + ' ' + descricaoFinal).trim();
+  var matchHora = textoBuscaHora.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+  if (matchHora) {
+    horaExtraida = matchHora[1];
+  }
+
+  // Fallback: se não achar na observação, tenta pegar da linha da tabela (DOM)
+  if (!horaExtraida) {
+    var botoes = document.querySelectorAll('[data-idpedido="' + rdoId + '"], [data-id="' + rdoId + '"]');
+    for (var b = 0; b < botoes.length; b++) {
+      var tr = botoes[b].closest('tr');
+      if (tr) {
+        var matchTr = tr.innerText.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+        if (matchTr) {
+          horaExtraida = matchTr[1];
+          break;
+        }
+      }
+    }
+  }
+
+  if (horaExtraida && horaExtraida.includes(':')) {
+    var matchLimpo = horaExtraida.match(/(\d{2}:\d{2})/);
+    if (matchLimpo) horaExtraida = matchLimpo[1];
+  }
+
+  var horaFinal = horaExtraida ? horaExtraida.substring(0, 5) : '00:00';
+
+  var modalHtml =
+    '<div class="modal fade" id="' + idModal + '" tabindex="-1">' +
+    '<div class="modal-dialog modal-dialog-centered">' +
+    '<div class="modal-content">' +
+    '<div class="modal-header">' +
+    '<h5 class="modal-title">Detalhes &middot; ' + escapeHtml(rdoId || '-') + '</h5>' +
+    '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+    '</div>' +
+    '<div class="modal-body">' +
+    '<div class="mb-3">' +
+    '<label class="form-label small text-muted fw-bold">Situação</label>' +
+    '<div class="p-2 bg-light rounded border small">' + escapeHtml(situacaoFinal) + '</div>' +
+    '</div>' +
+    '<div class="mb-3">' +
+    '<label class="form-label small text-muted fw-bold">Horário</label>' +
+    '<input type="text" class="form-control form-control-sm bg-light" value="' + escapeHtml(horaFinal) + '" readonly>' +
+    '</div>' +
+    '<div class="mb-3">' +
+    '<label class="form-label small text-muted fw-bold">Descrição</label>' +
+    '<div class="p-2 bg-light rounded border small">' + escapeHtml(descricaoFinal || '-') + '</div>' +
+    '</div>' +
+    '<div class="mb-3">' +
+    '<label class="form-label small text-muted fw-bold">Observação</label>' +
+    '<div class="p-2 bg-light rounded border small">' + escapeHtml(observacaoFinal || '-') + '</div>' +
+    '</div>' +
+    '<div class="mb-3">' +
+    '<label class="form-label small text-muted fw-bold">Valor</label>' +
+    '<div class="fw-bold text-success">' + formatarMoeda(valorFinal) + '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="modal-footer">' +
+    '<button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Fechar</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>';
+
+  var antigo = document.getElementById(idModal);
+  if (antigo) antigo.remove();
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  var modalEl = document.getElementById(idModal);
+  var modalInstance = new bootstrap.Modal(modalEl);
+
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    modalEl.remove();
+  });
+
+  modalInstance.show();
+}
+
   function abrirModalVisualizarPeriodoCaixa(periodo) {
     var idModal = 'modal-visualizar-caixa-' + periodo.id;
     var registros = periodo.registros || [];
@@ -2555,7 +2683,7 @@ if (!window.EventBus) {
 
       var linhas = registrosOrdenados.map(function (r) {
         var cor = r.tipo === 'entrada' ? '#198754' : '#dc3545';
-        
+
         var horaExtraida = '';
         if (r.hora && String(r.hora).trim() !== '' && String(r.hora) !== 'N/A') {
           horaExtraida = String(r.hora).trim();
@@ -2574,9 +2702,9 @@ if (!window.EventBus) {
 
           var pedidosMap = window.pedidosCache || window.todosPedidos || {};
           var pedidoObj = pedidosMap[idCompletoRdo] || pedidosMap[idPed] || pedidosMap[idLimpoNum] || null;
-          
+
           if (!pedidoObj && Array.isArray(window.listaPedidosGlobal)) {
-            pedidoObj = window.listaPedidosGlobal.find(function(p) {
+            pedidoObj = window.listaPedidosGlobal.find(function (p) {
               var pId = String(p.id || '').trim().toUpperCase();
               var pIdNum = pId.replace(/\D/g, '');
               return pId === idCompletoRdo || pId === idPed.toUpperCase() || pIdNum === idLimpoNum;
@@ -2594,13 +2722,13 @@ if (!window.EventBus) {
             horaExtraida = matchHora[1];
           }
         }
-        
+
         var horaFinal = horaExtraida && horaExtraida !== 'N/A' ? horaExtraida.substring(0, 5) : '--:--';
 
-        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function' 
-          ? limparSufixoHoraValorDescricao(r.descricao) 
+        var descricaoLimpa = typeof limparSufixoHoraValorDescricao === 'function'
+          ? limparSufixoHoraValorDescricao(r.descricao)
           : (r.descricao ? r.descricao.replace(/(\d{2}:\d{2}:\d{2}|\d{2}:\d{2})/g, '').replace(/R\$\s*[\d.,]+/g, '').trim() : '-');
-        
+
         return '' +
           '<div style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:.75rem;">' +
           '<span style="color:#333;white-space:nowrap;flex-shrink:0;width:42px;font-weight:700;">' + escapeHtml(horaFinal) + '</span>' +
@@ -5225,4 +5353,3 @@ document.addEventListener('finRenderizado', function () {
     aplicarEstadoValoresCaixa();
   }
 });
-
