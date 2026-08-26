@@ -1212,7 +1212,6 @@
   function obterNomeClienteDoPedido(pedido) {
     const idCliente = resolverValor('pedidos', 'id_cliente', pedido) || resolverValor('pedidos', 'cliente', pedido);
     const canonico = nomeCanonicoDoGrupo(idCliente);
-    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
 
     if (canonico) return canonico;
 
@@ -1220,23 +1219,44 @@
       const cli = state.clientes.find(function (c) { return normalizarIdCliente(c.id) === normalizarIdCliente(idCliente); });
       if (cli) {
         const username = resolverValor('clientes', 'username', cli);
-        if (username) return username;
+        if (username) {
+          const canonicoUsername = nomeCanonicoDoGrupo(username) || canonicoPorNomeExato(username);
+          if (canonicoUsername) return canonicoUsername;
+          return username;
+        }
       }
     }
 
-    if (solicitante) return solicitante;
+    const solicitante = resolverValor('pedidos', 'solicitante', pedido);
+    if (solicitante) {
+      const regexSolicitante = normalizarNomeClienteRegex(solicitante);
+      if (regexSolicitante) return regexSolicitante;
+      return solicitante;
+    }
 
     const mercadoria = resolverValor('pedidos', 'mercadoria', pedido);
-    if (mercadoria) return mercadoria;
+    if (mercadoria) {
+      const regexMercadoria = normalizarNomeClienteRegex(mercadoria);
+      if (regexMercadoria) return regexMercadoria;
+    }
 
     const de = resolverValor('pedidos', 'de', pedido);
-    if (de) return de;
+    if (de) {
+      const regexDe = normalizarNomeClienteRegex(de);
+      if (regexDe) return regexDe;
+    }
 
     const destino = resolverValor('pedidos', 'para', pedido);
-    if (destino) return destino;
+    if (destino) {
+      const regexDestino = normalizarNomeClienteRegex(destino);
+      if (regexDestino) return regexDestino;
+    }
 
     const observacao = resolverValor('pedidos', 'observacao', pedido);
-    if (observacao) return observacao;
+    if (observacao) {
+      const regexObs = normalizarNomeClienteRegex(observacao);
+      if (regexObs) return regexObs;
+    }
 
     if (idCliente) return idCliente;
 
@@ -1665,7 +1685,7 @@
     [/\bdeluza\b/i, 'DELUZA'],
     [/\bop\s*i?\s*minas\b|\bopminas\b/i, 'OPMINAS'],
     [/\btelecom\b/i, 'TELECOM'],
-    [/\bs[\.\s]?manoel\b|\bs[ãa]o\s+manoel\b/i, 'S MANOEL'],
+    [/\bs[\.\s]?manoel\b|\bs[ãa]o\s+manoel\b|\bsao\s*manoel\w*/i, 'SÃO MANOEL'],
     [/\bff\s*fashion\b|\bffashion\b/i, 'FF FASHION'],
     [/\bkopenhagen\b/i, 'KOPENHAGEN'],
     [/\bjosi\s*fraga\b|\bjosifraga\b/i, 'JOSI FRAGA'],
@@ -1703,7 +1723,7 @@
     'DELUZA': 'ZZOVKXPIBAT',
     'OPMINAS': 'QYURDAK3F7H',
     'TELECOM': 'PJ117O5LI4G',
-    'S MANOEL': '7RZBKEC257F',
+    'SÃO MANOEL': '7RZBKEC257F',
     'FF FASHION': 'VDC7X7XTBYD',
     'KOPENHAGEN': 'RO08OGQ25F3',
     'JOSI FRAGA': 'PVRJ2ZGDDVN',
@@ -1745,18 +1765,24 @@
       const nomePadrao = candidatos[i];
       const nomeNormalizado = normalizarComparacao(nomePadrao);
       if (!nomeNormalizado) continue;
-      const regex = new RegExp('(^|[^A-Z0-9])' + nomeNormalizado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])', 'i');
-      if (regex.test(' ' + textoNormalizado + ' ')) return nomePadrao;
+
+      const regexStr = '(^|[^A-Z0-9])' + nomeNormalizado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^A-Z0-9])';
+      const regex = new RegExp(regexStr, 'i');
+
+      if (regex.test(' ' + textoNormalizado + ' ') || textoNormalizado.includes(nomeNormalizado)) {
+        return nomePadrao;
+      }
     }
 
     return '';
   }
 
-  const PADRAO_CLIENTE_AVULSO_EXPLICITO = /\bcliente\s*avuls[oa]\b/i;
-
   function resolverNomeClienteComFallback() {
     for (let i = 0; i < arguments.length; i++) {
-      const nomePadrao = normalizarNomeClienteRegex(arguments[i]);
+      const argumentoAtual = arguments[i];
+      if (!argumentoAtual) continue;
+
+      const nomePadrao = normalizarNomeClienteRegex(argumentoAtual);
       if (nomePadrao) return nomePadrao;
     }
 
@@ -1767,6 +1793,8 @@
 
     return NOME_CLIENTE_AVULSO;
   }
+
+  const PADRAO_CLIENTE_AVULSO_EXPLICITO = /\bcliente\s*avuls[oa]\b/i;
 
   function obterIdPadraoCliente(nomePadrao, idAtual) {
     const idConhecido = IDS_CLIENTES_PADRAO[nomePadrao];
