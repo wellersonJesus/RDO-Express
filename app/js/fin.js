@@ -685,7 +685,7 @@ if (!window.EventBus) {
 
   function ehReceitaFin(tipo) {
     var t = (tipo || '').toString().trim().toLowerCase();
-    return t === 'corrida' || t === 'entrada';
+    return t === 'entrada' || t === 'entrada';
   }
 
   function formatarMoedaComSinal(valor, tipo) {
@@ -3118,10 +3118,10 @@ if (!window.EventBus) {
 
   function getInfoTipoFinanceiro(registro) {
     var tipoNorm = (registro.tipo || '').toString().trim().toLowerCase();
-    var ehReceita = tipoNorm === 'corrida' || tipoNorm === 'entrada';
+    var ehReceita = tipoNorm === 'entrada' || tipoNorm === 'entrada';
     return {
       ehReceita: ehReceita,
-      label: ehReceita ? 'Corrida' : 'Despesa',
+      label: ehReceita ? 'entrada' : 'Despesa',
       badgeClasse: ehReceita ? 'fin-badge-corrida' : 'fin-badge-despesa',
       valorClasse: ehReceita ? 'fin-valor-positivo' : 'fin-valor-negativo',
       sinal: ehReceita ? '+' : '−'
@@ -3130,7 +3130,7 @@ if (!window.EventBus) {
 
   function formatarValorComSinal(registro) {
     var tipoNormalizado = (registro.tipo || '').toString().trim().toLowerCase();
-    var ehReceita = tipoNormalizado === 'corrida' || tipoNormalizado === 'entrada';
+    var ehReceita = tipoNormalizado === 'entrada' || tipoNormalizado === 'entrada';
     var valor = parseFloat(registro.valor) || 0;
 
     return {
@@ -3630,16 +3630,13 @@ if (!window.EventBus) {
   }
 
   function obterHoraRegistro(reg) {
-
     if (reg.hora) return reg.hora.toString().trim();
-
 
     if (reg.idPedido && state.chatCache) {
       var msgsDoPedido = Object.values(state.chatCache).filter(function (msg) {
         return msg.pedido_id === reg.idPedido;
       });
       if (msgsDoPedido.length) {
-
         var primeira = msgsDoPedido.sort(function (a, b) {
           return (a.data + a.hora) < (b.data + b.hora) ? -1 : 1;
         })[0];
@@ -4232,7 +4229,6 @@ if (!window.EventBus) {
 
   function excluirLancamentoFinanceiro(id) {
     return window.API.call('delfinanceiro', { id: id }).then(function (res) {
-      console.log('Resposta da exclusão para ID', id, ':', res);
       return res;
     });
   }
@@ -4270,7 +4266,6 @@ if (!window.EventBus) {
       }
       if (falhas > 0) {
         finToast(falhas + ' lançamento(s) não puderam ser excluídos.', 'warning');
-        console.error('Falhas na exclusão de fantasmas:', resultados.filter(function (r) { return !r.ok; }));
       }
       carregarDados();
     });
@@ -5319,7 +5314,6 @@ if (!window.EventBus) {
     }
     _relatorioFinCarregando = window.carregarScriptExterno('/js/relatorios_fin.js')
       .then(function () {
-
         return new Promise(function (resolve) {
           var tentativas = 0;
           (function checar() {
@@ -5368,14 +5362,10 @@ if (document.readyState === 'loading') {
 setTimeout(window.vincularOlhinhosFinanceiros, 500);
 
 function garantirAtualizacaoCaixaRdo() {
-  // Seleciona o link/botão da aba Caixa
   var linkCaixa = document.querySelector('a[href="#caixa"], [data-bs-target="#caixa"], .nav-link-caixa');
 
   if (linkCaixa) {
     linkCaixa.addEventListener('click', function () {
-      console.log('[FIN] Aba Caixa clicada. Forçando re-renderização do RDO e Caixa...');
-
-      // Pequeno atraso para garantir que a aba visível foi ativada pelo Bootstrap
       setTimeout(function () {
         if (typeof renderCaixa === 'function') {
           renderCaixa();
@@ -5384,7 +5374,6 @@ function garantirAtualizacaoCaixaRdo() {
           renderRdoContadores();
         }
 
-        // Reaplica a máscara do "olhinho" se estiver ativa
         if (window.finValoresOcultos && typeof aplicarEstadoValoresCaixa === 'function') {
           aplicarEstadoValoresCaixa();
         }

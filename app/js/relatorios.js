@@ -1149,7 +1149,7 @@
       totais.temSituacao = true;
       dadosOriginais.forEach(function (r) {
         const tipo = normalizarComparacao(resolverValor('financeiro', 'tipo', r));
-        if (tipo && tipo !== 'RECEITA' && tipo !== 'CORRIDA' && tipo !== 'SERVICO') return;
+        if (tipo && tipo !== 'RECEITA' && tipo !== 'entrada' && tipo !== 'SERVICO') return;
 
         const v = parseMoeda(obterValorCampoFinanceiro('vlr_servico', r, nomesAlvo));
         if (!isNaN(v)) totais.somaValor += v;
@@ -1282,7 +1282,7 @@
     else if (banco === 'financeiro') {
       dados = state.financeiro.filter(function (r) {
         const tipo = normalizarComparacao(resolverValor('financeiro', 'tipo', r));
-        const tipoValido = !tipo || tipo === 'RECEITA' || tipo === 'CORRIDA' || tipo === 'SERVICO';
+        const tipoValido = !tipo || tipo === 'RECEITA' || tipo === 'entrada' || tipo === 'SERVICO';
         if (!tipoValido) return false;
 
         const dataResolvida = obterValorCampoFinanceiro('data', r);
