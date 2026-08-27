@@ -1,12 +1,16 @@
+/* ==========================================================================
+   MÓDULO PEDIDOS - RDO EXPRESS (Consolidado e Otimizado)
+   ========================================================================== */
+
 :root {
-    --rdo-lista-font-size: 0.75rem;
-    --rdo-lista-font-size-mobile: 0.75rem;
-    --rdo-lista-btn-size: 32px;
+    --rdo-lista-font-size: 14px;
+    --rdo-lista-font-size-mobile: 12px;
+    --rdo-lista-btn-size: 36px;
     --rdo-lista-btn-size-mobile: 32px;
-    --rdo-lista-btn-icon-size: 0.9rem;
-    --rdo-lista-btn-icon-size-mobile: 0.9rem;
-    --rdo-lista-badge-font-size: 0.62rem;
-    --rdo-lista-badge-font-size-mobile: 0.65rem;
+    --rdo-lista-btn-icon-size: 16px;
+    --rdo-lista-btn-icon-size-mobile: 14px;
+    --rdo-lista-badge-font-size: 12px;
+    --rdo-lista-badge-font-size-mobile: 10px;
 }
 
 .pedidos-page-wrapper {
@@ -316,22 +320,17 @@
     display: inline-block;
 }
 
-
 @keyframes spin-rotate {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
 }
 
 @keyframes spin-loop {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* --- Correção Definitiva do Dropdown de Filtro / Motoboys --- */
+/* Dropdown de Filtro / Motoboys */
 .dropdown-filtro-wrapper {
     position: relative !important;
     display: inline-block !important;
@@ -400,27 +399,9 @@
     transform: rotate(180deg);
 }
 
-.dropdown-filtro-menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    width: 220px;
-    min-width: 0;
-    max-width: 260px;
-}
-
-.dropdown-filtro-menu.show {
-    display: block;
-    animation: fadeInDropFiltro 0.15s ease;
-}
-
 @keyframes fadeInDropFiltro {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .dropdown-filtro-item {
@@ -773,6 +754,7 @@
     color: #495057;
 }
 
+/* Cards de Status */
 .ped-status-card {
     background: #fff;
     border: 1px solid #f0f0f0;
@@ -895,11 +877,11 @@
     color: #e07080;
 }
 
+/* Cores dos Ícones de Status */
 .ped-icon-todos {
     background: #f0f0f0;
     color: #888;
 }
-
 .ped-status-action-item.active .ped-icon-todos,
 .ped-status-action-item:hover .ped-icon-todos {
     background: #e8e8e8;
@@ -910,7 +892,6 @@
     background: rgba(255, 193, 7, 0.15);
     color: #e6a800;
 }
-
 .ped-status-action-item.active .ped-icon-pendente,
 .ped-status-action-item:hover .ped-icon-pendente {
     background: rgba(255, 193, 7, 0.28);
@@ -921,7 +902,6 @@
     background: rgba(25, 118, 210, 0.12);
     color: #1976d2;
 }
-
 .ped-status-action-item.active .ped-icon-em-rota,
 .ped-status-action-item:hover .ped-icon-em-rota {
     background: rgba(25, 118, 210, 0.22);
@@ -932,7 +912,6 @@
     background: rgba(25, 135, 84, 0.12);
     color: #198754;
 }
-
 .ped-status-action-item.active .ped-icon-concluido,
 .ped-status-action-item:hover .ped-icon-concluido {
     background: rgba(25, 135, 84, 0.24);
@@ -943,7 +922,6 @@
     background: rgba(220, 53, 69, 0.10);
     color: #dc3545;
 }
-
 .ped-status-action-item.active .ped-icon-cancelado,
 .ped-status-action-item:hover .ped-icon-cancelado {
     background: rgba(220, 53, 69, 0.20);
@@ -954,13 +932,13 @@
     background: rgba(13, 202, 240, 0.12);
     color: #0dcaf0;
 }
-
 .ped-status-action-item.active .ped-icon-financeiro,
 .ped-status-action-item:hover .ped-icon-financeiro {
     background: rgba(13, 202, 240, 0.24);
     color: #0aa2c0;
 }
 
+/* Ações da Tabela (Visualizar, Editar, Excluir) */
 .btn-pedido-view,
 .btn-pedido-edit,
 .btn-pedido-delete {
@@ -995,10 +973,7 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
-
-.btn-pedido-view:hover i {
-    color: #495057;
-}
+.btn-pedido-view:hover i { color: #495057; }
 
 .btn-pedido-edit:hover {
     background: #e7f1ff;
@@ -1006,10 +981,7 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(13, 110, 253, 0.15);
 }
-
-.btn-pedido-edit:hover i {
-    color: #0d6efd;
-}
+.btn-pedido-edit:hover i { color: #0d6efd; }
 
 .btn-pedido-delete:hover {
     background: #fff5f5;
@@ -1017,40 +989,7 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(220, 53, 69, 0.15);
 }
-
-.btn-pedido-delete:hover i {
-    color: #dc3545;
-}
-
-.btn-pedido-view:active,
-.btn-pedido-edit:active,
-.btn-pedido-delete:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.btn-pedido-view:disabled,
-.btn-pedido-edit:disabled,
-.btn-pedido-delete:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-pedido-view:disabled:hover,
-.btn-pedido-edit:disabled:hover,
-.btn-pedido-delete:disabled:hover {
-    background: transparent;
-    border-color: #dee2e6;
-    box-shadow: none;
-    transform: none;
-}
-
-.btn-pedido-view:disabled:hover i,
-.btn-pedido-edit:disabled:hover i,
-.btn-pedido-delete:disabled:hover i {
-    color: #6c757d;
-}
+.btn-pedido-delete:hover i { color: #dc3545; }
 
 .btn-limpar-busca {
     position: absolute;
@@ -1085,6 +1024,7 @@
     margin-top: 4px !important;
 }
 
+/* Responsividade Mobile e Animações Especiais */
 @media (max-width: 767.98px) {
     .ped-status-action-info {
         display: none;
@@ -1125,23 +1065,19 @@
         display: flex !important;
         flex-wrap: wrap !important;
     }
-
     .row-det-cliente-info > [class*="col-"] {
         flex: 0 0 50% !important;
         max-width: 50% !important;
     }
-
     .row-det-motoboy-status,
     .row-det-valores {
         display: flex !important;
         flex-wrap: nowrap !important;
     }
-
     .row-det-motoboy-status > [class*="col-"] {
         flex: 0 0 50% !important;
         max-width: 50% !important;
     }
-
     .row-det-valores > [class*="col-"] {
         flex: 0 0 33.3333% !important;
         max-width: 33.3333% !important;
@@ -1173,4 +1109,54 @@
 .spin {
     display: inline-block;
     animation: spin 1s linear infinite;
+}
+
+/* Badges e Status Personalizados */
+.pedidos-container, .container-pedidos, .content-pedidos {
+    background-color: #f4f6f9;
+    font-family: inherit;
+}
+
+.card-stat, .pedido-metric-card, .stats-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-stat:hover, .pedido-metric-card:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+}
+
+.badge-concluido, .status-concluido {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 600;
+}
+
+.badge-areceber, .status-areceber {
+    background-color: #f59e0b !important;
+    color: #ffffff !important;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 600;
+}
+
+.badge-pendente, .status-pendente {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 600;
+}
+
+.badge-cancelado, .status-cancelado {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 600;
 }

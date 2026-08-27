@@ -4700,9 +4700,6 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
             if (typeof window.EventBus !== 'undefined')
                 window.EventBus.emit('pedido:atualizado', {
                     id: _pedidoId,
-                    id_pedido: _pedidoId,
-                    idPedido: _pedidoId,
-                    pedido_id: _pedidoId,
                     valor_final: valorFinalPedido,
                     valor_total: valorFinalPedido,
                     valor_corrida: valorFinalPedido,

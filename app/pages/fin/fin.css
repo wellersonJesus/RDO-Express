@@ -2907,3 +2907,571 @@
     font-size: 0.54rem !important;
   }
 }
+
+
+/* --- VACINA PONTUAL: FINANCEIRO & CAIXA APROVADA --- */
+:root {
+    --fin-blue: #3b82f6;
+    --fin-blue-dark: #1d4ed8;
+    --fin-green: #10b981;
+    --fin-green-dark: #047857;
+    --fin-red: #ef4444;
+    --fin-red-dark: #b91c1c;
+    --fin-yellow: #f59e0b;
+    --fin-purple: #8b5cf6;
+    --fin-bg-light: #f9fafb;
+    --fin-bg-hover: #f3f4f6;
+    --fin-border: #e5e7eb;
+}
+
+/* Card Principal RDO Pay / Caixa (Gradiente Vermelho Exato dos Mockups) */
+.rdo-pay-card, .caixa-destaque-card, .wallet-card-hero {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 50% , #881337 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(225, 29, 72, 0.25);
+    padding: 24px;
+}
+
+.rdo-pay-card h2, .rdo-pay-card .saldo-valor {
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+/* Abas de Navegação Interna (RDO / Caixa / Extrato) */
+.fin-tabs-nav, .sub-nav-tabs {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 30px;
+    display: inline-flex;
+    gap: 8px;
+}
+
+.fin-tab-btn, .sub-nav-btn {
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 600;
+    color: #4b5563;
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.fin-tab-btn.active, .sub-nav-btn.active, .fin-tab-btn:hover {
+    background-color: #e11d48;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+}
+
+/* Botões de Ação Principais (Adicionar, Transferir, Repasses, Extratos) */
+.btn-fin-action, .btn-caixa-acao {
+    background: #ffffff;
+    color: #1f2937;
+    border-radius: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: all 0.2s ease;
+}
+
+.btn-fin-action:hover {
+    background: #fdf2f4;
+    color: #e11d48;
+    border-color: #fbcfe8;
+}
+
+/* ===== VACINA ESTILIZAÇÃO RDO EXPRESS ===== */
+/* ============================================================
+   FINANCEIRO — CAMADA VISUAL
+   SOMENTE ESTILIZAÇÃO
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   ESTRUTURA
+   ------------------------------------------------------------ */
+
+#fin-tab-content-caixa,
+#fin-tab-content-extrato,
+#fin-tab-content-todos {
+    width: 100%;
+}
+
+#fin-tab-content-caixa .card,
+#fin-tab-content-extrato .card,
+#fin-tab-content-todos .card {
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+/* ------------------------------------------------------------
+   RDO PAY / SALDO
+   ------------------------------------------------------------ */
+
+.rdo-pay-top {
+    width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.rdo-pay-header {
+    border-radius: 18px 18px 0 0;
+}
+
+.rdo-pay-logo {
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+.rdo-pay-title {
+    font-weight: 700;
+}
+
+.rdo-pay-saldo-wrap {
+    padding: 20px;
+}
+
+.rdo-pay-saldo-label {
+    font-size: .76rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    opacity: .85;
+}
+
+.rdo-pay-saldo-valor {
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 800;
+}
+
+/* ------------------------------------------------------------
+   AÇÕES DO RDO PAY
+   ------------------------------------------------------------ */
+
+.rdo-pay-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px;
+}
+
+.rdo-pay-action-item {
+    min-width: 0;
+    min-height: 78px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+.rdo-pay-action-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, .06);
+}
+
+.rdo-pay-action-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.rdo-pay-action-label {
+    font-size: .72rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.rdo-pay-icon-add,
+.rdo-pay-icon-extrato,
+.rdo-pay-icon-pix,
+.rdo-pay-icon-transfer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ------------------------------------------------------------
+   CARDS DO CAIXA
+   ------------------------------------------------------------ */
+
+#caixa-card-entradas,
+#caixa-card-saidas,
+#caixa-card-registros,
+#caixa-card-saldo-total,
+#rdo-card-entradas,
+#rdo-card-saidas,
+#rdo-card-registros,
+#rdo-card-saldo-total,
+#rdo-card-colaboradores,
+#rdo-card-empresa {
+    border-radius: 14px;
+    border: 1px solid #e9ecef;
+    background: #ffffff;
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+#caixa-card-entradas:hover,
+#caixa-card-saidas:hover,
+#caixa-card-registros:hover,
+#caixa-card-saldo-total:hover,
+#rdo-card-entradas:hover,
+#rdo-card-saidas:hover,
+#rdo-card-registros:hover,
+#rdo-card-saldo-total:hover,
+#rdo-card-colaboradores:hover,
+#rdo-card-empresa:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, .06);
+}
+
+/* ------------------------------------------------------------
+   TABELA FINANCEIRA
+   ------------------------------------------------------------ */
+
+.tabela-fin-head th {
+    background: #f8f9fa;
+    color: #6b7280;
+    border-bottom: 1px solid #e9ecef;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    white-space: nowrap;
+    padding: 11px 12px;
+}
+
+#tabela-fin-todos {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+#tabela-fin-todos tbody td {
+    padding: 11px 12px;
+    vertical-align: middle;
+    border-color: #f0f1f3;
+    font-size: .84rem;
+}
+
+#tabela-fin-todos tbody tr {
+    transition: background-color .15s ease;
+}
+
+#tabela-fin-todos tbody tr:hover {
+    background: #fafafa;
+}
+
+/* ------------------------------------------------------------
+   FILTRO / BUSCA
+   ------------------------------------------------------------ */
+
+#filtro-busca-fin {
+    min-height: 40px;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    box-shadow: none;
+}
+
+#filtro-busca-fin:focus {
+    border-color: #adb5bd;
+    box-shadow: 0 0 0 .15rem rgba(0, 0, 0, .04);
+}
+
+#btn-limpar-busca-fin,
+#btn-refresh-fin,
+#btn-novo-fin,
+#btn-abrir-fluxo-extrato {
+    border-radius: 10px;
+}
+
+/* ------------------------------------------------------------
+   PAGINAÇÃO
+   ------------------------------------------------------------ */
+
+#fin-pag-prev-caixa,
+#fin-pag-next-caixa,
+#fin-pag-prev-todos,
+#fin-pag-next-todos {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 9px;
+}
+
+#fin-pag-info-caixa,
+#fin-pag-info-todos {
+    font-size: .78rem;
+    color: #6b7280;
+}
+
+/* ------------------------------------------------------------
+   EXTRATO
+   ------------------------------------------------------------ */
+
+#extrato-fluxo-overlay,
+#extrato-modal-overlay {
+    backdrop-filter: blur(3px);
+}
+
+#extrato-fluxo-body,
+#extrato-modal-body {
+    border-radius: 16px;
+}
+
+#extrato-fluxo-titulo,
+#extrato-modal-titulo {
+    font-weight: 700;
+}
+
+#extrato-lista,
+#extrato-lista-selecao {
+    border-radius: 12px;
+}
+
+/* ------------------------------------------------------------
+   MODAIS DE CAIXA
+   ------------------------------------------------------------ */
+
+#modalDetalheDia .modal-content,
+#modalPeriodoCaixa .modal-content,
+#modal-confirmar-exclusao-carteira .modal-content {
+    border: 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+#modal-detalhe-dia-titulo,
+#modal-periodo-caixa-titulo {
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------
+   BOTÕES DE CONTROLE
+   ------------------------------------------------------------ */
+
+#btn-toggle-caixa-valores,
+#btn-toggle-rdo-valores,
+#btn-relatorio-fin-caixa,
+#btn-baixar-fin-caixa,
+#btn-ver-repasses,
+#btn-buscar-periodo-caixa,
+#btn-salvar-periodo-caixa {
+    border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+    .rdo-pay-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .rdo-pay-saldo-valor {
+        font-size: 1.6rem;
+    }
+
+    .tabela-fin-head th {
+        font-size: .65rem;
+    }
+
+    #tabela-fin-todos tbody td {
+        font-size: .76rem;
+        padding: 8px;
+    }
+
+    .rdo-pay-action-item {
+        min-height: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .rdo-pay-actions {
+        gap: 7px;
+        padding: 10px;
+    }
+
+    .rdo-pay-action-item {
+        padding: 9px 5px;
+    }
+
+    .rdo-pay-action-label {
+        font-size: .66rem;
+    }
+}
+/* ===== FIM VACINA ESTILIZAÇÃO RDO EXPRESS ===== */
+
+/* ============================================================================
+   RDO EXPRESS - VACINA DE ESTILIZAÇÃO
+   ÁREA: FINANCEIRO
+   ============================================================================ */
+/* Estrutura principal */
+.fin-page,
+.financeiro-page {
+    width: 100%;
+}
+
+/* Blocos financeiros */
+.fin-page .card,
+.financeiro-page .card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+}
+
+/* Blocos de data */
+.bloco-data {
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.bloco-data-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.bloco-data-body {
+    background: #fff;
+}
+
+/* Extrato */
+.linha-extrato {
+    vertical-align: middle;
+}
+
+.hora-extrato {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.desc-extrato {
+    min-width: 0;
+}
+
+.valor-extrato {
+    white-space: nowrap;
+    font-weight: 600;
+    text-align: right;
+}
+
+/* Badges financeiros */
+.fin-badge-situacao,
+.fin-badge-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Relatório */
+.relatorio-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.relatorio-total {
+    border-top: 1px solid #e9ecef;
+}
+
+/* Campos financeiros */
+.fin-field-input {
+    border-radius: 999px;
+}
+
+/* Modais financeiros */
+.fin-page .modal-content,
+.financeiro-page .modal-content {
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+/* ============================================================================
+   FIM DA VACINA DE ESTILIZAÇÃO - FINANCEIRO
+   ============================================================================ */
+
+/* RDO EXPRESS - VACINA TEMPORÁRIA - FINANCEIRO */
+
+.fin-page .card,
+.financeiro-page .card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+}
+
+.bloco-data {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.bloco-data-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.bloco-data-body {
+    background: #fff;
+}
+
+.linha-extrato {
+    vertical-align: middle;
+}
+
+.hora-extrato {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.desc-extrato {
+    min-width: 0;
+}
+
+.valor-extrato {
+    white-space: nowrap;
+    font-weight: 600;
+    text-align: right;
+}
+
+.fin-badge-situacao,
+.fin-badge-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.relatorio-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.relatorio-total {
+    border-top: 1px solid #e9ecef;
+}
+
+.fin-field-input {
+    border-radius: 999px;
+}
+
+.fin-page .modal-content,
+.financeiro-page .modal-content {
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* FIM RDO EXPRESS - VACINA TEMPORÁRIA - FINANCEIRO */

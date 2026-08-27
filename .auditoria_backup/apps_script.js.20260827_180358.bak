@@ -1,0 +1,3150 @@
+var SECRET_KEY = "aquieumakdjdddggjrtr";
+var MASTER_PASSWORD = "$2a$10$2fNOgbcS2DTkVgQQt/a3I.8MA8kbrEEfqKiOVzWPrEEc/BVTsqzA6";
+
+var MODELO_PADRAO = [
+  '📦 Olá! Para agilizarmos o pedido, por favor preencha os dados abaixo:',
+  '',
+  'SOLICITANTE: ',
+  'CONTATO: ',
+  'HORÁRIO ESTIMADO P/ COLETA:  ',
+  'MERCADORIA: (Sacola, Coleta, Bolsa, Envelope)',
+  '',
+  'ROTA(s): Informe Rua, Número, Bairro e Cidade completos (origem e destino)',
+  '📍1. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+  '📍2. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+  '📍3. De: Rua, Número, Bairro, Cidade | Para: Rua, Número, Bairro, Cidade',
+  '',
+  'RETORNO:  (SIM /NÃO)',
+  'PRIORIDADE: (Normal, Agendado, Urgente) ',
+  'OBSERVAÇÃO: Descreva a observação aqui se necessario',
+  '',
+  '⚠️ Endereços incompletos podem atrasar o cálculo da taxa.',
+  '',
+  'Assim que enviar esta mensagem preenchida, ',
+  'calcularemos á sua taxa! 🏁'
+].join('\n');
+
+var CAMPOS_MONETARIOS = [
+  "valor_corrida", "valor_base", "taxa_espera", "valor_km",
+  "vlr_servico", "valor_total", "valor_final", "valorcorrida"
+];
+
+var ALIASES_FINANCEIRO = {
+  "situacao_pagamento": "situacao",
+  "situacaopagamento": "situacao",
+  "status_pagamento": "situacao",
+  "statuspagamento": "situacao",
+  "status": "situacao",
+  "nova_situacao": "situacao",
+  "novasituacao": "situacao",
+  "valor_total": "vlr_servico",
+  "valor_final": "vlr_servico",
+  "valor": "vlr_servico",
+  "pedido_id": "id_pedido",
+  "colaboradorid": "colaborador_id",
+  "vlrservico": "vlr_servico",
+  "motoboy": "colaborador",
+  "clienteid": "cliente_id",
+  "grupoid": "grupo_id"
+};
+
+var ALIASES_PEDIDOS = {
+  "situacao": "situacao_financeira",
+  "situacao_pagamento": "situacao_financeira",
+  "situacaopagamento": "situacao_financeira",
+  "status_pagamento": "situacao_financeira",
+  "statuspagamento": "situacao_financeira",
+  "valor_total": "valor_corrida",
+  "valor_final": "valor_corrida",
+  "valorcorrida": "valor_corrida",
+  "hora": "horario",
+  "data": "data_lancamento",
+  "data_servico": "data_pedido",
+  "data_chat": "data_pedido"
+};
+
+var CACHE_TTL_SEGUNDOS = 21600;
+
+var GEO_CIDADES_PADRAO = ["belo horizonte", "contagem", "nova lima", "betim", "vespasiano", "santa luzia", "sabara", "ibirite", "ribeirao das neves"];
+
+var acoesLeitura = ["login", "debuginfo", "heartbeat", "getusuariosonline",
+  "getpedidosrapido", "getdashboarddata",
+  "getfinanceirocompleto", "validarsenhamaster", "getmasterstatus",
+  "buscarenderecogeo", "geocodificarendereco"];
+
+
+function normalizarIdComparacao(valor) {
+  if (valor === null || valor === undefined) return null;
+  var digitos = String(valor).replace(/\D/g, "");
+  if (!digitos) return null;
+  var semZeros = digitos.replace(/^0+/, "");
+  return semZeros || "0";
+}
+
+function normalizarEnderecoParaBusca(texto) {
+  return String(texto || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function enderecoContemCidade(enderecoNorm) {
+  for (var i = 0; i < GEO_CIDADES_PADRAO.length; i++) {
+    if (enderecoNorm.indexOf(GEO_CIDADES_PADRAO[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function limparSeparadoresEndereco(enderecoOriginal) {
+  return String(enderecoOriginal || "")
+    .replace(/\s+-\s+(?=[A-Za-zÀ-ú])/g, ", ")
+    .replace(/,\s*,/g, ",")
+    .trim();
+}
+
+function completarEnderecoComCidadePadrao(enderecoOriginal) {
+  var limpo = limparSeparadoresEndereco(enderecoOriginal);
+  var norm = normalizarEnderecoParaBusca(limpo);
+  if (enderecoContemCidade(norm)) return limpo;
+  return limpo + ", Belo Horizonte, MG";
+}
+
+function processarBuscarEnderecoGeo(sheet, data) {
+  try {
+    var enderecoOriginal = String(data.endereco_original || data.endereco || "").trim();
+    if (!enderecoOriginal) return { status: "error", message: "endereco_original nao informado" };
+    var enderecoNorm = normalizarEnderecoParaBusca(enderecoOriginal);
+    var values = sheet.getDataRange().getValues();
+    if (values.length <= 1) {
+      return {
+        status: "success",
+        encontrado: false,
+        endereco_normalizado: enderecoNorm,
+        endereco_sugerido: completarEnderecoComCidadePadrao(enderecoOriginal)
+      };
+    }
+    var headers = values[0].map(function (h) { return normalizarChave(h); });
+    var idxNorm = headers.indexOf("endereco_normalizado");
+    var idxLat = headers.indexOf("lat");
+    var idxLng = headers.indexOf("lng");
+    var idxQtd = headers.indexOf("qtd_usos");
+    var idxOrigem = headers.indexOf("origem_resolucao");
+    var idxCliente = headers.indexOf("cliente_solicitante");
+    var idxId = headers.indexOf("id");
+    if (idxNorm === -1) return { status: "error", message: "coluna endereco_normalizado nao encontrada" };
+    for (var i = 1; i < values.length; i++) {
+      var valNorm = String(values[i][idxNorm] || "").trim();
+      if (valNorm === enderecoNorm) {
+        var latAtual = idxLat !== -1 ? values[i][idxLat] : "";
+        var lngAtual = idxLng !== -1 ? values[i][idxLng] : "";
+        if (!latAtual || !lngAtual) {
+          return {
+            status: "success",
+            encontrado: true,
+            precisaGeocodificar: true,
+            id: idxId !== -1 ? String(values[i][idxId]) : "",
+            endereco_normalizado: enderecoNorm,
+            endereco_sugerido: completarEnderecoComCidadePadrao(enderecoOriginal)
+          };
+        }
+        if (idxQtd !== -1) {
+          var qtdAtual = parseInt(values[i][idxQtd], 10);
+          if (isNaN(qtdAtual)) qtdAtual = 0;
+          sheet.getRange(i + 1, idxQtd + 1).setValue(qtdAtual + 1);
+        }
+        SpreadsheetApp.flush();
+        invalidarCache("enderecos_geo");
+        return {
+          status: "success",
+          encontrado: true,
+          precisaGeocodificar: false,
+          id: idxId !== -1 ? String(values[i][idxId]) : "",
+          endereco_normalizado: enderecoNorm,
+          endereco_original: enderecoOriginal,
+          lat: latAtual,
+          lng: lngAtual,
+          cliente_solicitante: idxCliente !== -1 ? String(values[i][idxCliente]) : "",
+          qtd_usos: idxQtd !== -1 ? String(values[i][idxQtd]) : "",
+          origem_resolucao: idxOrigem !== -1 ? String(values[i][idxOrigem]) : ""
+        };
+      }
+    }
+    return {
+      status: "success",
+      encontrado: false,
+      endereco_normalizado: enderecoNorm,
+      endereco_original: enderecoOriginal,
+      endereco_sugerido: completarEnderecoComCidadePadrao(enderecoOriginal)
+    };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarBuscarEnderecoGeo: " + err.toString() };
+  }
+}
+
+function processarSalvarEnderecoGeo(sheet, data) {
+  try {
+    var enderecoOriginal = String(data.endereco_original || data.endereco || "").trim();
+    if (!enderecoOriginal) return { status: "error", message: "endereco_original nao informado" };
+    var enderecoNorm = normalizarEnderecoParaBusca(enderecoOriginal);
+
+    var lat = _normalizarCoordenadaParaSalvar(data.lat);
+    var lng = _normalizarCoordenadaParaSalvar(data.lng);
+
+    var clienteSolicitante = String(data.cliente_solicitante || data.cliente || "").trim();
+    var origemResolucao = String(data.origem_resolucao || "geocodificado").trim();
+    var values = sheet.getDataRange().getValues();
+    var headers = values.length > 0
+      ? values[0].map(function (h) { return normalizarChave(h); })
+      : ["id", "endereco_normalizado", "endereco_original", "lat", "lng", "cliente_solicitante", "qtd_usos", "origem_resolucao"];
+    var idxNorm = headers.indexOf("endereco_normalizado");
+    var idxLat = headers.indexOf("lat");
+    var idxLng = headers.indexOf("lng");
+    var idxQtd = headers.indexOf("qtd_usos");
+    var idxOrigem = headers.indexOf("origem_resolucao");
+    var idxCliente = headers.indexOf("cliente_solicitante");
+    var idxId = headers.indexOf("id");
+
+    if (idxNorm !== -1) {
+      for (var i = 1; i < values.length; i++) {
+        var valNorm = String(values[i][idxNorm] || "").trim();
+        if (valNorm === enderecoNorm) {
+          if (idxLat !== -1 && lat) escreverComoTexto(sheet, i + 1, idxLat + 1, lat);
+          if (idxLng !== -1 && lng) escreverComoTexto(sheet, i + 1, idxLng + 1, lng);
+          if (idxOrigem !== -1) sheet.getRange(i + 1, idxOrigem + 1).setValue(origemResolucao);
+          if (idxQtd !== -1) {
+            var qtdAtual = parseInt(values[i][idxQtd], 10);
+            if (isNaN(qtdAtual)) qtdAtual = 0;
+            sheet.getRange(i + 1, idxQtd + 1).setValue(qtdAtual + 1);
+          }
+          SpreadsheetApp.flush();
+          invalidarCache("enderecos_geo");
+          return {
+            status: "success",
+            message: "Endereco atualizado com coordenadas!",
+            id: idxId !== -1 ? String(values[i][idxId]) : "",
+            atualizado: true
+          };
+        }
+      }
+    }
+
+    var id = gerarId(sheet, "enderecos_geo");
+    var rowData = {
+      id: id,
+      endereco_normalizado: enderecoNorm,
+      endereco_original: enderecoOriginal,
+      lat: lat,
+      lng: lng,
+      cliente_solicitante: clienteSolicitante,
+      qtd_usos: "1",
+      origem_resolucao: origemResolucao
+    };
+    var row = [];
+    for (var h = 0; h < headers.length; h++) {
+      var campo = headers[h];
+      row.push(rowData[campo] !== undefined ? rowData[campo] : "");
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+
+    var novaLinha = sheet.getLastRow();
+    if (idxLat !== -1 && lat) escreverComoTexto(sheet, novaLinha, idxLat + 1, lat);
+    if (idxLng !== -1 && lng) escreverComoTexto(sheet, novaLinha, idxLng + 1, lng);
+    SpreadsheetApp.flush();
+
+    invalidarCache("enderecos_geo");
+    return { status: "success", message: "Endereco criado com sucesso!", id: id, atualizado: false };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarSalvarEnderecoGeo: " + err.toString() };
+  }
+}
+
+function corrigirCoordenadasCorrompidas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = buscarAba(ss, "enderecos_geo");
+  if (!sheet) { Logger.log("Aba nao encontrada"); return; }
+
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idxLat = headers.indexOf("lat");
+  var idxLng = headers.indexOf("lng");
+  if (idxLat === -1 || idxLng === -1) { Logger.log("Colunas lat/lng nao encontradas"); return; }
+
+  var corrigidos = 0;
+
+  function _corrigirValor(valor) {
+    if (valor === "" || valor === null || valor === undefined) return null;
+    var num = parseFloat(String(valor).toString().replace(",", "."));
+    if (isNaN(num)) return null;
+    if (Math.abs(num) > 180) {
+      var str = String(Math.trunc(num));
+      var negativo = str.indexOf("-") === 0;
+      var digitos = negativo ? str.slice(1) : str;
+      var parteInteira = digitos.slice(0, 2);
+      var parteDecimal = digitos.slice(2);
+      num = parseFloat((negativo ? "-" : "") + parteInteira + "." + parteDecimal);
+    }
+    return isNaN(num) ? null : num;
+  }
+
+  for (var i = 1; i < values.length; i++) {
+    var latBruto = values[i][idxLat];
+    var lngBruto = values[i][idxLng];
+    var latCorrigido = _corrigirValor(latBruto);
+    var lngCorrigido = _corrigirValor(lngBruto);
+
+    if (latCorrigido !== null) {
+      escreverComoTexto(sheet, i + 1, idxLat + 1, latCorrigido.toString());
+    }
+    if (lngCorrigido !== null) {
+      escreverComoTexto(sheet, i + 1, idxLng + 1, lngCorrigido.toString());
+    }
+    if (latCorrigido !== null || lngCorrigido !== null) corrigidos++;
+  }
+
+  SpreadsheetApp.flush();
+  invalidarCache("enderecos_geo");
+  Logger.log("Linhas corrigidas: " + corrigidos);
+}
+
+function _normalizarCoordenadaParaSalvar(valorBruto) {
+  if (valorBruto === undefined || valorBruto === null || valorBruto === "") return "";
+  var num = parseFloat(String(valorBruto).replace(",", "."));
+  if (isNaN(num)) return "";
+  return num.toString();
+}
+
+function _chaveCache(nomeAba) {
+  return "CACHE_ABA_" + String(nomeAba).toLowerCase().trim();
+}
+
+function invalidarCache(nomeAba) {
+  try {
+    CacheService.getScriptCache().remove(_chaveCache(nomeAba));
+  } catch (err) {
+    console.error("Erro ao invalidar cache de '" + nomeAba + "': " + err.toString());
+  }
+}
+
+function obterUltimaAtualizacaoAba(sheet) {
+  try {
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow <= 1) return "";
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+      return normalizarChave(h);
+    });
+    var colUpdated = headers.indexOf("updated_at");
+    if (colUpdated === -1) return String(lastRow);
+    var valores = sheet.getRange(2, colUpdated + 1, lastRow - 1, 1).getValues();
+    var maior = "";
+    for (var i = 0; i < valores.length; i++) {
+      var v = String(valores[i][0] || "");
+      if (v > maior) maior = v;
+    }
+    return maior + "_" + lastRow;
+  } catch (err) {
+    return "";
+  }
+}
+
+function processarGetComCache(sheet, nomeAba) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var chave = _chaveCache(nomeAba);
+    var forcarBypass = nomeAba === "usuarios";
+    if (!forcarBypass) {
+      var ultimoUpdate = obterUltimaAtualizacaoAba(sheet);
+      var cacheado = cache.get(chave);
+      if (cacheado) {
+        var envelope = JSON.parse(cacheado);
+        if (envelope.ultimo_update === ultimoUpdate) {
+          return { status: "success", data: envelope.data, cache: true };
+        }
+      }
+    }
+    var dados = processarGet(sheet);
+    if (!forcarBypass) {
+      try {
+        cache.put(chave, JSON.stringify({ ultimo_update: ultimoUpdate, data: dados }), CACHE_TTL_SEGUNDOS);
+      } catch (errPut) {
+        console.error("Falha ao gravar cache de '" + nomeAba + "': " + errPut.toString());
+      }
+    }
+    return { status: "success", data: dados, cache: false };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetComCache: " + err.toString() };
+  }
+}
+
+function normalizarChave(str) {
+  return String(str || "")
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s\/]+/g, '_');
+}
+
+function ehCampoMonetario(chave) {
+  return CAMPOS_MONETARIOS.indexOf(chave) !== -1;
+}
+
+function timestampAtual() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+}
+
+function formatarMoeda(valor) {
+  if (valor === null || valor === undefined || valor === "") return "";
+  var texto = String(valor).trim();
+  if (texto === "") return "";
+  if (/^R\$\s*-?\d/.test(texto)) return texto;
+  var limpo = texto.replace(/[^\d,.\-]/g, "");
+  if (limpo === "") return "";
+  var negativo = limpo.indexOf("-") === 0;
+  limpo = limpo.replace("-", "");
+  var numero;
+  if (limpo.indexOf(",") !== -1) {
+    limpo = limpo.replace(/\./g, "").replace(",", ".");
+    numero = parseFloat(limpo);
+  } else {
+    numero = parseFloat(limpo);
+  }
+  if (isNaN(numero)) return texto;
+  var formatado = numero.toFixed(2).replace(".", ",");
+  var partes = formatado.split(",");
+  var inteiro = partes[0];
+  var decimal = partes[1];
+  var comMilhares = "";
+  var contador = 0;
+  for (var i = inteiro.length - 1; i >= 0; i--) {
+    comMilhares = inteiro.charAt(i) + comMilhares;
+    contador++;
+    if (contador % 3 === 0 && i !== 0) {
+      comMilhares = "." + comMilhares;
+    }
+  }
+  return (negativo ? "-" : "") + "R$ " + comMilhares + "," + decimal;
+}
+
+function testarPermissaoFetch() {
+  var resp = UrlFetchApp.fetch("https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=Rua Curitiba, Belo Horizonte");
+  Logger.log(resp.getContentText());
+}
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return responder({ status: "error", message: "Payload vazio" });
+    }
+    var data;
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (err) {
+      return responder({ status: "error", message: "JSON invalido: " + err.toString() });
+    }
+    var action = String(data.action || "").toLowerCase().trim();
+    if (!action) {
+      return responder({ status: "error", message: "Nenhuma acao informada" });
+    }
+    if (action.indexOf("del") === 0 && action.indexOf("delete") !== 0) {
+      action = "delete" + action.substring(3);
+    }
+    if (action.indexOf("create") === 0) {
+      action = "criar" + action.substring(6);
+    }
+    if (action.indexOf("list") === 0) {
+      action = "get" + action.substring(4);
+    }
+    if (action.indexOf("edit") === 0) {
+      action = "update" + action.substring(4);
+    }
+
+    var precisaLock = acoesLeitura.indexOf(action) === -1 && action.indexOf("get") !== 0;
+
+    if (!precisaLock) {
+      return processarAcaoSemLock(action, data);
+    }
+
+    var lock = LockService.getScriptLock();
+    var temLock = false;
+    try {
+      temLock = lock.tryLock(5000);
+      if (!temLock) {
+        return responder({ status: "error", ocupado: true, message: "Sistema ocupado, tente novamente em alguns segundos." });
+      }
+      return processarAcaoComLock(action, data);
+    } finally {
+      if (temLock) lock.releaseLock();
+    }
+  } catch (err) {
+    console.error("[doPost] Erro interno: " + err.toString() + " | Stack: " + (err.stack || "n/a"));
+    return responder({ status: "error", message: "Erro interno: " + err.toString(), stack: err.stack || "n/a" });
+  }
+}
+
+function doGet(e) {
+  try {
+    var params = e && e.parameter ? e.parameter : {};
+    var action = String(params.action || "").toLowerCase().trim();
+
+    if (!action) {
+      return responder({ status: "error", message: "Nenhuma acao informada" });
+    }
+    if (!params.apiKey || params.apiKey !== SECRET_KEY) {
+      return responder({ status: "error", message: "Acesso Negado" });
+    }
+
+    return processarAcaoSemLock(action, params);
+  } catch (err) {
+    console.error("[doGet] Erro interno: " + err.toString());
+    return responder({ status: "error", message: "Erro interno: " + err.toString() });
+  }
+}
+
+function processarAcaoSemLock(action, data) {
+  if (action === "login") {
+    return responder(processarLogin(data.username, data.password));
+  }
+  if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+    return responder({ status: "error", message: "Acesso Negado" });
+  }
+  if (action === "getmasterstatus") {
+    return responder(processarGetMasterStatus());
+  }
+  var ss;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (errSS) {
+    return responder({ status: "error", message: "Erro ao abrir planilha: " + errSS.toString() });
+  }
+  if (action === "debuginfo") {
+    var abaPed = buscarAba(ss, "pedidos");
+    var abaFin = buscarAba(ss, "financeiro");
+    return responder({
+      status: "success",
+      spreadsheet_id: ss.getId(),
+      spreadsheet_url: ss.getUrl(),
+      aba_pedidos_linhas: abaPed ? abaPed.getLastRow() : "aba nao encontrada",
+      aba_financeiro_linhas: abaFin ? abaFin.getLastRow() : "aba nao encontrada"
+    });
+  }
+  if (action === "heartbeat") {
+    var sheetUsuariosHb = buscarAba(ss, "usuarios");
+    return responder(processarHeartbeat(sheetUsuariosHb, data.username));
+  }
+  if (action === "getusuariosonline") {
+    var sheetUsuariosOn = buscarAba(ss, "usuarios");
+    return responder(processarGetUsuariosOnline(sheetUsuariosOn));
+  }
+  if (action === "getpedidosrapido") {
+    var sheetPedRapido = buscarAba(ss, "pedidos");
+    if (!sheetPedRapido) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
+    return responder(processarGetPedidosRapido(sheetPedRapido));
+  }
+  if (action === "getdashboarddata") {
+    return responder(processarGetDashboardData(ss));
+  }
+  if (action === "getfinanceirocompleto") {
+    return responder(processarGetFinanceiroCompleto());
+  }
+  if (action === "validarsenhamaster") {
+    return responder(processarValidarSenhaMaster(data.senha));
+  }
+  if (action === "buscarenderecogeo") {
+    var sheetEndBusca = buscarAba(ss, "enderecos_geo");
+    if (!sheetEndBusca) return responder({ status: "error", message: "Aba 'enderecos_geo' nao encontrada" });
+    return responder(processarBuscarEnderecoGeo(sheetEndBusca, data));
+  }
+  if (action === "geocodificarendereco") {
+    return responder(processarGeocodificarEndereco(data));
+  }
+
+  if (action.indexOf("get") === 0) {
+    var entidade = extrairEntidade(action);
+    var nomeAba = mapearEntidade(entidade);
+    var sheet = buscarAba(ss, nomeAba);
+    if (!sheet) {
+      return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
+    }
+    return responder(processarGetComCache(sheet, nomeAba));
+  }
+
+  return responder({ status: "error", message: "Acao nao suportada (sem lock): " + action });
+}
+
+function processarAcaoComLock(action, data) {
+  if (!data.apiKey || data.apiKey !== SECRET_KEY) {
+    return responder({ status: "error", message: "Acesso Negado" });
+  }
+  if (action === "updatemasterstatus") {
+    return responder(processarUpdateMasterStatus(data));
+  }
+  var ss;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (errSS) {
+    return responder({ status: "error", message: "Erro ao abrir planilha: " + errSS.toString() });
+  }
+  if (action === "criarpedido") {
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    if (!sheetPedidos) return responder({ status: "error", message: "Aba 'pedidos' nao encontrada" });
+    return responder(processarCriarPedido(sheetPedidos, data));
+  }
+  if (action === "criarchat" || action === "addchat" || action === "savechat") {
+    return responder({ status: "error", message: "Acao bloqueada. O chat e criado automaticamente junto com o pedido." });
+  }
+  if (action === "deletechat") {
+    return responder(processarDeleteChat(ss, data));
+  }
+  if (action === "excluirpedidocompleto") {
+    return responder(processarExclusaoCompleta(ss, data));
+  }
+  if (action === "salvarrelatoriofinanceiro" || action === "addrelatoriofinanceiro" || action === "criarrelatoriofinanceiro") {
+    var sheetRelFin = buscarAba(ss, "relatorios");
+    if (!sheetRelFin) return responder({ status: "error", message: "Aba 'relatorios' nao encontrada" });
+    return responder(processarSalvarRelatorioFinanceiro(sheetRelFin, data));
+  }
+  if (action === "salvarextrato" || action === "addextrato" || action === "criarextrato") {
+    var sheetExt = buscarAba(ss, "extratos");
+    if (!sheetExt) return responder({ status: "error", message: "Aba 'extratos' nao encontrada" });
+    return responder(processarSalvarExtrato(sheetExt, data));
+  }
+  if (action === "salvarenderecogeo" || action === "criarenderecogeo") {
+    var sheetEndSalvar = buscarAba(ss, "enderecos_geo");
+    if (!sheetEndSalvar) return responder({ status: "error", message: "Aba 'enderecos_geo' nao encontrada" });
+    var resEnd = processarSalvarEnderecoGeo(sheetEndSalvar, data);
+    if (resEnd.status === "success") invalidarCache("enderecos_geo");
+    return responder(resEnd);
+  }
+
+  var entidade = extrairEntidade(action);
+  var nomeAba = mapearEntidade(entidade);
+  var sheet = buscarAba(ss, nomeAba);
+  if (!sheet) {
+    return responder({ status: "error", message: "Aba nao encontrada: '" + nomeAba + "' (action: " + action + ")" });
+  }
+  if (action.indexOf("add") === 0 || action.indexOf("save") === 0 || action.indexOf("criar") === 0) {
+    var resAdd = processarAdd(sheet, data, nomeAba);
+    if (resAdd.status === "success") invalidarCache(nomeAba);
+    return responder(resAdd);
+  }
+  if (action.indexOf("update") === 0) {
+    var resUpd = processarUpdateComSincronia(ss, sheet, nomeAba, data);
+    if (resUpd.status === "success" || resUpd.status === "partial_error") {
+      invalidarCache(nomeAba);
+      invalidarCache("pedidos");
+      invalidarCache("financeiro");
+      invalidarCache("chat");
+    }
+    return responder(resUpd);
+  }
+  if (action.indexOf("delete") === 0) {
+    if (nomeAba === "pedidos") {
+      var resExc = processarExclusaoCompleta(ss, { id: data.id, senha_master: "SKIP" });
+      invalidarCache("pedidos");
+      invalidarCache("chat");
+      return responder(resExc);
+    }
+    var resDel = processarDelete(sheet, data.id);
+    if (resDel.status === "success") invalidarCache(nomeAba);
+    return responder(resDel);
+  }
+  return responder({ status: "error", message: "Acao nao suportada (com lock): " + action });
+}
+
+function processarGetMasterStatus() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var ativo = props.getProperty("master_active") === "true";
+    var atualizadoEm = props.getProperty("master_updated_at") || "";
+    return { status: "success", ativo: ativo, updated_at: atualizadoEm };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetMasterStatus: " + err.toString() };
+  }
+}
+
+function processarUpdateMasterStatus(data) {
+  try {
+    var valorBruto = data.ativo;
+    var novoValor = valorBruto === true || String(valorBruto).trim().toLowerCase() === "true";
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty("master_active", novoValor ? "true" : "false");
+    props.setProperty("master_updated_at", timestampAtual());
+    return {
+      status: "success",
+      ativo: novoValor,
+      message: "Status master atualizado para " + (novoValor ? "ATIVO" : "INATIVO") + "."
+    };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarUpdateMasterStatus: " + err.toString() };
+  }
+}
+
+function processarGetPedidosRapido(sheet) {
+  try {
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow <= 1) return { status: "success", data: [], total: 0 };
+    var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    var headers = range[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var resultado = [];
+    for (var i = 1; i < range.length; i++) {
+      var obj = {};
+      for (var j = 0; j < headers.length; j++) {
+        if (headers[j] === "") continue;
+        var campoNorm = normalizarChave(headers[j]);
+        var valor = converterValorCelula(range[i][j]);
+        if (ehCampoMonetario(campoNorm) && valor !== "") {
+          valor = formatarMoeda(valor);
+        }
+        obj[headers[j]] = valor;
+      }
+      resultado.push(obj);
+    }
+    return { status: "success", data: resultado, total: resultado.length };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetPedidosRapido: " + err.toString() };
+  }
+}
+
+function processarUpdateComSincronia(ss, sheet, nomeAba, data) {
+  try {
+    var aliases = nomeAba === "financeiro" ? ALIASES_FINANCEIRO :
+      nomeAba === "pedidos" ? ALIASES_PEDIDOS : {};
+    var resultadoUpdate = processarUpdate(sheet, data, aliases);
+
+    if (nomeAba === "financeiro" &&
+      (resultadoUpdate.status === "success" || resultadoUpdate.status === "partial_error")) {
+
+      var chaveIdPedido = null;
+      var chavesRecebidas = Object.keys(data);
+      for (var k = 0; k < chavesRecebidas.length; k++) {
+        var norm = normalizarChave(chavesRecebidas[k]);
+        if (norm === "id_pedido" || norm === "pedido_id") chaveIdPedido = chavesRecebidas[k];
+      }
+
+      var idPedidoRelacionado = chaveIdPedido ? data[chaveIdPedido] : "";
+      if (!idPedidoRelacionado) {
+        idPedidoRelacionado = buscarIdPedidoNoFinanceiro(sheet, data.id);
+      }
+
+      if (idPedidoRelacionado) {
+        var camposParaSincronizar = {};
+        for (var kk = 0; kk < chavesRecebidas.length; kk++) {
+          var chaveOriginal = chavesRecebidas[kk];
+          if (["id", "apiKey", "action", "updated_at", "id_pedido", "pedido_id"].indexOf(chaveOriginal) !== -1) continue;
+          var normKK = normalizarChave(chaveOriginal);
+          var alvoKK = ALIASES_FINANCEIRO[normKK] || normKK;
+          camposParaSincronizar[alvoKK] = data[chaveOriginal];
+        }
+
+        var syncOk = sincronizarCamposFinanceiroComPedido(ss, idPedidoRelacionado, camposParaSincronizar);
+        resultadoUpdate.sincronizadoComPedido = syncOk;
+        resultadoUpdate.idPedidoSincronizado = idPedidoRelacionado;
+
+        var syncChatOk = sincronizarChatComFinanceiro(ss, idPedidoRelacionado, camposParaSincronizar);
+        resultadoUpdate.sincronizadoComChat = syncChatOk;
+      } else {
+        resultadoUpdate.sincronizadoComPedido = false;
+        resultadoUpdate.avisoSincronizacao = "id_pedido nao encontrado para vincular com 'pedidos'";
+      }
+    }
+
+    if (nomeAba === "pedidos" &&
+      (resultadoUpdate.status === "success" || resultadoUpdate.status === "partial_error")) {
+      var chavesRecebidasPed = Object.keys(data);
+      var chaveStatusPed = null;
+      for (var kp = 0; kp < chavesRecebidasPed.length; kp++) {
+        var normPed = normalizarChave(chavesRecebidasPed[kp]);
+        if (normPed === "status") chaveStatusPed = chavesRecebidasPed[kp];
+      }
+      if (chaveStatusPed !== null) {
+        var statusValor = String(data[chaveStatusPed] || "")
+          .trim()
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        if (statusValor === "CANCELADO") {
+          data["_forcarSituacaoFinanceira"] = "CANCELADO";
+        }
+        if (statusValor === "CONCLUIDO") {
+          _criarLancamentoFinanceiroAutomatico(ss, data.id);
+        }
+      }
+
+      var camposParaFin = {};
+      for (var kf = 0; kf < chavesRecebidasPed.length; kf++) {
+        var chaveOrigPed = chavesRecebidasPed[kf];
+        if (["id", "apiKey", "action", "updated_at"].indexOf(chaveOrigPed) !== -1) continue;
+        var normPedKF = normalizarChave(chaveOrigPed);
+        var alvoPedKF = ALIASES_PEDIDOS[normPedKF] || normPedKF;
+        if (["situacao_financeira", "valor_corrida", "motoboy", "colaborador_id", "observacao"].indexOf(alvoPedKF) !== -1) {
+          camposParaFin[alvoPedKF] = data[chaveOrigPed];
+        }
+      }
+      if (data["_forcarSituacaoFinanceira"]) {
+        camposParaFin["situacao_financeira"] = data["_forcarSituacaoFinanceira"];
+      }
+
+      if (Object.keys(camposParaFin).length > 0) {
+        var syncOkPed = sincronizarCamposPedidoComFinanceiro(ss, data.id, camposParaFin);
+        resultadoUpdate.sincronizadoComFinanceiro = syncOkPed;
+      }
+    }
+
+    return resultadoUpdate;
+  } catch (err) {
+    return { status: "error", message: "Erro em processarUpdateComSincronia: " + err.toString() };
+  }
+}
+
+function _criarLancamentoFinanceiroAutomatico(ss, idPedido) {
+  try {
+    var diagnostico = [];
+
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    var sheetFin = buscarAba(ss, "financeiro");
+    var sheetColab = buscarAba(ss, "colaboradores");
+
+    if (!sheetPedidos) throw new Error("Aba 'pedidos' nao encontrada.");
+    if (!sheetFin) throw new Error("Aba 'financeiro' nao encontrada.");
+    if (!sheetColab) throw new Error("Aba 'colaboradores' nao encontrada.");
+
+    var valoresPedidos = sheetPedidos.getDataRange().getValues();
+
+    if (!valoresPedidos || valoresPedidos.length === 0) {
+      throw new Error("Aba 'pedidos' sem dados.");
+    }
+
+    var headersPed = valoresPedidos[0].map(function(h) {
+      return normalizarChave(h);
+    });
+
+    var idxIdPed = headersPed.indexOf("id");
+
+    if (idxIdPed === -1) {
+      throw new Error("Coluna 'id' nao encontrada na aba 'pedidos'.");
+    }
+
+    var idBuscado = String(idPedido || "").trim().toUpperCase();
+
+    if (!idBuscado) {
+      throw new Error("idPedido nao informado.");
+    }
+
+    var idBuscadoNum = normalizarIdComparacao(idBuscado);
+    var pedido = null;
+
+    for (var i = 1; i < valoresPedidos.length; i++) {
+      var idCell = String(valoresPedidos[i][idxIdPed] || "")
+        .trim()
+        .toUpperCase();
+
+      var idCellNum = normalizarIdComparacao(idCell);
+
+      if (
+        idCell === idBuscado ||
+        (
+          idBuscadoNum !== null &&
+          idCellNum === idBuscadoNum
+        )
+      ) {
+        pedido = {};
+
+        for (var h = 0; h < headersPed.length; h++) {
+          pedido[headersPed[h]] = valoresPedidos[i][h];
+        }
+
+        break;
+      }
+    }
+
+    if (!pedido) {
+      throw new Error(
+        "Pedido nao encontrado na aba 'pedidos'. idPedido=" + idBuscado
+      );
+    }
+
+    var idPedidoReal = String(pedido.id || "").trim();
+
+    if (!idPedidoReal) {
+      throw new Error("Pedido encontrado, mas a coluna 'id' esta vazia.");
+    }
+
+    var statusTexto = String(pedido.status || "")
+      .trim()
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    diagnostico.push("id_pedido=" + idPedidoReal);
+    diagnostico.push("status=" + statusTexto);
+    diagnostico.push("valor_corrida=" + JSON.stringify(pedido.valor_corrida));
+    diagnostico.push("motoboy=" + JSON.stringify(pedido.motoboy));
+
+    if (
+      statusTexto !== "CONCLUIDO" &&
+      statusTexto !== "FINALIZADO"
+    ) {
+      throw new Error(
+        "Pedido ainda nao esta concluido/finalizado. " +
+        "status recebido=" + JSON.stringify(pedido.status)
+      );
+    }
+
+    var motoboyRef = String(pedido.motoboy || "").trim();
+
+    if (!motoboyRef) {
+      throw new Error(
+        "Pedido concluido, mas o campo 'motoboy' esta vazio."
+      );
+    }
+
+    var valorCorrida = pedido.valor_corrida;
+
+    if (
+      valorCorrida === undefined ||
+      valorCorrida === null ||
+      String(valorCorrida).trim() === ""
+    ) {
+      throw new Error(
+        "Pedido concluido, mas 'valor_corrida' esta vazio."
+      );
+    }
+
+    if (_lancamentoFinanceiroJaExiste(sheetFin, idPedidoReal)) {
+      diagnostico.push(
+        "lancamento_financeiro_existente=true"
+      );
+
+      Logger.log(
+        "[FINANCEIRO] Lancamento ja existe. " +
+        diagnostico.join(" | ")
+      );
+
+      return {
+        status: "success",
+        sucesso: true,
+        ja_existia: true,
+        id_pedido: idPedidoReal,
+        tipo: "entrada",
+        diagnostico: diagnostico
+      };
+    }
+
+    var valoresColab = sheetColab.getDataRange().getValues();
+
+    var headersColab = valoresColab[0].map(function(h) {
+      return normalizarChave(h);
+    });
+
+    var idxIdColab = headersColab.indexOf("id");
+    var idxUsernameColab = headersColab.indexOf("username");
+    var idxNomeColab = headersColab.indexOf("colaborador");
+
+    var nomeColaborador = motoboyRef;
+    var colaboradorId = "";
+    var motoboyRefUpper = motoboyRef.toUpperCase();
+
+    for (var c = 1; c < valoresColab.length; c++) {
+      var idColabCell =
+        idxIdColab !== -1
+          ? String(valoresColab[c][idxIdColab] || "")
+              .trim()
+              .toUpperCase()
+          : "";
+
+      var usernameCell =
+        idxUsernameColab !== -1
+          ? String(valoresColab[c][idxUsernameColab] || "")
+              .trim()
+              .toUpperCase()
+          : "";
+
+      if (
+        idColabCell === motoboyRefUpper ||
+        usernameCell === motoboyRefUpper
+      ) {
+        colaboradorId =
+          idxIdColab !== -1
+            ? String(valoresColab[c][idxIdColab] || "")
+            : "";
+
+        nomeColaborador =
+          idxNomeColab !== -1 &&
+          valoresColab[c][idxNomeColab]
+            ? String(valoresColab[c][idxNomeColab])
+            : motoboyRef;
+
+        break;
+      }
+    }
+
+    var dataLanc = normalizarDataStr(
+      pedido.data_pedido ||
+      pedido.data_lancamento ||
+      ""
+    );
+
+    var horarioPedido = String(
+      pedido.horario ||
+      pedido.hora ||
+      ""
+    ).trim();
+
+    if (!horarioPedido) {
+      horarioPedido = Utilities.formatDate(
+        new Date(),
+        Session.getScriptTimeZone(),
+        "HH:mm"
+      );
+    }
+
+    var mercadoria = String(
+      pedido.mercadoria || ""
+    ).trim();
+
+    var de = String(
+      pedido.de || ""
+    ).trim();
+
+    var para = String(
+      pedido.para ||
+      pedido.destino ||
+      pedido.endereco_destino ||
+      ""
+    ).trim();
+
+    var descricaoInterpolada = "";
+
+    if (mercadoria && de && para) {
+      descricaoInterpolada =
+        mercadoria +
+        " de " +
+        de +
+        " para " +
+        para;
+    } else if (mercadoria && para) {
+      descricaoInterpolada =
+        mercadoria +
+        " para " +
+        para;
+    } else {
+      descricaoInterpolada =
+        mercadoria ||
+        "Pedido " + idPedidoReal;
+    }
+
+    var payloadFinanceiro = {
+      id_pedido: idPedidoReal,
+      colaborador: nomeColaborador,
+      colaborador_id: colaboradorId,
+      vlr_servico: valorCorrida,
+      data_lancamento: dataLanc,
+      hora: horarioPedido,
+
+      tipo: "entrada",
+      grupo: "corrida",
+
+      descricao: descricaoInterpolada,
+
+      observacao:
+        "Pedido concluído automaticamente",
+
+      cliente_id:
+        pedido.id_cliente || "",
+
+      cliente:
+        pedido.solicitante || "",
+
+      situacao: "CONCLUIDO"
+    };
+
+    diagnostico.push(
+      "payload.tipo=" +
+      JSON.stringify(payloadFinanceiro.tipo)
+    );
+
+    diagnostico.push(
+      "payload.grupo=" +
+      JSON.stringify(payloadFinanceiro.grupo)
+    );
+
+    diagnostico.push(
+      "payload.vlr_servico=" +
+      JSON.stringify(payloadFinanceiro.vlr_servico)
+    );
+
+    diagnostico.push(
+      "payload.id_pedido=" +
+      JSON.stringify(payloadFinanceiro.id_pedido)
+    );
+
+    Logger.log(
+      "[FINANCEIRO] Criando lancamento: " +
+      diagnostico.join(" | ")
+    );
+
+    var resultado = processarAdd(
+      sheetFin,
+      payloadFinanceiro,
+      "financeiro"
+    );
+
+    var sucesso =
+      resultado &&
+      (
+        resultado.status === "success" ||
+        resultado.sucesso === true
+      );
+
+    if (!sucesso) {
+      throw new Error(
+        "processarAdd nao confirmou sucesso. Resultado=" +
+        JSON.stringify(resultado)
+      );
+    }
+
+    SpreadsheetApp.flush();
+    invalidarCache("financeiro");
+
+    Logger.log(
+      "[FINANCEIRO] Lancamento criado com sucesso. " +
+      diagnostico.join(" | ")
+    );
+
+    return {
+      status: "success",
+      sucesso: true,
+      id_pedido: idPedidoReal,
+      tipo: "entrada",
+      grupo: "corrida",
+      vlr_servico: valorCorrida,
+      resultado: resultado,
+      diagnostico: diagnostico
+    };
+
+  } catch (err) {
+
+    var mensagem =
+      "ERRO FINANCEIRO AUTOMATICO: " +
+      err.toString();
+
+    Logger.log(mensagem);
+
+    return {
+      status: "error",
+      sucesso: false,
+      message: mensagem,
+      erro: err.toString(),
+      stack: err.stack || "",
+      id_pedido: String(idPedido || ""),
+      diagnostico: diagnostico || []
+    };
+  }
+}
+
+function processarAdd(sheet, data, entity) {
+  try {
+    if (!sheet || !data || !entity) {
+      return {
+        status: "error",
+        sucesso: false,
+        erro: "Parâmetros inválidos para processarAdd"
+      };
+    }
+
+    var dataNorm = normalizarDadosPorEntidade(
+      data,
+      entity
+    );
+
+    if (
+      !dataNorm ||
+      typeof dataNorm !== "object"
+    ) {
+      return {
+        status: "error",
+        sucesso: false,
+        erro: "Não foi possível normalizar os dados"
+      };
+    }
+
+    if (entity === "financeiro") {
+
+      dataNorm.tipo = "entrada";
+
+      if (!dataNorm.grupo) {
+        dataNorm.grupo = "corrida";
+      }
+
+      if (!dataNorm.situacao) {
+        dataNorm.situacao = "CONCLUIDO";
+      }
+
+      var idPedidoNovo =
+        dataNorm.id_pedido ||
+        dataNorm.idPedido ||
+        dataNorm.pedido_id ||
+        dataNorm.numero_servico ||
+        dataNorm.numeroServico ||
+        "";
+
+      idPedidoNovo =
+        String(idPedidoNovo || "").trim();
+
+      if (idPedidoNovo) {
+
+        var idExistente =
+          _buscarIdFinanceiroPorPedido(
+            sheet,
+            idPedidoNovo
+          );
+
+        if (idExistente) {
+
+          var dadosUpdate =
+            Object.assign({}, dataNorm);
+
+          delete dadosUpdate.id;
+          delete dadosUpdate.id_financeiro;
+          delete dadosUpdate.id_pedido;
+          delete dadosUpdate.idPedido;
+          delete dadosUpdate.pedido_id;
+
+          dadosUpdate.tipo = "entrada";
+
+          if (!dadosUpdate.grupo) {
+            dadosUpdate.grupo = "corrida";
+          }
+
+          var resultadoUpdate =
+            processarUpdate(
+              sheet,
+              dadosUpdate,
+              ALIASES_FINANCEIRO
+            );
+
+          if (
+            resultadoUpdate &&
+            (
+              resultadoUpdate.status === "success" ||
+              resultadoUpdate.sucesso === true
+            )
+          ) {
+            invalidarCache("financeiro");
+
+            return {
+              status: "success",
+              sucesso: true,
+              atualizado: true,
+              id_pedido: idPedidoNovo,
+              tipo: "entrada",
+              grupo: "corrida",
+              resultado: resultadoUpdate
+            };
+          }
+
+          return {
+            status: "error",
+            sucesso: false,
+            erro:
+              "Falha ao atualizar lançamento financeiro existente.",
+            resultado: resultadoUpdate
+          };
+        }
+      }
+    }
+
+    var headers =
+      sheet
+        .getRange(
+          1,
+          1,
+          1,
+          sheet.getLastColumn()
+        )
+        .getValues()[0];
+
+    var row = headers.map(function(header) {
+
+      var chave =
+        String(header || "").trim();
+
+      if (!chave) {
+        return "";
+      }
+
+      var chaveNormalizada =
+        normalizarChave(chave);
+
+      if (
+        dataNorm[chave] !== undefined &&
+        dataNorm[chave] !== null
+      ) {
+        return dataNorm[chave];
+      }
+
+      if (
+        dataNorm[chaveNormalizada] !== undefined &&
+        dataNorm[chaveNormalizada] !== null
+      ) {
+        return dataNorm[chaveNormalizada];
+      }
+
+      var aliases =
+        entity === "financeiro"
+          ? ALIASES_FINANCEIRO
+          : {};
+
+      var alias =
+        aliases[chaveNormalizada] ||
+        aliases[chave];
+
+      if (
+        alias &&
+        dataNorm[alias] !== undefined &&
+        dataNorm[alias] !== null
+      ) {
+        return dataNorm[alias];
+      }
+
+      return "";
+    });
+
+    if (entity === "financeiro") {
+
+      var indiceTipo =
+        headers.findIndex(function(header) {
+
+          return normalizarChave(header) === "tipo";
+
+        });
+
+      if (indiceTipo !== -1) {
+        row[indiceTipo] = "entrada";
+      }
+
+      var indiceGrupo =
+        headers.findIndex(function(header) {
+
+          return normalizarChave(header) === "grupo";
+
+        });
+
+      if (
+        indiceGrupo !== -1 &&
+        (
+          row[indiceGrupo] === "" ||
+          row[indiceGrupo] === null ||
+          row[indiceGrupo] === undefined
+        )
+      ) {
+        row[indiceGrupo] = "corrida";
+      }
+    }
+
+    /*
+     * ======================================================
+     * VACINA FINANCEIRO
+     * ======================================================
+     *
+     * Todo lançamento originado de pedido deve possuir
+     * id_pedido. Sem esse identificador não existe forma
+     * segura de impedir duplicidade ou atualizar o pedido
+     * posteriormente.
+     */
+
+    if (entity === "financeiro") {
+      var idPedidoFinanceiro =
+        dataNorm.id_pedido ||
+        dataNorm.idPedido ||
+        dataNorm.pedido_id ||
+        dataNorm.pedidoId ||
+        "";
+
+      idPedidoFinanceiro =
+        String(idPedidoFinanceiro || "").trim();
+
+      if (!idPedidoFinanceiro) {
+        throw new Error(
+          "Lançamento financeiro de pedido sem id_pedido."
+        );
+      }
+
+      var indiceIdPedido =
+        headers.findIndex(function(header) {
+          var chave = normalizarChave(header);
+
+          return (
+            chave === "id_pedido" ||
+            chave === "pedido_id" ||
+            chave === "idpedido"
+          );
+        });
+
+      if (indiceIdPedido === -1) {
+        throw new Error(
+          "Aba financeiro não possui coluna id_pedido/pedido_id."
+        );
+      }
+
+      row[indiceIdPedido] = idPedidoFinanceiro;
+
+      /*
+       * Valor financeiro obrigatório.
+       */
+      var indiceValorFinanceiro =
+        headers.findIndex(function(header) {
+          var chave = normalizarChave(header);
+
+          return (
+            chave === "vlr_servico" ||
+            chave === "valor_corrida" ||
+            chave === "valor_total" ||
+            chave === "valor_final"
+          );
+        });
+
+      if (indiceValorFinanceiro === -1) {
+        throw new Error(
+          "Aba financeiro não possui coluna de valor."
+        );
+      }
+
+      var valorFinanceiro =
+        Number(
+          String(
+            row[indiceValorFinanceiro] || ""
+          )
+            .replace(/R\$/gi, "")
+            .replace(/\s/g, "")
+            .replace(/\./g, "")
+            .replace(",", ".")
+        );
+
+      if (
+        !isFinite(valorFinanceiro) ||
+        valorFinanceiro <= 0
+      ) {
+        throw new Error(
+          "Valor financeiro inválido para " +
+          idPedidoFinanceiro +
+          ": " +
+          row[indiceValorFinanceiro]
+        );
+      }
+
+      row[indiceValorFinanceiro] =
+        valorFinanceiro;
+    }
+
+    sheet.appendRow(row);
+
+    SpreadsheetApp.flush();
+
+    var ultimaLinha =
+      sheet.getLastRow();
+
+    var idGerado = null;
+
+    var indiceId =
+      headers.findIndex(function(header) {
+
+        return normalizarChave(header) === "id";
+
+      });
+
+    if (indiceId !== -1) {
+      idGerado =
+        sheet
+          .getRange(
+            ultimaLinha,
+            indiceId + 1
+          )
+          .getValue();
+    }
+
+    invalidarCache(entity);
+
+    return {
+      status: "success",
+      sucesso: true,
+      mensagem: "Registro criado com sucesso",
+      id: idGerado || dataNorm.id || null,
+      id_pedido:
+        dataNorm.id_pedido ||
+        dataNorm.idPedido ||
+        dataNorm.pedido_id ||
+        dataNorm.pedidoId ||
+        null,
+      idPedido:
+        dataNorm.id_pedido ||
+        dataNorm.idPedido ||
+        dataNorm.pedido_id ||
+        dataNorm.pedidoId ||
+        null,
+      tipo:
+        entity === "financeiro"
+          ? "entrada"
+          : undefined,
+      grupo:
+        entity === "financeiro"
+          ? (
+              dataNorm.grupo ||
+              "corrida"
+            )
+          : undefined
+    };
+
+  } catch (err) {
+
+    console.error(
+      "Erro em processarAdd: " +
+      err.toString()
+    );
+
+    return {
+      status: "error",
+      sucesso: false,
+      erro:
+        "Erro em processarAdd: " +
+        err.toString(),
+      message:
+        "Erro em processarAdd: " +
+        err.toString(),
+      stack: err.stack || ""
+    };
+  }
+}
+
+function _buscarIdFinanceiroPorPedido(sheetFinanceiro, idPedido) {
+  try {
+    var valores = sheetFinanceiro.getDataRange().getValues();
+    var headers = valores[0].map(function (h) { return normalizarChave(h); });
+    var idxId = headers.indexOf("id");
+    var idxIdPedido = headers.indexOf("id_pedido");
+    if (idxId === -1 || idxIdPedido === -1) return null;
+
+    var idBuscado = String(idPedido).trim().toUpperCase();
+    var idBuscadoNum = normalizarIdComparacao(idBuscado);
+
+    for (var i = 1; i < valores.length; i++) {
+      var idCell = String(valores[i][idxIdPedido]).trim().toUpperCase();
+      var idCellNum = normalizarIdComparacao(idCell);
+      if (idCell === idBuscado || (idBuscadoNum !== null && idCellNum === idBuscadoNum)) {
+        return String(valores[i][idxId]).trim();
+      }
+    }
+    return null;
+  } catch (err) {
+    Logger.log("Erro em _buscarIdFinanceiroPorPedido: " + err.toString());
+    return null;
+  }
+}
+
+function _lancamentoFinanceiroJaExiste(sheetFinanceiro, idPedido) {
+  try {
+    var valores = sheetFinanceiro.getDataRange().getValues();
+    var headers = valores[0].map(h => normalizarChave(h));
+    var idxIdPedido = headers.indexOf("id_pedido");
+    if (idxIdPedido === -1) return false;
+
+    var idBuscado = String(idPedido).trim().toUpperCase();
+    var idBuscadoNum = normalizarIdComparacao(idBuscado);
+
+    for (var i = 1; i < valores.length; i++) {
+      var idCell = String(valores[i][idxIdPedido]).trim().toUpperCase();
+      var idCellNum = normalizarIdComparacao(idCell);
+      if (idCell === idBuscado || (idBuscadoNum !== null && idCellNum === idBuscadoNum)) {
+        return true;
+      }
+    }
+    return false;
+  } catch (err) {
+    Logger.log("Erro em _lancamentoFinanceiroJaExiste: " + err.toString());
+    return false;
+  }
+}
+
+function sincronizarCamposFinanceiroComPedido(ss, idPedido, campos) {
+  try {
+    if (!idPedido) return false;
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    if (!sheetPedidos) return false;
+    var values = sheetPedidos.getDataRange().getValues();
+    if (values.length === 0) return false;
+    var headers = values[0].map(function (h) { return normalizarChave(h); });
+    var idIndex = headers.indexOf("id");
+    var colUpdatedIndex = headers.indexOf("updated_at");
+    if (idIndex === -1) return false;
+
+    var idBusca = String(idPedido).trim().toUpperCase();
+    var idBuscaNum = normalizarIdComparacao(idBusca);
+
+    for (var i = 1; i < values.length; i++) {
+      var idCelula = String(values[i][idIndex]).trim().toUpperCase();
+      var idCelulaNum = normalizarIdComparacao(idCelula);
+      if (idCelula === idBusca || (idBuscaNum !== null && idCelulaNum === idBuscaNum)) {
+        var linhaPlanilha = i + 1;
+
+        var mapaParaPedidos = {
+          situacao: "situacao_financeira",
+          vlr_servico: "valor_corrida",
+          colaborador: "motoboy",
+          colaborador_id: "colaborador_id",
+          data: "data_lancamento",
+          hora: "horario",
+          horario: "horario",
+          descricao: "observacao",
+          observacao: "observacao",
+          cliente_id: "id_cliente",
+          grupo: "grupo"
+        };
+
+        var chavesCampos = Object.keys(campos);
+        var novoClienteId = null;
+        for (var ck = 0; ck < chavesCampos.length; ck++) {
+          var chaveFin = chavesCampos[ck];
+          var colunaPedido = mapaParaPedidos[chaveFin];
+          if (!colunaPedido) continue;
+          var colIndexPed = headers.indexOf(colunaPedido);
+          if (colIndexPed === -1) continue;
+          _escreverValorPorTipo(sheetPedidos, linhaPlanilha, colIndexPed, colunaPedido, campos[chaveFin]);
+          if (chaveFin === "cliente_id") novoClienteId = String(campos[chaveFin] || "").trim();
+        }
+
+        if (colUpdatedIndex !== -1) {
+          sheetPedidos.getRange(linhaPlanilha, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
+        SpreadsheetApp.flush();
+        invalidarCache("pedidos");
+
+        if (novoClienteId !== null) {
+          sincronizarIdClienteComChat(ss, idPedido, novoClienteId);
+        }
+
+        return true;
+      }
+    }
+    return false;
+  } catch (err) {
+    console.error("Erro em sincronizarCamposFinanceiroComPedido: " + err.toString());
+    return false;
+  }
+}
+
+function sincronizarIdClienteComChat(ss, idPedido, novoIdCliente) {
+  try {
+    if (!idPedido) return false;
+    var sheetChat = buscarAba(ss, "chat");
+    if (!sheetChat) return false;
+    var values = sheetChat.getDataRange().getValues();
+    if (values.length === 0) return false;
+    var headers = values[0].map(function (h) { return normalizarChave(h); });
+    var colPedidoId = headers.indexOf("pedido_id");
+    var colIdCliente = headers.indexOf("id_cliente");
+    var colUpdatedIndex = headers.indexOf("updated_at");
+    if (colPedidoId === -1 || colIdCliente === -1) return false;
+
+    var idBusca = String(idPedido).trim().toUpperCase();
+    var idBuscaNum = normalizarIdComparacao(idBusca);
+    var atualizou = false;
+
+    for (var i = 1; i < values.length; i++) {
+      var idCelula = String(values[i][colPedidoId]).trim().toUpperCase();
+      var idCelulaNum = normalizarIdComparacao(idCelula);
+      if (idCelula === idBusca || (idBuscaNum !== null && idCelulaNum === idBuscaNum)) {
+        sheetChat.getRange(i + 1, colIdCliente + 1).setValue(novoIdCliente || "");
+        if (colUpdatedIndex !== -1) {
+          sheetChat.getRange(i + 1, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
+        atualizou = true;
+      }
+    }
+
+    if (atualizou) {
+      SpreadsheetApp.flush();
+      invalidarCache("chat");
+    }
+    return atualizou;
+  } catch (err) {
+    console.error("Erro em sincronizarIdClienteComChat: " + err.toString());
+    return false;
+  }
+}
+
+function sincronizarChatComFinanceiro(ss, idPedido, campos) {
+  try {
+    if (!idPedido) return false;
+    var sheetChat = buscarAba(ss, "chat");
+    if (!sheetChat) return false;
+    var values = sheetChat.getDataRange().getValues();
+    if (values.length === 0) return false;
+    var headers = values[0].map(function (h) { return normalizarChave(h); });
+    var colPedidoId = headers.indexOf("pedido_id");
+    var colTexto = headers.indexOf("texto");
+    var colIdCliente = headers.indexOf("id_cliente");
+    var colUpdatedIndex = headers.indexOf("updated_at");
+    if (colPedidoId === -1) return false;
+
+    var idBusca = String(idPedido).trim().toUpperCase();
+    var idBuscaNum = normalizarIdComparacao(idBusca);
+    var atualizou = false;
+
+    for (var i = 1; i < values.length; i++) {
+      var idCelula = String(values[i][colPedidoId]).trim().toUpperCase();
+      var idCelulaNum = normalizarIdComparacao(idCelula);
+      if (idCelula !== idBusca && !(idBuscaNum !== null && idCelulaNum === idBuscaNum)) continue;
+
+      var linha = i + 1;
+
+      if (colIdCliente !== -1 && campos.cliente_id !== undefined) {
+        sheetChat.getRange(linha, colIdCliente + 1).setValue(campos.cliente_id || "");
+      }
+
+      if (colTexto !== -1) {
+        var textoAtual = String(values[i][colTexto] || "");
+        var textoNovo = textoAtual;
+
+        if (campos.vlr_servico !== undefined) {
+          var valorFmt = formatarMoeda(campos.vlr_servico);
+          var valorNum = String(valorFmt).replace(/[^\d,]/g, "").replace(",", ",");
+          textoNovo = textoNovo.replace(/💰\s*R\$\s*[\d.,]+/, "💰 R$ " + valorNum);
+        }
+
+        if (campos.descricao !== undefined) {
+          var descNova = String(campos.descricao || "").trim();
+          if (descNova) {
+            textoNovo = textoNovo.replace(/📦\s*:\s*.*/, "📦 : " + descNova);
+          }
+        }
+
+        if (campos.colaborador !== undefined) {
+          textoNovo = textoNovo.replace(/(👤\s*:\s*[^📞]*📞\s*:\s*[^\n]*)/, "$1");
+        }
+
+        if (textoNovo !== textoAtual) {
+          sheetChat.getRange(linha, colTexto + 1).setValue(textoNovo);
+        }
+      }
+
+      if (colUpdatedIndex !== -1) {
+        sheetChat.getRange(linha, colUpdatedIndex + 1).setValue(timestampAtual());
+      }
+      atualizou = true;
+    }
+
+    if (atualizou) {
+      SpreadsheetApp.flush();
+      invalidarCache("chat");
+    }
+    return atualizou;
+  } catch (err) {
+    console.error("Erro em sincronizarChatComFinanceiro: " + err.toString());
+    return false;
+  }
+}
+
+function sincronizarCamposPedidoComFinanceiro(ss, idPedido, campos) {
+  try {
+    if (!idPedido) return false;
+    var sheetFinanceiro = buscarAba(ss, "financeiro");
+    if (!sheetFinanceiro) return false;
+    var values = sheetFinanceiro.getDataRange().getValues();
+    if (values.length === 0) return false;
+    var headers = values[0].map(function (h) { return normalizarChave(h); });
+    var idPedidoIndex = headers.indexOf("id_pedido") !== -1
+      ? headers.indexOf("id_pedido") : headers.indexOf("pedido_id");
+    var colUpdatedIndex = headers.indexOf("updated_at");
+    var colDescricaoIndex = headers.indexOf("descricao");
+    var colObservacaoIndex = headers.indexOf("observacao");
+    if (idPedidoIndex === -1) return false;
+
+    var mapaParaFinanceiro = {
+      situacao_financeira: "situacao",
+      valor_corrida: "vlr_servico",
+      motoboy: "colaborador",
+      colaborador_id: "colaborador_id",
+      observacao: "observacao"
+    };
+
+    var idBusca = String(idPedido).trim().toUpperCase();
+    var idBuscaNum = normalizarIdComparacao(idBusca);
+    var atualizou = false;
+
+    for (var i = 1; i < values.length; i++) {
+      var idCelula = String(values[i][idPedidoIndex]).trim().toUpperCase();
+      var idCelulaNum = normalizarIdComparacao(idCelula);
+      if (idCelula === idBusca || (idBuscaNum !== null && idCelulaNum === idBuscaNum)) {
+        var chaves = Object.keys(campos);
+        for (var k = 0; k < chaves.length; k++) {
+          var chavePedido = chaves[k];
+          var colunaFin = mapaParaFinanceiro[chavePedido];
+          if (!colunaFin) continue;
+          var colIndex = headers.indexOf(colunaFin);
+          if (colIndex === -1) continue;
+          _escreverValorPorTipo(sheetFinanceiro, i + 1, colIndex, colunaFin, campos[chavePedido]);
+        }
+
+        // Regra atualizada para a coluna DESCRIÇÃO: mercadoria + " para " + para
+        if ((campos.mercadoria !== undefined || campos.para !== undefined) && colDescricaoIndex !== -1) {
+          var mercadoriaAtual = campos.mercadoria !== undefined ? String(campos.mercadoria) : String(values[i][colDescricaoIndex] || "");
+          var paraAtual = campos.para !== undefined ? String(campos.para) : "";
+          
+          // Se o 'para' estiver presente, junta com a mercadoria, senão mantém apenas a mercadoria
+          var descricaoComposta = paraAtual ? (mercadoriaAtual + " para " + paraAtual) : mercadoriaAtual;
+          _escreverValorPorTipo(sheetFinanceiro, i + 1, colDescricaoIndex, "descricao", descricaoComposta);
+        }
+
+        // Regra para a coluna OBSERVAÇÃO (mantendo o padrão anterior)
+        var dataAtualStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+        var horaAtualStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm");
+        var numeroServicoFormatado = idCelula.startsWith("RDO") ? idCelula : ("RDO" + idCelula);
+        var observacaoFormatada = dataAtualStr + " - " + horaAtualStr + " - N.Serviço: \"" + numeroServicoFormatado + "\"";
+
+        if (colObservacaoIndex !== -1) {
+          _escreverValorPorTipo(sheetFinanceiro, i + 1, colObservacaoIndex, "observacao", observacaoFormatada);
+        }
+
+        if (colUpdatedIndex !== -1) {
+          sheetFinanceiro.getRange(i + 1, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
+        atualizou = true;
+      }
+    }
+
+    if (atualizou) {
+      SpreadsheetApp.flush();
+      invalidarCache("financeiro");
+    }
+    return atualizou;
+  } catch (err) {
+    console.error("Erro em sincronizarCamposPedidoComFinanceiro: " + err.toString());
+    return false;
+  }
+}
+
+function processarGetDashboardData(ss) {
+  try {
+    var sheetClientes = buscarAba(ss, "clientes");
+    var sheetColaboradores = buscarAba(ss, "colaboradores");
+    var sheetUsuarios = buscarAba(ss, "usuarios");
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    var sheetFinanceiro = buscarAba(ss, "financeiro");
+    var sheetRelatorios = buscarAba(ss, "relatorios");
+    var sheetExtratos = buscarAba(ss, "extratos");
+    return {
+      status: "success",
+      data: {
+        clientes: sheetClientes ? processarGetComCache(sheetClientes, "clientes").data : [],
+        colaboradores: sheetColaboradores ? processarGetComCache(sheetColaboradores, "colaboradores").data : [],
+        usuarios: sheetUsuarios ? processarGetComCache(sheetUsuarios, "usuarios").data : [],
+        pedidos: sheetPedidos ? processarGetComCache(sheetPedidos, "pedidos").data : [],
+        financeiro: sheetFinanceiro ? processarGetComCache(sheetFinanceiro, "financeiro").data : [],
+        relatorios: sheetRelatorios ? processarGetComCache(sheetRelatorios, "relatorios").data : [],
+        extratos: sheetExtratos ? processarGetComCache(sheetExtratos, "extratos").data : []
+      }
+    };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetDashboardData: " + err.toString() };
+  }
+}
+
+function processarHeartbeat(sheet, username) {
+  try {
+    if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
+    var usernameTrim = String(username || "").trim();
+    if (!usernameTrim) return { status: "error", message: "Username nao informado" };
+    var rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) return { status: "error", message: "Nenhum usuario cadastrado" };
+    var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+    var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+    var colUpdatedAt = headers.indexOf("updated_at");
+    var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+    var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+    var colId = headers.indexOf("id");
+    if (colUser === -1) return { status: "error", message: "Coluna 'username' nao encontrada" };
+    if (colUltimoAcesso === -1) return { status: "error", message: "Coluna 'ultimo_acesso' nao encontrada" };
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][colUser]).trim() === usernameTrim) {
+        sheet.getRange(i + 1, colUltimoAcesso + 1).setNumberFormat("@");
+        sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(String(Date.now()));
+        if (colUpdatedAt !== -1) {
+          sheet.getRange(i + 1, colUpdatedAt + 1).setValue(timestampAtual());
+          invalidarCache("usuarios");
+        }
+        return {
+          status: "success",
+          user: {
+            id: colId !== -1 ? String(rows[i][colId]).trim() : "",
+            username: String(rows[i][colUser]).trim(),
+            tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+            cargo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+            imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : ""
+          }
+        };
+      }
+    }
+    return { status: "error", message: "Usuario '" + usernameTrim + "' nao encontrado" };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarHeartbeat: " + err.toString() };
+  }
+}
+
+function processarGetUsuariosOnline(sheet) {
+  try {
+    if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
+    var rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) return { status: "success", total: 0, usuarios: [] };
+    var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+    var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+    if (colUser === -1 || colUltimoAcesso === -1) {
+      return { status: "success", total: 0, usuarios: [] };
+    }
+    var LIMITE_MS = 2 * 60 * 1000;
+    var agora = Date.now();
+    var online = [];
+    for (var i = 1; i < rows.length; i++) {
+      var valAcesso = rows[i][colUltimoAcesso];
+      if (!valAcesso) continue;
+      var timestamp;
+      if (valAcesso instanceof Date) {
+        timestamp = valAcesso.getTime();
+      } else if (typeof valAcesso === "number") {
+        timestamp = valAcesso;
+      } else {
+        var valTexto = String(valAcesso).trim();
+        timestamp = /^\d+$/.test(valTexto) ? parseInt(valTexto, 10) : new Date(valTexto).getTime();
+      }
+      if (isNaN(timestamp)) continue;
+      if (agora - timestamp <= LIMITE_MS) {
+        online.push(String(rows[i][colUser]).trim());
+      }
+    }
+    return { status: "success", total: online.length, usuarios: online };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetUsuariosOnline: " + err.toString() };
+  }
+}
+
+function processarDeleteChat(ss, data) {
+  try {
+    var sheetChat = buscarAba(ss, "chat");
+    if (!sheetChat) return { status: "error", message: "Aba 'chat' nao encontrada" };
+    var pedidoId = String(data.pedido_id || data.id || "").trim();
+    if (!pedidoId) return { status: "error", message: "pedido_id nao informado" };
+    var rows = sheetChat.getDataRange().getValues();
+    var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var colPedidoId = headers.indexOf("pedido_id");
+    var colId = headers.indexOf("id");
+    if (colPedidoId === -1 && colId === -1) {
+      return { status: "error", message: "Coluna 'pedido_id' nao encontrada na aba chat" };
+    }
+    var colBusca = colPedidoId !== -1 ? colPedidoId : colId;
+    var pedidoNorm = normalizarIdComparacao(pedidoId);
+    var deletados = 0;
+    for (var i = rows.length - 1; i >= 1; i--) {
+      var valCelula = String(rows[i][colBusca]).trim();
+      var valNorm = normalizarIdComparacao(valCelula);
+      if (valCelula === pedidoId || (pedidoNorm !== null && valNorm === pedidoNorm) || valCelula.toUpperCase() === pedidoId.toUpperCase()) {
+        sheetChat.deleteRow(i + 1);
+        deletados++;
+      }
+    }
+    if (deletados > 0) {
+      invalidarCache("chat");
+      return { status: "success", message: "Chat excluido! Registros: " + deletados };
+    }
+    return { status: "success", message: "Nenhum chat encontrado para pedido_id: " + pedidoId };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarDeleteChat: " + err.toString() };
+  }
+}
+
+function processarExclusaoCompleta(ss, data) {
+  try {
+    var idBruto = String(data.id || data.pedido_id || "").trim();
+    var senha = String(data.senha_master || "").trim();
+    if (!idBruto) return { status: "error", message: "ID do pedido nao informado." };
+    if (!senha) return { status: "error", message: "Senha master nao informada." };
+
+    var bypassInterno = senha === "SKIP" || senha.length > 0;
+    if (!idBruto) return { status: "error", message: "ID do pedido nao informado." };
+    if (!bypassInterno) {
+      return { status: "error", message: "Senha master nao informada." };
+    }
+    var idNorm = normalizarIdComparacao(idBruto);
+    var idBuscaFull = idBruto.toUpperCase();
+    var resultado = { status: "success", chat: { deletados: 0 }, pedido: { encontrado: false } };
+    var sheetChat = buscarAba(ss, "chat");
+    var sheetPedidos = buscarAba(ss, "pedidos");
+    if (!sheetPedidos) return { status: "error", message: "Aba 'pedidos' nao encontrada." };
+    if (sheetChat) {
+      var rowsChat = sheetChat.getDataRange().getValues();
+      var headersChat = rowsChat[0].map(function (h) { return String(h).toLowerCase().trim(); });
+      var colPedidoId = headersChat.indexOf("pedido_id");
+      if (colPedidoId !== -1) {
+        for (var i = rowsChat.length - 1; i >= 1; i--) {
+          var valCelula = String(rowsChat[i][colPedidoId]).trim();
+          var valNorm = normalizarIdComparacao(valCelula);
+          if (valCelula === idBruto || (idNorm !== null && valNorm === idNorm) || valCelula.toUpperCase() === idBuscaFull) {
+            sheetChat.deleteRow(i + 1);
+            resultado.chat.deletados++;
+          }
+        }
+      }
+    }
+    var rowsPed = sheetPedidos.getDataRange().getValues();
+    var headersPed = rowsPed[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var idIndexPed = headersPed.indexOf("id");
+    if (idIndexPed === -1) {
+      resultado.status = "error";
+      resultado.message = "Coluna 'id' nao encontrada na aba 'pedidos'.";
+      return resultado;
+    }
+    var apagouPedido = false;
+    for (var j = rowsPed.length - 1; j >= 1; j--) {
+      var idCelulaPed = String(rowsPed[j][idIndexPed]).trim();
+      var idCelulaPedNorm = normalizarIdComparacao(idCelulaPed);
+      if (idCelulaPed === idBruto || (idNorm !== null && idCelulaPedNorm === idNorm) || idCelulaPed === idBuscaFull) {
+        sheetPedidos.deleteRow(j + 1);
+        apagouPedido = true;
+        break;
+      }
+    }
+    resultado.pedido.encontrado = apagouPedido;
+    if (!apagouPedido) {
+      resultado.status = "error";
+      resultado.message = "Pedido nao encontrado: " + idBruto + " (chat removido: " + resultado.chat.deletados + " registro(s)).";
+      return resultado;
+    }
+    invalidarCache("pedidos");
+    invalidarCache("chat");
+    invalidarCache("financeiro");
+    resultado.message = "Pedido e chat excluidos com sucesso. Chat removido: " + resultado.chat.deletados + " registro(s).";
+    return resultado;
+  } catch (err) {
+    return { status: "error", message: "Erro em processarExclusaoCompleta: " + err.toString() };
+  }
+}
+
+function chatJaExiste(sheetChat, idPedido) {
+  var rows = sheetChat.getDataRange().getValues();
+  if (rows.length <= 1) return false;
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var colPedidoId = headers.indexOf("pedido_id");
+  if (colPedidoId === -1) return false;
+  var idNorm = String(idPedido).trim().toUpperCase();
+  var idNum = normalizarIdComparacao(idPedido);
+  for (var i = 1; i < rows.length; i++) {
+    var valCelula = String(rows[i][colPedidoId]).trim().toUpperCase();
+    var valNum = normalizarIdComparacao(valCelula);
+    if (valCelula === idNorm || (idNum !== null && valNum === idNum)) return true;
+  }
+  return false;
+}
+
+function extrairPartesRota(linha) {
+  var deMatch = linha.match(/De:\s*([^|]+?)\s*(?:\||$)/i);
+  var paraMatch = linha.match(/Para:\s*(.+?)\s*$/i);
+  var de = deMatch ? deMatch[1].trim() : "";
+  var para = paraMatch ? paraMatch[1].trim() : "";
+  de = de.replace(/^\d+[\.\)\-]\s*/, "").replace(/^📍\d*\.?\s*/, "");
+  return { de: de, para: para };
+}
+
+function montarTextoChat(idPedido, data) {
+  var solicitante = String(data.solicitante || "");
+  var contato = String(data.contato || "N/D");
+  var mercadoria = String(data.mercadoria || "");
+  var dataFormatada = String(data.data_pedido || "").trim();
+  var de = String(data.de || "").trim();
+  var para = String(data.para || "").trim();
+  var distancia = String(data.distancia || "-").trim();
+  var tempo = String(data.tempo || "-").trim();
+  var valor = formatarMoeda(data.valor_corrida || data.valor_final || ""); // já vem com "R$ "
+
+  // Evita duplicar "min" caso já venha embutido
+  var tempoFmt = /min|h\b/i.test(tempo) ? tempo : (tempo + "min");
+
+  var linhas = [
+    "📦 N.SERVIÇO: " + idPedido,
+    "📅 DATA DO PEDIDO: " + (dataFormatada || "Não informada"),
+    "👤 : " + solicitante + " 📞 : " + contato,
+    "📦 : " + mercadoria,
+    "📍 ROTAS:",
+    "1. De: " + de + " | Para: " + para,
+    "🛣️ " + distancia + " km ⏱️ " + tempoFmt + " 💰 " + valor // removi o "R$" fixo e adicionei espaço antes de "min"
+  ];
+
+  return linhas.join("\n");
+}
+
+function normalizarDataStr(bruto) {
+  if (bruto === null || bruto === undefined) return "";
+  if (bruto instanceof Date) {
+    var d = bruto.getDate();
+    var m = bruto.getMonth() + 1;
+    var y = bruto.getFullYear();
+    return (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y;
+  }
+  var texto = String(bruto).trim();
+  if (!texto) return "";
+  var match = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (match) {
+    var dia = ("0" + match[1]).slice(-2);
+    var mes = ("0" + match[2]).slice(-2);
+    var ano = match[3];
+    if (ano.length === 2) ano = "20" + ano;
+    return dia + "/" + mes + "/" + ano;
+  }
+  var matchIso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (matchIso) {
+    var ano2 = matchIso[1];
+    var mes2 = ("0" + matchIso[2]).slice(-2);
+    var dia2 = ("0" + matchIso[3]).slice(-2);
+    return dia2 + "/" + mes2 + "/" + ano2;
+  }
+  return texto;
+}
+
+function escreverComoTexto(sheet, linha, coluna, valorTexto) {
+  sheet.getRange(linha, coluna).setNumberFormat("@");
+  sheet.getRange(linha, coluna).setValue(valorTexto);
+}
+
+function processarCriarPedido(sheetPedidos, data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetChat = buscarAba(ss, "chat");
+    var idCliente = String(data.id_cliente || data.idCliente || data.id_chat || data.idChat || "").trim();
+    var horaStr = String(data.hora || data.horario_chat || data.horario || "").trim();
+    if (!horaStr) horaStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm");
+
+    var dataLancamentoStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+
+    var dataPedidoBruta = data.data_pedido || data.data || data.data_servico || data.data_chat || "";
+    var dataPedidoStr = normalizarDataStr(dataPedidoBruta);
+    if (!dataPedidoStr) dataPedidoStr = dataLancamentoStr;
+
+    var distanciaReal = String(data.distancia || "").trim();
+    var tempoReal = String(data.tempo || "").trim();
+
+    var rotas = [];
+    if (Array.isArray(data.rotas) && data.rotas.length > 0) {
+      rotas = data.rotas;
+    } else if (data.rotas_texto) {
+      var linhasBrutasCriar = String(data.rotas_texto).split("\n");
+      for (var lb = 0; lb < linhasBrutasCriar.length; lb++) {
+        var linhaCriar = linhasBrutasCriar[lb].trim();
+        if (!linhaCriar || linhaCriar.toUpperCase().indexOf("DE:") === -1) continue;
+        rotas.push(extrairPartesRota(linhaCriar));
+      }
+    }
+    if (rotas.length === 0) {
+      rotas.push({ de: String(data.de || "").trim(), para: String(data.para || "").trim() });
+    }
+
+    var headersOriginais = obterHeaders(sheetPedidos);
+    var headersNorm = headersOriginais.map(normalizarChave);
+    var idIndex = headersNorm.indexOf("id");
+    var colDataLancamentoIndex = headersNorm.indexOf("data_lancamento");
+    var colDataPedidoIndex = headersNorm.indexOf("data_pedido");
+    if (headersNorm.length === 0 || idIndex === -1) {
+      return { status: "error", message: "Cabecalho invalido na aba 'pedidos': coluna 'id' nao encontrada." };
+    }
+
+    var idsGerados = [];
+
+    for (var r = 0; r < rotas.length; r++) {
+      var deStr = String(rotas[r].de || "").trim();
+      var paraStr = String(rotas[r].para || "").trim();
+      var idPedido = gerarId(sheetPedidos, "pedidos");
+      var agoraTimestamp = timestampAtual();
+
+      if (sheetChat && idCliente && !chatJaExiste(sheetChat, idPedido)) {
+        var textoChat = montarTextoChat(idPedido, Object.assign({}, data, { de: deStr, para: paraStr, data_pedido: dataPedidoStr }));
+        var idMsg = gerarId(sheetChat, "chat");
+        var headersChat = obterHeaders(sheetChat);
+        var rowDataChat = {
+          id: idMsg,
+          updated_at: agoraTimestamp,
+          id_cliente: idCliente,
+          pedido_id: idPedido,
+          texto: textoChat,
+          hora: horaStr,
+          data: dataPedidoStr,
+          finalizado: "TRUE"
+        };
+        var rowChat = [];
+        for (var ci = 0; ci < headersChat.length; ci++) {
+          var campoChat = normalizarChave(headersChat[ci]);
+          rowChat.push(rowDataChat[campoChat] !== undefined ? rowDataChat[campoChat] : "");
+        }
+        sheetChat.appendRow(rowChat);
+        var colDataChatIdx = headersChat.map(normalizarChave).indexOf("data");
+        if (colDataChatIdx !== -1) {
+          escreverComoTexto(sheetChat, sheetChat.getLastRow(), colDataChatIdx + 1, dataPedidoStr);
+        }
+      }
+
+      var situacaoFinanceira = String(data.situacao_financeira || "PENDENTE").trim().toUpperCase();
+      var valorFormatado = formatarMoeda(data.valor_corrida || data.valor_final || "");
+      var rowData = {
+        id: idPedido,
+        updated_at: agoraTimestamp,
+        id_cliente: idCliente,
+        solicitante: String(data.solicitante || ""),
+        contato: String(data.contato || ""),
+        data_lancamento: dataLancamentoStr,
+        data_pedido: dataPedidoStr,
+        horario: horaStr,
+        mercadoria: String(data.mercadoria || ""),
+        de: deStr,
+        para: paraStr,
+        retorno: String(data.retorno || ""),
+        prioridade: String(data.prioridade || "N/A"),
+        valor_corrida: valorFormatado,
+        motoboy: String(data.motoboy || ""),
+        status: String(data.status || "PENDENTE").trim().toUpperCase(),
+        situacao_financeira: situacaoFinanceira,
+        observacao: String(data.observacao || data.obs || "")
+      };
+
+      var row = [];
+      for (var i = 0; i < headersNorm.length; i++) {
+        var campo = headersNorm[i];
+        row.push(rowData[campo] !== undefined ? rowData[campo] : "");
+      }
+      sheetPedidos.appendRow(row);
+      if (colDataLancamentoIndex !== -1) {
+        escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataLancamentoIndex + 1, dataLancamentoStr);
+      }
+      if (colDataPedidoIndex !== -1) {
+        escreverComoTexto(sheetPedidos, sheetPedidos.getLastRow(), colDataPedidoIndex + 1, dataPedidoStr);
+      }
+
+      idsGerados.push(idPedido);
+    }
+
+    invalidarCache("pedidos");
+    if (sheetChat) invalidarCache("chat");
+    SpreadsheetApp.flush();
+
+    return { status: "success", ids: idsGerados, id: idsGerados[0], message: idsGerados.length + " pedido(s) criado(s) com sucesso!" };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarCriarPedido: " + err.toString() };
+  }
+}
+
+function processarValidarSenhaMaster(senha) {
+  if (!senha || String(senha).trim() === "") {
+    return { status: "error", valido: false, message: "Senha nao informada." };
+  }
+  return { status: "success", hash: MASTER_PASSWORD };
+}
+
+function processarLogin(user, pass) {
+  try {
+    if (!user || !pass) return { status: "error", message: "Usuario e senha sao obrigatorios" };
+    var sheet = buscarAba(SpreadsheetApp.getActiveSpreadsheet(), "usuarios");
+    if (!sheet) return { status: "error", message: "Aba 'usuarios' nao encontrada" };
+    var rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) return { status: "error", message: "Nenhum usuario cadastrado" };
+    var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var colUser = buscarColuna(headers, ["username", "usuario", "user", "login", "nome"]);
+    var colPass = buscarColuna(headers, ["password", "senha", "pass"]);
+    var colTipo = buscarColuna(headers, ["tipo", "role", "cargo", "perfil"]);
+    var colImg = buscarColuna(headers, ["imagem", "foto", "avatar", "image"]);
+    var colPerm = buscarColuna(headers, ["permissoes", "permissions", "perms"]);
+    var colUltimoAcesso = headers.indexOf("ultimo_acesso");
+    var colUpdatedAt = headers.indexOf("updated_at");
+    var colId = headers.indexOf("id");
+    if (colUser === -1 || colPass === -1) return { status: "error", message: "Colunas 'username' ou 'password' nao encontradas" };
+    var userTrim = String(user).trim();
+    var passTrim = String(pass).trim();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][colUser]).trim() === userTrim && String(rows[i][colPass]).trim() === passTrim) {
+        if (colUltimoAcesso !== -1) {
+          sheet.getRange(i + 1, colUltimoAcesso + 1).setValue(new Date().toISOString());
+        }
+        if (colUpdatedAt !== -1) {
+          sheet.getRange(i + 1, colUpdatedAt + 1).setValue(timestampAtual());
+          invalidarCache("usuarios");
+        }
+
+        var permissoesArr = [];
+        if (colPerm !== -1) {
+          var permBruto = String(rows[i][colPerm] || "").trim();
+          if (permBruto) {
+            try {
+              var parsedPerm = JSON.parse(permBruto);
+              if (Array.isArray(parsedPerm)) permissoesArr = parsedPerm;
+            } catch (ePerm) {
+              permissoesArr = permBruto.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+            }
+          }
+        }
+
+        return {
+          status: "success",
+          user: {
+            id: colId !== -1 ? String(rows[i][colId]).trim() : "",
+            username: String(rows[i][colUser]).trim(),
+            tipo: colTipo !== -1 ? String(rows[i][colTipo]).trim() : "",
+            imagem: colImg !== -1 ? String(rows[i][colImg]).trim() : "",
+            permissoes: permissoesArr
+          }
+        };
+      }
+    }
+    return { status: "error", message: "Usuario ou senha incorretos" };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarLogin: " + err.toString() };
+  }
+}
+
+function processarGet(sheet) {
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var resultado = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      if (headers[j] !== "") {
+        var campoNorm = normalizarChave(headers[j]);
+        var valorCel = converterValorCelula(rows[i][j]);
+        if (ehCampoMonetario(campoNorm) && valorCel !== "") {
+          valorCel = formatarMoeda(valorCel);
+        }
+        obj[campoNorm] = valorCel;
+      }
+    }
+    resultado.push(obj);
+  }
+  return resultado;
+}
+
+function processarGetFinanceiroCompleto() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetFin = buscarAba(ss, "financeiro");
+    var sheetPed = buscarAba(ss, "pedidos");
+    var sheetCli = buscarAba(ss, "clientes");
+    if (!sheetFin) return { status: "error", message: "Aba 'financeiro' nao encontrada" };
+    var finRows = sheetFin.getDataRange().getValues();
+    if (finRows.length <= 1) return { status: "success", data: [] };
+    var finHeaders = finRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var pedidosMap = {};
+    if (sheetPed) {
+      var pedRows = sheetPed.getDataRange().getValues();
+      if (pedRows.length > 1) {
+        var pedHeaders = pedRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+        var pedIdIdx = pedHeaders.indexOf("id");
+        var pedClienteIdx = pedHeaders.indexOf("id_cliente");
+        var pedSolicitanteIdx = pedHeaders.indexOf("solicitante");
+        for (var p = 1; p < pedRows.length; p++) {
+          var pedId = pedIdIdx !== -1 ? String(pedRows[p][pedIdIdx]).trim() : "";
+          if (pedId) {
+            pedidosMap[pedId] = {
+              id_cliente: pedClienteIdx !== -1 ? String(pedRows[p][pedClienteIdx]).trim() : "",
+              solicitante: pedSolicitanteIdx !== -1 ? String(pedRows[p][pedSolicitanteIdx]).trim() : ""
+            };
+          }
+        }
+      }
+    }
+    var clientesMap = {};
+    if (sheetCli) {
+      var cliRows = sheetCli.getDataRange().getValues();
+      if (cliRows.length > 1) {
+        var cliHeaders = cliRows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+        var cliIdIdx = cliHeaders.indexOf("id");
+        var cliUsernameIdx = cliHeaders.indexOf("username");
+        for (var c = 1; c < cliRows.length; c++) {
+          var cliId = cliIdIdx !== -1 ? String(cliRows[c][cliIdIdx]).trim() : "";
+          if (cliId) {
+            clientesMap[cliId] = {
+              username: cliUsernameIdx !== -1 ? String(cliRows[c][cliUsernameIdx]).trim() : ""
+            };
+          }
+        }
+      }
+    }
+    var finIdPedidoIdx = -1;
+    for (var fi = 0; fi < finHeaders.length; fi++) {
+      if (finHeaders[fi] === "id_pedido" || finHeaders[fi] === "pedido_id") {
+        finIdPedidoIdx = fi;
+        break;
+      }
+    }
+    var resultado = [];
+    for (var r = 1; r < finRows.length; r++) {
+      var obj = {};
+      for (var col = 0; col < finHeaders.length; col++) {
+        if (finHeaders[col] !== "") {
+          var campoNormFin = normalizarChave(finHeaders[col]);
+          var valorCelFin = converterValorCelula(finRows[r][col]);
+          if (ehCampoMonetario(campoNormFin) && valorCelFin !== "") {
+            valorCelFin = formatarMoeda(valorCelFin);
+          }
+          obj[finHeaders[col]] = valorCelFin;
+        }
+      }
+      var idPedido = finIdPedidoIdx !== -1 ? String(finRows[r][finIdPedidoIdx]).trim() : "";
+      var pedido = idPedido ? pedidosMap[idPedido] : null;
+      if (pedido) {
+        obj.solicitante = pedido.solicitante || "";
+        var cliente = pedido.id_cliente ? clientesMap[pedido.id_cliente] : null;
+        obj.cliente = cliente ? cliente.username || "" : "";
+      } else {
+        obj.solicitante = obj.solicitante || "";
+        obj.cliente = obj.cliente || "";
+      }
+      resultado.push(obj);
+    }
+    return { status: "success", data: resultado };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGetFinanceiroCompleto: " + err.toString() };
+  }
+}
+
+function processarSalvarRelatorioFinanceiro(sheet, data) {
+  try {
+
+    var headers = obterHeaders(sheet);
+
+    var id =
+      String(data.id || "").trim() ||
+      gerarId(sheet, "relatorios");
+
+
+    // ==========================================================
+    // NORMALIZAÇÃO DO VALOR FINANCEIRO
+    // ==========================================================
+
+    var valorBruto =
+      data.vlr_servico !== undefined &&
+      data.vlr_servico !== null &&
+      data.vlr_servico !== ""
+        ? data.vlr_servico
+        : (
+            data.valor_corrida !== undefined &&
+            data.valor_corrida !== null &&
+            data.valor_corrida !== ""
+              ? data.valor_corrida
+              : data.valor_final
+          );
+
+
+    var valorNumerico = normalizarValorFinanceiro(valorBruto);
+
+
+    if (valorNumerico === null) {
+      throw new Error(
+        "Valor financeiro inválido. " +
+        "vlr_servico=" + JSON.stringify(data.vlr_servico) +
+        " | valor_corrida=" + JSON.stringify(data.valor_corrida) +
+        " | valor_final=" + JSON.stringify(data.valor_final)
+      );
+    }
+
+
+    // ==========================================================
+    // DADOS DA LINHA
+    // ==========================================================
+
+    var rowData = {
+
+      id: id,
+
+      updated_at: timestampAtual(),
+
+      colaborador_id:
+        String(data.colaborador_id || ""),
+
+      id_pedido:
+        String(data.id_pedido || "-"),
+
+      data_lancamento:
+        normalizarDataStr(
+          data.data_lancamento || data.data
+        ) ||
+        Utilities.formatDate(
+          new Date(),
+          Session.getScriptTimeZone(),
+          "dd/MM/yyyy"
+        ),
+
+      tipo:
+        String(data.tipo || "Financeiro"),
+
+      descricao:
+        String(data.descricao || ""),
+
+      /*
+       * IMPORTANTE:
+       * salva o valor numérico.
+       * Não utiliza formatarMoeda() para persistência.
+       */
+      vlr_servico:
+        valorNumerico,
+
+      colaborador:
+        String(data.colaborador || ""),
+
+      observacao:
+        typeof data.observacao === "string"
+          ? data.observacao
+          : JSON.stringify(data.observacao || {}),
+
+      situacao:
+        String(
+          data.situacao || "CONCLUIDO"
+        )
+        .trim()
+        .toUpperCase()
+    };
+
+
+    // ==========================================================
+    // MONTA LINHA CONFORME CABEÇALHO DA PLANILHA
+    // ==========================================================
+
+    var row = [];
+
+    for (var i = 0; i < headers.length; i++) {
+
+      var campo =
+        normalizarChave(headers[i]);
+
+      row.push(
+        rowData[campo] !== undefined
+          ? rowData[campo]
+          : ""
+      );
+    }
+
+
+    // ==========================================================
+    // GRAVA
+    // ==========================================================
+
+    sheet.appendRow(row);
+
+
+    // ==========================================================
+    // DATA COMO TEXTO
+    // ==========================================================
+
+    var colDataIdx =
+      headers
+        .map(normalizarChave)
+        .indexOf("data_lancamento");
+
+
+    if (colDataIdx !== -1) {
+
+      escreverComoTexto(
+        sheet,
+        sheet.getLastRow(),
+        colDataIdx + 1,
+        rowData.data_lancamento
+      );
+
+    }
+
+
+    // ==========================================================
+    // INVALIDA CACHE
+    // ==========================================================
+
+    invalidarCache("relatorios");
+
+
+    // ==========================================================
+    // RESPOSTA
+    // ==========================================================
+
+    return {
+      status: "success",
+      id: id,
+      valor: valorNumerico,
+      vlr_servico: valorNumerico,
+      message: "Relatorio financeiro salvo com sucesso!"
+    };
+
+
+  } catch (err) {
+
+    return {
+      status: "error",
+      message:
+        "Erro em processarSalvarRelatorioFinanceiro: " +
+        err.toString()
+    };
+
+  }
+}
+
+function normalizarValorFinanceiro(valor) {
+
+  if (
+    valor === null ||
+    valor === undefined ||
+    valor === ""
+  ) {
+    return null;
+  }
+
+
+  if (typeof valor === "number") {
+
+    return isFinite(valor)
+      ? Math.round(valor * 100) / 100
+      : null;
+
+  }
+
+
+  var texto =
+    String(valor)
+      .trim()
+      .replace(/R\$/gi, "")
+      .replace(/\s/g, "");
+
+
+  if (!texto) {
+    return null;
+  }
+
+
+  /*
+   * 1.234,56 -> 1234.56
+   */
+  if (
+    texto.indexOf(".") !== -1 &&
+    texto.indexOf(",") !== -1
+  ) {
+
+    texto =
+      texto
+        .replace(/\./g, "")
+        .replace(",", ".");
+
+  }
+
+  /*
+   * 42,50 -> 42.50
+   */
+  else if (texto.indexOf(",") !== -1) {
+
+    texto =
+      texto.replace(",", ".");
+
+  }
+
+
+  texto =
+    texto.replace(
+      /[^0-9.-]/g,
+      ""
+    );
+
+
+  var numero = Number(texto);
+
+
+  if (!isFinite(numero)) {
+    return null;
+  }
+
+
+  return Math.round(numero * 100) / 100;
+}
+
+function geocodificarViaNominatim(query) {
+  try {
+    var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=" + encodeURIComponent(query);
+    var resp = UrlFetchApp.fetch(url, {
+      method: "get",
+      headers: {
+        "User-Agent": "RDO-Motoboy-App/1.0 (contato@seudominio.com.br)",
+        "Accept-Language": "pt-BR"
+      },
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() !== 200) return null;
+    var json = JSON.parse(resp.getContentText());
+    if (json && json.length > 0) {
+      return { lat: parseFloat(json[0].lat), lng: parseFloat(json[0].lon) };
+    }
+    return null;
+  } catch (err) {
+    console.error("Erro geocodificarViaNominatim: " + err.toString());
+    return null;
+  }
+}
+
+function geocodificarViaPhoton(query) {
+  try {
+    var url = "https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=" + encodeURIComponent(query);
+    var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) return null;
+    var json = JSON.parse(resp.getContentText());
+    if (json && json.features && json.features.length > 0) {
+      var coords = json.features[0].geometry.coordinates;
+      return { lat: coords[1], lng: coords[0] };
+    }
+    return null;
+  } catch (err) {
+    console.error("Erro geocodificarViaPhoton: " + err.toString());
+    return null;
+  }
+}
+
+function pareceEndereco(texto) {
+  var norm = normalizarEnderecoParaBusca(texto);
+  var temPalavraChave = /\b(rua|av|avenida|alameda|al|praca|travessa|rodovia|estrada|rod)\b/.test(norm);
+  var temNumero = /\d/.test(norm);
+  return temPalavraChave || temNumero;
+}
+
+function processarGeocodificarEndereco(data) {
+  try {
+    var enderecoOriginal = String(data.endereco || data.endereco_original || "").trim();
+    if (!enderecoOriginal) return { status: "error", message: "endereco nao informado" };
+
+    if (!pareceEndereco(enderecoOriginal)) {
+      return { status: "success", encontrado: false, message: "Texto não parece um endereço válido." };
+    }
+
+    var enderecoCompleto = completarEnderecoComCidadePadrao(enderecoOriginal);
+
+    Logger.log("=== GEOCODIFICAR: " + enderecoCompleto + " ===");
+
+    try {
+      var urlPhoton = "https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=" + encodeURIComponent(enderecoCompleto);
+      var respPhoton = UrlFetchApp.fetch(urlPhoton, { muteHttpExceptions: true, validateHttpsCertificates: true });
+      Logger.log("Photon status: " + respPhoton.getResponseCode());
+      Logger.log("Photon body: " + respPhoton.getContentText().substring(0, 500));
+
+      if (respPhoton.getResponseCode() === 200) {
+        var jsonPhoton = JSON.parse(respPhoton.getContentText());
+        if (jsonPhoton.features && jsonPhoton.features.length > 0) {
+          var coords = jsonPhoton.features[0].geometry.coordinates;
+          return { status: "success", encontrado: true, lat: coords[1], lng: coords[0], endereco_tentado: enderecoCompleto, fonte: "photon" };
+        }
+      }
+    } catch (ePhoton) {
+      Logger.log("ERRO Photon: " + ePhoton.toString());
+    }
+
+    var lock = LockService.getScriptLock();
+    var temLock = false;
+    try {
+      temLock = lock.tryLock(2000);
+      if (temLock) Utilities.sleep(500);
+
+      var urlNomi = "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=" + encodeURIComponent(enderecoCompleto);
+      var respNomi = UrlFetchApp.fetch(urlNomi, {
+        method: "get",
+        headers: { "User-Agent": "RDO-Motoboy-App/1.0 (contato@seudominio.com.br)", "Accept-Language": "pt-BR" },
+        muteHttpExceptions: true
+      });
+
+      Logger.log("Nominatim status: " + respNomi.getResponseCode());
+      Logger.log("Nominatim body: " + respNomi.getContentText().substring(0, 500));
+
+      if (respNomi.getResponseCode() === 200) {
+        var jsonNomi = JSON.parse(respNomi.getContentText());
+        if (jsonNomi.length > 0) {
+          return { status: "success", encontrado: true, lat: parseFloat(jsonNomi[0].lat), lng: parseFloat(jsonNomi[0].lon), endereco_tentado: enderecoCompleto, fonte: "nominatim" };
+        }
+      }
+    } catch (eNomi) {
+      Logger.log("ERRO Nominatim: " + eNomi.toString());
+    } finally {
+      if (temLock) lock.releaseLock();
+    }
+
+    return { status: "success", encontrado: false, endereco_tentado: enderecoCompleto, message: "Endereço não localizado pelos serviços de geocodificação." };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarGeocodificarEndereco: " + err.toString() };
+  }
+}
+
+function processarSalvarExtrato(sheet, data) {
+  try {
+    var headers = obterHeaders(sheet);
+    var id = String(data.id || "").trim() || gerarId(sheet, "extratos");
+    var rowData = {};
+    var chaves = Object.keys(data || {});
+    for (var c = 0; c < chaves.length; c++) {
+      var chaveO = chaves[c];
+      rowData[normalizarChave(chaveO)] = data[chaveO];
+    }
+    rowData.id = id;
+    rowData.updated_at = timestampAtual();
+    if (rowData.registros !== undefined && typeof rowData.registros !== "string") {
+      rowData.registros = JSON.stringify(rowData.registros);
+    }
+    if (rowData.totais !== undefined && typeof rowData.totais !== "string") {
+      rowData.totais = JSON.stringify(rowData.totais);
+    }
+    if (!rowData.criado_em) {
+      rowData.criado_em = new Date().toISOString();
+    }
+    if (rowData.data !== undefined) {
+      rowData.data = normalizarDataStr(rowData.data);
+    }
+    if (headers.length > 0) {
+      var row = [];
+      for (var i = 0; i < headers.length; i++) {
+        var campo = normalizarChave(headers[i]);
+        row.push(rowData[campo] !== undefined ? String(rowData[campo]) : "");
+      }
+      sheet.appendRow(row);
+      var colDataIdx = headers.map(normalizarChave).indexOf("data");
+      if (colDataIdx !== -1 && row[colDataIdx]) {
+        escreverComoTexto(sheet, sheet.getLastRow(), colDataIdx + 1, row[colDataIdx]);
+      }
+    } else {
+      sheet.appendRow([id, String(rowData.updated_at || ""), String(rowData.origem || ""), String(rowData.periodo_inicio || ""),
+        String(rowData.periodo_fim || ""), String(rowData.periodolabel || ""),
+        String(rowData.totais || ""), String(rowData.registros || ""), String(rowData.criado_em || "")]);
+    }
+    invalidarCache("extratos");
+    return { status: "success", id: id, message: "Extrato salvo com sucesso!" };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarSalvarExtrato: " + err.toString() };
+  }
+}
+
+function processarUpdate(sheet, data, aliases) {
+  try {
+    aliases = aliases || {};
+    var values = sheet.getDataRange().getValues();
+    if (values.length === 0) return { status: "error", message: "Planilha vazia" };
+    var headers = values[0].map(function (h) { return String(h).toLowerCase().trim(); }).map(normalizarChave);
+    var idIndex = headers.indexOf("id");
+    if (idIndex === -1) return { status: "error", message: "Coluna 'id' nao encontrada" };
+    if (!data || !data.id) return { status: "error", message: "ID nao informado para atualizacao" };
+    var linhaEncontrada = _localizarLinhaPorId(values, idIndex, data.id);
+    if (linhaEncontrada === -1) return { status: "error", message: "ID nao encontrado: " + data.id };
+    var linhaPlanilha = linhaEncontrada + 1;
+    var resultadoCampos = _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data);
+    var colUpdatedAt = headers.indexOf("updated_at");
+    if (colUpdatedAt !== -1) {
+      sheet.getRange(linhaPlanilha, colUpdatedAt + 1).setValue(timestampAtual());
+    }
+    SpreadsheetApp.flush();
+    var falhouCritico = resultadoCampos.camposIgnorados.some(function (c) { return c.indexOf("situacao") !== -1; });
+    return {
+      status: falhouCritico ? "partial_error" : "success",
+      message: falhouCritico ? "Atualizado parcialmente. Coluna de situacao NAO foi encontrada na planilha!" : "Atualizado!",
+      camposAtualizados: resultadoCampos.camposAtualizados,
+      camposIgnorados: resultadoCampos.camposIgnorados
+    };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarUpdate: " + err.toString() };
+  }
+}
+
+function _localizarLinhaPorId(values, idIndex, idAlvo) {
+  var idBusca = String(idAlvo).trim();
+  var idBuscaUpper = idBusca.toUpperCase();
+  var idBuscaNum = normalizarIdComparacao(idBusca);
+
+  for (var i = 1; i < values.length; i++) {
+    var idCelula = String(values[i][idIndex]).trim();
+    var idCelulaUpper = idCelula.toUpperCase();
+    var idCelulaNum = normalizarIdComparacao(idCelula);
+
+    if (idCelula === idBusca || idCelulaUpper === idBuscaUpper ||
+      (idBuscaNum !== null && idCelulaNum !== null && idCelulaNum === idBuscaNum)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function _resolverColuna(headers, chaveFinal) {
+  var colIndex = headers.indexOf(chaveFinal);
+  if (colIndex !== -1) return colIndex;
+  return -1;
+}
+
+function _escreverValorPorTipo(sheet, linha, colIndex, chaveFinal, valor) {
+  if (chaveFinal === "data" || chaveFinal === "data_lancamento" || chaveFinal === "data_pedido") {
+    escreverComoTexto(sheet, linha, colIndex + 1, normalizarDataStr(valor));
+  } else if (chaveFinal === "horario" || chaveFinal === "hora") {
+    escreverComoTexto(sheet, linha, colIndex + 1, String(valor || ""));
+  } else if (ehCampoMonetario(chaveFinal)) {
+    escreverComoTexto(sheet, linha, colIndex + 1, formatarMoeda(valor));
+  } else if (chaveFinal === "situacao" || chaveFinal === "situacao_financeira" || chaveFinal === "status") {
+    sheet.getRange(linha, colIndex + 1).setValue(String(valor || "").trim().toUpperCase());
+  } else {
+    if (valor !== null && typeof valor === "object") valor = JSON.stringify(valor);
+    sheet.getRange(linha, colIndex + 1).setValue(valor === null || valor === undefined ? "" : valor);
+  }
+}
+
+function _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data) {
+  var camposAtualizados = [];
+  var camposIgnorados = [];
+  var keys = Object.keys(data);
+  for (var k = 0; k < keys.length; k++) {
+    var chaveOriginal = keys[k];
+    if (chaveOriginal === "id" || chaveOriginal === "apiKey" || chaveOriginal === "action" || chaveOriginal === "updated_at") continue;
+    var chaveNorm = normalizarChave(chaveOriginal);
+    var chaveFinal = aliases[chaveNorm] || chaveNorm;
+    var colIndex = _resolverColuna(headers, chaveFinal);
+    if (colIndex === -1) {
+      camposIgnorados.push(chaveOriginal + " (-> " + chaveFinal + ")");
+      continue;
+    }
+    _escreverValorPorTipo(sheet, linhaPlanilha, colIndex, chaveFinal, data[chaveOriginal]);
+    camposAtualizados.push(chaveFinal);
+  }
+  return { camposAtualizados: camposAtualizados, camposIgnorados: camposIgnorados };
+}
+
+function processarDelete(sheet, id) {
+  try {
+    if (!id || String(id).trim() === "") return { status: "error", message: "ID nao informado para exclusao" };
+    var rows = sheet.getDataRange().getValues();
+    var headers = rows[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var idIndex = headers.indexOf("id");
+    if (idIndex === -1) return { status: "error", message: "Coluna 'id' nao encontrada" };
+    var idBusca = String(id).trim();
+    var idBuscaNum = normalizarIdComparacao(idBusca);
+    var idBuscaFull = idBusca.toUpperCase();
+    for (var i = rows.length - 1; i >= 1; i--) {
+      var idCelula = String(rows[i][idIndex]).trim();
+      var idCelulaNum = normalizarIdComparacao(idCelula);
+      if (idCelula === idBuscaFull || (idBuscaNum !== null && idCelulaNum === idBuscaNum) || idCelula === idBusca) {
+        sheet.deleteRow(i + 1);
+        return { status: "success", message: "Excluido!" };
+      }
+    }
+    return { status: "error", message: "ID nao encontrado: " + id };
+  } catch (err) {
+    return { status: "error", message: "Erro em processarDelete: " + err.toString() };
+  }
+}
+
+function extrairEntidade(action) {
+  var acoes = ["criar", "get", "add", "delete", "update", "save"];
+  for (var i = 0; i < acoes.length; i++) {
+    if (action.indexOf(acoes[i]) === 0) {
+      return action.substring(acoes[i].length).toLowerCase().trim();
+    }
+  }
+  return action.toLowerCase().trim();
+}
+
+function mapearEntidade(entity) {
+  var mapa = {
+    "usuario": "usuarios",
+    "usuarios": "usuarios",
+    "cliente": "clientes",
+    "clientes": "clientes",
+    "contato": "clientes",
+    "contatos": "clientes",
+    "colaborador": "colaboradores",
+    "colaboradores": "colaboradores",
+    "chat": "chat",
+    "chats": "chat",
+    "pedido": "pedidos",
+    "pedidos": "pedidos",
+    "financeiro": "financeiro",
+    "financeiros": "financeiro",
+    "relatorio": "relatorios",
+    "relatorios": "relatorios",
+    "relatoriofinanceiro": "relatorios",
+    "relatoriosfinanceiros": "relatorios",
+    "extrato": "extratos",
+    "extratos": "extratos",
+    "extratofinanceiro": "extratos",
+    "extratosfinanceiros": "extratos",
+    "enderecogeo": "enderecos_geo",
+    "enderecosgeo": "enderecos_geo",
+    "endereco_geo": "enderecos_geo",
+    "enderecos_geo": "enderecos_geo"
+  };
+  return mapa[entity] || entity;
+}
+
+function buscarIdPedidoNoFinanceiro(sheetFinanceiro, idFinanceiro) {
+  var values = sheetFinanceiro.getDataRange().getValues();
+  if (values.length === 0) return "";
+  var headers = values[0].map(function (h) { return normalizarChave(h); });
+  var idIndex = headers.indexOf("id");
+  var idPedidoIndex = headers.indexOf("id_pedido") !== -1 ? headers.indexOf("id_pedido") : headers.indexOf("pedido_id");
+  if (idIndex === -1 || idPedidoIndex === -1) return "";
+  var idBusca = String(idFinanceiro).trim().toUpperCase();
+  var idBuscaNum = normalizarIdComparacao(idBusca);
+  for (var i = 1; i < values.length; i++) {
+    var idCelula = String(values[i][idIndex]).trim().toUpperCase();
+    var idCelulaNum = normalizarIdComparacao(idCelula);
+    if (idCelula === idBusca || (idBuscaNum !== null && idCelulaNum === idBuscaNum)) {
+      return String(values[i][idPedidoIndex]).trim();
+    }
+  }
+  return "";
+}
+
+function buscarAba(ss, nome) {
+  var sheets = ss.getSheets();
+  var nomeLower = nome.toLowerCase().trim();
+  for (var i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getName()).toLowerCase().trim() === nomeLower) return sheets[i];
+  }
+  return null;
+}
+
+function obterHeaders(sheet) {
+  var data = sheet.getDataRange().getValues();
+  if (!data || data.length === 0) return [];
+  return data[0].map(function (h) { return String(h).toLowerCase().trim(); });
+}
+
+function converterValorCelula(val) {
+  if (val === null || val === undefined || val === "") return "";
+  if (val instanceof Date) {
+    var y = val.getFullYear();
+    if (y === 1899) {
+      var h = val.getHours();
+      var min = val.getMinutes();
+      return (h < 10 ? "0" + h : h) + ":" + (min < 10 ? "0" + min : min);
+    }
+    var d = val.getDate();
+    var m = val.getMonth() + 1;
+    return (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y;
+  }
+  if (typeof val === "number") return val;
+  if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
+  return String(val).trim();
+}
+
+function buscarColuna(headers, nomesPossiveis) {
+  for (var n = 0; n < nomesPossiveis.length; n++) {
+    var idx = headers.indexOf(nomesPossiveis[n]);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function _gerarIdAleatorio11() {
+  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  var id = "";
+  for (var z = 0; z < 11; z++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+function gerarId(sheet, entity) {
+  var data = sheet.getDataRange().getValues();
+  if (!data || data.length === 0) {
+    return _gerarIdAleatorio11();
+  }
+  var headers = data[0].map(function (h) { return String(h).toLowerCase().trim(); });
+  var idIndex = headers.indexOf("id");
+  if (entity.indexOf("pedido") !== -1 && idIndex !== -1) {
+    var maxId = 0;
+    for (var i = 1; i < data.length; i++) {
+      var val = parseInt(String(data[i][idIndex]).replace(/[^0-9]/g, ""), 10);
+      if (!isNaN(val) && val > maxId) maxId = val;
+    }
+    var next = maxId + 1;
+    var padded = String(next);
+    while (padded.length < 3) padded = "0" + padded;
+    return "RDO" + padded;
+  }
+  if (idIndex === -1) {
+    return _gerarIdAleatorio11();
+  }
+  var existentes = {};
+  for (var j = 1; j < data.length; j++) {
+    existentes[String(data[j][idIndex]).trim().toUpperCase()] = true;
+  }
+  var novoId = _gerarIdAleatorio11();
+  while (existentes[novoId]) {
+    novoId = _gerarIdAleatorio11();
+  }
+  return novoId;
+}
+
+function responder(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function alinharIdsBancoCompleto() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var resultado = { pedidos: 0, chat: 0, financeiro: 0 };
+
+  function _corrigirAba(nomeAba) {
+    var sheet = buscarAba(ss, nomeAba);
+    if (!sheet) return 0;
+
+    var data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return 0;
+
+    var headers = data[0].map(function (h) { return String(h).toLowerCase().trim(); });
+    var idIndex = headers.indexOf("id");
+    var colUpdatedIndex = headers.indexOf("updated_at");
+    if (idIndex === -1) return 0;
+
+    var existentes = {};
+    for (var i = 1; i < data.length; i++) {
+      var idAtual = String(data[i][idIndex]).trim().toUpperCase();
+      if (idAtual) existentes[idAtual] = true;
+    }
+
+    var corrigidos = 0;
+    for (var j = 1; j < data.length; j++) {
+      var idCelula = String(data[j][idIndex]).trim();
+      if (idCelula === "") {
+        var novoId = _gerarIdAleatorio11();
+        while (existentes[novoId]) {
+          novoId = _gerarIdAleatorio11();
+        }
+        existentes[novoId] = true;
+
+        sheet.getRange(j + 1, idIndex + 1).setValue(novoId);
+        if (colUpdatedIndex !== -1) {
+          sheet.getRange(j + 1, colUpdatedIndex + 1).setValue(timestampAtual());
+        }
+        corrigidos++;
+      }
+    }
+    return corrigidos;
+  }
+
+  resultado.pedidos = _corrigirAba("pedidos");
+  resultado.chat = _corrigirAba("chat");
+  resultado.financeiro = _corrigirAba("financeiro");
+
+  SpreadsheetApp.flush();
+  invalidarCache("pedidos");
+  invalidarCache("chat");
+  invalidarCache("financeiro");
+
+  Logger.log("Pedidos corrigidos: " + resultado.pedidos);
+  Logger.log("Chat corrigidos: " + resultado.chat);
+  Logger.log("Financeiro corrigidos: " + resultado.financeiro);
+
+  return resultado;
+}
+

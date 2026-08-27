@@ -3930,9 +3930,6 @@ window.StatusModal = (function () {
 
                         window.EventBus.emit('pedido:atualizado', {
                             id: _pedidoId,
-                            id_pedido: _pedidoId,
-                            idPedido: _pedidoId,
-                            pedido_id: _pedidoId,
                             valor_final: valorFinalPedido,
                             valor_total: valorFinalPedido,
                             valor_corrida: valorFinalPedido,
@@ -4700,9 +4697,6 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
             if (typeof window.EventBus !== 'undefined')
                 window.EventBus.emit('pedido:atualizado', {
                     id: _pedidoId,
-                    id_pedido: _pedidoId,
-                    idPedido: _pedidoId,
-                    pedido_id: _pedidoId,
                     valor_final: valorFinalPedido,
                     valor_total: valorFinalPedido,
                     valor_corrida: valorFinalPedido,
@@ -6663,102 +6657,3 @@ window.EventBus.on('pedido:atualizado', function (dados) {
     }
 
 })();
-
-
-
-/* VACINA_CHAT_FINANCEIRO_CONTRATO_V2 */
-(function () {
-  'use strict';
-
-  if (window.__VACINA_CHAT_FINANCEIRO_CONTRATO_V2__) {
-    return;
-  }
-
-  window.__VACINA_CHAT_FINANCEIRO_CONTRATO_V2__ = true;
-
-  console.info(
-    '[VACINA FINANCEIRO] contrato do chat protegido.'
-  );
-
-  function idNormalizado(v) {
-    return String(v || '').trim();
-  }
-
-  function valorSeguro(v) {
-
-    if (v === null || v === undefined || v === '') {
-      return 0;
-    }
-
-    if (typeof v === 'number') {
-      return Number.isFinite(v) ? v : 0;
-    }
-
-    var s = String(v)
-      .replace(/R\$/gi, '')
-      .replace(/\s/g, '');
-
-    if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) {
-      s = s.replace(/\./g, '').replace(',', '.');
-    } else {
-      s = s.replace(',', '.');
-    }
-
-    s = s.replace(/[^0-9.-]/g, '');
-
-    var n = Number(s);
-
-    return Number.isFinite(n) ? n : 0;
-  }
-
-
-  /*
-   * Não altera texto da mensagem.
-   * Apenas garante que o objeto de dados mantenha
-   * valor_corrida e pedido_id quando esses campos
-   * forem atualizados.
-   */
-
-  if (typeof window._sincronizarValorNoChat === 'function') {
-
-    var original =
-      window._sincronizarValorNoChat;
-
-
-    window._sincronizarValorNoChat =
-      function (dados) {
-
-        if (dados && typeof dados === 'object') {
-
-          if (
-            dados.valor_corrida !== undefined
-          ) {
-
-            dados.valor_corrida =
-              valorSeguro(
-                dados.valor_corrida
-              );
-          }
-
-
-          if (
-            dados.pedido_id !== undefined
-          ) {
-
-            dados.pedido_id =
-              idNormalizado(
-                dados.pedido_id
-              );
-          }
-        }
-
-
-        return original.apply(
-          this,
-          arguments
-        );
-      };
-  }
-
-})();
-

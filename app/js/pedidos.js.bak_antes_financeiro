@@ -920,7 +920,6 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
-                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -1265,7 +1264,6 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
-                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
