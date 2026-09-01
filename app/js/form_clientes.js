@@ -424,7 +424,7 @@ function _parseMoedaSeguro(valor) {
 
 window._parseMoedaSeguro = _parseMoedaSeguro;
 
-window.carregarPedidosDoCliente = async function (clienteId) {
+window.carregarPedidosDoClienteClientes = async function (clienteId) {
     if (!clienteId) return;
     try {
         var todosPedidos = await API.call('getpedidos');
@@ -572,7 +572,7 @@ window.abrirConversa = function (id, nome, urlImagem, isOnline) {
         msgInput.setAttribute('placeholder', 'Digite o pedido...');
     }
 
-    return window.carregarPedidosDoCliente(idCliente);
+    return window.carregarPedidosDoClienteClientes(idCliente);
 };
 
 function _resolverTextoMensagem(msg, pedido) {
@@ -1741,7 +1741,7 @@ window.fecharParaChat = function (modalId) {
                 setTimeout(function () {
                     if (!window.AppRDO.isFetching) {
                         _spinChatOn();
-                        window.carregarPedidosDoCliente(clienteId).finally(function () {
+                        window.carregarPedidosDoClienteClientes(clienteId).finally(function () {
                             _spinChatOff();
                         });
                     }

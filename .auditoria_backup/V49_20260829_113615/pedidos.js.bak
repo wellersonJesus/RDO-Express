@@ -920,6 +920,7 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
+                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -1264,6 +1265,7 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
+                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -2260,3 +2262,18 @@ document.addEventListener("click", function (e) {
 
 })();
 
+/* ============================================================
+   V36 — PONTE DE COMPATIBILIDADE
+   _renderizarTabelaPedidos -> _renderizarTabela
+   ============================================================ */
+function _renderizarTabelaPedidos(pedidos) {
+    if (Array.isArray(pedidos)) {
+        return _renderizarTabela(pedidos);
+    }
+
+    return _renderizarTabela(
+        window.AppRDO.pedidosCache || []
+    );
+}
+
+window._renderizarTabelaPedidos = _renderizarTabelaPedidos;

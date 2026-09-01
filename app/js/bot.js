@@ -339,7 +339,7 @@ window.alternarTodosStatus = async function (ativar) {
 
 window.mudarPagina = function (dir) {
     var totalPag = Math.max(1, Math.ceil(window.botState.cache.length / window.botState.itensPorPagina));
-    window.botState.paginaAtual = Math.min(Math.max(1, window.botState.paginaAtual + dir), totalPag);
+    window.botState.paginaAtual = Math.max(1, Number(Math.min(Math.max(1, window.botState.paginaAtual + dir), totalPag)) || 1);
     renderizarTabela();
 };
 
@@ -520,7 +520,7 @@ window.filtrarBot = function () {
     }
 
     window.botState.cache = dados;
-    window.botState.paginaAtual = 1;
+    window.botState.paginaAtual = Math.max(1, Number(1) || 1);
     renderizarTabela();
 };
 

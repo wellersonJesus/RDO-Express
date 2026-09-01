@@ -1,0 +1,746 @@
+
+============================================================
+V49 — INÍCIO
+============================================================
+[INFO] Projeto: /home/pcmaster/Documentos/Projetos/RDO-Express
+[INFO] Data: sáb 29 ago 2026 11:36:15 -03
+[INFO] Backup: .auditoria_backup/V49_20260829_113615
+
+============================================================
+1. VERIFICAÇÃO DOS ARQUIVOS
+============================================================
+[OK] /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/pedidos.js
+[OK] /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/chat.js
+[OK] /home/pcmaster/Documentos/Projetos/RDO-Express/api/data/modelos/scripts/codigo_gs.js
+[OK] fin.js encontrado — NÃO SERÁ ALTERADO
+
+============================================================
+2. BACKUP
+============================================================
+[OK] Backup: /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/pedidos.js
+[OK] Backup: /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/chat.js
+[OK] Backup: /home/pcmaster/Documentos/Projetos/RDO-Express/api/data/modelos/scripts/codigo_gs.js
+
+============================================================
+3. SHA256 ANTES
+============================================================
+dbffc3968df9d43a346fd53035295140299590f37bdb151c7cfc1fde54ba1409  /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/pedidos.js
+94445661e270feacae8d580670cda2a18c52b37cec25b50a3ba9b11274cba040  /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/chat.js
+e2d36f6ab8a877daffae3f3804b75c7ff90a0e39a0936ce9b3120caacfd1c260  /home/pcmaster/Documentos/Projetos/RDO-Express/api/data/modelos/scripts/codigo_gs.js
+
+============================================================
+4. PROTEÇÃO DO FINANCEIRO
+============================================================
+[OK] SHA fin.js antes: 01e7c08780d82f66280c9c6dea392acfdc56bdea628e4464a6fb4eb6ddbbaa07
+
+============================================================
+5. AUDITORIA DA RECURSÃO
+============================================================
+[INFO] Definições _renderizarTabelaPedidos em pedidos.js: 1
+[INFO] Definições _renderizarTabela em chat.js: 1
+2264-
+2265-/* ============================================================
+2266-   V36 — PONTE DE COMPATIBILIDADE
+2267-   _renderizarTabelaPedidos -> _renderizarTabela
+2268-   ============================================================ */
+2269:function _renderizarTabelaPedidos(pedidos) {
+2270-    if (Array.isArray(pedidos)) {
+2271-        return _renderizarTabela(pedidos);
+2272-    }
+2273-
+2274-    return _renderizarTabela(
+2275-        window.AppRDO.pedidosCache || []
+2276-    );
+2277-}
+2278-
+2279-window._renderizarTabelaPedidos = _renderizarTabelaPedidos;
+4506-    var modalEl = document.getElementById(modalId);
+4507-    if (modalEl) { callback(true); return; }
+4508-    callback(false);
+4509-}
+4510-
+4511:function _renderizarTabela(pedidos) {
+4512-    if (typeof window._renderizarTabelaPedidos === 'function') window._renderizarTabelaPedidos(pedidos);
+4513-}
+4514-
+4515-window.RDO_PEDIDOS.onEditarValorInput = function (input) {
+4516-    var valor = _parseMoeda(input.value);
+4517-    document.getElementById('edit-valor-base').value = valor;
+4518-    window.RDO_PEDIDOS.calcularEspera();
+4519-};
+4520-
+4521-window.RDO_PEDIDOS.calcularEspera = function () {
+4522-    var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+4523-    var minutos = parseFloat((document.getElementById('edit-espera-minutos') || {}).value) || 0;
+
+============================================================
+6. AUDITORIA DO UPDATEPEDIDO
+============================================================
+1119-            } else {
+1120-                console.warn('[pedidos.js] ⚠️ Campo ausente: edit-motoboy');
+1121-            }
+1122-            _s('edit-status', statusAtual);
+1123-
+1124-            var tituloEl = document.getElementById('editar-titulo');
+1125-            if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
+1126-
+1127-            var errEl = document.getElementById('edit-error-msg');
+1128-            if (errEl) errEl.classList.add('d-none');
+1129-
+1130-            setTimeout(function () {
+1131-                if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
+1132-                    window.RDO_PEDIDOS.calcularEspera();
+1133-                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+1134-                _ativarDestaqueValor();
+1135-            }, 50);
+1136-        });
+1137-    };
+1138-
+1139:    window.RDO_PEDIDOS.salvarEdicao = function () {
+1140-        var numServico = (document.getElementById('edit-numero-servico') || document.getElementById('det-numero-servico') || {}).value || '';
+1141-        var idPedido = (document.getElementById('edit-id-pedido') || {}).value || '';
+1142-        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
+1143-
+1144-        if (numServico && idPedido && dataLancamento) {
+1145-            var descricaoFormatada = 'N.Serviço RDO' + numServico + ' - ' + dataLancamento;
+1146-            var observacaoFormatada = 'Pedido ID: ' + idPedido + ' | Serviço: ' + numServico;
+1147-
+1148-            var elDesc = document.getElementById('edit-descricao');
+1149-            if (elDesc) elDesc.value = descricaoFormatada;
+1150-
+1151-            var elObs = document.getElementById('edit-observacao');
+1152-            if (elObs) elObs.value = observacaoFormatada;
+1153-        }
+1154-        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1155-        var errEl = document.getElementById('edit-error-msg');
+1156-
+1157-        if (btnSalvar && btnSalvar.disabled) return;
+1158-
+1159-        if (errEl) errEl.classList.add('d-none');
+1160-
+1161-        var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
+1162-        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+1163-        var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+1164-        var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
+1165-
+1166-        if (!pedidoId) {
+1167-            if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
+1168-            return;
+1169-        }
+1170-
+1171-        var pontos = tipo === 'ambos' ? 2 : 1;
+1172-        var franquiaTotal = FRANQUIA_MIN * pontos;
+1173-        var excedente = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
+1174-        var taxa = excedente * TARIFA_MIN;
+1175-        var valorFinal = valorBase + taxa;
+1176-
+1177-        var novoStatusEl = document.getElementById('edit-status');
+1178-        var novoStatus = novoStatusEl ? String(novoStatusEl.value || '').trim().toUpperCase() : '';
+1179-
+1180-        var selectMotoboy = document.getElementById('edit-motoboy');
+1181-        var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
+1182-
+1183-        // 🔒 PROTEÇÃO: nunca sobrescreve o motoboy com vazio se já havia um valor salvo no cache
+1184-        if (!motoboyNome) {
+1185-            var pedidoCacheAtual = (Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [])
+1186-                .find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+1187-            if (pedidoCacheAtual && pedidoCacheAtual.motoboy) {
+1188-                motoboyNome = String(pedidoCacheAtual.motoboy).trim();
+1189-            }
+1190-        }
+1191-        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
+1192-
+1193-        var payload = {
+1194-            id: pedidoId,
+1195-            solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
+1196-            contato: (document.getElementById('edit-contato') || {}).value || '',
+1197-            data_lancamento: dataLancamento,
+1198-            horario: (document.getElementById('edit-horario') || {}).value || '',
+1199-            de: (document.getElementById('edit-de') || {}).value || '',
+1200-            para: (document.getElementById('edit-para') || {}).value || '',
+1201-            observacao: (document.getElementById('edit-obs') || {}).value || '',
+1202-            espera_tipo: tipo,
+1203-            espera_minutos: minutos,
+1204-            taxa_espera: taxa,
+1205-            valor_base: valorBase,
+1206-            valor_corrida: valorBase,
+1207-            valor_total: valorBase,
+1208-            valor_final: valorFinal,
+1209-            mercadoria: (document.getElementById('edit-mercadoria') || {}).value || '',
+1210-            retorno: (document.getElementById('edit-retorno') || {}).value || 'Não',
+1211-            prioridade: (document.getElementById('edit-prioridade') || {}).value || '0',
+1212-            motoboy: motoboyNome
+1213-        };
+1214-
+1215-        if (novoStatus) payload.status = novoStatus;
+1216-
+1217-        _setBotaoLoading(btnSalvar, true);
+1218-
+1219-        API.call('updatepedido', payload)
+1220-            .then(function (res) {
+1221-                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+1222-
+1223-                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+1224-                var pedido = cache.find(function (p) {
+1225-                    return String(p.id || '').trim() === String(pedidoId).trim();
+1226-                });
+1227-                if (pedido) {
+1228-                    Object.assign(pedido, {
+1229-                        solicitante: payload.solicitante,
+1230-                        contato: payload.contato,
+1231-                        data_lancamento: payload.data_lancamento,
+1232-                        horario: payload.horario,
+1233-                        de: payload.de,
+1234-                        para: payload.para,
+1235-                        observacao: payload.observacao,
+1236-                        espera_tipo: payload.espera_tipo,
+1237-                        espera_minutos: payload.espera_minutos,
+1238-                        taxa_espera: payload.taxa_espera,
+1239-                        valor_base: payload.valor_base,
+
+[INFO] Chamadas updatepedido:
+1219:        API.call('updatepedido', payload)
+
+============================================================
+7. AUDITORIA DA SINCRONIZAÇÃO FINANCEIRA
+============================================================
+app/js/api.js:8:        updatefinanceiro: 30000
+api/data/modelos/scripts/codigo_gs.js:794:        resultadoUpdate.sincronizadoComFinanceiro = syncOkPed;
+
+============================================================
+8. AUDITORIA DO CACHE LOCAL
+============================================================
+105-                pedidosNovos = respPedidos;
+106-            } else if (respPedidos && typeof respPedidos === 'object') {
+107-                pedidosNovos = Array.isArray(respPedidos.pedidos) ? respPedidos.pedidos :
+108-                    Array.isArray(respPedidos.data) ? respPedidos.data : [];
+109-            }
+110-
+111-            window.AppRDO.chatsCache = chatsNovos;
+112-            window.AppRDO.pedidosCache = pedidosNovos;
+113-            window.pedidosState.dadosCarregados = true;
+114-
+115:            _salvarCacheLocal(pedidosNovos, chatsNovos);
+116-
+117-            _renderizarTabelaComTravaSpin(pedidosNovos);
+118-
+119-            _esconderLoading();
+120-
+121-        } catch (e) {
+122-            console.error('[pedidos.js] ❌ Erro no fetch:', e);
+123-            var msg = e && e.message ? e.message : 'Erro desconhecido ao buscar pedidos.';
+124-
+125-            if (silencioso && window.pedidosState.dadosCarregados) {
+126-                console.warn('[pedidos.js] ⚠️ Sync silencioso falhou, mantendo dados do cache local:', msg);
+127-            } else {
+128-                if (loadingContent) loadingContent.classList.add('d-none');
+129-                if (errorContent) errorContent.classList.remove('d-none');
+130-                if (errorText) errorText.textContent = msg;
+131-
+132-                if (btnRetry) {
+133-                    btnRetry.onclick = function () {
+134-                        window.pedidosState.dadosCarregados = false;
+135-                        window.pedidosState.emAcao = true;
+136-                        _fetchPedidos();
+137-                    };
+138-                }
+139-
+140-                if (window.PedidosErro && typeof window.PedidosErro.mostrar === 'function') {
+141-                    window.PedidosErro.mostrar(msg);
+142-                }
+143-
+144-                if (els.tbody && window.pedidosState.dadosCarregados === false) {
+145-                    els.tbody.innerHTML =
+146-                        '<tr><td colspan="6" class="text-center text-danger py-4">' +
+147-                        '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>' +
+148-                        'Erro: ' + _escHtml(msg) + '</td></tr>';
+149-                }
+150-            }
+--
+1689-            _aplicarFiltroData(inputData.value);
+1690-        };
+1691-
+1692-        inputData.oninput = function () {
+1693-            if (!inputData.value) {
+1694-                _aplicarFiltroData('');
+1695-            }
+1696-        };
+1697-    }
+1698-
+1699:    function _salvarCacheLocal(pedidos, chats) {
+1700-        try {
+1701-            localStorage.setItem(PEDIDOS_LS_KEY, JSON.stringify({
+1702-                pedidos: pedidos || [],
+1703-                chats: chats || [],
+1704-                salvoEm: Date.now()
+1705-            }));
+1706-        } catch (e) {
+1707-            console.warn('[pedidos.js] ⚠️ Falha ao salvar cache local:', e);
+1708-        }
+1709-    }
+1710-
+1711-    function _lerCacheLocal() {
+1712-        try {
+1713-            var raw = localStorage.getItem(PEDIDOS_LS_KEY);
+1714-            if (!raw) return null;
+1715-            var parsed = JSON.parse(raw);
+1716-            if (!parsed || !Array.isArray(parsed.pedidos)) return null;
+1717-            return parsed;
+1718-        } catch (e) {
+1719-            console.warn('[pedidos.js] ⚠️ Cache local corrompido, ignorando:', e);
+1720-            return null;
+1721-        }
+1722-    }
+1723-
+1724-    function _configurarInfoHoverStatus() {
+1725-        var itens = Array.prototype.slice.call(document.querySelectorAll('.ped-status-action-item'));
+1726-        if (!itens.length) return;
+1727-
+1728-        function _isMobile() {
+1729-            return window.innerWidth <= 767;
+1730-        }
+1731-
+1732-        itens.forEach(function (item) {
+1733-            // 🔒 Evita registrar os mesmos listeners múltiplas vezes no mesmo elemento
+1734-            if (item.dataset.hoverBind === '1') return;
+
+============================================================
+9. AUDITORIA DO MODAL
+============================================================
+739-                btnReabrir.classList.add('d-none');
+740-            }
+741-        });
+742-    }
+743-
+744-    function _registrarEventosLinhas() {
+745-        document.querySelectorAll('.btn-pedido-view').forEach(function (btn) {
+746-            btn.onclick = function () {
+747-                var id = btn.getAttribute('data-id');
+748-                window.visualizarPedido(id);
+749-                _configurarBotaoReabrir(id);
+750-            };
+751-        });
+752-
+753-        document.querySelectorAll('.btn-pedido-edit').forEach(function (btn) {
+754:            btn.onclick = function () { window.editarPedido(btn.getAttribute('data-id')); };
+755-        });
+756-
+757-        document.querySelectorAll('.btn-pedido-delete').forEach(function (btn) {
+758-            btn.onclick = function () {
+759-                if (typeof window.MasterAuth !== 'undefined' && typeof window.MasterAuth.abrir === 'function')
+760-                    window.MasterAuth.abrir(btn.getAttribute('data-id'));
+761-                else
+762-                    console.error('[pedidos.js] ❌ MasterAuth não disponível');
+763-            };
+764-        });
+765-    }
+766-
+767-    function _garantirModal(modalId, callback) {
+768-        if (document.getElementById(modalId)) { callback(true); return; }
+769-        if (typeof window.loadModal === 'function') {
+770-            window.loadModal('form_pedidos.html').then(function (ok) {
+771-                callback(ok && !!document.getElementById(modalId));
+772-            });
+773-        } else {
+774-            console.error('[pedidos.js] ❌ window.loadModal não definido e modal ausente:', modalId);
+775-            callback(false);
+776-        }
+777-    }
+778-
+779-    function _resolverMotivoCancelamento(pedido) {
+780-        var raw = String(pedido.motivo_cancelamento || '').trim();
+781-        if (!raw) return '';
+782-        var sep = raw.includes(' | ') ? ' | ' : ',';
+783-        var partes = raw.split(sep).map(function (v) { return v.trim(); });
+784-        return partes.map(function (val) {
+785-            var found = MOTIVOS_CANCELAMENTO.find(function (m) { return m.value === val; });
+786-            return found ? found.label : val;
+787-        }).join(', ');
+788-    }
+789-
+790-    window.RDO_PEDIDOS.calcularEspera = function (skipDisplayUpdate) {
+791-        var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+792-        var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
+793-        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+794-
+795-        var boxMin = document.getElementById('box-espera-minutos');
+796-        var boxResumo = document.getElementById('box-espera-resumo');
+797-        var elFinal = document.getElementById('edit-espera-valor-final');
+798-        var elDisplay = document.getElementById('edit-valor-pedido-display');
+799-
+800-        if (!skipDisplayUpdate && elDisplay) elDisplay.value = _formatarMoeda(valorBase);
+801-        if (boxMin) boxMin.style.display = tipo === 'sem_espera' ? 'none' : 'block';
+802-
+803-        if (tipo === 'sem_espera' || minutos <= 0) {
+804-            if (elFinal) elFinal.textContent = _formatarMoeda(valorBase);
+805-            if (boxResumo) boxResumo.style.display = 'none';
+806-            return;
+807-        }
+808-
+809-        var pontos = tipo === 'ambos' ? 2 : 1;
+810-        var franquiaTotal = FRANQUIA_MIN * pontos;
+811-        var excedente = Math.max(0, minutos - franquiaTotal);
+812-        var taxa = excedente * TARIFA_MIN;
+813-        var total = valorBase + taxa;
+814-
+815-        if (elFinal) elFinal.textContent = _formatarMoeda(total);
+816-
+817-        function _setTxt(id, val) {
+818-            var el = document.getElementById(id);
+819-            if (el) el.textContent = val;
+820-        }
+821-        _setTxt('resumo-valor-original', _formatarMoeda(valorBase));
+822-        _setTxt('resumo-minutos', excedente + ' min');
+823-        _setTxt('resumo-tarifa', 'R$ ' + TARIFA_MIN.toFixed(2).replace('.', ','));
+824-        _setTxt('resumo-taxa', _formatarMoeda(taxa));
+825-        _setTxt('resumo-total', _formatarMoeda(total));
+826-
+827-        if (boxResumo) boxResumo.style.display = excedente > 0 ? 'block' : 'none';
+828-    };
+829-
+830-    window.RDO_PEDIDOS.removerDoCache = function (id) {
+831-        if (!window.AppRDO || !Array.isArray(window.AppRDO.pedidosCache)) return;
+832-        var idStr = String(id || '').trim();
+833-        window.AppRDO.pedidosCache = window.AppRDO.pedidosCache.filter(function (p) {
+834-            return String(p.id || '').trim() !== idStr;
+835-        });
+836-        _renderizarTabela(window.AppRDO.pedidosCache);
+837-        _dispararSync();
+838-    };
+839-
+840-    function _dispararSync() {
+841-        window.pedidosState.dadosCarregados = false;
+842-        window.pedidosState.emAcao = true;
+843-        window.pedidosState.isFetching = false;
+844-        _fetchPedidos();
+845-    }
+846-
+847-    window.RDO_PEDIDOS._renderizarTabelaPublico = function () {
+848-        window.pedidosState.emAcao = true;
+849-        _renderizarTabela(window.AppRDO.pedidosCache || []);
+850-    };
+851-
+852-    window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome, motivoCancelamento) {
+853-        var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+854-        var idNorm = String(pedidoId || '').trim().replace(/^RDO0*/i, '') || String(pedidoId || '').trim();
+--
+1041-            elValor.removeEventListener('mousedown', _removerDestaque);
+1042-        }
+1043-
+1044-        elValor.addEventListener('focus', _removerDestaque);
+1045-        elValor.addEventListener('mousedown', _removerDestaque);
+1046-
+1047-        var modalEl = document.getElementById('modalEditarPedido');
+1048-        if (modalEl) {
+1049-            modalEl.addEventListener('hidden.bs.modal', function onHide() {
+1050-                _removerDestaque();
+1051-                modalEl.removeEventListener('hidden.bs.modal', onHide);
+1052-            });
+1053-        }
+1054-    }
+1055-
+1056:    window.editarPedido = function (id) {
+1057-        var pedido = (window.AppRDO.pedidosCache || []).find(function (p) {
+1058-            return String(p.id || p._id || '').trim() === String(id).trim();
+1059-        });
+1060-        if (!pedido) { console.error('[pedidos.js] ❌ Pedido não encontrado:', id); return; }
+1061-
+1062-        _garantirModal('modalEditarPedido', function (ok) {
+1063-            if (!ok) { console.error('[pedidos.js] ❌ #modalEditarPedido indisponível'); return; }
+1064-
+1065-            var modalEl = document.getElementById('modalEditarPedido');
+1066-
+1067-            document.querySelectorAll('.modal.show').forEach(function (m) {
+1068-                var inst = bootstrap.Modal.getInstance(m);
+1069-                if (inst) inst.hide();
+1070-            });
+1071-
+1072-            function _s(elId, val) {
+1073-                var el = document.getElementById(elId);
+1074-                if (el) el.value = val != null ? String(val) : '';
+1075-                else console.warn('[pedidos.js] ⚠️ Campo ausente:', elId);
+1076-            }
+1077-
+1078-            var valor = _resolverValor(pedido);
+1079-
+1080-            // 🔒 Data do Pedido: fixa, imutável, resolvida a partir do chat/registro original
+1081-            var dataPedidoISO = _extrairDataPedido(pedido);
+1082-            var dataPedidoExibicao = _formatarDataExibicao(dataPedidoISO);
+1083-            if (!dataPedidoExibicao || dataPedidoExibicao === '—') {
+1084-                dataPedidoExibicao = _resolverDataFallback(pedido);
+1085-            }
+1086-
+1087-            // ✏️ Data do Lançamento: campo editável (armazenado na coluna "data" da planilha)
+1088-            var dataLancamentoExibicao = _resolverDataLancamento(pedido) || dataPedidoExibicao;
+1089-
+1090-            var hora = _resolverHoraPedido(pedido);
+1091-            var rotaDe = String(pedido.de || pedido.origem || pedido.endereco_coleta || '').trim();
+1092-            var rotaPara = String(pedido.para || pedido.destino || pedido.endereco_entrega || '').trim();
+1093-            var statusAtual = _normalizarStatus(pedido.status) || 'PENDENTE';
+1094-            _toggleBotaoSalvarEdicao(statusAtual);
+1095-
+1096-            _s('edit-pedido-id', id);
+1097-            _s('edit-valor-base', valor.toFixed(2));
+1098-            _s('edit-solicitante', pedido.solicitante || '');
+1099-            _s('edit-contato', pedido.contato || '');
+1100-            _s('edit-data-pedido', dataPedidoExibicao || '');          // 🆕 somente leitura
+1101-            _s('edit-data-lancamento', dataLancamentoExibicao || '');   // 🆕 editável
+1102-            _s('edit-horario', hora !== '—' ? hora : '');
+1103-            _s('edit-de', rotaDe);
+1104-            _s('edit-para', rotaPara);
+1105-            _s('edit-obs', pedido.observacao || '');
+1106-            _s('edit-valor-pedido-display', _formatarMoeda(valor));
+1107-            _s('edit-status-atual', statusAtual);
+1108-            _s('edit-espera-tipo', pedido.espera_tipo || 'sem_espera');
+1109-            _s('edit-espera-minutos', pedido.espera_minutos || '');
+1110-
+1111-            _s('edit-cliente', _resolverNomeCliente(pedido));
+1112-            _s('edit-mercadoria', pedido.mercadoria || '');
+1113-            _s('edit-retorno', String(pedido.retorno || 'Não').trim());
+1114-            _s('edit-prioridade', String(pedido.prioridade != null ? pedido.prioridade : '0').trim());
+1115-
+1116-            var selectMotoboy = document.getElementById('edit-motoboy');
+1117-            if (selectMotoboy) {
+1118-                _carregarMotoboysDropdown(selectMotoboy, _resolverMotoboy(pedido));
+1119-            } else {
+1120-                console.warn('[pedidos.js] ⚠️ Campo ausente: edit-motoboy');
+1121-            }
+1122-            _s('edit-status', statusAtual);
+1123-
+1124-            var tituloEl = document.getElementById('editar-titulo');
+1125-            if (tituloEl) tituloEl.textContent = _formatarIdServico(id);
+1126-
+1127-            var errEl = document.getElementById('edit-error-msg');
+1128-            if (errEl) errEl.classList.add('d-none');
+1129-
+1130-            setTimeout(function () {
+1131-                if (typeof window.RDO_PEDIDOS.calcularEspera === 'function')
+1132-                    window.RDO_PEDIDOS.calcularEspera();
+1133-                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+1134-                _ativarDestaqueValor();
+1135-            }, 50);
+1136-        });
+1137-    };
+1138-
+1139-    window.RDO_PEDIDOS.salvarEdicao = function () {
+1140-        var numServico = (document.getElementById('edit-numero-servico') || document.getElementById('det-numero-servico') || {}).value || '';
+1141-        var idPedido = (document.getElementById('edit-id-pedido') || {}).value || '';
+1142-        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
+1143-
+1144-        if (numServico && idPedido && dataLancamento) {
+1145-            var descricaoFormatada = 'N.Serviço RDO' + numServico + ' - ' + dataLancamento;
+1146-            var observacaoFormatada = 'Pedido ID: ' + idPedido + ' | Serviço: ' + numServico;
+1147-
+1148-            var elDesc = document.getElementById('edit-descricao');
+1149-            if (elDesc) elDesc.value = descricaoFormatada;
+1150-
+1151-            var elObs = document.getElementById('edit-observacao');
+1152-            if (elObs) elObs.value = observacaoFormatada;
+1153-        }
+1154-        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1155-        var errEl = document.getElementById('edit-error-msg');
+1156-
+--
+1779-                Swal.fire({
+1780-                    icon: 'warning',
+1781-                    title: 'Pedido finalizado',
+1782-                    text: 'Não é possível editar um pedido Concluído ou Cancelado.'
+1783-                });
+1784-            }
+1785-            return;
+1786-        }
+1787-
+1788-        var modalDetalhe = document.getElementById('modalPedidoDetalhes');
+1789-        if (modalDetalhe) {
+1790-            var inst = bootstrap.Modal.getInstance(modalDetalhe);
+1791-            if (inst) inst.hide();
+1792-        }
+1793-
+1794:        window.editarPedido(id);
+1795-    };
+1796-
+1797-    window.RDO_PEDIDOS._initEmAndamento = false;
+1798-    window.RDO_PEDIDOS._jaInicializado = false;
+1799-
+1800-    window.initPedidos = function () {
+1801-        console.log('[pedidos.js] ========== initPedidos ==========');
+1802-
+1803-        // 🔒 Guarda contra chamadas concorrentes/duplicadas (ex.: scroll, resize,
+1804-        // reflow, router disparando o init da página mais de uma vez)
+1805-        if (window.RDO_PEDIDOS._initEmAndamento) {
+1806-            console.warn('[pedidos.js] ⚠️ initPedidos já está em execução — chamada ignorada');
+1807-            return;
+1808-        }
+1809-
+1810-        if (!document.getElementById('corpo-tabela-pedidos')) {
+1811-            console.warn('[pedidos.js] Tabela não encontrada — abortando init');
+1812-            return;
+1813-        }
+1814-
+1815-        window.RDO_PEDIDOS._initEmAndamento = true;
+1816-
+1817-        // 🔒 Se já foi inicializado antes, apenas garante que os binds e eventos
+1818-        // ainda apontam para os elementos corretos (idempotente), sem resetar
+1819-        // o estado de paginação/filtros do usuário e sem forçar novo loading visual.
+1820-        var reinicializacao = window.RDO_PEDIDOS._jaInicializado;
+1821-
+1822-        if (!reinicializacao) {
+1823-            window.pedidosState.paginaAtual = 1;
+1824-            window.pedidosState.isFetching = false;
+1825-            window.pedidosState.dadosCarregados = false;
+1826-            window.pedidosState.emAcao = false;
+1827-            window.pedidosState.sortDesc = true;
+1828-        }
+1829-
+1830-        if (window.pedidosState.intervaloId) clearInterval(window.pedidosState.intervaloId);
+1831-
+1832-        if (!_bind()) {
+1833-            window.RDO_PEDIDOS._initEmAndamento = false;
+1834-            return;
+1835-        }
+1836-
+1837-        _toggleBtnClearBusca();
+1838-        _registrarEventos();
+1839-        _registrarEventosEventBus();
+1840-        _configurarBotaoCalendario();
+1841-        _configurarInfoHoverStatus();
+1842-
+1843-        if (reinicializacao) {
+1844-            // ✅ Já tínhamos dados carregados antes: apenas re-renderiza a tabela
+1845-            // existente no cache, SEM mostrar overlay de loading e SEM refetch.
+1846-            console.log('[pedidos.js] Reinicialização detectada — usando cache em memória, sem novo fetch.');
+1847-            _renderizarTabela(window.AppRDO.pedidosCache || []);
+1848-            window.RDO_PEDIDOS._initEmAndamento = false;
+1849-            return;
+1850-        }
+1851-
+1852-        var cacheLocal = _lerCacheLocal();
+1853-        if (cacheLocal) {
+1854-            window.AppRDO.pedidosCache = cacheLocal.pedidos;
+1855-            window.AppRDO.chatsCache = cacheLocal.chats;
+1856-            window.pedidosState.dadosCarregados = true;
+1857-            _renderizarTabela(window.AppRDO.pedidosCache);
+1858-            _fetchPedidos({ silencioso: true }).finally(function () {
+1859-                window.RDO_PEDIDOS._jaInicializado = true;
+1860-                window.RDO_PEDIDOS._initEmAndamento = false;
+1861-            });
+1862-        } else {
+1863-            _fetchPedidos().finally(function () {
+1864-                window.RDO_PEDIDOS._jaInicializado = true;
+1865-                window.RDO_PEDIDOS._initEmAndamento = false;
+1866-            });
+1867-        }
+1868-
+1869-        console.log('[pedidos.js] Pronto!');
+1870-    };
+1871-
+1872-})();
+1873-
+1874-window.popularDropdownMotoboys = function (pedidos) {
+1875-    var menuEl = document.getElementById("dropdown-filtro-menu") || document.querySelector(".dropdown-filtro-menu");
+1876-    var btnFiltro = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
+1877-
+1878-    if (!menuEl) return;
+1879-
+1880-    // Extrai motoboys únicos do array de pedidos de forma limpa
+1881-    var motoboysSet = new Set();
+1882-    (pedidos || window.AppRDO && window.AppRDO.pedidosCache || []).forEach(function (p) {
+1883-        var m = String(p.motoboy || p.colaborador || p.nome_motoboy || "").trim();
+1884-        if (m && m.toLowerCase() !== "todos" && m !== "") {
+1885-            motoboysSet.add(m);
+1886-        }
+1887-    });
+1888-
+1889-    var listaMotoboys = Array.from(motoboysSet).sort();
+1890-    console.log("🛵 Motoboys encontrados para o menu:", listaMotoboys);
+1891-
+1892-    // Reconstrói o HTML do dropdown mantendo a opção 'Todos'
+1893-    var htmlDropdown = `<div class="dropdown-filtro-item active" data-filtro="todos"><i class="bi bi-people"></i> Todos os Motoboys</div>`;
+1894-
+793:        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+798:        var elDisplay = document.getElementById('edit-valor-pedido-display');
+1023:        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1033:        var elValor = document.getElementById('edit-valor-pedido-display');
+1097:            _s('edit-valor-base', valor.toFixed(2));
+1106:            _s('edit-valor-pedido-display', _formatarMoeda(valor));
+1107:            _s('edit-status-atual', statusAtual);
+1111:            _s('edit-cliente', _resolverNomeCliente(pedido));
+1154:        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1162:        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+
+============================================================
+10. DIAGNÓSTICO
+============================================================
+[CONFIRMADO] Ciclo de renderização detectado.
+[CONFIRMADO] Cache local ativo.
+
+============================================================
+11. APLICAÇÃO DA VACINA
+============================================================
+
+============================================================
+12. CORREÇÃO DO CACHE LOCAL
+============================================================
+
+============================================================
+13. PROTEÇÃO DO MODAL
+============================================================
+
+============================================================
+14. VALIDAÇÃO DE SINTAXE
+============================================================
+[OK] Sintaxe JavaScript válida.
+
+============================================================
+15. VERIFICAÇÃO PÓS-VACINA
+============================================================
+[OK] Chamadas circulares críticas removidas.
+
+============================================================
+16. INTEGRIDADE DO FIN.JS
+============================================================
+[OK] fin.js permaneceu INTACTO.
+
+============================================================
+17. SHA256 FINAL
+============================================================
+f343459871ec2762e308454a1ed360473ebc13ee507410b4bb18db7e1cef6784  /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/pedidos.js
+e74f548b5ac55004e1e82d7c8ff0f4a6c5381755bde155ae898394ceda84f53c  /home/pcmaster/Documentos/Projetos/RDO-Express/app/js/chat.js
+e2d36f6ab8a877daffae3f3804b75c7ff90a0e39a0936ce9b3120caacfd1c260  /home/pcmaster/Documentos/Projetos/RDO-Express/api/data/modelos/scripts/codigo_gs.js
+
+============================================================
+V49 — RESULTADO
+============================================================
+[OK] Backup criado.
+[OK] Recursão pedidos.js <-> chat.js removida.
+[OK] Cache local protegido contra QuotaExceededError.
+[OK] Campos opcionais do modal não bloqueiam edição.
+[OK] fin.js não foi alterado.
+[OK] banco não foi acessado diretamente.
+[OK] regras financeiras existentes não foram modificadas.
+
+[INFO] Relatório:
+.auditoria_backup/V49_20260829_113615_RELATORIO.txt
+
+[INFO] Backup:
+.auditoria_backup/V49_20260829_113615
+
+============================================================
+ V49 FINALIZADA — TERMINAL PERMANECE ABERTO
+============================================================
+
+IMPORTANTE:
+A vacina não executa npm, build, servidor ou alteração direta
+no banco.
+
+Antes de testar o financeiro, valide primeiro:
+1. editar RDO
+2. alterar R$ 42,00 para R$ 1,00
+3. salvar
+4. fechar modal
+5. abrir novamente
+6. atualizar página
+7. confirmar R$ 1,00
+8. somente depois testar conclusão + motoboy + financeiro
+
+O TERMINAL NÃO SERÁ FECHADO.

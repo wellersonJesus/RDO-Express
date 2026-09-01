@@ -69,44 +69,26 @@
         var silencioso = !!opts.silencioso;
 
         if (window.pedidosState.isFetching) return;
-
-        if (
-            window.pedidosState.dadosCarregados &&
-            !window.pedidosState.emAcao &&
-            !silencioso
-        ) {
-            return;
-        }
+        if (window.pedidosState.dadosCarregados && !window.pedidosState.emAcao && !silencioso) return;
 
         window.pedidosState.isFetching = true;
         window.pedidosState.emAcao = false;
 
         _spinOn();
 
-        if (!silencioso) {
-            _mostrarLoading();
-        }
+        if (!silencioso) _mostrarLoading();
 
         var loadingContent = document.getElementById('pedidos-loading-state');
         var errorContent = document.getElementById('pedidos-error-state');
         var errorText = document.getElementById('pedidos-error-text');
         var btnRetry = document.getElementById('btn-retry-pedidos');
 
-        if (!silencioso && loadingContent) {
-            loadingContent.classList.remove('d-none');
-        }
-
-        if (errorContent) {
-            errorContent.classList.add('d-none');
-        }
+        if (!silencioso && loadingContent) loadingContent.classList.remove('d-none');
+        if (errorContent) errorContent.classList.add('d-none');
 
         try {
-            if (
-                typeof API === 'undefined' ||
-                typeof API.call !== 'function'
-            ) {
+            if (typeof API === 'undefined' || typeof API.call !== 'function')
                 throw new Error('API.call indefinido');
-            }
 
             var resultados = await Promise.all([
                 _fetchComRetry('getchat'),
@@ -116,169 +98,36 @@
             var respChat = resultados[0];
             var respPedidos = resultados[1];
 
-            var chatsNovos = [];
-
-            if (Array.isArray(respChat)) {
-                chatsNovos = respChat;
-            } else if (
-                respChat &&
-                typeof respChat === 'object'
-            ) {
-                if (Array.isArray(respChat.data)) {
-                    chatsNovos = respChat.data;
-                } else if (Array.isArray(respChat.chats)) {
-                    chatsNovos = respChat.chats;
-                }
-            }
+            var chatsNovos = Array.isArray(respChat) ? respChat : [];
 
             var pedidosNovos = [];
-
             if (Array.isArray(respPedidos)) {
                 pedidosNovos = respPedidos;
-            } else if (
-                respPedidos &&
-                typeof respPedidos === 'object'
-            ) {
-                if (Array.isArray(respPedidos.data)) {
-                    pedidosNovos = respPedidos.data;
-                } else if (Array.isArray(respPedidos.pedidos)) {
-                    pedidosNovos = respPedidos.pedidos;
-                }
+            } else if (respPedidos && typeof respPedidos === 'object') {
+                pedidosNovos = Array.isArray(respPedidos.pedidos) ? respPedidos.pedidos :
+                    Array.isArray(respPedidos.data) ? respPedidos.data : [];
             }
 
-            var pedidosValidos = Array.isArray(pedidosNovos);
-            var chatsValidos = Array.isArray(chatsNovos);
-
-            if (!pedidosValidos) {
-                throw new Error('Resposta inválida ao buscar pedidos.');
-            }
-
-            if (!chatsValidos) {
-                throw new Error('Resposta inválida ao buscar chats.');
-            }
-
-            var pedidosAtuais = Array.isArray(window.AppRDO.pedidosCache)
-                ? window.AppRDO.pedidosCache
-                : [];
-
-            var chatsAtuais = Array.isArray(window.AppRDO.chatsCache)
-                ? window.AppRDO.chatsCache
-                : [];
-
-            var mapaPedidos = new Map();
-
-            pedidosAtuais.forEach(function (pedido) {
-                if (!pedido || pedido.id == null) return;
-
-                var id = String(pedido.id).trim();
-
-                if (id) {
-                    mapaPedidos.set(id, pedido);
-                }
-            });
-
-            pedidosNovos.forEach(function (pedido) {
-                if (!pedido || pedido.id == null) return;
-
-                var id = String(pedido.id).trim();
-
-                if (id) {
-                    mapaPedidos.set(id, pedido);
-                }
-            });
-
-            var mapaChats = new Map();
-
-            chatsAtuais.forEach(function (chat) {
-                if (!chat) return;
-
-                var id =
-                    chat.id != null
-                        ? String(chat.id).trim()
-                        : '';
-
-                var pedidoId =
-                    chat.pedido_id != null
-                        ? String(chat.pedido_id).trim()
-                        : '';
-
-                var chave = pedidoId || id;
-
-                if (chave) {
-                    mapaChats.set(chave, chat);
-                }
-            });
-
-            chatsNovos.forEach(function (chat) {
-                if (!chat) return;
-
-                var id =
-                    chat.id != null
-                        ? String(chat.id).trim()
-                        : '';
-
-                var pedidoId =
-                    chat.pedido_id != null
-                        ? String(chat.pedido_id).trim()
-                        : '';
-
-                var chave = pedidoId || id;
-
-                if (chave) {
-                    mapaChats.set(chave, chat);
-                }
-            });
-
-            var pedidosFinais = Array.from(mapaPedidos.values());
-            var chatsFinais = Array.from(mapaChats.values());
-
-            window.AppRDO.pedidosCache = pedidosFinais;
-            window.AppRDO.chatsCache = chatsFinais;
-
+            window.AppRDO.chatsCache = chatsNovos;
+            window.AppRDO.pedidosCache = pedidosNovos;
             window.pedidosState.dadosCarregados = true;
 
-            _salvarCacheLocal(
-                pedidosFinais,
-                chatsFinais
-            );
+            _salvarCacheLocal(pedidosNovos, chatsNovos);
 
-            _renderizarTabelaComTravaSpin(
-                pedidosFinais
-            );
+            _renderizarTabelaComTravaSpin(pedidosNovos);
 
             _esconderLoading();
 
         } catch (e) {
-            console.error(
-                '[pedidos.js] ❌ Erro no fetch:',
-                e
-            );
+            console.error('[pedidos.js] ❌ Erro no fetch:', e);
+            var msg = e && e.message ? e.message : 'Erro desconhecido ao buscar pedidos.';
 
-            var msg =
-                e && e.message
-                    ? e.message
-                    : 'Erro desconhecido ao buscar pedidos.';
-
-            if (
-                silencioso &&
-                window.pedidosState.dadosCarregados
-            ) {
-                console.warn(
-                    '[pedidos.js] ⚠️ Sync silencioso falhou, mantendo dados do cache local:',
-                    msg
-                );
+            if (silencioso && window.pedidosState.dadosCarregados) {
+                console.warn('[pedidos.js] ⚠️ Sync silencioso falhou, mantendo dados do cache local:', msg);
             } else {
-                if (loadingContent) {
-                    loadingContent.classList.add('d-none');
-                }
-
-                if (errorContent) {
-                    errorContent.classList.remove('d-none');
-                }
-
-                if (errorText) {
-                    errorText.textContent = msg;
-                }
+                if (loadingContent) loadingContent.classList.add('d-none');
+                if (errorContent) errorContent.classList.remove('d-none');
+                if (errorText) errorText.textContent = msg;
 
                 if (btnRetry) {
                     btnRetry.onclick = function () {
@@ -288,23 +137,15 @@
                     };
                 }
 
-                if (
-                    window.PedidosErro &&
-                    typeof window.PedidosErro.mostrar === 'function'
-                ) {
+                if (window.PedidosErro && typeof window.PedidosErro.mostrar === 'function') {
                     window.PedidosErro.mostrar(msg);
                 }
 
-                if (
-                    els.tbody &&
-                    window.pedidosState.dadosCarregados === false
-                ) {
+                if (els.tbody && window.pedidosState.dadosCarregados === false) {
                     els.tbody.innerHTML =
                         '<tr><td colspan="6" class="text-center text-danger py-4">' +
                         '<i class="bi bi-exclamation-triangle d-block mb-2" style="font-size:2rem;"></i>' +
-                        'Erro: ' +
-                        _escHtml(msg) +
-                        '</td></tr>';
+                        'Erro: ' + _escHtml(msg) + '</td></tr>';
                 }
             }
         } finally {
@@ -460,13 +301,18 @@
     }
 
     function _parseMoeda(valor) {
-        if (valor === null || valor === undefined || valor === '') return 0;
-        var n = Number(valor);
-        if (!isNaN(n) && isFinite(n)) {
-            if (Math.abs(n) > 999999) return _parseMoedaStr(String(valor));
-            return n;
+        if (typeof valor === 'number') return isNaN(valor) ? 0 : valor;
+        if (!valor) return 0;
+        var limpo = String(valor).replace(/[^0-9,.-]+/g, "");
+        if (limpo.includes(",")) {
+            if (limpo.includes(".")) {
+                limpo = limpo.replace(/\./g, "").replace(",", ".");
+            } else {
+                limpo = limpo.replace(",", ".");
+            }
         }
-        return _parseMoedaStr(String(valor));
+        var num = parseFloat(limpo);
+        return isNaN(num) ? 0 : num;
     }
 
     function _formatarMoeda(valor) {
@@ -475,11 +321,14 @@
     }
 
     function _resolverValor(pedido) {
-        if (pedido.valor_base != null && pedido.valor_base !== '') {
-            return _parseMoeda(pedido.valor_base);
-        }
-        var raw = pedido.valor_corrida || pedido.valor_total || pedido.valor_final || 0;
-        return _parseMoeda(raw);
+        if (!pedido) return 0;
+        var bruto = pedido.valor !== undefined ? pedido.valor :
+            (pedido.valor_total !== undefined ? pedido.valor_total :
+                (pedido.valor_final !== undefined ? pedido.valor_final :
+                    (pedido.vlr_servico !== undefined ? pedido.vlr_servico :
+                        (pedido.valor_corrida !== undefined ? pedido.valor_corrida :
+                            (pedido.valorEstimado !== undefined ? pedido.valorEstimado : 0)))));
+        return _parseMoeda(bruto);
     }
 
     function _resolverNomeCliente(pedido) {
@@ -794,6 +643,13 @@
         var paginado = filtrados.slice(inicio, inicio + window.pedidosState.itensPorPagina);
         var totalPag = Math.ceil(filtrados.length / window.pedidosState.itensPorPagina);
 
+        paginado.forEach(function (pedido) {
+            var valorResolvido = _resolverValor ? _resolverValor(pedido) : (pedido.valor_total || pedido.valor || 0);
+            pedido.valor = valorResolvido;
+            pedido.valor_total = valorResolvido;
+            pedido.vlr_servico = valorResolvido;
+        });
+
         els.tbody.innerHTML = paginado.map(_criarLinhaTabela).join('');
 
         if (els.infoPaginacao)
@@ -1064,6 +920,7 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
+                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -1280,40 +1137,13 @@
     };
 
     window.RDO_PEDIDOS.salvarEdicao = function () {
-        var btnSalvar = document.getElementById('btn-salvar-edicao');
-        var errEl = document.getElementById('edit-error-msg');
+        var numServico = (document.getElementById('edit-numero-servico') || document.getElementById('det-numero-servico') || {}).value || '';
+        var idPedido = (document.getElementById('edit-id-pedido') || {}).value || '';
+        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
 
-        if (btnSalvar && btnSalvar.disabled) return;
-
-        if (errEl) {
-            errEl.classList.add('d-none');
-            errEl.textContent = '';
-        }
-
-        var numServicoEl = document.getElementById('edit-numero-servico') ||
-            document.getElementById('det-numero-servico');
-
-        var idPedidoEl = document.getElementById('edit-id-pedido');
-        var dataLancamentoEl = document.getElementById('edit-data-lancamento');
-
-        var numServico = numServicoEl
-            ? String(numServicoEl.value || '').trim()
-            : '';
-
-        var idPedidoInformativo = idPedidoEl
-            ? String(idPedidoEl.value || '').trim()
-            : '';
-
-        var dataLancamento = dataLancamentoEl
-            ? String(dataLancamentoEl.value || '').trim()
-            : '';
-
-        if (numServico && idPedidoInformativo && dataLancamento) {
-            var descricaoFormatada =
-                'N.Serviço RDO' + numServico + ' - ' + dataLancamento;
-
-            var observacaoFormatada =
-                'Pedido ID: ' + idPedidoInformativo + ' | Serviço: ' + numServico;
+        if (numServico && idPedido && dataLancamento) {
+            var descricaoFormatada = 'N.Serviço RDO' + numServico + ' - ' + dataLancamento;
+            var observacaoFormatada = 'Pedido ID: ' + idPedido + ' | Serviço: ' + numServico;
 
             var elDesc = document.getElementById('edit-descricao');
             if (elDesc) elDesc.value = descricaoFormatada;
@@ -1321,114 +1151,54 @@
             var elObs = document.getElementById('edit-observacao');
             if (elObs) elObs.value = observacaoFormatada;
         }
+        var btnSalvar = document.getElementById('btn-salvar-edicao');
+        var errEl = document.getElementById('edit-error-msg');
 
-        var pedidoIdEl = document.getElementById('edit-pedido-id');
+        if (btnSalvar && btnSalvar.disabled) return;
 
-        var pedidoId = pedidoIdEl
-            ? String(pedidoIdEl.value || '').trim()
-            : '';
+        if (errEl) errEl.classList.add('d-none');
+
+        var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
+        var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+        var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+        var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
 
         if (!pedidoId) {
-            if (errEl) {
-                errEl.textContent = 'ID do pedido não encontrado.';
-                errEl.classList.remove('d-none');
-            }
+            if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
             return;
         }
 
-        var valorBaseEl = document.getElementById('edit-valor-base');
-
-        var valorBase = _parseMoeda(
-            valorBaseEl ? valorBaseEl.value : 0
-        );
-
-        var tipoEl = document.getElementById('edit-espera-tipo');
-
-        var tipo = tipoEl
-            ? String(tipoEl.value || 'sem_espera').trim()
-            : 'sem_espera';
-
-        var minutosEl = document.getElementById('edit-espera-minutos');
-
-        var minutos = parseInt(
-            minutosEl ? minutosEl.value : '0',
-            10
-        ) || 0;
-
         var pontos = tipo === 'ambos' ? 2 : 1;
-
         var franquiaTotal = FRANQUIA_MIN * pontos;
-
-        var excedente =
-            tipo !== 'sem_espera' && minutos > 0
-                ? Math.max(0, minutos - franquiaTotal)
-                : 0;
-
+        var excedente = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
         var taxa = excedente * TARIFA_MIN;
-
         var valorFinal = valorBase + taxa;
 
-        var statusEl = document.getElementById('edit-status');
-
-        var novoStatus = statusEl
-            ? String(statusEl.value || '').trim().toUpperCase()
-            : '';
+        var novoStatusEl = document.getElementById('edit-status');
+        var novoStatus = novoStatusEl ? String(novoStatusEl.value || '').trim().toUpperCase() : '';
 
         var selectMotoboy = document.getElementById('edit-motoboy');
+        var motoboyNome = selectMotoboy ? String(selectMotoboy.value || '').trim() : '';
 
-        var motoboyNome = selectMotoboy
-            ? String(selectMotoboy.value || '').trim()
-            : '';
-
-        var cache = Array.isArray(window.AppRDO && window.AppRDO.pedidosCache)
-            ? window.AppRDO.pedidosCache
-            : [];
-
-        var pedidoAtual = cache.find(function (p) {
-            return String(p && p.id || '').trim() === pedidoId;
-        });
-
-        if (!motoboyNome && pedidoAtual && pedidoAtual.motoboy) {
-            motoboyNome = String(pedidoAtual.motoboy).trim();
-        }
-
-        var campo = function (id, fallback) {
-            var el = document.getElementById(id);
-
-            if (el) {
-                return el.value || '';
+        // 🔒 PROTEÇÃO: nunca sobrescreve o motoboy com vazio se já havia um valor salvo no cache
+        if (!motoboyNome) {
+            var pedidoCacheAtual = (Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [])
+                .find(function (p) { return String(p.id || '').trim() === String(pedidoId).trim(); });
+            if (pedidoCacheAtual && pedidoCacheAtual.motoboy) {
+                motoboyNome = String(pedidoCacheAtual.motoboy).trim();
             }
-
-            return fallback !== undefined ? fallback : '';
-        };
+        }
+        var dataLancamento = (document.getElementById('edit-data-lancamento') || {}).value || '';
 
         var payload = {
             id: pedidoId,
-            solicitante: campo(
-                'edit-solicitante',
-                pedidoAtual ? pedidoAtual.solicitante : ''
-            ),
-            contato: campo(
-                'edit-contato',
-                pedidoAtual ? pedidoAtual.contato : ''
-            ),
+            solicitante: (document.getElementById('edit-solicitante') || {}).value || '',
+            contato: (document.getElementById('edit-contato') || {}).value || '',
             data_lancamento: dataLancamento,
-            horario: campo(
-                'edit-horario',
-                pedidoAtual ? pedidoAtual.horario : ''
-            ),
-            de: campo(
-                'edit-de',
-                pedidoAtual ? pedidoAtual.de : ''
-            ),
-            para: campo(
-                'edit-para',
-                pedidoAtual ? pedidoAtual.para : ''
-            ),
-            observacao: campo(
-                'edit-obs',
-                pedidoAtual ? pedidoAtual.observacao : ''
-            ),
+            horario: (document.getElementById('edit-horario') || {}).value || '',
+            de: (document.getElementById('edit-de') || {}).value || '',
+            para: (document.getElementById('edit-para') || {}).value || '',
+            observacao: (document.getElementById('edit-obs') || {}).value || '',
             espera_tipo: tipo,
             espera_minutos: minutos,
             taxa_espera: taxa,
@@ -1436,285 +1206,122 @@
             valor_corrida: valorBase,
             valor_total: valorBase,
             valor_final: valorFinal,
-            mercadoria: campo(
-                'edit-mercadoria',
-                pedidoAtual ? pedidoAtual.mercadoria : ''
-            ),
-            retorno: campo(
-                'edit-retorno',
-                pedidoAtual ? pedidoAtual.retorno : 'Não'
-            ),
-            prioridade: campo(
-                'edit-prioridade',
-                pedidoAtual ? pedidoAtual.prioridade : '0'
-            ),
+            mercadoria: (document.getElementById('edit-mercadoria') || {}).value || '',
+            retorno: (document.getElementById('edit-retorno') || {}).value || 'Não',
+            prioridade: (document.getElementById('edit-prioridade') || {}).value || '0',
             motoboy: motoboyNome
         };
 
-        if (pedidoAtual) {
-            if (pedidoAtual.id_cliente !== undefined) {
-                payload.id_cliente = pedidoAtual.id_cliente;
-            }
-
-            if (pedidoAtual.idCliente !== undefined) {
-                payload.idCliente = pedidoAtual.idCliente;
-            }
-
-            if (pedidoAtual.cliente !== undefined) {
-                payload.cliente = pedidoAtual.cliente;
-            }
-        }
-
-        if (novoStatus) {
-            payload.status = novoStatus;
-        }
+        if (novoStatus) payload.status = novoStatus;
 
         _setBotaoLoading(btnSalvar, true);
 
         API.call('updatepedido', payload)
             .then(function (res) {
-                if (res && res.status === 'error') {
-                    throw new Error(
-                        res.message || 'Erro ao salvar'
-                    );
-                }
+                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
 
-                var cacheAtualizado =
-                    Array.isArray(window.AppRDO && window.AppRDO.pedidosCache)
-                        ? window.AppRDO.pedidosCache
-                        : [];
-
-                var pedido = cacheAtualizado.find(function (p) {
-                    return String(p && p.id || '').trim() === pedidoId;
+                var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+                var pedido = cache.find(function (p) {
+                    return String(p.id || '').trim() === String(pedidoId).trim();
                 });
-
-                if (!pedido) {
-                    pedido = Object.assign(
-                        {},
-                        pedidoAtual || {},
-                        {
-                            id: pedidoId
-                        }
-                    );
-
-                    cacheAtualizado.push(pedido);
+                if (pedido) {
+                    Object.assign(pedido, {
+                        solicitante: payload.solicitante,
+                        contato: payload.contato,
+                        data_lancamento: payload.data_lancamento,
+                        horario: payload.horario,
+                        de: payload.de,
+                        para: payload.para,
+                        observacao: payload.observacao,
+                        espera_tipo: payload.espera_tipo,
+                        espera_minutos: payload.espera_minutos,
+                        taxa_espera: payload.taxa_espera,
+                        valor_base: payload.valor_base,
+                        valor_corrida: payload.valor_corrida,
+                        valor_total: payload.valor_total,
+                        valor_final: payload.valor_final,
+                        mercadoria: payload.mercadoria,
+                        retorno: payload.retorno,
+                        prioridade: payload.prioridade,
+                        motoboy: payload.motoboy
+                    });
+                    if (payload.status) pedido.status = payload.status;
                 }
 
-                Object.assign(pedido, {
-                    id: pedidoId,
-                    solicitante: payload.solicitante,
-                    contato: payload.contato,
-                    data_lancamento: payload.data_lancamento,
-                    horario: payload.horario,
-                    de: payload.de,
-                    para: payload.para,
-                    observacao: payload.observacao,
-                    espera_tipo: payload.espera_tipo,
-                    espera_minutos: payload.espera_minutos,
-                    taxa_espera: payload.taxa_espera,
-                    valor_base: payload.valor_base,
-                    valor_corrida: payload.valor_corrida,
-                    valor_total: payload.valor_total,
-                    valor_final: payload.valor_final,
-                    mercadoria: payload.mercadoria,
-                    retorno: payload.retorno,
-                    prioridade: payload.prioridade,
-                    motoboy: payload.motoboy
-                });
+                _renderizarTabela(window.AppRDO.pedidosCache);
 
-                if (payload.status) {
-                    pedido.status = payload.status;
+                var modalEl = document.getElementById('modalEditarPedido');
+                if (modalEl) {
+                    var inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
                 }
 
-                if (payload.id_cliente !== undefined) {
-                    pedido.id_cliente = payload.id_cliente;
-                }
-
-                if (payload.idCliente !== undefined) {
-                    pedido.idCliente = payload.idCliente;
-                }
-
-                if (payload.cliente !== undefined) {
-                    pedido.cliente = payload.cliente;
-                }
-
-                window.AppRDO.pedidosCache = cacheAtualizado;
-
-                var chatsCache =
-                    Array.isArray(window.AppRDO && window.AppRDO.chatsCache)
-                        ? window.AppRDO.chatsCache
-                        : [];
-
-                var chatAtual = chatsCache.find(function (chat) {
-                    return String(
-                        chat && (
-                            chat.pedido_id !== undefined
-                                ? chat.pedido_id
-                                : chat.id_pedido
-                        ) || ''
-                    ).trim() === pedidoId;
-                });
-
-                if (chatAtual) {
-                    if (payload.valor_final !== undefined) {
-                        chatAtual.valor_final = payload.valor_final;
-                    }
-
-                    if (payload.valor_total !== undefined) {
-                        chatAtual.valor_total = payload.valor_total;
-                    }
-
-                    if (payload.valor_corrida !== undefined) {
-                        chatAtual.valor_corrida = payload.valor_corrida;
-                    }
-
-                    if (payload.valor_base !== undefined) {
-                        chatAtual.valor_base = payload.valor_base;
-                    }
-
-                    if (payload.motoboy !== undefined) {
-                        chatAtual.motoboy = payload.motoboy;
-                    }
-
-                    chatAtual.pedido_id = pedidoId;
-                    chatAtual.id_pedido = pedidoId;
-                }
-
-                window.AppRDO.chatsCache = chatsCache;
-
-                if (typeof _salvarCacheLocal === 'function') {
-                    _salvarCacheLocal(
-                        window.AppRDO.pedidosCache,
-                        window.AppRDO.chatsCache
-                    );
-                }
-
-                _renderizarTabela(
-                    window.AppRDO.pedidosCache
-                );
-
-                var modalEl =
-                    document.getElementById('modalEditarPedido');
-
-                if (
-                    modalEl &&
-                    typeof bootstrap !== 'undefined' &&
-                    bootstrap.Modal
-                ) {
-                    var inst =
-                        bootstrap.Modal.getInstance(modalEl);
-
-                    if (inst) {
-                        inst.hide();
-                    }
-                }
-
-                if (
-                    typeof window.EventBus !== 'undefined' &&
-                    typeof window.EventBus.emit === 'function'
-                ) {
-                    var chaveEmit =
-                        pedidoId + '_' + valorFinal;
-
-                    window._ultimosEmitsPedido =
-                        window._ultimosEmitsPedido || {};
-
+                if (typeof window.EventBus !== 'undefined') {
+                    var chaveEmit = pedidoId + '_' + valorFinal;
+                    window._ultimosEmitsPedido = window._ultimosEmitsPedido || {};
                     var agora = Date.now();
 
-                    if (
-                        !window._ultimosEmitsPedido[chaveEmit] ||
-                        agora -
-                        window._ultimosEmitsPedido[chaveEmit] >
-                        1000
-                    ) {
-                        window._ultimosEmitsPedido[chaveEmit] =
-                            agora;
-
-                        window.EventBus.emit(
-                            'pedido:atualizado',
-                            {
-                                id: pedidoId,
-                                id_pedido: pedidoId,
-                                id_cliente: pedido.id_cliente,
-                                idCliente: pedido.idCliente,
-                                valor_base: valorBase,
-                                valor_corrida: valorBase,
-                                valor_total: valorBase,
-                                valor_final: valorFinal,
-                                motoboy: payload.motoboy
-                            }
-                        );
-
-                        window.EventBus.emit(
-                            'chat:sincronizarValor',
-                            {
-                                id: pedidoId,
-                                id_pedido: pedidoId,
-                                id_cliente: pedido.id_cliente,
-                                idCliente: pedido.idCliente,
-                                valor: valorBase,
-                                valor_base: valorBase,
-                                valor_corrida: valorBase,
-                                valor_total: valorBase,
-                                valor_final: valorFinal
-                            }
-                        );
+                    if (!window._ultimosEmitsPedido[chaveEmit] || (agora - window._ultimosEmitsPedido[chaveEmit]) > 1000) {
+                        window._ultimosEmitsPedido[chaveEmit] = agora;
+                        window.EventBus.emit('pedido:atualizado', {
+                            id: pedidoId,
+                            id_pedido: pedidoId,
+                            valor_corrida: valorBase,
+                            valor_total: valorBase,
+                            valor_final: valorFinal,
+                            motoboy: payload.motoboy
+                        });
                     }
                 }
 
-                if (typeof Swal !== 'undefined') {
+                if (typeof Swal !== 'undefined')
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Pedido atualizado!',
-                        toast: true,
-                        timer: 2000,
-                        position: 'top-end',
-                        showConfirmButton: false
+                        icon: 'success', title: 'Pedido atualizado!',
+                        toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
                     });
-                }
             })
             .catch(function (err) {
-                console.error(
-                    '[pedidos.js] ❌ salvarEdicao:',
-                    err
-                );
-
-                if (errEl) {
-                    errEl.textContent =
-                        err.message || 'Falha ao salvar.';
-                    errEl.classList.remove('d-none');
-                }
+                console.error('[pedidos.js] ❌ salvarEdicao:', err);
+                if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
             })
             .finally(function () {
-                _setBotaoLoading(
-                    btnSalvar,
-                    false,
-                    'bi bi-check-lg',
-                    'SALVAR'
-                );
+                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
             });
     };
 
     window.RDO_PEDIDOS.onEditarValorInput = function (input) {
-        var valor = _parseMoeda(input.value);
-        var elBase = document.getElementById('edit-valor-base');
-        if (elBase) elBase.value = valor;
-        window.RDO_PEDIDOS.calcularEspera(true);
+        if (!input) return;
+        var cursorPos = input.selectionStart;
+        var bruto = input.value.replace(/\D/g, "");
+        if (!bruto) {
+            input.value = "R$ 0,00";
+            return;
+        }
+        var numero = parseInt(bruto, 10) / 100;
+        input.value = numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
     window.RDO_PEDIDOS.salvarValorPedido = function () {
-        var btn = document.getElementById('btn-salvar-valor-pedido');
-        _setBotaoLoading(btn, true);
-        // salvarEdicao já cuida do loading do btn-salvar-edicao;
-        // aqui só espelhamos visualmente no botão específico, se existir
-        window.RDO_PEDIDOS.salvarEdicao();
-        // libera o botão específico quando o modal fechar (edição concluída)
-        var modalEl = document.getElementById('modalEditarPedido');
-        if (modalEl) {
-            modalEl.addEventListener('hidden.bs.modal', function onHide() {
-                _setBotaoLoading(btn, false, 'bi bi-check-lg', 'SALVAR');
-                modalEl.removeEventListener('hidden.bs.modal', onHide);
-            });
+        var inputVal = document.getElementById('input-editar-valor-pedido') || document.querySelector('.input-editar-valor');
+        var pedidoId = window.RDO_PEDIDOS.currentEditId;
+        if (!inputVal || !pedidoId) return;
+
+        var valorNumerico = _parseMoeda(inputVal.value);
+
+        var pedido = cachePedidos.find(function (p) { return _normIdChat(p.id) === _normIdChat(pedidoId); });
+        if (pedido) {
+            pedido.valor = valorNumerico;
+            pedido.valor_total = valorNumerico;
+            pedido.valorEstimado = valorNumerico;
+        }
+
+        if (typeof window.EventBus !== 'undefined' && typeof window.EventBus.emit === 'function') {
+            window.EventBus.emit('pedido:atualizado', { id: pedidoId, valor: valorNumerico });
+            window.EventBus.emit('chat:sincronizarValor', { id: pedidoId, valor: valorNumerico });
+        }
+
+        if (typeof _renderizarTabelaPedidos === 'function') {
+            _renderizarTabelaPedidos();
         }
     };
 
@@ -2331,6 +1938,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 1000);
 });
 
+
 window.carregarDropdownMotoboysGarantido = function (pedidos) {
     var menuEl = document.getElementById("dropdown-filtro-menu") || document.querySelector(".dropdown-filtro-menu") || document.querySelector("[id*='motoboy']");
     var btnFiltro = document.getElementById("btn-filtro-tipo") || document.querySelector("#btn-filtro-tipo");
@@ -2401,6 +2009,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 800);
 });
 
+
 document.addEventListener("click", function (e) {
     var item = e.target.closest(".dropdown-filtro-item, [data-filtro]");
     if (!item) return;
@@ -2446,6 +2055,7 @@ document.addEventListener("click", function (e) {
         }
     }
 }, true);
+
 
 (function () {
     // 1. Garante o comportamento limpo do Dropdown e Filtro de Motoboy
@@ -2526,3 +2136,144 @@ document.addEventListener("click", function (e) {
         }
     });
 })();
+
+
+
+/* VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2 */
+(function () {
+  'use strict';
+
+  if (window.__VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2__) {
+    return;
+  }
+
+  window.__VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2__ = true;
+
+  console.info(
+    '[VACINA FINANCEIRO] contrato de pedidos protegido.'
+  );
+
+  function numero(v) {
+
+    if (v === null || v === undefined || v === '') {
+      return 0;
+    }
+
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : 0;
+    }
+
+    var s = String(v)
+      .replace(/R\$/gi, '')
+      .replace(/\s/g, '');
+
+    if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(',', '.');
+    }
+
+    s = s.replace(/[^0-9.-]/g, '');
+
+    var n = Number(s);
+
+    return Number.isFinite(n) ? n : 0;
+  }
+
+
+  /*
+   * Garante que createpedido/updatepedido nunca percam
+   * valor_corrida por conversões intermediárias.
+   */
+
+  if (
+    window.API &&
+    typeof window.API.call === 'function' &&
+    !window.API.__VACINA_PEDIDOS_CONTRATO_V2__
+  ) {
+
+    var original =
+      window.API.call.bind(window.API);
+
+
+    window.API.call = function (endpoint, payload) {
+
+      var ep = String(endpoint || '')
+        .trim()
+        .toLowerCase();
+
+
+      if (
+        ep === 'createpedido' ||
+        ep === 'updatepedido' ||
+        ep === 'updatepedidos'
+      ) {
+
+        if (
+          payload &&
+          typeof payload === 'object'
+        ) {
+
+          var p =
+            Object.assign({}, payload);
+
+
+          if (
+            p.valor_corrida !== undefined
+          ) {
+
+            p.valor_corrida =
+              numero(p.valor_corrida);
+          }
+
+
+          /*
+           * Não substitui valor_corrida por vlr_servico.
+           * São campos de módulos diferentes.
+           */
+
+          if (
+            p.valor_corrida === undefined &&
+            p.valorCorrida !== undefined
+          ) {
+
+            p.valor_corrida =
+              numero(p.valorCorrida);
+          }
+
+
+          return original(
+            endpoint,
+            p
+          );
+        }
+      }
+
+
+      return original(
+        endpoint,
+        payload
+      );
+    };
+
+
+    window.API.__VACINA_PEDIDOS_CONTRATO_V2__ = true;
+  }
+
+})();
+
+/* ============================================================
+   V36 — PONTE DE COMPATIBILIDADE
+   _renderizarTabelaPedidos -> _renderizarTabela
+   ============================================================ */
+function _renderizarTabelaPedidos(pedidos) {
+    if (Array.isArray(pedidos)) {
+        return _renderizarTabela(pedidos);
+    }
+
+    return _renderizarTabela(
+        window.AppRDO.pedidosCache || []
+    );
+}
+
+window._renderizarTabelaPedidos = _renderizarTabelaPedidos;

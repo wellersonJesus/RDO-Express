@@ -2484,185 +2484,888 @@ function _resolverTextoMensagem(msg, pedido) {
 }
 
 window.remitirPedido = async function () {
-    var _validarCampo = function (el) {
+
+    // ============================================================
+    // FUNÇÕES AUXILIARES
+    // ============================================================
+
+    function validarCampo(el) {
         if (!el || !String(el.value || '').trim()) {
             if (el) {
                 el.style.border = '2px solid #dc3545';
                 el.style.boxShadow = '0 0 0 0.2rem rgba(220,53,69,.25)';
-                setTimeout(function () { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+
+                setTimeout(function () {
+                    el.style.border = '';
+                    el.style.boxShadow = '';
+                }, 3000);
             }
+
             return false;
         }
+
         return true;
-    };
-
-    var invalido = false;
-    ['p-solicitante', 'p-contato', 'p-mercadoria', 'p-rotas'].forEach(function (id) {
-        if (!_validarCampo(document.getElementById(id))) invalido = true;
-    });
-    if (invalido) return;
-
-    if (typeof window.calcularTudo === 'function') window.calcularTudo();
-
-    var dados = window.dadosPedidoAtual || {};
-    var solicitante = String((document.getElementById('p-solicitante') || {}).value || dados.solicitante || '').trim();
-    var contato = String((document.getElementById('p-contato') || {}).value || dados.contato || '').trim();
-    var horario = String((document.getElementById('p-horario') || {}).value || dados.horario || '').trim();
-    var mercadoria = String((document.getElementById('p-mercadoria') || {}).value || dados.mercadoria || 'ENTREGA').trim();
-    var distancia = parseFloat((document.getElementById('p-distancia') || {}).value || dados.distanciaTotal || 0) || 0;
-    var tempo = String((document.getElementById('p-tempo') || {}).value || '').trim();
-    var obs = String((document.getElementById('p-obs') || {}).value || dados.obs || '').trim();
-    var valorKm = String((document.getElementById('p-valor-km') || {}).value || '3').trim();
-    var retorno = String((document.getElementById('p-retorno') || {}).value || '0').trim();
-    var dinamica = String((document.getElementById('p-dinamica') || {}).value || '0').trim();
-    var prioridade = String((document.getElementById('p-prioridade') || {}).value || '0').trim();
-    var valorTotal = Number(dados.valorEstimado || 0);
-    var dataPedido = String(dados.dataPedido || '').trim();
-
-    var rotasProcessadas = (
-        Array.isArray(dados.rotasProcessadas) && dados.rotasProcessadas.length > 0
-    ) ? dados.rotasProcessadas : [];
-
-    var rotasTexto = '';
-    if (rotasProcessadas.length > 0) {
-        rotasTexto = rotasProcessadas.map(function (r, i) {
-            return (i + 1) + '. De: ' + r.de + ' | Para: ' + r.para;
-        }).join('\n');
-    } else {
-        rotasTexto = String((document.getElementById('p-rotas') || {}).value || '').trim();
     }
 
-    var primeiraRota = rotasProcessadas.length > 0 ? rotasProcessadas[0] : null;
-    var deStr = primeiraRota ? primeiraRota.de : '';
-    var paraStr = primeiraRota ? primeiraRota.para : '';
+    function converterNumero(valor) {
+
+        if (valor === null || valor === undefined) {
+            return null;
+        }
+
+        if (typeof valor === 'number') {
+            return Number.isFinite(valor) ? valor : null;
+        }
+
+        var texto = String(valor).trim();
+
+        if (!texto) {
+            return null;
+        }
+
+        /*
+         * Remove moeda, espaços e caracteres externos.
+         *
+         * Exemplos:
+         * 42
+         * "42"
+         * "42,50"
+         * "R$ 42,50"
+         * "R$ 1.234,56"
+         */
+
+        texto = texto
+            .replace(/R\$/gi, '')
+            .replace(/\s/g, '')
+            .trim();
+
+        /*
+         * Se possuir ponto e vírgula:
+         * 1.234,56 -> 1234.56
+         */
+        if (texto.indexOf(',') !== -1 && texto.indexOf('.') !== -1) {
+            texto = texto.replace(/\./g, '').replace(',', '.');
+        }
+
+        /*
+         * Somente vírgula:
+         * 42,50 -> 42.50
+         */
+        else if (texto.indexOf(',') !== -1) {
+            texto = texto.replace(',', '.');
+        }
+
+        /*
+         * Remove qualquer coisa que não seja número,
+         * ponto ou sinal.
+         */
+        texto = texto.replace(/[^0-9.-]/g, '');
+
+        var numero = Number(texto);
+
+        return Number.isFinite(numero) ? numero : null;
+    }
+
+
+    function obterValorPedido(dados) {
+
+        /*
+         * IMPORTANTE:
+         *
+         * A prioridade é o valor que efetivamente está
+         * calculado/armazenado no pedido.
+         */
+
+        var candidatos = [
+
+            // Campo visual do formulário
+            document.getElementById('p-valor'),
+
+            document.getElementById('p-valor-total'),
+
+            document.getElementById('p-valor-corrida'),
+
+            document.getElementById('p-valor-final'),
+
+            // Dados internos
+            dados.valorEstimado,
+
+            dados.valor_corrida,
+
+            dados.valor_final,
+
+            dados.valor_total,
+
+            dados.valor,
+
+            dados.vlr_servico,
+
+            dados.valorcorrida
+        ];
+
+        for (var i = 0; i < candidatos.length; i++) {
+
+            var candidato = candidatos[i];
+
+            if (candidato && candidato.nodeType === 1) {
+                candidato = candidato.value;
+            }
+
+            var numero = converterNumero(candidato);
+
+            if (numero !== null) {
+                return numero;
+            }
+        }
+
+        return null;
+    }
+
+
+    // ============================================================
+    // VALIDAÇÃO DOS CAMPOS
+    // ============================================================
+
+    var invalido = false;
+
+    [
+        'p-solicitante',
+        'p-contato',
+        'p-mercadoria',
+        'p-rotas'
+    ].forEach(function (id) {
+
+        if (!validarCampo(document.getElementById(id))) {
+            invalido = true;
+        }
+
+    });
+
+    if (invalido) {
+        return;
+    }
+
+
+    // ============================================================
+    // GARANTE QUE OS CÁLCULOS ESTEJAM ATUALIZADOS
+    // ============================================================
+
+    if (typeof window.calcularTudo === 'function') {
+        window.calcularTudo();
+    }
+
+
+    // ============================================================
+    // DADOS ATUAIS
+    // ============================================================
+
+    var dados = window.dadosPedidoAtual || {};
+
+
+    var solicitante = String(
+        (document.getElementById('p-solicitante') || {}).value ||
+        dados.solicitante ||
+        ''
+    ).trim();
+
+
+    var contato = String(
+        (document.getElementById('p-contato') || {}).value ||
+        dados.contato ||
+        ''
+    ).trim();
+
+
+    var horario = String(
+        (document.getElementById('p-horario') || {}).value ||
+        dados.horario ||
+        ''
+    ).trim();
+
+
+    var mercadoria = String(
+        (document.getElementById('p-mercadoria') || {}).value ||
+        dados.mercadoria ||
+        'ENTREGA'
+    ).trim();
+
+
+    var distancia = parseFloat(
+        (document.getElementById('p-distancia') || {}).value ||
+        dados.distanciaTotal ||
+        0
+    ) || 0;
+
+
+    var tempo = String(
+        (document.getElementById('p-tempo') || {}).value ||
+        dados.tempo ||
+        ''
+    ).trim();
+
+
+    var obs = String(
+        (document.getElementById('p-obs') || {}).value ||
+        dados.obs ||
+        dados.observacao ||
+        ''
+    ).trim();
+
+
+    var valorKm = String(
+        (document.getElementById('p-valor-km') || {}).value ||
+        dados.valor_km ||
+        '3'
+    ).trim();
+
+
+    var retorno = String(
+        (document.getElementById('p-retorno') || {}).value ||
+        dados.retorno ||
+        '0'
+    ).trim();
+
+
+    var dinamica = String(
+        (document.getElementById('p-dinamica') || {}).value ||
+        dados.dinamica ||
+        '0'
+    ).trim();
+
+
+    var prioridade = String(
+        (document.getElementById('p-prioridade') || {}).value ||
+        dados.prioridade ||
+        '0'
+    ).trim();
+
+
+    var dataPedido = String(
+        dados.dataPedido ||
+        dados.data_pedido ||
+        ''
+    ).trim();
+
+
+    // ============================================================
+    // OBTÉM O VALOR REAL
+    // ============================================================
+
+    var valorTotal = obterValorPedido(dados);
+
+
+    /*
+     * NÃO permitir que um valor inexistente vire silenciosamente 0.
+     *
+     * Esse é um ponto importante da correção.
+     */
+
+    if (valorTotal === null) {
+
+        console.error(
+            '[REMETIR PEDIDO] VALOR DA CORRIDA NÃO ENCONTRADO',
+            {
+                dados: dados,
+                valorEstimado: dados.valorEstimado,
+                valor_corrida: dados.valor_corrida,
+                valor_final: dados.valor_final,
+                valor_total: dados.valor_total
+            }
+        );
+
+        try {
+            Swal.fire({
+                icon: 'error',
+                title: 'Valor da corrida não encontrado',
+                text: 'O pedido não foi enviado porque o valor não foi calculado corretamente.',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#dc3545'
+            });
+        } catch (_) {
+            alert(
+                'O valor da corrida não foi calculado corretamente.'
+            );
+        }
+
+        return;
+    }
+
+
+    /*
+     * Arredondamento monetário seguro.
+     */
+    valorTotal = Math.round((valorTotal + Number.EPSILON) * 100) / 100;
+
+
+    console.log(
+        '[REMETIR PEDIDO] VALOR FINAL ANTES DO ENVIO:',
+        valorTotal,
+        typeof valorTotal
+    );
+
+
+    // ============================================================
+    // ROTAS
+    // ============================================================
+
+    var rotasProcessadas = (
+        Array.isArray(dados.rotasProcessadas) &&
+        dados.rotasProcessadas.length > 0
+    )
+        ? dados.rotasProcessadas
+        : [];
+
+
+    var rotasTexto = '';
+
+
+    if (rotasProcessadas.length > 0) {
+
+        rotasTexto = rotasProcessadas
+            .map(function (r, i) {
+
+                return (
+                    (i + 1) +
+                    '. De: ' +
+                    String(r.de || '') +
+                    ' | Para: ' +
+                    String(r.para || '')
+                );
+
+            })
+            .join('\n');
+
+    } else {
+
+        rotasTexto = String(
+            (document.getElementById('p-rotas') || {}).value || ''
+        ).trim();
+
+    }
+
+
+    var primeiraRota =
+        rotasProcessadas.length > 0
+            ? rotasProcessadas[0]
+            : null;
+
+
+    var deStr =
+        primeiraRota
+            ? String(primeiraRota.de || '')
+            : '';
+
+
+    var paraStr =
+        primeiraRota
+            ? String(primeiraRota.para || '')
+            : '';
+
+
+    // ============================================================
+    // DADOS PARA A MENSAGEM
+    // ============================================================
 
     var dadosParaMensagem = {
+
         id: '[ID_GERADO]',
+
         solicitante: solicitante,
+
         contato: contato,
+
         mercadoria: mercadoria,
+
         rotasProcessadas: rotasProcessadas,
-        distanciaTotal: dados.distanciaTotal || distancia,
-        tempoTotal: dados.tempoTotal || 0,
+
+        distanciaTotal:
+            dados.distanciaTotal || distancia,
+
+        tempoTotal:
+            dados.tempoTotal || 0,
+
+        /*
+         * Mantém compatibilidade com gerarMensagemFormatada.
+         */
         valorEstimado: valorTotal,
-        dataPedido: dataPedido
-    };
 
-    var mensagemProvisoria = typeof window.gerarMensagemFormatada === 'function'
-        ? window.gerarMensagemFormatada(dadosParaMensagem)
-        : '';
-
-    var payload = {
-        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
-        solicitante: solicitante,
-        contato: contato,
-        horario: horario,
-        mercadoria: mercadoria,
-        rotas_texto: rotasTexto,
-        de: deStr,
-        para: paraStr,
-        distancia: distancia.toFixed(2),
-        tempo: tempo,
-        obs: obs,
-        valor_km: valorKm,
-        retorno: retorno,
-        dinamica: dinamica,
-        prioridade: prioridade,
+        /*
+         * Também disponibiliza os nomes usados pelo Apps Script.
+         */
         valor_corrida: valorTotal,
+
         valor_final: valorTotal,
-        status: 'PENDENTE',
-        situacao_financeira: 'PENDENTE',
-        texto: mensagemProvisoria,
+
+        dataPedido: dataPedido,
+
         data_pedido: dataPedido
     };
 
-    if (!payload.id_cliente) { window.exibirModalValidacao('Nenhum cliente selecionado.'); return; }
 
-    var btnRemitir = document.getElementById('btn-remitir-pedido');
-    var textoOriginal = btnRemitir ? btnRemitir.innerHTML : '';
-    if (btnRemitir) {
-        btnRemitir.disabled = true;
-        btnRemitir.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+    var mensagemProvisoria =
+        typeof window.gerarMensagemFormatada === 'function'
+            ? window.gerarMensagemFormatada(dadosParaMensagem)
+            : '';
+
+
+    // ============================================================
+    // CLIENTE
+    // ============================================================
+
+    var idCliente = String(
+        (window.AppRDO && window.AppRDO.clienteId) || ''
+    ).trim();
+
+
+    if (!idCliente) {
+
+        window.exibirModalValidacao(
+            'Nenhum cliente selecionado.'
+        );
+
+        return;
     }
 
+
+    // ============================================================
+    // PAYLOAD FINAL
+    // ============================================================
+
+    var payload = {
+
+        id_cliente: idCliente,
+
+        solicitante: solicitante,
+
+        contato: contato,
+
+        horario: horario,
+
+        mercadoria: mercadoria,
+
+        rotas_texto: rotasTexto,
+
+        de: deStr,
+
+        para: paraStr,
+
+        distancia: distancia.toFixed(2),
+
+        tempo: tempo,
+
+        obs: obs,
+
+        valor_km: valorKm,
+
+        retorno: retorno,
+
+        dinamica: dinamica,
+
+        prioridade: prioridade,
+
+
+        /*
+         * ========================================================
+         * CORREÇÃO PRINCIPAL
+         * ========================================================
+         *
+         * O mesmo número é enviado em todos os aliases
+         * utilizados pelo sistema.
+         */
+
+        valor_corrida: valorTotal,
+
+        valor_final: valorTotal,
+
+        valor_total: valorTotal,
+
+        valor: valorTotal,
+
+        vlr_servico: valorTotal,
+
+
+        status: 'PENDENTE',
+
+        situacao_financeira: 'PENDENTE',
+
+        texto: mensagemProvisoria,
+
+        data_pedido: dataPedido
+    };
+
+
+    // ============================================================
+    // DIAGNÓSTICO FINAL DO PAYLOAD
+    // ============================================================
+
+    console.log(
+        '[REMETIR PEDIDO] PAYLOAD FINAL:',
+        {
+            valor_corrida: payload.valor_corrida,
+            valor_final: payload.valor_final,
+            valor_total: payload.valor_total,
+            valor: payload.valor,
+            vlr_servico: payload.vlr_servico,
+
+            tipo_valor_corrida: typeof payload.valor_corrida,
+            tipo_valor_final: typeof payload.valor_final,
+
+            id_cliente: payload.id_cliente
+        }
+    );
+
+
+    // ============================================================
+    // BOTÃO
+    // ============================================================
+
+    var btnRemitir =
+        document.getElementById('btn-remitir-pedido');
+
+
+    var textoOriginal =
+        btnRemitir
+            ? btnRemitir.innerHTML
+            : '';
+
+
+    if (btnRemitir) {
+
+        btnRemitir.disabled = true;
+
+        btnRemitir.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+            'Enviando...';
+
+    }
+
+
+    // ============================================================
+    // ENVIO
+    // ============================================================
+
     try {
-        var resposta = await API.call('createpedido', payload);
-        if (!resposta || resposta.status !== 'success')
-            throw new Error((resposta && resposta.message) || 'Resposta inválida da API');
 
-        window.AppRDO._chatRequestToken = (window.AppRDO._chatRequestToken || 0) + 1;
+        var resposta =
+            await API.call(
+                'createpedido',
+                payload
+            );
 
-        var novoPedidoIdRaw = String(resposta.id || resposta.pedido_id || '').trim();
-        var novoPedidoId = novoPedidoIdRaw.replace(/^RDO0*/i, '') || novoPedidoIdRaw;
-        var novoChatId = String(resposta.chat_id || resposta.id_chat || '').trim();
 
-        var mensagemFinal = mensagemProvisoria.replace('[ID_GERADO]', novoPedidoIdRaw);
+        if (
+            !resposta ||
+            resposta.status !== 'success'
+        ) {
 
-        var modalForm = document.getElementById('modalFormulario');
-        var instForm = modalForm ? bootstrap.Modal.getInstance(modalForm) : null;
-        if (instForm) { try { instForm.hide(); } catch (e) { window._exibirErroGlobal(e, 'ocultar modal de formulário'); } }
+            throw new Error(
+                (resposta && resposta.message) ||
+                'Resposta inválida da API'
+            );
 
-        if (mensagemFinal && typeof window.enviarMensagemParaChat === 'function')
-            window.enviarMensagemParaChat(mensagemFinal, false, novoPedidoId || null);
+        }
+
+
+        console.log(
+            '[REMETIR PEDIDO] CREATEPEDIDO CONFIRMADO:',
+            resposta
+        );
+
+
+        window.AppRDO._chatRequestToken =
+            (window.AppRDO._chatRequestToken || 0) + 1;
+
+
+        var novoPedidoIdRaw =
+            String(
+                resposta.id ||
+                resposta.pedido_id ||
+                ''
+            ).trim();
+
+
+        var novoPedidoId =
+            novoPedidoIdRaw.replace(
+                /^RDO0*/i,
+                ''
+            ) || novoPedidoIdRaw;
+
+
+        var novoChatId =
+            String(
+                resposta.chat_id ||
+                resposta.id_chat ||
+                ''
+            ).trim();
+
+
+        var mensagemFinal =
+            mensagemProvisoria.replace(
+                '[ID_GERADO]',
+                novoPedidoIdRaw
+            );
+
+
+        // ========================================================
+        // FECHA MODAL
+        // ========================================================
+
+        var modalForm =
+            document.getElementById(
+                'modalFormulario'
+            );
+
+
+        var instForm =
+            modalForm
+                ? bootstrap.Modal.getInstance(modalForm)
+                : null;
+
+
+        if (instForm) {
+
+            try {
+                instForm.hide();
+            } catch (e) {
+
+                window._exibirErroGlobal(
+                    e,
+                    'ocultar modal de formulário'
+                );
+
+            }
+
+        }
+
+
+        // ========================================================
+        // CHAT
+        // ========================================================
+
+        if (
+            mensagemFinal &&
+            typeof window.enviarMensagemParaChat === 'function'
+        ) {
+
+            window.enviarMensagemParaChat(
+                mensagemFinal,
+                false,
+                novoPedidoId || null
+            );
+
+        }
+
+
+        // ========================================================
+        // CACHE DO PEDIDO
+        // ========================================================
 
         if (novoPedidoId) {
-            var novoPedidoCache = Object.assign({}, payload, {
-                id: novoPedidoId,
-                status: 'PENDENTE',
-                situacao_financeira: 'PENDENTE',
-                motoboy: '',
-                mensagem: mensagemFinal
-            });
-            if (Array.isArray(window.AppRDO.pedidosCache))
-                window.AppRDO.pedidosCache.push(novoPedidoCache);
 
-            if (Array.isArray(window.AppRDO.mensagensCache))
+            var novoPedidoCache =
+                Object.assign(
+                    {},
+                    payload,
+                    {
+                        id: novoPedidoId,
+
+                        status: 'PENDENTE',
+
+                        situacao_financeira: 'PENDENTE',
+
+                        motoboy: '',
+
+                        mensagem: mensagemFinal
+                    }
+                );
+
+
+            if (
+                Array.isArray(
+                    window.AppRDO.pedidosCache
+                )
+            ) {
+
+                window.AppRDO.pedidosCache.push(
+                    novoPedidoCache
+                );
+
+            }
+
+
+            if (
+                Array.isArray(
+                    window.AppRDO.mensagensCache
+                )
+            ) {
+
                 window.AppRDO.mensagensCache.push({
-                    id: novoChatId || null,
-                    id_cliente: payload.id_cliente,
-                    pedido_id: novoPedidoId,
-                    texto: mensagemFinal,
-                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    data: new Date().toISOString()
+
+                    id:
+                        novoChatId || null,
+
+                    id_cliente:
+                        payload.id_cliente,
+
+                    pedido_id:
+                        novoPedidoId,
+
+                    texto:
+                        mensagemFinal,
+
+                    hora:
+                        new Date().toLocaleTimeString(
+                            'pt-BR',
+                            {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }
+                        ),
+
+                    data:
+                        new Date().toISOString()
+
                 });
+
+            }
+
         }
+
+
+        // ========================================================
+        // LIMPEZA
+        // ========================================================
 
         window.dadosPedidoAtual = {};
+
         window.AppRDO._mapaModalAberto = false;
+
         window.AppRDO.isProcessingCheckout = false;
 
-        var msgInput = document.getElementById('msg-input');
+
+        var msgInput =
+            document.getElementById(
+                'msg-input'
+            );
+
+
         if (msgInput) {
+
             msgInput.value = '';
+
             msgInput.style.height = 'auto';
-            msgInput.setAttribute('placeholder', 'Digite o pedido...');
+
+            msgInput.setAttribute(
+                'placeholder',
+                'Digite o pedido...'
+            );
+
         }
 
-        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
 
-        setTimeout(function () { _limparBackdrop(); }, 350);
+        if (btnRemitir) {
+
+            btnRemitir.disabled = false;
+
+            btnRemitir.innerHTML =
+                textoOriginal;
+
+        }
+
+
+        setTimeout(
+            function () {
+                _limparBackdrop();
+            },
+            350
+        );
+
+
+        // ========================================================
+        // SUCESSO
+        // ========================================================
 
         try {
+
             Swal.fire({
-                icon: 'success', title: 'Pedido enviado!',
-                text: 'O pedido foi registrado com sucesso.',
-                toast: true, position: 'top-end',
-                showConfirmButton: false, timer: 3000,
-                timerProgressBar: true, customClass: { popup: 'rounded-4 shadow' }
+
+                icon: 'success',
+
+                title: 'Pedido enviado!',
+
+                text:
+                    'O pedido foi registrado com sucesso.',
+
+                toast: true,
+
+                position: 'top-end',
+
+                showConfirmButton: false,
+
+                timer: 3000,
+
+                timerProgressBar: true,
+
+                customClass: {
+                    popup: 'rounded-4 shadow'
+                }
+
             });
-        } catch (_) { }
+
+        } catch (_) {}
+
 
     } catch (err) {
-        window._exibirErroGlobal(err, 'enviar pedido');
-        if (btnRemitir) { btnRemitir.disabled = false; btnRemitir.innerHTML = textoOriginal; }
+
+        window._exibirErroGlobal(
+            err,
+            'enviar pedido'
+        );
+
+
+        if (btnRemitir) {
+
+            btnRemitir.disabled = false;
+
+            btnRemitir.innerHTML =
+                textoOriginal;
+
+        }
+
+
         try {
+
             Swal.fire({
-                icon: 'error', title: 'Erro ao enviar pedido',
-                html: '<div style="font-size:.9rem;">' + (err.message || 'Tente novamente.') + '</div>',
-                confirmButtonText: 'Fechar', confirmButtonColor: '#dc3545',
-                customClass: { popup: 'rounded-4' }
+
+                icon: 'error',
+
+                title: 'Erro ao enviar pedido',
+
+                html:
+                    '<div style="font-size:.9rem;">' +
+                    (err.message ||
+                        'Tente novamente.') +
+                    '</div>',
+
+                confirmButtonText: 'Fechar',
+
+                confirmButtonColor: '#dc3545',
+
+                customClass: {
+                    popup: 'rounded-4'
+                }
+
             });
-        } catch (_) { alert('Erro ao enviar pedido: ' + (err.message || '')); }
+
+        } catch (_) {
+
+            alert(
+                'Erro ao enviar pedido: ' +
+                (err.message || '')
+            );
+
+        }
+
     }
 };
 
@@ -2951,12 +3654,16 @@ window.gerarMensagemFormatada = function (dados) {
 
     var km = Number(dados.distanciaTotal || dados.distancia || 0);
     var min = Number(dados.tempoTotal || 0);
-    var valor = Number(dados.valorEstimado || dados.valor_total || dados.valor_final || 0);
+    var valorFinalCalculado = _resolverValor(dados);
+
+    dados.valor = valorFinalCalculado;
+    dados.valor_total = valorFinalCalculado;
+    dados.vlr_servico = valorFinalCalculado;
 
     linhas.push(
         '🛣️ ' + km.toFixed(2) + ' km ' +
         '⏱️ ' + window.formatarTempoHumano(min) + ' ' +
-        '💰 ' + valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        '💰 ' + valorFinalCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     );
 
     return linhas.join('\n');
@@ -3223,6 +3930,9 @@ window.StatusModal = (function () {
 
                         window.EventBus.emit('pedido:atualizado', {
                             id: _pedidoId,
+                            id_pedido: _pedidoId,
+                            idPedido: _pedidoId,
+                            pedido_id: _pedidoId,
                             valor_final: valorFinalPedido,
                             valor_total: valorFinalPedido,
                             valor_corrida: valorFinalPedido,
@@ -3752,7 +4462,21 @@ function _geocodificarExterno(busca) {
 }
 
 function _parseMoeda(valor) {
-    return window._parseMoedaSeguro(valor);
+    if (typeof valor === 'number') return isNaN(valor) ? 0 : valor;
+    if (!valor) return 0;
+    if (typeof window._parseMoedaSeguro === 'function') {
+        return window._parseMoedaSeguro(valor);
+    }
+    var limpo = String(valor).replace(/[^0-9,.-]+/g, "");
+    if (limpo.includes(",")) {
+        if (limpo.includes(".")) {
+            limpo = limpo.replace(/\./g, "").replace(",", ".");
+        } else {
+            limpo = limpo.replace(",", ".");
+        }
+    }
+    var num = parseFloat(limpo);
+    return isNaN(num) ? 0 : num;
 }
 
 function _formatarMoedaBR(valor) {
@@ -3760,7 +4484,13 @@ function _formatarMoedaBR(valor) {
 }
 
 function _resolverValor(pedido) {
-    return _parseMoeda(pedido.valor_total || pedido.valor_corrida || pedido.valor_final || 0);
+    if (!pedido) return 0;
+    var valorBruto = pedido.valorEstimado !== undefined ? pedido.valorEstimado :
+                     (pedido.valor_total !== undefined ? pedido.valor_total :
+                     (pedido.valor_corrida !== undefined ? pedido.valor_corrida :
+                     (pedido.valor_final !== undefined ? pedido.valor_final :
+                     (pedido.valor !== undefined ? pedido.valor : 0))));
+    return _parseMoeda(valorBruto);
 }
 
 function _normalizarStatus(status) {
@@ -3896,31 +4626,13 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
 
     var errEl = document.getElementById('edit-error-msg');
 
-    if (btnSalvar && btnSalvar.disabled) return;
-
-    if (errEl) errEl.classList.add('d-none');
-
-    function campo(id, fallback) {
-        var el = document.getElementById(id);
-        if (el) return el.value != null ? el.value : '';
-        return fallback != null ? fallback : '';
+    if (errEl) {
+        errEl.classList.add('d-none');
+        errEl.textContent = '';
     }
 
-    function normalizarId(valor) {
-        return String(valor == null ? '' : valor).trim();
-    }
-
-    function primeiroValor() {
-        for (var i = 0; i < arguments.length; i++) {
-            var valor = arguments[i];
-            if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
-                return valor;
-            }
-        }
-        return '';
-    }
-
-    var pedidoId = normalizarId(campo('edit-pedido-id'));
+    var pedidoId =
+        (document.getElementById('edit-pedido-id') || {}).value || '';
 
     if (!pedidoId) {
         if (errEl) {
@@ -3932,374 +4644,134 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
 
     var cache =
         window.AppRDO &&
-            Array.isArray(window.AppRDO.pedidosCache)
+        Array.isArray(window.AppRDO.pedidosCache)
             ? window.AppRDO.pedidosCache
             : [];
 
     var pedido = cache.find(function (p) {
-        return normalizarId(p.id || p._id || p.id_pedido || p.pedido_id) === pedidoId;
+        return String(p && p.id || '').trim() === String(pedidoId).trim();
     });
 
     if (!pedido) {
         if (errEl) {
-            errEl.textContent = 'Pedido não encontrado no cache: ' + pedidoId;
+            errEl.textContent = 'Pedido não encontrado no cache local.';
             errEl.classList.remove('d-none');
         }
         return;
     }
 
-    var valorTexto = campo(
-        'edit-valor-original',
-        campo(
-            'edit-valor-base',
-            primeiroValor(
-                pedido.valor_original,
-                pedido.valor_base,
-                pedido.valor_corrida,
-                pedido.valor_total,
-                pedido.valor,
-                0
-            )
-        )
-    );
-
-    var valorBase =
-        typeof _parseMoeda === 'function'
-            ? _parseMoeda(valorTexto)
-            : Number(
-                String(valorTexto)
-                    .replace(/R\$/gi, '')
-                    .replace(/\s/g, '')
-                    .replace(/\./g, '')
-                    .replace(',', '.')
-            );
-
-    if (!Number.isFinite(valorBase) || valorBase < 0) {
-        if (errEl) {
-            errEl.textContent = 'Valor inválido: ' + valorTexto;
-            errEl.classList.remove('d-none');
-        }
-        return;
+    if (typeof window.RDO_PEDIDOS.calcularEspera === 'function') {
+        window.RDO_PEDIDOS.calcularEspera();
     }
 
-    var tipo = campo(
-        'edit-espera-tipo',
-        pedido.espera_tipo || 'sem_espera'
+    var valorBase = _parseMoeda(
+        (document.getElementById('edit-valor-base') || {}).value
     );
 
-    var minutos = parseInt(
-        campo(
-            'edit-espera-minutos',
-            pedido.espera_minutos || 0
-        ),
-        10
-    ) || 0;
+    var tipoEspera =
+        (document.getElementById('edit-espera-tipo') || {}).value ||
+        'sem_espera';
 
-    if (minutos < 0) minutos = 0;
+    var minutosEspera =
+        parseFloat(
+            (document.getElementById('edit-espera-minutos') || {}).value
+        ) || 0;
 
-    var pontos = tipo === 'ambos' ? 2 : 1;
-
-    var franquiaTotal =
-        Number(FRANQUIA_MIN || 0) * pontos;
-
-    var excedente =
-        tipo !== 'sem_espera' && minutos > 0
-            ? Math.max(0, minutos - franquiaTotal)
-            : 0;
-
-    var taxa =
-        excedente * Number(TARIFA_MIN || 0);
+    var taxaEspera =
+        Number(window.RDO_PEDIDOS._taxaEsperaCalculada) || 0;
 
     var valorFinal =
-        valorBase + taxa;
+        window.RDO_PEDIDOS._valorFinalCalculado != null
+            ? Number(window.RDO_PEDIDOS._valorFinalCalculado)
+            : valorBase + taxaEspera;
 
-    var status = String(
-        campo('edit-status', pedido.status || '')
-    ).trim().toUpperCase();
+    var de =
+        (document.getElementById('edit-de') || {}).value || '';
 
-    var motoboy = String(
-        campo('edit-motoboy', pedido.motoboy || '')
-    ).trim();
+    var para =
+        (document.getElementById('edit-para') || {}).value || '';
 
-    var idCliente = normalizarId(
-        primeiroValor(
-            campo('edit-id-cliente'),
-            pedido.id_cliente,
-            pedido.idCliente,
-            window.AppRDO && window.AppRDO.clienteId
-        )
-    );
-
-    var solicitante = campo(
-        'edit-solicitante',
-        primeiroValor(
-            pedido.solicitante,
-            pedido.cliente,
-            ''
-        )
-    );
-
-    var contato = campo(
-        'edit-contato',
-        pedido.contato || ''
-    );
-
-    var dataLancamento = campo(
-        'edit-data-lancamento',
-        primeiroValor(
-            pedido.data_lancamento,
-            pedido.dataLancamento,
-            ''
-        )
-    );
-
-    var horario = campo(
-        'edit-horario',
-        pedido.horario || ''
-    );
-
-    var mercadoria = campo(
-        'edit-mercadoria',
-        pedido.mercadoria || ''
-    );
-
-    var de = campo(
-        'edit-de',
-        pedido.de || ''
-    );
-
-    var para = campo(
-        'edit-para',
-        pedido.para || ''
-    );
-
-    var observacao = campo(
-        'edit-obs',
-        primeiroValor(
-            pedido.observacao,
-            pedido.obs,
-            ''
-        )
-    );
-
-    var retorno = campo(
-        'edit-retorno',
-        pedido.retorno || 'Não'
-    );
-
-    var prioridade = campo(
-        'edit-prioridade',
-        pedido.prioridade || '0'
-    );
+    var obs =
+        (document.getElementById('edit-obs') || {}).value || '';
 
     var payload = {
         id: pedidoId,
-        id_pedido: pedidoId,
-        pedido_id: pedidoId,
-
-        id_cliente: idCliente,
-        idCliente: idCliente,
-
-        solicitante: solicitante,
-        cliente: solicitante,
-        contato: contato,
-
-        data_lancamento: dataLancamento,
-        dataLancamento: dataLancamento,
-        horario: horario,
-
-        mercadoria: mercadoria,
+        id_cliente: String(
+            (window.AppRDO && window.AppRDO.clienteId) || pedido.id_cliente || ''
+        ),
         de: de,
         para: para,
-
-        observacao: observacao,
-        obs: observacao,
-
-        retorno: retorno,
-        prioridade: prioridade,
-        motoboy: motoboy,
-
-        espera_tipo: tipo,
-        espera_minutos: minutos,
-        taxa_espera: taxa,
-
-        valor_original: valorBase,
-        valor: valorBase,
-        valor_base: valorBase,
-        valor_corrida: valorBase,
-        valor_total: valorBase,
+        observacao: obs,
+        espera_tipo: tipoEspera,
+        espera_minutos: minutosEspera,
+        taxa_espera: taxaEspera,
+        valor_total: valorFinal,
+        valor_corrida: valorFinal,
         valor_final: valorFinal
     };
-
-    if (status) {
-        payload.status = status;
-    } else if (pedido.status != null) {
-        payload.status = pedido.status;
-    }
-
-    if (pedido.situacao_financeira != null) {
-        payload.situacao_financeira = pedido.situacao_financeira;
-    }
-
-    console.log('[pedidos.js] 🚀 SALVANDO PEDIDO:', payload);
 
     _setBotaoLoading(btnSalvar, true);
 
     API.call('updatepedido', payload)
         .then(function (res) {
             if (res && res.status === 'error') {
-                throw new Error(
-                    res.message || 'Erro ao salvar pedido.'
-                );
+                throw new Error(res.message || 'Erro ao salvar');
             }
 
-            Object.assign(pedido, payload);
-
-            pedido.id = pedidoId;
-            pedido.id_pedido = pedidoId;
-            pedido.pedido_id = pedidoId;
-
-            if (idCliente) {
-                pedido.id_cliente = idCliente;
-                pedido.idCliente = idCliente;
-            }
-
-            if (typeof _renderizarTabela === 'function') {
-                _renderizarTabela(
-                    window.AppRDO.pedidosCache
-                );
-            }
-
-            var chatsCache =
-                window.AppRDO &&
-                    Array.isArray(window.AppRDO.chatsCache)
-                    ? window.AppRDO.chatsCache
-                    : [];
-
-            var dadosChat = {
-                id: pedidoId,
-                id_pedido: pedidoId,
-                pedido_id: pedidoId,
-
-                id_cliente: idCliente,
-                idCliente: idCliente,
-
-                cliente: solicitante,
-                solicitante: solicitante,
-                contato: contato,
-
-                data_lancamento: dataLancamento,
-                dataLancamento: dataLancamento,
-                horario: horario,
-
-                mercadoria: mercadoria,
+            Object.assign(pedido, {
                 de: de,
                 para: para,
-
-                observacao: observacao,
-                obs: observacao,
-
-                retorno: retorno,
-                prioridade: prioridade,
-
-                motoboy: motoboy,
-                status: payload.status || pedido.status,
-
-                espera_tipo: tipo,
-                espera_minutos: minutos,
-                taxa_espera: taxa,
-
-                valor_original: valorBase,
-                valor: valorBase,
-                valor_base: valorBase,
-                valor_corrida: valorBase,
-                valor_total: valorBase,
+                observacao: obs,
+                espera_tipo: tipoEspera,
+                espera_minutos: minutosEspera,
+                taxa_espera: taxaEspera,
+                valor_total: valorFinal,
+                valor_corrida: valorFinal,
                 valor_final: valorFinal
-            };
-
-            var chatExistente = chatsCache.find(function (chat) {
-                return normalizarId(
-                    chat.id_pedido ||
-                    chat.pedido_id ||
-                    chat.idPedido ||
-                    chat.id
-                ) === pedidoId;
             });
 
-            if (chatExistente) {
-                Object.assign(chatExistente, dadosChat);
-            }
-
-            if (typeof window._sincronizarValorNoChat === 'function') {
-                window._sincronizarValorNoChat(dadosChat);
-            }
-
-            if (
-                window.EventBus &&
-                typeof window.EventBus.emit === 'function'
-            ) {
-                window.EventBus.emit(
-                    'pedido:atualizado',
-                    dadosChat
-                );
-
-                window.EventBus.emit(
-                    'chat:sincronizarValor',
-                    dadosChat
-                );
-
-                window.EventBus.emit(
-                    'chat:pedidoAtualizado',
-                    dadosChat
-                );
-            }
-
-            if (
-                typeof window._renderizarChats === 'function'
-            ) {
-                try {
-                    window._renderizarChats(
-                        window.AppRDO.chatsCache
-                    );
-                } catch (e) {
-                    console.warn(
-                        '[pedidos.js] ⚠️ Falha ao renderizar chat:',
-                        e
-                    );
-                }
-            }
-
-            if (
-                typeof window._renderizarChat === 'function'
-            ) {
-                try {
-                    window._renderizarChat();
-                } catch (e) {
-                    console.warn(
-                        '[pedidos.js] ⚠️ Falha ao renderizar chat:',
-                        e
-                    );
-                }
+            if (typeof window._renderizarTabelaPedidos === 'function') {
+                window._renderizarTabelaPedidos(cache);
             }
 
             var modalEl =
-                document.getElementById(
-                    'modalEditarPedido'
-                );
+                document.getElementById('modalEditarPedido');
 
-            if (
-                modalEl &&
-                window.bootstrap &&
-                bootstrap.Modal
-            ) {
-                var inst =
-                    bootstrap.Modal.getInstance(
-                        modalEl
-                    );
+            if (modalEl &&
+                typeof bootstrap !== 'undefined' &&
+                bootstrap.Modal) {
+
+                var inst = bootstrap.Modal.getInstance(modalEl);
 
                 if (inst) {
                     inst.hide();
                 }
+            }
+
+            if (typeof window.EventBus !== 'undefined' &&
+                window.EventBus &&
+                typeof window.EventBus.emit === 'function') {
+
+                window.EventBus.emit('pedido:atualizado', {
+                    id: pedidoId,
+                    id_pedido: pedidoId,
+                    idPedido: pedidoId,
+                    pedido_id: pedidoId,
+                    valor_final: valorFinal,
+                    valor_total: valorFinal,
+                    valor_corrida: valorFinal,
+                    motoboy:
+                        pedido.motoboy ||
+                        pedido.nome_motoboy ||
+                        pedido.motoboy_nome ||
+                        '',
+                    data_pedido:
+                        pedido.data_lancamento ||
+                        pedido.dataLancamento ||
+                        pedido.updated_at ||
+                        pedido.data ||
+                        ''
+                });
             }
 
             if (typeof Swal !== 'undefined') {
@@ -4312,22 +4784,16 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
                     showConfirmButton: false
                 });
             }
-
-            console.log(
-                '[pedidos.js] ✅ PEDIDO E CHAT SINCRONIZADOS:',
-                pedidoId
-            );
         })
         .catch(function (err) {
             console.error(
-                '[pedidos.js] ❌ salvarEdicao:',
+                '[RDO_PEDIDOS] ❌ salvarEdicao:',
                 err
             );
 
             if (errEl) {
                 errEl.textContent =
-                    err.message ||
-                    'Falha ao salvar.';
+                    err.message || 'Falha ao salvar.';
                 errEl.classList.remove('d-none');
             }
         })
@@ -4339,7 +4805,6 @@ window.RDO_PEDIDOS.salvarEdicao = function () {
                 'SALVAR'
             );
         });
-
 };
 
 window.RDO_PEDIDOS.salvarValorPedido = function () {
@@ -5154,1135 +5619,115 @@ function _normIdChat(id) {
 }
 
 function _sincronizarValorNoChat(dados) {
-    dados = dados || {};
-
-    var pedidoId = String(
-        dados.id ||
-        dados.id_pedido ||
-        dados.pedido_id ||
-        ''
-    ).trim();
-
-    if (!pedidoId) return Promise.resolve(false);
-
-    var idNorm = typeof _normIdChat === 'function'
-        ? _normIdChat(pedidoId)
-        : pedidoId;
-
-    var cachePedidos =
-        window.AppRDO &&
-            Array.isArray(window.AppRDO.pedidosCache)
-            ? window.AppRDO.pedidosCache
-            : [];
-
-    var pedidoCache = cachePedidos.find(function (p) {
-        var id = String(
-            p.id ||
-            p._id ||
-            p.pedido_id ||
-            ''
-        ).trim();
-
-        return (
-            id === pedidoId ||
-            (
-                typeof _normIdChat === 'function' &&
-                _normIdChat(id) === idNorm
-            )
-        );
-    }) || null;
-
-    var cacheMsgs =
-        window.AppRDO &&
-            Array.isArray(window.AppRDO.mensagensCache)
-            ? window.AppRDO.mensagensCache
-            : [];
-
-    var mensagensEncontradas = cacheMsgs.filter(function (m) {
-        var ids = [
-            m.pedido_id,
-            m.id_pedido,
-            m.pedidoId,
-            m.idPedido
-        ];
-
-        return ids.some(function (id) {
-            var valor = String(id || '').trim();
-
-            return (
-                valor === pedidoId ||
-                (
-                    typeof _normIdChat === 'function' &&
-                    _normIdChat(valor) === idNorm
-                )
-            );
-        });
-    });
-
-    var msg = mensagensEncontradas.length
-        ? mensagensEncontradas[0]
-        : null;
-
-    if (!msg) {
-        msg = cacheMsgs.find(function (m) {
-            var texto = String(m.texto || '');
-            var numero = pedidoId.replace(/^RDO/i, '');
-
-            return (
-                texto.indexOf('RDO' + numero) !== -1 ||
-                texto.indexOf(pedidoId) !== -1
-            );
-        }) || null;
-    }
-
-    if (!msg || !msg.id) {
-        console.warn(
-            '[chat.js] ⚠️ Nenhuma mensagem encontrada para o pedido:',
-            pedidoId
-        );
-        return Promise.resolve(false);
-    }
-
-    var textoAtual = String(msg.texto || '');
-    var textoNovo = textoAtual;
-
-    var valorBruto =
-        dados.valor_final != null
-            ? dados.valor_final
-            : dados.valor_total != null
-                ? dados.valor_total
-                : dados.valor_corrida != null
-                    ? dados.valor_corrida
-                    : dados.valor_base != null
-                        ? dados.valor_base
-                        : dados.valor_original != null
-                            ? dados.valor_original
-                            : dados.valor;
-
-    if (
-        valorBruto !== null &&
-        valorBruto !== undefined &&
-        valorBruto !== ''
-    ) {
-        var novoValor;
-
-        if (typeof valorBruto === 'number') {
-            novoValor = valorBruto;
-        } else {
-            var valorTexto = String(valorBruto)
-                .trim()
-                .replace(/R\$/gi, '')
-                .replace(/\s/g, '');
-
-            if (
-                valorTexto.indexOf(',') !== -1 &&
-                valorTexto.indexOf('.') !== -1
-            ) {
-                valorTexto = valorTexto
-                    .replace(/\./g, '')
-                    .replace(',', '.');
-            } else if (
-                valorTexto.indexOf(',') !== -1
-            ) {
-                valorTexto = valorTexto.replace(',', '.');
-            }
-
-            novoValor = Number(valorTexto);
-        }
-
-        if (Number.isFinite(novoValor)) {
-            var valorFormatado = novoValor.toLocaleString(
-                'pt-BR',
-                {
-                    style: 'currency',
-                    currency: 'BRL'
-                }
-            );
-
-            var regexValor =
-                /💰\s*(?:R\$\s*)?[\d.,]+/;
-
-            if (regexValor.test(textoNovo)) {
-                textoNovo = textoNovo.replace(
-                    regexValor,
-                    '💰 ' + valorFormatado
-                );
-            } else {
-                var linhas = textoNovo.split('\n');
-
-                var indiceValor = linhas.findIndex(function (linha) {
-                    return /💰/.test(linha);
-                });
-
-                if (indiceValor !== -1) {
-                    linhas[indiceValor] =
-                        linhas[indiceValor].replace(
-                            /💰.*/,
-                            '💰 ' + valorFormatado
-                        );
-
-                    textoNovo = linhas.join('\n');
-                }
-            }
-
-            msg.valor = novoValor;
-            msg.valor_original = novoValor;
-            msg.valor_base = novoValor;
-            msg.valor_corrida = novoValor;
-            msg.valor_total = novoValor;
-            msg.valor_final = novoValor;
-        }
-    }
-
-    if (dados.cliente != null || dados.solicitante != null) {
-        var clienteNovo = String(
-            dados.cliente != null
-                ? dados.cliente
-                : dados.solicitante
-        ).trim();
-
-        if (clienteNovo && clienteNovo !== '-') {
-            var regexCliente =
-                /(👤\s*:\s*)([^📞\n]+)/;
-
-            if (regexCliente.test(textoNovo)) {
-                textoNovo = textoNovo.replace(
-                    regexCliente,
-                    '$1' + clienteNovo + ' '
-                );
-            }
-
-            msg.cliente = clienteNovo;
-            msg.solicitante = clienteNovo;
-
-            if (pedidoCache) {
-                pedidoCache.cliente = clienteNovo;
-                pedidoCache.solicitante = clienteNovo;
-            }
-        }
-    }
-
-    if (dados.motoboy != null) {
-        var motoboyNovo =
-            String(dados.motoboy || '').trim();
-
-        if (motoboyNovo && motoboyNovo !== '-') {
-            msg.motoboy = motoboyNovo;
-
-            if (pedidoCache) {
-                pedidoCache.motoboy = motoboyNovo;
-            }
-        }
-    }
-
-    if (dados.status != null) {
-        msg.status = dados.status;
-
-        if (pedidoCache) {
-            pedidoCache.status = dados.status;
-        }
-    }
-
-    var msgEls = document.querySelectorAll(
-        '[data-pedido-id]'
-    );
-
-    msgEls.forEach(function (msgEl) {
-        var elId = String(
-            msgEl.getAttribute('data-pedido-id') || ''
-        ).trim();
-
-        var corresponde =
-            elId === pedidoId ||
-            (
-                typeof _normIdChat === 'function' &&
-                _normIdChat(elId) === idNorm
-            );
-
-        if (!corresponde) return;
-
-        if (textoNovo !== textoAtual) {
-            var bodyEl =
-                msgEl.querySelector('.message-body');
-
-            if (bodyEl) {
-                var textoSeguro = textoNovo
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/\n/g, '<br>');
-
-                bodyEl.innerHTML =
-                    typeof _estilizarRotasNaMensagem === 'function'
-                        ? _estilizarRotasNaMensagem(textoSeguro)
-                        : textoSeguro;
-            }
-
-            msgEl.setAttribute(
-                'data-texto-original',
-                textoNovo
-                    .replace(/&/g, '&amp;')
-                    .replace(/"/g, '&quot;')
-            );
-        }
-
-        if (
-            valorBruto !== null &&
-            valorBruto !== undefined &&
-            Number.isFinite(Number(valorBruto))
-        ) {
-            var valorEl = msgEl.querySelector(
-                '.valor-pedido-chat, .valor-destaque, .badge-valor, .text-success.fs-5, [data-valor-estimado], span[class*="valor"]'
-            );
-
-            if (valorEl) {
-                var valorVisual =
-                    Number(valorBruto);
-
-                if (Number.isFinite(valorVisual)) {
-                    valorEl.textContent =
-                        valorVisual.toLocaleString(
-                            'pt-BR',
-                            {
-                                style: 'currency',
-                                currency: 'BRL'
-                            }
-                        );
-                }
-            }
-        }
-
-        if (dados.cliente || dados.solicitante) {
-            var clienteEl = msgEl.querySelector(
-                '.solicitante-pedido-chat, .nome-solicitante, .solicitante-txt'
-            );
-
-            if (clienteEl) {
-                clienteEl.textContent =
-                    String(
-                        dados.cliente ||
-                        dados.solicitante
-                    );
-            }
-        }
-
-        if (dados.status) {
-            var statusEl = msgEl.querySelector(
-                '.status-badge, .badge-status'
-            );
-
-            if (statusEl) {
-                statusEl.textContent =
-                    String(dados.status);
-            }
-        }
-    });
-
-    if (textoNovo === textoAtual) {
-        return Promise.resolve(false);
-    }
-
-    msg.texto = textoNovo;
-
-    var chatId = String(
-        msg.id || ''
-    ).trim();
-
-    if (!chatId) {
-        console.warn(
-            '[chat.js] ⚠️ Mensagem sem ID para o pedido:',
-            pedidoId
-        );
-        return Promise.resolve(false);
-    }
-
-    console.log(
-        '[chat.js] 📤 updatechat:',
-        {
-            pedido_id: pedidoId,
-            chat_id: chatId,
-            valor: valorBruto,
-            texto: textoNovo
-        }
-    );
-
-    return API.call(
-        'updatechat',
-        {
-            id: chatId,
-            texto: textoNovo
-        }
-    )
-        .then(function (res) {
-            if (
-                !res ||
-                res.status === 'error'
-            ) {
-                throw new Error(
-                    (
-                        res &&
-                        res.message
-                    ) ||
-                    'Falha ao atualizar o chat.'
-                );
-            }
-
-            console.log(
-                '[chat.js] ✅ Chat atualizado:',
-                {
-                    pedido_id: pedidoId,
-                    chat_id: chatId
-                }
-            );
-
-            return true;
-        })
-        .catch(function (e) {
-            console.error(
-                '[chat.js] ❌ Falha ao atualizar chat:',
-                e
-            );
-
-            if (
-                typeof window._exibirErroGlobal ===
-                'function'
-            ) {
-                window._exibirErroGlobal(
-                    e,
-                    'atualizar pedido no chat'
-                );
-            }
-
-            throw e;
-        });
-}
-
-window._sincronizarValorNoChat =
-    _sincronizarValorNoChat;
-
-window.EventBus.on(
-    'pedido:atualizado',
-    function (dados) {
-        if (!dados) return;
-
-        var pedidoId = String(
-            dados.id ||
-            dados.id_pedido ||
-            dados.pedido_id ||
-            ''
-        ).trim();
-
-        if (!pedidoId) return;
-
-        var dadosSync = Object.assign(
-            {},
-            dados,
-            {
-                id: pedidoId,
-                id_pedido: pedidoId,
-                pedido_id: pedidoId
-            }
-        );
-
-        if (
-            window.AppRDO &&
-            Array.isArray(window.AppRDO.mensagensCache)
-        ) {
-            window.AppRDO.mensagensCache.forEach(function (msg) {
-                var ids = [
-                    msg.pedido_id,
-                    msg.id_pedido,
-                    msg.pedidoId,
-                    msg.idPedido
-                ];
-
-                var corresponde = ids.some(function (id) {
-                    var valor = String(id || '').trim();
-
-                    return (
-                        valor === pedidoId ||
-                        (
-                            typeof _normIdChat === 'function' &&
-                            _normIdChat(valor) === _normIdChat(pedidoId)
-                        )
-                    );
-                });
-
-                if (!corresponde) return;
-
-                if (dados.valor != null)
-                    msg.valor = dados.valor;
-
-                if (dados.valor_original != null)
-                    msg.valor_original = dados.valor_original;
-
-                if (dados.valor_base != null)
-                    msg.valor_base = dados.valor_base;
-
-                if (dados.valor_corrida != null)
-                    msg.valor_corrida = dados.valor_corrida;
-
-                if (dados.valor_total != null)
-                    msg.valor_total = dados.valor_total;
-
-                if (dados.valor_final != null)
-                    msg.valor_final = dados.valor_final;
-
-                if (dados.solicitante != null)
-                    msg.solicitante = dados.solicitante;
-
-                if (dados.cliente != null)
-                    msg.cliente = dados.cliente;
-
-                if (dados.status != null)
-                    msg.status = dados.status;
-
-                if (dados.motoboy != null)
-                    msg.motoboy = dados.motoboy;
-            });
-        }
-
-        if (
-            typeof window._sincronizarValorNoChat ===
-            'function'
-        ) {
-            window._sincronizarValorNoChat(
-                dadosSync
-            ).catch(function (erro) {
-                console.error(
-                    '[chat.js] ❌ Sincronização Pedido → Chat falhou:',
-                    erro
-                );
-            });
-        }
-    }
-);
-
-window._sincronizarValorNoChat = function (dados) {
-    dados = dados || {};
-
-    var pedidoId = String(
-        dados.id ||
-        dados.id_pedido ||
-        dados.pedido_id ||
-        (window.AppRDO && window.AppRDO._pedidoAtualId) ||
-        ''
-    ).trim();
-
+    var pedidoId = String(dados && dados.id || '').trim();
     if (!pedidoId) return;
 
-    function normalizarId(id) {
-        var valor = String(id || '').trim().toUpperCase();
+    var idNorm = _normIdChat(pedidoId);
+    var houveAlteracao = false;
 
-        if (typeof window._normIdChat === 'function') {
-            try {
-                return window._normIdChat(valor);
-            } catch (e) { }
-        }
+    var cachePedidos = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
+    var pedidoCache = cachePedidos.find(function (p) { return _normIdChat(p.id) === idNorm; });
 
-        return valor.replace(/^RDO/, '').trim();
-    }
+    var cacheMsgs = Array.isArray(window.AppRDO.mensagensCache) ? window.AppRDO.mensagensCache : [];
+    var msg = cacheMsgs.find(function (m) { return _normIdChat(m.pedido_id) === idNorm; });
+    if (!msg || !msg.texto || !msg.id) return;
 
-    var idNorm = normalizarId(pedidoId);
+    var textoAtualizado = msg.texto;
 
-    function correspondeId(id) {
-        if (!id) return false;
+    var valorBruto = dados.valor_final != null ? dados.valor_final
+        : dados.valor_total != null ? dados.valor_total
+            : dados.valor_corrida;
 
-        var bruto = String(id).trim();
+    if (valorBruto != null && valorBruto !== '') {
+        var novoValor = typeof valorBruto === 'number'
+            ? valorBruto
+            : parseFloat(String(valorBruto).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3},)/g, '').replace(',', '.'));
 
-        if (!bruto) return false;
-
-        return (
-            normalizarId(bruto) === idNorm
-        );
-    }
-
-    var app =
-        window.AppRDO ||
-        {};
-
-    var mensagens =
-        Array.isArray(app.mensagensCache)
-            ? app.mensagensCache
-            : [];
-
-    var pedido =
-        Array.isArray(app.pedidosCache)
-            ? app.pedidosCache.find(function (p) {
-                return correspondeId(
-                    p.id ||
-                    p._id ||
-                    p.pedido_id ||
-                    p.pedidoId
-                );
-            })
-            : null;
-
-    var msg = null;
-
-    for (var i = 0; i < mensagens.length; i++) {
-        var m = mensagens[i];
-
-        if (
-            correspondeId(
-                m.pedido_id ||
-                m.id_pedido ||
-                m.pedidoId ||
-                m.idPedido
-            )
-        ) {
-            msg = m;
-            break;
-        }
-    }
-
-    if (!msg) {
-        var numero =
-            String(pedidoId)
-                .replace(/^RDO/i, '')
-                .trim();
-
-        var padroes = [
-            'RDO' + numero,
-            'RDO ' + numero
-        ];
-
-        for (var j = 0; j < mensagens.length; j++) {
-            var textoBusca =
-                String(
-                    mensagens[j].texto ||
-                    mensagens[j].mensagem ||
-                    mensagens[j].content ||
-                    ''
-                );
-
-            if (
-                padroes.some(function (p) {
-                    return textoBusca
-                        .toUpperCase()
-                        .indexOf(
-                            p.toUpperCase()
-                        ) !== -1;
-                })
-            ) {
-                msg = mensagens[j];
-                break;
-            }
-        }
-    }
-
-    if (!msg) {
-        console.warn(
-            '[chat.js] Chat não encontrado para pedido:',
-            pedidoId
-        );
-        return;
-    }
-
-    var chatId =
-        String(
-            msg.id ||
-            msg._id ||
-            msg.chat_id ||
-            ''
-        ).trim();
-
-    if (!chatId) {
-        console.warn(
-            '[chat.js] Chat encontrado sem ID:',
-            msg
-        );
-        return;
-    }
-
-    var valorBruto;
-
-    if (dados.valor_final != null) {
-        valorBruto = dados.valor_final;
-    } else if (dados.valor_total != null) {
-        valorBruto = dados.valor_total;
-    } else if (dados.valor_corrida != null) {
-        valorBruto = dados.valor_corrida;
-    } else if (dados.valor_base != null) {
-        valorBruto = dados.valor_base;
-    } else if (dados.valor_original != null) {
-        valorBruto = dados.valor_original;
-    } else if (dados.valor != null) {
-        valorBruto = dados.valor;
-    } else if (dados.valorEstimado != null) {
-        valorBruto = dados.valorEstimado;
-    } else if (pedido) {
-        valorBruto =
-            pedido.valor_final != null
-                ? pedido.valor_final
-                : pedido.valor_total != null
-                    ? pedido.valor_total
-                    : pedido.valor_corrida != null
-                        ? pedido.valor_corrida
-                        : pedido.valor_base != null
-                            ? pedido.valor_base
-                            : pedido.valor_original != null
-                                ? pedido.valor_original
-                                : pedido.valor;
-    }
-
-    function converterValor(valor) {
-        if (typeof valor === 'number') {
-            return Number.isFinite(valor)
-                ? valor
-                : null;
-        }
-
-        var texto =
-            String(valor == null ? '' : valor)
-                .trim()
-                .replace(/R\$/gi, '')
-                .replace(/\s/g, '');
-
-        if (!texto) return null;
-
-        if (
-            texto.indexOf(',') !== -1
-        ) {
-            texto =
-                texto
-                    .replace(/\./g, '')
-                    .replace(',', '.');
-        }
-
-        var numero =
-            Number(texto);
-
-        return Number.isFinite(numero)
-            ? numero
-            : null;
-    }
-
-    var novoValor =
-        converterValor(valorBruto);
-
-    var textoAtual =
-        String(
-            msg.texto ||
-            msg.mensagem ||
-            msg.content ||
-            ''
-        );
-
-    var textoNovo =
-        textoAtual;
-
-    if (novoValor !== null) {
-        var valorFormatado =
-            novoValor.toLocaleString(
-                'pt-BR',
-                {
-                    style: 'currency',
-                    currency: 'BRL'
+        if (!isNaN(novoValor)) {
+            var valorFormatado = novoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            var regexValor = /💰\s*R\$\s*[\d.,]+/;
+            if (regexValor.test(textoAtualizado)) {
+                var textoComValor = textoAtualizado.replace(regexValor, '💰 ' + valorFormatado);
+                if (textoComValor !== textoAtualizado) {
+                    textoAtualizado = textoComValor;
+                    houveAlteracao = true;
                 }
-            );
-
-        var regexValor =
-            /💰\s*(?:R\$\s*)?[\d.,]+/i;
-
-        if (
-            regexValor.test(
-                textoNovo
-            )
-        ) {
-            textoNovo =
-                textoNovo.replace(
-                    regexValor,
-                    '💰 ' + valorFormatado
-                );
-        } else {
-            var linhas =
-                textoNovo.split('\n');
-
-            var indice =
-                linhas.findIndex(
-                    function (linha) {
-                        return /💰/.test(
-                            linha
-                        );
-                    }
-                );
-
-            if (indice !== -1) {
-                linhas[indice] =
-                    linhas[indice].replace(
-                        /💰.*/,
-                        '💰 ' + valorFormatado
-                    );
-
-                textoNovo =
-                    linhas.join('\n');
-            } else {
-                textoNovo +=
-                    (
-                        textoNovo
-                            ? '\n'
-                            : ''
-                    ) +
-                    '💰 ' +
-                    valorFormatado;
             }
         }
     }
 
     if (dados.cliente !== undefined) {
-        var cliente =
-            String(
-                dados.cliente ||
-                dados.solicitante ||
-                ''
-            ).trim();
-
-        if (cliente) {
-            var regexCliente =
-                /(👤\s*:\s*)([^📞\n]+)/i;
-
-            if (
-                regexCliente.test(
-                    textoNovo
-                )
-            ) {
-                textoNovo =
-                    textoNovo.replace(
-                        regexCliente,
-                        '$1' + cliente + ' '
-                    );
+        var clienteNovo = String(dados.cliente || '').trim();
+        if (clienteNovo && clienteNovo !== '-') {
+            var regexCliente = /(👤\s*:\s*)([^📞\n]+)/;
+            if (regexCliente.test(textoAtualizado)) {
+                var textoComCliente = textoAtualizado.replace(regexCliente, '$1' + clienteNovo + ' ');
+                if (textoComCliente !== textoAtualizado) {
+                    textoAtualizado = textoComCliente;
+                    houveAlteracao = true;
+                }
             }
+            if (pedidoCache) pedidoCache.cliente = clienteNovo;
         }
     }
 
-    if (dados.solicitante !== undefined) {
-        var solicitante =
-            String(
-                dados.solicitante || ''
-            ).trim();
-
-        if (
-            solicitante &&
-            !dados.cliente
-        ) {
-            var regexSolicitante =
-                /(👤\s*:\s*)([^📞\n]+)/i;
-
-            if (
-                regexSolicitante.test(
-                    textoNovo
-                )
-            ) {
-                textoNovo =
-                    textoNovo.replace(
-                        regexSolicitante,
-                        '$1' + solicitante + ' '
-                    );
-            }
+    var motoboyNovo = '';
+    if (dados.motoboy !== undefined) {
+        motoboyNovo = String(dados.motoboy || '').trim();
+        if (motoboyNovo && motoboyNovo !== '-') {
+            if (pedidoCache) pedidoCache.motoboy = motoboyNovo;
+            houveAlteracao = true;
         }
     }
 
-    if (
-        textoNovo ===
-        textoAtual
-    ) {
-        if (pedido) {
-            if (novoValor !== null) {
-                pedido.valor =
-                    novoValor;
-
-                pedido.valor_original =
-                    novoValor;
-
-                pedido.valor_base =
-                    novoValor;
-
-                pedido.valor_corrida =
-                    novoValor;
-
-                pedido.valor_total =
-                    novoValor;
-            }
-
-            if (
-                dados.valor_final != null
-            ) {
-                pedido.valor_final =
-                    converterValor(
-                        dados.valor_final
-                    );
-            }
-        }
-
-        return;
-    }
-
-    msg.texto =
-        textoNovo;
-
-    if (novoValor !== null) {
-        msg.valor =
-            novoValor;
-
-        msg.valor_original =
-            novoValor;
-
-        msg.valor_base =
-            novoValor;
-
-        msg.valor_corrida =
-            novoValor;
-
-        msg.valor_total =
-            novoValor;
-    }
-
-    if (dados.valor_final != null) {
-        msg.valor_final =
-            converterValor(
-                dados.valor_final
-            );
-    }
-
-    if (dados.solicitante != null) {
-        msg.solicitante =
-            dados.solicitante;
-    }
-
-    if (dados.cliente != null) {
-        msg.cliente =
-            dados.cliente;
-    }
-
-    if (dados.status != null) {
-        msg.status =
-            dados.status;
-    }
-
-    if (dados.motoboy != null) {
-        msg.motoboy =
-            dados.motoboy;
-    }
-
-    if (pedido) {
-        if (novoValor !== null) {
-            pedido.valor =
-                novoValor;
-
-            pedido.valor_original =
-                novoValor;
-
-            pedido.valor_base =
-                novoValor;
-
-            pedido.valor_corrida =
-                novoValor;
-
-            pedido.valor_total =
-                novoValor;
-        }
-
-        if (dados.valor_final != null) {
-            pedido.valor_final =
-                converterValor(
-                    dados.valor_final
-                );
-        }
-
-        if (dados.solicitante != null) {
-            pedido.solicitante =
-                dados.solicitante;
-        }
-
-        if (dados.status != null) {
-            pedido.status =
-                dados.status;
-        }
-
-        if (dados.motoboy != null) {
-            pedido.motoboy =
-                dados.motoboy;
+    var msgEl = document.querySelector('[data-pedido-id="' + pedidoId + '"]');
+    if (msgEl) {
+        var iconEl = msgEl.querySelector('.status-icon');
+        if (iconEl && pedidoCache) {
+            var statusBrutoAtual = String(pedidoCache.status || '').trim();
+            var statusPuroAtual = statusBrutoAtual.includes('/') ? statusBrutoAtual.split('/').pop().trim() : statusBrutoAtual;
+            var statusLabelAtual = statusPuroAtual.replace(/_/g, ' ');
+            var motoboyParaTooltip = motoboyNovo || pedidoCache.motoboy || '';
+            var novoTooltip = motoboyParaTooltip ? motoboyParaTooltip + ' • ' + statusLabelAtual : statusLabelAtual;
+            iconEl.setAttribute('data-tooltip', novoTooltip);
+            iconEl.setAttribute('title', novoTooltip);
         }
     }
 
-    var elementos =
-        document.querySelectorAll(
-            '[data-pedido-id]'
-        );
+    if (!houveAlteracao || textoAtualizado === msg.texto) return;
 
-    elementos.forEach(function (el) {
-        var elId =
-            el.getAttribute(
-                'data-pedido-id'
-            );
+    var chatId = msg.id;
+    if (!chatId) return;
 
-        if (
-            !correspondeId(elId)
-        ) {
-            return;
-        }
+    msg.texto = textoAtualizado;
 
-        var valorEl =
-            el.querySelector(
-                '.valor-pedido-chat, .valor-destaque, .badge-valor, .text-success.fs-5, [data-valor-estimado], span[class*="valor"]'
-            );
-
-        if (
-            valorEl &&
-            novoValor !== null
-        ) {
-            valorEl.textContent =
-                novoValor.toLocaleString(
-                    'pt-BR',
-                    {
-                        style: 'currency',
-                        currency: 'BRL'
-                    }
-                );
-        }
-
-        var bodyEl =
-            el.querySelector(
-                '.message-body'
-            );
-
+    if (msgEl) {
+        var bodyEl = msgEl.querySelector('.message-body');
         if (bodyEl) {
-            var seguro =
-                textoNovo
-                    .replace(
-                        /&/g,
-                        '&amp;'
-                    )
-                    .replace(
-                        /</g,
-                        '&lt;'
-                    )
-                    .replace(
-                        />/g,
-                        '&gt;'
-                    )
-                    .replace(
-                        /\n/g,
-                        '<br>'
-                    );
-
-            bodyEl.innerHTML =
-                typeof _estilizarRotasNaMensagem ===
-                    'function'
-                    ? _estilizarRotasNaMensagem(
-                        seguro
-                    )
-                    : seguro;
+            bodyEl.innerHTML = _estilizarRotasNaMensagem(
+                textoAtualizado
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\n/g, '<br>')
+            );
         }
-
-        el.setAttribute(
+        msgEl.setAttribute(
             'data-texto-original',
-            textoNovo
-                .replace(
-                    /&/g,
-                    '&amp;'
-                )
-                .replace(
-                    /"/g,
-                    '&quot;'
-                )
+            textoAtualizado.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
         );
-    });
-
-    if (
-        !window.API ||
-        typeof window.API.call !==
-        'function'
-    ) {
-        console.error(
-            '[chat.js] API.call não disponível para updatechat'
-        );
-        return;
     }
 
-    var payload =
-    {
-        id: chatId,
-        texto: textoNovo
-    };
-
-    console.log(
-        '[chat.js] → updatechat',
-        {
-            pedido_id: pedidoId,
-            chat_id: chatId,
-            valor: novoValor,
-            payload: payload
-        }
-    );
-
-    return API.call(
-        'updatechat',
-        payload
-    )
+    API.call('updatechat', { id: chatId, texto: textoAtualizado })
         .then(function (res) {
-            if (
-                !res ||
-                res.status === 'error'
-            ) {
-                throw new Error(
-                    (
-                        res &&
-                        res.message
-                    ) ||
-                    'Falha ao atualizar chat'
-                );
+            if (!res || res.status === 'error') {
+                throw new Error((res && res.message) || 'Falha ao sincronizar dados no banco de chat');
             }
-
-            console.log(
-                '[chat.js] ✅ updatechat confirmado',
-                {
-                    pedido_id: pedidoId,
-                    chat_id: chatId,
-                    valor: novoValor
-                }
-            );
-
-            if (
-                window.EventBus &&
-                typeof window.EventBus.emit ===
-                'function'
-            ) {
-                window.EventBus.emit(
-                    'chat:atualizado',
-                    {
-                        id: chatId,
-                        id_pedido: pedidoId,
-                        pedido_id: pedidoId,
-                        valor: novoValor,
-                        valor_final:
-                            dados.valor_final != null
-                                ? converterValor(
-                                    dados.valor_final
-                                )
-                                : novoValor,
-                        texto: textoNovo
-                    }
-                );
-            }
-
-            return res;
         })
-        .catch(function (erro) {
-            console.error(
-                '[chat.js] ❌ updatechat falhou',
-                {
-                    pedido_id: pedidoId,
-                    chat_id: chatId,
-                    erro: erro
-                }
-            );
-
-            throw erro;
+        .catch(function (e) {
+            window._exibirErroGlobal(e, 'sincronizar dados do pedido no chat');
         });
-
-};
+}
 
 function _validarDataRetroativa(dataStr) {
     if (!dataStr) return { valido: false, mensagem: 'Selecione a data do pedido.' };
@@ -6453,6 +5898,7 @@ window.prosseguirParaFormulario = function () {
             var modalForm = document.getElementById('modalFormulario');
             if (!modalForm) return;
 
+            // 🔑 PORTAL: escapa do stacking context
             if (modalForm.parentElement !== document.body) {
                 document.body.appendChild(modalForm);
             }
@@ -6506,20 +5952,6 @@ window.calcularTudo = function () {
         window.dadosPedidoAtual.retorno = retorno;
         window.dadosPedidoAtual.dinamica = dinamica;
         window.dadosPedidoAtual.prioridade = prioridade;
-
-        var solicitanteEl = document.getElementById('p-solicitante');
-        var contatoEl = document.getElementById('p-contato');
-        var horarioEl = document.getElementById('p-horario');
-        var obsEl = document.getElementById('p-obs');
-        var mercadoriaEl = document.getElementById('p-mercadoria');
-
-        if (solicitanteEl) window.dadosPedidoAtual.solicitante = solicitanteEl.value;
-        if (contatoEl) window.dadosPedidoAtual.contato = contatoEl.value;
-        if (horarioEl) window.dadosPedidoAtual.horario = horarioEl.value;
-        if (obsEl) window.dadosPedidoAtual.obs = obsEl.value;
-        if (mercadoriaEl) window.dadosPedidoAtual.mercadoria = mercadoriaEl.value;
-
-        window.EventBus.emit('pedido:atualizado', window.dadosPedidoAtual);
     }
 };
 
@@ -6664,47 +6096,7 @@ window.fecharParaChat = function (modalId) {
 };
 
 window.EventBus.on('pedido:atualizado', function (dados) {
-    if (!dados) return;
-
-    var pedidoId = String(dados.id || dados.id_pedido || dados.pedido_id || '').trim();
-    if (!pedidoId) return;
-
-    if (Array.isArray(window.AppRDO.mensagensCache)) {
-        window.AppRDO.mensagensCache.forEach(function (msg) {
-            if (String(msg.pedido_id || msg.id || '').trim() === pedidoId) {
-                if (dados.valor != null) msg.valor = dados.valor;
-                if (dados.valor_final != null) msg.valor_final = dados.valor_final;
-                if (dados.solicitante != null) msg.solicitante = dados.solicitante;
-                if (dados.status != null) msg.status = dados.status;
-                if (dados.motoboy != null) msg.motoboy = dados.motoboy;
-            }
-        });
-    }
-
-    document.querySelectorAll('[data-pedido-id]').forEach(function (msgEl) {
-        var elId = String(msgEl.getAttribute('data-pedido-id') || '').trim();
-        if (elId !== pedidoId) return;
-
-        var elValor = msgEl.querySelector('.valor-destaque, .badge-valor, span[class*="valor"]');
-        if (elValor && (dados.valor_final != null || dados.valor != null)) {
-            var val = dados.valor_final != null ? dados.valor_final : dados.valor;
-            elValor.textContent = Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-
-        var elSolicitante = msgEl.querySelector('.nome-solicitante, .solicitante-txt');
-        if (elSolicitante && dados.solicitante) {
-            elSolicitante.textContent = dados.solicitante;
-        }
-
-        var elStatus = msgEl.querySelector('.status-badge, .badge-status');
-        if (elStatus && dados.status) {
-            elStatus.textContent = dados.status;
-        }
-    });
-
-    if (typeof window._sincronizarValorNoChat === 'function') {
-        window._sincronizarValorNoChat(dados);
-    }
+    _sincronizarValorNoChat(dados);
 });
 
 (function () {
@@ -6820,10 +6212,1349 @@ window.EventBus.on('pedido:atualizado', function (dados) {
     _registrarEventos();
 })();
 
+/* =====================================================
+ * VACINA_FINANCEIRO_RDO_EXPRESS
+ * ===================================================== */
+
+(function () {
+
+    'use strict';
+
+    /*
+     * Contrato financeiro:
+     *
+     * pedidos.id
+     *      ↓
+     * financeiro.id_pedido
+     *
+     * pedidos.valor_corrida
+     *      ↓
+     * financeiro.vlr_servico
+     *
+     * financeiro.tipo
+     *      ↓
+     * "entrada"
+     */
+
+    var _financeiroVacinaEmExecucao = {};
+
+    function _vacinaNormalizarId(valor) {
+
+        if (valor === null || valor === undefined) {
+            return '';
+        }
+
+        return String(valor).trim();
+    }
+
+
+    function _vacinaNumero(valor) {
+
+        if (
+            valor === null ||
+            valor === undefined ||
+            valor === ''
+        ) {
+            return 0;
+        }
+
+        if (typeof valor === 'number') {
+            return Number.isFinite(valor) ? valor : 0;
+        }
+
+        var texto = String(valor)
+            .replace(/\s/g, '')
+            .replace(/R\$/gi, '');
+
+        /*
+         * Suporta:
+         *
+         * 100
+         * 100.50
+         * 100,50
+         * R$ 100,50
+         */
+
+        if (
+            texto.indexOf(',') >= 0 &&
+            texto.indexOf('.') >= 0
+        ) {
+
+            texto = texto
+                .replace(/\./g, '')
+                .replace(',', '.');
+
+        } else if (
+            texto.indexOf(',') >= 0
+        ) {
+
+            texto = texto.replace(',', '.');
+        }
+
+        texto = texto.replace(/[^0-9.-]/g, '');
+
+        var numero = Number(texto);
+
+        return Number.isFinite(numero)
+            ? numero
+            : 0;
+    }
+
+
+    function _vacinaEhConcluido(status) {
+
+        var s = String(status || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        return (
+            s === 'concluido' ||
+            s === 'concluida' ||
+            s === 'finalizado' ||
+            s === 'finalizada' ||
+            s === 'entregue' ||
+            s === 'entrega concluida' ||
+            s === 'entrega finalizada'
+        );
+    }
+
+
+    function _vacinaExtrairPedido(dados) {
+
+        if (!dados) {
+            return null;
+        }
+
+        var pedido =
+            dados.pedido ||
+            dados.pedidoAtual ||
+            dados.pedidoData ||
+            dados;
+
+        var id =
+            pedido.id ||
+            dados.id_pedido ||
+            dados.pedido_id ||
+            dados.idPedido;
+
+        if (!id) {
+            return null;
+        }
+
+        var valor =
+            pedido.valor_corrida;
+
+        if (
+            valor === undefined ||
+            valor === null ||
+            valor === ''
+        ) {
+            valor = dados.valor_corrida;
+        }
+
+        if (
+            valor === undefined ||
+            valor === null ||
+            valor === ''
+        ) {
+            valor = dados.valorCorrida;
+        }
+
+        return {
+            id: _vacinaNormalizarId(id),
+
+            valor_corrida:
+                _vacinaNumero(valor),
+
+            id_cliente:
+                pedido.id_cliente ||
+                dados.id_cliente ||
+                null,
+
+            solicitante:
+                pedido.solicitante ||
+                dados.solicitante ||
+                pedido.cliente ||
+                dados.cliente ||
+                '',
+
+            contato:
+                pedido.contato ||
+                dados.contato ||
+                '',
+
+            data_lancamento:
+                pedido.data_lancamento ||
+                dados.data_lancamento ||
+                pedido.data_pedido ||
+                dados.data_pedido ||
+                null,
+
+            horario:
+                pedido.horario ||
+                dados.horario ||
+                pedido.hora ||
+                dados.hora ||
+                null,
+
+            mercadoria:
+                pedido.mercadoria ||
+                dados.mercadoria ||
+                '',
+
+            de:
+                pedido.de ||
+                dados.de ||
+                '',
+
+            para:
+                pedido.para ||
+                dados.para ||
+                '',
+
+            motoboy:
+                pedido.motoboy ||
+                dados.motoboy ||
+                '',
+
+            status:
+                pedido.status ||
+                dados.status ||
+                '',
+
+            situacao_financeira:
+                pedido.situacao_financeira ||
+                dados.situacao_financeira ||
+                ''
+        };
+    }
+
+
+    async function _vacinaSalvarFinanceiro(dados) {
+
+        var pedido = _vacinaExtrairPedido(dados);
+
+        if (!pedido) {
+
+            console.warn(
+                '[VACINA FINANCEIRO] Pedido sem ID.',
+                dados
+            );
+
+            return {
+                ok: false,
+                motivo: 'pedido_sem_id'
+            };
+        }
+
+        if (!pedido.valor_corrida) {
+
+            console.warn(
+                '[VACINA FINANCEIRO] valor_corrida vazio/zero.',
+                pedido
+            );
+
+            return {
+                ok: false,
+                motivo: 'valor_corrida_invalido'
+            };
+        }
+
+        var chave =
+            pedido.id + ':' +
+            pedido.valor_corrida;
+
+        if (_financeiroVacinaEmExecucao[chave]) {
+
+            return {
+                ok: true,
+                ignorado: true,
+                motivo: 'lancamento_em_execucao'
+            };
+        }
+
+        _financeiroVacinaEmExecucao[chave] = true;
+
+        try {
+
+            /*
+             * PRIMEIRA OPÇÃO:
+             *
+             * Aproveita a função já existente no fin.js.
+             */
+
+            if (
+                typeof window.salvarRegistroFinanceiro ===
+                'function'
+            ) {
+
+                var registro = {
+
+                    id_pedido: pedido.id,
+
+                    tipo: 'entrada',
+
+                    descricao:
+                        'Corrida ' + pedido.id,
+
+                    vlr_servico:
+                        pedido.valor_corrida,
+
+                    colaborador:
+                        pedido.motoboy || '',
+
+                    observacao:
+                        'Lançamento automático da corrida',
+
+                    situacao:
+                        'pendente',
+
+                    hora:
+                        pedido.horario || '',
+
+                    cliente:
+                        pedido.solicitante || '',
+
+                    cliente_id:
+                        pedido.id_cliente || null,
+
+                    grupo:
+                        'corrida',
+
+                    grupo_id:
+                        null
+                };
+
+                console.info(
+                    '[VACINA FINANCEIRO] ' +
+                    'Chamando salvarRegistroFinanceiro',
+                    registro
+                );
+
+                var resultado =
+                    await window.salvarRegistroFinanceiro(
+                        pedido.id,
+                        registro
+                    );
+
+                console.info(
+                    '[VACINA FINANCEIRO] ' +
+                    'Financeiro processado.',
+                    resultado
+                );
+
+                return {
+                    ok: true,
+                    metodo: 'salvarRegistroFinanceiro',
+                    resultado: resultado
+                };
+            }
+
+
+            /*
+             * SEGUNDA OPÇÃO:
+             *
+             * Usa API.call caso a função financeira
+             * ainda não esteja exposta globalmente.
+             *
+             * IMPORTANTE:
+             * não envia "corrida" para tipo.
+             */
+
+            if (
+                window.API &&
+                typeof window.API.call === 'function'
+            ) {
+
+                var payload = {
+
+                    colaborador_id:
+                        pedido.motoboy || null,
+
+                    id_pedido:
+                        pedido.id,
+
+                    tipo:
+                        'entrada',
+
+                    descricao:
+                        'Corrida ' + pedido.id,
+
+                    vlr_servico:
+                        pedido.valor_corrida,
+
+                    colaborador:
+                        pedido.motoboy || '',
+
+                    observacao:
+                        'Lançamento automático da corrida',
+
+                    situacao:
+                        'pendente',
+
+                    hora:
+                        pedido.horario || '',
+
+                    cliente:
+                        pedido.solicitante || '',
+
+                    cliente_id:
+                        pedido.id_cliente || null,
+
+                    grupo:
+                        'corrida',
+
+                    grupo_id:
+                        null
+                };
+
+                console.info(
+                    '[VACINA FINANCEIRO] ' +
+                    'API.call disponível.',
+                    payload
+                );
+
+                /*
+                 * Não inventamos um endpoint.
+                 *
+                 * A função existente do projeto deverá
+                 * ser utilizada preferencialmente.
+                 */
+
+                return {
+                    ok: false,
+                    motivo:
+                        'salvarRegistroFinanceiro_nao_exposto',
+                    payload: payload
+                };
+            }
+
+
+            return {
+                ok: false,
+                motivo:
+                    'nenhum_mecanismo_financeiro_disponivel'
+            };
+
+        } finally {
+
+            delete _financeiroVacinaEmExecucao[chave];
+        }
+    }
+
+
+    /*
+     * Função pública.
+     *
+     * Pode ser chamada por pedidos.js, chat.js
+     * ou pelo EventBus.
+     */
+
+    window._vacinaLancarFinanceiroPedido =
+        _vacinaSalvarFinanceiro;
+
+
+    /*
+     * Intercepta atualizações do pedido.
+     *
+     * O lançamento somente acontece quando o status
+     * representa conclusão.
+     */
+
+    function _vacinaRegistrarEventBus() {
+
+        if (
+            !window.EventBus ||
+            typeof window.EventBus.on !== 'function'
+        ) {
+            return;
+        }
+
+        window.EventBus.on(
+            'pedido:statusAtualizado',
+            function (dados) {
+
+                try {
+
+                    if (!dados) {
+                        return;
+                    }
+
+                    if (
+                        !_vacinaEhConcluido(
+                            dados.status
+                        )
+                    ) {
+                        return;
+                    }
+
+                    console.info(
+                        '[VACINA FINANCEIRO] ' +
+                        'Pedido concluído detectado.',
+                        dados
+                    );
+
+                    _vacinaSalvarFinanceiro(dados)
+                        .catch(function (erro) {
+
+                            console.error(
+                                '[VACINA FINANCEIRO] ' +
+                                'Erro ao lançar financeiro:',
+                                erro
+                            );
+
+                        });
+
+                } catch (erro) {
+
+                    console.error(
+                        '[VACINA FINANCEIRO] ' +
+                        'Erro no EventBus:',
+                        erro
+                    );
+                }
+            }
+        );
+
+        console.info(
+            '[VACINA FINANCEIRO] EventBus registrado.'
+        );
+    }
+
+
+    /*
+     * Inicialização segura.
+     */
+
+    if (
+        document.readyState === 'loading'
+    ) {
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            _vacinaRegistrarEventBus
+        );
+
+    } else {
+
+        _vacinaRegistrarEventBus();
+    }
+
+})();
+
+
+
+/* VACINA_CHAT_FINANCEIRO_CONTRATO_V2 */
+(function () {
+  'use strict';
+
+  if (window.__VACINA_CHAT_FINANCEIRO_CONTRATO_V2__) {
+    return;
+  }
+
+  window.__VACINA_CHAT_FINANCEIRO_CONTRATO_V2__ = true;
+
+  console.info(
+    '[VACINA FINANCEIRO] contrato do chat protegido.'
+  );
+
+  function idNormalizado(v) {
+    return String(v || '').trim();
+  }
+
+  function valorSeguro(v) {
+
+    if (v === null || v === undefined || v === '') {
+      return 0;
+    }
+
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : 0;
+    }
+
+    var s = String(v)
+      .replace(/R\$/gi, '')
+      .replace(/\s/g, '');
+
+    if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(',', '.');
+    }
+
+    s = s.replace(/[^0-9.-]/g, '');
+
+    var n = Number(s);
+
+    return Number.isFinite(n) ? n : 0;
+  }
+
+
+  /*
+   * Não altera texto da mensagem.
+   * Apenas garante que o objeto de dados mantenha
+   * valor_corrida e pedido_id quando esses campos
+   * forem atualizados.
+   */
+
+  if (typeof window._sincronizarValorNoChat === 'function') {
+
+    var original =
+      window._sincronizarValorNoChat;
+
+
+    window._sincronizarValorNoChat =
+      function (dados) {
+
+        if (dados && typeof dados === 'object') {
+
+          if (
+            dados.valor_corrida !== undefined
+          ) {
+
+            dados.valor_corrida =
+              valorSeguro(
+                dados.valor_corrida
+              );
+          }
+
+
+          if (
+            dados.pedido_id !== undefined
+          ) {
+
+            dados.pedido_id =
+              idNormalizado(
+                dados.pedido_id
+              );
+          }
+        }
+
+
+        return original.apply(
+          this,
+          arguments
+        );
+      };
+  }
+
+})();
+
+
+// [VACINA APLICADA]: Ouvinte global para sincronizar alteração de valores vinda de pedidos
+window.addEventListener('RDO_PEDIDO_ATUALIZADO', function(e) {
+    var pedidoModificado = e.detail;
+    if (!pedidoModificado) return;
+    // Atualiza elementos visuais correspondentes no chat se existirem
+    var elementosChat = document.querySelectorAll('[data-pedido-id="' + pedidoModificado.id + '"]');
+    elementosChat.forEach(function(el) {
+        var elValor = el.querySelector('.valor-pedido, .chat-pedido-valor');
+        if (elValor) {
+            elValor.innerText = 'R$ ' + Number(pedidoModificado.valor).toFixed(2).replace('.', ',');
+        }
+    });
+});
 
 
 
 
 
 
+
+
+
+
+/* ============================================================
+ * RDO_V22_PEDIDOS_DATA_FLOW
+ *
+ * Correção do fluxo de dados da lista de pedidos.
+ *
+ * Esta camada NÃO substitui:
+ *   - carregarPedidosDoCliente
+ *   - salvarEdicao
+ *   - salvarValorPedido
+ *   - API.call
+ *   - EventBus
+ *
+ * Ela apenas garante que, depois que o carregamento original
+ * terminar, o cache seja normalizado e a tabela seja renderizada.
+ * ============================================================ */
+(function () {
+    'use strict';
+
+    window.RDO_V22 = window.RDO_V22 || {};
+
+    var _ultimoCliente = null;
+    var _sincronizando = false;
+    var _tentativas = 0;
+    var _timer = null;
+
+    function normalizarId(valor) {
+        if (valor === null || valor === undefined) return '';
+        return String(valor).trim();
+    }
+
+    function obterClienteAtual() {
+        if (!window.AppRDO) return '';
+
+        return normalizarId(
+            window.AppRDO.clienteId ||
+            window.AppRDO.cliente_id ||
+            ''
+        );
+    }
+
+    function obterCache() {
+        if (!window.AppRDO) return [];
+
+        if (!Array.isArray(window.AppRDO.pedidosCache)) {
+            window.AppRDO.pedidosCache = [];
+        }
+
+        return window.AppRDO.pedidosCache;
+    }
+
+    function encontrarRenderizador() {
+        if (typeof window._renderizarTabelaPedidos === 'function') {
+            return window._renderizarTabelaPedidos;
+        }
+
+        if (typeof window._renderizarTabela === 'function') {
+            return window._renderizarTabela;
+        }
+
+        return null;
+    }
+
+    function renderizar(pedidos) {
+        var lista = Array.isArray(pedidos) ? pedidos : [];
+        var renderizador = encontrarRenderizador();
+
+        if (renderizador) {
+            try {
+                renderizador(lista);
+                return true;
+            } catch (erro) {
+                console.error(
+                    '[RDO_V22] Erro ao renderizar pedidos:',
+                    erro
+                );
+            }
+        }
+
+        var corpo = document.getElementById(
+            'corpo-tabela-pedidos'
+        );
+
+        if (!corpo) return false;
+
+        if (!lista.length) {
+            corpo.innerHTML =
+                '<tr>' +
+                '<td colspan="99" class="text-center">' +
+                'Nenhum pedido encontrado.' +
+                '</td>' +
+                '</tr>';
+
+            return true;
+        }
+
+        return false;
+    }
+
+    function localizarPedidosEmResposta(res) {
+        if (!res) return [];
+
+        if (Array.isArray(res)) {
+            return res;
+        }
+
+        var candidatos = [
+            res.pedidos,
+            res.data,
+            res.result,
+            res.rows,
+            res.items,
+            res.lista
+        ];
+
+        for (var i = 0; i < candidatos.length; i++) {
+            if (Array.isArray(candidatos[i])) {
+                return candidatos[i];
+            }
+
+            if (
+                candidatos[i] &&
+                Array.isArray(candidatos[i].pedidos)
+            ) {
+                return candidatos[i].pedidos;
+            }
+
+            if (
+                candidatos[i] &&
+                Array.isArray(candidatos[i].data)
+            ) {
+                return candidatos[i].data;
+            }
+        }
+
+        return [];
+    }
+
+    function atualizarCache(lista) {
+        if (!window.AppRDO) return [];
+
+        var pedidos = Array.isArray(lista) ? lista : [];
+
+        window.AppRDO.pedidosCache = pedidos;
+
+        return pedidos;
+    }
+
+    function renderizarCache() {
+        var cache = obterCache();
+
+        if (!cache.length) {
+            return false;
+        }
+
+        return renderizar(cache);
+    }
+
+    function clienteAindaSelecionado(clienteId) {
+        return normalizarId(obterClienteAtual()) ===
+            normalizarId(clienteId);
+    }
+
+    /*
+     * Intercepta SOMENTE a conclusão de API.call('getpedidos').
+     *
+     * Não altera a chamada.
+     * Não altera parâmetros.
+     * Não altera api.js.
+     *
+     * Apenas normaliza a resposta e alimenta pedidosCache.
+     */
+    function instalarInterceptadorAPI() {
+        if (!window.API ||
+            typeof window.API.call !== 'function') {
+            return false;
+        }
+
+        if (window.API.__RDO_V22_GETPEDIDOS) {
+            return true;
+        }
+
+        var callOriginal = window.API.call;
+
+        window.API.call = function () {
+            var args = arguments;
+            var acao = args[0];
+
+            var retorno = callOriginal.apply(this, args);
+
+            if (
+                String(acao || '').toLowerCase() !==
+                'getpedidos'
+            ) {
+                return retorno;
+            }
+
+            if (!retorno ||
+                typeof retorno.then !== 'function') {
+                return retorno;
+            }
+
+            return retorno.then(function (res) {
+                try {
+                    var pedidos = localizarPedidosEmResposta(res);
+
+                    if (pedidos.length) {
+                        atualizarCache(pedidos);
+
+                        console.log(
+                            '[RDO_V22] getpedidos → pedidosCache:',
+                            pedidos.length
+                        );
+
+                        /*
+                         * Pequeno atraso para permitir que o fluxo
+                         * original termine antes da renderização.
+                         */
+                        setTimeout(function () {
+                            if (clienteAindaSelecionado(
+                                obterClienteAtual()
+                            )) {
+                                renderizarCache();
+                            }
+                        }, 0);
+                    } else {
+                        console.warn(
+                            '[RDO_V22] getpedidos respondeu sem lista:',
+                            res
+                        );
+                    }
+                } catch (erro) {
+                    console.error(
+                        '[RDO_V22] Falha ao normalizar getpedidos:',
+                        erro
+                    );
+                }
+
+                return res;
+            });
+        };
+
+        window.API.__RDO_V22_GETPEDIDOS = true;
+
+        console.log(
+            '[RDO_V22] Interceptador getpedidos instalado.'
+        );
+
+        return true;
+    }
+
+    /*
+     * Observa alterações no cache sem disparar API.
+     */
+    function sincronizarCache() {
+        if (_sincronizando) return;
+
+        var cache = obterCache();
+
+        if (!cache.length) return;
+
+        var cliente = obterClienteAtual();
+
+        if (
+            _ultimoCliente !== cliente ||
+            _tentativas < 5
+        ) {
+            _ultimoCliente = cliente;
+            _tentativas++;
+
+            _sincronizando = true;
+
+            try {
+                renderizar(cache);
+            } finally {
+                _sincronizando = false;
+            }
+        }
+    }
+
+    /*
+     * Quando a seleção do cliente muda, limpa somente o estado
+     * visual antigo e deixa o carregador original buscar os dados.
+     */
+    function ouvirEventos() {
+        if (!window.EventBus ||
+            typeof window.EventBus.on !== 'function') {
+            return;
+        }
+
+        [
+            'pedido:adicionado',
+            'pedido:atualizado',
+            'pedido:statusAtualizado',
+            'pedido:excluido'
+        ].forEach(function (evento) {
+            window.EventBus.on(evento, function () {
+                setTimeout(function () {
+                    _tentativas = 0;
+                    renderizarCache();
+                }, 0);
+            });
+        });
+    }
+
+    /*
+     * Diagnóstico público.
+     */
+    window.RDO_V22.diagnosticar = function () {
+        var cache = obterCache();
+        var corpo = document.getElementById(
+            'corpo-tabela-pedidos'
+        );
+
+        var resultado = {
+            clienteId: obterClienteAtual(),
+            quantidadePedidos: cache.length,
+            corpoExiste: !!corpo,
+            renderPedidos:
+                typeof window._renderizarTabelaPedidos ===
+                'function',
+            renderTabela:
+                typeof window._renderizarTabela ===
+                'function',
+            carregarPedidos:
+                typeof window.carregarPedidosDoCliente ===
+                'function',
+            apiExiste:
+                !!window.API &&
+                typeof window.API.call === 'function',
+            interceptadorV22:
+                !!(
+                    window.API &&
+                    window.API.__RDO_V22_GETPEDIDOS
+                )
+        };
+
+        console.group(
+            '[RDO_V22] DIAGNÓSTICO PEDIDOS'
+        );
+
+        console.table(resultado);
+
+        console.log(
+            'pedidosCache:',
+            cache
+        );
+
+        if (cache.length) {
+            console.log(
+                'Primeiro pedido:',
+                cache[0]
+            );
+        }
+
+        console.log(
+            'carregarPedidosDoCliente:',
+            window.carregarPedidosDoCliente
+        );
+
+        console.groupEnd();
+
+        return resultado;
+    };
+
+    function iniciar() {
+        instalarInterceptadorAPI();
+        ouvirEventos();
+
+        /*
+         * O carregamento dos pedidos continua pertencendo
+         * ao código existente.
+         *
+         * Estes ciclos apenas sincronizam a visualização.
+         */
+        var tempos = [
+            100,
+            300,
+            700,
+            1200,
+            2000,
+            3500
+        ];
+
+        tempos.forEach(function (tempo) {
+            setTimeout(function () {
+                instalarInterceptadorAPI();
+                sincronizarCache();
+            }, tempo);
+        });
+
+        if (!_timer) {
+            _timer = setInterval(function () {
+                instalarInterceptadorAPI();
+
+                if (
+                    window.AppRDO &&
+                    Array.isArray(
+                        window.AppRDO.pedidosCache
+                    ) &&
+                    window.AppRDO.pedidosCache.length
+                ) {
+                    renderizarCache();
+                }
+            }, 1500);
+        }
+
+        console.log(
+            '[RDO_V22] Fluxo de pedidos ativado.'
+        );
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener(
+            'DOMContentLoaded',
+            iniciar
+        );
+    } else {
+        iniciar();
+    }
+
+})();
+
+/* ============================================================
+   RDO_V24_PEDIDOS_BRIDGE
+   ============================================================ */
+
+(function () {
+    'use strict';
+
+    window.RDO_V24 = window.RDO_V24 || {};
+
+    function obterCachePedidos() {
+
+        if (
+            window.AppRDO &&
+            Array.isArray(window.AppRDO.pedidosCache)
+        ) {
+            return window.AppRDO.pedidosCache;
+        }
+
+        return [];
+    }
+
+    function obterCorpoTabela() {
+
+        return (
+            document.getElementById('corpo-tabela-pedidos') ||
+            document.querySelector('#corpo-tabela-pedidos')
+        );
+    }
+
+    function obterRenderizador() {
+
+        if (
+            typeof window._renderizarTabelaPedidos === 'function'
+        ) {
+            return window._renderizarTabelaPedidos;
+        }
+
+        if (
+            typeof window._renderizarTabela === 'function'
+        ) {
+            return window._renderizarTabela;
+        }
+
+        return null;
+    }
+
+    window.RDO_V24.renderizarPedidos = function (lista) {
+
+        var pedidos = Array.isArray(lista)
+            ? lista
+            : obterCachePedidos();
+
+        var corpo = obterCorpoTabela();
+
+        console.log(
+            '[RDO_V24] renderizarPedidos:',
+            pedidos.length,
+            'pedido(s)'
+        );
+
+        if (!corpo) {
+
+            console.warn(
+                '[RDO_V24] #corpo-tabela-pedidos ainda não existe.'
+            );
+
+            return false;
+        }
+
+        var renderizador = obterRenderizador();
+
+        if (renderizador) {
+
+            try {
+
+                renderizador(pedidos);
+
+                console.log(
+                    '[RDO_V24] Renderizador oficial executado.'
+                );
+
+                return true;
+
+            } catch (erro) {
+
+                console.error(
+                    '[RDO_V24] Erro no renderizador oficial:',
+                    erro
+                );
+
+            }
+        }
+
+        /*
+         * Não vamos fabricar uma tabela paralela.
+         *
+         * Se o renderizador real não existir, o diagnóstico
+         * deverá mostrar isso para corrigirmos a origem.
+         */
+
+        if (!pedidos.length) {
+
+            corpo.innerHTML =
+                '<tr>' +
+                '<td colspan="99" class="text-center">' +
+                'Nenhum pedido encontrado.' +
+                '</td>' +
+                '</tr>';
+
+            return true;
+        }
+
+        console.warn(
+            '[RDO_V24] Existem ' +
+            pedidos.length +
+            ' pedidos no cache, porém o renderizador oficial não foi encontrado.'
+        );
+
+        return false;
+    };
+
+    window.RDO_V24.diagnosticar = function () {
+
+        var cache = obterCachePedidos();
+        var corpo = obterCorpoTabela();
+        var renderizador = obterRenderizador();
+
+        var diagnostico = {
+
+            quantidadePedidos: cache.length,
+
+            corpoExiste: !!corpo,
+
+            renderizadorPedidos:
+                typeof window._renderizarTabelaPedidos === 'function',
+
+            renderizadorTabela:
+                typeof window._renderizarTabela === 'function',
+
+            clienteSelecionado:
+                window.AppRDO
+                    ? window.AppRDO.clienteId || null
+                    : null,
+
+            apiExiste:
+                typeof window.API !== 'undefined',
+
+            carregarPedidos:
+                typeof window.carregarPedidosDoCliente === 'function',
+
+            renderizadorEncontrado:
+                !!renderizador
+
+        };
+
+        console.group(
+            '[RDO_V24] DIAGNÓSTICO DA LISTA DE PEDIDOS'
+        );
+
+        console.table(diagnostico);
+
+        console.log(
+            '[RDO_V24] pedidosCache:',
+            cache
+        );
+
+        console.log(
+            '[RDO_V24] corpo:',
+            corpo
+        );
+
+        console.log(
+            '[RDO_V24] renderizador:',
+            renderizador
+        );
+
+        console.groupEnd();
+
+        return diagnostico;
+    };
+
+    /*
+     * NÃO interceptamos API.call().
+     *
+     * O getpedidos original continua sendo o responsável
+     * por buscar os dados.
+     */
+
+    function sincronizar() {
+
+        if (!window.AppRDO) {
+            return;
+        }
+
+        if (
+            !Array.isArray(window.AppRDO.pedidosCache)
+        ) {
+            return;
+        }
+
+        var corpo = obterCorpoTabela();
+
+        if (!corpo) {
+            return;
+        }
+
+        /*
+         * Só renderiza quando realmente existem pedidos.
+         * Não substitui o cache.
+         * Não chama API.
+         */
+
+        if (
+            window.AppRDO.pedidosCache.length > 0
+        ) {
+
+            window.RDO_V24.renderizarPedidos(
+                window.AppRDO.pedidosCache
+            );
+
+        }
+
+    }
+
+    /*
+     * Aguarda o DOM.
+     */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function () {
+
+            setTimeout(sincronizar, 300);
+            setTimeout(sincronizar, 1000);
+            setTimeout(sincronizar, 2000);
+
+        }
+    );
+
+    /*
+     * Eventos existentes.
+     */
+
+    if (
+        window.EventBus &&
+        typeof window.EventBus.on === 'function'
+    ) {
+
+        [
+            'pedido:adicionado',
+            'pedido:atualizado',
+            'pedido:statusAtualizado',
+            'pedido:excluido'
+        ].forEach(function (evento) {
+
+            window.EventBus.on(
+                evento,
+                sincronizar
+            );
+
+        });
+
+    }
+
+    console.log(
+        '[RDO_V24] Ponte segura de pedidos carregada.'
+    );
+
+})();
 

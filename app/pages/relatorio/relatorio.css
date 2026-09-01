@@ -1,3 +1,40 @@
+
+
+/* ============================================================
+   RDO EXPRESS — TEMA VISUAL DO RELATÓRIO
+   VACINA CENTRALIZADA
+   ============================================================ */
+
+:root {
+    --rdo-relatorio-gradiente:
+        linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+
+    --rdo-relatorio-gradiente-suave:
+        linear-gradient(
+            135deg,
+            #f5f7ff 0%,
+            #ffffff 100%
+        );
+
+    --rdo-relatorio-texto-header: #ffffff;
+
+    --rdo-relatorio-sombra-header:
+        0 8px 24px rgba(0, 0, 0, 0.12);
+
+    --rdo-relatorio-borda:
+        rgba(118, 75, 162, 0.20);
+}
+
+
+
+/* ============================================================
+   RDO EXPRESS — TEMA VISUAL DO RELATÓRIO
+   VACINA CENTRALIZADA
+   ============================================================ */
+
+:root {
+}
+
 .rel-page-wrapper {
   padding: 0;
 }
@@ -288,7 +325,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background: #fafafa;
+  
   border-bottom: 1px solid #eee;
   font-size: .65rem;
   font-weight: 700;
@@ -485,7 +522,6 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #dc3545, #c82333);
   color: #fff;
   display: flex;
   align-items: center;
@@ -1307,3 +1343,720 @@
     padding: .4rem .6rem;
   }
 }
+
+
+/* ============================================================
+   RDO EXPRESS — PADRONIZAÇÃO DO MODAL DE RELATÓRIO
+   ============================================================ */
+
+.rel-modal-content-inner .rel-modal-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.25;
+}
+
+.rel-modal-content-inner .rel-modal-section-title i {
+  flex: 0 0 auto;
+}
+
+.rel-modal-content-inner .rel-td-nowrap {
+  vertical-align: middle;
+}
+
+
+/* ============================================================
+   HEADER PRINCIPAL DO RELATÓRIO
+   O degradê deve substituir o azul antigo.
+   ============================================================ */
+
+.rdo-relatorio-header,
+.relatorio-header,
+.report-header,
+.header-relatorio,
+.cabecalho-relatorio,
+.cabecalho-relatorio-principal,
+#relatorioHeader,
+
+.rdo-relatorio-header *,
+.relatorio-header *,
+.report-header *,
+.header-relatorio *,
+.cabecalho-relatorio *,
+.cabecalho-relatorio-principal *,
+#relatorioHeader *,
+[data-relatorio-header] * {
+
+    color: inherit;
+}
+
+
+
+/* ============================================================
+   BLOCOS DE INFORMAÇÕES DO RELATÓRIO
+   ============================================================ */
+
+.rdo-relatorio-meta,
+.relatorio-meta,
+.relatorio-info,
+.info-relatorio,
+.relatorio-metadata {
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rdo-relatorio-meta .meta-item,
+.relatorio-meta .meta-item,
+.relatorio-info .meta-item,
+.info-relatorio .meta-item,
+.relatorio-metadata .meta-item,
+.rdo-meta-item,
+.relatorio-meta-item {
+
+    
+    
+
+    color: #ffffff;
+
+    border-radius: 10px;
+
+    padding: 10px 14px;
+
+    border: 1px solid
+        rgba(255, 255, 255, 0.18);
+
+    box-shadow:
+        0 4px 12px
+        rgba(0, 0, 0, 0.08);
+}
+
+/*
+ * Tipo e Colaborador recebem exatamente o mesmo tratamento
+ * visual utilizado pelos demais metadados.
+ */
+
+.rdo-relatorio-tipo,
+.relatorio-tipo,
+.meta-tipo,
+[data-campo="tipo"],
+[data-relatorio-campo="tipo"] {
+
+    
+    
+
+    color: #ffffff !important;
+}
+
+.rdo-relatorio-colaborador,
+.relatorio-colaborador,
+.meta-colaborador,
+[data-campo="colaborador"],
+[data-relatorio-campo="colaborador"] {
+
+    
+    
+
+    color: #ffffff !important;
+}
+
+.rdo-relatorio-tipo *,
+.relatorio-tipo *,
+.meta-tipo *,
+[data-campo="tipo"] *,
+[data-relatorio-campo="tipo"] *,
+
+.rdo-relatorio-colaborador *,
+.relatorio-colaborador *,
+.meta-colaborador *,
+[data-campo="colaborador"] *,
+[data-relatorio-campo="colaborador"] * {
+
+    color: inherit !important;
+}
+
+
+/* ============================================================
+   RDO EXPRESS — GARANTIA FINAL DO TEMA
+   ============================================================ */
+
+.rdo-relatorio-header,
+.relatorio-header,
+.report-header,
+.header-relatorio,
+.cabecalho-relatorio,
+.cabecalho-relatorio-principal,
+#relatorioHeader,
+
+
+/* ============================================================
+   RDO EXPRESS — NORMALIZAÇÃO VISUAL DO FORMULÁRIO
+   ============================================================ */
+
+/*
+ * Tipo e Colaborador não possuem identidade visual própria.
+ *
+ * Eles devem seguir exatamente o mesmo padrão visual dos
+ * campos Período / Gerado por / Hora já existentes.
+ *
+ * Não utilizar degradê azul.
+ */
+
+.relatorio-tipo,
+.rdo-relatorio-tipo,
+.meta-tipo,
+.relatorio-colaborador,
+.rdo-relatorio-colaborador,
+.meta-colaborador,
+[data-campo="tipo"],
+[data-campo="colaborador"],
+[data-relatorio-campo="tipo"],
+[data-relatorio-campo="colaborador"] {
+
+    background: var(--rdo-relatorio-gradiente) !important;
+    background-image: none !important;
+
+    color: #ffffff !important;
+}
+
+/*
+ * Conteúdo interno mantém a mesma cor do bloco.
+ */
+
+.relatorio-tipo *,
+.rdo-relatorio-tipo *,
+.meta-tipo *,
+.relatorio-colaborador *,
+.rdo-relatorio-colaborador *,
+.meta-colaborador *,
+[data-campo="tipo"] *,
+[data-campo="colaborador"] *,
+[data-relatorio-campo="tipo"] *,
+[data-relatorio-campo="colaborador"] * {
+
+    color: #ffffff !important;
+}
+
+/*
+ * Garantia:
+ * nenhuma regra desta vacina cria degradê azul no header,
+ * na lista de relatórios ou nos blocos do formulário.
+ */
+
+
+
+/* ============================================================
+   HEADER PRINCIPAL DO RELATÓRIO
+   O degradê deve substituir o azul antigo.
+   ============================================================ */
+
+.rdo-relatorio-header,
+.relatorio-header,
+.report-header,
+.header-relatorio,
+.cabecalho-relatorio,
+.cabecalho-relatorio-principal,
+#relatorioHeader,
+[data-relatorio-header] {
+
+    background: #fff;
+    background: #fff;
+
+    color: var(--rdo-relatorio-texto-header);
+
+    box-shadow:
+        var(--rdo-relatorio-sombra-header);
+}
+
+.rdo-relatorio-header *,
+.relatorio-header *,
+.report-header *,
+.header-relatorio *,
+.cabecalho-relatorio *,
+.cabecalho-relatorio-principal *,
+#relatorioHeader *,
+[data-relatorio-header] * {
+
+    color: inherit;
+}
+
+
+/* ============================================================
+   RDO EXPRESS — GARANTIA FINAL DO TEMA
+   ============================================================ */
+
+.rdo-relatorio-header,
+.relatorio-header,
+.report-header,
+.header-relatorio,
+.cabecalho-relatorio,
+.cabecalho-relatorio-principal,
+#relatorioHeader,
+[data-relatorio-header] {
+
+    background: var(--rdo-relatorio-gradiente) !important;
+    background-image: var(--rdo-relatorio-gradiente) !important;
+}
+
+
+
+/* ============================================================
+   RDO EXPRESS — VACINA VISUAL DOS BLOCOS DE METADADOS
+   ============================================================ */
+
+.relatorio-refinado .rel-meta-tipo,
+.relatorio-refinado .rel-meta-colaborador {
+    background: inherit;
+    background-image: none;
+}
+
+/*
+ * Tipo e Colaborador devem utilizar o mesmo tratamento visual
+ * dos blocos Período, Gerado por e Hora.
+ *
+ * A aparência é herdada do container correto, evitando azul
+ * específico nesses dois blocos.
+ */
+.relatorio-refinado .rel-meta-tipo,
+.relatorio-refinado .rel-meta-colaborador {
+    color: inherit;
+    border-color: inherit;
+}
+
+
+
+/* Header principal do relatório */
+.relatorio-refinado .relatorio-header,
+.relatorio-refinado .rel-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+
+/* ============================================================
+   RDO EXPRESS — CABEÇALHO DA LISTA DE RELATÓRIOS
+   ============================================================ */
+
+/*
+ * Somente o cabeçalho da listagem:
+ * Descrição / Data / Ação
+ *
+ * Não afeta o modal nem o relatório gerado.
+ */
+.rel-lista .rel-lista-header,
+.rel-lista-header,
+.rel-table-header,
+.rel-list-header {
+    background: #fff;
+    background: #fff;
+
+  color: #212529;
+}
+
+
+/* RDO_VACINA_ICONE_LISTA_2026
+ * Ícone individual do relatório.
+ * Mantém o mesmo ícone utilizado no conteúdo do relatório.
+ */
+.rel-item-card .rel-item-icon,
+.rel-lista .rel-item-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 50%;
+    background: #dc3545;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rel-item-card .rel-item-icon i,
+.rel-lista .rel-item-icon i {
+    color: #fff;
+}
+
+
+/* RDO_VACINA_META_VERMELHO_2026
+ * Todos os blocos iniciais do relatório seguem o mesmo padrão.
+ *
+ * Tipo
+ * Colaborador
+ * Período
+ * Gerado por
+ * Hora
+ */
+.relatorio-refinado .rel-meta-tipo,
+.relatorio-refinado .rel-meta-colaborador,
+.relatorio-refinado .rel-meta-periodo,
+.relatorio-refinado .rel-meta-gerado-por,
+.relatorio-refinado .rel-meta-hora {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    background-image: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: #fff;
+}
+
+.relatorio-refinado .rel-meta-tipo *,
+.relatorio-refinado .rel-meta-colaborador *,
+.relatorio-refinado .rel-meta-periodo *,
+.relatorio-refinado .rel-meta-gerado-por *,
+.relatorio-refinado .rel-meta-hora * {
+    color: inherit;
+}
+
+
+/* RDO_VACINA_HEADER_RELATORIO_2026 */
+.relatorio-refinado .relatorio-header,
+.relatorio-refinado .rel-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    background-image: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+
+
+/* ============================================================
+   RDO_VACINA_MOTOBOYS_MODELO_CLIENTES_2026
+
+   A aba Motoboys deve possuir exatamente o mesmo comportamento
+   estrutural da aba Clientes para:
+
+       Data inicial
+       Data final
+       Descrição
+       Ações
+
+   O conteúdo específico continua sendo de Motoboys.
+   ============================================================ */
+
+/*
+ * Cabeçalho da tabela/lista:
+ * nunca utilizar o azul degradê.
+ */
+[data-tab="motoboys"] .rel-lista-header,
+[data-tab="motoboys"] .rel-table-header,
+[data-tab="motoboys"] .rel-list-header,
+#rel-lista-motoboys .rel-lista-header,
+#rel-lista-motoboys .rel-table-header,
+#rel-lista-motoboys .rel-list-header {
+    background: #fff;
+    background: #fff;
+
+  color: #212529;
+}
+
+/*
+ * Descrição e Ações seguem o mesmo padrão da aba Clientes.
+ */
+#rel-lista-motoboys .rel-lista-header span,
+#rel-lista-motoboys .rel-lista-header strong,
+#rel-lista-motoboys .rel-table-header span,
+#rel-lista-motoboys .rel-table-header strong,
+#rel-lista-motoboys .rel-list-header span,
+#rel-lista-motoboys .rel-list-header strong {
+    background: #fff;
+    background: #fff;
+
+  color: #212529;
+}
+
+/*
+ * Não aplicar azul individualmente ao bloco Motoboys.
+ */
+#rel-lista-motoboys {
+    background: #dc3545;
+}
+
+
+/* ============================================================
+   RDO_VACINA_TIPO_COLABORADOR_VERMELHO_SUAVE_2026
+
+   Tipo e Colaborador NÃO devem possuir degradê.
+
+   Devem possuir o mesmo conceito visual dos demais blocos,
+   utilizando vermelho suave.
+   ============================================================ */
+
+.relatorio-refinado .rel-meta-tipo,
+.relatorio-refinado .rel-meta-colaborador {
+    background: #f8d7da !important;
+    background-image: none !important;
+    color: #842029;
+    border-color: #f1aeb5;
+}
+
+/*
+ * Não permitir que filhos tragam o degradê azul/vermelho.
+ */
+.relatorio-refinado .rel-meta-tipo *,
+.relatorio-refinado .rel-meta-colaborador * {
+    background-image: none;
+}
+
+/*
+ * Cabeçalho gerado dentro da lista.
+ *
+ * A cor do texto é explicitamente definida para impedir
+ * herança de regras que estejam deixando "Descrição" branca.
+ */
+#rel-lista-motoboys .rel-lista-header,
+#rel-lista-motoboys .rel-table-header,
+#rel-lista-motoboys .rel-list-header,
+#rel-lista-motoboys .rel-header-lista {
+    background: #fff;
+    background: #fff;
+    color: #212529 !important;
+}
+
+/*
+ * "Descrição" e demais textos do cabeçalho.
+ */
+#rel-lista-motoboys .rel-lista-header span,
+#rel-lista-motoboys .rel-lista-header strong,
+#rel-lista-motoboys .rel-table-header span,
+#rel-lista-motoboys .rel-table-header strong,
+#rel-lista-motoboys .rel-list-header span,
+#rel-lista-motoboys .rel-list-header strong,
+#rel-lista-motoboys .rel-header-lista span,
+#rel-lista-motoboys .rel-header-lista strong {
+    color: #212529 !important;
+    background: #fff;
+    background: #fff;
+}
+
+/*
+ * O botão de ordenação permanece independente.
+ */
+#rel-lista-motoboys .btn-sort-data {
+    color: inherit;
+}
+
+/*
+ * O cabeçalho NÃO recebe o azul degradê.
+ */
+#rel-lista-motoboys [style*="linear-gradient"] {
+    background: #dc3545;
+    background: #dc3545;
+    color: #212529 !important;
+}
+
+/* ============================================================
+ * VACINA_RELATORIO_MOTOBOYS_V2
+ * Família visual dos cards do relatório.
+ * Somente apresentação — nenhuma regra de negócio.
+ * ============================================================ */
+
+.rel-vacina-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.rel-vacina-meta-card {
+    background: #fff8f8;
+    border: 1px solid #f0d6d6;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.rel-vacina-meta-label {
+    font-size: .68rem;
+    font-weight: 700;
+    color: #8a5555;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+    margin-bottom: 3px;
+}
+
+.rel-vacina-meta-value {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #333;
+    overflow-wrap: anywhere;
+}
+
+.rel-vacina-indicadores {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 14px;
+}
+
+.rel-vacina-indicador {
+    background: #fff8f8;
+    border: 1px solid #f0d6d6;
+    border-radius: 10px;
+    padding: 11px 13px;
+}
+
+.rel-vacina-indicador-label {
+    font-size: .68rem;
+    font-weight: 700;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-bottom: 4px;
+}
+
+.rel-vacina-indicador-value {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.rel-vacina-indicador.colaborador .rel-vacina-indicador-value {
+    color: #0a7d2c;
+}
+
+.rel-vacina-indicador.rdo .rel-vacina-indicador-value {
+    color: #0d6efd;
+}
+
+.rel-vacina-indicador.total .rel-vacina-indicador-value {
+    color: #dc3545;
+}
+
+.rel-vacina-cliente {
+    background: #fff;
+    border: 1px solid #e8dada;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.rel-vacina-cliente-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.rel-vacina-cliente-name {
+    font-size: .78rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.rel-vacina-cliente-value {
+    font-size: .78rem;
+    font-weight: 700;
+    color: #0a7d2c;
+}
+
+@media (max-width: 768px) {
+    .rel-vacina-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rel-vacina-indicadores {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .rel-vacina-meta-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ============================================================
+   VACINA_RELATORIO_MOTOBOYS_V4_CSS
+   Família visual do relatório de motoboys
+   ============================================================ */
+
+.rel-vacina-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.rel-vacina-meta-card {
+  background: #fff7f7;
+  border: 1px solid #f1d6d6;
+  border-radius: 10px;
+  padding: 11px 13px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.rel-vacina-meta-card .rel-modal-card-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: #7a4a4a;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.rel-vacina-meta-card .rel-modal-card-value {
+  font-size: .94rem;
+  font-weight: 600;
+  color: #212529;
+  overflow-wrap: anywhere;
+}
+
+.rel-vacina-indicadores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.rel-vacina-indicador {
+  background: #fff8f8;
+  border: 1px solid #efdada;
+  border-radius: 10px;
+  padding: 13px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.rel-vacina-indicador-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: #7a4a4a;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.rel-vacina-indicador-value {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #212529;
+  overflow-wrap: anywhere;
+}
+
+.rel-vacina-cliente {
+  background: #fffafa;
+  border: 1px solid #eadede;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.rel-vacina-cliente-title {
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 7px;
+}
+
+@media (max-width: 900px) {
+  .rel-vacina-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rel-vacina-indicadores {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .rel-vacina-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

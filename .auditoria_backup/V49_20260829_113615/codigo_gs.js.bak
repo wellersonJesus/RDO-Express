@@ -1149,471 +1149,120 @@ function _criarLancamentoFinanceiroAutomatico(ss, idPedido) {
 
 function processarAdd(sheet, data, entity) {
   try {
-    if (!sheet || !data || !entity) {
-      return {
-        status: "error",
-        sucesso: false,
-        erro: "Parâmetros inválidos para processarAdd"
-      };
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = lastRow > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return normalizarChave(h); }) : [];
+    
+    if (headers.length === 0) {
+      return { status: "error", message: "Aba '" + entity + "' sem cabecalhos definidos" };
     }
 
-    var dataNorm = normalizarDadosPorEntidade(
-      data,
-      entity
-    );
-
-    if (
-      !dataNorm ||
-      typeof dataNorm !== "object"
-    ) {
-      return {
-        status: "error",
-        sucesso: false,
-        erro: "Não foi possível normalizar os dados"
-      };
+    var normalizedData = normalizarDadosPorEntidade(data, entity);
+    var idColIdx = headers.indexOf("id");
+    if (idColIdx !== -1 && !normalizedData.id) {
+      normalizedData.id = gerarId(sheet, entity);
+    }
+    if (headers.indexOf("updated_at") !== -1 && !normalizedData.updated_at) {
+      normalizedData.updated_at = timestampAtual();
     }
 
-    if (entity === "financeiro") {
-
-      dataNorm.tipo = "entrada";
-
-      if (!dataNorm.grupo) {
-        dataNorm.grupo = "corrida";
+    var row = [];
+    for (var i = 0; i < headers.length; i++) {
+      var campo = headers[i];
+      var valor = normalizedData[campo] !== undefined ? normalizedData[campo] : "";
+      if (ehCampoMonetario(campo) && valor !== "") {
+        valor = formatarMoeda(valor);
       }
-
-      if (!dataNorm.situacao) {
-        dataNorm.situacao = "CONCLUIDO";
-      }
-
-      var idPedidoNovo =
-        dataNorm.id_pedido ||
-        dataNorm.idPedido ||
-        dataNorm.pedido_id ||
-        dataNorm.numero_servico ||
-        dataNorm.numeroServico ||
-        "";
-
-      idPedidoNovo =
-        String(idPedidoNovo || "").trim();
-
-      if (idPedidoNovo) {
-
-        var idExistente =
-          _buscarIdFinanceiroPorPedido(
-            sheet,
-            idPedidoNovo
-          );
-
-        if (idExistente) {
-
-          var dadosUpdate =
-            Object.assign({}, dataNorm);
-
-          delete dadosUpdate.id;
-          delete dadosUpdate.id_financeiro;
-          delete dadosUpdate.id_pedido;
-          delete dadosUpdate.idPedido;
-          delete dadosUpdate.pedido_id;
-
-          dadosUpdate.tipo = "entrada";
-
-          if (!dadosUpdate.grupo) {
-            dadosUpdate.grupo = "corrida";
-          }
-
-          var resultadoUpdate =
-            processarUpdate(
-              sheet,
-              dadosUpdate,
-              ALIASES_FINANCEIRO
-            );
-
-          if (
-            resultadoUpdate &&
-            (
-              resultadoUpdate.status === "success" ||
-              resultadoUpdate.sucesso === true
-            )
-          ) {
-            invalidarCache("financeiro");
-
-            return {
-              status: "success",
-              sucesso: true,
-              atualizado: true,
-              id_pedido: idPedidoNovo,
-              tipo: "entrada",
-              grupo: "corrida",
-              resultado: resultadoUpdate
-            };
-          }
-
-          return {
-            status: "error",
-            sucesso: false,
-            erro:
-              "Falha ao atualizar lançamento financeiro existente.",
-            resultado: resultadoUpdate
-          };
-        }
-      }
-    }
-
-    var headers =
-      sheet
-        .getRange(
-          1,
-          1,
-          1,
-          sheet.getLastColumn()
-        )
-        .getValues()[0];
-
-    var row = headers.map(function(header) {
-
-      var chave =
-        String(header || "").trim();
-
-      if (!chave) {
-        return "";
-      }
-
-      var chaveNormalizada =
-        normalizarChave(chave);
-
-      if (
-        dataNorm[chave] !== undefined &&
-        dataNorm[chave] !== null
-      ) {
-        return dataNorm[chave];
-      }
-
-      if (
-        dataNorm[chaveNormalizada] !== undefined &&
-        dataNorm[chaveNormalizada] !== null
-      ) {
-        return dataNorm[chaveNormalizada];
-      }
-
-      var aliases =
-        entity === "financeiro"
-          ? ALIASES_FINANCEIRO
-          : {};
-
-      var alias =
-        aliases[chaveNormalizada] ||
-        aliases[chave];
-
-      if (
-        alias &&
-        dataNorm[alias] !== undefined &&
-        dataNorm[alias] !== null
-      ) {
-        return dataNorm[alias];
-      }
-
-      return "";
-    });
-
-    if (entity === "financeiro") {
-
-      var indiceTipo =
-        headers.findIndex(function(header) {
-
-          return normalizarChave(header) === "tipo";
-
-        });
-
-      if (indiceTipo !== -1) {
-        row[indiceTipo] = "entrada";
-      }
-
-      var indiceGrupo =
-        headers.findIndex(function(header) {
-
-          return normalizarChave(header) === "grupo";
-
-        });
-
-      if (
-        indiceGrupo !== -1 &&
-        (
-          row[indiceGrupo] === "" ||
-          row[indiceGrupo] === null ||
-          row[indiceGrupo] === undefined
-        )
-      ) {
-        row[indiceGrupo] = "corrida";
-      }
-    }
-
-    /*
-     * ======================================================
-     * VACINA FINANCEIRO
-     * ======================================================
-     *
-     * Todo lançamento originado de pedido deve possuir
-     * id_pedido. Sem esse identificador não existe forma
-     * segura de impedir duplicidade ou atualizar o pedido
-     * posteriormente.
-     */
-
-    if (entity === "financeiro") {
-      var idPedidoFinanceiro =
-        dataNorm.id_pedido ||
-        dataNorm.idPedido ||
-        dataNorm.pedido_id ||
-        dataNorm.pedidoId ||
-        "";
-
-      idPedidoFinanceiro =
-        String(idPedidoFinanceiro || "").trim();
-
-      if (!idPedidoFinanceiro) {
-        throw new Error(
-          "Lançamento financeiro de pedido sem id_pedido."
-        );
-      }
-
-      var indiceIdPedido =
-        headers.findIndex(function(header) {
-          var chave = normalizarChave(header);
-
-          return (
-            chave === "id_pedido" ||
-            chave === "pedido_id" ||
-            chave === "idpedido"
-          );
-        });
-
-      if (indiceIdPedido === -1) {
-        throw new Error(
-          "Aba financeiro não possui coluna id_pedido/pedido_id."
-        );
-      }
-
-      row[indiceIdPedido] = idPedidoFinanceiro;
-
-      /*
-       * Valor financeiro obrigatório.
-       */
-      var indiceValorFinanceiro =
-        headers.findIndex(function(header) {
-          var chave = normalizarChave(header);
-
-          return (
-            chave === "vlr_servico" ||
-            chave === "valor_corrida" ||
-            chave === "valor_total" ||
-            chave === "valor_final"
-          );
-        });
-
-      if (indiceValorFinanceiro === -1) {
-        throw new Error(
-          "Aba financeiro não possui coluna de valor."
-        );
-      }
-
-      var valorFinanceiro =
-        Number(
-          String(
-            row[indiceValorFinanceiro] || ""
-          )
-            .replace(/R\$/gi, "")
-            .replace(/\s/g, "")
-            .replace(/\./g, "")
-            .replace(",", ".")
-        );
-
-      if (
-        !isFinite(valorFinanceiro) ||
-        valorFinanceiro <= 0
-      ) {
-        throw new Error(
-          "Valor financeiro inválido para " +
-          idPedidoFinanceiro +
-          ": " +
-          row[indiceValorFinanceiro]
-        );
-      }
-
-      row[indiceValorFinanceiro] =
-        valorFinanceiro;
-    }
-
-    /*
-     * ======================================================
-     * VACINA FINANCEIRO
-     * ======================================================
-     *
-     * Todo lançamento originado de pedido deve possuir
-     * id_pedido. Sem esse identificador não existe forma
-     * segura de impedir duplicidade ou atualizar o pedido
-     * posteriormente.
-     */
-
-    if (entity === "financeiro") {
-      var idPedidoFinanceiro =
-        dataNorm.id_pedido ||
-        dataNorm.idPedido ||
-        dataNorm.pedido_id ||
-        dataNorm.pedidoId ||
-        "";
-
-      idPedidoFinanceiro =
-        String(idPedidoFinanceiro || "").trim();
-
-      if (!idPedidoFinanceiro) {
-        throw new Error(
-          "Lançamento financeiro de pedido sem id_pedido."
-        );
-      }
-
-      var indiceIdPedido =
-        headers.findIndex(function(header) {
-          var chave = normalizarChave(header);
-
-          return (
-            chave === "id_pedido" ||
-            chave === "pedido_id" ||
-            chave === "idpedido"
-          );
-        });
-
-      if (indiceIdPedido === -1) {
-        throw new Error(
-          "Aba financeiro não possui coluna id_pedido/pedido_id."
-        );
-      }
-
-      row[indiceIdPedido] = idPedidoFinanceiro;
-
-      /*
-       * Valor financeiro obrigatório.
-       */
-      var indiceValorFinanceiro =
-        headers.findIndex(function(header) {
-          var chave = normalizarChave(header);
-
-          return (
-            chave === "vlr_servico" ||
-            chave === "valor_corrida" ||
-            chave === "valor_total" ||
-            chave === "valor_final"
-          );
-        });
-
-      if (indiceValorFinanceiro === -1) {
-        throw new Error(
-          "Aba financeiro não possui coluna de valor."
-        );
-      }
-
-      var valorFinanceiro =
-        Number(
-          String(
-            row[indiceValorFinanceiro] || ""
-          )
-            .replace(/R\$/gi, "")
-            .replace(/\s/g, "")
-            .replace(/\./g, "")
-            .replace(",", ".")
-        );
-
-      if (
-        !isFinite(valorFinanceiro) ||
-        valorFinanceiro <= 0
-      ) {
-        throw new Error(
-          "Valor financeiro inválido para " +
-          idPedidoFinanceiro +
-          ": " +
-          row[indiceValorFinanceiro]
-        );
-      }
-
-      row[indiceValorFinanceiro] =
-        valorFinanceiro;
+      row.push(valor);
     }
 
     sheet.appendRow(row);
-
     SpreadsheetApp.flush();
-
-    var ultimaLinha =
-      sheet.getLastRow();
-
-    var idGerado = null;
-
-    var indiceId =
-      headers.findIndex(function(header) {
-
-        return normalizarChave(header) === "id";
-
-      });
-
-    if (indiceId !== -1) {
-      idGerado =
-        sheet
-          .getRange(
-            ultimaLinha,
-            indiceId + 1
-          )
-          .getValue();
-    }
-
-    invalidarCache(entity);
 
     return {
       status: "success",
-      sucesso: true,
-      mensagem: "Registro criado com sucesso",
-      id: idGerado || dataNorm.id || null,
-      id_pedido:
-        dataNorm.id_pedido ||
-        dataNorm.idPedido ||
-        dataNorm.pedido_id ||
-        dataNorm.pedidoId ||
-        null,
-      idPedido:
-        dataNorm.id_pedido ||
-        dataNorm.idPedido ||
-        dataNorm.pedido_id ||
-        dataNorm.pedidoId ||
-        null,
-      tipo:
-        entity === "financeiro"
-          ? "entrada"
-          : undefined,
-      grupo:
-        entity === "financeiro"
-          ? (
-              dataNorm.grupo ||
-              "corrida"
-            )
-          : undefined
+      message: "Registro adicionado com sucesso!",
+      id: normalizedData.id || ""
     };
-
   } catch (err) {
-
-    console.error(
-      "Erro em processarAdd: " +
-      err.toString()
-    );
-
-    return {
-      status: "error",
-      sucesso: false,
-      erro:
-        "Erro em processarAdd: " +
-        err.toString(),
-      message:
-        "Erro em processarAdd: " +
-        err.toString(),
-      stack: err.stack || ""
-    };
+    return { status: "error", message: "Erro em processarAdd: " + err.toString() };
   }
+}
+
+/* V44_VALOR_CORRIDA_FALLBACK_SEGURO */
+function _v44ExtrairValorCorridaSeguro(data) {
+  if (!data || typeof data !== "object") return "";
+
+  var candidatos = [
+    "valor_corrida",
+    "valorcorrida",
+    "valor",
+    "valor_total",
+    "valor_final",
+    "vlr_servico",
+    "valor_base"
+  ];
+
+  for (var i = 0; i < candidatos.length; i++) {
+    var chave = candidatos[i];
+
+    if (!Object.prototype.hasOwnProperty.call(data, chave)) continue;
+
+    var valor = data[chave];
+
+    if (valor === null || valor === undefined) continue;
+
+    if (typeof valor === "string") {
+      valor = valor.trim();
+      if (valor === "") continue;
+    }
+
+    return valor;
+  }
+
+  return "";
+}
+
+function _v44GarantirValorCorrida(data) {
+  if (!data || typeof data !== "object") return data;
+
+  var valorAtual = data.valor_corrida;
+
+  if (
+    valorAtual !== null &&
+    valorAtual !== undefined &&
+    String(valorAtual).trim() !== ""
+  ) {
+    return data;
+  }
+
+  var fallback = _v44ExtrairValorCorridaSeguro(data);
+
+  if (
+    fallback !== null &&
+    fallback !== undefined &&
+    String(fallback).trim() !== ""
+  ) {
+    data.valor_corrida = fallback;
+  }
+
+  return data;
+}
+
+function normalizarDadosPorEntidade(data, entity) {
+  data = _v44GarantirValorCorrida(data);
+
+  var dadosNorm = {};
+  var chaves = Object.keys(data);
+  var aliases = entity === "financeiro" ? ALIASES_FINANCEIRO : entity === "pedidos" ? ALIASES_PEDIDOS : {};
+
+  for (var i = 0; i < chaves.length; i++) {
+    var chaveOriginal = chaves[i];
+    var chaveNorm = normalizarChave(chaveOriginal);
+    var chaveAlvo = aliases[chaveNorm] || chaveNorm;
+    dadosNorm[chaveAlvo] = data[chaveOriginal];
+  }
+  return dadosNorm;
 }
 
 function _buscarIdFinanceiroPorPedido(sheetFinanceiro, idPedido) {
@@ -2971,9 +2620,20 @@ function _localizarLinhaPorId(values, idIndex, idAlvo) {
   return -1;
 }
 
+/* V42_RESOLVER_COLUNA_SEGURO */
 function _resolverColuna(headers, chaveFinal) {
-  var colIndex = headers.indexOf(chaveFinal);
-  if (colIndex !== -1) return colIndex;
+  if (!Array.isArray(headers)) return -1;
+  if (chaveFinal === null || chaveFinal === undefined) return -1;
+
+  var chave = normalizarChave(String(chaveFinal));
+  if (!chave) return -1;
+
+  for (var i = 0; i < headers.length; i++) {
+    if (normalizarChave(String(headers[i])) === chave) {
+      return i;
+    }
+  }
+
   return -1;
 }
 
@@ -2993,6 +2653,8 @@ function _escreverValorPorTipo(sheet, linha, colIndex, chaveFinal, valor) {
 }
 
 function _aplicarCamposUpdate(sheet, linhaPlanilha, headers, aliases, data) {
+  data = _v44GarantirValorCorrida(data);
+
   var camposAtualizados = [];
   var camposIgnorados = [];
   var keys = Object.keys(data);

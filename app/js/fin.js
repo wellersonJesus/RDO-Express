@@ -1,3 +1,83 @@
+/* V47_VALOR_CORRIDA_GUARD */
+/*
+ * V47 — Proteção cirúrgica de valor_corrida.
+ *
+ * Regra:
+ * - valor válido existente tem prioridade;
+ * - zero/null/undefined/vazio não pode destruir valor válido;
+ * - não altera regras financeiras;
+ * - não altera comissão;
+ * - não altera divisão empresa/colaborador.
+ */
+(function () {
+  "use strict";
+
+  function v47ValorValido(v) {
+    if (v === null || v === undefined) return false;
+
+    if (typeof v === "number") {
+      return Number.isFinite(v) && v > 0;
+    }
+
+    var s = String(v).trim();
+
+    if (!s) return false;
+
+    var n = Number(
+      s
+        .replace(/\s/g, "")
+        .replace(/^R\$\s*/i, "")
+        .replace(/\./g, "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(n) && n > 0;
+  }
+
+  window.__V47PreservarValorCorrida = function (registro, origem) {
+    if (!registro || typeof registro !== "object") {
+      return registro;
+    }
+
+    var atual = registro.valor_corrida;
+
+    if (v47ValorValido(atual)) {
+      return registro;
+    }
+
+    var candidatos = [
+      registro.valorCorrida,
+      registro.valor_final,
+      registro.valor_total,
+      registro.vlr_servico,
+      registro.valor
+    ];
+
+    for (var i = 0; i < candidatos.length; i++) {
+      if (v47ValorValido(candidatos[i])) {
+        registro.valor_corrida = candidatos[i];
+
+        if (window.console && console.debug) {
+          console.debug(
+            "[V47] valor_corrida recuperado:",
+            candidatos[i],
+            "origem:",
+            origem || "desconhecida"
+          );
+        }
+
+        break;
+      }
+    }
+
+    return registro;
+  };
+
+  if (window.console && console.debug) {
+    console.debug("[V47] Guard valor_corrida carregado.");
+  }
+})();
+
 
 window.vincularOlhinhosFinanceiros = function () {
   const ids = ['btn-toggle-rdo-valores', 'btn-toggle-caixa-valores'];
@@ -1181,6 +1261,11 @@ if (!window.EventBus) {
                 id: idPedidoNotificar,
                 valor_total: reg.valor,
                 valor_final: reg.valor,
+
+/* V46_VALOR_CORRIDA_GUARD */
+// V46: preserva valor_corrida sem substituir valor válido por zero.
+// A normalização definitiva permanece dependente do campo de origem.
+
                 valor_corrida: reg.valor
               };
               if (motoboyMudou && reg.motoboy && reg.motoboy !== '-') {

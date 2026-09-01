@@ -1,0 +1,344 @@
+============================================================
+V48 — INÍCIO
+============================================================
+[INFO] Projeto:
+/home/pcmaster/Documentos/Projetos/RDO-Express
+[INFO] Data:
+sáb 29 ago 2026 11:33:25 -03
+[INFO] Backup:
+.auditoria_backup/V48_20260829_113324
+============================================================
+1. VERIFICAÇÃO DOS ARQUIVOS
+============================================================
+[OK] app/js/pedidos.js
+[OK] app/js/chat.js
+[OK] api/data/modelos/scripts/codigo_gs.js
+============================================================
+2. BACKUP
+============================================================
+[OK] Backup: app/js/pedidos.js
+[OK] Backup: app/js/chat.js
+[OK] Backup: api/data/modelos/scripts/codigo_gs.js
+============================================================
+3. SHA256 ANTES DA VACINA
+============================================================
+dbffc3968df9d43a346fd53035295140299590f37bdb151c7cfc1fde54ba1409  app/js/pedidos.js
+94445661e270feacae8d580670cda2a18c52b37cec25b50a3ba9b11274cba040  app/js/chat.js
+e2d36f6ab8a877daffae3f3804b75c7ff90a0e39a0936ce9b3120caacfd1c260  api/data/modelos/scripts/codigo_gs.js
+============================================================
+4. AUDITORIA DA RECURSÃO DE RENDERIZAÇÃO
+============================================================
+[INFO] Definições de _renderizarTabelaPedidos:
+app/js/pedidos.js:1323:        if (typeof _renderizarTabelaPedidos === 'function') {
+app/js/pedidos.js:2269:function _renderizarTabelaPedidos(pedidos) {
+app/js/pedidos.js:2279:window._renderizarTabelaPedidos = _renderizarTabelaPedidos;
+app/js/chat.js:4512:    if (typeof window._renderizarTabelaPedidos === 'function') window._renderizarTabelaPedidos(pedidos);
+app/js/chat.js:4733:            if (typeof window._renderizarTabelaPedidos === 'function') {
+app/js/chat.js:6920:        if (typeof window._renderizarTabelaPedidos === 'function') {
+app/js/chat.js:7187:                typeof window._renderizarTabelaPedidos ===
+app/js/chat.js:7323:            typeof window._renderizarTabelaPedidos === 'function'
+app/js/chat.js:7425:                typeof window._renderizarTabelaPedidos === 'function',
+[INFO] Chamadas de _renderizarTabelaPedidos:
+app/js/pedidos.js:1324:            _renderizarTabelaPedidos();
+app/js/pedidos.js:2269:function _renderizarTabelaPedidos(pedidos) {
+app/js/chat.js:4512:    if (typeof window._renderizarTabelaPedidos === 'function') window._renderizarTabelaPedidos(pedidos);
+app/js/chat.js:4734:                window._renderizarTabelaPedidos(cache);
+[INFO] Definições/chamadas de _renderizarTabela:
+app/js/pedidos.js:47:    function _renderizarTabelaComTravaSpin(pedidos) {
+app/js/pedidos.js:609:    function _renderizarTabela(pedidos) {
+app/js/pedidos.js:1924:            if (typeof window._renderizarTabela === "function") {
+app/js/pedidos.js:1995:            if (typeof window._renderizarTabela === "function") {
+app/js/pedidos.js:2051:        if (typeof window._renderizarTabela === "function") {
+app/js/pedidos.js:2131:            if (cache.length > 0 && typeof window._renderizarTabela === "function") {
+app/js/pedidos.js:2269:function _renderizarTabelaPedidos(pedidos) {
+app/js/chat.js:4511:function _renderizarTabela(pedidos) {
+app/js/chat.js:6924:        if (typeof window._renderizarTabela === 'function') {
+app/js/chat.js:7190:                typeof window._renderizarTabela ===
+app/js/chat.js:7329:            typeof window._renderizarTabela === 'function'
+app/js/chat.js:7428:                typeof window._renderizarTabela === 'function',
+[INFO] Trecho crítico pedidos.js (2240–2290):
+            p.valor_corrida =
+              numero(p.valorCorrida);
+          }
+
+
+          return original(
+            endpoint,
+            p
+          );
+        }
+      }
+
+
+      return original(
+        endpoint,
+        payload
+      );
+    };
+
+
+    window.API.__VACINA_PEDIDOS_CONTRATO_V2__ = true;
+  }
+
+})();
+
+/* ============================================================
+   V36 — PONTE DE COMPATIBILIDADE
+   _renderizarTabelaPedidos -> _renderizarTabela
+   ============================================================ */
+function _renderizarTabelaPedidos(pedidos) {
+    if (Array.isArray(pedidos)) {
+        return _renderizarTabela(pedidos);
+    }
+
+    return _renderizarTabela(
+        window.AppRDO.pedidosCache || []
+    );
+}
+
+window._renderizarTabelaPedidos = _renderizarTabelaPedidos;
+[INFO] Trecho crítico chat.js (4480–4540):
+}
+
+function _formatarMoedaBR(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _resolverValor(pedido) {
+    if (!pedido) return 0;
+    var valorBruto = pedido.valorEstimado !== undefined ? pedido.valorEstimado :
+                     (pedido.valor_total !== undefined ? pedido.valor_total :
+                     (pedido.valor_corrida !== undefined ? pedido.valor_corrida :
+                     (pedido.valor_final !== undefined ? pedido.valor_final :
+                     (pedido.valor !== undefined ? pedido.valor : 0))));
+    return _parseMoeda(valorBruto);
+}
+
+function _normalizarStatus(status) {
+    var s = String(status || '').trim();
+    return s.includes('/') ? s.split('/').pop().trim() : s;
+}
+
+function _formatarIdServico(id) {
+    return typeof window._formatarNomeServico === 'function' ? window._formatarNomeServico(id) : String(id);
+}
+
+function _garantirModal(modalId, callback) {
+    var modalEl = document.getElementById(modalId);
+    if (modalEl) { callback(true); return; }
+    callback(false);
+}
+
+function _renderizarTabela(pedidos) {
+    if (typeof window._renderizarTabelaPedidos === 'function') window._renderizarTabelaPedidos(pedidos);
+}
+
+window.RDO_PEDIDOS.onEditarValorInput = function (input) {
+    var valor = _parseMoeda(input.value);
+    document.getElementById('edit-valor-base').value = valor;
+    window.RDO_PEDIDOS.calcularEspera();
+};
+
+window.RDO_PEDIDOS.calcularEspera = function () {
+    var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
+    var minutos = parseFloat((document.getElementById('edit-espera-minutos') || {}).value) || 0;
+    var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
+
+    var boxMinutos = document.getElementById('box-espera-minutos');
+    var boxResumo = document.getElementById('box-espera-resumo');
+    var elFinal = document.getElementById('edit-espera-valor-final');
+
+    var TARIFA_MIN = 0.60;
+    var FRANQUIA_MIN = 10;
+
+    if (tipo === 'sem_espera') {
+        if (boxMinutos) boxMinutos.style.display = 'none';
+        if (boxResumo) boxResumo.style.display = 'none';
+        if (elFinal) elFinal.textContent = 'R$ ' + _formatarMoedaBR(valorBase);
+        window.RDO_PEDIDOS._valorFinalCalculado = valorBase;
+        window.RDO_PEDIDOS._taxaEsperaCalculada = 0;
+        return;
+    }
+============================================================
+5. AUDITORIA DO MODAL DE EDIÇÃO
+============================================================
+[INFO] _garantirModal:
+767:    function _garantirModal(modalId, callback) {
+[INFO] editarPedido:
+754:            btn.onclick = function () { window.editarPedido(btn.getAttribute('data-id')); };
+1056:    window.editarPedido = function (id) {
+1794:        window.editarPedido(id);
+[INFO] Campos edit-status-atual / edit-cliente:
+app/js/pedidos.js:1107:            _s('edit-status-atual', statusAtual);
+app/js/pedidos.js:1111:            _s('edit-cliente', _resolverNomeCliente(pedido));
+============================================================
+6. AUDITORIA DA PERSISTÊNCIA
+============================================================
+[INFO] Chamadas de API relacionadas a pedidos:
+682:        API.call('updatepedidos', { id: id, status: 'PENDENTE', situacao_financeira: 'pendente' })
+902:        API.call('createpedido', payload)
+1219:        API.call('updatepedido', payload)
+[INFO] Região de salvar/editar pedido:
+115:            _salvarCacheLocal(pedidosNovos, chatsNovos);
+532:            '<button class="btn-pedido-edit"   data-id="' + idSafe + '" title="Editar"><i class="bi bi-pencil-square"></i></button>' +
+582:    function _atualizarContadores(pedidos) {
+628:        _atualizarContadores(pedidos);
+682:        API.call('updatepedidos', { id: id, status: 'PENDENTE', situacao_financeira: 'pendente' })
+754:            btn.onclick = function () { window.editarPedido(btn.getAttribute('data-id')); };
+790:    window.RDO_PEDIDOS.calcularEspera = function (skipDisplayUpdate) {
+800:        if (!skipDisplayUpdate && elDisplay) elDisplay.value = _formatarMoeda(valorBase);
+852:    window.RDO_PEDIDOS.atualizarStatusLocal = function (pedidoId, statusFormatado, motoboyNome, motivoCancelamento) {
+869:    window.RDO_PEDIDOS.salvarNovoPedido = function () {
+870:        var btnSalvar = document.getElementById('btn-salvar-novo-pedido');
+900:        _setBotaoLoading(btnSalvar, true);
+943:                console.error('[pedidos.js] ❌ salvarNovoPedido:', err);
+947:                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'Salvar');
+978:            _s('det-data', _resolverDataLancamento(pedido) || _formatarDataExibicao(pedido.updated_at));
+1006:            _toggleBotaoEditarDetalhes(statusAtual);
+1012:    function _toggleBotaoEditarDetalhes(statusAtual) {
+1013:        var btnEditar = document.getElementById('btn-editar-pedido-detalhes');
+1014:        if (!btnEditar) return;
+1016:        var podeEditar = statusAtual === 'PENDENTE' || statusAtual === 'EM_ROTA';
+1018:        btnEditar.classList.toggle('d-none', !podeEditar);
+1019:        btnEditar.disabled = !podeEditar;
+1022:    function _toggleBotaoSalvarEdicao(statusAtual) {
+1023:        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1024:        if (!btnSalvar) return;
+1026:        var podeEditar = statusAtual === 'PENDENTE' || statusAtual === 'EM_ROTA';
+1028:        btnSalvar.classList.toggle('d-none', !podeEditar);
+1029:        btnSalvar.disabled = !podeEditar;
+1047:        var modalEl = document.getElementById('modalEditarPedido');
+1056:    window.editarPedido = function (id) {
+1062:        _garantirModal('modalEditarPedido', function (ok) {
+1063:            if (!ok) { console.error('[pedidos.js] ❌ #modalEditarPedido indisponível'); return; }
+1065:            var modalEl = document.getElementById('modalEditarPedido');
+1094:            _toggleBotaoSalvarEdicao(statusAtual);
+1124:            var tituloEl = document.getElementById('editar-titulo');
+1139:    window.RDO_PEDIDOS.salvarEdicao = function () {
+1154:        var btnSalvar = document.getElementById('btn-salvar-edicao');
+1157:        if (btnSalvar && btnSalvar.disabled) return;
+1217:        _setBotaoLoading(btnSalvar, true);
+1219:        API.call('updatepedido', payload)
+1221:                if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+1253:                var modalEl = document.getElementById('modalEditarPedido');
+1284:                console.error('[pedidos.js] ❌ salvarEdicao:', err);
+1285:                if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
+1288:                _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
+1292:    window.RDO_PEDIDOS.onEditarValorInput = function (input) {
+1304:    window.RDO_PEDIDOS.salvarValorPedido = function () {
+1305:        var inputVal = document.getElementById('input-editar-valor-pedido') || document.querySelector('.input-editar-valor');
+1699:    function _salvarCacheLocal(pedidos, chats) {
+1707:            console.warn('[pedidos.js] ⚠️ Falha ao salvar cache local:', e);
+1782:                    text: 'Não é possível editar um pedido Concluído ou Cancelado.'
+1794:        window.editarPedido(id);
+2185:   * Garante que createpedido/updatepedido nunca percam
+2208:        ep === 'updatepedido' ||
+2209:        ep === 'updatepedidos'
+============================================================
+7. AUDITORIA DO VALOR
+============================================================
+[INFO] Ocorrências de valor_corrida:
+329:                        (pedido.valor_corrida !== undefined ? pedido.valor_corrida :
+888:            valor_corrida: _parseMoeda((document.getElementById('novo-valor-pedido') || {}).value),
+924:                            valor_corrida: valorBase,
+1206:            valor_corrida: valorBase,
+1240:                        valor_corrida: payload.valor_corrida,
+1269:                            valor_corrida: valorBase,
+1612:                        : dados.valor_corrida;
+1617:                    pedido.valor_corrida = novoValor;
+1630:                    if (novoValor != null) chat.valor_corrida = novoValor;
+2186:   * valor_corrida por conversões intermediárias.
+2222:            p.valor_corrida !== undefined
+2225:            p.valor_corrida =
+2226:              numero(p.valor_corrida);
+2231:           * Não substitui valor_corrida por vlr_servico.
+2236:            p.valor_corrida === undefined &&
+2240:            p.valor_corrida =
+[INFO] Operadores potencialmente perigosos envolvendo valor:
+647:            var valorResolvido = _resolverValor ? _resolverValor(pedido) : (pedido.valor_total || pedido.valor || 0);
+888:            valor_corrida: _parseMoeda((document.getElementById('novo-valor-pedido') || {}).value),
+963:            var finalNum = _parseMoeda(pedido.valor_final) || valorBase;
+============================================================
+8. AUDITORIA DO CACHE LOCAL
+============================================================
+41:    var PEDIDOS_LS_KEY = 'rdo_pedidos_cache_v1';
+115:            _salvarCacheLocal(pedidosNovos, chatsNovos);
+1699:    function _salvarCacheLocal(pedidos, chats) {
+1701:            localStorage.setItem(PEDIDOS_LS_KEY, JSON.stringify({
+1713:            var raw = localStorage.getItem(PEDIDOS_LS_KEY);
+============================================================
+9. PROTEÇÃO CONTRA FINANCEIRO PREMATURO
+============================================================
+[INFO] addfinanceiro em pedidos.js:
+[INFO] Eventos emitidos próximos ao fluxo de edição:
+914:                if (typeof window.EventBus !== 'undefined') {
+921:                        window.EventBus.emit('pedido:atualizado', {
+1259:                if (typeof window.EventBus !== 'undefined') {
+1266:                        window.EventBus.emit('pedido:atualizado', {
+1318:        if (typeof window.EventBus !== 'undefined' && typeof window.EventBus.emit === 'function') {
+1319:            window.EventBus.emit('pedido:atualizado', { id: pedidoId, valor: valorNumerico });
+1320:            window.EventBus.emit('chat:sincronizarValor', { id: pedidoId, valor: valorNumerico });
+1579:    function _registrarEventosEventBus() {
+1580:        if (typeof window.EventBus === 'undefined') { setTimeout(_registrarEventosEventBus, 300); return; }
+1638:            window.EventBus.on(evt, handlers[evt]);
+1839:        _registrarEventosEventBus();
+============================================================
+10. DIAGNÓSTICO AUTOMÁTICO
+============================================================
+[ATENÇÃO] pedidos.js contém ambas as funções/chamadas.
+[ATENÇÃO] Cache local rdo_pedidos_cache_v1 encontrado.
+[ATENÇÃO] Campos de modal referenciados.
+============================================================
+11. DECISÃO DE SEGURANÇA
+============================================================
+[INFO] A vacina V48 não irá reescrever automaticamente as funções.
+[INFO] O motivo é evitar destruir a implementação existente.
+[INFO] O diagnóstico precisa apontar a implementação real antes da substituição.
+[OK] Ponto de investigação da recursão encontrado.
+[OK] Ponto de investigação do localStorage encontrado.
+============================================================
+12. SINTAXE ATUAL
+============================================================
+[OK] Sintaxe: app/js/pedidos.js
+[OK] Sintaxe: app/js/chat.js
+[OK] Sintaxe: api/data/modelos/scripts/codigo_gs.js
+============================================================
+13. V48 — MODO SEGURO
+============================================================
+[IMPORTANTE]
+A auditoria revelou um ciclo potencial entre pedidos.js e chat.js.
+Também revelou falha de elementos do modal e quota do localStorage.
+
+Por segurança, esta execução NÃO fará substituição automática
+de funções grandes sem conhecer o corpo real das funções.
+
+Isso evita uma segunda vacina que piore o módulo.
+
+O relatório completo contém os trechos necessários para criar
+a correção cirúrgica.
+============================================================
+14. SHA FINAL
+============================================================
+[IGUAL] app/js/pedidos.js
+       SHA: dbffc3968df9d43a346fd53035295140299590f37bdb151c7cfc1fde54ba1409
+[IGUAL] app/js/chat.js
+       SHA: 94445661e270feacae8d580670cda2a18c52b37cec25b50a3ba9b11274cba040
+[IGUAL] api/data/modelos/scripts/codigo_gs.js
+       SHA: e2d36f6ab8a877daffae3f3804b75c7ff90a0e39a0936ce9b3120caacfd1c260
+============================================================
+15. V48 — RESULTADO
+============================================================
+[OK] Backup criado.
+[OK] Auditoria executada.
+[OK] Nenhuma alteração cega realizada.
+[OK] fin.js NÃO foi alterado.
+[OK] Banco NÃO foi alterado.
+[OK] Regras financeiras NÃO foram alteradas.
+[OK] Comissão NÃO foi alterada.
+[OK] Divisão 80/20 NÃO foi alterada.
+
+[INFO] Relatório:
+.auditoria_backup/V48_20260829_113324_RELATORIO.txt
+
+[INFO] Backup:
+.auditoria_backup/V48_20260829_113324

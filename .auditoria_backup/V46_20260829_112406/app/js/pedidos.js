@@ -920,6 +920,7 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
+                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -1264,6 +1265,7 @@
                         window._ultimosEmitsPedido[chaveEmit] = agora;
                         window.EventBus.emit('pedido:atualizado', {
                             id: pedidoId,
+                            id_pedido: pedidoId,
                             valor_corrida: valorBase,
                             valor_total: valorBase,
                             valor_final: valorFinal,
@@ -2134,3 +2136,144 @@ document.addEventListener("click", function (e) {
         }
     });
 })();
+
+
+
+/* VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2 */
+(function () {
+  'use strict';
+
+  if (window.__VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2__) {
+    return;
+  }
+
+  window.__VACINA_PEDIDOS_FINANCEIRO_CONTRATO_V2__ = true;
+
+  console.info(
+    '[VACINA FINANCEIRO] contrato de pedidos protegido.'
+  );
+
+  function numero(v) {
+
+    if (v === null || v === undefined || v === '') {
+      return 0;
+    }
+
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : 0;
+    }
+
+    var s = String(v)
+      .replace(/R\$/gi, '')
+      .replace(/\s/g, '');
+
+    if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(',', '.');
+    }
+
+    s = s.replace(/[^0-9.-]/g, '');
+
+    var n = Number(s);
+
+    return Number.isFinite(n) ? n : 0;
+  }
+
+
+  /*
+   * Garante que createpedido/updatepedido nunca percam
+   * valor_corrida por conversões intermediárias.
+   */
+
+  if (
+    window.API &&
+    typeof window.API.call === 'function' &&
+    !window.API.__VACINA_PEDIDOS_CONTRATO_V2__
+  ) {
+
+    var original =
+      window.API.call.bind(window.API);
+
+
+    window.API.call = function (endpoint, payload) {
+
+      var ep = String(endpoint || '')
+        .trim()
+        .toLowerCase();
+
+
+      if (
+        ep === 'createpedido' ||
+        ep === 'updatepedido' ||
+        ep === 'updatepedidos'
+      ) {
+
+        if (
+          payload &&
+          typeof payload === 'object'
+        ) {
+
+          var p =
+            Object.assign({}, payload);
+
+
+          if (
+            p.valor_corrida !== undefined
+          ) {
+
+            p.valor_corrida =
+              numero(p.valor_corrida);
+          }
+
+
+          /*
+           * Não substitui valor_corrida por vlr_servico.
+           * São campos de módulos diferentes.
+           */
+
+          if (
+            p.valor_corrida === undefined &&
+            p.valorCorrida !== undefined
+          ) {
+
+            p.valor_corrida =
+              numero(p.valorCorrida);
+          }
+
+
+          return original(
+            endpoint,
+            p
+          );
+        }
+      }
+
+
+      return original(
+        endpoint,
+        payload
+      );
+    };
+
+
+    window.API.__VACINA_PEDIDOS_CONTRATO_V2__ = true;
+  }
+
+})();
+
+/* ============================================================
+   V36 — PONTE DE COMPATIBILIDADE
+   _renderizarTabelaPedidos -> _renderizarTabela
+   ============================================================ */
+function _renderizarTabelaPedidos(pedidos) {
+    if (Array.isArray(pedidos)) {
+        return _renderizarTabela(pedidos);
+    }
+
+    return _renderizarTabela(
+        window.AppRDO.pedidosCache || []
+    );
+}
+
+window._renderizarTabelaPedidos = _renderizarTabelaPedidos;

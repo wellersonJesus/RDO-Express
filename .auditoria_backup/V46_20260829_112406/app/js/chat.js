@@ -4620,107 +4620,190 @@ window.editarPedido = function (id) {
 };
 
 window.RDO_PEDIDOS.salvarEdicao = function () {
-    var btnSalvar = document.getElementById('btn-salvar-edicao') || document.getElementById('btn-salvar-valor-pedido');
+    var btnSalvar =
+        document.getElementById('btn-salvar-edicao') ||
+        document.getElementById('btn-salvar-valor-pedido');
+
     var errEl = document.getElementById('edit-error-msg');
 
-    if (errEl) errEl.classList.add('d-none');
+    if (errEl) {
+        errEl.classList.add('d-none');
+        errEl.textContent = '';
+    }
 
-    var pedidoId = (document.getElementById('edit-pedido-id') || {}).value || '';
-    var valorBase = _parseMoeda((document.getElementById('edit-valor-base') || {}).value);
-    var tipo = (document.getElementById('edit-espera-tipo') || {}).value || 'sem_espera';
-    var minutos = parseInt((document.getElementById('edit-espera-minutos') || {}).value || '0', 10) || 0;
+    var pedidoId =
+        (document.getElementById('edit-pedido-id') || {}).value || '';
 
     if (!pedidoId) {
-        if (errEl) { errEl.textContent = 'ID do pedido não encontrado.'; errEl.classList.remove('d-none'); }
+        if (errEl) {
+            errEl.textContent = 'ID do pedido não encontrado.';
+            errEl.classList.remove('d-none');
+        }
         return;
     }
 
-    var pontos = tipo === 'ambos' ? 2 : 1;
-    var franquiaTotal = FRANQUIA_MIN * pontos;
-    var excedente = (tipo !== 'sem_espera' && minutos > 0) ? Math.max(0, minutos - franquiaTotal) : 0;
-    var taxa = excedente * TARIFA_MIN;
-    var valorFinal = valorBase + taxa;
+    var cache =
+        window.AppRDO &&
+        Array.isArray(window.AppRDO.pedidosCache)
+            ? window.AppRDO.pedidosCache
+            : [];
+
+    var pedido = cache.find(function (p) {
+        return String(p && p.id || '').trim() === String(pedidoId).trim();
+    });
+
+    if (!pedido) {
+        if (errEl) {
+            errEl.textContent = 'Pedido não encontrado no cache local.';
+            errEl.classList.remove('d-none');
+        }
+        return;
+    }
+
+    if (typeof window.RDO_PEDIDOS.calcularEspera === 'function') {
+        window.RDO_PEDIDOS.calcularEspera();
+    }
+
+    var valorBase = _parseMoeda(
+        (document.getElementById('edit-valor-base') || {}).value
+    );
+
+    var tipoEspera =
+        (document.getElementById('edit-espera-tipo') || {}).value ||
+        'sem_espera';
+
+    var minutosEspera =
+        parseFloat(
+            (document.getElementById('edit-espera-minutos') || {}).value
+        ) || 0;
+
+    var taxaEspera =
+        Number(window.RDO_PEDIDOS._taxaEsperaCalculada) || 0;
+
+    var valorFinal =
+        window.RDO_PEDIDOS._valorFinalCalculado != null
+            ? Number(window.RDO_PEDIDOS._valorFinalCalculado)
+            : valorBase + taxaEspera;
+
+    var de =
+        (document.getElementById('edit-de') || {}).value || '';
+
+    var para =
+        (document.getElementById('edit-para') || {}).value || '';
+
+    var obs =
+        (document.getElementById('edit-obs') || {}).value || '';
 
     var payload = {
-        id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
-        solicitante: solicitante,
-        contato: contato,
-        horario: horario,
-        mercadoria: mercadoria,
-        rotas_texto: rotasTexto,
-        de: deStr,
-        para: paraStr,
-        distancia: distancia.toFixed(2),
-        tempo: tempo,
-        obs: obs,
-        valor_km: valorKm,
-        retorno: retorno,
-        dinamica: dinamica,
-        prioridade: prioridade,
-        valor_corrida: valorTotal,
-        valor_final: valorTotal,
-        status: 'PENDENTE',
-        situacao_financeira: 'PENDENTE',
-        texto: mensagemProvisoria,
-        data: dados.dataPedido || ''
+        id: pedidoId,
+        id_cliente: String(
+            (window.AppRDO && window.AppRDO.clienteId) || pedido.id_cliente || ''
+        ),
+        de: de,
+        para: para,
+        observacao: obs,
+        espera_tipo: tipoEspera,
+        espera_minutos: minutosEspera,
+        taxa_espera: taxaEspera,
+        valor_total: valorFinal,
+        valor_corrida: valorFinal,
+        valor_final: valorFinal
     };
 
     _setBotaoLoading(btnSalvar, true);
 
     API.call('updatepedido', payload)
         .then(function (res) {
-            if (res && res.status === 'error') throw new Error(res.message || 'Erro ao salvar');
+            if (res && res.status === 'error') {
+                throw new Error(res.message || 'Erro ao salvar');
+            }
 
-            var cache = Array.isArray(window.AppRDO.pedidosCache) ? window.AppRDO.pedidosCache : [];
-            var pedido = cache.find(function (p) {
-                return String(p.id || '').trim() === String(pedidoId).trim();
+            Object.assign(pedido, {
+                de: de,
+                para: para,
+                observacao: obs,
+                espera_tipo: tipoEspera,
+                espera_minutos: minutosEspera,
+                taxa_espera: taxaEspera,
+                valor_total: valorFinal,
+                valor_corrida: valorFinal,
+                valor_final: valorFinal
             });
-            if (pedido) {
-                Object.assign(pedido, {
-                    de: payload.de,
-                    para: payload.para,
-                    observacao: payload.observacao,
-                    espera_tipo: payload.espera_tipo,
-                    espera_minutos: payload.espera_minutos,
-                    taxa_espera: payload.taxa_espera,
-                    valor_corrida: payload.valor_corrida,
-                    valor_total: payload.valor_total,
-                    valor_final: payload.valor_final
-                });
+
+            if (typeof window._renderizarTabelaPedidos === 'function') {
+                window._renderizarTabelaPedidos(cache);
             }
 
-            _renderizarTabela(window.AppRDO.pedidosCache);
+            var modalEl =
+                document.getElementById('modalEditarPedido');
 
-            var modalEl = document.getElementById('modalEditarPedido');
-            if (modalEl) {
+            if (modalEl &&
+                typeof bootstrap !== 'undefined' &&
+                bootstrap.Modal) {
+
                 var inst = bootstrap.Modal.getInstance(modalEl);
-                if (inst) inst.hide();
+
+                if (inst) {
+                    inst.hide();
+                }
             }
 
-            if (typeof window.EventBus !== 'undefined')
-                window.EventBus.emit('pedido:atualizado', {
-                    id: _pedidoId,
-                    valor_final: valorFinalPedido,
-                    valor_total: valorFinalPedido,
-                    valor_corrida: valorFinalPedido,
-                    motoboy: motoboyNome,
-                    data_pedido: pedidoConcluido
-                        ? (pedidoConcluido.data_lancamento || pedidoConcluido.dataLancamento || pedidoConcluido.updated_at || '')
-                        : ''
-                });
+            if (typeof window.EventBus !== 'undefined' &&
+                window.EventBus &&
+                typeof window.EventBus.emit === 'function') {
 
-            if (typeof Swal !== 'undefined')
-                Swal.fire({
-                    icon: 'success', title: 'Pedido atualizado!',
-                    toast: true, timer: 2000, position: 'top-end', showConfirmButton: false
+                window.EventBus.emit('pedido:atualizado', {
+                    id: pedidoId,
+                    id_pedido: pedidoId,
+                    idPedido: pedidoId,
+                    pedido_id: pedidoId,
+                    valor_final: valorFinal,
+                    valor_total: valorFinal,
+                    valor_corrida: valorFinal,
+                    motoboy:
+                        pedido.motoboy ||
+                        pedido.nome_motoboy ||
+                        pedido.motoboy_nome ||
+                        '',
+                    data_pedido:
+                        pedido.data_lancamento ||
+                        pedido.dataLancamento ||
+                        pedido.updated_at ||
+                        pedido.data ||
+                        ''
                 });
+            }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Pedido atualizado!',
+                    toast: true,
+                    timer: 2000,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+            }
         })
         .catch(function (err) {
-            console.error('[pedidos.js] ❌ salvarEdicao:', err);
-            if (errEl) { errEl.textContent = err.message || 'Falha ao salvar.'; errEl.classList.remove('d-none'); }
+            console.error(
+                '[RDO_PEDIDOS] ❌ salvarEdicao:',
+                err
+            );
+
+            if (errEl) {
+                errEl.textContent =
+                    err.message || 'Falha ao salvar.';
+                errEl.classList.remove('d-none');
+            }
         })
         .finally(function () {
-            _setBotaoLoading(btnSalvar, false, 'bi bi-check-lg', 'SALVAR');
+            _setBotaoLoading(
+                btnSalvar,
+                false,
+                'bi bi-check-lg',
+                'SALVAR'
+            );
         });
 };
 
@@ -6756,6 +6839,722 @@ window.EventBus.on('pedido:atualizado', function (dados) {
         );
       };
   }
+
+})();
+
+
+// [VACINA APLICADA]: Ouvinte global para sincronizar alteração de valores vinda de pedidos
+window.addEventListener('RDO_PEDIDO_ATUALIZADO', function(e) {
+    var pedidoModificado = e.detail;
+    if (!pedidoModificado) return;
+    // Atualiza elementos visuais correspondentes no chat se existirem
+    var elementosChat = document.querySelectorAll('[data-pedido-id="' + pedidoModificado.id + '"]');
+    elementosChat.forEach(function(el) {
+        var elValor = el.querySelector('.valor-pedido, .chat-pedido-valor');
+        if (elValor) {
+            elValor.innerText = 'R$ ' + Number(pedidoModificado.valor).toFixed(2).replace('.', ',');
+        }
+    });
+});
+
+
+
+
+
+
+
+
+
+
+/* ============================================================
+ * RDO_V22_PEDIDOS_DATA_FLOW
+ *
+ * Correção do fluxo de dados da lista de pedidos.
+ *
+ * Esta camada NÃO substitui:
+ *   - carregarPedidosDoCliente
+ *   - salvarEdicao
+ *   - salvarValorPedido
+ *   - API.call
+ *   - EventBus
+ *
+ * Ela apenas garante que, depois que o carregamento original
+ * terminar, o cache seja normalizado e a tabela seja renderizada.
+ * ============================================================ */
+(function () {
+    'use strict';
+
+    window.RDO_V22 = window.RDO_V22 || {};
+
+    var _ultimoCliente = null;
+    var _sincronizando = false;
+    var _tentativas = 0;
+    var _timer = null;
+
+    function normalizarId(valor) {
+        if (valor === null || valor === undefined) return '';
+        return String(valor).trim();
+    }
+
+    function obterClienteAtual() {
+        if (!window.AppRDO) return '';
+
+        return normalizarId(
+            window.AppRDO.clienteId ||
+            window.AppRDO.cliente_id ||
+            ''
+        );
+    }
+
+    function obterCache() {
+        if (!window.AppRDO) return [];
+
+        if (!Array.isArray(window.AppRDO.pedidosCache)) {
+            window.AppRDO.pedidosCache = [];
+        }
+
+        return window.AppRDO.pedidosCache;
+    }
+
+    function encontrarRenderizador() {
+        if (typeof window._renderizarTabelaPedidos === 'function') {
+            return window._renderizarTabelaPedidos;
+        }
+
+        if (typeof window._renderizarTabela === 'function') {
+            return window._renderizarTabela;
+        }
+
+        return null;
+    }
+
+    function renderizar(pedidos) {
+        var lista = Array.isArray(pedidos) ? pedidos : [];
+        var renderizador = encontrarRenderizador();
+
+        if (renderizador) {
+            try {
+                renderizador(lista);
+                return true;
+            } catch (erro) {
+                console.error(
+                    '[RDO_V22] Erro ao renderizar pedidos:',
+                    erro
+                );
+            }
+        }
+
+        var corpo = document.getElementById(
+            'corpo-tabela-pedidos'
+        );
+
+        if (!corpo) return false;
+
+        if (!lista.length) {
+            corpo.innerHTML =
+                '<tr>' +
+                '<td colspan="99" class="text-center">' +
+                'Nenhum pedido encontrado.' +
+                '</td>' +
+                '</tr>';
+
+            return true;
+        }
+
+        return false;
+    }
+
+    function localizarPedidosEmResposta(res) {
+        if (!res) return [];
+
+        if (Array.isArray(res)) {
+            return res;
+        }
+
+        var candidatos = [
+            res.pedidos,
+            res.data,
+            res.result,
+            res.rows,
+            res.items,
+            res.lista
+        ];
+
+        for (var i = 0; i < candidatos.length; i++) {
+            if (Array.isArray(candidatos[i])) {
+                return candidatos[i];
+            }
+
+            if (
+                candidatos[i] &&
+                Array.isArray(candidatos[i].pedidos)
+            ) {
+                return candidatos[i].pedidos;
+            }
+
+            if (
+                candidatos[i] &&
+                Array.isArray(candidatos[i].data)
+            ) {
+                return candidatos[i].data;
+            }
+        }
+
+        return [];
+    }
+
+    function atualizarCache(lista) {
+        if (!window.AppRDO) return [];
+
+        var pedidos = Array.isArray(lista) ? lista : [];
+
+        window.AppRDO.pedidosCache = pedidos;
+
+        return pedidos;
+    }
+
+    function renderizarCache() {
+        var cache = obterCache();
+
+        if (!cache.length) {
+            return false;
+        }
+
+        return renderizar(cache);
+    }
+
+    function clienteAindaSelecionado(clienteId) {
+        return normalizarId(obterClienteAtual()) ===
+            normalizarId(clienteId);
+    }
+
+    /*
+     * Intercepta SOMENTE a conclusão de API.call('getpedidos').
+     *
+     * Não altera a chamada.
+     * Não altera parâmetros.
+     * Não altera api.js.
+     *
+     * Apenas normaliza a resposta e alimenta pedidosCache.
+     */
+    function instalarInterceptadorAPI() {
+        if (!window.API ||
+            typeof window.API.call !== 'function') {
+            return false;
+        }
+
+        if (window.API.__RDO_V22_GETPEDIDOS) {
+            return true;
+        }
+
+        var callOriginal = window.API.call;
+
+        window.API.call = function () {
+            var args = arguments;
+            var acao = args[0];
+
+            var retorno = callOriginal.apply(this, args);
+
+            if (
+                String(acao || '').toLowerCase() !==
+                'getpedidos'
+            ) {
+                return retorno;
+            }
+
+            if (!retorno ||
+                typeof retorno.then !== 'function') {
+                return retorno;
+            }
+
+            return retorno.then(function (res) {
+                try {
+                    var pedidos = localizarPedidosEmResposta(res);
+
+                    if (pedidos.length) {
+                        atualizarCache(pedidos);
+
+                        console.log(
+                            '[RDO_V22] getpedidos → pedidosCache:',
+                            pedidos.length
+                        );
+
+                        /*
+                         * Pequeno atraso para permitir que o fluxo
+                         * original termine antes da renderização.
+                         */
+                        setTimeout(function () {
+                            if (clienteAindaSelecionado(
+                                obterClienteAtual()
+                            )) {
+                                renderizarCache();
+                            }
+                        }, 0);
+                    } else {
+                        console.warn(
+                            '[RDO_V22] getpedidos respondeu sem lista:',
+                            res
+                        );
+                    }
+                } catch (erro) {
+                    console.error(
+                        '[RDO_V22] Falha ao normalizar getpedidos:',
+                        erro
+                    );
+                }
+
+                return res;
+            });
+        };
+
+        window.API.__RDO_V22_GETPEDIDOS = true;
+
+        console.log(
+            '[RDO_V22] Interceptador getpedidos instalado.'
+        );
+
+        return true;
+    }
+
+    /*
+     * Observa alterações no cache sem disparar API.
+     */
+    function sincronizarCache() {
+        if (_sincronizando) return;
+
+        var cache = obterCache();
+
+        if (!cache.length) return;
+
+        var cliente = obterClienteAtual();
+
+        if (
+            _ultimoCliente !== cliente ||
+            _tentativas < 5
+        ) {
+            _ultimoCliente = cliente;
+            _tentativas++;
+
+            _sincronizando = true;
+
+            try {
+                renderizar(cache);
+            } finally {
+                _sincronizando = false;
+            }
+        }
+    }
+
+    /*
+     * Quando a seleção do cliente muda, limpa somente o estado
+     * visual antigo e deixa o carregador original buscar os dados.
+     */
+    function ouvirEventos() {
+        if (!window.EventBus ||
+            typeof window.EventBus.on !== 'function') {
+            return;
+        }
+
+        [
+            'pedido:adicionado',
+            'pedido:atualizado',
+            'pedido:statusAtualizado',
+            'pedido:excluido'
+        ].forEach(function (evento) {
+            window.EventBus.on(evento, function () {
+                setTimeout(function () {
+                    _tentativas = 0;
+                    renderizarCache();
+                }, 0);
+            });
+        });
+    }
+
+    /*
+     * Diagnóstico público.
+     */
+    window.RDO_V22.diagnosticar = function () {
+        var cache = obterCache();
+        var corpo = document.getElementById(
+            'corpo-tabela-pedidos'
+        );
+
+        var resultado = {
+            clienteId: obterClienteAtual(),
+            quantidadePedidos: cache.length,
+            corpoExiste: !!corpo,
+            renderPedidos:
+                typeof window._renderizarTabelaPedidos ===
+                'function',
+            renderTabela:
+                typeof window._renderizarTabela ===
+                'function',
+            carregarPedidos:
+                typeof window.carregarPedidosDoCliente ===
+                'function',
+            apiExiste:
+                !!window.API &&
+                typeof window.API.call === 'function',
+            interceptadorV22:
+                !!(
+                    window.API &&
+                    window.API.__RDO_V22_GETPEDIDOS
+                )
+        };
+
+        console.group(
+            '[RDO_V22] DIAGNÓSTICO PEDIDOS'
+        );
+
+        console.table(resultado);
+
+        console.log(
+            'pedidosCache:',
+            cache
+        );
+
+        if (cache.length) {
+            console.log(
+                'Primeiro pedido:',
+                cache[0]
+            );
+        }
+
+        console.log(
+            'carregarPedidosDoCliente:',
+            window.carregarPedidosDoCliente
+        );
+
+        console.groupEnd();
+
+        return resultado;
+    };
+
+    function iniciar() {
+        instalarInterceptadorAPI();
+        ouvirEventos();
+
+        /*
+         * O carregamento dos pedidos continua pertencendo
+         * ao código existente.
+         *
+         * Estes ciclos apenas sincronizam a visualização.
+         */
+        var tempos = [
+            100,
+            300,
+            700,
+            1200,
+            2000,
+            3500
+        ];
+
+        tempos.forEach(function (tempo) {
+            setTimeout(function () {
+                instalarInterceptadorAPI();
+                sincronizarCache();
+            }, tempo);
+        });
+
+        if (!_timer) {
+            _timer = setInterval(function () {
+                instalarInterceptadorAPI();
+
+                if (
+                    window.AppRDO &&
+                    Array.isArray(
+                        window.AppRDO.pedidosCache
+                    ) &&
+                    window.AppRDO.pedidosCache.length
+                ) {
+                    renderizarCache();
+                }
+            }, 1500);
+        }
+
+        console.log(
+            '[RDO_V22] Fluxo de pedidos ativado.'
+        );
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener(
+            'DOMContentLoaded',
+            iniciar
+        );
+    } else {
+        iniciar();
+    }
+
+})();
+
+/* ============================================================
+   RDO_V24_PEDIDOS_BRIDGE
+   ============================================================ */
+
+(function () {
+    'use strict';
+
+    window.RDO_V24 = window.RDO_V24 || {};
+
+    function obterCachePedidos() {
+
+        if (
+            window.AppRDO &&
+            Array.isArray(window.AppRDO.pedidosCache)
+        ) {
+            return window.AppRDO.pedidosCache;
+        }
+
+        return [];
+    }
+
+    function obterCorpoTabela() {
+
+        return (
+            document.getElementById('corpo-tabela-pedidos') ||
+            document.querySelector('#corpo-tabela-pedidos')
+        );
+    }
+
+    function obterRenderizador() {
+
+        if (
+            typeof window._renderizarTabelaPedidos === 'function'
+        ) {
+            return window._renderizarTabelaPedidos;
+        }
+
+        if (
+            typeof window._renderizarTabela === 'function'
+        ) {
+            return window._renderizarTabela;
+        }
+
+        return null;
+    }
+
+    window.RDO_V24.renderizarPedidos = function (lista) {
+
+        var pedidos = Array.isArray(lista)
+            ? lista
+            : obterCachePedidos();
+
+        var corpo = obterCorpoTabela();
+
+        console.log(
+            '[RDO_V24] renderizarPedidos:',
+            pedidos.length,
+            'pedido(s)'
+        );
+
+        if (!corpo) {
+
+            console.warn(
+                '[RDO_V24] #corpo-tabela-pedidos ainda não existe.'
+            );
+
+            return false;
+        }
+
+        var renderizador = obterRenderizador();
+
+        if (renderizador) {
+
+            try {
+
+                renderizador(pedidos);
+
+                console.log(
+                    '[RDO_V24] Renderizador oficial executado.'
+                );
+
+                return true;
+
+            } catch (erro) {
+
+                console.error(
+                    '[RDO_V24] Erro no renderizador oficial:',
+                    erro
+                );
+
+            }
+        }
+
+        /*
+         * Não vamos fabricar uma tabela paralela.
+         *
+         * Se o renderizador real não existir, o diagnóstico
+         * deverá mostrar isso para corrigirmos a origem.
+         */
+
+        if (!pedidos.length) {
+
+            corpo.innerHTML =
+                '<tr>' +
+                '<td colspan="99" class="text-center">' +
+                'Nenhum pedido encontrado.' +
+                '</td>' +
+                '</tr>';
+
+            return true;
+        }
+
+        console.warn(
+            '[RDO_V24] Existem ' +
+            pedidos.length +
+            ' pedidos no cache, porém o renderizador oficial não foi encontrado.'
+        );
+
+        return false;
+    };
+
+    window.RDO_V24.diagnosticar = function () {
+
+        var cache = obterCachePedidos();
+        var corpo = obterCorpoTabela();
+        var renderizador = obterRenderizador();
+
+        var diagnostico = {
+
+            quantidadePedidos: cache.length,
+
+            corpoExiste: !!corpo,
+
+            renderizadorPedidos:
+                typeof window._renderizarTabelaPedidos === 'function',
+
+            renderizadorTabela:
+                typeof window._renderizarTabela === 'function',
+
+            clienteSelecionado:
+                window.AppRDO
+                    ? window.AppRDO.clienteId || null
+                    : null,
+
+            apiExiste:
+                typeof window.API !== 'undefined',
+
+            carregarPedidos:
+                typeof window.carregarPedidosDoCliente === 'function',
+
+            renderizadorEncontrado:
+                !!renderizador
+
+        };
+
+        console.group(
+            '[RDO_V24] DIAGNÓSTICO DA LISTA DE PEDIDOS'
+        );
+
+        console.table(diagnostico);
+
+        console.log(
+            '[RDO_V24] pedidosCache:',
+            cache
+        );
+
+        console.log(
+            '[RDO_V24] corpo:',
+            corpo
+        );
+
+        console.log(
+            '[RDO_V24] renderizador:',
+            renderizador
+        );
+
+        console.groupEnd();
+
+        return diagnostico;
+    };
+
+    /*
+     * NÃO interceptamos API.call().
+     *
+     * O getpedidos original continua sendo o responsável
+     * por buscar os dados.
+     */
+
+    function sincronizar() {
+
+        if (!window.AppRDO) {
+            return;
+        }
+
+        if (
+            !Array.isArray(window.AppRDO.pedidosCache)
+        ) {
+            return;
+        }
+
+        var corpo = obterCorpoTabela();
+
+        if (!corpo) {
+            return;
+        }
+
+        /*
+         * Só renderiza quando realmente existem pedidos.
+         * Não substitui o cache.
+         * Não chama API.
+         */
+
+        if (
+            window.AppRDO.pedidosCache.length > 0
+        ) {
+
+            window.RDO_V24.renderizarPedidos(
+                window.AppRDO.pedidosCache
+            );
+
+        }
+
+    }
+
+    /*
+     * Aguarda o DOM.
+     */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function () {
+
+            setTimeout(sincronizar, 300);
+            setTimeout(sincronizar, 1000);
+            setTimeout(sincronizar, 2000);
+
+        }
+    );
+
+    /*
+     * Eventos existentes.
+     */
+
+    if (
+        window.EventBus &&
+        typeof window.EventBus.on === 'function'
+    ) {
+
+        [
+            'pedido:adicionado',
+            'pedido:atualizado',
+            'pedido:statusAtualizado',
+            'pedido:excluido'
+        ].forEach(function (evento) {
+
+            window.EventBus.on(
+                evento,
+                sincronizar
+            );
+
+        });
+
+    }
+
+    console.log(
+        '[RDO_V24] Ponte segura de pedidos carregada.'
+    );
 
 })();
 

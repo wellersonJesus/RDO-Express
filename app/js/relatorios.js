@@ -251,8 +251,8 @@
       },
       defaults: {
         colaborador: ['username'],
-        pedidos: [],
-        financeiro: ['data', 'cliente', 'descricao', 'vlr_servico']
+        pedidos: ['cliente', 'data', 'para', 'valor_corrida'],
+        financeiro: []
       }
     },
     clientes: {
@@ -309,7 +309,7 @@
     ultimoBuilderState: null,
     paginaAtual: 1,
     itensPorPagina: 10,
-    ordenacao: { motoboys: 'desc', clientes: 'desc', financeiro: 'desc', global: 'desc' },
+    ordenacao: { motoboys: 'desc', clientes: 'desc' },
     builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
   };
 
@@ -544,6 +544,8 @@
   function iniciarBuilder(tipo, periodo, filtroExtra) {
     try {
       state.builder.tipo = tipo;
+
+      aplicarDefaultsBuilderRelatorios(tipo);
       state.builder.periodo = periodo;
       state.builder.filtroExtra = filtroExtra;
       state.builder.step = 1;
@@ -607,6 +609,129 @@
   function contarSelecionados(banco) {
     const obj = state.builder.selecionados[banco] || {};
     return Object.keys(obj).filter(function (k) { return obj[k]; }).length;
+  }
+
+  function aplicarDefaultsBuilderRelatorios(tipo) {
+    var banco = String(tipo || '').toLowerCase().trim();
+
+    var defaults = {
+      colaborador: ['username'],
+      motoboys: ['username'],
+      pedidos: ['data', 'cliente', 'solicitante', 'descricao', 'valor'],
+      pedido: ['data', 'cliente', 'solicitante', 'descricao', 'valor'],
+      financeiro: []
+    };
+
+    var desejados = defaults[banco];
+
+    if (!desejados) return false;
+
+    var builder = state && state.builder ? state.builder : null;
+    if (!builder) return false;
+
+    /*
+     * O Builder pode utilizar diferentes nomes internos para
+     * representar os campos selecionados. Normalizamos somente
+     * estruturas que já existam.
+     */
+    var propriedades = [
+      'camposSelecionados',
+      'camposSelecionadosPorBanco',
+      'selecionados',
+      'campos'
+    ];
+
+    var alvo = null;
+    var propriedade = null;
+
+    for (var i = 0; i < propriedades.length; i++) {
+      var nomeProp = propriedades[i];
+
+      if (Object.prototype.hasOwnProperty.call(builder, nomeProp)) {
+        var valorProp = builder[nomeProp];
+
+        if (Array.isArray(valorProp)) {
+          alvo = valorProp;
+          propriedade = nomeProp;
+          break;
+        }
+
+        if (valorProp && typeof valorProp === 'object') {
+          if (Array.isArray(valorProp[banco])) {
+            alvo = valorProp[banco];
+            propriedade = nomeProp;
+            break;
+          }
+        }
+      }
+    }
+
+    /*
+     * Caso a estrutura seja um objeto por banco.
+     */
+    if (!alvo && builder.camposPorBanco &&
+      typeof builder.camposPorBanco === 'object') {
+      if (Array.isArray(builder.camposPorBanco[banco])) {
+        alvo = builder.camposPorBanco[banco];
+        propriedade = 'camposPorBanco';
+      }
+    }
+
+    /*
+     * Se não conseguimos identificar a estrutura real,
+     * não alteramos nada.
+     */
+    if (!alvo) return false;
+
+    /*
+     * Preserva o formato utilizado pela aplicação:
+     * strings permanecem strings.
+     */
+    var resultado = desejados.slice();
+
+    if (propriedade === 'camposSelecionadosPorBanco' &&
+      builder.camposSelecionadosPorBanco &&
+      typeof builder.camposSelecionadosPorBanco === 'object') {
+      builder.camposSelecionadosPorBanco[banco] = resultado;
+    } else if (propriedade === 'camposPorBanco' &&
+      builder.camposPorBanco &&
+      typeof builder.camposPorBanco === 'object') {
+      builder.camposPorBanco[banco] = resultado;
+    } else {
+      builder[propriedade] = resultado;
+    }
+
+    /*
+     * Sincroniza os checkboxes existentes no DOM.
+     * Somente checkboxes pertencentes ao banco atual são afetados.
+     */
+    var raiz = document.getElementById('rb-banco-panels');
+
+    if (raiz) {
+      var checkboxes = raiz.querySelectorAll(
+        'input[type="checkbox"][data-campo], ' +
+        'input[type="checkbox"][data-field], ' +
+        'input[type="checkbox"][value]'
+      );
+
+      Array.prototype.forEach.call(checkboxes, function (checkbox) {
+        var campo =
+          checkbox.getAttribute('data-campo') ||
+          checkbox.getAttribute('data-field') ||
+          checkbox.value ||
+          '';
+
+        campo = String(campo).trim();
+
+        /*
+         * Não existe seleção para Financeiro.
+         * Para os demais tipos, somente os defaults são marcados.
+         */
+        checkbox.checked = desejados.indexOf(campo) !== -1;
+      });
+    }
+
+    return true;
   }
 
   function renderizarBuilderTabs() {
@@ -2072,7 +2197,7 @@
       if (els.modalPeriodo) els.modalPeriodo.textContent = relatorio.periodoLabel || '';
 
       if (els.modalIcon) {
-        const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
+        const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people' };
         els.modalIcon.className = 'bi ' + (icons[relatorio.tipo] || 'bi-file-earmark-bar-graph');
       }
 
@@ -2192,16 +2317,28 @@
     const usuarioGerador = relatorio.usuarioGerador || (snapshot && snapshot.meta && snapshot.meta.usuarioGerador) || 'Não identificado';
     const horaGeracao = relatorio.horaGeracao || (snapshot && snapshot.meta && snapshot.meta.horaGeracao) || '-';
 
+    let periodoFormatado = escapeHtml(relatorio.periodoLabel || '');
+    if (periodoFormatado.includes(' a ')) {
+      periodoFormatado = periodoFormatado.replace(' a ', ' a<br><span style="font-size: 0.9em; opacity: 0.9;">');
+      periodoFormatado += '</span>';
+    }
+
     html += '<div class="rel-modal-section">';
     html += '<div class="rel-modal-section-title"><i class="bi bi-info-circle"></i> Informações</div>';
-    html += '<div class="rel-modal-grid">';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Tipo</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.tipo) + '</div></div>';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Período</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.periodoLabel) + '</div></div>';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Gerado por</div><div class="rel-modal-card-value">' + escapeHtml(usuarioGerador) + '</div></div>';
-    html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Hora</div><div class="rel-modal-card-value">' + escapeHtml(horaGeracao) + '</div></div>';
+    html += '<div class="rel-modal-grid" style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px;">';
+    html += '<div class="rel-modal-card" style="flex: 1; min-width: 140px; background: #fff5f5; border: 1px solid #ffd6d6;"><div class="rel-modal-card-label" style="font-weight: 300; font-size: 0.75rem;">tipo:</div><div class="rel-modal-card-value">' + escapeHtml(relatorio.tipo) + '</div></div>';
+    html += '<div class="rel-modal-card" style="flex: 1; min-width: 140px; background: #fff5f5; border: 1px solid #ffd6d6;"><div class="rel-modal-card-label" style="font-weight: 300; font-size: 0.75rem;">período:</div><div class="rel-modal-card-value" style="line-height: 1.2;">' + periodoFormatado + '</div></div>';
+    html += '<div class="rel-modal-card" style="flex: 1; min-width: 140px; background: #fff5f5; border: 1px solid #ffd6d6;"><div class="rel-modal-card-label" style="font-weight: 300; font-size: 0.75rem;">gerado por:</div><div class="rel-modal-card-value">' + escapeHtml(usuarioGerador) + '</div></div>';
+    html += '<div class="rel-modal-card" style="flex: 1; min-width: 140px; background: #fff5f5; border: 1px solid #ffd6d6;"><div class="rel-modal-card-label" style="font-weight: 300; font-size: 0.75rem;">hora:</div><div class="rel-modal-card-value">' + escapeHtml(horaGeracao) + '</div></div>';
     html += '</div></div>';
 
     const bancos = snapshot && snapshot.bancos ? snapshot.bancos : {};
+    let acumuladoTotaisQtd = 0;
+    let acumuladoSomaValor = 0;
+    let acumuladoSomaPagos = 0;
+    let temValorGeralTotais = false;
+    let temSituacaoGeralTotais = false;
+
     Object.keys(bancos).forEach(function (banco) {
       const info = bancos[banco];
       if (!info || !info.campos || !info.campos.length) return;
@@ -2281,22 +2418,22 @@
 
         if (temCampoValor) {
           html += '<div style="background:#fff9f0;border:2px solid #ffc107;border-radius:10px;padding:10px 16px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;">';
-          html += '<span style="font-size:.85rem;font-weight:700;color:#444;">TOTAL GERAL (todas as datas)</span>';
+          html += '<span style="font-size:.85rem;font-weight:700;color:#444;">TOTAL GERAL POR PERÍODO</span>';
           html += '<span style="font-size:.95rem;font-weight:700;color:#0a7d2c;">' + formatarMoeda(somaGeralBanco) + '</span>';
           html += '</div>';
         }
       }
 
-      if (info.totais && (info.totais.temValor || info.totais.temSituacao)) {
-        html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;">';
-        html += '<div class="rel-modal-card" style="background:#f0f7ff;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + info.totais.qtd + '</div></div>';
+      if (info.totais) {
+        acumuladoTotaisQtd += (info.totais.qtd || 0);
         if (info.totais.temValor) {
-          html += '<div class="rel-modal-card" style="background:#eafaf0;"><div class="rel-modal-card-label">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(info.totais.somaValor) + '</div></div>';
+          temValorGeralTotais = true;
+          acumuladoSomaValor += (info.totais.somaValor || 0);
         }
         if (info.totais.temSituacao) {
-          html += '<div class="rel-modal-card" style="background:#fff6e8;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(info.totais.somaPagos) + '</div></div>';
+          temSituacaoGeralTotais = true;
+          acumuladoSomaPagos += (info.totais.somaPagos || 0);
         }
-        html += '</div>';
       }
 
       html += '</div>';
@@ -2319,7 +2456,7 @@
 
       html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
       html += '<thead><tr>' +
-        '<th>Motoboy</th>' +
+        '<th>motoboy</th>' +
         '<th>Qtd. Corridas</th>' +
         '<th>Valor Total Receita</th>' +
         '<th>Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</th>' +
@@ -2336,7 +2473,7 @@
         totalGeralCalculado += m.valorTotalCalculado;
 
         html += '<tr>' +
-          '<td class="rel-td-nowrap"><strong>' + escapeHtml(abreviarNome(m.nome)) + '</strong></td>' +
+          '<td class="rel-td-nowrap" style="font-weight: 300; font-size: 0.9em;"><strong>' + escapeHtml(abreviarNome(m.nome)) + '</strong></td>' +
           '<td>' + m.qtd + '</td>' +
           '<td>' + formatarMoeda(m.receitaTotal) + '</td>' +
           '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(m.valorMotoboy) + '</td>' +
@@ -2365,39 +2502,127 @@
       html += '</div>';
     }
 
+    // Resumo por Cliente block refatorado com cálculo robusto das métricas solicitadas
+    html += '<div class="rel-modal-divider"></div>';
+    html += '<div class="rel-modal-section">';
+    html += '<div class="rel-modal-section-title"><i class="bi bi-people"></i> Resumo por Cliente</div>';
+
+    html += '<div style="background:#f0f7ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.75rem;color:#1c3d5a;">';
+    html += '<i class="bi bi-info-circle-fill" style="margin-right:6px;color:#0d6efd;"></i>';
+    html += '<strong>Regra de divisão da corrida:</strong> do valor total de cada corrida, <strong>' +
+      (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%</strong> é destinado ao motoboy e <strong>' +
+      (PERCENTUAL_RDO * 100).toFixed(0) + '%</strong> é retido pela RDO (empresa). ' +
+      'O "Valor Total Receita" representa a soma bruta das corridas; "Valor Motoboy" e "Valor RDO" são os valores já calculados conforme essa divisão.';
+    html += '</div>';
+
     if (resumos.clientes && resumos.clientes.length) {
-      html += '<div class="rel-modal-divider"></div>';
-      html += '<div class="rel-modal-section">';
-      html += '<div class="rel-modal-section-title"><i class="bi bi-people"></i> Resumo por Cliente</div>';
-      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.75rem;background:#fff;">';
-      html += '<thead><tr><th>Cliente</th><th>Qtd. Pedidos</th><th>Total Gasto</th><th>Pendente (qtd)</th><th>Total Pendente</th></tr></thead><tbody>';
-      let totalGeralCli = 0, totalPendGeralCli = 0;
+      html += '<div style="overflow-x:auto;"><table class="table table-sm table-bordered" style="font-size:.72rem;background:#fff;">';
+      html += '<thead><tr>' +
+        '<th>cliente</th>' +
+        '<th>Qtd. Corridas</th>' +
+        '<th>Valor Total Receita</th>' +
+        '<th>Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</th>' +
+        '<th>Valor RDO (' + (PERCENTUAL_RDO * 100).toFixed(0) + '%)</th>' +
+        '<th>Total Calculado</th>' +
+        '</tr></thead><tbody>';
+
+      let totalCliReceita = 0, totalCliMotoboy = 0, totalCliRdo = 0, totalCliCalculado = 0;
+
       resumos.clientes.forEach(function (c) {
-        totalGeralCli += c.total;
-        totalPendGeralCli += c.totalPendente;
+        const qtdCli = c.qtd || 0;
+        const receitaCli = !isNaN(parseMoeda(c.total)) ? parseMoeda(c.total) : (!isNaN(parseMoeda(c.receitaTotal)) ? parseMoeda(c.receitaTotal) : (!isNaN(parseMoeda(c.totalPendente)) ? parseMoeda(c.totalPendente) : 0));
+        const vlrMotoboyCli = receitaCli * PERCENTUAL_MOTOBOY;
+        const vlrRdoCli = receitaCli * PERCENTUAL_RDO;
+        const vlrCalculadoCli = vlrMotoboyCli + vlrRdoCli;
+
+        totalCliReceita += receitaCli;
+        totalCliMotoboy += vlrMotoboyCli;
+        totalCliRdo += vlrRdoCli;
+        totalCliCalculado += vlrCalculadoCli;
+
         html += '<tr>' +
-          '<td class="rel-td-nowrap"><strong>' + escapeHtml(abreviarNome(c.nome)) + '</strong></td>' +
-          '<td>' + c.qtd + '</td>' +
-          '<td>' + formatarMoeda(c.total) + '</td>' +
-          '<td>' + (c.qtdPendente || '-') + '</td>' +
-          '<td>' + (c.totalPendente ? formatarMoeda(c.totalPendente) : '-') + '</td>' +
+          '<td class="rel-td-nowrap" style="font-weight: 300; font-size: 0.9em;"><strong>' + escapeHtml(abreviarNome(c.nome)) + '</strong></td>' +
+          '<td>' + qtdCli + '</td>' +
+          '<td>' + formatarMoeda(receitaCli) + '</td>' +
+          '<td style="color:#0a7d2c;font-weight:600;">' + formatarMoeda(vlrMotoboyCli) + '</td>' +
+          '<td style="color:#0d6efd;font-weight:600;">' + formatarMoeda(vlrRdoCli) + '</td>' +
+          '<td>' + formatarMoeda(vlrCalculadoCli) + '</td>' +
           '</tr>';
       });
+
       html += '</tbody><tfoot><tr style="font-weight:700;background:#f8f9fa;">' +
-        '<td>TOTAL GERAL</td><td>-</td><td>' + formatarMoeda(totalGeralCli) + '</td><td>-</td><td>' + formatarMoeda(totalPendGeralCli) + '</td>' +
-        '</tr></tfoot></table></div></div>';
+        '<td>TOTAL GERAL</td>' +
+        '<td>-</td>' +
+        '<td>' + formatarMoeda(totalCliReceita) + '</td>' +
+        '<td style="color:#0a7d2c;">' + formatarMoeda(totalCliMotoboy) + '</td>' +
+        '<td style="color:#0d6efd;">' + formatarMoeda(totalCliRdo) + '</td>' +
+        '<td>' + formatarMoeda(totalCliCalculado) + '</td>' +
+        '</tr></tfoot></table></div>';
     }
+
+    const temPendentesCli = resumos.clientes && resumos.clientes.some(function (c) { return c.qtdPendente > 0; });
+    if (temPendentesCli) {
+      html += '<div style="margin-top:12px;font-size:.72rem;color:#b02a37;background:#fff3f3;border:1px solid #f5c2c7;border-radius:8px;padding:8px 12px;">';
+      html += '<i class="bi bi-exclamation-triangle-fill" style="margin-right:6px;"></i>';
+      html += '<strong>Atenção:</strong> existem corridas com status pendente (não concluído) inclusas nos totais acima. Consulte a coluna de status na tabela de pedidos para detalhes individuais.';
+      html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Cálculo dos totais agregados de Motoboy e RDO para exibição nos blocos informativos (buscando do resumo de motoboys ou calculando proporcionalmente se necessário)
+    let totalGeralMotoboyResumoCards = 0;
+    let totalGeralRdoResumoCards = 0;
+    if (resumos.motoboys && resumos.motoboys.length) {
+      resumos.motoboys.forEach(function (m) {
+        totalGeralMotoboyResumoCards += (m.valorMotoboy || 0);
+        totalGeralRdoResumoCards += (m.valorRdo || 0);
+      });
+    } else {
+      totalGeralMotoboyResumoCards = acumuladoSomaValor * PERCENTUAL_MOTOBOY;
+      totalGeralRdoResumoCards = acumuladoSomaValor * PERCENTUAL_RDO;
+    }
+
+    // Blocos informativos com os valores totais gerais corretos e estilização solicitada
+    html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;margin-bottom:16px;">';
+    html += '<div class="rel-modal-card" style="background:#eafaf0;flex:1;min-width:140px;"><div class="rel-modal-card-label" style="font-weight:700;color:#0a7d2c;">Valor Motoboy (' + (PERCENTUAL_MOTOBOY * 100).toFixed(0) + '%)</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(totalGeralMotoboyResumoCards) + '</div></div>';
+    html += '<div class="rel-modal-card" style="background:#eafaf0;flex:1;min-width:140px;"><div class="rel-modal-card-label" style="font-weight:700;color:#0a7d2c;">Valor RDO (' + (PERCENTUAL_RDO * 100).toFixed(0) + '%)</div><div class="rel-modal-card-value" style="color:#0a7d2c;">' + formatarMoeda(totalGeralRdoResumoCards) + '</div></div>';
+    html += '</div>';
+
+    html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;">';
+    html += '<div class="rel-modal-card" style="background:#f1f3f5;flex:1;min-width:140px;"><div class="rel-modal-card-label">Total de Registros</div><div class="rel-modal-card-value">' + acumuladoTotaisQtd + '</div></div>';
+    if (temValorGeralTotais) {
+      html += '<div class="rel-modal-card" style="background:#fdf2f2;flex:1;min-width:140px;"><div class="rel-modal-card-label" style="color:#a71d2a;">Soma Valor Serviço</div><div class="rel-modal-card-value" style="color:#a71d2a;">' + formatarMoeda(acumuladoSomaValor) + '</div></div>';
+    }
+    if (temSituacaoGeralTotais) {
+      html += '<div class="rel-modal-card" style="background:#fff6e8;flex:1;min-width:140px;"><div class="rel-modal-card-label">Soma Pagos</div><div class="rel-modal-card-value" style="color:#b06d00;">' + formatarMoeda(acumuladoSomaPagos) + '</div></div>';
+    }
+    html += '</div>';
 
     if (resumos.geral) {
       const g = resumos.geral;
+
       html += '<div class="rel-modal-divider"></div>';
       html += '<div class="rel-modal-section" style="background:#fff9f0;border:2px solid #ffc107;border-radius:12px;padding:16px 18px;">';
       html += '<div class="rel-modal-section-title" style="font-size:.95rem;"><i class="bi bi-clipboard2-check-fill" style="color:#dc3545;"></i> Resumo Final do Relatório</div>';
 
-      html += '<div class="rel-modal-grid" style="margin-bottom:14px;grid-template-columns:repeat(3,1fr);">';
-      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Total de Corridas</div><div class="rel-modal-card-value" style="font-size:1rem;color:#dc3545;">' + g.totalChamados + '</div></div>';
-      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Total a Cobrar do Cliente</div><div class="rel-modal-card-value" style="font-size:1rem;color:#0d6efd;">' + formatarMoeda(g.valorTotalGeral) + '</div></div>';
-      html += '<div class="rel-modal-card"><div class="rel-modal-card-label">Corridas Pendentes</div><div class="rel-modal-card-value" style="font-size:1rem;color:#b02a37;">' + g.totalPendentes + '</div></div>';
+      // Blocos lado a lado para Total Colaborador (80%) e RDO Express (20%)
+      html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">';
+      html += '<div class="rel-modal-card" style="background:#fff;flex:1;min-width:140px;border:1px solid #e0e0e0;"><div class="rel-modal-card-label" style="font-weight:700;color:#6c757d;font-size:0.75rem;">TOTAL COLABORADOR (80%)</div><div class="rel-modal-card-value" style="color:#0a7d2c;font-size:1rem;font-weight:700;">' + formatarMoeda(totalGeralMotoboyResumoCards) + '</div></div>';
+      html += '<div class="rel-modal-card" style="background:#fff;flex:1;min-width:140px;border:1px solid #e0e0e0;"><div class="rel-modal-card-label" style="font-weight:700;color:#6c757d;font-size:0.75rem;">RDO EXPRESS (20%)</div><div class="rel-modal-card-value" style="color:#0d6efd;font-size:1rem;font-weight:700;">' + formatarMoeda(totalGeralRdoResumoCards) + '</div></div>';
+      html += '</div>';
+
+      // Bloco de Total Geral logo abaixo
+      html += '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
+      html += '<span style="font-size:0.75rem;font-weight:700;color:#6c757d;letter-spacing:0.5px;">TOTAL GERAL</span>';
+      html += '<span style="font-size:1rem;font-weight:700;color:#dc3545;">' + formatarMoeda(g.valorTotalGeral) + '</span>';
+      html += '</div>';
+
+      html += '<div class="rel-modal-grid" style="margin-bottom:14px;display:flex;flex-direction:column;gap:12px;">';
+      html += '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">';
+      html += '<span style="font-size:0.75rem;font-weight:700;color:#6c757d;letter-spacing:0.5px;">TOTAL DE CORRIDAS POR DIA</span>';
+      html += '<span style="font-size:1rem;font-weight:700;color:#444;">' + g.totalChamados + '</span>';
+      html += '</div>';
       html += '</div>';
 
       html += '<div style="font-size:.8rem;font-weight:700;color:#444;margin-bottom:8px;">Corridas por Motoboy</div>';
@@ -2411,7 +2636,7 @@
 
         html += '<div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 12px;">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-        html += '<span style="font-size:.82rem;"><i class="bi bi-person-fill me-1" style="color:#dc3545;"></i><strong>' + escapeHtml(m.nome) + '</strong> — ' + m.qtd + (m.qtd === 1 ? ' corrida' : ' corridas') + '</span>';
+        html += '<span style="font-size:.82rem;"><i class="bi bi-person-fill me-1" style="color:#dc3545;"></i><strong style="font-weight: 300; font-size: 0.9em;">' + escapeHtml(m.nome) + '</strong> — ' + m.qtd + (m.qtd === 1 ? ' corrida' : ' corridas') + '</span>';
         html += '<span style="font-weight:600;color:#0a7d2c;font-size:.82rem;">' + formatarMoeda(m.receitaTotal) + '</span>';
         html += '</div>';
         html += '<div>' + datasHtml + '</div>';
@@ -2490,7 +2715,7 @@
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
 
     carregarHtml2Pdf().then(function () {
-      const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
+      const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people' };
       const iconClass = icons[state.relatorioAtual.tipo] || 'bi-file-earmark-bar-graph';
 
       const container = document.createElement('div');
@@ -2602,8 +2827,8 @@
     const config = {
       motoboys: { el: els.mbLista, filtro: function (r) { return r.tipo === 'motoboys'; }, pag: els.paginacao.motoboys },
       clientes: { el: els.cliLista, filtro: function (r) { return r.tipo === 'clientes'; }, pag: els.paginacao.clientes },
-      financeiro: { el: els.finLista, filtro: function (r) { return r.tipo === 'financeiro'; }, pag: els.paginacao.financeiro },
-      global: { el: els.globLista, filtro: function (r) { return r.tipo === 'global'; }, pag: els.paginacao.global }
+
+
     };
 
     const c = config[state.tabAtual];
@@ -2627,7 +2852,7 @@
     const inicio = (state.paginaAtual - 1) * state.itensPorPagina;
     const paginaLista = lista.slice(inicio, inicio + state.itensPorPagina);
 
-    const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people', financeiro: 'bi-wallet2', global: 'bi-globe2' };
+    const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people' };
 
     if (!lista.length) {
       c.el.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório gerado ainda.</span></div>';
@@ -2690,7 +2915,6 @@
       { chave: 'clientes', nome: 'getclientes' },
       { chave: 'pedidos', nome: 'getpedidos' },
       { chave: 'chat', nome: 'getchat' },
-      { chave: 'financeiro', nome: 'getfinanceirocompleto' }
     ];
 
     Promise.allSettled(
@@ -2981,3 +3205,4 @@
 
   window.initRelatorios = initRelatorios;
 })();
+

@@ -1251,100 +1251,439 @@ if (!window.EventBus) {
     window._finListenerPedidoAtualizadoBind = true;
 
     window.EventBus.on('pedido:atualizado', function (dados) {
-      if (!dados || !dados.id) return;
+      try {
+        if (!dados || typeof dados !== 'object') {
+          console.error('[Financeiro] ERRO: evento pedido:atualizado inválido.', dados);
+          return;
+        }
 
-      var idFormatado = typeof window._formatarNomeServico === 'function'
-        ? window._formatarNomeServico(dados.id)
-        : String(dados.id);
+        var idEventoFinanceiro = String(
+          dados.id_pedido ||
+          dados.idPedido ||
+          dados.pedido_id ||
+          dados.pedidoId ||
+          dados.id ||
+          ''
+        ).trim();
 
+        if (!idEventoFinanceiro) {
+          console.error(
+            '[Financeiro] ERRO: pedido:atualizado recebido sem identificador.',
+            dados
+          );
 
+          if (typeof finToast === 'function') {
+            finToast('Erro: pedido sem identificador para o financeiro.', 'error');
+          }
 
-      var jaExiste = (window.financeiroState?.cache || []).some(function (r) {
-        var idRegistro = r && (
-          r.id_pedido ||
-          r.idPedido ||
-          r.pedido_id ||
-          r.pedidoId
+          return;
+        }
+
+        var idFormatado = idEventoFinanceiro;
+
+        try {
+          if (typeof window._formatarNomeServico === 'function') {
+            var idConvertido = window._formatarNomeServico(idEventoFinanceiro);
+
+            if (idConvertido !== undefined &&
+              idConvertido !== null &&
+              String(idConvertido).trim() !== '') {
+              idFormatado = String(idConvertido).trim();
+            }
+          }
+        } catch (errFormatacao) {
+          console.error(
+            '[Financeiro] ERRO ao formatar id_pedido:',
+            idEventoFinanceiro,
+            errFormatacao
+          );
+          idFormatado = idEventoFinanceiro;
+        }
+
+        if (!idFormatado) {
+          console.error(
+            '[Financeiro] ERRO: id_pedido ficou vazio após formatação.',
+            dados
+          );
+
+          if (typeof finToast === 'function') {
+            finToast('Erro: identificador inválido para o financeiro.', 'error');
+          }
+
+          return;
+        }
+
+        var idComparacao = String(idFormatado).trim().toUpperCase();
+
+        var cacheFinanceiro =
+          window.financeiroState &&
+            Array.isArray(window.financeiroState.cache)
+            ? window.financeiroState.cache
+            : [];
+
+        var jaExiste = cacheFinanceiro.some(function (r) {
+          if (!r) return false;
+
+          var idsPossiveis = [
+            r.id_pedido,
+            r.idPedido,
+            r.pedido_id,
+            r.pedidoId
+          ];
+
+          return idsPossiveis.some(function (valorId) {
+            if (
+              valorId === undefined ||
+              valorId === null ||
+              String(valorId).trim() === ''
+            ) {
+              return false;
+            }
+
+            return String(valorId).trim().toUpperCase() === idComparacao;
+          });
+        });
+
+        if (jaExiste) {
+          console.log(
+            '[Financeiro] LANÇAMENTO JÁ EXISTE:',
+            idFormatado
+          );
+          return;
+        }
+
+        var valorOrigem = null;
+
+        if (
+          dados.valor_final !== undefined &&
+          dados.valor_final !== null &&
+          dados.valor_final !== ''
+        ) {
+          valorOrigem = dados.valor_final;
+        } else if (
+          dados.valor_total !== undefined &&
+          dados.valor_total !== null &&
+          dados.valor_total !== ''
+        ) {
+          valorOrigem = dados.valor_total;
+        } else if (
+          dados.valor_corrida !== undefined &&
+          dados.valor_corrida !== null &&
+          dados.valor_corrida !== ''
+        ) {
+          valorOrigem = dados.valor_corrida;
+        } else if (
+          dados.vlr_servico !== undefined &&
+          dados.vlr_servico !== null &&
+          dados.vlr_servico !== ''
+        ) {
+          valorOrigem = dados.vlr_servico;
+        } else if (
+          dados.valor !== undefined &&
+          dados.valor !== null &&
+          dados.valor !== ''
+        ) {
+          valorOrigem = dados.valor;
+        }
+
+        var valorNum = 0;
+
+        try {
+          if (typeof window._parseMoedaSeguro === 'function') {
+            valorNum = window._parseMoedaSeguro(valorOrigem);
+          } else {
+            valorNum = Number(valorOrigem);
+          }
+        } catch (errValor) {
+          console.error(
+            '[Financeiro] ERRO ao converter valor:',
+            {
+              id_pedido: idFormatado,
+              valorOrigem: valorOrigem,
+              erro: errValor
+            }
+          );
+
+          if (typeof finToast === 'function') {
+            finToast('Erro ao converter o valor do pedido.', 'error');
+          }
+
+          return;
+        }
+
+        valorNum = Number(valorNum);
+
+        if (!isFinite(valorNum) || valorNum <= 0) {
+          console.error(
+            '[Financeiro] ERRO: valor financeiro inválido.',
+            {
+              id_pedido: idFormatado,
+              valor_final: dados.valor_final,
+              valor_total: dados.valor_total,
+              valor_corrida: dados.valor_corrida,
+              vlr_servico: dados.vlr_servico,
+              valor: dados.valor,
+              valorOrigem: valorOrigem,
+              valorCalculado: valorNum,
+              dados: dados
+            }
+          );
+
+          if (typeof finToast === 'function') {
+            finToast(
+              'Pedido não enviado ao financeiro: valor inválido.',
+              'error'
+            );
+          }
+
+          return;
+        }
+
+        var dataLancamentoFinal = String(
+          dados.data_pedido ||
+          dados.dataPedido ||
+          dados.data_lancamento ||
+          dados.dataLancamento ||
+          dados.updated_at ||
+          ''
+        ).trim();
+
+        if (!dataLancamentoFinal) {
+          var hoje = new Date();
+
+          dataLancamentoFinal =
+            String(hoje.getDate()).padStart(2, '0') + '/' +
+            String(hoje.getMonth() + 1).padStart(2, '0') + '/' +
+            hoje.getFullYear();
+        }
+
+        var nomeColaboradorEvento = String(
+          dados.motoboy ||
+          dados.colaborador ||
+          dados.nome_colaborador ||
+          dados.colaborador_nome ||
+          ''
+        ).trim();
+
+        var idColaboradorEvento = String(
+          dados.colaborador_id ||
+          dados.colaboradorId ||
+          dados.id_colaborador ||
+          ''
+        ).trim();
+
+        try {
+          if (
+            !nomeColaboradorEvento &&
+            idColaboradorEvento &&
+            typeof state !== 'undefined' &&
+            state &&
+            state.colaboradoresCache &&
+            state.colaboradoresCache[idColaboradorEvento]
+          ) {
+            var cEvento = state.colaboradoresCache[idColaboradorEvento];
+
+            nomeColaboradorEvento = String(
+              cEvento.username ||
+              cEvento.nome ||
+              cEvento.name ||
+              ''
+            ).trim();
+          }
+        } catch (errColaborador) {
+          console.error(
+            '[Financeiro] ERRO ao resolver colaborador:',
+            {
+              id_pedido: idFormatado,
+              colaborador_id: idColaboradorEvento,
+              erro: errColaborador
+            }
+          );
+        }
+
+        if (
+          !window.API ||
+          typeof window.API.call !== 'function'
+        ) {
+          console.error(
+            '[Financeiro] ERRO CRÍTICO: window.API.call não está disponível.',
+            {
+              id_pedido: idFormatado,
+              valor: valorNum
+            }
+          );
+
+          if (typeof finToast === 'function') {
+            finToast('API financeira indisponível.', 'error');
+          }
+
+          return;
+        }
+
+        var payloadFinanceiro = {
+          tipo: 'entrada',
+          data_lancamento: dataLancamentoFinal,
+          descricao: 'Pedido ' + idFormatado,
+          vlr_servico: valorNum,
+          situacao: 'pendente',
+          colaborador: nomeColaboradorEvento,
+          colaborador_id: idColaboradorEvento,
+          observacao: '',
+          id_pedido: idFormatado,
+          idPedido: idFormatado,
+          pedido_id: idFormatado,
+          pedidoId: idFormatado
+        };
+
+        console.log(
+          '[Financeiro] ENVIANDO PEDIDO PARA addfinanceiro:',
+          payloadFinanceiro
         );
 
-        return String(idRegistro || '').trim().toUpperCase() ===
-          String(idFormatado || '').trim().toUpperCase();
-      });
+        var resultadoApi = window.API.call(
+          'addfinanceiro',
+          payloadFinanceiro
+        );
 
-      if (jaExiste) {
-        console.log('[Financeiro] Ignorando criação duplicada para pedido:', idFormatado);
-        return;
-      }
+        if (
+          !resultadoApi ||
+          typeof resultadoApi.then !== 'function'
+        ) {
+          console.error(
+            '[Financeiro] ERRO: addfinanceiro não retornou Promise.',
+            {
+              id_pedido: idFormatado,
+              retorno: resultadoApi
+            }
+          );
 
-      var valorOrigem =
-        dados.valor_final !== undefined &&
-        dados.valor_final !== null &&
-        dados.valor_final !== ''
-          ? dados.valor_final
-          : (
-              dados.valor_total !== undefined &&
-              dados.valor_total !== null &&
-              dados.valor_total !== ''
-                ? dados.valor_total
-                : dados.valor_corrida
+          if (typeof finToast === 'function') {
+            finToast('Financeiro não respondeu corretamente.', 'error');
+          }
+
+          return;
+        }
+
+        resultadoApi
+          .then(function (res) {
+            console.log(
+              '[Financeiro] RESPOSTA addfinanceiro:',
+              {
+                id_pedido: idFormatado,
+                resposta: res
+              }
             );
 
-      var valorNum = window._parseMoedaSeguro(valorOrigem);
+            var sucesso =
+              res &&
+              (
+                res.sucesso === true ||
+                res.status === 'success' ||
+                res.ok === true
+              );
 
-      if (!isFinite(Number(valorNum)) || Number(valorNum) <= 0) {
+            if (!sucesso) {
+              console.error(
+                '[Financeiro] ERRO REAL AO GRAVAR PEDIDO:',
+                {
+                  id_pedido: idFormatado,
+                  valor: valorNum,
+                  payload: payloadFinanceiro,
+                  resposta: res
+                }
+              );
+
+              if (typeof finToast === 'function') {
+                finToast(
+                  'Pedido não foi gravado no financeiro.',
+                  'error'
+                );
+              }
+
+              return;
+            }
+
+            console.log(
+              '[Financeiro] PEDIDO GRAVADO COM SUCESSO:',
+              {
+                id_pedido: idFormatado,
+                valor: valorNum,
+                resposta: res
+              }
+            );
+
+            try {
+              if (typeof carregarDados === 'function') {
+                var recarga = carregarDados();
+
+                if (
+                  recarga &&
+                  typeof recarga.catch === 'function'
+                ) {
+                  recarga.catch(function (errReloadPromise) {
+                    console.error(
+                      '[Financeiro] ERRO na Promise de recarregarDados:',
+                      errReloadPromise
+                    );
+                  });
+                }
+              } else {
+                console.error(
+                  '[Financeiro] AVISO: carregarDados não está disponível.'
+                );
+              }
+            } catch (errReload) {
+              console.error(
+                '[Financeiro] ERRO ao recarregar financeiro:',
+                errReload
+              );
+            }
+          })
+          .catch(function (err) {
+            console.error(
+              '[Financeiro] EXCEÇÃO NO addfinanceiro:',
+              {
+                id_pedido: idFormatado,
+                valor: valorNum,
+                payload: payloadFinanceiro,
+                erro: err,
+                mensagem: err && err.message
+                  ? err.message
+                  : String(err)
+              }
+            );
+
+            if (typeof finToast === 'function') {
+              finToast(
+                'Erro ao gravar pedido no financeiro.',
+                'error'
+              );
+            }
+          });
+
+      } catch (errGeral) {
         console.error(
-          '[Financeiro] BLOQUEADO: valor inválido para pedido',
-          idFormatado,
+          '[Financeiro] ERRO NÃO TRATADO NO LISTENER pedido:atualizado:',
           {
-            valor_final: dados.valor_final,
-            valor_total: dados.valor_total,
-            valor_corrida: dados.valor_corrida,
-            valorCalculado: valorNum
+            dados: dados,
+            erro: errGeral,
+            mensagem: errGeral && errGeral.message
+              ? errGeral.message
+              : String(errGeral),
+            stack: errGeral && errGeral.stack
+              ? errGeral.stack
+              : ''
           }
         );
 
         if (typeof finToast === 'function') {
           finToast(
-            'Pedido não enviado ao financeiro: valor inválido.',
+            'Erro inesperado ao processar o pedido no financeiro.',
             'error'
           );
         }
-
-        return;
       }
-
-      valorNum = Number(valorNum);
-
-      var dataLancamentoFinal = String(dados.data_pedido || '').trim();
-      if (!dataLancamentoFinal) {
-        var hoje = new Date();
-        dataLancamentoFinal =
-          String(hoje.getDate()).padStart(2, '0') + '/' +
-          String(hoje.getMonth() + 1).padStart(2, '0') + '/' +
-          hoje.getFullYear();
-      }
-
-      var nomeColaboradorEvento = (dados.motoboy || dados.colaborador || dados.nome_colaborador || dados.colaborador_nome || '').toString().trim();
-      var idColaboradorEvento = (dados.colaborador_id || dados.colaboradorId || '').toString().trim();
-
-      if (!nomeColaboradorEvento && idColaboradorEvento && state.colaboradoresCache[idColaboradorEvento]) {
-        var cEvento = state.colaboradoresCache[idColaboradorEvento];
-        nomeColaboradorEvento = (cEvento.username || cEvento.nome || '').toString().trim();
-      }
-
-      window.API.call('addfinanceiro', {
-        tipo: 'entrada',
-        data_lancamento: dataLancamentoFinal,
-        descricao: 'Pedido ' + idFormatado,
-        vlr_servico: valorNum,
-        situacao: 'pendente',
-        colaborador: nomeColaboradorEvento,
-        colaborador_id: idColaboradorEvento,
-        observacao: '',
-        id_pedido: idFormatado
-      });
     });
-
   }
 
   function _toggleBtnClearBuscaFin() {
@@ -1522,7 +1861,11 @@ if (!window.EventBus) {
       var desc = descEl ? descEl.value.trim() : '';
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      var idGeradoTemp = 'manual_' + Date.now();
       window.API.call('addfinanceiro', {
+        id_pedido: idGeradoTemp,
+        idPedido: idGeradoTemp,
+        pedido_id: idGeradoTemp,
         tipo: 'entrada',
         data: toISO(new Date()),
         descricao: desc || 'Entrada manual',
@@ -1532,14 +1875,29 @@ if (!window.EventBus) {
         colaborador_id: '',
         observacao: ''
       }).then(function (res) {
-        if (isRespostaSucesso(res)) { finToast('Depósito adicionado!', 'success'); modalInst.hide(); carregarDados(); }
-        else { erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.'); erroEl.classList.remove('d-none'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar'; }
+        if (isRespostaSucesso(res)) {
+          finToast('Depósito adicionado!', 'success');
+          modalInst.hide();
+          if (typeof carregarDados === 'function') {
+            carregarDados();
+          }
+        } else {
+          erroEl.textContent = 'Erro: ' + ((res && (res.message || res.msg)) || 'Tente novamente.');
+          erroEl.classList.remove('d-none');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar';
+        }
       }).catch(function () {
-        erroEl.textContent = 'Falha na comunicação com o servidor.'; erroEl.classList.remove('d-none');
-        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar';
+        erroEl.textContent = 'Falha na comunicação com o servidor.';
+        erroEl.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar';
       });
     });
-    modalEl.addEventListener('hidden.bs.modal', function () { modalInst.dispose(); if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl); });
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      modalInst.dispose();
+      if (modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
+    });
     modalInst.show();
   }
 
