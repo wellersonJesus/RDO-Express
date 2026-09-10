@@ -5413,7 +5413,43 @@ if (!window.EventBus) {
 
       state.gruposCache = {};
 
-      state.cache = financeiro.map(normalizarRegistro);
+      state.cache = financeiro.map(function (registro) {
+        var reg = normalizarRegistro(registro);
+
+        if (ehReceitaFin(reg.tipo)) {
+          var pctColab = 80;
+
+          if (
+            reg.colaboradorId &&
+            state.colaboradoresCache &&
+            state.colaboradoresCache[reg.colaboradorId]
+          ) {
+            var percentual = state.colaboradoresCache[reg.colaboradorId].percentual_comissao;
+
+            if (
+              percentual !== undefined &&
+              percentual !== null &&
+              percentual !== ''
+            ) {
+              var percentualNumerico = parseFloat(percentual);
+
+              if (isFinite(percentualNumerico)) {
+                pctColab = percentualNumerico;
+              }
+            }
+          }
+
+          reg.percentualComissao = pctColab;
+          reg.valorColaborador = reg.valor * (pctColab / 100);
+          reg.valorEmpresa = reg.valor * ((100 - pctColab) / 100);
+        } else {
+          reg.valorColaborador = 0;
+          reg.valorEmpresa = 0;
+        }
+
+        return reg;
+      });
+
       resolverClienteSolicitante();
       preencherOrigensExtrato();
 

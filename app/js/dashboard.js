@@ -778,33 +778,310 @@ function navegarParaTodosPedidos() {
     if (typeof window.loadPage === 'function') window.loadPage('pedidos', 'Pedidos', 'Todos os pedidos');
 }
 
+
+
 function renderizarBlocoFinanceiro(usuario, dados) {
     var cards = document.getElementById('dashboard-fin-cards');
-    if (!_aplicarVisibilidadeBloco('bloco-financeiro', usuario) || !cards) return;
 
-    var financeiro = dados.financeiro || [];
-    var receitas = financeiro.filter(function (f) {
-        return _tipoLancamento(f).indexOf('RECEITA') !== -1 || _tipoLancamento(f).indexOf('ENTRADA') !== -1;
+    if (!_aplicarVisibilidadeBloco('bloco-financeiro', usuario) || !cards) {
+        return;
+    }
+
+    function numero(valor) {
+        if (typeof valor === 'number') {
+            return isFinite(valor) ? valor : 0;
+        }
+
+        if (valor === null || valor === undefined || valor === '') {
+            return 0;
+        }
+
+        var texto = String(valor).trim();
+
+        /*
+         * Aceita valores reais vindos do listfinanceiro:
+         *
+         * R$ 22,00
+         * R$ 1.234,56
+         * 22,00
+         * 1.234,56
+         * 22.00
+         */
+
+        texto = texto
+            .replace(/\s/g, '')
+            .replace(/R\$/gi, '')
+            .replace(/[^\d,.\-]/g, '');
+
+        if (!texto) {
+            return 0;
+        }
+
+        if (texto.indexOf(',') !== -1) {
+            texto = texto
+                .replace(/\./g, '')
+                .replace(',', '.');
+        }
+
+        var n = Number(texto);
+
+        return isFinite(n) ? n : 0;
+    }
+
+    function moeda(valor) {
+        return numero(valor).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function extrairLista(resposta) {
+        if (!resposta) return [];
+
+        if (Array.isArray(resposta)) {
+            return resposta;
+        }
+
+        if (Array.isArray(resposta.data)) {
+            return resposta.data;
+        }
+
+        if (Array.isArray(resposta.financeiro)) {
+            return resposta.financeiro;
+        }
+
+        if (Array.isArray(resposta.colaboradores)) {
+            return resposta.colaboradores;
+        }
+
+        return [];
+    }
+
+    function renderizar(totais) {
+        cards.innerHTML =
+            '<div class="dashboard-fin-card fin-receitas">' +
+                '<i class="bi bi-arrow-down-circle"></i>' +
+                '<span>Receitas</span>' +
+                '<strong>' + moeda(totais.receitas) + '</strong>' +
+            '</div>' +
+
+            '<div class="dashboard-fin-card fin-despesas">' +
+                '<i class="bi bi-arrow-up-circle"></i>' +
+                '<span>Despesas</span>' +
+                '<strong>' + moeda(totais.despesas) + '</strong>' +
+            '</div>' +
+
+            '<div class="dashboard-fin-card fin-rdo">' +
+                '<i class="bi bi-building"></i>' +
+                '<span>RDO Express</span>' +
+                '<strong>' + moeda(totais.rdo) + '</strong>' +
+            '</div>' +
+
+            '<div class="dashboard-fin-card fin-colaboradores">' +
+                '<i class="bi bi-people"></i>' +
+                '<span>Colaboradores</span>' +
+                '<strong>' + moeda(totais.colaboradores) + '</strong>' +
+            '</div>' +
+
+            '<div class="dashboard-fin-card fin-saldo">' +
+                '<i class="bi bi-wallet2"></i>' +
+                '<span>Saldo</span>' +
+                '<strong>' + moeda(totais.saldo) + '</strong>' +
+            '</div>';
+    }
+
+    cards.innerHTML =
+        '<div class="dashboard-fin-loading">Carregando financeiro...</div>';
+
+    if (!window.API || typeof window.API.call !== 'function') {
+        console.warn('[Dashboard Financeiro] API indisponível.');
+        cards.innerHTML =
+            '<div class="dashboard-fin-loading">—</div>';
+        return;
+    }
+
+    /*
+     * Usa as mesmas duas fontes utilizadas pelo Financeiro:
+     * listfinanceiro + listcolaboradores
+     */
+    Promise.all([
+        window.API.call('listfinanceiro', {}),
+        window.API.call('listcolaboradores', {})
+    ])
+    .then(function (resultados) {
+        var financeiro = extrairLista(resultados[0]);
+        var colaboradores = extrairLista(resultados[1]);
+
+        /*
+         * Índice dos colaboradores pelo ID.
+         * É exatamente a fonte usada pelo fin.js.
+         */
+        var colaboradoresMap = {};
+
+        colaboradores.forEach(function (colaborador) {
+            if (!colaborador) return;
+
+            var id =
+                colaborador.id ||
+                colaborador.colaborador_id ||
+                colaborador.colaboradorId;
+
+            if (id !== undefined && id !== null && String(id).trim() !== '') {
+                colaboradoresMap[String(id).trim()] = colaborador;
+            }
+        });
+
+        var receitas = 0;
+        var despesas = 0;
+        var rdo = 0;
+        var totalColaboradores = 0;
+
+        /*
+         * Registros separados para alimentar os gráficos
+         * usando exatamente a mesma fonte do financeiro.
+         */
+        var receitasRegistros = [];
+        var despesasRegistros = [];
+
+        financeiro.forEach(function (registro) {
+            if (!registro) return;
+
+            /*
+             * MESMA NORMALIZAÇÃO DO fin.js
+             */
+            var tipo = String(
+                registro.tipo || ''
+            ).trim().toLowerCase();
+
+            var valor = numero(
+                registro.vlr_servico !== undefined
+                    ? registro.vlr_servico
+                    : registro.valor
+            );
+
+            /*
+             * Tipos reais encontrados no listfinanceiro:
+             *
+             * Entrada = receita
+             * Despesa = despesa
+             * Saida / Saída = saída
+             */
+            var tipoNormalizado = tipo
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+
+            if (tipoNormalizado === 'entrada') {
+                receitasRegistros.push(registro);
+                receitas += valor;
+
+                /*
+                 * MESMA REGRA DO fin.js:
+                 * padrão = 80%
+                 */
+                var pctColab = 80;
+
+                var colaboradorId = String(
+                    registro.colaborador_id ||
+                    registro.colaboradorId ||
+                    ''
+                ).trim();
+
+                if (colaboradorId && colaboradoresMap[colaboradorId]) {
+                    var percentual =
+                        colaboradoresMap[colaboradorId].percentual_comissao;
+
+                    if (
+                        percentual !== undefined &&
+                        percentual !== null &&
+                        percentual !== ''
+                    ) {
+                        var percentualNumerico =
+                            parseFloat(percentual);
+
+                        if (isFinite(percentualNumerico)) {
+                            pctColab = percentualNumerico;
+                        }
+                    }
+                }
+
+                var valorColaborador =
+                    valor * (pctColab / 100);
+
+                var valorEmpresa =
+                    valor * ((100 - pctColab) / 100);
+
+                totalColaboradores += valorColaborador;
+                rdo += valorEmpresa;
+
+            } else if (
+                tipoNormalizado === 'despesa'
+            ) {
+                despesasRegistros.push(registro);
+                despesas += valor;
+
+            } else if (
+                tipoNormalizado === 'saida'
+            ) {
+                /*
+                 * Saída permanece separada.
+                 * Não será transformada em despesa.
+                 */
+                console.debug(
+                    '[Dashboard Financeiro] Saída ignorada dos totais:',
+                    registro
+                );
+            }
+        });
+
+        var saldo = receitas - despesas;
+
+        renderizar({
+            receitas: receitas,
+            despesas: despesas,
+            rdo: rdo,
+            colaboradores: totalColaboradores,
+            saldo: saldo
+        });
+
+        /*
+         * GRÁFICOS:
+         * utilizam os mesmos registros reais usados
+         * para calcular os indicadores acima.
+         */
+        _renderChartFinanceiroLinha(
+            receitasRegistros,
+            despesasRegistros
+        );
+
+        _renderChartFinanceiroPizza(
+            receitasRegistros.length,
+            despesasRegistros.length
+        );
+
+        console.log(
+            '[Dashboard Financeiro] Totais reais:',
+            {
+                registrosFinanceiros: financeiro.length,
+                colaboradores: colaboradores.length,
+                receitas: receitas,
+                despesas: despesas,
+                rdoExpress: rdo,
+                colaboradoresValor: totalColaboradores,
+                saldo: saldo
+            }
+        );
+    })
+    .catch(function (erro) {
+        console.error(
+            '[Dashboard Financeiro] Erro:',
+            erro
+        );
+
+        cards.innerHTML =
+            '<div class="dashboard-fin-loading">—</div>';
     });
-    var despesas = financeiro.filter(function (f) {
-        return _tipoLancamento(f).indexOf('DESPESA') !== -1 || _tipoLancamento(f).indexOf('SAIDA') !== -1 || _tipoLancamento(f).indexOf('SAÍDA') !== -1;
-    });
-
-    var totalReceita = receitas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
-    var totalDespesa = despesas.reduce(function (acc, f) { return acc + _parseValor(f.valor); }, 0);
-    var saldo = totalReceita - totalDespesa;
-    var fmt = function (n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
-
-    var html = '';
-    html += renderIndicadorCard('success', 'bi-graph-up-arrow', fmt(totalReceita), 'Total de Receitas');
-    html += renderIndicadorCard('danger', 'bi-graph-down-arrow', fmt(totalDespesa), 'Total de Despesas');
-    html += renderIndicadorCard(saldo >= 0 ? 'primary' : 'warning', 'bi-piggy-bank-fill', fmt(saldo), 'Saldo Atual');
-    html += renderIndicadorCard('secondary', 'bi-receipt', financeiro.length, 'Lançamentos no Período');
-
-    cards.innerHTML = html;
-
-    _renderChartFinanceiroLinha(receitas, despesas);
-    _renderChartFinanceiroPizza(receitas.length, despesas.length);
 }
 
 function renderizarBlocoRelatorio(usuario, dados) {
@@ -852,20 +1129,77 @@ function _agruparPorMes(lista) {
     var meses = {};
     var ordem = [];
     var hoje = new Date();
+
     for (var i = 5; i >= 0; i--) {
-        var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        var chave = d.getFullYear() + '-' + d.getMonth();
-        var label = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
-        meses[chave] = { label: label, total: 0, ano: d.getFullYear(), mes: d.getMonth() };
+        var d = new Date(
+            hoje.getFullYear(),
+            hoje.getMonth() - i,
+            1
+        );
+
+        var chave =
+            d.getFullYear() + '-' + d.getMonth();
+
+        var label = d
+            .toLocaleString('pt-BR', { month: 'short' })
+            .replace('.', '');
+
+        meses[chave] = {
+            label: label,
+            total: 0,
+            ano: d.getFullYear(),
+            mes: d.getMonth()
+        };
+
         ordem.push(chave);
     }
-    lista.forEach(function (item) {
-        var data = _parseDataBR(item.data || item.dataLancamento);
-        if (isNaN(data.getTime())) return;
-        var chave = data.getFullYear() + '-' + data.getMonth();
-        if (meses[chave]) meses[chave].total += _parseValor(item.valor);
+
+    (lista || []).forEach(function (item) {
+        if (!item) return;
+
+        var dataValor =
+            item.data ||
+            item.dataLancamento ||
+            item.dataISO ||
+            item.created_at ||
+            item.createdAt;
+
+        var data = _parseDataBR(dataValor);
+
+        if (isNaN(data.getTime()) && dataValor) {
+            data = new Date(dataValor);
+        }
+
+        if (isNaN(data.getTime())) {
+            return;
+        }
+
+        var chave =
+            data.getFullYear() + '-' + data.getMonth();
+
+        if (!meses[chave]) {
+            return;
+        }
+
+        var valorBruto =
+            item.vlr_servico !== undefined &&
+            item.vlr_servico !== null &&
+            item.vlr_servico !== ''
+                ? item.vlr_servico
+                : item.valor;
+
+        var valor = _parseValor(valorBruto);
+
+        if (!isFinite(valor)) {
+            valor = 0;
+        }
+
+        meses[chave].total += valor;
     });
-    return ordem.map(function (k) { return meses[k]; });
+
+    return ordem.map(function (k) {
+        return meses[k];
+    });
 }
 
 function _renderChartFinanceiroLinha(receitas, despesas) {
@@ -883,8 +1217,8 @@ function _renderChartFinanceiroLinha(receitas, despesas) {
         data: {
             labels: labels,
             datasets: [
-                { label: 'Receitas', data: recMensal.map(function (m) { return m.total; }), borderColor: '#198754', backgroundColor: 'rgba(25,135,84,.12)', fill: true, tension: .35 },
-                { label: 'Despesas', data: despMensal.map(function (m) { return m.total; }), borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,.12)', fill: true, tension: .35 }
+                { label: 'Receitas', data: recMensal.map(function (m) { return m.total; }), borderColor: '#6fb98f', backgroundColor: 'rgba(111,185,143,.10)', fill: true, tension: .35 },
+                { label: 'Despesas', data: despMensal.map(function (m) { return m.total; }), borderColor: '#e58b95', backgroundColor: 'rgba(229,139,149,.08)', fill: true, tension: .35 }
             ]
         },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
@@ -899,7 +1233,7 @@ function _renderChartFinanceiroPizza(qtdReceitas, qtdDespesas) {
 
     window.dashboardState.charts.pizza = new Chart(canvas, {
         type: 'doughnut',
-        data: { labels: ['Receitas', 'Despesas'], datasets: [{ data: [qtdReceitas, qtdDespesas], backgroundColor: ['#198754', '#dc3545'] }] },
+        data: { labels: ['Receitas', 'Despesas'], datasets: [{ data: [qtdReceitas, qtdDespesas], backgroundColor: ['#8fc9a8', '#e9a3aa'] }] },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
 }

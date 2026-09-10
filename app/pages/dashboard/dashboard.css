@@ -1466,3 +1466,318 @@ img.avatar:not([src]) {
 .notificacao-pagamento-ultimo-lancado strong {
     color: #444;
 }
+
+/* === VACINA DASHBOARD FINANCEIRO === */
+
+#dashboard-fin-cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+}
+
+#dashboard-fin-cards .dashboard-fin-card {
+    min-width: 0;
+    min-height: 108px;
+    border-radius: 14px;
+    padding: 15px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+#dashboard-fin-cards .dashboard-fin-card:nth-child(1),
+#dashboard-fin-cards .dashboard-fin-card:nth-child(2),
+#dashboard-fin-cards .dashboard-fin-card:nth-child(3) {
+    grid-column: span 2;
+}
+
+#dashboard-fin-cards .dashboard-fin-card:nth-child(4),
+#dashboard-fin-cards .dashboard-fin-card:nth-child(5) {
+    grid-column: span 3;
+}
+
+#dashboard-fin-cards .dashboard-fin-card-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.75);
+    font-size: 1.15rem;
+}
+
+#dashboard-fin-cards .dashboard-fin-card-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+#dashboard-fin-cards .dashboard-fin-card-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-bottom: 7px;
+    white-space: nowrap;
+}
+
+#dashboard-fin-cards .dashboard-fin-card-value {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* Receitas — verde */
+#dashboard-fin-cards .dash-fin-receitas {
+    background: rgba(25, 135, 84, 0.13);
+    border-color: rgba(25, 135, 84, 0.25);
+}
+
+/* Despesas — vermelho */
+#dashboard-fin-cards .dash-fin-despesas {
+    background: rgba(220, 53, 69, 0.13);
+    border-color: rgba(220, 53, 69, 0.25);
+}
+
+/* RDO Express — azul */
+#dashboard-fin-cards .dash-fin-empresa {
+    background: rgba(13, 110, 253, 0.13);
+    border-color: rgba(13, 110, 253, 0.25);
+}
+
+/* Colaboradores — laranja */
+#dashboard-fin-cards .dash-fin-colaboradores {
+    background: rgba(253, 126, 20, 0.14);
+    border-color: rgba(253, 126, 20, 0.27);
+}
+
+/* Saldo — neutro */
+#dashboard-fin-cards .dash-fin-saldo {
+    background: rgba(108, 117, 125, 0.10);
+    border-color: rgba(108, 117, 125, 0.20);
+}
+
+@media (max-width: 767.98px) {
+    #dashboard-fin-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card,
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(1),
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(2),
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(3),
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(4),
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(5) {
+        grid-column: span 1;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card:nth-child(3) {
+        grid-column: span 2;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card {
+        min-height: 96px;
+        padding: 12px;
+        gap: 9px;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card-icon {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        font-size: 1rem;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card-label {
+        font-size: 0.72rem;
+        margin-bottom: 5px;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card-value {
+        font-size: 0.90rem;
+        white-space: normal;
+        word-break: break-word;
+    }
+}
+
+/* === FIM VACINA DASHBOARD FINANCEIRO === */
+
+
+/* =========================================================
+   DASHBOARD — INDICADORES FINANCEIROS
+   VISUAL CLEAN
+   ========================================================= */
+
+#dashboard-fin-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+#dashboard-fin-cards .dashboard-fin-card {
+    min-width: 0;
+    min-height: 76px;
+    padding: 10px 12px;
+    border: 1px solid rgba(33, 37, 41, .07);
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 3px;
+    box-sizing: border-box;
+
+    transition:
+        transform .12s ease,
+        box-shadow .12s ease,
+        background-color .12s ease,
+        border-color .12s ease;
+}
+
+#dashboard-fin-cards .dashboard-fin-card i {
+    font-size: 17px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+#dashboard-fin-cards .dashboard-fin-card span {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+#dashboard-fin-cards .dashboard-fin-card strong {
+    font-size: 17px;
+    line-height: 1.15;
+    font-weight: 700;
+    color: #343a40;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   CORES SUAVES
+   ========================================================= */
+
+#dashboard-fin-cards .fin-receitas {
+    background: #f2faf5;
+    border-color: #dcefe3;
+}
+
+#dashboard-fin-cards .fin-receitas i {
+    color: #5ca77b;
+}
+
+#dashboard-fin-cards .fin-despesas {
+    background: #fff6f7;
+    border-color: #f3dfe2;
+}
+
+#dashboard-fin-cards .fin-despesas i {
+    color: #d9828b;
+}
+
+#dashboard-fin-cards .fin-rdo {
+    background: #f3f7fc;
+    border-color: #dfe8f4;
+}
+
+#dashboard-fin-cards .fin-rdo i {
+    color: #6e9ed1;
+}
+
+#dashboard-fin-cards .fin-colaboradores {
+    background: #fff8f1;
+    border-color: #f3e6d5;
+}
+
+#dashboard-fin-cards .fin-colaboradores i {
+    color: #d79a62;
+}
+
+#dashboard-fin-cards .fin-saldo {
+    background: #f6f7f8;
+    border-color: #e4e6e8;
+}
+
+#dashboard-fin-cards .fin-saldo i {
+    color: #737b83;
+}
+
+/* =========================================================
+   HOVER DISCRETO
+   ========================================================= */
+
+#dashboard-fin-cards .dashboard-fin-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .06);
+}
+
+#dashboard-fin-cards .dashboard-fin-card:hover i {
+    transform: none;
+}
+
+#dashboard-fin-cards .dashboard-fin-card:hover span,
+#dashboard-fin-cards .dashboard-fin-card:hover strong {
+    color: inherit;
+}
+
+#dashboard-fin-cards .dashboard-fin-loading {
+    grid-column: 1 / -1;
+    padding: 18px;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 900px) {
+    #dashboard-fin-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card {
+        min-height: 72px;
+    }
+}
+
+@media (max-width: 576px) {
+    #dashboard-fin-cards {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card {
+        min-height: 68px;
+        padding: 9px 11px;
+    }
+
+    #dashboard-fin-cards .dashboard-fin-card strong {
+        font-size: 16px;
+    }
+}
+
+/* =========================================================
+   GRÁFICOS FINANCEIROS
+   ========================================================= */
+
+#chart-fin-linha,
+#chart-fin-pizza {
+    max-width: 100%;
+}
+
+/* === FIM VACINA DASHBOARD FINANCEIRO === */
