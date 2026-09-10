@@ -409,26 +409,360 @@ function renderizarBlocoAdministracao(usuario, dados) {
         return !isNaN(data.getTime()) && data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
     });
 
-    var totalPedidosMes = pedidosMes.length;
+    /*
+     * ================================================================
+     * V25 — CONTADORES DE PEDIDOS DO DASHBOARD
+     * ================================================================
+     *
+     * Regra única:
+     *
+     *   fonte = dados.pedidos
+     *   período = mês/ano corrente
+     *   cancelado = status normalizado === CANCELADO
+     *
+     * Os dois cards usam EXATAMENTE o mesmo conjunto de pedidos.
+     * ================================================================
+     */
+
+    function _v25NormalizarDataPedido(data) {
+        if (!data) return null;
+
+        if (data instanceof Date) {
+            if (!isNaN(data.getTime())) return data;
+            return null;
+        }
+
+        var raw = String(data).trim();
+        if (!raw) return null;
+
+        /*
+         * DD/MM/YYYY ou DD-MM-YYYY
+         */
+        var m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+.*)?$/);
+        if (m) {
+            var d = new Date(
+                parseInt(m[3], 10),
+                parseInt(m[2], 10) - 1,
+                parseInt(m[1], 10)
+            );
+
+            if (!isNaN(d.getTime())) return d;
+        }
+
+        /*
+         * YYYY-MM-DD / ISO
+         */
+        var iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (iso) {
+            var dIso = new Date(
+                parseInt(iso[1], 10),
+                parseInt(iso[2], 10) - 1,
+                parseInt(iso[3], 10)
+            );
+
+            if (!isNaN(dIso.getTime())) return dIso;
+        }
+
+        /*
+         * Último recurso: Date nativo.
+         */
+        var nativo = new Date(raw);
+        return isNaN(nativo.getTime()) ? null : nativo;
+    }
+
+    function _v25StatusCancelado(status) {
+        var raw = String(status || '').trim();
+
+        if (!raw) return false;
+
+        /*
+         * Mantém a mesma regra conceitual de
+         * _statusPedidoCancelado(), mas de forma independente
+         * para garantir que o contador nunca dependa de comparação
+         * textual frágil.
+         */
+        if (raw.indexOf('/') !== -1) {
+            raw = raw.split('/').pop().trim();
+        }
+
+        raw = raw
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+
+        return raw === 'CANCELADO';
+    }
+
+    function _v25ObterPedidosMesAtual() {
+        var fonte = (dados && Array.isArray(dados.pedidos))
+            ? dados.pedidos
+            : [];
+
+        var agora = new Date();
+        var mesAtual = agora.getMonth();
+        var anoAtual = agora.getFullYear();
+
+        return fonte.filter(function (p) {
+            if (!p) return false;
+
+            var dataRaw = p.data;
+
+            /*
+             * Compatibilidade com possíveis nomes de campo.
+             * O campo principal continua sendo "data".
+             */
+            if (!dataRaw) dataRaw = p.data_pedido;
+            if (!dataRaw) dataRaw = p.created_at;
+            if (!dataRaw) dataRaw = p.createdAt;
+
+            var dataPedido = _v25NormalizarDataPedido(dataRaw);
+
+            if (!dataPedido) return false;
+
+            return (
+                dataPedido.getMonth() === mesAtual &&
+                dataPedido.getFullYear() === anoAtual
+            );
+        });
+    }
+
+    /*
+     * IMPORTANTE:
+     * Não usa mais a variável intermediária "pedidosMes" para os
+     * contadores administrativos.
+     *
+     * O conjunto é reconstruído diretamente da fonte real de pedidos.
+     */
+    var pedidosMesV25 = _v25ObterPedidosMesAtual();
+
+    var totalPedidosMes = pedidosMesV25.length;
+
     var elTotalPedidos = document.getElementById('admin-total-pedidos');
     var elPedidosInfo = document.getElementById('admin-pedidos-info');
-    if (elTotalPedidos) elTotalPedidos.textContent = totalPedidosMes;
-    if (elPedidosInfo) elPedidosInfo.textContent =
-        totalPedidosMes + (totalPedidosMes === 1 ? ' pedido registrado no período' : ' pedidos registrados no período');
 
-    var pedidosCancelados = pedidosMes.filter(function (p) { return String(p.status || '').toUpperCase() === 'CANCELADO'; });
-    var totalCancelados = pedidosCancelados.length;
-    var percentualCancelados = totalPedidosMes > 0 ? Math.round((totalCancelados / totalPedidosMes) * 100) : 0;
+    if (elTotalPedidos) {
+        elTotalPedidos.textContent = totalPedidosMes;
+    }
 
-    var elCanceladosStatus = document.getElementById('admin-cancelados-status');
-    var elTotalCancelados = document.getElementById('admin-total-cancelados');
-    var elCanceladosInfo = document.getElementById('admin-cancelados-info');
+    if (elPedidosInfo) {
+        elPedidosInfo.textContent =
+            totalPedidosMes +
+            (totalPedidosMes === 1
+                ? ' pedido registrado no mês'
+                : ' pedidos registrados no mês');
+    }
 
-    if (elCanceladosStatus) elCanceladosStatus.textContent = totalCancelados > 0
-        ? totalCancelados + ' cancelamento(s) no período'
-        : 'Nenhum cancelamento no período';
-    if (elTotalCancelados) elTotalCancelados.textContent = totalCancelados;
-    if (elCanceladosInfo) elCanceladosInfo.textContent = percentualCancelados + '% do total de pedidos no mês';
+    /*
+     * CANCELADOS:
+     * mesmo conjunto mensal usado pelo contador principal.
+     */
+    var pedidosCanceladosV25 = pedidosMesV25.filter(function (p) {
+        return _v25StatusCancelado(p && p.status);
+    });
+
+    var totalCancelados = pedidosCanceladosV25.length;
+
+    var percentualCancelados = totalPedidosMes > 0
+        ? Math.round((totalCancelados / totalPedidosMes) * 100)
+        : 0;
+
+    var elCanceladosStatus =
+        document.getElementById('admin-cancelados-status');
+
+    var elTotalCancelados =
+        document.getElementById('admin-total-cancelados');
+
+    var elCanceladosInfo =
+        document.getElementById('admin-cancelados-info');
+
+    if (elCanceladosStatus) {
+        elCanceladosStatus.textContent =
+            totalCancelados > 0
+                ? totalCancelados + ' cancelamento(s) no mês'
+                : 'Nenhum cancelamento no mês';
+    }
+
+    if (elTotalCancelados) {
+        elTotalCancelados.textContent = totalCancelados;
+    }
+
+    if (elCanceladosInfo) {
+        elCanceladosInfo.textContent =
+            percentualCancelados + '% do total de pedidos no mês';
+    }
+
+    /*
+     * ================================================================
+     * V25 — ATUALIZAÇÃO POR EVENTOS
+     * ================================================================
+     *
+     * Quando um pedido é criado, atualizado, excluído ou tem o status
+     * alterado, o dashboard é recalculado.
+     *
+     * Isso evita que o card fique congelado com o valor carregado
+     * anteriormente.
+     * ================================================================
+     */
+    if (!window._rdoV25ContadoresRegistrados) {
+        window._rdoV25ContadoresRegistrados = true;
+
+        var _v25AtualizarContadores = function () {
+            try {
+                var dadosAtualizados =
+                    window.dashboardState &&
+                    window.dashboardState.dados;
+
+                if (!dadosAtualizados) return;
+
+                var pedidosAtuais =
+                    Array.isArray(dadosAtualizados.pedidos)
+                        ? dadosAtualizados.pedidos
+                        : [];
+
+                var agoraAtual = new Date();
+                var mesAtualAtual = agoraAtual.getMonth();
+                var anoAtualAtual = agoraAtual.getFullYear();
+
+                var pedidosMesAtualizados = pedidosAtuais.filter(function (p) {
+                    if (!p) return false;
+
+                    var dataRaw = p.data ||
+                        p.data_pedido ||
+                        p.created_at ||
+                        p.createdAt;
+
+                    var dataPedido =
+                        _v25NormalizarDataPedido(dataRaw);
+
+                    if (!dataPedido) return false;
+
+                    return (
+                        dataPedido.getMonth() === mesAtualAtual &&
+                        dataPedido.getFullYear() === anoAtualAtual
+                    );
+                });
+
+                var totalAtualizado =
+                    pedidosMesAtualizados.length;
+
+                var canceladosAtualizados =
+                    pedidosMesAtualizados.filter(function (p) {
+                        return _v25StatusCancelado(p && p.status);
+                    }).length;
+
+                var percentualAtualizado =
+                    totalAtualizado > 0
+                        ? Math.round(
+                            (canceladosAtualizados /
+                                totalAtualizado) * 100
+                        )
+                        : 0;
+
+                var totalEl =
+                    document.getElementById('admin-total-pedidos');
+
+                var infoEl =
+                    document.getElementById('admin-pedidos-info');
+
+                var canceladosEl =
+                    document.getElementById('admin-total-cancelados');
+
+                var canceladosStatusEl =
+                    document.getElementById('admin-cancelados-status');
+
+                var canceladosInfoEl =
+                    document.getElementById('admin-cancelados-info');
+
+                if (totalEl) {
+                    totalEl.textContent = totalAtualizado;
+                }
+
+                if (infoEl) {
+                    infoEl.textContent =
+                        totalAtualizado +
+                        (totalAtualizado === 1
+                            ? ' pedido registrado no mês'
+                            : ' pedidos registrados no mês');
+                }
+
+                if (canceladosEl) {
+                    canceladosEl.textContent =
+                        canceladosAtualizados;
+                }
+
+                if (canceladosStatusEl) {
+                    canceladosStatusEl.textContent =
+                        canceladosAtualizados > 0
+                            ? canceladosAtualizados +
+                              ' cancelamento(s) no mês'
+                            : 'Nenhum cancelamento no mês';
+                }
+
+                if (canceladosInfoEl) {
+                    canceladosInfoEl.textContent =
+                        percentualAtualizado +
+                        '% do total de pedidos no mês';
+                }
+
+                /*
+                 * Mantém o estado do dashboard coerente.
+                 */
+                window.dashboardState.contadoresV25 = {
+                    totalPedidosMes: totalAtualizado,
+                    totalCancelados: canceladosAtualizados,
+                    percentualCancelados: percentualAtualizado,
+                    atualizadoEm: new Date().toISOString()
+                };
+
+            } catch (err) {
+                console.warn(
+                    '[RDO V25] Falha ao atualizar contadores:',
+                    err
+                );
+            }
+        };
+
+        /*
+         * Eventos nativos usados pelo sistema.
+         */
+        [
+            'pedido:adicionado',
+            'pedido:atualizado',
+            'pedido:excluido',
+            'pedido:statusAtualizado'
+        ].forEach(function (evento) {
+            window.addEventListener(evento, _v25AtualizarContadores);
+        });
+
+        /*
+         * EventBus, se existir.
+         */
+        if (
+            typeof EventBus !== 'undefined' &&
+            EventBus &&
+            typeof EventBus.on === 'function'
+        ) {
+            [
+                'pedido:adicionado',
+                'pedido:atualizado',
+                'pedido:excluido',
+                'pedido:statusAtualizado'
+            ].forEach(function (evento) {
+                try {
+                    EventBus.on(evento, _v25AtualizarContadores);
+                } catch (e) {
+                    console.warn(
+                        '[RDO V25] Não foi possível registrar EventBus:',
+                        evento,
+                        e
+                    );
+                }
+            });
+        }
+
+        window._rdoV25AtualizarContadores =
+            _v25AtualizarContadores;
+    }
 
     var btnVerPedidos = document.getElementById('btn-ver-todos-pedidos');
     if (btnVerPedidos && !btnVerPedidos._bound) {

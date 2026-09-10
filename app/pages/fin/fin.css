@@ -3427,14 +3427,18 @@
     overflow: hidden;
 }
 
-/* Abas de Navegação Interna (RDO / Caixa / Extrato) - Background vermelho suave e espaçamento */
-.fin-tabs-nav, .sub-nav-tabs {
+/* Abas de Navegação Interna (RDO / Caixa / Extrato) */
+.fin-tabs-nav,
+.sub-nav-tabs {
     background: #fdf2f4;
     padding: 6px;
-    border-radius: 30px;
-    display: inline-flex;
+    border-radius: 14px;
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-left: 0;
+    margin-bottom: 8px;
 }
 
 .fin-tab-btn, .sub-nav-btn {
@@ -3606,7 +3610,7 @@
 #rdo-card-colaboradores,
 #rdo-card-empresa {
     border-radius: 14px;
-    border: 1px solid #e9ecef;
+    border: 0;
     background: #ffffff;
     transition: transform .18s ease, box-shadow .18s ease;
 }
@@ -3639,4 +3643,246 @@
     flex-direction: column;
     width: 100%;
   }
+}
+
+/* VACINA FINANCEIRO — posicionamento interno das abas */
+.fin-tabs-nav .nav-link,
+.sub-nav-tabs .nav-link {
+    transform: translateX(8px);
+    padding-bottom: 7px;
+}
+
+.fin-tabs-nav .nav-link.active::after,
+.sub-nav-tabs .nav-link.active::after {
+    bottom: 1px;
+}
+
+/* VACINA FINANCEIRO — valores do Resumo Geral sem moldura interna */
+#caixa-card-entradas,
+#caixa-card-saidas,
+#caixa-card-registros,
+#caixa-card-saldo-total,
+#rdo-card-entradas,
+#rdo-card-saidas,
+#rdo-card-registros,
+#rdo-card-saldo-total,
+#rdo-card-colaboradores,
+#rdo-card-empresa {
+    border: 0 !important;
+}
+
+@media (max-width: 767.98px) {
+
+    /* =========================================================
+       TABELA PRINCIPAL
+       ========================================================= */
+
+    #tabela-fin-todos {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+
+    /* =========================================================
+       ESPAÇAMENTO GERAL DA TABELA
+       ========================================================= */
+
+    /* ESPAÇO GERAL — espaçamento interno padrão de todas as células */
+    #tabela-fin-todos th,
+    #tabela-fin-todos td {
+        padding-left: 3px;
+        padding-right: 3px;
+        white-space: nowrap;
+    }
+
+
+    /* =========================================================
+       TÍTULO — DATA
+       ========================================================= */
+
+    /* DATA — TÍTULO */
+    #tabela-fin-todos th:nth-child(1) {
+        text-align: left;
+    }
+
+    /* DATA — ESPAÇO ANTES DO TÍTULO */
+    #tabela-fin-todos th:nth-child(1) {
+        padding-left: 4px;
+    }
+
+
+    /* =========================================================
+       DATA → DESCRIÇÃO
+       ========================================================= */
+
+    /* DATA → DESCRIÇÃO — ESPAÇAMENTO ENTRE OS DOIS TÍTULOS */
+    #tabela-fin-todos th:nth-child(1) {
+        padding-right: 14px;
+    }
+
+    /* DATA → DESCRIÇÃO — ESPAÇAMENTO COMPLEMENTAR */
+    #tabela-fin-todos th:nth-child(2) {
+        padding-left: 26px;
+    }
+
+
+    /* =========================================================
+       COLUNA DATA — CONTEÚDO
+       ========================================================= */
+
+    /* DATA — LARGURA DA COLUNA */
+    #tabela-fin-todos th:nth-child(1),
+    #tabela-fin-todos td:nth-child(1) {
+        width: 28%;
+    }
+
+    /* DATA — CONTEÚDO */
+    #tabela-fin-todos td:nth-child(1) {
+        text-align: left;
+        padding-left: 4px;
+        padding-right: 16px;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+
+    /* =========================================================
+       TÍTULO — DESCRIÇÃO
+       ========================================================= */
+
+    /* DESCRIÇÃO — TÍTULO — ALINHA COM O CONTEÚDO DA DESCRIÇÃO */
+    #tabela-fin-todos th:nth-child(2) {
+        text-align: right;
+        padding-left: 1px;
+    }
+
+
+    /* =========================================================
+       COLUNA DESCRIÇÃO — CONTEÚDO
+       ========================================================= */
+
+    /* DESCRIÇÃO — LARGURA DA COLUNA */
+    #tabela-fin-todos th:nth-child(2),
+    #tabela-fin-todos td:nth-child(2) {
+        width: 32%;
+    }
+
+    /* DESCRIÇÃO — CONTEÚDO */
+    #tabela-fin-todos td:nth-child(2) {
+        text-align: left;
+        padding-left: 45px;
+        padding-right: 24px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* DESCRIÇÃO — CORTE DO TEXTO */
+    #tabela-fin-todos .fin-td-descricao-mobile {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+    /* =========================================================
+       DESCRIÇÃO → TIPO
+       ========================================================= */
+
+    /* DESCRIÇÃO → TIPO — ESPAÇAMENTO ENTRE OS DOIS TÍTULOS */
+    #tabela-fin-todos th:nth-child(2) {
+        padding-right: 4px;
+    }
+
+    /* DESCRIÇÃO → TIPO — ESPAÇAMENTO COMPLEMENTAR */
+    #tabela-fin-todos th:nth-child(3) {
+        padding-left: 10px;
+    }
+
+
+    /* =========================================================
+       TÍTULO — TIPO
+       ========================================================= */
+
+    /* TIPO — TÍTULO — AVANÇA PARA A DIREITA */
+    #tabela-fin-todos th:nth-child(3) {
+        text-align: right;
+        padding-right: 20px;
+    }
+
+
+    /* =========================================================
+       COLUNA TIPO — CONTEÚDO
+       ========================================================= */
+
+    /* TIPO — LARGURA DA COLUNA */
+    #tabela-fin-todos th:nth-child(3),
+    #tabela-fin-todos td:nth-child(3) {
+        width: 20%;
+    }
+
+    /* TIPO — CONTEÚDO — AVANÇA JUNTO COM O TÍTULO */
+    #tabela-fin-todos td:nth-child(3) {
+        text-align: right;
+        padding-right: 10px;
+    }
+
+
+    /* =========================================================
+       TIPO → AÇÕES
+       ========================================================= */
+
+    /* TIPO → AÇÕES — ESPAÇAMENTO ENTRE OS DOIS TÍTULOS */
+    #tabela-fin-todos th:nth-child(3) {
+        padding-right: 1px;
+    }
+
+    /* TIPO → AÇÕES — ESPAÇAMENTO COMPLEMENTAR */
+    #tabela-fin-todos th:nth-child(4) {
+        padding-left: 1px;
+    }
+
+
+    /* =========================================================
+       TÍTULO — AÇÕES
+       ========================================================= */
+
+    /* AÇÕES — TÍTULO */
+    #tabela-fin-todos th:nth-child(4) {
+        text-align: right;
+    }
+
+
+    /* =========================================================
+       COLUNA AÇÕES — CONTEÚDO
+       ========================================================= */
+
+    /* AÇÕES — LARGURA DA COLUNA */
+    #tabela-fin-todos th:nth-child(4),
+    #tabela-fin-todos td:nth-child(4) {
+        width: 25%;
+    }
+
+    /* AÇÕES — CONTEÚDO */
+    #tabela-fin-todos td:nth-child(4) {
+        text-align: right;
+        padding-left: 1px;
+        padding-right: 4px;
+    }
+
+
+    /* =========================================================
+       BOTÕES — AÇÕES
+       ========================================================= */
+
+    /* AÇÕES — ORGANIZAÇÃO DOS BOTÕES */
+    #tabela-fin-todos .fin-actions-group {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    /* AÇÕES — ESPAÇO ENTRE OS BOTÕES */
+    #tabela-fin-todos .fin-actions-group {
+        gap: 3px;
+    }
+
 }

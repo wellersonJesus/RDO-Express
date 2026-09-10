@@ -1,14 +1,3 @@
-/* V47_VALOR_CORRIDA_GUARD */
-/*
- * V47 — Proteção cirúrgica de valor_corrida.
- *
- * Regra:
- * - valor válido existente tem prioridade;
- * - zero/null/undefined/vazio não pode destruir valor válido;
- * - não altera regras financeiras;
- * - não altera comissão;
- * - não altera divisão empresa/colaborador.
- */
 (function () {
   "use strict";
 
@@ -1157,58 +1146,134 @@ if (!window.EventBus) {
   }
 
   function salvarRegistroFinanceiro(id, dados) {
-    if (!id) {
+    var idNormalizado = String(id == null ? '' : id).trim();
+
+    if (!idNormalizado) {
       return Promise.reject(new Error('ID do registro não informado.'));
     }
-    if (!dados || typeof dados !== 'object') {
+
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
       return Promise.reject(new Error('Dados do lançamento não informados ou inválidos.'));
     }
 
-    var payload;
-    try {
-      payload = Object.assign({ id: id }, dados);
-      if (payload.valor !== undefined) {
-        var vNum = parseValor(payload.valor);
-        payload.valor = isNaN(vNum) ? 0 : vNum;
-      }
-    } catch (errPayload) {
-      console.error('[salvarRegistroFinanceiro] Erro ao montar payload:', errPayload);
-      return Promise.reject(new Error('Erro ao preparar os dados para envio: ' + errPayload.message));
-    }
-
-    if (typeof window.API === 'undefined' || typeof window.API.call !== 'function') {
+    if (!window.API || typeof window.API.call !== 'function') {
       return Promise.reject(new Error('API indisponível. Verifique sua conexão ou recarregue a página.'));
     }
 
-    return window.API.call('updatefinanceiro', payload)
-      .catch(function (errApi) {
-        console.error('[salvarRegistroFinanceiro] Falha na chamada API:', errApi);
-        throw new Error('Falha na comunicação com o servidor: ' + (errApi && errApi.message ? errApi.message : 'Erro desconhecido.'));
-      })
-      .then(function (resFin) {
-        console.log('[salvarRegistroFinanceiro] resposta backend:', resFin);
+    var payload;
 
-        if (!resFin) {
-          throw new Error('O servidor não retornou nenhuma resposta.');
+    try {
+      payload = Object.assign({}, dados, { id: idNormalizado });
+
+      if (payload.valor !== undefined && payload.valor !== null && payload.valor !== '') {
+        var valorNormalizado = parseValor(payload.valor);
+
+        if (!isFinite(valorNormalizado)) {
+          return Promise.reject(new Error('Valor do lançamento inválido.'));
         }
 
-        var sucessoFin = resFin.status === 'success' ||
+        payload.valor = valorNormalizado;
+      }
+    } catch (errPayload) {
+      console.error('[salvarRegistroFinanceiro] Erro ao preparar payload:', errPayload);
+      return Promise.reject(
+        new Error(
+          'Erro ao preparar os dados para envio: ' +
+          (errPayload && errPayload.message ? errPayload.message : String(errPayload))
+        )
+      );
+    }
+
+    return Promise.resolve()
+      .then(function () {
+        return window.API.call('updatefinanceiro', payload);
+      })
+      .catch(function (errApi) {
+        console.error('[salvarRegistroFinanceiro] Falha na chamada updatefinanceiro:', errApi);
+
+        throw new Error(
+          'Falha na comunicação com o servidor: ' +
+          (errApi && errApi.message ? errApi.message : 'Erro desconhecido.')
+        );
+      })
+      .then(function (resFin) {
+        if (!resFin || typeof resFin !== 'object') {
+          throw new Error('O servidor não retornou uma resposta válida.');
+        }
+
+        var sucessoFin =
+          resFin.status === 'success' ||
           resFin.success === true ||
           resFin.success === 'true' ||
           resFin.success === 1 ||
           resFin.ok === true;
 
         if (resFin.status === 'partial_error') {
-          finToast('Atenção: ' + (resFin.message || 'coluna não localizada na planilha.'), 'warning');
+          if (typeof finToast === 'function') {
+            finToast(
+              'Atenção: ' +
+              (resFin.message || 'alguns campos não puderam ser atualizados.'),
+              'warning'
+            );
+          }
         } else if (!sucessoFin) {
-          var msgErroFin = resFin.message || resFin.msg || resFin.error || 'O banco financeiro não confirmou a atualização.';
-          throw new Error(msgErroFin);
+          throw new Error(
+            resFin.message ||
+            resFin.msg ||
+            resFin.error ||
+            'O banco financeiro não confirmou a atualização.'
+          );
         }
 
-        var idx = state.cache.findIndex(function (r) { return String(r.id) === String(id); });
+        var cache =
+          state &&
+            Array.isArray(state.cache)
+            ? state.cache
+            : [];
 
-        if (idx === -1 && dados.id_pedido !== undefined) {
-          idx = state.cache.findIndex(function (r) { return String(r.idPedido) === String(dados.id_pedido); });
+        var idx = cache.findIndex(function (r) {
+          return r &&
+            r.id !== undefined &&
+            r.id !== null &&
+            String(r.id).trim() === idNormalizado;
+        });
+
+        if (idx === -1) {
+          var idsPedido = [
+            dados.id_pedido,
+            dados.idPedido,
+            dados.pedido_id,
+            dados.pedidoId
+          ];
+
+          idx = cache.findIndex(function (r) {
+            if (!r) return false;
+
+            var idsRegistro = [
+              r.id_pedido,
+              r.idPedido,
+              r.pedido_id,
+              r.pedidoId
+            ];
+
+            return idsRegistro.some(function (registroId) {
+              if (registroId === undefined || registroId === null) {
+                return false;
+              }
+
+              var registroIdNormalizado = String(registroId).trim();
+
+              if (!registroIdNormalizado) {
+                return false;
+              }
+
+              return idsPedido.some(function (pedidoId) {
+                return pedidoId !== undefined &&
+                  pedidoId !== null &&
+                  String(pedidoId).trim() === registroIdNormalizado;
+              });
+            });
+          });
         }
 
         var idPedidoNotificar = null;
@@ -1216,27 +1281,82 @@ if (!window.EventBus) {
 
         if (idx !== -1) {
           try {
-            var reg = state.cache[idx];
+            var reg = cache[idx];
+
+            if (!reg || typeof reg !== 'object') {
+              throw new Error('Registro localizado no cache possui formato inválido.');
+            }
 
             var valorAntes = reg.valor;
             var motoboyAntes = reg.motoboy;
             var clienteAntes = reg.cliente;
 
-            if (dados.valor !== undefined) reg.valor = parseValor(dados.valor);
-            if (dados.tipo !== undefined) reg.tipo = dados.tipo;
-            if (dados.situacao !== undefined) reg.situacao = dados.situacao;
-            if (dados.descricao !== undefined) reg.descricao = dados.descricao;
-            if (dados.observacao !== undefined) reg.observacao = dados.observacao;
-            if (dados.colaborador_id !== undefined) reg.colaboradorId = dados.colaborador_id;
-            if (dados.motoboy !== undefined) reg.motoboy = dados.motoboy || '-';
-            if (dados.cliente !== undefined) reg.cliente = dados.cliente || '-';
-            if (dados.grupo !== undefined) reg.grupo = dados.grupo || '';
+            if (dados.valor !== undefined) {
+              var novoValor = parseValor(dados.valor);
+
+              if (!isFinite(novoValor)) {
+                throw new Error('Valor atualizado inválido.');
+              }
+
+              reg.valor = novoValor;
+            }
+
+            if (dados.tipo !== undefined) {
+              reg.tipo = dados.tipo;
+            }
+
+            if (dados.situacao !== undefined) {
+              reg.situacao = dados.situacao;
+            }
+
+            if (dados.descricao !== undefined) {
+              reg.descricao = dados.descricao;
+            }
+
+            if (dados.observacao !== undefined) {
+              reg.observacao = dados.observacao;
+            }
+
+            if (dados.colaborador_id !== undefined) {
+              reg.colaboradorId = dados.colaborador_id;
+            }
+
+            if (dados.motoboy !== undefined) {
+              reg.motoboy = dados.motoboy || '-';
+            }
+
+            if (dados.cliente !== undefined) {
+              reg.cliente = dados.cliente || '-';
+            }
+
+            if (dados.grupo !== undefined) {
+              reg.grupo = dados.grupo || '';
+            }
 
             if (ehReceitaFin(reg.tipo)) {
               var pctColab = 80;
-              if (reg.colaboradorId && state.colaboradoresCache[reg.colaboradorId] && state.colaboradoresCache[reg.colaboradorId].percentual_comissao) {
-                pctColab = parseFloat(state.colaboradoresCache[reg.colaboradorId].percentual_comissao) || 80;
+
+              if (
+                reg.colaboradorId &&
+                state.colaboradoresCache &&
+                state.colaboradoresCache[reg.colaboradorId]
+              ) {
+                var percentual =
+                  state.colaboradoresCache[reg.colaboradorId].percentual_comissao;
+
+                if (
+                  percentual !== undefined &&
+                  percentual !== null &&
+                  percentual !== ''
+                ) {
+                  var percentualNumerico = parseFloat(percentual);
+
+                  if (isFinite(percentualNumerico)) {
+                    pctColab = percentualNumerico;
+                  }
+                }
               }
+
               reg.percentualComissao = pctColab;
               reg.valorColaborador = reg.valor * (pctColab / 100);
               reg.valorEmpresa = reg.valor * ((100 - pctColab) / 100);
@@ -1245,90 +1365,228 @@ if (!window.EventBus) {
               reg.valorEmpresa = 0;
             }
 
-            state.cache[idx] = reg;
-            idPedidoNotificar = reg.idPedido || null;
+            cache[idx] = reg;
+            state.cache = cache;
 
-            if (dados.situacao !== undefined && reg.idPedido && state.pedidosCache[reg.idPedido]) {
-              state.pedidosCache[reg.idPedido].situacao_financeira = dados.situacao;
+            idPedidoNotificar =
+              reg.idPedido ||
+              reg.id_pedido ||
+              reg.pedido_id ||
+              reg.pedidoId ||
+              dados.id_pedido ||
+              dados.idPedido ||
+              dados.pedido_id ||
+              dados.pedidoId ||
+              null;
+
+            if (
+              dados.situacao !== undefined &&
+              idPedidoNotificar &&
+              state.pedidosCache &&
+              state.pedidosCache[idPedidoNotificar]
+            ) {
+              state.pedidosCache[idPedidoNotificar].situacao_financeira =
+                dados.situacao;
             }
 
             var valorMudou = valorAntes !== reg.valor;
             var motoboyMudou = motoboyAntes !== reg.motoboy;
             var clienteMudou = clienteAntes !== reg.cliente;
 
-            if (idPedidoNotificar && (valorMudou || motoboyMudou || clienteMudou)) {
+            if (
+              idPedidoNotificar &&
+              (valorMudou || motoboyMudou || clienteMudou)
+            ) {
               camposAlteradosParaChat = {
                 id: idPedidoNotificar,
                 valor_total: reg.valor,
                 valor_final: reg.valor,
-
-/* V46_VALOR_CORRIDA_GUARD */
-// V46: preserva valor_corrida sem substituir valor válido por zero.
-// A normalização definitiva permanece dependente do campo de origem.
-
                 valor_corrida: reg.valor
               };
-              if (motoboyMudou && reg.motoboy && reg.motoboy !== '-') {
+
+              if (
+                motoboyMudou &&
+                reg.motoboy &&
+                reg.motoboy !== '-'
+              ) {
                 camposAlteradosParaChat.motoboy = reg.motoboy;
               }
-              if (clienteMudou && reg.cliente && reg.cliente !== '-') {
+
+              if (
+                clienteMudou &&
+                reg.cliente &&
+                reg.cliente !== '-'
+              ) {
                 camposAlteradosParaChat.cliente = reg.cliente;
               }
             }
           } catch (errCache) {
-            console.error('[salvarRegistroFinanceiro] Erro ao atualizar cache local:', errCache);
-            finToast('Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.', 'warning');
+            console.error(
+              '[salvarRegistroFinanceiro] Erro ao atualizar cache local:',
+              errCache
+            );
+
+            if (typeof finToast === 'function') {
+              finToast(
+                'Salvo no servidor, mas houve um erro ao atualizar a tela localmente. Atualize a página se necessário.',
+                'warning'
+              );
+            }
           }
         } else {
-          console.warn('[salvarRegistroFinanceiro] Registro id=' + id + ' não encontrado no cache local. Forçando novo carregamento.');
-          carregarDados();
+          if (typeof carregarDados === 'function') {
+            try {
+              var recarga = carregarDados();
+
+              if (
+                recarga &&
+                typeof recarga.catch === 'function'
+              ) {
+                recarga.catch(function (errReload) {
+                  console.error(
+                    '[salvarRegistroFinanceiro] Erro ao recarregar dados:',
+                    errReload
+                  );
+                });
+              }
+            } catch (errReloadSync) {
+              console.error(
+                '[salvarRegistroFinanceiro] Erro ao iniciar recarga:',
+                errReloadSync
+              );
+            }
+          }
         }
 
-        if (dados.situacao !== undefined && idPedidoNotificar) {
+        if (
+          dados.situacao !== undefined &&
+          idPedidoNotificar &&
+          typeof notificarSituacaoFinanceiraAtualizada === 'function'
+        ) {
           try {
-            notificarSituacaoFinanceiraAtualizada(idPedidoNotificar, dados.situacao);
+            notificarSituacaoFinanceiraAtualizada(
+              idPedidoNotificar,
+              dados.situacao
+            );
           } catch (errNotify) {
-            console.error('[salvarRegistroFinanceiro] Erro ao emitir evento financeiro:situacaoAtualizada:', errNotify);
-            finToast('Situação salva, mas a tela de pedidos pode não atualizar automaticamente.', 'warning');
+            console.error(
+              '[salvarRegistroFinanceiro] Erro ao notificar situação:',
+              errNotify
+            );
+
+            if (typeof finToast === 'function') {
+              finToast(
+                'Situação salva, mas a tela de pedidos pode não atualizar automaticamente.',
+                'warning'
+              );
+            }
           }
         }
 
-        if (camposAlteradosParaChat) {
+        if (
+          camposAlteradosParaChat &&
+          window.EventBus &&
+          typeof window.EventBus.emit === 'function'
+        ) {
           try {
-            window.EventBus.emit('pedido:atualizado', Object.assign({ __origemFinanceiro: true }, camposAlteradosParaChat));
+            window.EventBus.emit(
+              'pedido:atualizado',
+              Object.assign(
+                {},
+                camposAlteradosParaChat,
+                { __origemFinanceiro: true }
+              )
+            );
           } catch (errEmit) {
-            console.error('[salvarRegistroFinanceiro] Erro ao emitir pedido:atualizado:', errEmit);
-            finToast('Financeiro salvo, mas a sincronização com pedido/chat pode ter falhado.', 'warning');
+            console.error(
+              '[salvarRegistroFinanceiro] Erro ao emitir pedido:atualizado:',
+              errEmit
+            );
+
+            if (typeof finToast === 'function') {
+              finToast(
+                'Financeiro salvo, mas a sincronização com pedido/chat pode ter falhado.',
+                'warning'
+              );
+            }
           }
         }
-        return { resultado: resFin, idxAtualizado: idx };
+
+        return {
+          resultado: resFin,
+          idxAtualizado: idx
+        };
       })
       .then(function (contexto) {
-        try {
-          if (contexto.idxAtualizado !== -1) {
-            if (typeof renderTodos === 'function') renderTodos();
-            if (typeof renderRdoContadores === 'function') renderRdoContadores();
-            if (typeof renderCaixa === 'function') renderCaixa();
-            if (typeof renderizarListaExtratos === 'function') renderizarListaExtratos();
+        if (
+          contexto &&
+          contexto.idxAtualizado !== -1
+        ) {
+          try {
+            if (typeof renderTodos === 'function') {
+              renderTodos();
+            }
+
+            if (typeof renderRdoContadores === 'function') {
+              renderRdoContadores();
+            }
+
+            if (typeof renderCaixa === 'function') {
+              renderCaixa();
+            }
+
+            if (typeof renderizarListaExtratos === 'function') {
+              renderizarListaExtratos();
+            }
+          } catch (errRender) {
+            console.error(
+              '[salvarRegistroFinanceiro] Erro ao atualizar interface:',
+              errRender
+            );
+
+            if (typeof finToast === 'function') {
+              finToast(
+                'Dados salvos, mas houve um erro ao atualizar a tela. Recarregue se necessário.',
+                'warning'
+              );
+            }
           }
-        } catch (errRender) {
-          console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar telas:', errRender);
-          finToast('Dados salvos, mas houve um erro ao atualizar a tela. Recarregue se necessário.', 'warning');
         }
 
-        if (!contexto.resultado || contexto.resultado.status !== 'partial_error') {
-          finToast('Lançamento atualizado com sucesso!', 'success');
+        if (
+          !contexto.resultado ||
+          contexto.resultado.status !== 'partial_error'
+        ) {
+          if (typeof finToast === 'function') {
+            finToast(
+              'Lançamento atualizado com sucesso!',
+              'success'
+            );
+          }
         }
+
         return contexto.resultado;
       })
       .catch(function (err) {
-        console.error('[salvarRegistroFinanceiro] Erro:', err);
+        console.error(
+          '[salvarRegistroFinanceiro] Erro:',
+          err
+        );
+
         try {
-          if (typeof renderTodos === 'function') renderTodos();
+          if (typeof renderTodos === 'function') {
+            renderTodos();
+          }
         } catch (errRenderErro) {
-          console.error('[salvarRegistroFinanceiro] Erro ao re-renderizar após falha:', errRenderErro);
+          console.error(
+            '[salvarRegistroFinanceiro] Erro ao re-renderizar após falha:',
+            errRenderErro
+          );
         }
-        throw err instanceof Error ? err : new Error(String(err));
+
+        throw err instanceof Error
+          ? err
+          : new Error(String(err));
       });
   }
 
@@ -2044,7 +2302,26 @@ if (!window.EventBus) {
       old.remove();
     }
 
-    var dados = state.caixa.dadosFiltrados.length ? state.caixa.dadosFiltrados : state.cache;
+    // ==========================================================
+    // VACINA: REPASSES SEMPRE RESPEITA O PERÍODO DA CARTEIRA
+    // ==========================================================
+    var inicioRepasses = state.caixa.dataInicio || '';
+    var fimRepasses = state.caixa.dataFim || '';
+
+    var dados;
+
+    if (inicioRepasses && fimRepasses) {
+      dados = state.cache.filter(function (r) {
+        return r.dataISO &&
+          r.dataISO >= inicioRepasses &&
+          r.dataISO <= fimRepasses;
+      });
+    } else if (state.caixa.dadosFiltrados.length) {
+      dados = state.caixa.dadosFiltrados;
+    } else {
+      dados = state.cache;
+    }
+
     var entradas = dados.filter(function (r) { return ehReceitaFin(r.tipo); });
     var por = {};
     entradas.forEach(function (r) {
@@ -2055,7 +2332,9 @@ if (!window.EventBus) {
     var listaHtml = nomes.length ? nomes.map(function (nome) {
       return '<div class="d-flex justify-content-between align-items-center py-2 px-1" style="border-bottom:1px solid #f0f0f0;"><div class="d-flex align-items-center gap-2"><div style="width:36px;height:36px;border-radius:50%;background:#f3e8ff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-person" style="color:#6f42c1;font-size:.9rem;"></i></div><span style="font-size:.82rem;font-weight:600;">' + escapeHtml(nome) + '</span></div><span style="font-size:.84rem;font-weight:700;color:#6f42c1;">' + formatarMoeda(por[nome]) + '</span></div>';
     }).join('') : '<div class="text-center text-muted py-5"><i class="bi bi-people" style="font-size:2rem;opacity:.3;display:block;margin-bottom:10px;"></i>Nenhum dado disponível.</div>';
-    var periodoLabel = state.caixa.dataInicio && state.caixa.dataFim ? formatDateBR(state.caixa.dataInicio) + ' a ' + formatDateBR(state.caixa.dataFim) : 'Todos os registros';
+    var periodoLabel = state.caixa.dataInicio && state.caixa.dataFim
+      ? formatDateBR(state.caixa.dataInicio) + ' até ' + formatDateBR(state.caixa.dataFim)
+      : 'Todos os registros';
     var html = '<div class="modal fade" id="' + OLD_ID + '" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:420px;"><div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden"><div style="background:linear-gradient(135deg,#6f42c1 0%,#59359a 100%);padding:20px 24px 16px;position:relative;"><div class="d-flex align-items-center gap-3"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-people-fill" style="font-size:1.2rem;color:#fff;"></i></div><div><h6 class="fw-bold mb-0 text-white" style="font-size:.92rem;">Repasses</h6><small style="color:rgba(255,255,255,.65);font-size:.72rem;">' + escapeHtml(periodoLabel) + '</small></div></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:.8;"></button></div><div class="modal-body px-3 py-3">' + listaHtml + '</div><div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end"><button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal" style="font-size:.78rem;height:38px;"><i class="bi bi-x-lg me-1"></i>Fechar</button></div></div></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
     var modalEl = document.getElementById(OLD_ID);
@@ -2342,7 +2621,17 @@ if (!window.EventBus) {
         tipo: elTipo.value,
         situacao: elSituacao.value,
         descricao: elDescricao.value.trim(),
-        observacao: elObservacao.value.trim()
+        observacao: elObservacao.value.trim(),
+
+        // VACINA:
+        // preserva o pedido EXATO associado ao lançamento financeiro.
+        id_pedido: String(
+          reg.idPedido ||
+          reg.id_pedido ||
+          reg.pedido_id ||
+          reg.pedidoId ||
+          ''
+        ).trim()
       };
     }
 
@@ -3327,47 +3616,129 @@ if (!window.EventBus) {
     var lista = state.cache.slice();
 
     if (state.filtroTipo !== 'todos') {
-      lista = lista.filter(function (r) { return r.tipo === state.filtroTipo; });
+      lista = lista.filter(function (r) {
+        return r.tipo === state.filtroTipo;
+      });
     }
+
     if (state.filtroSituacao !== 'todos') {
-      lista = lista.filter(function (r) { return (r.situacao || '').toLowerCase() === state.filtroSituacao; });
+      lista = lista.filter(function (r) {
+        return removerAcentos(
+          String(r.situacao || '').toLowerCase()
+        ) === removerAcentos(
+          String(state.filtroSituacao || '').toLowerCase()
+        );
+      });
     }
+
     if (state.filtroBusca) {
-      var termoOriginal = removerAcentos(state.filtroBusca.toLowerCase().trim());
-      var termos = termoOriginal.split(/\s+/).filter(Boolean);
-      var termoIdNormalizado = _normalizarIdPedidoBusca(state.filtroBusca);
-      var pareceIdPedido = /^(rdo)?\d+$/i.test(state.filtroBusca.trim());
+      var busca = removerAcentos(
+        String(state.filtroBusca || '').toLowerCase().trim()
+      );
+
+      var termos = busca.split(/\s+/).filter(Boolean);
+
+      var termosTipo = {
+        receita: true,
+        despesa: true
+      };
+
+      var termosSituacao = {
+        pendente: true,
+        pago: true,
+        recebido: true,
+        cancelado: true
+      };
 
       lista = lista.filter(function (r) {
-        var idPedidoRaw = (r.idPedido || '').toString();
+        var idPedidoRaw = String(r.idPedido || '');
         var idPedidoNormalizado = _normalizarIdPedidoBusca(idPedidoRaw);
 
-        var matchId = !!(termoIdNormalizado && idPedidoNormalizado && termoIdNormalizado === idPedidoNormalizado);
-        if (matchId) return true;
+        var tipo = removerAcentos(
+          String(r.tipo || '').toLowerCase().trim()
+        );
 
-        if (pareceIdPedido) return false;
+        var tipoBusca = '';
 
+        if (tipo === 'entrada' || tipo === 'receita') {
+          tipoBusca = 'receita';
+        } else if (tipo === 'despesa' || tipo === 'saida') {
+          tipoBusca = 'despesa';
+        }
+
+        var situacao = removerAcentos(
+          String(r.situacao || '').toLowerCase().trim()
+        );
 
         var pool = removerAcentos(
           [
-            r.descricao, r.motoboy, r.observacao, idPedidoRaw, 'RDO' + idPedidoNormalizado,
-            r.cliente, r.solicitante,
-            r.dataBR, r.dataDisplay,
-            r.dataPedidoBR, r.dataPedidoDisplay
-          ].map(function (c) { return (c || '').toString(); }).join(' ').toLowerCase()
+            r.descricao,
+            r.motoboy,
+            r.observacao,
+            idPedidoRaw,
+            idPedidoNormalizado
+              ? 'RDO' + idPedidoNormalizado
+              : '',
+            r.cliente,
+            r.solicitante,
+            r.dataBR,
+            r.dataDisplay,
+            r.dataPedidoBR,
+            r.dataPedidoDisplay
+          ]
+            .map(function (c) {
+              return String(c || '');
+            })
+            .join(' ')
+            .toLowerCase()
         );
 
         for (var i = 0; i < termos.length; i++) {
-          if (termos[i] && pool.indexOf(termos[i]) === -1) return false;
+          var termo = termos[i];
+
+          if (termosTipo[termo]) {
+            if (tipoBusca !== termo) {
+              return false;
+            }
+            continue;
+          }
+
+          if (termosSituacao[termo]) {
+            if (situacao !== termo) {
+              return false;
+            }
+            continue;
+          }
+
+          // Número/RDO: exige correspondência exata do pedido.
+          if (/^(rdo)?\d+$/i.test(termo)) {
+            var idBusca = _normalizarIdPedidoBusca(termo);
+
+            if (!idBusca || idPedidoNormalizado !== idBusca) {
+              return false;
+            }
+
+            continue;
+          }
+
+          // Demais termos continuam usando a busca textual existente.
+          if (pool.indexOf(termo) === -1) {
+            return false;
+          }
         }
+
         return true;
       });
     }
 
     lista.sort(function (a, b) {
       var da = a.dataISO || '', db = b.dataISO || '';
+
       if (da === db) return 0;
-      return state.sortDataDesc ? (da < db ? 1 : -1) : (da < db ? -1 : 1);
+
+      return state.sortDataDesc
+        ? (da < db ? 1 : -1)
+        : (da < db ? -1 : 1);
     });
 
     return lista;
@@ -3375,28 +3746,61 @@ if (!window.EventBus) {
 
   function renderTodos() {
     if (!els.tbodyTodos) return;
+
     var lista = dadosFiltradosTodos();
     var totalItens = lista.length;
-    state.todos.totalPag = Math.max(1, Math.ceil(totalItens / state.todos.porPagina));
-    if (state.todos.pagina > state.todos.totalPag) state.todos.pagina = state.todos.totalPag;
+
+    state.todos.totalPag = Math.max(
+      1,
+      Math.ceil(totalItens / state.todos.porPagina)
+    );
+
+    if (state.todos.pagina > state.todos.totalPag) {
+      state.todos.pagina = state.todos.totalPag;
+    }
 
     var inicio = (state.todos.pagina - 1) * state.todos.porPagina;
     var pagina = lista.slice(inicio, inicio + state.todos.porPagina);
 
     if (!pagina.length) {
-      els.tbodyTodos.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>Nenhum registro encontrado.</td></tr>';
+      els.tbodyTodos.innerHTML =
+        '<tr>' +
+        '<td colspan="4" class="text-center text-muted py-4">' +
+        '<i class="bi bi-inbox" style="font-size:1.6rem;opacity:.4;display:block;margin-bottom:8px;"></i>' +
+        'Nenhum registro encontrado.' +
+        '</td>' +
+        '</tr>';
     } else {
       els.tbodyTodos.innerHTML = pagina.map(function (r) {
         var badgeSituacao = getStatusBadge(r.situacao);
+        var descricaoCompleta = String(r.descricao || '-').trim();
 
-        return '<tr class="fin-row" data-idpedido="' + escapeHtml(r.idPedido || '') + '" style="cursor:pointer;">' +
-          '<td>' + escapeHtml(r.dataDisplay || '-') + '</td>' +
-          '<td class="fin-td-descricao-mobile" title="' + escapeHtml(r.descricao || '-') + '">' + formatarDescricaoMobile(r.descricao) + '</td>' +
-          '<td class="fin-col-tipo">' + badgeSituacao + '</td>' +
+        return '<tr class="fin-row" data-idpedido="' +
+          escapeHtml(r.idPedido || '') +
+          '" style="cursor:pointer;">' +
+          '<td>' +
+          escapeHtml(r.dataDisplay || '-') +
+          '</td>' +
+          '<td class="fin-td-descricao-mobile" title="' +
+          escapeHtml(descricaoCompleta) +
+          '">' +
+          escapeHtml(descricaoCompleta) +
+          '</td>' +
+          '<td class="fin-col-tipo">' +
+          badgeSituacao +
+          '</td>' +
           '<td class="text-end">' +
           '<div class="fin-actions-group">' +
-          '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-eye"></i></button>' +
-          '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-idpedido="' + escapeHtml(r.idPedido || '') + '"><i class="bi bi-pencil-square"></i></button>' +
+          '<button class="fin-btn-action fin-btn-view fin-btn-ver" data-idpedido="' +
+          escapeHtml(r.idPedido || '') +
+          '">' +
+          '<i class="bi bi-eye"></i>' +
+          '</button>' +
+          '<button class="fin-btn-action fin-btn-edit fin-btn-editar" data-idpedido="' +
+          escapeHtml(r.idPedido || '') +
+          '">' +
+          '<i class="bi bi-pencil-square"></i>' +
+          '</button>' +
           '</div>' +
           '</td>' +
           '</tr>';
@@ -3406,6 +3810,7 @@ if (!window.EventBus) {
 
       linhasDom.forEach(function (linhaEl, index) {
         var reg = pagina[index];
+
         if (!reg) return;
 
         var btnVer = linhaEl.querySelector('.fin-btn-ver');
@@ -3432,10 +3837,23 @@ if (!window.EventBus) {
       });
     }
 
-    if (els.pagLabelTodos) els.pagLabelTodos.textContent = 'Pág ' + state.todos.pagina;
-    if (els.pagInfoTodos) els.pagInfoTodos.textContent = totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
-    if (els.pagPrevTodos) els.pagPrevTodos.disabled = state.todos.pagina <= 1;
-    if (els.pagNextTodos) els.pagNextTodos.disabled = state.todos.pagina >= state.todos.totalPag;
+    if (els.pagLabelTodos) {
+      els.pagLabelTodos.textContent = 'Pág ' + state.todos.pagina;
+    }
+
+    if (els.pagInfoTodos) {
+      els.pagInfoTodos.textContent =
+        totalItens + ' registro' + (totalItens !== 1 ? 's' : '');
+    }
+
+    if (els.pagPrevTodos) {
+      els.pagPrevTodos.disabled = state.todos.pagina <= 1;
+    }
+
+    if (els.pagNextTodos) {
+      els.pagNextTodos.disabled =
+        state.todos.pagina >= state.todos.totalPag;
+    }
 
     _atualizarContadoresFin();
   }
