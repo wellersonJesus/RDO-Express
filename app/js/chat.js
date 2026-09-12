@@ -6821,9 +6821,220 @@ window.EventBus.on('pedido:atualizado', function (dados) {
 })();
 
 
+/* ============================================================
+ * RDO EXPRESS — VACINA PEDIDOS → CHAT V1
+ *
+ * Regra:
+ * Pedido é a origem da alteração.
+ * Chat apenas recebe o evento e espelha o valor.
+ *
+ * NÃO executa updatepedido.
+ * NÃO cria nova gravação.
+ * NÃO dispara pedido:atualizado novamente.
+ * ============================================================ */
+
+window.__RDO_VACINA_PEDIDO_CHAT_V1__ = true;
+
+window.__sincronizarPedidoValorNoChatV1 = function (dados) {
+    if (!dados) return false;
+
+    var pedidoId = String(
+        dados.id ||
+        dados.id_pedido ||
+        dados.pedido_id ||
+        dados.pedidoId ||
+        dados.idPedido ||
+        ''
+    ).trim();
+
+    if (!pedidoId) return false;
+
+    var valorTotal =
+        dados.valor_total != null
+            ? dados.valor_total
+            : dados.valor_corrida != null
+                ? dados.valor_corrida
+                : dados.valor_base != null
+                    ? dados.valor_base
+                    : dados.valor;
+
+    var valorFinal =
+        dados.valor_final != null
+            ? dados.valor_final
+            : valorTotal;
+
+    /* ---------------------------------------------------------
+     * 1. CACHE DE PEDIDOS DO CHAT
+     * --------------------------------------------------------- */
+
+    if (
+        window.AppRDO &&
+        Array.isArray(window.AppRDO.pedidosCache)
+    ) {
+        window.AppRDO.pedidosCache.forEach(function (pedido) {
+
+            var id = String(
+                pedido.id ||
+                pedido.id_pedido ||
+                pedido.pedido_id ||
+                pedido.pedidoId ||
+                pedido.idPedido ||
+                ''
+            ).trim();
+
+            if (id !== pedidoId) return;
+
+            if (valorTotal != null) {
+                pedido.valor_total = valorTotal;
+                pedido.valor_corrida = valorTotal;
+            }
+
+            if (valorFinal != null) {
+                pedido.valor_final = valorFinal;
+            }
+
+            if (dados.taxa_espera != null) {
+                pedido.taxa_espera = dados.taxa_espera;
+            }
+
+            if (dados.espera_tipo != null) {
+                pedido.espera_tipo = dados.espera_tipo;
+            }
+        });
+    }
+
+    /* ---------------------------------------------------------
+     * 2. CACHE DE MENSAGENS DO CHAT
+     * --------------------------------------------------------- */
+
+    if (
+        window.AppRDO &&
+        Array.isArray(window.AppRDO.mensagensCache)
+    ) {
+        window.AppRDO.mensagensCache.forEach(function (msg) {
+
+            var ids = [
+                msg.pedido_id,
+                msg.id_pedido,
+                msg.pedidoId,
+                msg.idPedido
+            ];
+
+            var corresponde = ids.some(function (id) {
+                return String(id || '').trim() === pedidoId;
+            });
+
+            if (!corresponde) return;
+
+            if (valorTotal != null) {
+                msg.valor_total = valorTotal;
+                msg.valor_corrida = valorTotal;
+                msg.valor = valorTotal;
+            }
+
+            if (valorFinal != null) {
+                msg.valor_final = valorFinal;
+            }
+
+            if (dados.solicitante != null) {
+                msg.solicitante = dados.solicitante;
+            }
+
+            if (dados.cliente != null) {
+                msg.cliente = dados.cliente;
+            }
+
+            if (dados.status != null) {
+                msg.status = dados.status;
+            }
+
+            if (dados.motoboy != null) {
+                msg.motoboy = dados.motoboy;
+            }
+        });
+    }
+
+    /* ---------------------------------------------------------
+     * 3. DOM DO CHAT
+     * --------------------------------------------------------- */
+
+    document
+        .querySelectorAll('[data-pedido-id]')
+        .forEach(function (msgEl) {
+
+            var elId = String(
+                msgEl.getAttribute('data-pedido-id') || ''
+            ).trim();
+
+            if (elId !== pedidoId) return;
+
+            var elValor = msgEl.querySelector(
+                '.valor-destaque, .badge-valor, span[class*="valor"]'
+            );
+
+            if (
+                elValor &&
+                (valorFinal != null || valorTotal != null)
+            ) {
+                var valorExibicao =
+                    valorFinal != null
+                        ? valorFinal
+                        : valorTotal;
+
+                var numero = Number(valorExibicao);
+
+                if (Number.isFinite(numero)) {
+                    elValor.textContent =
+                        numero.toLocaleString(
+                            'pt-BR',
+                            {
+                                style: 'currency',
+                                currency: 'BRL'
+                            }
+                        );
+                }
+            }
+
+            if (dados.solicitante) {
+                var elSolicitante = msgEl.querySelector(
+                    '.nome-solicitante, .solicitante-txt'
+                );
+
+                if (elSolicitante) {
+                    elSolicitante.textContent =
+                        dados.solicitante;
+                }
+            }
+        });
+
+    console.log(
+        '[VACINA PEDIDOS→CHAT] sincronizado:',
+        {
+            pedido_id: pedidoId,
+            valor_total: valorTotal,
+            valor_final: valorFinal
+        }
+    );
+
+    return true;
+};
 
 
+/* -------------------------------------------------------------
+ * ÚNICO RECEPTOR DA VACINA
+ * ------------------------------------------------------------- */
 
+window.EventBus.on(
+    'pedido:atualizado',
+    function (dados) {
 
+        window.__sincronizarPedidoValorNoChatV1(dados);
+
+    }
+);
+
+console.log(
+    '[VACINA PEDIDOS→CHAT V1] instalada'
+);
 
 

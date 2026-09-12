@@ -542,12 +542,28 @@
     function badgePagamento(pagamento) {
         var val = String(pagamento || '').toUpperCase();
         if (!val) return '<span class="text-muted">-</span>';
+
         var classe = 'badge-soft-gray';
-        if (val.indexOf('DIÁRIO') !== -1) classe = 'badge-soft-red';
-        else if (val.indexOf('SEMANAL') !== -1) classe = 'badge-soft-blue';
-        else if (val.indexOf('QUINZENAL') !== -1) classe = 'badge-soft-yellow';
-        else if (val.indexOf('MENSAL') !== -1) classe = 'badge-soft-green';
-        return '<span class="badge-soft ' + classe + '">' + pagamento + '</span>';
+        var pagamentoMobile = String(pagamento || '').trim();
+
+        if (val.indexOf('DIÁRIO') !== -1 || val.indexOf('DIARIO') !== -1) {
+            classe = 'badge-soft-red';
+            pagamentoMobile = 'Diário';
+        } else if (val.indexOf('SEMANAL') !== -1) {
+            classe = 'badge-soft-blue';
+            pagamentoMobile = 'Semanal';
+        } else if (val.indexOf('QUINZENAL') !== -1) {
+            classe = 'badge-soft-yellow';
+            pagamentoMobile = 'Quinzenal';
+        } else if (val.indexOf('MENSAL') !== -1) {
+            classe = 'badge-soft-green';
+            pagamentoMobile = 'Mensal';
+        }
+
+        return '<span class="badge-soft ' + classe + ' admin-badge-pagamento">' +
+            '<span class="admin-pagamento-desktop">' + pagamento + '</span>' +
+            '<span class="admin-pagamento-mobile">' + pagamentoMobile + '</span>' +
+            '</span>';
     }
 
     function _primeiroNome(nomeCompleto) {

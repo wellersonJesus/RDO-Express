@@ -1473,6 +1473,113 @@ function _ultimaDataPedidoCliente(idCliente, pedidosPendentesDoCliente) {
     return maiorData;
 }
 
+/* VACINA_PAGAMENTO_LOTE_DASHBOARD_V1 */
+
+/* VACINA_PERMISSAO_FINANCEIRO_PAGAMENTO_LOTE_V1 */
+
+function usuarioTemPermissaoFinanceiroPagamentoLote() {
+    try {
+        if (typeof window._usuarioAtualPermissoes === 'function') {
+            var permissoes = window._usuarioAtualPermissoes();
+
+            return Array.isArray(permissoes) &&
+                permissoes.indexOf('Financeiro') !== -1;
+        }
+
+        /*
+         * O bot.js define _usuarioAtualPermissoes() como fonte oficial
+         * das permissões do usuário logado.
+         *
+         * Se essa função ainda não estiver disponível, NEGAMOS o acesso
+         * por segurança, em vez de liberar indevidamente.
+         */
+        return false;
+
+    } catch (e) {
+        console.warn(
+            '[Pagamento em lote] Falha ao verificar permissão Financeiro:',
+            e
+        );
+
+        return false;
+    }
+}
+
+function abrirPagamentoLoteDoDashboard(cliente, idCliente) {
+    if (!usuarioTemPermissaoFinanceiroPagamentoLote()) {
+        console.warn(
+            '[Pagamento em lote] Usuário sem permissão Financeiro.'
+        );
+        return false;
+    }
+
+    var contexto = {
+        id_cliente: String(
+            idCliente == null ? '' : idCliente
+        ).trim(),
+
+        cliente: String(
+            cliente == null ? '' : cliente
+        ).trim()
+    };
+
+    window.AppRDO = window.AppRDO || {};
+
+    /*
+     * Guarda o cliente antes da navegação.
+     * O fin.js consumirá este alvo depois da inicialização.
+     */
+    window.AppRDO._clienteAlvoPagamentoLote =
+        contexto;
+
+    /*
+     * Fecha o modal de notificações do Dashboard
+     * antes de trocar para o Financeiro.
+     */
+    var modalEl =
+        document.getElementById(
+            'modalNotifPagamentoDashboard'
+        );
+
+    if (
+        modalEl &&
+        modalEl.classList.contains('show') &&
+        typeof bootstrap !== 'undefined' &&
+        bootstrap.Modal
+    ) {
+        var inst =
+            bootstrap.Modal.getInstance(modalEl);
+
+        if (inst) {
+            var aoEsconder = function () {
+                modalEl.removeEventListener(
+                    'hidden.bs.modal',
+                    aoEsconder
+                );
+
+                navegarParaPagamentoLoteFinanceiro(
+                    contexto
+                );
+            };
+
+            modalEl.addEventListener(
+                'hidden.bs.modal',
+                aoEsconder
+            );
+
+            inst.hide();
+
+            return true;
+        }
+    }
+
+    navegarParaPagamentoLoteFinanceiro(
+        contexto
+    );
+
+    return true;
+}
+
 function _agruparPedidosPendentesPorCliente(pedidosPendentes) {
     var grupos = {};
     pedidosPendentes.forEach(function (p) {
@@ -1546,10 +1653,67 @@ function _calcularPedidosAguardandoPagamento(pedidos, clientes) {
     var mapaClientes = _obterMapaClientesPorId(clientes);
 
     return pedidos.filter(function (p) {
+        if (!p) return false;
+
+        /*
+         * RDO_DASHBOARD_PAGAMENTO_ELEGIBILIDADE_V1
+         *
+         * Um pedido somente aparece em
+         * "Pedidos aguardando pagamento" quando:
+         *
+         * 1. O status operacional estiver CONCLUIDO ou FINALIZADO;
+         * 2. Existir motoboy/colaborador atribuído;
+         * 3. A situação financeira estiver PENDENTE.
+         *
+         * IMPORTANTE:
+         * "situacao" pode representar situação financeira.
+         * Portanto NÃO usamos "situacao" como status operacional.
+         */
+
         if (_statusPedidoCancelado(p.status)) return false;
+
+        var statusOperacional = String(
+            p.status ||
+            p.status_pedido ||
+            p.statusPedido ||
+            p.situacao_pedido ||
+            ''
+        ).trim().toUpperCase();
+
+        statusOperacional = statusOperacional
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        var pedidoConcluido =
+            statusOperacional === 'CONCLUIDO' ||
+            statusOperacional === 'FINALIZADO';
+
+        if (!pedidoConcluido) return false;
+
+        var motoboy = String(
+            p.motoboy ||
+            p.colaborador ||
+            p.nome_colaborador ||
+            p.colaborador_nome ||
+            p.colaborador_id ||
+            ''
+        ).trim();
+
+        if (
+            !motoboy ||
+            motoboy === '-' ||
+            motoboy.toLowerCase() === 'null' ||
+            motoboy.toLowerCase() === 'undefined'
+        ) {
+            return false;
+        }
+
         if (!_situacaoFinanceiraPendente(p)) return false;
+
         var chave = String(p.id_cliente || '').trim();
+
         if (!chave || !mapaClientes[chave]) return true;
+
         return true;
     });
 }
@@ -1708,9 +1872,59 @@ function _renderizarItemNotifPagamento(itemDados) {
         abrirRelatorioDaNotificacao(idPedido, idClientePedido);
     });
 
-    acoes.appendChild(badge);
-    acoes.appendChild(btnVer);
-    acoes.appendChild(btnRelatorio);
+    if (usuarioTemPermissaoFinanceiroPagamentoLote()) {
+    /* VACINA_BOTAO_PAGAMENTO_LOTE_MODAL_V1 */
+        var btnPagamentoLote = document.createElement('button');
+        btnPagamentoLote.type = 'button';
+        btnPagamentoLote.className = 'modal-notif-pagamento-item-btn-lote';
+        btnPagamentoLote.title = 'Abrir pagamento em lote deste cliente';
+        btnPagamentoLote.innerHTML = '<i class="bi bi-wallet2"></i><span class="btn-notif-texto"> Pagamento em lote</span>';
+        btnPagamentoLote.style.cssText = 'border:none;background:rgba(25,135,84,.11);color:#198754;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+        btnPagamentoLote.addEventListener('click', function () {
+            btnPagamentoLote.blur();
+    
+            if (!idClientePedido) {
+                console.warn('[Pagamento em lote] Cliente sem id_cliente:', itemDados);
+                return;
+            }
+    
+            var abrir = function () {
+                if (typeof abrirPagamentoLoteDoDashboard === 'function') {
+                    abrirPagamentoLoteDoDashboard(itemDados.nome, idClientePedido);
+                } else {
+                    console.error('[Pagamento em lote] abrirPagamentoLoteDoDashboard não está disponível.');
+                }
+            };
+    
+            var modalEl = document.getElementById('modalNotifPagamentoDashboard');
+    
+            if (
+                modalEl &&
+                modalEl.classList.contains('show') &&
+                typeof bootstrap !== 'undefined'
+            ) {
+                var instancia = bootstrap.Modal.getInstance(modalEl);
+    
+                if (instancia) {
+                    var aoEsconder = function () {
+                        modalEl.removeEventListener('hidden.bs.modal', aoEsconder);
+                        abrir();
+                    };
+    
+                    modalEl.addEventListener('hidden.bs.modal', aoEsconder);
+                    instancia.hide();
+                    return;
+                }
+            }
+    
+            abrir();
+        });
+    
+        acoes.appendChild(badge);
+        acoes.appendChild(btnVer);
+        acoes.appendChild(btnRelatorio);
+        acoes.appendChild(btnPagamentoLote);
+}
 
     item.appendChild(info);
     item.appendChild(acoes);
@@ -1895,6 +2109,101 @@ function aguardarFinanceiroEDispararEvento(idAlvo, tentativas) {
         console.warn('[navegarParaFinanceiroPedido] fin.js não inicializou a tempo.');
     }
 }
+
+
+function navegarParaPagamentoLoteFinanceiro(contexto) {
+    window.AppRDO = window.AppRDO || {};
+
+    window.AppRDO._clienteAlvoPagamentoLote =
+        contexto;
+
+    /*
+     * Invalida a referência anterior do Financeiro.
+     * O polling aguardará a nova instância carregada.
+     */
+    window.FinanceiroModule = null;
+
+    if (typeof window.loadPage !== 'function') {
+        console.error(
+            '[Pagamento em lote] window.loadPage não está disponível.'
+        );
+        return;
+    }
+
+    window.loadPage(
+        'fin',
+        'Financeiro',
+        'Gestão financeira'
+    );
+
+    aguardarFinanceiroParaPagamentoLote(
+        contexto
+    );
+}
+
+function aguardarFinanceiroParaPagamentoLote(
+    contexto,
+    tentativas
+) {
+    tentativas = tentativas || 0;
+
+    var alvo =
+        window.AppRDO &&
+        window.AppRDO._clienteAlvoPagamentoLote;
+
+    if (!alvo) {
+        return;
+    }
+
+    /*
+     * Só dispara depois que o Financeiro e o módulo
+     * de pagamento em lote estiverem disponíveis.
+     */
+    if (
+        window.FinanceiroModule &&
+        window.RDO_PAGAMENTO_LOTE &&
+        typeof window.RDO_PAGAMENTO_LOTE.abrir === 'function'
+    ) {
+        window.dispatchEvent(
+            new CustomEvent(
+                'abrirPagamentoLoteFinanceiro',
+                {
+                    detail: {
+                        origem:
+                            'dashboard-pagamento-lote',
+
+                        cliente:
+                            alvo.cliente || '',
+
+                        id_cliente:
+                            alvo.id_cliente || ''
+                    }
+                }
+            )
+        );
+
+        return;
+    }
+
+    if (tentativas < 60) {
+        setTimeout(
+            function () {
+                aguardarFinanceiroParaPagamentoLote(
+                    contexto,
+                    tentativas + 1
+                );
+            },
+            100
+        );
+
+        return;
+    }
+
+    console.error(
+        '[Pagamento em lote] Financeiro não inicializou a tempo.'
+    );
+}
+
 
 function abrirRelatorioDaNotificacao(pedidoId, idCliente) {
     window.AppRDO = window.AppRDO || {};
@@ -2145,3 +2454,23 @@ window.addEventListener('masterStatusChanged', function () {
     const alvo = document.getElementById(contexto === 'RDO' ? 'btn-toggle-rdo-valores' : 'btn-toggle-caixa-valores');
     if (alvo) alvo.click();
   }
+
+
+    // [Correção Definitiva Race Condition v12] Garante objeto global e mapeamento seguro de data_pedido no 1º clique
+    window.RDO_SAFE_LOTE_OPEN = function(pedidoData) {
+        const item = pedidoData || {};
+        const dataReal = item.data_pedido || item.dataPedido || item.data || '';
+        if (window.RDO_PAGAMENTO_LOTE && typeof window.RDO_PAGAMENTO_LOTE.abrir === 'function') {
+            window.RDO_PAGAMENTO_LOTE.abrir({ ...item, data_pedido: dataReal });
+        } else {
+            console.warn('[RDO] Módulo de Pagamento em Lote carregando sob demanda, tentando novamente...');
+            setTimeout(() => {
+                if (window.RDO_PAGAMENTO_LOTE && typeof window.RDO_PAGAMENTO_LOTE.abrir === 'function') {
+                    window.RDO_PAGAMENTO_LOTE.abrir({ ...item, data_pedido: dataReal });
+                }
+            }, 300);
+        }
+    };
+    
+
+

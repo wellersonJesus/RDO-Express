@@ -359,7 +359,7 @@ window.loadPage = function (page, title, subtitle) {
             if (MODULE_INITS[page]) MODULE_INITS[page]();
         })
         .catch(function (err) {
-            console.error('[carregarModaisDaPagina] Falha ao buscar modal:', url, err);
+            console.error('[carregarModaisDaPagina] Falha ao carregar a página:', page, err);
         });
 };
 

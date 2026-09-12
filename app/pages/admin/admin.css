@@ -664,3 +664,19 @@
         width: 100% !important;
     }
 }
+
+
+/* Administração — texto do mesmo badge de pagamento */
+.admin-badge-pagamento .admin-pagamento-mobile {
+    display: none;
+}
+
+@media (max-width: 576px) {
+    .admin-badge-pagamento .admin-pagamento-desktop {
+        display: none;
+    }
+
+    .admin-badge-pagamento .admin-pagamento-mobile {
+        display: inline;
+    }
+}
