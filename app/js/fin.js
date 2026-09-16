@@ -3048,8 +3048,8 @@ if (!window._finListenerPedidoAtualizadoBind) {
 
       if (els.pagPrevTodos) els.pagPrevTodos.addEventListener('click', function () { try { if (state.todos.pagina > 1) { state.todos.pagina--; renderTodos(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
       if (els.pagNextTodos) els.pagNextTodos.addEventListener('click', function () { try { if (state.todos.pagina < state.todos.totalPag) { state.todos.pagina++; renderTodos(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
-      if (els.pagPrevCaixa) els.pagPrevCaixa.addEventListener('click', function () { try { if (state.caixa.pagina > 1) { state.caixa.pagina--; renderCaixaListaDiaria(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
-      if (els.pagNextCaixa) els.pagNextCaixa.addEventListener('click', function () { try { if (state.caixa.pagina < state.caixa.totalPag) { state.caixa.pagina++; renderCaixaListaDiaria(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
+      if (els.pagPrevCaixa) els.pagPrevCaixa.addEventListener('click', function () { try { if (state.caixa.pagina > 1) { state.caixa.pagina--; renderCaixa(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
+      if (els.pagNextCaixa) els.pagNextCaixa.addEventListener('click', function () { try { if (state.caixa.pagina < state.caixa.totalPag) { state.caixa.pagina++; renderCaixa(); } } catch (err) { console.error(err); finToast('Erro de paginação: ' + err.message, 'danger'); } });
 
       function obterPeriodoCaixa() {
         var inicio = els.caixaDataInicio ? els.caixaDataInicio.value : '';
@@ -4535,16 +4535,19 @@ if (!window._finListenerPedidoAtualizadoBind) {
     if (!wrapper || !lista) return;
 
     var periodos = carregarPeriodosCaixaStorage();
+
     if (!periodos.length) {
       wrapper.style.display = 'none';
       lista.innerHTML = '';
       return;
     }
+
     wrapper.style.display = 'block';
 
     lista.innerHTML = periodos.map(function (p, index) {
-      var totais = calcularTotaisRegistros(p.registros);
-      var totalRegs = (p.registros || []).length;
+      var registrosPeriodo = Array.isArray(p.registros) ? p.registros : [];
+      var totais = calcularTotaisRegistros(registrosPeriodo);
+      var totalRegs = registrosPeriodo.length;
       var criadoLabel = p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : '-';
       var saldoColor = totais.saldo >= 0 ? '#198754' : '#dc3545';
       var isUltimo = index === periodos.length - 1;
@@ -4552,30 +4555,130 @@ if (!window._finListenerPedidoAtualizadoBind) {
       var cardBg = isUltimo ? 'rgba(220, 53, 69, 0.08)' : 'transparent';
       var cardBorder = isUltimo ? '1px solid #dc3545' : '1px solid transparent';
       var chkBg = isUltimo ? '#dc3545' : '#ffffff';
-      var chkBorder = '#dc3545';
 
-      return '<div class="extrato-item-card" data-periodo-id="' + escapeHtml(p.id) + '" style="cursor:pointer;display:flex;align-items:center;justify-content:between;background-color:' + cardBg + ';border:' + cardBorder + ';border-radius:6px;padding:6px;transition:background-color 0.2s, border-color 0.2s;">' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<input type="checkbox" class="form-check-input periodo-caixa-checkbox" data-id="' + escapeHtml(p.id) + '" ' + (isUltimo ? 'checked' : '') + ' style="cursor:pointer;background-color:' + chkBg + ';border-color:' + chkBorder + ';accent-color:#dc3545;width:1.15rem;height:1.15rem;">' +
-        '<div class="extrato-item-left" style="display:flex;align-items:center;gap:10px;">' +
-        '<div class="extrato-item-icon" style="color:#8B5E3C;background:rgba(139,94,60,.12);"><i class="bi bi-wallet2"></i></div>' +
-        '<div>' +
-        '<div class="extrato-item-titulo">' + escapeHtml(p.periodoLabel || '-') + '</div>' +
-        '<div class="extrato-item-sub">' + totalRegs + ' lançamento' + (totalRegs !== 1 ? 's' : '') + '</div>' +
-        '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div>' +
-        '</div></div></div>' +
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
-        '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' + formatarMoeda(totais.saldo) + '</span>' +
-        '<div style="display:flex;gap:6px;">' +
-        '<button class="btn-icone-retangular btn-visualizar-icone periodo-caixa-btn-ver" data-id="' + escapeHtml(p.id) + '" title="Visualizar carteira" style="pointer-events:auto;"><i class="bi bi-eye"></i></button>' +
-        '<button class="btn-icone-retangular btn-excluir-icone periodo-caixa-btn-excluir" data-id="' + escapeHtml(p.id) + '" title="Excluir carteira" style="pointer-events:auto;"><i class="bi bi-trash"></i></button>' +
+      var agrupado = agruparPorDia(registrosPeriodo);
+
+      var dias = Object.keys(agrupado).sort(function (a, b) {
+        if (a === 'sem-data') return 1;
+        if (b === 'sem-data') return -1;
+        return a < b ? 1 : -1;
+      });
+
+      var diasHtml = dias.map(function (dia) {
+        var registrosDia = agrupado[dia] || [];
+        var totaisDia = calcularTotaisRegistros(registrosDia);
+        var labelData = dia !== 'sem-data' ? formatDateBR(dia) : 'Sem data';
+        var labelSemana = dia !== 'sem-data' ? getDiaSemanaCompleto(dia) : '';
+        var saldoDiaColor = totaisDia.saldo >= 0 ? '#198754' : '#dc3545';
+
+        return '' +
+  '<div class="caixa-periodo-dia" ' +
+  'data-periodo-id="' + escapeHtml(p.id) + '" ' +
+  'data-dia="' + escapeHtml(dia) + '" ' +
+  'style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;max-width:100%;box-sizing:border-box;padding:8px 12px;border-top:1px solid rgba(0,0,0,.06);background:#fff;">' +
+  '<div style="display:flex;align-items:center;justify-content:flex-start;gap:8px;min-width:0;flex:1 1 auto;overflow:hidden;text-align:left;">' +
+  '<div style="width:32px;height:32px;border-radius:9px;color:#198754;background:rgba(25,135,84,.10);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">' +
+  '<i class="bi bi-calendar-day"></i>' +
+  '</div>' +
+  '<div style="min-width:0;overflow:hidden;">' +
+  '<div class="extrato-item-titulo" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+  escapeHtml(labelData) +
+  '</div>' +
+  '<div class="extrato-item-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+  escapeHtml(labelSemana) + ' · ' + registrosDia.length + ' lançamento' + (registrosDia.length !== 1 ? 's' : '') +
+  '</div>' +
+  '</div>' +
+  '</div>' +
+  '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;margin-left:auto;">' +
+  '<span style="font-size:.72rem;font-weight:700;color:' + saldoDiaColor + ';white-space:nowrap;">' +
+  formatarMoeda(totaisDia.saldo) +
+  '</span>' +
+  '<button type="button" ' +
+  'class="btn-icone-retangular btn-visualizar-icone btn-visualizar-dia-carteira" ' +
+  'data-periodo-id="' + escapeHtml(p.id) + '" ' +
+  'data-dia="' + escapeHtml(dia) + '" ' +
+  'title="Visualizar dia">' +
+  '<i class="bi bi-eye"></i>' +
+  '</button>' +
+  '</div>' +
+  '</div>';
+      }).join('');
+
+      return '' +
+
+        '<div class="extrato-item-card caixa-periodo-card" ' +
+        'data-periodo-id="' + escapeHtml(p.id) + '" ' +
+        'style="cursor:pointer;display:block;background-color:' + cardBg + ';border:' + cardBorder + ';border-radius:8px;padding:8px;margin-bottom:7px;transition:background-color .2s,border-color .2s;">' +
+
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+
+        '<div style="display:flex;align-items:center;gap:8px;min-width:0;">' +
+
+        '<input type="checkbox" ' +
+        'class="form-check-input periodo-caixa-checkbox" ' +
+        'data-id="' + escapeHtml(p.id) + '" ' +
+        (isUltimo ? 'checked' : '') +
+        ' style="cursor:pointer;background-color:' + chkBg + ';border-color:#dc3545;accent-color:#dc3545;width:1.15rem;height:1.15rem;flex:0 0 auto;">' +
+
+        '<div style="width:32px;height:32px;border-radius:9px;color:#8B5E3C;background:rgba(139,94,60,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">' +
+        '<i class="bi bi-wallet2"></i>' +
         '</div>' +
-        '</div></div>';
+
+        '<div style="min-width:0;">' +
+        '<div class="extrato-item-titulo">' +
+        escapeHtml(p.periodoLabel || '-') +
+        '</div>' +
+
+        '<div class="extrato-item-sub">' +
+        totalRegs + ' lançamento' + (totalRegs !== 1 ? 's' : '') +
+        ' · ' + dias.length + ' dia' + (dias.length !== 1 ? 's' : '') +
+        '</div>' +
+
+        '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' +
+        escapeHtml(criadoLabel) +
+        '</div>' +
+
+        '</div>' +
+        '</div>' +
+
+        '<div style="display:flex;align-items:center;gap:6px;flex:0 0 auto;">' +
+
+        '<span style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">' +
+        formatarMoeda(totais.saldo) +
+        '</span>' +
+
+        '<span class="caixa-periodo-chevron" style="font-size:.8rem;color:#777;transition:transform .2s;">' +
+        '<i class="bi bi-chevron-down"></i>' +
+        '</span>' +
+
+        '<button type="button" ' +
+        'class="btn-icone-retangular btn-visualizar-icone periodo-caixa-btn-ver" ' +
+        'data-id="' + escapeHtml(p.id) + '" ' +
+        'title="Visualizar carteira">' +
+        '<i class="bi bi-eye"></i>' +
+        '</button>' +
+
+        '<button type="button" ' +
+        'class="btn-icone-retangular btn-excluir-icone periodo-caixa-btn-excluir" ' +
+        'data-id="' + escapeHtml(p.id) + '" ' +
+        'title="Excluir carteira">' +
+        '<i class="bi bi-trash"></i>' +
+        '</button>' +
+
+        '</div>' +
+        '</div>' +
+
+        '<div class="caixa-periodo-dias" style="display:none;margin-top:7px;padding:2px 0 0 0;width:100%;max-width:100%;box-sizing:border-box;background:#fff;overflow:hidden;">' +
+        (diasHtml || '<div class="text-muted" style="font-size:.72rem;padding:8px;">Nenhum lançamento neste período.</div>') +
+        '</div>' +
+
+        '</div>';
     }).join('');
 
     function atualizarVisualSelecao() {
-      lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
+      lista.querySelectorAll('.caixa-periodo-card').forEach(function (card) {
         var chk = card.querySelector('.periodo-caixa-checkbox');
+
         if (chk && chk.checked) {
           card.style.backgroundColor = 'rgba(220, 53, 69, 0.08)';
           card.style.border = '1px solid #dc3545';
@@ -4583,94 +4686,210 @@ if (!window._finListenerPedidoAtualizadoBind) {
         } else {
           card.style.backgroundColor = 'transparent';
           card.style.border = '1px solid transparent';
+
           if (chk) chk.style.backgroundColor = '#ffffff';
         }
       });
     }
 
+    /*
+     * CHECKBOX DA CARTEIRA
+     */
     lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (chk) {
       chk.addEventListener('change', function (e) {
         e.stopPropagation();
+
         if (this.checked) {
           lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) {
             if (c !== chk) c.checked = false;
           });
-          atualizarVisualSelecao();
+
           var p = buscarPeriodoCaixaPorId(this.getAttribute('data-id'));
+
           if (p) {
-            if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
-            if (typeof renderCaixa === 'function') renderCaixa();
+            state.caixa.periodoAtivoId = p.id;
+            state.caixa.listaFiltradaAtual = Array.isArray(p.registros) ? p.registros.slice() : [];
+
+            if (typeof atualizarCardsCaixa === 'function') {
+              atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
+            }
+
+            if (typeof renderCaixa === 'function') {
+              renderCaixa();
+            }
           }
-        } else {
-          atualizarVisualSelecao();
         }
+
+        atualizarVisualSelecao();
       });
     });
 
-    lista.querySelectorAll('.periodo-caixa-btn-ver').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        var idAtual = this.getAttribute('data-id');
-        var chk = lista.querySelector('.periodo-caixa-checkbox[data-id="' + idAtual + '"]');
-        if (chk) {
-          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) { c.checked = false; });
+    /*
+     * CLIQUE NO BLOCO DA CARTEIRA = ABRE/FECHA OS DIAS
+     */
+    lista.querySelectorAll('.caixa-periodo-card').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (
+          e.target.closest('button') ||
+          e.target.closest('input[type="checkbox"]') ||
+          e.target.closest('.caixa-periodo-dia')
+        ) {
+          return;
+        }
+
+        var dias = card.querySelector('.caixa-periodo-dias');
+        var chevron = card.querySelector('.caixa-periodo-chevron');
+
+        if (!dias) return;
+
+        var aberto = dias.style.display !== 'none';
+
+        dias.style.display = aberto ? 'none' : 'block';
+
+        if (chevron) {
+          chevron.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        var id = card.getAttribute('data-periodo-id');
+        var chk = card.querySelector('.periodo-caixa-checkbox');
+
+        if (chk && !chk.checked) {
+          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) {
+            c.checked = false;
+          });
+
           chk.checked = true;
           atualizarVisualSelecao();
-        }
-        var chkAtivo = lista.querySelector('.periodo-caixa-checkbox:checked');
-        var idParaExibir = chkAtivo ? chkAtivo.getAttribute('data-id') : idAtual;
-        var p = buscarPeriodoCaixaPorId(idParaExibir);
-        if (p) {
-          if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
-          if (typeof renderCaixa === 'function') renderCaixa();
-          abrirModalVisualizarPeriodoCaixa(p);
+
+          var p = buscarPeriodoCaixaPorId(id);
+
+          if (p) {
+            state.caixa.periodoAtivoId = p.id;
+            state.caixa.listaFiltradaAtual = Array.isArray(p.registros) ? p.registros.slice() : [];
+
+            if (typeof atualizarCardsCaixa === 'function') {
+              atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
+            }
+          }
         }
       });
     });
 
+    /*
+     * VISUALIZAR UM DIA ESPECÍFICO DA CARTEIRA
+     */
+    lista.querySelectorAll('.btn-visualizar-dia-carteira').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var periodoId = this.getAttribute('data-periodo-id');
+        var dia = this.getAttribute('data-dia');
+        var periodo = buscarPeriodoCaixaPorId(periodoId);
+
+        if (!periodo) {
+          finToast('Carteira não encontrada.', 'warning');
+          return;
+        }
+
+        var registrosPeriodo = Array.isArray(periodo.registros) ? periodo.registros : [];
+
+        var registrosDia = registrosPeriodo.filter(function (r) {
+          return r && r.dataISO === dia;
+        });
+
+        if (!registrosDia.length) {
+          finToast('Nenhum lançamento encontrado para este dia.', 'warning');
+          return;
+        }
+
+        /*
+         * Mantém a carteira como contexto ativo.
+         * O modal recebe EXATAMENTE os registros do dia.
+         */
+        state.caixa.periodoAtivoId = periodo.id;
+        state.caixa.listaFiltradaAtual = registrosPeriodo.slice();
+
+        abrirModalDetalheDia(dia, registrosDia);
+      });
+    });
+
+    /*
+     * VISUALIZAR A CARTEIRA COMPLETA
+     * Mantém o botão de olho existente.
+     */
+    lista.querySelectorAll('.periodo-caixa-btn-ver').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var id = this.getAttribute('data-id');
+        var periodo = buscarPeriodoCaixaPorId(id);
+
+        if (!periodo) {
+          finToast('Carteira não encontrada.', 'warning');
+          return;
+        }
+
+        lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) {
+          c.checked = false;
+        });
+
+        var chk = lista.querySelector('.periodo-caixa-checkbox[data-id="' + id + '"]');
+
+        if (chk) chk.checked = true;
+
+        atualizarVisualSelecao();
+
+        state.caixa.periodoAtivoId = periodo.id;
+        state.caixa.listaFiltradaAtual = Array.isArray(periodo.registros) ? periodo.registros.slice() : [];
+
+        if (typeof atualizarCardsCaixa === 'function') {
+          atualizarCardsCaixa(calcularTotaisRegistros(periodo.registros));
+        }
+
+        if (typeof renderCaixa === 'function') {
+          renderCaixa();
+        }
+
+        if (typeof abrirModalVisualizarPeriodoCaixa === 'function') {
+          abrirModalVisualizarPeriodoCaixa(periodo);
+        }
+      });
+    });
+
+    /*
+     * EXCLUIR CARTEIRA
+     */
     lista.querySelectorAll('.periodo-caixa-btn-excluir').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
+
         var id = this.getAttribute('data-id');
-        var p = buscarPeriodoCaixaPorId(id);
-        if (!p) {
+        var periodo = buscarPeriodoCaixaPorId(id);
+
+        if (!periodo) {
           finToast('Carteira não encontrada.', 'warning');
           return;
         }
 
         abrirModalAtencaoExclusaoCarteira(
-          'Sua carteira "' + (p.periodoLabel || '') + '" será excluída. Isso remove apenas este relatório salvo localmente — nenhum dado do seu banco/lista será apagado.',
+          'Sua carteira "' + (periodo.periodoLabel || '') + '" será excluída. Isso remove apenas este relatório salvo localmente — nenhum dado do seu banco/lista será apagado.',
           function () {
             var ok = excluirPeriodoCaixaStorage(id);
+
             if (ok) {
               finToast('Carteira excluída com sucesso!', 'success');
             }
+
             renderPeriodosSalvosCaixa();
           }
         );
       });
     });
 
-    lista.querySelectorAll('.extrato-item-card').forEach(function (card) {
-      card.addEventListener('click', function (e) {
-        if (e.target.closest('.btn-icone-retangular') || e.target.closest('input[type="checkbox"]')) return;
-        var idAtual = this.getAttribute('data-periodo-id');
-        var chk = lista.querySelector('.periodo-caixa-checkbox[data-id="' + idAtual + '"]');
-        if (chk) {
-          lista.querySelectorAll('.periodo-caixa-checkbox').forEach(function (c) { c.checked = false; });
-          chk.checked = true;
-          atualizarVisualSelecao();
-        }
-        var chkAtivo = lista.querySelector('.periodo-caixa-checkbox:checked');
-        var idParaExibir = chkAtivo ? chkAtivo.getAttribute('data-id') : idAtual;
-        var p = buscarPeriodoCaixaPorId(idParaExibir);
-        if (p) {
-          if (typeof atualizarCardsCaixa === 'function') atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
-          if (typeof renderCaixa === 'function') renderCaixa();
-          abrirModalVisualizarPeriodoCaixa(p);
-        }
-      });
-    });
+    atualizarVisualSelecao();
   }
 
   function refinarComportamentoOlhinhoEListaCaixa() {
@@ -5850,7 +6069,7 @@ state.clientesCache = {};
       if (state.caixa.porPagina !== novo) {
         state.caixa.porPagina = novo;
         state.caixa.pagina = 1;
-        renderCaixaListaDiaria();
+        renderCaixa();
       }
     }, 250));
   }
@@ -6443,9 +6662,10 @@ state.clientesCache = {};
   };
 
   function selecionarPrimeiroPeriodoCaixaAutomatico() {
+    if (state.caixa && state.caixa.buscaRealizada) return;
+
     var periodos = state.caixa && state.caixa.periodosSalvos;
     if (Array.isArray(periodos) && periodos.length > 0) {
-
       var primeiro = periodos[0];
       if (primeiro && (!state.caixa.periodoAtivoId || state.caixa.periodoAtivoId !== primeiro.id)) {
         state.caixa.periodoAtivoId = primeiro.id;
@@ -6457,14 +6677,42 @@ state.clientesCache = {};
   function renderCaixa() {
     if (!els.caixaListaDiaria) return;
 
+    /*
+     * CARTEIRA SALVA:
+     * Os lançamentos pertencentes à carteira já são renderizados
+     * dentro do dropdown da própria carteira.
+     *
+     * Não duplicar os mesmos registros na lista diária externa.
+     */
+    if (
+      state.caixa &&
+      state.caixa.periodoAtivoId &&
+      typeof buscarPeriodoCaixaPorId === 'function' &&
+      buscarPeriodoCaixaPorId(state.caixa.periodoAtivoId)
+    ) {
+      els.caixaListaDiaria.innerHTML = '';
+      atualizarPaginacaoCaixa(0);
+      return;
+    }
 
     if (typeof selecionarPrimeiroPeriodoCaixaAutomatico === 'function') {
       selecionarPrimeiroPeriodoCaixaAutomatico();
     }
 
-    var lista = state.caixa.listaFiltradaAtual || state.cache.filter(function (r) {
-      return ehReceitaFin(r.tipo) || r.tipo === 'despesa';
-    });
+    var lista;
+
+    if (state.caixa.buscaRealizada && state.caixa.dataInicio && state.caixa.dataFim) {
+      lista = (state.cache || []).filter(function (r) {
+        return r &&
+          r.dataISO >= state.caixa.dataInicio &&
+          r.dataISO <= state.caixa.dataFim &&
+          (ehReceitaFin(r.tipo) || r.tipo === 'despesa');
+      });
+    } else {
+      lista = state.caixa.listaFiltradaAtual || (state.cache || []).filter(function (r) {
+        return ehReceitaFin(r.tipo) || r.tipo === 'despesa';
+      });
+    }
 
     if (!lista.length) {
       els.caixaListaDiaria.innerHTML = '<div class="text-center text-muted py-4">Nenhum registro encontrado.</div>';
