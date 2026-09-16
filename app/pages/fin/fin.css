@@ -3886,3 +3886,30 @@
     }
 
 }
+
+/* VACINA RDO MOBILE — OCULTAR DESCRIÇÃO */
+@media (max-width: 767.98px) {
+    #tabela-fin-todos th:nth-child(2),
+    #tabela-fin-todos td:nth-child(2) {
+        display: none !important;
+    }
+}
+
+/* VACINA RDO MOBILE — CENTRALIZAR COLUNAS */
+@media (max-width: 767.98px) {
+    #tabela-fin-todos {
+        margin-left: 3%;
+        width: 97% !important;
+    }
+
+    #tabela-fin-todos th:nth-child(1),
+    #tabela-fin-todos td:nth-child(1),
+    #tabela-fin-todos th:nth-child(3),
+    #tabela-fin-todos td:nth-child(3),
+    #tabela-fin-todos th:nth-child(4),
+    #tabela-fin-todos td:nth-child(4) {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+}
+
