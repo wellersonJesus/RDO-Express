@@ -53,8 +53,8 @@
         els.btnFiltro = document.getElementById('btn-filtro-admin');
         els.menuFiltro = document.getElementById('dropdown-filtro-menu-admin');
         els.labelFiltro = document.getElementById('label-filtro-admin');
-        els.btnLoopHeader = document.getElementById('btn-loop-admin');
-        els.iconLoopHeader = document.getElementById('icon-loop-admin');
+        els.btnLoopHeader = document.getElementById('btn-sync-admin');
+        els.iconLoopHeader = document.getElementById('sync-icon-admin');
 
         els.modalExcluir = document.getElementById('modal-excluir-admin');
         els.excluirNome = document.getElementById('excluir-admin-nome');
@@ -730,17 +730,44 @@
     function alternarCampoFechamento() {
         var pagamento = String((document.getElementById('c-pagamento') || {}).value || '').toUpperCase();
         var div = document.getElementById('div-dia-fechamento');
-        var mapaFechamento = {
-            'DIÁRIO IMEDIATO': '',
-            'SEMANAL (SEGUNDA - FINAL DO DIA)': '',
-            'QUINZENAL (QUINTA, SEXTA E SEGUNDA)': 'Dia 15 e Dia 30',
-            'MENSAL': 'Dia 30'
-        };
-        var valorCalculado = mapaFechamento.hasOwnProperty(pagamento) ? mapaFechamento[pagamento] : '';
-        var precisaFechamento = pagamento === 'QUINZENAL (QUINTA, SEXTA E SEGUNDA)' || pagamento === 'MENSAL';
+        var campo = document.getElementById('c-dia_fechamento');
+
+        var precisaFechamento =
+            pagamento === 'QUINZENAL (QUINTA, SEXTA E SEGUNDA)' ||
+            pagamento === 'MENSAL';
 
         if (div) div.classList.toggle('d-none', !precisaFechamento);
-        preencherCampo('c-dia_fechamento', valorCalculado);
+
+        if (!campo || !precisaFechamento) {
+            if (campo && !precisaFechamento) campo.value = '';
+            return;
+        }
+
+        var valorAtual = String(campo.value || '').trim();
+
+        if (campo.tagName.toLowerCase() !== 'select') {
+            var select = document.createElement('select');
+
+            select.id = 'c-dia_fechamento';
+            select.name = campo.name || 'dia_fechamento';
+            select.className = campo.className || 'form-select';
+
+            for (var dia = 1; dia <= 31; dia++) {
+                var option = document.createElement('option');
+                option.value = String(dia);
+                option.textContent = String(dia);
+                select.appendChild(option);
+            }
+
+            campo.parentNode.replaceChild(select, campo);
+            campo = select;
+        }
+
+        if (/^\d+$/.test(valorAtual) && Number(valorAtual) >= 1 && Number(valorAtual) <= 31) {
+            campo.value = valorAtual;
+        } else {
+            campo.value = '';
+        }
     }
 
     function registrarEventosForm() {
@@ -837,8 +864,11 @@
     }
 
     function coletarDadosClientes() {
+        var nome = ((document.getElementById('c-username') || {}).value || '').trim();
+
         return {
-            nome: ((document.getElementById('c-username') || {}).value || '').trim(),
+            username: nome,
+            nome: nome,
             responsavel: ((document.getElementById('c-responsavel') || {}).value || '').trim(),
             contato: ((document.getElementById('c-contato') || {}).value || '').trim(),
             pagamento: (document.getElementById('c-pagamento') || {}).value || '',
@@ -849,201 +879,202 @@
     }
 
     function coletarFuncoesSelecionadas() {
-        var checks = document.querySelectorAll('.col-funcao:checked');
-        var funcoes = [];
-        checks.forEach(function (el) {
-            funcoes.push(el.value);
-        });
-        return funcoes;
-    }
-
-    function coletarDadosColaboradores() {
-        var funcoesSelecionadas = coletarFuncoesSelecionadas();
-
-        var dados = {
-            username: ((document.getElementById('col-username') || {}).value || '').trim(),
-            colaborador: funcoesSelecionadas.join(', '),
-            cpf_cnpj: ((document.getElementById('col-cpf_cnpj') || {}).value || '').trim(),
-            contato: ((document.getElementById('col-contato') || {}).value || '').trim(),
-            email: ((document.getElementById('col-email') || {}).value || '').trim(),
-            comissao: ((document.getElementById('col-comissao') || {}).value || '').trim(),
-            imagem: ((document.getElementById('col-imagem') || {}).value || '').trim(),
-            status: (document.getElementById('col-status') || {}).value || 'FALSE'
-        };
-        dados._funcoesArray = funcoesSelecionadas;
-        return dados;
-    }
-
-    function coletarDadosForm() {
-        var dados = (state.origem === 'clientes') ? coletarDadosClientes() : coletarDadosColaboradores();
-        if (state.idEdicao !== null && state.idEdicao !== undefined) {
-            dados.id = String(state.idEdicao);
-        }
-        return dados;
-    }
-
-    function validarForm(dados) {
-        var isCliente = (state.origem === 'clientes');
-        var nomeCampo = isCliente ? dados.nome : dados.username;
-
-        if (!nomeCampo || !nomeCampo.trim()) {
-            mostrarModalAviso('O campo Nome é obrigatório.', 'warning');
-            return false;
-        }
-
-        if (!isCliente && (!dados._funcoesArray || dados._funcoesArray.length === 0)) {
-            mostrarModalAviso('Selecione ao menos uma função para o colaborador.', 'warning');
-            return false;
-        }
-
-        return true;
-    }
-
-    function salvar() {
-        var dados;
-        try {
-            dados = coletarDadosForm();
-        } catch (err) {
-            tratarErro(err, 'Erro ao coletar dados do formulário');
-            return;
-        }
-        if (!validarForm(dados)) return;
-
-        // Remove campo auxiliar de validação antes de enviar
-        delete dados._funcoesArray;
-
-        var acao;
-        try {
-            verificarAPI();
-            acao = state.idEdicao ? getAction('atualizar') : getAction('criar');
-        } catch (err) {
-            tratarErro(err, 'Erro de inicialização');
-            return;
-        }
-
-        console.log('[Admin] Enviando payload para "' + acao + '":', JSON.stringify(dados));
-
-        var btn = document.getElementById('btn-salvar-form-admin');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; }
-
-        window.API.call(acao, dados)
-            .then(function (res) {
-                if (res && res.status === 'error') {
-                    throw new Error(extrairMsgErro(res.message || res.error || res));
-                }
-                var el = document.getElementById('modalFormAdmin');
-                if (el && window.bootstrap) {
-                    var m = window.bootstrap.Modal.getInstance(el);
-                    if (m) m.hide();
-                }
-                state.idEdicao = null;
-                state.modoVisualizar = false;
-                fetchDados();
-            })
-            .catch(function (err) { tratarErro(err, 'Erro ao salvar (' + acao + ')'); })
-            .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; } });
-    }
-
-    function confirmarExclusao(id, nome) {
-        if (!id) { mostrarErro('ID inválido.', 'Erro ao excluir'); return; }
-        if (!els.modalExcluir || !window.bootstrap) {
-            mostrarErro('Modal de exclusão não disponível.', 'Erro ao excluir');
-            return;
-        }
-        if (els.excluirNome) els.excluirNome.textContent = nome || 'este registro';
-        if (els.btnConfirmarExcluir) {
-            els.btnConfirmarExcluir.onclick = function () { executarExclusao(id); };
-        }
-        var modal = window.bootstrap.Modal.getOrCreateInstance(els.modalExcluir);
-        modal.show();
-    }
-
-    function executarExclusao(id) {
-        var acao;
-        try {
-            verificarAPI();
-            acao = getAction('excluir');
-        } catch (err) {
-            tratarErro(err, 'Erro de inicialização');
-            return;
-        }
-
-        var btn = els.btnConfirmarExcluir;
-        var htmlOriginal = btn ? btn.innerHTML : '';
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        }
-
-        window.API.call(acao, { id: id })
-            .then(function (res) {
-                if (res && res.status === 'error') {
-                    throw new Error(extrairMsgErro(res.message || res.error || res));
-                }
-                state.cache = (Array.isArray(state.cache) ? state.cache : []).filter(function (x) {
-                    return String(x.id) !== String(id);
-                });
-                renderTabela();
-                if (els.modalExcluir && window.bootstrap) {
-                    var m = window.bootstrap.Modal.getInstance(els.modalExcluir);
-                    if (m) m.hide();
-                }
-            })
-            .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); })
-            .finally(function () {
-                if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
+            var checks = document.querySelectorAll('.col-funcao:checked');
+            var funcoes = [];
+            checks.forEach(function (el) {
+                funcoes.push(el.value);
             });
-    }
-
-    function configurarInfoHoverAdmin() {
-        var itens = Array.prototype.slice.call(document.querySelectorAll('.admin-status-action-item'));
-        if (!itens.length) return;
-
-        function isMobile() {
-            return window.innerWidth <= 576;
+            return funcoes;
         }
 
-        itens.forEach(function (item) {
-            item.addEventListener('mouseenter', function () {
-                if (isMobile()) item.classList.add('mostrar-info');
-            });
-            item.addEventListener('mouseleave', function () {
-                if (isMobile()) item.classList.remove('mostrar-info');
-            });
-            item.addEventListener('touchstart', function () {
-                if (!isMobile()) return;
-                itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
-                item.classList.add('mostrar-info');
-            }, { passive: true });
-        });
+        function coletarDadosColaboradores() {
+            var funcoesSelecionadas = coletarFuncoesSelecionadas();
 
-        document.addEventListener('touchstart', function (e) {
-            if (!isMobile()) return;
-            if (!e.target.closest('.admin-status-action-item')) {
-                itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+            var dados = {
+                username: ((document.getElementById('col-username') || {}).value || '').trim(),
+                colaborador: funcoesSelecionadas.join(', '),
+                cpf_cnpj: ((document.getElementById('col-cpf_cnpj') || {}).value || '').trim(),
+                contato: ((document.getElementById('col-contato') || {}).value || '').trim(),
+                email: ((document.getElementById('col-email') || {}).value || '').trim(),
+                comissao: ((document.getElementById('col-comissao') || {}).value || '').trim(),
+                imagem: ((document.getElementById('col-imagem') || {}).value || '').trim(),
+                status: (document.getElementById('col-status') || {}).value || 'FALSE'
+            };
+            dados._funcoesArray = funcoesSelecionadas;
+            return dados;
+        }
+
+        function coletarDadosForm() {
+            var dados = (state.origem === 'clientes') ? coletarDadosClientes() : coletarDadosColaboradores();
+            if (state.idEdicao !== null && state.idEdicao !== undefined) {
+                dados.id = String(state.idEdicao);
             }
-        }, { passive: true });
-    }
-
-    function init() {
-        try {
-            bind();
-            registrarEventos();
-            atualizarTabsAtivas();
-            atualizarColunaPagamento();
-            configurarInfoHoverAdmin();
-            fetchDados();
-        } catch (err) {
-            tratarErro(err, 'Erro na inicialização do módulo Admin');
+            return dados;
         }
-    }
 
-    window.addEventListener('error', function (e) {
-        if (e && e.message) console.error('[Admin][window.onerror]', e.message);
-    });
+        function validarForm(dados) {
+            var isCliente = (state.origem === 'clientes');
+            var nomeCampo = isCliente ? dados.nome : dados.username;
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); }); else init();
+            if (!nomeCampo || !nomeCampo.trim()) {
+                mostrarModalAviso('O campo Nome é obrigatório.', 'warning');
+                return false;
+            }
 
-    window.adminModule = { fetchDados: fetchDados, renderTabela: renderTabela, abrirForm: abrirForm };
+            if (!isCliente && (!dados._funcoesArray || dados._funcoesArray.length === 0)) {
+                mostrarModalAviso('Selecione ao menos uma função para o colaborador.', 'warning');
+                return false;
+            }
+
+            return true;
+        }
+
+        function salvar() {
+            var dados;
+            try {
+                dados = coletarDadosForm();
+            } catch (err) {
+                tratarErro(err, 'Erro ao coletar dados do formulário');
+                return;
+            }
+            if (!validarForm(dados)) return;
+
+            // Remove campo auxiliar de validação antes de enviar
+            delete dados._funcoesArray;
+
+            var acao;
+            try {
+                verificarAPI();
+                acao = state.idEdicao ? getAction('atualizar') : getAction('criar');
+            } catch (err) {
+                tratarErro(err, 'Erro de inicialização');
+                return;
+            }
+
+            console.log('[Admin] Enviando payload para "' + acao + '":', JSON.stringify(dados));
+
+            var btn = document.getElementById('btn-salvar-form-admin');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...'; }
+
+            window.API.call(acao, dados)
+                .then(function (res) {
+                    if (res && res.status === 'error') {
+                        throw new Error(extrairMsgErro(res.message || res.error || res));
+                    }
+                    var el = document.getElementById('modalFormAdmin');
+                    if (el && window.bootstrap) {
+                        var m = window.bootstrap.Modal.getInstance(el);
+                        if (m) m.hide();
+                    }
+                    state.idEdicao = null;
+                    state.modoVisualizar = false;
+                    fetchDados();
+                })
+                .catch(function (err) { tratarErro(err, 'Erro ao salvar (' + acao + ')'); })
+                .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; } });
+        }
+
+        function confirmarExclusao(id, nome) {
+            if (!id) { mostrarErro('ID inválido.', 'Erro ao excluir'); return; }
+            if (!els.modalExcluir || !window.bootstrap) {
+                mostrarErro('Modal de exclusão não disponível.', 'Erro ao excluir');
+                return;
+            }
+            if (els.excluirNome) els.excluirNome.textContent = nome || 'este registro';
+            if (els.btnConfirmarExcluir) {
+                els.btnConfirmarExcluir.onclick = function () { executarExclusao(id); };
+            }
+            var modal = window.bootstrap.Modal.getOrCreateInstance(els.modalExcluir);
+            modal.show();
+        }
+
+        function executarExclusao(id) {
+            var acao;
+            try {
+                verificarAPI();
+                acao = getAction('excluir');
+            } catch (err) {
+                tratarErro(err, 'Erro de inicialização');
+                return;
+            }
+
+            var btn = els.btnConfirmarExcluir;
+            var htmlOriginal = btn ? btn.innerHTML : '';
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            }
+
+            window.API.call(acao, { id: id })
+                .then(function (res) {
+                    if (res && res.status === 'error') {
+                        throw new Error(extrairMsgErro(res.message || res.error || res));
+                    }
+                    state.cache = (Array.isArray(state.cache) ? state.cache : []).filter(function (x) {
+                        return String(x.id) !== String(id);
+                    });
+                    renderTabela();
+                    if (els.modalExcluir && window.bootstrap) {
+                        var m = window.bootstrap.Modal.getInstance(els.modalExcluir);
+                        if (m) m.hide();
+                    }
+                })
+                .catch(function (err) { tratarErro(err, 'Erro ao excluir (' + acao + ')'); })
+                .finally(function () {
+                    if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
+                });
+        }
+
+        function configurarInfoHoverAdmin() {
+            var itens = Array.prototype.slice.call(document.querySelectorAll('.admin-status-action-item'));
+            if (!itens.length) return;
+
+            function isMobile() {
+                return window.innerWidth <= 576;
+            }
+
+            itens.forEach(function (item) {
+                item.addEventListener('mouseenter', function () {
+                    if (isMobile()) item.classList.add('mostrar-info');
+                });
+                item.addEventListener('mouseleave', function () {
+                    if (isMobile()) item.classList.remove('mostrar-info');
+                });
+                item.addEventListener('touchstart', function () {
+                    if (!isMobile()) return;
+                    itens.forEach(function (i) { if (i !== item) i.classList.remove('mostrar-info'); });
+                    item.classList.add('mostrar-info');
+                }, { passive: true });
+            });
+
+            document.addEventListener('touchstart', function (e) {
+                if (!isMobile()) return;
+                if (!e.target.closest('.admin-status-action-item')) {
+                    itens.forEach(function (i) { i.classList.remove('mostrar-info'); });
+                }
+            }, { passive: true });
+        }
+
+        function init() {
+            try {
+                bind();
+                registrarEventos();
+                atualizarTabsAtivas();
+                atualizarColunaPagamento();
+                configurarInfoHoverAdmin();
+                fetchDados();
+            } catch (err) {
+                tratarErro(err, 'Erro na inicialização do módulo Admin');
+            }
+        }
+
+        window.addEventListener('error', function (e) {
+            if (e && e.message) console.error('[Admin][window.onerror]', e.message);
+        });
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); }); else init();
+
+        window.adminModule = { fetchDados: fetchDados, renderTabela: renderTabela, abrirForm: abrirForm };
+    
 })();
