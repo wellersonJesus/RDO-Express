@@ -1026,6 +1026,7 @@
 
 /* Responsividade Mobile e Animações Especiais */
 @media (max-width: 767.98px) {
+
     .ped-status-grid {
         display: flex;
         flex-direction: column;
@@ -1034,7 +1035,7 @@
 
     .ped-status-row {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 6px;
         width: 100%;
     }
@@ -1044,10 +1045,12 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        flex: 1 1 0;
         width: 100%;
+        min-width: 0;
         padding: 8px 12px;
         box-sizing: border-box;
-        gap: 12px;
+        gap: 8px;
     }
 
     /* Agrupamento do Título e do Valor em coluna, mantendo-os à esquerda */
@@ -1088,6 +1091,18 @@
         margin-left: auto;
         align-self: center;
     }
+
+
+    .ped-status-action-count,
+    .ped-status-action-pct {
+        display: none !important;
+    }
+
+    .ped-status-action-item.active .ped-status-action-count,
+    .ped-status-action-item.active .ped-status-action-pct {
+        display: inline !important;
+    }
+
 }
 
 @media (min-width: 768px) {
@@ -1197,3 +1212,124 @@
     padding: 4px 12px;
     font-weight: 600;
 }
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .ped-status-row {
+        flex-direction: row;
+    }
+
+    .ped-status-action-item {
+        flex: 1 1 0;
+    }
+}
+
+/* VACINA_PEDIDOS_MOBILE_V4 */
+@media (max-width: 767.98px) {
+    .ped-status-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .ped-status-row {
+        display: contents !important;
+    }
+
+    .ped-status-action-item {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 78px !important;
+        min-height: 78px !important;
+        max-height: 78px !important;
+        padding: 20px 3px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .ped-status-action-item > i,
+    .ped-status-action-item > svg,
+    .ped-status-action-item > span:first-child {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+    }
+
+    .ped-status-action-info {
+        position: absolute !important;
+        left: 50% !important;
+        bottom: calc(100% + 8px) !important;
+        width: max-content !important;
+        max-width: 180px !important;
+        padding: 6px 9px !important;
+        margin: 0 !important;
+        display: none !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 3px !important;
+        background: #fff !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.14) !important;
+        transform: translateX(-50%) !important;
+        z-index: 100 !important;
+        pointer-events: none !important;
+        white-space: nowrap !important;
+    }
+
+    .ped-status-action-label {
+        display: block !important;
+        font-size: 0.68rem !important;
+        line-height: 1.15 !important;
+        font-weight: 600 !important;
+        color: #555 !important;
+        white-space: nowrap !important;
+    }
+
+    .ped-status-action-count {
+        display: block !important;
+        font-size: 0.82rem !important;
+        line-height: 1.15 !important;
+        font-weight: 700 !important;
+        color: #222 !important;
+        white-space: nowrap !important;
+    }
+
+    .ped-status-action-pct {
+        display: block !important;
+        font-size: 0.62rem !important;
+        line-height: 1.15 !important;
+        color: #999 !important;
+        white-space: nowrap !important;
+    }
+
+    .ped-status-action-item:hover .ped-status-action-info,
+    .ped-status-action-item:focus .ped-status-action-info,
+    .ped-status-action-item:focus-visible .ped-status-action-info {
+        display: flex !important;
+    }
+
+    .ped-status-action-item::after {
+        content: "" !important;
+        position: absolute !important;
+        left: 50% !important;
+        bottom: calc(100% + 3px) !important;
+        width: 7px !important;
+        height: 7px !important;
+        background: #fff !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        transform: translateX(-50%) rotate(45deg) !important;
+        display: none !important;
+        z-index: 101 !important;
+    }
+
+    .ped-status-action-item:hover::after,
+    .ped-status-action-item:focus::after,
+    .ped-status-action-item:focus-visible::after {
+        display: block !important;
+    }
+}
+

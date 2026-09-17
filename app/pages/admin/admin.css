@@ -680,3 +680,114 @@
         display: inline;
     }
 }
+
+@media (max-width: 576px) {
+    .admin-status-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .admin-status-row {
+        display: contents !important;
+    }
+
+    .admin-status-placeholder {
+        display: none !important;
+    }
+
+    .admin-status-action-item {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 78px !important;
+        min-height: 78px !important;
+        max-height: 78px !important;
+        padding: 20px 3px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .admin-status-action-icon {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+    }
+
+    .admin-status-action-icon i {
+        margin: 0 !important;
+    }
+
+    .admin-status-action-info {
+        position: absolute !important;
+        left: 50% !important;
+        bottom: calc(100% + 8px) !important;
+        width: max-content !important;
+        max-width: 180px !important;
+        padding: 6px 9px !important;
+        margin: 0 !important;
+        display: none !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 5px !important;
+        background: #fff !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.14) !important;
+        transform: translateX(-50%) !important;
+        z-index: 100 !important;
+        pointer-events: none !important;
+        white-space: nowrap !important;
+    }
+
+    .admin-status-action-item.mostrar-info .admin-status-action-info {
+        display: flex !important;
+    }
+
+    .admin-status-action-label {
+        display: block !important;
+        font-size: 0.68rem !important;
+        line-height: 1.15 !important;
+        font-weight: 600 !important;
+        color: #555 !important;
+        white-space: nowrap !important;
+    }
+
+    .admin-status-action-count {
+        display: block !important;
+        font-size: 0.82rem !important;
+        line-height: 1.15 !important;
+        font-weight: 700 !important;
+        color: #222 !important;
+        white-space: nowrap !important;
+    }
+
+    .admin-status-action-pct {
+        display: block !important;
+        font-size: 0.62rem !important;
+        line-height: 1.15 !important;
+        color: #999 !important;
+        white-space: nowrap !important;
+    }
+
+    .admin-status-action-item::after {
+        content: "" !important;
+        position: absolute !important;
+        left: 50% !important;
+        bottom: calc(100% + 3px) !important;
+        width: 7px !important;
+        height: 7px !important;
+        background: #fff !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        transform: translateX(-50%) rotate(45deg) !important;
+        display: none !important;
+        z-index: 101 !important;
+    }
+
+    .admin-status-action-item.mostrar-info::after {
+        display: block !important;
+    }
+}

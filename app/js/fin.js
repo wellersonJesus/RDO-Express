@@ -4708,14 +4708,9 @@ if (!window._finListenerPedidoAtualizadoBind) {
 
           if (p) {
             state.caixa.periodoAtivoId = p.id;
-            state.caixa.listaFiltradaAtual = Array.isArray(p.registros) ? p.registros.slice() : [];
 
             if (typeof atualizarCardsCaixa === 'function') {
               atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
-            }
-
-            if (typeof renderCaixa === 'function') {
-              renderCaixa();
             }
           }
         }
@@ -4765,7 +4760,6 @@ if (!window._finListenerPedidoAtualizadoBind) {
 
           if (p) {
             state.caixa.periodoAtivoId = p.id;
-            state.caixa.listaFiltradaAtual = Array.isArray(p.registros) ? p.registros.slice() : [];
 
             if (typeof atualizarCardsCaixa === 'function') {
               atualizarCardsCaixa(calcularTotaisRegistros(p.registros));
@@ -4842,14 +4836,9 @@ if (!window._finListenerPedidoAtualizadoBind) {
         atualizarVisualSelecao();
 
         state.caixa.periodoAtivoId = periodo.id;
-        state.caixa.listaFiltradaAtual = Array.isArray(periodo.registros) ? periodo.registros.slice() : [];
 
         if (typeof atualizarCardsCaixa === 'function') {
           atualizarCardsCaixa(calcularTotaisRegistros(periodo.registros));
-        }
-
-        if (typeof renderCaixa === 'function') {
-          renderCaixa();
         }
 
         if (typeof abrirModalVisualizarPeriodoCaixa === 'function') {
