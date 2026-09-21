@@ -832,15 +832,278 @@
     }
 
     function preencherClientes(it) {
-        preencherCampo('c-username', it.nome || it.username);
+        var nomeCliente = it.nome || it.username || '';
+        preencherCampo('c-username', nomeCliente);
         preencherCampo('c-responsavel', it.responsavel);
         preencherCampo('c-contato', it.contato);
         preencherCampo('c-pagamento', it.pagamento);
         preencherCampo('c-dia_fechamento', it.dia_fechamento);
         preencherCampo('c-imagem', it.imagem);
+
+        var campoEndereco = document.getElementById('c-endereco');
+        if (campoEndereco) {
+            campoEndereco.dataset.enderecoSelecionado = String(it.endereco || '').trim();
+            campoEndereco.dataset.enderecoCadastro = String(it.endereco || '').trim();
+        }
+
+
         var st = document.getElementById('c-status');
         if (st) st.value = String(it.status || '').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE';
         alternarCampoFechamento();
+        carregarEnderecoCliente(nomeCliente, it.endereco || '');
+    }
+
+    function carregarEnderecoCliente(nomeCliente, enderecoPreferido) {
+        var campo = document.getElementById('c-endereco');
+        var listaOpcoes = document.getElementById('c-endereco-opcoes');
+        var botaoToggle = document.getElementById('c-endereco-toggle');
+
+        if (!campo || !listaOpcoes) return;
+
+        var nome = String(nomeCliente || '').trim();
+        var chaveCliente = nome.toLowerCase();
+        var preferido = String(enderecoPreferido || campo.dataset.enderecoSelecionado || '').trim();
+
+        campo.value = '';
+        campo.dataset.enderecoSelecionado = '';
+        campo.dataset.lat = '';
+        campo.dataset.lng = '';
+        campo.dataset.geoExistente = 'false';
+        campo.dataset.enderecosCliente = '[]';
+
+        listaOpcoes.innerHTML = '';
+        listaOpcoes.style.display = 'none';
+
+        if (botaoToggle) botaoToggle.setAttribute('aria-expanded', 'false');
+
+        API.call('getenderecosgeo')
+            .then(function (res) {
+                var lista = Array.isArray(res) ? res :
+                    (res && Array.isArray(res.data) ? res.data :
+                    (res && Array.isArray(res.dados) ? res.dados : []));
+
+                var enderecosCliente = [];
+                var unicos = {};
+
+                lista.forEach(function (item) {
+                    var endereco = String(item.endereco_original || '').trim();
+                    if (!endereco) return;
+
+                    var chaveEndereco = endereco.toLowerCase();
+
+                    if (!unicos[chaveEndereco]) {
+                        unicos[chaveEndereco] = {
+                            endereco: endereco,
+                            lat: item.lat || '',
+                            lng: item.lng || '',
+                            usos: parseInt(item.qtd_usos, 10) || 0
+                        };
+
+                        enderecosCliente.push(unicos[chaveEndereco]);
+                    }
+                });
+
+                enderecosCliente.sort(function (a, b) {
+                    return b.usos - a.usos;
+                });
+
+                campo.dataset.enderecosCliente = JSON.stringify(enderecosCliente);
+
+                function renderizarOpcoes(filtro) {
+                    var termo = String(filtro || '').trim().toLowerCase();
+
+                    listaOpcoes.innerHTML = '';
+
+                    var filtrados = enderecosCliente.filter(function (item) {
+                        return !termo ||
+                            item.endereco.toLowerCase().indexOf(termo) !== -1;
+                    });
+
+                    filtrados.forEach(function (item) {
+                        var opcao = document.createElement('button');
+
+                        opcao.type = 'button';
+                        opcao.className = 'list-group-item list-group-item-action';
+                        opcao.textContent = item.endereco;
+                        opcao.dataset.endereco = item.endereco;
+                        opcao.dataset.lat = item.lat || '';
+                        opcao.dataset.lng = item.lng || '';
+                        opcao.dataset.qtdUsos = String(item.usos);
+
+                        opcao.addEventListener('mousedown', function (event) {
+                            event.preventDefault();
+
+                            campo.value = item.endereco;
+                            campo.dataset.enderecoSelecionado = item.endereco;
+                            campo.dataset.lat = item.lat || '';
+                            campo.dataset.lng = item.lng || '';
+                            campo.dataset.geoExistente = 'true';
+
+                            listaOpcoes.style.display = 'none';
+
+                            if (botaoToggle) {
+                                botaoToggle.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+
+                        listaOpcoes.appendChild(opcao);
+                    });
+
+                    if (filtrados.length > 0) {
+                        listaOpcoes.style.display = 'block';
+                    } else {
+                        listaOpcoes.style.display = 'none';
+                    }
+
+                    if (botaoToggle) {
+                        botaoToggle.setAttribute(
+                            'aria-expanded',
+                            listaOpcoes.style.display === 'block' ? 'true' : 'false'
+                        );
+                    }
+                }
+
+                if (preferido) {
+                    var preferidoExistente = enderecosCliente.find(function (item) {
+                        return item.endereco.toLowerCase() === preferido.toLowerCase();
+                    });
+
+                    if (preferidoExistente) {
+                        campo.value = preferidoExistente.endereco;
+                        campo.dataset.enderecoSelecionado = preferidoExistente.endereco;
+                        campo.dataset.lat = preferidoExistente.lat || '';
+                        campo.dataset.lng = preferidoExistente.lng || '';
+                        campo.dataset.geoExistente = 'true';
+                    }
+                }
+
+                if (!campo.value && enderecosCliente.length > 0) {
+                    campo.value = enderecosCliente[0].endereco;
+                    campo.dataset.enderecoSelecionado = enderecosCliente[0].endereco;
+                    campo.dataset.lat = enderecosCliente[0].lat || '';
+                    campo.dataset.lng = enderecosCliente[0].lng || '';
+                    campo.dataset.geoExistente = 'true';
+                }
+
+                if (!campo.dataset.listenerEndereco) {
+                    campo.addEventListener('input', function () {
+                        var valor = String(campo.value || '').trim();
+                        var encontrado = enderecosCliente.find(function (item) {
+                            return item.endereco.toLowerCase() === valor.toLowerCase();
+                        });
+
+                        if (encontrado) {
+                            campo.dataset.enderecoSelecionado = encontrado.endereco;
+                            campo.dataset.lat = encontrado.lat || '';
+                            campo.dataset.lng = encontrado.lng || '';
+                            campo.dataset.geoExistente = 'true';
+                        } else {
+                            campo.dataset.enderecoSelecionado = valor;
+                            campo.dataset.lat = '';
+                            campo.dataset.lng = '';
+                            campo.dataset.geoExistente = 'false';
+                        }
+
+                        renderizarOpcoes(valor);
+                    });
+
+                    campo.addEventListener('focus', function () {
+                        renderizarOpcoes(campo.value);
+                    });
+
+                    campo.dataset.listenerEndereco = 'true';
+                }
+
+                if (botaoToggle && !botaoToggle.dataset.listenerEndereco) {
+                    botaoToggle.addEventListener('click', function () {
+                        var aberto = listaOpcoes.style.display === 'block';
+
+                        if (aberto) {
+                            listaOpcoes.style.display = 'none';
+                            botaoToggle.setAttribute('aria-expanded', 'false');
+                        } else {
+                            renderizarOpcoes('');
+                            campo.focus();
+                        }
+                    });
+
+                    botaoToggle.dataset.listenerEndereco = 'true';
+                }
+
+                if (!document.body.dataset.listenerFecharEndereco) {
+                    document.addEventListener('mousedown', function (event) {
+                        var bloco = campo.closest('.position-relative');
+
+                        if (bloco && !bloco.contains(event.target)) {
+                            listaOpcoes.style.display = 'none';
+
+                            if (botaoToggle) {
+                                botaoToggle.setAttribute('aria-expanded', 'false');
+                            }
+                        }
+                    });
+
+                    document.body.dataset.listenerFecharEndereco = 'true';
+                }
+            })
+            .catch(function (err) {
+                console.error('[Admin] Erro ao carregar enderecos geolocalizados:', err);
+                listaOpcoes.innerHTML = '';
+                listaOpcoes.style.display = 'none';
+                campo.dataset.geoExistente = 'false';
+            });
+    }
+
+    function salvarEnderecoCliente(nomeCliente, endereco) {
+        var nome = String(nomeCliente || '').trim();
+        var campo = document.getElementById('c-endereco');
+
+        var valor = campo
+            ? String(campo.value || '').trim()
+            : String(endereco || '').trim();
+
+        if (!nome || !valor) return Promise.resolve();
+
+        var enderecoExistente = campo &&
+            campo.dataset.geoExistente === 'true' &&
+            String(campo.dataset.enderecoSelecionado || '').trim().toLowerCase() === valor.toLowerCase();
+
+        if (enderecoExistente) {
+            return Promise.resolve({
+                status: 'success',
+                endereco: valor,
+                existente: true
+            });
+        }
+
+        return API.call('geocodificarendereco', {
+            endereco: valor
+        }).then(function (geo) {
+            if (!geo || !geo.encontrado) {
+                throw new Error('Não foi possível localizar o endereço informado.');
+            }
+
+            return API.call('salvarenderecogeo', {
+                endereco_original: valor,
+                lat: geo.lat,
+                lng: geo.lng,
+                cliente_solicitante: nome,
+                origem_resolucao: geo.fonte || 'cadastro_admin'
+            });
+        }).then(function (res) {
+            if (res && res.status === 'error') {
+                throw new Error(extrairMsgErro(res.message || res.error || res));
+            }
+
+            if (campo) {
+                campo.dataset.enderecoSelecionado = valor;
+                campo.dataset.lat = '';
+                campo.dataset.lng = '';
+                campo.dataset.geoExistente = 'true';
+            }
+
+            return res;
+        });
     }
 
     function preencherColaboradores(it) {
@@ -874,7 +1137,8 @@
             pagamento: (document.getElementById('c-pagamento') || {}).value || '',
             dia_fechamento: ((document.getElementById('c-dia_fechamento') || {}).value || '').trim(),
             imagem: ((document.getElementById('c-imagem') || {}).value || '').trim(),
-            status: (document.getElementById('c-status') || {}).value || 'FALSE'
+            status: (document.getElementById('c-status') || {}).value || 'FALSE',
+            endereco: ((document.getElementById('c-endereco') || {}).value || '').trim()
         };
     }
 
@@ -961,14 +1225,18 @@
                     if (res && res.status === 'error') {
                         throw new Error(extrairMsgErro(res.message || res.error || res));
                     }
-                    var el = document.getElementById('modalFormAdmin');
-                    if (el && window.bootstrap) {
-                        var m = window.bootstrap.Modal.getInstance(el);
-                        if (m) m.hide();
-                    }
-                    state.idEdicao = null;
-                    state.modoVisualizar = false;
-                    fetchDados();
+
+                    return salvarEnderecoCliente(dados.username, dados.endereco)
+                        .then(function () {
+                            var el = document.getElementById('modalFormAdmin');
+                            if (el && window.bootstrap) {
+                                var m = window.bootstrap.Modal.getInstance(el);
+                                if (m) m.hide();
+                            }
+                            state.idEdicao = null;
+                            state.modoVisualizar = false;
+                            fetchDados();
+                        });
                 })
                 .catch(function (err) { tratarErro(err, 'Erro ao salvar (' + acao + ')'); })
                 .finally(function () { if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; } });

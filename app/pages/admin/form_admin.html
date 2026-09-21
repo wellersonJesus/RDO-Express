@@ -28,6 +28,18 @@
                             </div>
                         </div>
                         <div class="row g-2 mb-3">
+                            <div class="col-12">
+                                <label class="modal-pedido-field-label">Endereço Principal</label>
+                                <div class="position-relative">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="c-endereco" class="form-control modal-pedido-input" placeholder="Digite ou selecione o endereço principal..." autocomplete="off">
+                                        <button type="button" id="c-endereco-toggle" class="btn btn-outline-secondary" aria-label="Mostrar endereços" aria-expanded="false">▼</button>
+                                    </div>
+                                    <div id="c-endereco-opcoes" class="list-group position-absolute w-100 shadow-sm" style="display:none; z-index:1080; max-height:220px; overflow-y:auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
                             <div class="col-12 col-sm-6">
                                 <label class="modal-pedido-field-label">Contato</label>
                                 <input type="text" id="c-contato" class="form-control form-control-sm modal-pedido-input" placeholder="(00) 00000-0000">

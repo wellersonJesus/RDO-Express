@@ -2296,9 +2296,17 @@ window.carregarDados = function () {
         API.call('getchat'),
         API.call('getpedidos')
     ]).then(function (results) {
-        var listaClientes = Array.isArray(results[0]) ? results[0] : [];
-        var listaMensagens = Array.isArray(results[1]) ? results[1] : [];
-        var listaPedidos = Array.isArray(results[2]) ? results[2] : [];
+        var listaClientes = Array.isArray(results[0])
+            ? results[0]
+            : (results[0] && Array.isArray(results[0].data) ? results[0].data : []);
+
+        var listaMensagens = Array.isArray(results[1])
+            ? results[1]
+            : (results[1] && Array.isArray(results[1].data) ? results[1].data : []);
+
+        var listaPedidos = Array.isArray(results[2])
+            ? results[2]
+            : (results[2] && Array.isArray(results[2].data) ? results[2].data : []);
         var isMasterOn = window.AppRDO.isMasterOn;
 
         window.AppRDO.clientesCache = listaClientes;
@@ -4854,6 +4862,70 @@ window.RotaRapida = (function () {
         return item ? item.endereco_original : '';
     }
 
+    function _enderecoPrincipalAdmin(nomeCliente) {
+        var nome = _normalizar(nomeCliente);
+        if (!nome) return '';
+
+        var clientes = window.AppRDO && Array.isArray(window.AppRDO.clientesCache)
+            ? window.AppRDO.clientesCache
+            : [];
+
+        var cliente = clientes.find(function (item) {
+            var itemNome = _normalizar(item && (
+                item.username ||
+                item.nome ||
+                item.razao_social ||
+                ''
+            ));
+
+            return itemNome === nome;
+        });
+
+        if (!cliente) return '';
+
+        var chaves = Object.keys(cliente);
+
+        var enderecoOriginal = '';
+
+        for (var i = 0; i < chaves.length; i++) {
+            var chave = chaves[i];
+            var chaveNorm = _normalizar(chave);
+
+            if (
+                chaveNorm === 'endereco_original' ||
+                chaveNorm === 'endereco'
+            ) {
+                var valorOriginal = String(cliente[chave] || '').trim();
+
+                if (valorOriginal) {
+                    enderecoOriginal = valorOriginal;
+                    break;
+                }
+            }
+        }
+
+        if (enderecoOriginal) {
+            return enderecoOriginal;
+        }
+
+        for (var j = 0; j < chaves.length; j++) {
+            var chaveNormalizada = chaves[j];
+            var chaveNormFallback = _normalizar(chaveNormalizada);
+
+            if (chaveNormFallback === 'endereco_normalizado') {
+                var valorNormalizado = String(
+                    cliente[chaveNormalizada] || ''
+                ).trim();
+
+                if (valorNormalizado) {
+                    return valorNormalizado;
+                }
+            }
+        }
+
+        return '';
+    }
+
     function _renderizarLista(listaEl, termo, inputEl) {
         var termoNorm = _normalizar(termo);
         var resultados = enderecosCache.filter(function (e) {
@@ -4972,7 +5044,13 @@ window.RotaRapida = (function () {
         }
 
         function _pareceEndereco(linha) {
-            return /\d/.test(linha);
+            var texto = String(linha || '').trim();
+
+            if (!texto) return false;
+
+            if (/\d/.test(texto)) return true;
+
+            return /^(rua|r\.?|avenida|av\.?|alameda|al\.?|travessa|tv\.?|praça|praca|largo|rodovia|rod\.?|estrada|estr\.?|via|quadra|q\.?|setor|boulevard|blvd\.?|beco|viela)\b/i.test(texto);
         }
 
         if (!dados.solicitante) {
@@ -4997,10 +5075,21 @@ window.RotaRapida = (function () {
             dados.rotas = window._extrairRotasParciais(linhasRestantes.join('\n'));
         } else if (linhasRestantes.length > 0) {
             var rotasSequenciais = [];
-            for (var i = 0; i < linhasRestantes.length; i += 2) {
-                var de = linhasRestantes[i] || '';
-                var para = linhasRestantes[i + 1] || '';
-                rotasSequenciais.push({ de: de, para: para, parcial: !para });
+            if (linhasRestantes.length > 0) {
+                rotasSequenciais.push({
+                    de: '',
+                    para: linhasRestantes[0] || '',
+                    parcial: true,
+                    origem: 'endereco_unico'
+                });
+
+                for (var i = 1; i < linhasRestantes.length; i++) {
+                    rotasSequenciais.push({
+                        de: linhasRestantes[i - 1] || '',
+                        para: linhasRestantes[i] || '',
+                        parcial: false
+                    });
+                }
             }
             dados.rotas = rotasSequenciais;
         }
@@ -5050,20 +5139,37 @@ window.RotaRapida = (function () {
         }
 
         var nomeCliente = dados.solicitante || '';
+        var nomeClienteSelecionado =
+            (window.AppRDO && window.AppRDO.clienteSelecionado) || '';
+
+        if (!nomeCliente && nomeClienteSelecionado) {
+            nomeCliente = nomeClienteSelecionado;
+            if (!dados.solicitante) {
+                dados.solicitante = nomeClienteSelecionado;
+                if (elSolic) elSolic.value = nomeClienteSelecionado;
+            }
+        }
+
         var rotas = dados.rotas && dados.rotas.length > 0 ? dados.rotas : [{ de: '', para: '' }];
+        var enderecoPrincipal = _enderecoPrincipalAdmin(nomeCliente);
+
+        if (!enderecoPrincipal && nomeClienteSelecionado) {
+            enderecoPrincipal = _enderecoPrincipalAdmin(nomeClienteSelecionado);
+        }
 
         rotas.forEach(function (rota, idx) {
             var de = rota.de || '';
             var para = rota.para || '';
 
-            // ✅ Regra: o lado que faltar é buscado no banco pelo nome do cliente
-            if (!de && !para) {
-                de = _sugerirDeParaIndice(nomeCliente, idx);
-                para = _sugerirDeParaIndice(nomeCliente, idx + 1);
-            } else if (!de) {
-                de = _sugerirDeParaIndice(nomeCliente, idx);
-            } else if (!para) {
-                para = _sugerirDeParaIndice(nomeCliente, idx);
+            if (idx === 0) {
+                if (!de && enderecoPrincipal) {
+                    de = enderecoPrincipal;
+                }
+            } else {
+                if (!de) {
+                    var rotaAnterior = rotas[idx - 1] || {};
+                    de = rotaAnterior.para || '';
+                }
             }
 
             _criarLinhaRota(de, para);
@@ -5094,6 +5200,10 @@ window.RotaRapida = (function () {
 
         var nomeAtual = (window.AppRDO && window.AppRDO.clienteSelecionado) || '';
 
+        if (typeof _carregarEnderecos === 'function') {
+            await _carregarEnderecos();
+        }
+
         function _setVal(id, valor) {
             var el = document.getElementById(id);
             if (el) el.value = valor;
@@ -5110,7 +5220,7 @@ window.RotaRapida = (function () {
             _setVal('rr-obs', '');
             _limparRotas();
 
-            var deSugerido = _sugerirDeParaIndice(nomeAtual, 0);
+            var deSugerido = _enderecoPrincipalAdmin(nomeAtual);
             _criarLinhaRota(deSugerido, '');
         }
 
@@ -5118,10 +5228,16 @@ window.RotaRapida = (function () {
         if (solicitanteInput) {
             solicitanteInput.addEventListener('blur', function () {
                 var itens = document.querySelectorAll('#rr-rotas-container .rr-rota-item');
+                var enderecoAdmin = _enderecoPrincipalAdmin(solicitanteInput.value);
                 itens.forEach(function (item, idx) {
                     var deInput = item.querySelector('.rr-de-input');
-                    if (deInput && !deInput.value.trim()) {
-                        deInput.value = _sugerirDeParaIndice(solicitanteInput.value, idx);
+                    if (!deInput || deInput.value.trim()) return;
+
+                    if (idx === 0) {
+                        deInput.value = enderecoAdmin || '';
+                    } else {
+                        var anterior = itens[idx - 1].querySelector('.rr-para-input');
+                        deInput.value = anterior ? String(anterior.value || '').trim() : '';
                     }
                 });
             });
@@ -5130,8 +5246,21 @@ window.RotaRapida = (function () {
         var btnAdd = document.getElementById('rr-btn-add-rota');
         if (btnAdd) {
             btnAdd.addEventListener('click', function () {
-                var qtd = document.querySelectorAll('#rr-rotas-container .rr-rota-item').length;
-                var deSugerido = _sugerirDeParaIndice(solicitanteInput ? solicitanteInput.value : '', qtd);
+                var itens = document.querySelectorAll('#rr-rotas-container .rr-rota-item');
+                var qtd = itens.length;
+                var deSugerido = '';
+
+                if (qtd === 0) {
+                    deSugerido = _enderecoPrincipalAdmin(
+                        solicitanteInput ? solicitanteInput.value : ''
+                    );
+                } else {
+                    var ultimoPara = itens[qtd - 1].querySelector('.rr-para-input');
+                    deSugerido = ultimoPara
+                        ? String(ultimoPara.value || '').trim()
+                        : '';
+                }
+
                 _criarLinhaRota(deSugerido, '');
             });
         }
@@ -5188,6 +5317,25 @@ window.RotaRapida = (function () {
         }
 
         var rotas = _coletarRotas();
+
+        if (rotas.length === 1) {
+            var enderecoAdmin = _enderecoPrincipalAdmin(solicitante);
+            var itemUnico = document.querySelector('#rr-rotas-container .rr-rota-item');
+            var deUnico = itemUnico ? itemUnico.querySelector('.rr-de-input') : null;
+            var paraUnico = itemUnico ? itemUnico.querySelector('.rr-para-input') : null;
+
+            if (enderecoAdmin && deUnico && paraUnico) {
+                var deAtual = String(deUnico.value || '').trim();
+                var paraAtual = String(paraUnico.value || '').trim();
+
+                if (!deAtual && paraAtual) {
+                    deUnico.value = enderecoAdmin;
+                }
+            }
+
+            rotas = _coletarRotas();
+        }
+
         if (rotas.length === 0) {
             if (erroBox) {
                 erroBox.textContent = 'Preencha ao menos uma rota completa (De e Para).';
