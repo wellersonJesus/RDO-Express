@@ -3531,42 +3531,63 @@ function _limparComplementoParaGeocoding(endereco) {
 
 function _gerarVariacoesEndereco(enderecoOriginal) {
     var variacoes = [];
-    var limpo = _limparComplementoParaGeocoding(enderecoOriginal);
+    var original = String(enderecoOriginal || '').trim();
+    var limpo = _limparComplementoParaGeocoding(original);
 
-    variacoes.push(limpo);
-    if (limpo !== enderecoOriginal) variacoes.push(enderecoOriginal);
+    function adicionar(valor) {
+        var v = String(valor || '').trim();
+        if (v && variacoes.indexOf(v) === -1) variacoes.push(v);
+    }
 
-    var semNumero = limpo.replace(/,?\s*\d+\s*,/, ',').replace(/,\s*,/g, ',').trim();
-    if (semNumero && semNumero !== limpo) variacoes.push(semNumero);
+    var limpoLower = limpo.toLowerCase();
+    var possuiCidadeOuUf =
+        limpoLower.includes('belo horizonte') ||
+        /(^|[,\s])mg([,\s]|$)/i.test(limpo);
 
-    var partes = limpo.split(',').map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!possuiCidadeOuUf) {
+        adicionar(limpo + ', Belo Horizonte, MG, Brasil');
+    } else if (!limpoLower.includes('brasil')) {
+        adicionar(limpo + ', Brasil');
+    }
+
+    adicionar(limpo);
+
+    if (limpo !== original) adicionar(original);
+
+    var partes = limpo.split(',').map(function (p) {
+        return p.trim();
+    }).filter(Boolean);
+
     if (partes.length > 2) {
-        var semUltimaParte = partes.slice(0, -1).join(', ');
-        if (semUltimaParte && variacoes.indexOf(semUltimaParte) === -1) variacoes.push(semUltimaParte);
+        adicionar(partes.slice(0, -1).join(', '));
     }
+
     if (partes.length > 1) {
-        var soPrimeiraEsegunda = partes.slice(0, 2).join(', ');
-        if (soPrimeiraEsegunda && variacoes.indexOf(soPrimeiraEsegunda) === -1) variacoes.push(soPrimeiraEsegunda);
+        adicionar(partes.slice(0, 2).join(', '));
     }
 
-    var comCidade = limpo.toLowerCase().includes('belo horizonte') || limpo.toLowerCase().includes(' mg')
-        ? null
-        : limpo + ', Belo Horizonte, MG';
-    if (comCidade && variacoes.indexOf(comCidade) === -1) variacoes.push(comCidade);
-
-    return variacoes.filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
+    return variacoes;
 }
 
 function _tentarUmaVariacao(endereco) {
     return _geocodificarExterno(endereco).then(function (resultado) {
-        if (resultado && !resultado.erro) return resultado;
+        if (resultado && !resultado.erro && _coordenadaValidaBH(resultado)) return resultado;
 
         return _tentarPhoton(endereco, 8000).then(function (coordsPhoton) {
-            if (coordsPhoton) return { lat: coordsPhoton.lat, lng: coordsPhoton.lng, erro: null, fonte: 'photon' };
+            if (coordsPhoton && _coordenadaValidaBH(coordsPhoton)) {
+                return { lat: coordsPhoton.lat, lng: coordsPhoton.lng, erro: null, fonte: 'photon' };
+            }
 
             return _tentarNominatim(endereco, 8000).then(function (coordsNomi) {
-                if (coordsNomi) return { lat: coordsNomi.lat, lng: coordsNomi.lng, erro: null, fonte: 'nominatim' };
-                return resultado;
+                if (coordsNomi && _coordenadaValidaBH(coordsNomi)) {
+                    return { lat: coordsNomi.lat, lng: coordsNomi.lng, erro: null, fonte: 'nominatim' };
+                }
+
+                return {
+                    lat: null,
+                    lng: null,
+                    erro: (resultado && resultado.erro) || 'Coordenadas fora da região esperada para Belo Horizonte/MG.'
+                };
             });
         });
     });
@@ -3606,13 +3627,32 @@ function _geocodificarComFallback(enderecoCompleto) {
     return _tentarProxima(0);
 }
 
+function _coordenadaValidaBH(coords) {
+    if (!coords) return false;
+
+    var lat = parseFloat(coords.lat);
+    var lng = parseFloat(coords.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    if (lat < -20.5 || lat > -19.4) return false;
+    if (lng < -45.0 || lng > -43.0) return false;
+
+    return true;
+}
+
 window.buscarCoordenadasEndereco = function (endereco) {
     var busca = String(endereco || '').trim();
     if (!busca) return Promise.resolve(null);
 
     var chaveCache = busca.toLowerCase();
     if (window._cacheGeocodificacao[chaveCache] !== undefined) {
-        return Promise.resolve(window._cacheGeocodificacao[chaveCache]);
+        var cacheExistente = window._cacheGeocodificacao[chaveCache];
+
+        if (cacheExistente && !cacheExistente.erro && !_coordenadaValidaBH(cacheExistente)) {
+            delete window._cacheGeocodificacao[chaveCache];
+        } else {
+            return Promise.resolve(cacheExistente);
+        }
     }
     if (window._promessasGeocodificacaoEmAndamento[chaveCache]) {
         return window._promessasGeocodificacaoEmAndamento[chaveCache];
@@ -3652,6 +3692,10 @@ window.buscarCoordenadasEndereco = function (endereco) {
 
     var promessaReal = _tentarBackendInterno().then(function (resultadoInterno) {
         if (resultadoInterno.resolvidoInterno) {
+            if (!_coordenadaValidaBH(resultadoInterno.coords)) {
+                return _geocodificarComFallback(busca);
+            }
+
             window._cacheGeocodificacao[chaveCache] = resultadoInterno.coords;
             return resultadoInterno.coords;
         }
@@ -3661,6 +3705,17 @@ window.buscarCoordenadasEndereco = function (endereco) {
                 var falha = { lat: null, lng: null, erro: (resultadoExterno && resultadoExterno.erro) || 'Endereço não encontrado.', enderecoOriginal: busca };
                 window._cacheGeocodificacao[chaveCache] = falha;
                 return falha;
+            }
+
+            if (!_coordenadaValidaBH(resultadoExterno)) {
+                var falhaGeografica = {
+                    lat: null,
+                    lng: null,
+                    erro: 'Coordenadas fora da região esperada para Belo Horizonte/MG.',
+                    enderecoOriginal: busca
+                };
+                window._cacheGeocodificacao[chaveCache] = falhaGeografica;
+                return falhaGeografica;
             }
 
             window._cacheGeocodificacao[chaveCache] = resultadoExterno;
@@ -3684,6 +3739,19 @@ window.buscarCoordenadasEndereco = function (endereco) {
 
     var promessa = _comTimeoutDeSeguranca(promessaReal, 35000).then(function (resultado) {
         delete window._promessasGeocodificacaoEmAndamento[chaveCache];
+
+        if (resultado && !resultado.erro && !_coordenadaValidaBH(resultado)) {
+            var falhaGeograficaFinal = {
+                lat: null,
+                lng: null,
+                erro: 'Coordenadas fora da região esperada para Belo Horizonte/MG.',
+                enderecoOriginal: busca
+            };
+
+            window._cacheGeocodificacao[chaveCache] = falhaGeograficaFinal;
+            return falhaGeograficaFinal;
+        }
+
         return resultado;
     });
 
@@ -3696,8 +3764,17 @@ function _fetchGeoComTimeout(url, ms, headers) {
 }
 
 function _tentarPhoton(query, ms) {
+    var consulta = String(query || '').trim();
+    var lower = consulta.toLowerCase();
+
+    if (!lower.includes('belo horizonte') && !/(^|[,\\s])mg([,\\s]|$)/i.test(consulta)) {
+        consulta += ', Belo Horizonte, MG, Brasil';
+    } else if (!lower.includes('brasil')) {
+        consulta += ', Brasil';
+    }
+
     return _fetchGeoComTimeout(
-        'https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=' + encodeURIComponent(query),
+        'https://photon.komoot.io/api/?limit=1&lat=-19.92&lon=-43.94&q=' + encodeURIComponent(consulta),
         ms
     )
         .then(function (resp) { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
@@ -3714,8 +3791,17 @@ function _tentarPhoton(query, ms) {
 window._filaNominatim = window._filaNominatim || Promise.resolve();
 
 function _tentarNominatimReal(query, ms) {
+    var consulta = String(query || '').trim();
+    var lower = consulta.toLowerCase();
+
+    if (!lower.includes('belo horizonte') && !/(^|[,\\s])mg([,\\s]|$)/i.test(consulta)) {
+        consulta += ', Belo Horizonte, MG, Brasil';
+    } else if (!lower.includes('brasil')) {
+        consulta += ', Brasil';
+    }
+
     return _fetchGeoComTimeout(
-        'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(query),
+        'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(consulta),
         ms,
         { 'Accept-Language': 'pt-BR' }
     )
@@ -4646,8 +4732,8 @@ window.processarRotasEAbrirMapa = function (dadosBase, rotasExtraidas) {
                                 return;
                             }
 
-                            var kmArredondado = Math.round(kmTotal);
-                            var valorCalculado = kmArredondado * 3.00;
+                            var kmReal = Number(kmTotal.toFixed(2));
+                            var valorCalculado = Number((kmReal * 3.00).toFixed(2));
                             var destinoFinal = (rotasExtraidas && rotasExtraidas.length > 0) ? rotasExtraidas[rotasExtraidas.length - 1].para : '';
 
                             window.dadosPedidoAtual = {
@@ -4659,7 +4745,7 @@ window.processarRotasEAbrirMapa = function (dadosBase, rotasExtraidas) {
                                 obs: obs,
                                 dataPedido: dataPedido,
                                 cliente: (window.AppRDO ? window.AppRDO.clienteSelecionado : null) || localStorage.getItem('clienteSelecionadoNome') || 'N/A',
-                                distanciaTotal: kmArredondado,
+                                distanciaTotal: kmReal,
                                 tempoTotal: Math.round(minTotal),
                                 coordenadas: listaCaminhos,
                                 valorEstimado: valorCalculado,
@@ -4669,7 +4755,7 @@ window.processarRotasEAbrirMapa = function (dadosBase, rotasExtraidas) {
 
                             if (loaderEl) loaderEl.style.display = 'none';
 
-                            window._renderizarResumo(kmArredondado, minTotal, valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+                            window._renderizarResumo(kmReal, minTotal, valorCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
                             window.renderizarMapaUnificado();
                             window.AppRDO.isProcessingCheckout = false;
 
