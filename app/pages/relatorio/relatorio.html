@@ -2,20 +2,7 @@
   <div class="rel-content-area">
 
     <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-      <div class="card-body p-3 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-          <i class="bi bi-file-earmark-bar-graph fs-3 text-danger"></i>
-          <div>
-            <h5 class="fw-bold mb-0 text-dark">
-              <span class="text-danger">RDO</span> Express - Relatórios
-            </h5>
-            <small class="text-muted rel-subtitle">Análise e exportação de dados operacionais</small>
-          </div>
-        </div>
-        <button class="btn-sync-rel" id="btn-sync-relatorio" title="Atualizar">
-          <i class="bi bi-arrow-repeat" id="sync-icon-relatorio"></i>
-        </button>
-      </div>
+      
     </div>
 
     <div class="rel-tabs-nav">
@@ -27,248 +14,117 @@
       </a>
       
       
-    </div>
+    
+        <button class="btn-sync-rel" id="btn-sync-relatorio" title="Atualizar">
+          <i class="bi bi-arrow-repeat" id="sync-icon-relatorio"></i>
+        </button>
+      </div>
 
     <div id="rel-tab-content-motoboys" class="rel-tab-content active">
-      <div class="row g-3 mt-0">
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="rel-filtros-linha">
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
-                </div>
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
-                </div>
-                <!-- Aba Motoboys -->
-                <div class="rel-filtro-select-wrapper">
-                  <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Motoboy</label>
-                  <div class="rel-autocomplete" id="rel-mb-autocomplete">
-                    <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-mb-input"
-                      placeholder="Todos os motoboys" autocomplete="off">
-                    <input type="hidden" id="rel-mb-select" value="__todos__">
-                    <button type="button" class="rel-autocomplete-clear" id="rel-mb-clear" title="Limpar">
-                      <i class="bi bi-x-circle"></i>
-                    </button>
-                    <div class="rel-autocomplete-dropdown" id="rel-mb-dropdown"></div>
-                  </div>
-                </div>
 
-                <div class="rel-filtro-item-btn">
-                  <button class="btn-rel-gerar" data-tab-tipo="motoboys" type="button">
-                    <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
-                    <span class="btn-rel-label">Gerar Relatório</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+      <div class="rel-filtros-linha">
+        <div class="rel-filtro-item">
+          <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+          <input type="date" id="rel-mb-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
+        </div>
 
-            <div class="rel-lista-header" data-tab="motoboys">
-              <div class="rel-lista-header-col">
-                <span>Descrição</span>
-                <button type="button" class="btn-sort-data" data-tab="motoboys" title="Ordenar por data">
-                  <i class="bi bi-sort-down"></i>
-                </button>
-              </div>
-              <div class="rel-lista-header-col rel-col-acoes">Ações</div>
-            </div>
+        <div class="rel-filtro-item">
+          <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+          <input type="date" id="rel-mb-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
+        </div>
 
-            <div id="rel-motoboys-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-bicycle text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Consolidado de Motoboys</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr>
-                        <th>Motoboy / Rota</th>
-                        <th>Corridas</th>
-                        <th>Observação</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>EMERSON</td>
-                        <td>Alto volume</td>
-                        <td>Concentração em rotas Mauricio, Ammis, Opminas</td>
-                      </tr>
-                      <tr>
-                        <td>IGOR</td>
-                        <td>Alto volume</td>
-                        <td>Concentração em rotas Opminas, Elisa Athenienese, FF Fashion</td>
-                      </tr>
-                      <tr>
-                        <td>AUANDER</td>
-                        <td>Alto volume</td>
-                        <td>Concentração em rotas Mauricio, S Manoel, M Pitanga</td>
-                      </tr>
-                      <tr>
-                        <td>GRUPO</td>
-                        <td>Volume predominante</td>
-                        <td>Corridas rateadas entre a equipe (04/07 a 09/07)</td>
-                      </tr>
-                      <tr>
-                        <td>BRUNO</td>
-                        <td>Pontual</td>
-                        <td>Cliente Natalia (Escola Presidente Dutra)</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
-              <div class="btn-group shadow-sm">
-                <button class="btn btn-light" id="btn-pag-prev-motoboys"><i class="bi bi-chevron-left"></i></button>
-                <button class="btn btn-light" id="info-paginacao-motoboys" disabled>Pág 1</button>
-                <button class="btn btn-light" id="btn-pag-next-motoboys"><i class="bi bi-chevron-right"></i></button>
-              </div>
-            </div>
+        <div class="rel-filtro-select-wrapper">
+          <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Motoboy</label>
+          <div class="rel-autocomplete" id="rel-mb-autocomplete">
+            <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-mb-input"
+              placeholder="Todos os motoboys" autocomplete="off">
+            <input type="hidden" id="rel-mb-select" value="__todos__">
+            <button type="button" class="rel-autocomplete-clear" id="rel-mb-clear" title="Limpar">
+              <i class="bi bi-x-circle"></i>
+            </button>
+            <div class="rel-autocomplete-dropdown" id="rel-mb-dropdown"></div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div id="rel-tab-content-clientes" class="rel-tab-content">
-      <div class="row g-3 mt-0">
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="rel-filtros-linha">
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
-                  <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
-                </div>
-                <div class="rel-filtro-item">
-                  <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
-                  <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
-                </div>
-                <!-- Aba Clientes -->
-                <div class="rel-filtro-select-wrapper">
-                  <label class="rel-filtro-label"><i class="bi bi-building me-1"></i> Cliente</label>
-                  <div class="rel-autocomplete" id="rel-cli-autocomplete">
-                    <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-cli-input"
-                      placeholder="Todos os clientes" autocomplete="off">
-                    <input type="hidden" id="rel-cli-select" value="__todos__">
-                    <button type="button" class="rel-autocomplete-clear" id="rel-cli-clear" title="Limpar">
-                      <i class="bi bi-x-circle"></i>
-                    </button>
-                    <div class="rel-autocomplete-dropdown" id="rel-cli-dropdown"></div>
-                  </div>
-                </div>
-
-                <div class="rel-filtro-item-btn">
-                  <button class="btn-rel-gerar" data-tab-tipo="clientes" type="button">
-                    <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
-                    <span class="btn-rel-label">Gerar Relatório</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="rel-lista-header" data-tab="clientes">
-              <div class="rel-lista-header-col">
-                <span>Descrição</span>
-                <button type="button" class="btn-sort-data" data-tab="clientes" title="Ordenar por data">
-                  <i class="bi bi-sort-down"></i>
-                </button>
-              </div>
-              <div class="rel-lista-header-col rel-col-acoes">Ações</div>
-            </div>
-
-            <div id="rel-clientes-lista" class="rel-lista-salvos">
-              <div class="rel-item-salvo">
-                <div class="rel-item-header">
-                  <i class="bi bi-people text-danger"></i>
-                  <div class="rel-item-titulo">Relatório Consolidado de Clientes</div>
-                  <span class="rel-item-periodo">03/07/2026 a 09/07/2026</span>
-                </div>
-                <div class="rel-item-corpo">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr>
-                        <th>Cliente</th>
-                        <th>ID</th>
-                        <th>Volume no período</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>OPMINAS</td>
-                        <td>V72A5B0U5GR</td>
-                        <td>Alto (rotas hospitalares/PACs)</td>
-                      </tr>
-                      <tr>
-                        <td>AMMIS</td>
-                        <td>YT7JAJN3A6D</td>
-                        <td>Alto</td>
-                      </tr>
-                      <tr>
-                        <td>MAURICIO</td>
-                        <td>DXVO9FVLFZ5</td>
-                        <td>Alto</td>
-                      </tr>
-                      <tr>
-                        <td>ELISA ATHENIENSE (geral)</td>
-                        <td>BR463K2KU06 / MR34XBA3RKE / V70K6ETW0B3</td>
-                        <td>Alto</td>
-                      </tr>
-                      <tr>
-                        <td>SÃO MANOEL INDUSTRIA</td>
-                        <td>ATTZOHXOMVX</td>
-                        <td>Médio (regularizado no período)</td>
-                      </tr>
-                      <tr>
-                        <td>FF FASHION</td>
-                        <td>86N68UOG077</td>
-                        <td>Médio</td>
-                      </tr>
-                      <tr>
-                        <td>M PITANGA</td>
-                        <td>285E6BK4RD9</td>
-                        <td>Médio</td>
-                      </tr>
-                      <tr>
-                        <td>PLURAL</td>
-                        <td>O6DDMW3D7PX</td>
-                        <td>Médio</td>
-                      </tr>
-                      <tr>
-                        <td>INCLOSET</td>
-                        <td>RMX8GIY6TAV</td>
-                        <td>Médio</td>
-                      </tr>
-                      <tr>
-                        <td>VAL</td>
-                        <td>BVWVS4IHD5M</td>
-                        <td>Baixo/Médio</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
-              <div class="btn-group shadow-sm">
-                <button class="btn btn-light" id="btn-pag-prev-clientes"><i class="bi bi-chevron-left"></i></button>
-                <button class="btn btn-light" id="info-paginacao-clientes" disabled>Pág 1</button>
-                <button class="btn btn-light" id="btn-pag-next-clientes"><i class="bi bi-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
+        <div class="rel-filtro-item-btn">
+          <button class="btn-rel-gerar" data-tab-tipo="motoboys" type="button">
+            <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
+            <span class="btn-rel-label">Gerar Relatório</span>
+          </button>
         </div>
       </div>
+
+      <div class="rel-lista-header" data-tab="motoboys">
+        <div class="rel-lista-header-col">
+          <span>Descrição</span>
+          <button type="button" class="btn-sort-data" data-tab="motoboys" title="Ordenar por data">
+            <i class="bi bi-sort-down"></i>
+          </button>
+        </div>
+        <div class="rel-lista-header-col rel-col-acoes">Ações</div>
+      </div>
+
+      <div id="rel-motoboys-lista" class="rel-lista-salvos"></div>
+
+      <button class="btn btn-light" id="btn-pag-prev-motoboys"><i class="bi bi-chevron-left"></i></button>
+      <button class="btn btn-light" id="info-paginacao-motoboys" disabled>Pág 1</button>
+      <button class="btn btn-light" id="btn-pag-next-motoboys"><i class="bi bi-chevron-right"></i></button>
+
     </div>
 
-    <div id="rel-tab-content-financeiro" class="rel-tab-content">
+<div id="rel-tab-content-clientes" class="rel-tab-content">
+
+      <div class="rel-filtros-linha">
+        <div class="rel-filtro-item">
+          <label class="rel-filtro-label"><i class="bi bi-calendar3 me-1"></i> Data Inicial</label>
+          <input type="date" id="rel-cli-data-inicio" class="form-control rel-filtro-input" value="2026-07-03">
+        </div>
+
+        <div class="rel-filtro-item">
+          <label class="rel-filtro-label"><i class="bi bi-calendar-check me-1"></i> Data Final</label>
+          <input type="date" id="rel-cli-data-fim" class="form-control rel-filtro-input" value="2026-07-09">
+        </div>
+
+        <div class="rel-filtro-select-wrapper">
+          <label class="rel-filtro-label"><i class="bi bi-person-check me-1"></i> Cliente</label>
+          <div class="rel-autocomplete" id="rel-cli-autocomplete">
+            <input type="text" class="form-control rel-filtro-input rel-autocomplete-input" id="rel-cli-input"
+              placeholder="Todos os clientes" autocomplete="off">
+            <input type="hidden" id="rel-cli-select" value="__todos__">
+            <button type="button" class="rel-autocomplete-clear" id="rel-cli-clear" title="Limpar">
+              <i class="bi bi-x-circle"></i>
+            </button>
+            <div class="rel-autocomplete-dropdown" id="rel-cli-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="rel-filtro-item-btn">
+          <button class="btn-rel-gerar" data-tab-tipo="clientes" type="button">
+            <span class="btn-rel-icon"><i class="bi bi-sliders"></i></span>
+            <span class="btn-rel-label">Gerar Relatório</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rel-lista-header" data-tab="clientes">
+        <div class="rel-lista-header-col">
+          <span>Descrição</span>
+          <button type="button" class="btn-sort-data" data-tab="clientes" title="Ordenar por data">
+            <i class="bi bi-sort-down"></i>
+          </button>
+        </div>
+        <div class="rel-lista-header-col rel-col-acoes">Ações</div>
+      </div>
+
+      <div id="rel-clientes-lista" class="rel-lista-salvos"></div>
+
+      <button class="btn btn-light" id="btn-pag-prev-clientes"><i class="bi bi-chevron-left"></i></button>
+      <button class="btn btn-light" id="info-paginacao-clientes" disabled>Pág 1</button>
+      <button class="btn btn-light" id="btn-pag-next-clientes"><i class="bi bi-chevron-right"></i></button>
+
+    </div>
+
+<div id="rel-tab-content-financeiro" class="rel-tab-content">
       <div class="row g-3 mt-0">
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4">

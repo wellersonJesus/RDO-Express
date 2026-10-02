@@ -2,28 +2,16 @@
   <div class="fin-content-area">
 
     <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-      <div class="card-body p-3 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-          <i class="bi bi-cash-stack fs-3 text-danger"></i>
-          <div>
-            <h5 class="fw-bold mb-0 text-dark"><span class="text-danger">RDO</span> Express - Financeiro</h5>
-            <small class="text-muted fin-subtitle">Gestão e Logística</small>
-          </div>
-        </div>
-        <button type="button" id="btn-refresh-fin" class="btn-sync-fin" title="Atualizar dados">
-          <i id="sync-icon-fin" class="bi bi-arrow-repeat"></i>
-        </button>
-      </div>
+      
     </div>
 
     <div class="fin-tabs-nav">
       <a href="#" class="fin-tab active" data-tab="todos">RDO</a>
       <a href="#" class="fin-tab" data-tab="caixa">Caixa</a>
-      <a href="#" class="fin-tab" data-tab="extrato">Extrato</a>
     </div>
 
     <div id="fin-tab-content-todos" class="fin-tab-content active">
-      <div class="fin-status-card mb-3">
+      
         <div class="fin-status-card-header">
           <span class="fin-status-card-title">Resumo Geral</span>
           <button type="button" class="btn-olhinho-clean" id="btn-toggle-rdo-valores" title="Mostrar valores">
@@ -95,29 +83,31 @@
             </div>
           </div>
         </div>
-      </div>
 
       <div class="row g-3">
         <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                <div class="fin-busca-wrapper">
-                  <input type="text" id="filtro-busca-fin"
-                    class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..."
-                    autocomplete="off">
-                  <button type="button" id="btn-limpar-busca-fin" class="btn-limpar-busca-fin d-none"
-                    title="Limpar busca">
-                    <i class="bi bi-x-circle-fill"></i>
-                  </button>
-                </div>
-
-                <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
-                  <i class="bi bi-plus-lg"></i> Novo
-                </button>
-              </div>
+          <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap mb-2">
+            <div class="fin-busca-wrapper">
+              <input type="text" id="filtro-busca-fin"
+                class="form-control form-control-sm rounded-pill input-filtro-fin" placeholder="Buscar..."
+                autocomplete="off">
+              <button type="button" id="btn-limpar-busca-fin" class="btn-limpar-busca-fin d-none"
+                title="Limpar busca">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
             </div>
-            <div class="table-responsive p-3">
+
+            <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3" id="btn-novo-fin">
+              <i class="bi bi-plus-lg"></i> Novo
+            </button>
+
+            <button type="button" class="btn-sync-fin" id="btn-refresh-fin" title="Atualizar dados">
+              <i id="sync-icon-fin" class="bi bi-arrow-repeat"></i>
+            </button>
+          </div>
+
+          
+            <div class="table-responsive">
               <table class="table table-hover align-middle border-0 mb-0 fin-table-todos" id="tabela-fin-todos">
                 <thead class="tabela-fin-head text-uppercase">
                   <tr>
@@ -142,7 +132,7 @@
                 </tbody>
               </table>
             </div>
-            <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
+            <div class="fin-page-wrapper">
               <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-todos">0 registros</span>
               <div class="btn-group shadow-sm">
                 <button type="button" class="btn btn-light" id="fin-pag-prev-todos" disabled><i
@@ -151,7 +141,7 @@
                 <button type="button" class="btn btn-light" id="fin-pag-next-todos" disabled><i
                     class="bi bi-chevron-right"></i></button>
               </div>
-            </div>
+            
           </div>
         </div>
       </div>
@@ -254,11 +244,8 @@
         </div>
       </div>
 
-      <div class="row g-3">
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="caixa-filtro-row d-flex align-items-end gap-2 flex-wrap">
+      <div class="caixa-estrutura-unica">
+<div class="caixa-filtro-row d-flex align-items-end gap-2 flex-wrap">
                 <div class="caixa-filtro-campo">
                   <label class="caixa-filtro-label">De</label>
                   <input type="date" id="caixa-data-inicio"
@@ -295,52 +282,11 @@
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="card-footer bg-white border-0 d-flex align-items-center justify-content-between pb-3 px-3">
-              <span class="text-muted" style="font-size:.68rem;" id="fin-pag-info-caixa">0 registros</span>
-              <div class="btn-group shadow-sm">
-                <button type="button" class="btn btn-light" id="fin-pag-prev-caixa" disabled><i
-                    class="bi bi-chevron-left"></i></button>
-                <button type="button" class="btn btn-light" id="fin-pag-label-caixa" disabled>Pág 1</button>
-                <button type="button" class="btn btn-light" id="fin-pag-next-caixa" disabled><i
-                    class="bi bi-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <div id="fin-tab-content-extrato" class="fin-tab-content">
-      <div class="row g-3">
-        <div class="col-12">
-          <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body pb-0">
-              <div class="d-flex align-items-center gap-2 mb-3" style="justify-content:flex-end;">
-                <div class="fin-busca-wrapper" style="max-width:220px;">
-                  <input type="search" id="extrato-filtro-descricao" class="form-control form-control-sm rounded-pill"
-                    placeholder="Buscar extrato salvo..." autocomplete="off">
-                  <button type="button" id="btn-limpar-busca-extrato" class="btn-limpar-busca-fin d-none"
-                    title="Limpar busca">
-                    <i class="bi bi-x-circle-fill"></i>
-                  </button>
-                </div>
-
-                <button type="button" class="btn btn-danger btn-novo-fin-action rounded-pill px-3"
-                  id="btn-abrir-fluxo-extrato">
-                  <i class="bi bi-plus-lg"></i> Gerar Extrato
-                </button>
-              </div>
-              <div id="extrato-lista" class="extrato-lista pb-3">
-                <div class="extrato-placeholder">
-                  <i class="bi bi-file-earmark-text"></i>
-                  <span>Nenhum extrato gerado ainda.<br>Clique em <strong>Gerar Extrato</strong> para começar.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    
     </div>
 
     <div id="extrato-fluxo-overlay"

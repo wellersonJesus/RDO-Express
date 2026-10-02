@@ -97,6 +97,9 @@
   gap: 24px;
   border-bottom: 2px solid #f0f0f0;
   padding-bottom: 0;
+  width: 100%;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .rel-tab {
@@ -1714,59 +1717,6 @@
 
 
 /* ============================================================
-   RDO_VACINA_MOTOBOYS_MODELO_CLIENTES_2026
-
-   A aba Motoboys deve possuir exatamente o mesmo comportamento
-   estrutural da aba Clientes para:
-
-       Data inicial
-       Data final
-       Descrição
-       Ações
-
-   O conteúdo específico continua sendo de Motoboys.
-   ============================================================ */
-
-/*
- * Cabeçalho da tabela/lista:
- * nunca utilizar o azul degradê.
- */
-[data-tab="motoboys"] .rel-lista-header,
-[data-tab="motoboys"] .rel-table-header,
-[data-tab="motoboys"] .rel-list-header,
-#rel-lista-motoboys .rel-lista-header,
-#rel-lista-motoboys .rel-table-header,
-#rel-lista-motoboys .rel-list-header {
-    background: #fff;
-    background: #fff;
-
-  color: #212529;
-}
-
-/*
- * Descrição e Ações seguem o mesmo padrão da aba Clientes.
- */
-#rel-lista-motoboys .rel-lista-header span,
-#rel-lista-motoboys .rel-lista-header strong,
-#rel-lista-motoboys .rel-table-header span,
-#rel-lista-motoboys .rel-table-header strong,
-#rel-lista-motoboys .rel-list-header span,
-#rel-lista-motoboys .rel-list-header strong {
-    background: #fff;
-    background: #fff;
-
-  color: #212529;
-}
-
-/*
- * Não aplicar azul individualmente ao bloco Motoboys.
- */
-#rel-lista-motoboys {
-    background: #dc3545;
-}
-
-
-/* ============================================================
    RDO_VACINA_TIPO_COLABORADOR_VERMELHO_SUAVE_2026
 
    Tipo e Colaborador NÃO devem possuir degradê.
@@ -1775,6 +1725,9 @@
    utilizando vermelho suave.
    ============================================================ */
 
+/*
+ * Tipo e Colaborador NÃO devem possuir degradê.
+ */
 .relatorio-refinado .rel-meta-tipo,
 .relatorio-refinado .rel-meta-colaborador {
     background: #f8d7da !important;
@@ -1789,53 +1742,6 @@
 .relatorio-refinado .rel-meta-tipo *,
 .relatorio-refinado .rel-meta-colaborador * {
     background-image: none;
-}
-
-/*
- * Cabeçalho gerado dentro da lista.
- *
- * A cor do texto é explicitamente definida para impedir
- * herança de regras que estejam deixando "Descrição" branca.
- */
-#rel-lista-motoboys .rel-lista-header,
-#rel-lista-motoboys .rel-table-header,
-#rel-lista-motoboys .rel-list-header,
-#rel-lista-motoboys .rel-header-lista {
-    background: #fff;
-    background: #fff;
-    color: #212529 !important;
-}
-
-/*
- * "Descrição" e demais textos do cabeçalho.
- */
-#rel-lista-motoboys .rel-lista-header span,
-#rel-lista-motoboys .rel-lista-header strong,
-#rel-lista-motoboys .rel-table-header span,
-#rel-lista-motoboys .rel-table-header strong,
-#rel-lista-motoboys .rel-list-header span,
-#rel-lista-motoboys .rel-list-header strong,
-#rel-lista-motoboys .rel-header-lista span,
-#rel-lista-motoboys .rel-header-lista strong {
-    color: #212529 !important;
-    background: #fff;
-    background: #fff;
-}
-
-/*
- * O botão de ordenação permanece independente.
- */
-#rel-lista-motoboys .btn-sort-data {
-    color: inherit;
-}
-
-/*
- * O cabeçalho NÃO recebe o azul degradê.
- */
-#rel-lista-motoboys [style*="linear-gradient"] {
-    background: #dc3545;
-    background: #dc3545;
-    color: #212529 !important;
 }
 
 /* ============================================================
@@ -1964,7 +1870,7 @@
 
 /* ============================================================
    VACINA_RELATORIO_MOTOBOYS_V4_CSS
-   Família visual do relatório de motoboys
+   Família visual do relatório de clientes
    ============================================================ */
 
 .rel-vacina-meta-grid {
@@ -2060,3 +1966,47 @@
   }
 }
 
+
+
+/* REFINAMENTO — botão de atualização junto às abas */
+.rel-tabs-nav .btn-sync-rel {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+
+/* REFINAMENTO — responsivo das abas + atualização */
+@media (max-width: 576px) {
+  .rel-tabs-nav {
+    width: 100%;
+    align-items: center;
+    overflow-x: auto;
+  }
+
+  .rel-tabs-nav .btn-sync-rel {
+    margin-left: auto;
+    flex: 0 0 auto;
+  }
+}
+
+/* REFINAMENTO — paginação dos relatórios */
+#rel-tab-content-motoboys > #btn-pag-prev-motoboys,
+#rel-tab-content-clientes > #btn-pag-prev-clientes {
+  margin-left: auto;
+}
+
+#rel-tab-content-motoboys > #info-paginacao-motoboys,
+#rel-tab-content-motoboys > #btn-pag-next-motoboys,
+#rel-tab-content-clientes > #info-paginacao-clientes,
+#rel-tab-content-clientes > #btn-pag-next-clientes {
+  margin-left: 0;
+}
+
+#rel-tab-content-motoboys > #btn-pag-prev-motoboys,
+#rel-tab-content-motoboys > #info-paginacao-motoboys,
+#rel-tab-content-motoboys > #btn-pag-next-motoboys,
+#rel-tab-content-clientes > #btn-pag-prev-clientes,
+#rel-tab-content-clientes > #info-paginacao-clientes,
+#rel-tab-content-clientes > #btn-pag-next-clientes {
+  margin-bottom: 12px;
+}

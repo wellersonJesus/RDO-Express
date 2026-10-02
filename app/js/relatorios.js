@@ -307,7 +307,10 @@
     fetching: false,
     relatorioAtual: null,
     ultimoBuilderState: null,
-    paginaAtual: 1,
+    paginaAtual: {
+      motoboys: 1,
+      clientes: 1
+    },
     itensPorPagina: 10,
     ordenacao: { motoboys: 'desc', clientes: 'desc' },
     builder: { tipo: null, periodo: { inicio: '', fim: '' }, filtroExtra: null, bancoAtivo: null, selecionados: {}, step: 1, nome: '' }
@@ -2108,7 +2111,7 @@
         const t = tab.getAttribute('data-tab');
         if (!t) return;
         state.tabAtual = t;
-        state.paginaAtual = 1;
+        state.paginaAtual[t] = 1;
         document.querySelectorAll('.rel-tab').forEach(function (el) { el.classList.remove('active'); });
         tab.classList.add('active');
         document.querySelectorAll('.rel-tab-content').forEach(function (el) { el.classList.remove('active'); });
@@ -2130,7 +2133,7 @@
           const tab = btn.dataset.tab;
           if (!tab) return;
           state.ordenacao[tab] = state.ordenacao[tab] === 'desc' ? 'asc' : 'desc';
-          state.paginaAtual = 1;
+          state.paginaAtual[tab] = 1;
           renderizarListas();
         });
       });
@@ -2166,8 +2169,16 @@
     if (els.paginacao) {
       Object.keys(els.paginacao).forEach(function (tab) {
         const p = els.paginacao[tab];
-        if (p.prev) p.prev.addEventListener('click', function () { if (state.paginaAtual > 1) { state.paginaAtual--; renderizarListas(); } });
-        if (p.next) p.next.addEventListener('click', function () { state.paginaAtual++; renderizarListas(); });
+        if (p.prev) p.prev.addEventListener('click', function () {
+          if (state.paginaAtual[tab] > 1) {
+            state.paginaAtual[tab]--;
+            renderizarListas();
+          }
+        });
+        if (p.next) p.next.addEventListener('click', function () {
+          state.paginaAtual[tab]++;
+          renderizarListas();
+        });
       });
     }
 
@@ -2847,15 +2858,22 @@
     }
 
     const totalPaginas = Math.max(1, Math.ceil(lista.length / state.itensPorPagina));
-    if (state.paginaAtual > totalPaginas) state.paginaAtual = totalPaginas;
+    if (state.paginaAtual[state.tabAtual] > totalPaginas) {
+      state.paginaAtual[state.tabAtual] = totalPaginas;
+    }
 
-    const inicio = (state.paginaAtual - 1) * state.itensPorPagina;
+    const paginaAtual = state.paginaAtual[state.tabAtual] || 1;
+    const inicio = (paginaAtual - 1) * state.itensPorPagina;
     const paginaLista = lista.slice(inicio, inicio + state.itensPorPagina);
 
     const icons = { motoboys: 'bi-bicycle', clientes: 'bi-people' };
 
     if (!lista.length) {
-      c.el.innerHTML = '<div class="rel-lista-vazio"><i class="bi bi-inbox"></i><span>Nenhum relatório gerado ainda.</span></div>';
+      c.el.replaceChildren();
+      const vazio = document.createElement('div');
+      vazio.className = 'rel-lista-vazio';
+      vazio.innerHTML = '<i class="bi bi-inbox"></i><span>Nenhum relatório gerado ainda.</span>';
+      c.el.appendChild(vazio);
     } else {
       let html = '';
       paginaLista.forEach(function (rel) {
@@ -2897,9 +2915,17 @@
     }
 
     if (c.pag) {
-      if (c.pag.info) c.pag.info.textContent = 'Página ' + state.paginaAtual + ' de ' + totalPaginas;
+      if (c.pag.info) c.pag.info.textContent = 'Página ' + paginaAtual + ' de ' + totalPaginas;
       if (c.pag.prev) c.pag.prev.disabled = state.paginaAtual <= 1;
       if (c.pag.next) c.pag.next.disabled = state.paginaAtual >= totalPaginas;
+
+    const mostrarPaginacao = lista.length > state.itensPorPagina;
+
+    if (c.pag.prev) c.pag.prev.style.display = mostrarPaginacao ? 'inline-flex' : 'none';
+    if (c.pag.info) c.pag.info.style.display = mostrarPaginacao ? 'inline-flex' : 'none';
+    if (c.pag.next) c.pag.next.style.display = mostrarPaginacao ? 'inline-flex' : 'none';
+
+    /* VACINA — PAGINAÇÃO RELATÓRIOS */
     }
   }
 

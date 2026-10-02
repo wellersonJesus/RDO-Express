@@ -75,19 +75,6 @@
   border-bottom: 2px solid #f0f0f0;
 }
 
-.fin-tab {
-  position: relative;
-  text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #999;
-  padding: 6px 0 10px 0;
-  transition: color 0.2s ease;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-}
-
 .fin-tab:hover {
   color: #555;
   text-decoration: none;
@@ -2879,7 +2866,6 @@
   }
 }
 
-
 /* --- VACINA PONTUAL: FINANCEIRO & CAIXA APROVADA --- */
 :root {
     --fin-blue: #3b82f6;
@@ -2910,24 +2896,6 @@
 }
 
 /* Abas de Navegação Interna (RDO / Caixa / Extrato) */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* Botões de Ação Principais (Adicionar, Transferir, Repasses, Extratos) */
 .btn-fin-action, .btn-caixa-acao {
@@ -3136,12 +3104,14 @@
     min-height: 40px;
     border-radius: 10px;
     border: 1px solid #dee2e6;
+    background: transparent !important;
     box-shadow: none;
 }
 
 #filtro-busca-fin:focus {
     border-color: #adb5bd;
-    box-shadow: 0 0 0 .15rem rgba(0, 0, 0, .04);
+    background: transparent !important;
+    box-shadow: none;
 }
 
 #btn-limpar-busca-fin,
@@ -3499,8 +3469,6 @@
   opacity: .85;
 }
 
-
-
 .rdo-pay-action-item {
   display: flex;
   flex-direction: column;
@@ -3682,7 +3650,6 @@
         table-layout: fixed;
     }
 
-
     /* =========================================================
        ESPAÇAMENTO GERAL DA TABELA
        ========================================================= */
@@ -3694,7 +3661,6 @@
         padding-right: 3px;
         white-space: nowrap;
     }
-
 
     /* =========================================================
        TÍTULO — DATA
@@ -3710,7 +3676,6 @@
         padding-left: 4px;
     }
 
-
     /* =========================================================
        DATA → DESCRIÇÃO
        ========================================================= */
@@ -3724,7 +3689,6 @@
     #tabela-fin-todos th:nth-child(2) {
         padding-left: 26px;
     }
-
 
     /* =========================================================
        COLUNA DATA — CONTEÚDO
@@ -3745,7 +3709,6 @@
         text-overflow: clip;
     }
 
-
     /* =========================================================
        TÍTULO — DESCRIÇÃO
        ========================================================= */
@@ -3755,7 +3718,6 @@
         text-align: right;
         padding-left: 1px;
     }
-
 
     /* =========================================================
        COLUNA DESCRIÇÃO — CONTEÚDO
@@ -3782,7 +3744,6 @@
         text-overflow: ellipsis;
     }
 
-
     /* =========================================================
        DESCRIÇÃO → TIPO
        ========================================================= */
@@ -3797,7 +3758,6 @@
         padding-left: 10px;
     }
 
-
     /* =========================================================
        TÍTULO — TIPO
        ========================================================= */
@@ -3807,7 +3767,6 @@
         text-align: right;
         padding-right: 20px;
     }
-
 
     /* =========================================================
        COLUNA TIPO — CONTEÚDO
@@ -3825,7 +3784,6 @@
         padding-right: 10px;
     }
 
-
     /* =========================================================
        TIPO → AÇÕES
        ========================================================= */
@@ -3840,7 +3798,6 @@
         padding-left: 1px;
     }
 
-
     /* =========================================================
        TÍTULO — AÇÕES
        ========================================================= */
@@ -3849,7 +3806,6 @@
     #tabela-fin-todos th:nth-child(4) {
         text-align: right;
     }
-
 
     /* =========================================================
        COLUNA AÇÕES — CONTEÚDO
@@ -3867,7 +3823,6 @@
         padding-left: 1px;
         padding-right: 4px;
     }
-
 
     /* =========================================================
        BOTÕES — AÇÕES
@@ -3911,5 +3866,831 @@
         text-align: center !important;
         vertical-align: middle !important;
     }
+}
+
+/* VACINA — FINANCEIRO NO CONTRATO VISUAL DE PEDIDOS/ADMINISTRAÇÃO */
+
+.financeiro-page,
+.financeiro-page-wrapper,
+.financeiro-content-area {
+    background: transparent;
+}
+
+/* VACINA — TABELA FINANCEIRO tabela-fin-todos */
+
+#tabela-fin-todos {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+    background: transparent;
+}
+
+#tabela-fin-todos thead tr {
+    border-bottom: 1px solid #e9e9e9;
+}
+
+#tabela-fin-todos th {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #999;
+    vertical-align: middle;
+}
+
+#tabela-fin-todos td {
+    padding-top: 0.68rem;
+    padding-bottom: 0.68rem;
+    border: 0 !important;
+    border-bottom: 1px solid #eeeeee !important;
+    background: transparent !important;
+    vertical-align: middle;
+}
+
+#tabela-fin-todos tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+#tabela-fin-todos tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+#tabela-fin-todos tbody tr:hover {
+    background-color: #fff1f2;
+}
+
+@media (max-width: 767.98px) {
+    #tabela-fin-todos th {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+        font-size: 0.6rem;
+    }
+
+    #tabela-fin-todos td {
+        padding-top: 0.62rem;
+        padding-bottom: 0.62rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    #tabela-fin-todos th {
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+
+    #tabela-fin-todos td {
+        padding-top: 0.58rem;
+        padding-bottom: 0.58rem;
+    }
+
+    #tabela-fin-todos tbody tr:hover {
+        background-color: transparent;
+    }
+}
+
+/* VACINA — CONTROLES FINANCEIRO SEM CAMADAS BRANCAS */
+
+.financeiro-page button,
+.financeiro-page-wrapper button {
+    box-shadow: none;
+}
+
+.financeiro-page .btn-group,
+.financeiro-page-wrapper .btn-group {
+    box-shadow: none;
+}
+
+.financeiro-page .btn-light,
+.financeiro-page-wrapper .btn-light {
+    background: transparent;
+    box-shadow: none;
+}
+
+.financeiro-page .btn-light:hover,
+.financeiro-page-wrapper .btn-light:hover {
+    background: #fafafa;
+}
+
+/* CONTRATO VISUAL — PAGINAÇÃO FINANCEIRO */
+.fin-page-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 0.45rem;
+  padding: 0.5rem 0 0 0;
+  background: transparent;
+}
+
+.fin-page-wrapper .btn-group {
+  display: inline-flex;
+  box-shadow: none !important;
+}
+
+.fin-page-wrapper .btn {
+  min-width: 38px;
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #eeeeee;
+  background: transparent;
+  color: #666;
+  box-shadow: none !important;
+}
+
+.fin-page-wrapper .btn:hover:not(:disabled) {
+  background: #fafafa;
+  color: #dc3545;
+}
+
+.fin-page-wrapper .btn:disabled {
+  opacity: 0.55;
+  background: transparent;
+  color: #999;
+}
+
+/* REFINAMENTO FINANCEIRO — BOTAO NOVO */
+#btn-novo-fin,
+.btn-novo-fin-action {
+  color: #fff !important;
+}
+
+#btn-novo-fin i,
+.btn-novo-fin-action i {
+  color: #fff !important;
+}
+
+/* REFINAMENTO FINANCEIRO — COMANDOS */
+.fin-busca-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.fin-busca-wrapper .bi-search {
+  color: #666;
+}
+
+#btn-novo-fin,
+.btn-novo-fin-action {
+  color: #fff !important;
+}
+
+#btn-novo-fin i,
+.btn-novo-fin-action i {
+  color: #fff !important;
+}
+
+/* REFINAMENTO FINANCEIRO — LUPA AO LADO DO NOVO */
+.fin-search-icon-action {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.fin-search-icon-action i {
+  color: inherit;
+  pointer-events: none;
+}
+
+.fin-search-icon-action:hover {
+  color: #dc3545;
+}
+
+.fin-search-icon-action:focus {
+  outline: none;
+  color: #dc3545;
+}
+
+/* REFINAMENTO FINANCEIRO — NOVO BRANCO */
+#btn-novo-fin,
+.btn-novo-fin-action {
+  color: #fff !important;
+}
+
+#btn-novo-fin i,
+.btn-novo-fin-action i {
+  color: #fff !important;
+}
+
+/* CONTRATO VISUAL — ABAS FINANCEIRO ROBUSTAS */
+.fin-tabs-nav 
+
+@media (max-width: 576px) {
+  .fin-tabs-nav 
+}
+
+/* CONTRATO VISUAL — ABAS FINANCEIRO ESTÁVEIS */
+.fin-tabs-nav {
+  display: flex;
+  gap: 24px;
+  border-bottom: 2px solid #f0f0f0;
+  width: 100%;
+}
+
+.fin-tabs-nav .fin-tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #999;
+  padding: 6px 0 10px 0;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.fin-tabs-nav .fin-tab.active {
+  color: var(--fin-red);
+  font-weight: 700;
+}
+
+@media (max-width: 576px) {
+  .fin-tabs-nav {
+    gap: 18px;
+  }
+
+  .fin-tabs-nav .fin-tab {
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 7px 0 11px 0;
+  }
+}
+
+/* CONTRATO VISUAL — CONTADORES FINANCEIRO SEM CARD */
+.fin-status-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.fin-status-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 0.6rem 0;
+  background: transparent;
+}
+
+.fin-status-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #777;
+}
+
+.fin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+}
+
+.fin-status-row {
+  display: contents;
+}
+
+.fin-status-action-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 70px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.fin-status-action-item:hover {
+  background: #fff1f2;
+}
+
+.fin-status-action-icon.fin-icon-lg {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    border-radius: 14px;
+    font-size: 1.7rem;
+
+}
+
+.fin-status-action-info {
+  min-width: 0;
+}
+
+@media (max-width: 576px) {
+  .fin-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .fin-status-action-item {
+    min-height: 70px;
+    padding: 9px 8px;
+    gap: 8px;
+  }
+
+  .fin-status-action-icon.fin-icon-lg {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    font-size: 1.3rem;
+  }
+}
+
+/* REFINAMENTO — ÍCONES RESUMO GERAL RDO */
+.fin-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(70px, auto));
+  gap: 10px;
+}
+
+.fin-status-action-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 76px;
+  padding: 10px 12px;
+}
+
+.fin-status-action-icon.fin-icon-lg {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.55rem;
+}
+
+.fin-status-action-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 576px) {
+  .fin-status-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(78px, auto));
+    gap: 8px;
+  }
+
+  .fin-status-action-item {
+    min-height: 78px;
+    padding: 8px 6px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .fin-status-action-icon.fin-icon-lg {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: 14px;
+    font-size: 1.5rem;
+  }
+
+  .fin-status-action-info {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+/* A Caixa volta ao eixo natural do container. */
+.financeiro-page #fin-tab-content-caixa {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow-x: visible;
+}
+
+/* As linhas internas não podem escapar pelo lado esquerdo. */
+.financeiro-page #fin-tab-content-caixa > .caixa-mini-cards-row,
+.financeiro-page #fin-tab-content-caixa > .row.g-3 {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/*
+   Este é o wrapper externo que contém:
+   RDO | Caixa | Extrato
+
+   O seletor :has(.fin-tabs-nav) isola somente esse wrapper.
+   Os fin-page-wrapper usados pelas paginações não são afetados.
+*/
+
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) {
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+}
+
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+/*
+   As três áreas passam a obedecer exatamente ao mesmo eixo
+   horizontal das abas.
+*/
+
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > .fin-tabs-nav,
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-todos,
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-caixa,
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-extrato {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/*
+   O RDO Pay volta ao eixo natural da Caixa.
+   Nenhum deslocamento artificial.
+*/
+
+.financeiro-page > .fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-caixa > .rdo-pay-header {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/* VACINA FINANCEIRO — CORREÇÃO REAL DO EIXO DAS ABAS */
+
+/*
+   O DOM real é:
+
+   .fin-page-wrapper
+       └── .fin-content-area
+             ├── RDO
+             ├── Caixa
+             └── Extrato
+
+   O .fin-page-wrapper está dentro do #router-view,
+   que possui padding lateral de 24px.
+
+   O fin-content-area não pode ultrapassar esse eixo.
+*/
+
+.fin-page-wrapper:has(.fin-tabs-nav) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+}
+
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+    align-self: stretch;
+}
+
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > .fin-tabs-nav,
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-todos,
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-caixa,
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-extrato {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+.fin-page-wrapper:has(.fin-tabs-nav) > .fin-content-area > #fin-tab-content-caixa > .rdo-pay-header {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/* VACINA FINANCEIRO — CONTADORES CAIXA SEM FUNDO */
+
+/*
+   Refinamento exclusivamente dos quatro contadores da Caixa.
+
+   Mantém:
+   - estrutura;
+   - dimensões;
+   - textos;
+   - distribuição;
+   - comportamento;
+   - cores dos ícones.
+
+   Altera somente:
+   - remove preenchimento dos cards;
+   - mantém borda fina;
+   - aumenta os ícones;
+   - preserva a identidade cromática de cada contador.
+*/
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card {
+    background: transparent !important;
+    border: 1px solid #e5e5e5 !important;
+    box-shadow: none !important;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card[data-filtro-caixa="entrada"] {
+    border-color: rgba(25, 135, 84, .35) !important;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card[data-filtro-caixa="saida"] {
+    border-color: rgba(220, 53, 69, .35) !important;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card[data-filtro-caixa="registros"] {
+    border-color: rgba(255, 193, 7, .45) !important;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card[data-filtro-caixa="saldo"] {
+    border-color: rgba(108, 117, 125, .35) !important;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card .caixa-mini-card-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.35rem;
+    border-radius: 10px;
+}
+
+#fin-tab-content-caixa .caixa-mini-cards-row .caixa-mini-card.active {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* somente o conteúdo da aba Extrato */
+#fin-tab-content-extrato {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* bloco Buscar extrato + Gerar Extrato */
+#fin-tab-content-extrato .fin-busca-wrapper {
+  flex-shrink: 0;
+}
+
+#fin-tab-content-extrato #btn-abrir-fluxo-extrato {
+  flex-shrink: 0;
+}
+
+/* lista imediatamente abaixo dos comandos */
+#fin-tab-content-extrato #extrato-lista {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 0;
+}
+
+/* mantém os itens da lista no eixo normal da aba */
+#fin-tab-content-extrato #extrato-lista .extrato-item-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   EXTRATO — somente esta aba
+   Fluxo: abas > ações > lista
+   ============================================================ */
+
+/* bloco Buscar extrato + Gerar Extrato */
+#fin-tab-content-extrato > .d-flex {
+  position: relative;
+  display: flex !important;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0 0 10px 0 !important;
+  padding: 0;
+  box-sizing: border-box;
+  clear: both;
+  float: none !important;
+  transform: none !important;
+}
+
+/* lista dos extratos */
+#fin-tab-content-extrato > #extrato-lista {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 12px 0 !important;
+  box-sizing: border-box;
+  clear: both;
+  float: none !important;
+  overflow: visible;
+}
+
+/* cada extrato ocupa a largura disponível */
+#fin-tab-content-extrato > #extrato-lista > .extrato-item-card {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  float: none !important;
+  transform: none;
+}
+
+/* mantém o efeito sem transformar o item em bloco/card */
+#fin-tab-content-extrato > #extrato-lista > .extrato-item-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* VACINA EXTRATO — ITENS SEM BLOCO VISUAL */
+#fin-tab-content-extrato .extrato-item-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 0 10px 0 !important;
+}
+#fin-tab-content-extrato .extrato-item-card:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#fin-tab-content-extrato .extrato-item-card > .extrato-item-left {
+  background: transparent !important;
+}
+#fin-tab-content-extrato .extrato-item-card > div:last-child {
+  background: transparent !important;
+}
+
+/* VACINA EXTRATO — FLUXO EXCLUSIVO ABA */
+#fin-tab-content-extrato {
+  position: relative;
+  z-index: 1;
+}
+
+#fin-tab-content-extrato > .d-flex {
+  position: relative;
+  z-index: 2;
+}
+
+#fin-tab-content-extrato > #extrato-lista {
+  position: relative;
+  z-index: 1;
+}
+
+/* VACINA EXTRATO — FLUXO VERTICAL ISOLADO CORRIGIDO */
+
+/* o conteúdo permanece subordinado ao mecanismo normal das abas */
+#fin-tab-content-extrato {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    margin: 10px 0 0 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+/* Buscar extrato + Gerar Extrato */
+#fin-tab-content-extrato > .d-flex {
+    position: relative;
+    display: flex !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    margin: 0 0 12px 0 !important;
+    padding: 0;
+    box-sizing: border-box;
+    float: none !important;
+    clear: both;
+    transform: none !important;
+}
+
+/* lista: fluxo vertical normal e expansão conforme o conteúdo */
+#fin-tab-content-extrato > #extrato-lista {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0 0 12px 0 !important;
+    box-sizing: border-box;
+    float: none !important;
+    clear: both;
+    overflow: visible;
+}
+
+/* cada item permanece dentro exclusivamente da lista do Extrato */
+#fin-tab-content-extrato > #extrato-lista > .extrato-item-card {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    float: none !important;
+    transform: none !important;
+}
+
+/* não cria deslocamento visual durante o hover */
+#fin-tab-content-extrato > #extrato-lista > .extrato-item-card:hover {
+    transform: none !important;
 }
 

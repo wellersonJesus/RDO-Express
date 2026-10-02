@@ -791,3 +791,403 @@
         display: block !important;
     }
 }
+
+
+/* VACINA ADMIN — CONTROLES MOBILE NA MESMA LINHA */
+
+.admin-controles-linha {
+    width: 100%;
+}
+
+.admin-controles-linha .admin-busca-wrapper {
+    min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+    .admin-controles-linha {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        width: 100%;
+        gap: 0.4rem !important;
+        justify-content: stretch !important;
+        align-items: center !important;
+    }
+
+    .admin-controles-linha .dropdown-filtro-wrapper {
+        flex: 0 0 auto;
+    }
+
+    .admin-controles-linha .admin-busca-wrapper {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto;
+    }
+
+    .admin-controles-linha .admin-input-busca {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-controles-linha .btn-novo-admin {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        margin: 0 !important;
+    }
+
+    .admin-controles-linha .btn-sync-admin {
+        flex: 0 0 38px;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 !important;
+    }
+}
+
+    
+/* VACINA ADMIN — CONTADORES MODELO PEDIDOS V2 */
+
+.admin-status-icons {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, auto) !important;
+    gap: .75rem !important;
+    width: 100% !important;
+    padding: .4rem 0 .7rem !important;
+}
+
+.admin-status-icons .admin-status-row {
+    display: contents !important;
+}
+
+.admin-status-icons .admin-status-action-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 76px !important;
+    min-height: 76px !important;
+    max-height: 76px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    border-radius: 18px !important;
+
+    box-sizing: border-box !important;
+    transition:
+        transform .18s ease,
+        background-color .18s ease,
+        border-color .18s ease,
+        box-shadow .18s ease;
+}
+
+.admin-status-icons .admin-status-action-item:hover,
+.admin-status-icons .admin-status-action-item:focus-visible {
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.admin-status-icons .admin-status-action-item.active {
+    border-color: rgba(220, 53, 69, .30) !important;
+}
+
+.admin-status-icons .admin-status-action-info {
+    display: none !important;
+}
+
+.admin-status-icons .admin-status-action-icon.admin-icon-lg {
+    width: 66px !important;
+    height: 66px !important;
+    min-width: 66px !important;
+    min-height: 66px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 18px !important;
+    transform: none !important;
+}
+
+.admin-status-icons .admin-status-action-icon.admin-icon-lg i {
+    font-size: 2.65rem !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+}
+
+.admin-status-icons .admin-status-action-item::after {
+    display: none !important;
+}
+
+@media (max-width: 575.98px) {
+    .admin-status-icons {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        grid-template-rows: repeat(2, auto) !important;
+        gap: .65rem !important;
+        padding: .25rem .05rem .65rem !important;
+    }
+
+    .admin-status-icons .admin-status-action-item {
+        height: 82px !important;
+        min-height: 82px !important;
+        max-height: 82px !important;
+        border-radius: 18px !important;
+    }
+
+    .admin-status-icons .admin-status-action-icon.admin-icon-lg {
+        width: 70px !important;
+        height: 70px !important;
+        min-width: 70px !important;
+        min-height: 70px !important;
+        border-radius: 18px !important;
+    }
+
+    .admin-status-icons .admin-status-action-icon.admin-icon-lg i {
+        font-size: 2.8rem !important;
+    }
+}
+
+@media (max-width: 380px) {
+    .admin-status-icons {
+        gap: .5rem !important;
+    }
+
+    .admin-status-icons .admin-status-action-item {
+        height: 76px !important;
+        min-height: 76px !important;
+        max-height: 76px !important;
+        border-radius: 16px !important;
+    }
+
+    .admin-status-icons .admin-status-action-icon.admin-icon-lg {
+        width: 64px !important;
+        height: 64px !important;
+        min-width: 64px !important;
+        min-height: 64px !important;
+        border-radius: 16px !important;
+    }
+
+    .admin-status-icons .admin-status-action-icon.admin-icon-lg i {
+        font-size: 2.5rem !important;
+    }
+}
+
+
+/* VACINA — ADMIN TABELA NO PADRÃO DE PEDIDOS */
+
+#tabela-admin {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+    background: transparent;
+}
+
+#tabela-admin tr {
+    width: 100%;
+}
+
+#tabela-admin thead tr {
+    border-bottom: 1px solid #e9e9e9;
+}
+
+#tabela-admin th {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #999;
+    vertical-align: middle;
+}
+
+#tabela-admin td {
+    padding-top: 0.68rem;
+    padding-bottom: 0.68rem;
+    border: 0 !important;
+    border-bottom: 1px solid #eeeeee !important;
+    background: transparent !important;
+    vertical-align: middle;
+}
+
+#tabela-admin tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+#tabela-admin tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+#tabela-admin tbody tr:hover {
+    background-color: #fff1f2;
+}
+
+#tabela-admin .ps-3 {
+    padding-left: 0.25rem !important;
+}
+
+#tabela-admin .pe-3 {
+    padding-right: 0.25rem !important;
+}
+
+@media (max-width: 767.98px) {
+    #tabela-admin th {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+        font-size: 0.6rem;
+    }
+
+    #tabela-admin td {
+        padding-top: 0.62rem;
+        padding-bottom: 0.62rem;
+    }
+
+    #tabela-admin .ps-3 {
+        padding-left: 0 !important;
+    }
+
+    #tabela-admin .pe-3 {
+        padding-right: 0 !important;
+    }
+
+    #tabela-admin td:first-child {
+        padding-left: 0 !important;
+    }
+
+    #tabela-admin td:last-child {
+        padding-right: 0 !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    #tabela-admin th {
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+
+    #tabela-admin td {
+        padding-top: 0.58rem;
+        padding-bottom: 0.58rem;
+    }
+
+    #tabela-admin tbody tr:hover {
+        background-color: transparent;
+    }
+}
+
+
+/* VACINA — ADMIN PAGINAÇÃO NO PADRÃO DE PEDIDOS */
+
+.admin-paginacao {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 0.45rem;
+    padding: 0.5rem 0 0 0;
+    background: transparent;
+}
+
+.admin-paginacao .btn-group {
+    display: inline-flex;
+    box-shadow: none !important;
+}
+
+.admin-paginacao .btn {
+    min-width: 38px;
+    min-height: 36px;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid #eeeeee;
+    background: transparent;
+    color: #666;
+    box-shadow: none !important;
+}
+
+.admin-paginacao .btn:hover:not(:disabled) {
+    background: #fafafa;
+    color: #dc3545;
+}
+
+.admin-paginacao .btn:disabled {
+    opacity: 0.55;
+    background: transparent;
+    color: #999;
+}
+
+#info-paginacao-admin {
+    min-width: 100px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #666;
+}
+
+@media (max-width: 767.98px) {
+    .admin-paginacao {
+        margin-top: 0.35rem;
+        padding-top: 0.4rem;
+    }
+
+    .admin-paginacao .btn {
+        min-width: 36px;
+        min-height: 34px;
+        padding: 0.3rem 0.55rem;
+    }
+
+    #info-paginacao-admin {
+        min-width: 92px;
+        font-size: 0.72rem;
+    }
+}
+
+
+/* VACINA — ADMIN STATUS SEM CARTÃO BRANCO */
+
+.admin-status-icons .admin-status-action-item {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+}
+
+.admin-status-icons .admin-status-action-item:hover,
+.admin-status-icons .admin-status-action-item:focus-visible {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.admin-status-icons .admin-status-action-item.active {
+    background: transparent !important;
+    border-color: rgba(220, 53, 69, .30) !important;
+    box-shadow: none !important;
+}
+
+.admin-status-icons .admin-status-action-icon {
+    box-shadow: none !important;
+}
+
+.admin-status-icons .admin-status-action-item:hover .admin-status-action-icon,
+.admin-status-icons .admin-status-action-item.active .admin-status-action-icon {
+    box-shadow: none !important;
+}
+
+
+/* VACINA — ADMIN BUSCA NO PADRÃO LIMPO DE PEDIDOS */
+
+.admin-input-busca {
+    background: transparent;
+    box-shadow: none;
+}
+
+.admin-input-busca:focus {
+    background: transparent;
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
+    border-color: #e4606d;
+}
+
+.btn-limpar-busca-admin {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}

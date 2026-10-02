@@ -181,7 +181,7 @@ if (!window.EventBus) {
     filtroBusca: '',
     fetching: false,
     sortDataDesc: true,
-    todos: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1 },
+    todos: { pagina: 1, porPagina: 10, totalPag: 1 },
     caixa: { pagina: 1, porPagina: obterPorPaginaFin(), totalPag: 1, dataInicio: '', dataFim: '', filtroDescricao: '', filtroValor: '', dadosFiltrados: [], listaFiltradaAtual: [], buscaRealizada: false },
     extrato: { filtroDescricao: '' }
   };
@@ -4366,10 +4366,7 @@ if (!window._finListenerPedidoAtualizadoBind) {
         '<div class="extrato-item-sub">' + escapeHtml(ex.periodoLabel || '-') + ' · ' + totalRegs + ' registro' + (totalRegs !== 1 ? 's' : '') + '</div>' +
         '<div class="extrato-item-sub" style="font-size:.68rem;opacity:.7;">' + criadoLabel + '</div></div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
-        '<span class="extrato-saldo-valor" data-valor-real="' + formatarMoeda(totais.saldo) + '" data-visivel="0" style="font-size:.72rem;font-weight:700;color:' + saldoColor + ';">R$ ****</span>' +
-        '<div style="display:flex;gap:6px;">' +
-        '<button class="btn-icone-retangular btn-toggle-valor-extrato" data-id="' + escapeHtml(ex.id) + '" title="Mostrar/ocultar valor"><i class="bi bi-eye-slash"></i></button>' +
-        '<button class="btn-icone-retangular btn-visualizar-icone extrato-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-file-earmark-text"></i></button>' +
+        '<div style="display:flex;gap:6px;">' + '<button class="btn-icone-retangular btn-visualizar-icone extrato-btn-ver" data-id="' + escapeHtml(ex.id) + '" title="Visualizar"><i class="bi bi-file-earmark-text"></i></button>' +
         '<button class="btn-icone-retangular btn-excluir-icone extrato-btn-excluir" data-id="' + escapeHtml(ex.id) + '" title="Remover"><i class="bi bi-trash"></i></button>' +
         '</div></div></div>';
     }).join('');
@@ -4405,24 +4402,6 @@ if (!window._finListenerPedidoAtualizadoBind) {
             }
           }
         });
-      });
-    });
-
-    els.extratoListaDiaria.querySelectorAll('.btn-toggle-valor-extrato').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var card = this.closest('.extrato-item-card');
-        var span = card ? card.querySelector('.extrato-saldo-valor') : null;
-        if (!span) return;
-
-        var visivel = span.getAttribute('data-visivel') === '1';
-        var real = span.getAttribute('data-valor-real');
-
-        span.textContent = visivel ? 'R$ ****' : real;
-        span.setAttribute('data-visivel', visivel ? '0' : '1');
-
-        var icon = this.querySelector('i');
-        if (icon) icon.className = visivel ? 'bi bi-eye-slash' : 'bi bi-eye';
       });
     });
   }
@@ -6049,7 +6028,7 @@ state.clientesCache = {};
     carregarDados();
 
     window.addEventListener('resize', debounce(function () {
-      var novo = obterPorPaginaFin();
+      var novo = 10;
       if (state.todos.porPagina !== novo) {
         state.todos.porPagina = novo;
         state.todos.pagina = 1;

@@ -3,104 +3,60 @@
         <!-- Header da Página -->
         <div class="col-12">
             <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden">
-                <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-clipboard2-check fs-3 text-danger" aria-hidden="true"></i>
-                        <div>
-                            <h5 class="fw-bold mb-0 text-dark">
-                                <span class="text-danger">RDO</span> Express - Pedidos
-                            </h5>
-                            <small class="text-muted pedidos-subtitle">Logística e Controle de Entregas</small>
-                        </div>
-                    </div>
-                    <button id="btn-loop-pedidos" class="btn-sync-pedidos" title="Atualizar pedidos"
-                        aria-label="Atualizar pedidos">
-                        <i id="icon-loop-pedidos" class="bi bi-arrow-repeat" aria-hidden="true"></i>
-                    </button>
-                </div>
             </div>
         </div>
 
         <!-- Conteúdo Principal -->
         <div class="row g-3 mt-0">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-4">
-                    <div class="card-body pb-0">
-                        <div class="d-flex flex-column gap-2">
-                            <!-- Cards de Status / Filtros Rápidos -->
-                            <div class="ped-status-card">
-                                <div class="ped-status-card-inner ped-status-grid">
-                                    <div class="ped-status-row">
-                                        <div class="ped-status-action-item active" id="ped-filter-todos"
-                                            data-status-filter="todos" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-todos ped-icon-lg">
-                                                <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">Todos</span>
-                                                <span class="ped-status-action-count" id="ped-count-todos">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-todos">de 0</span>
-                                            </div>
-                                        </div>
-                                        <div class="ped-status-action-item" id="ped-filter-pendente"
-                                            data-status-filter="pendente" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-pendente ped-icon-lg">
-                                                <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">Pendentes</span>
-                                                <span class="ped-status-action-count" id="ped-count-pendente">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-pendente">0%</span>
-                                            </div>
-                                        </div>
-                                        <div class="ped-status-action-item" id="ped-filter-em_rota"
-                                            data-status-filter="em_rota" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-em-rota ped-icon-lg">
-                                                <i class="bi bi-signpost-split-fill" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">Em Rota</span>
-                                                <span class="ped-status-action-count" id="ped-count-em_rota">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-em_rota">0%</span>
-                                            </div>
-                                        </div>
+            
+                
+                            <!-- Filtros de Status -->
+                            <div class="ped-status-icons" aria-label="Filtros por status">
+                                <div class="ped-status-action-item active" id="ped-filter-todos"
+                                    data-status-filter="todos" role="button" tabindex="0"
+                                    aria-label="Todos">
+                                    <div class="ped-status-action-icon ped-icon-todos ped-icon-lg">
+                                        <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                                     </div>
-                                    <div class="ped-status-row">
-                                        <div class="ped-status-action-item" id="ped-filter-concluido"
-                                            data-status-filter="concluido" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-concluido ped-icon-lg">
-                                                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">Concluídos</span>
-                                                <span class="ped-status-action-count" id="ped-count-concluido">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-concluido">0%</span>
-                                            </div>
-                                        </div>
-                                        <div class="ped-status-action-item" id="ped-filter-cancelado"
-                                            data-status-filter="cancelado" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-cancelado ped-icon-lg">
-                                                <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">Cancelados</span>
-                                                <span class="ped-status-action-count" id="ped-count-cancelado">0</span>
-                                                <span class="ped-status-action-pct" id="ped-pct-cancelado">0%</span>
-                                            </div>
-                                        </div>
-                                        <div class="ped-status-action-item" id="ped-filter-pendente_financeiro"
-                                            data-status-filter="pendente_financeiro" role="button" tabindex="0">
-                                            <div class="ped-status-action-icon ped-icon-financeiro ped-icon-lg">
-                                                <i class="bi bi-cash-coin" aria-hidden="true"></i>
-                                            </div>
-                                            <div class="ped-status-action-info">
-                                                <span class="ped-status-action-label">A Receber</span>
-                                                <span class="ped-status-action-count"
-                                                    id="ped-count-pendente_financeiro">0</span>
-                                                <span class="ped-status-action-pct"
-                                                    id="ped-pct-pendente_financeiro">0%</span>
-                                            </div>
-                                        </div>
+                                </div>
+
+                                <div class="ped-status-action-item" id="ped-filter-pendente"
+                                    data-status-filter="pendente" role="button" tabindex="0"
+                                    aria-label="Pendentes">
+                                    <div class="ped-status-action-icon ped-icon-pendente ped-icon-lg">
+                                        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+
+                                <div class="ped-status-action-item" id="ped-filter-em_rota"
+                                    data-status-filter="em_rota" role="button" tabindex="0"
+                                    aria-label="Em rota">
+                                    <div class="ped-status-action-icon ped-icon-em-rota ped-icon-lg">
+                                        <i class="bi bi-signpost-split-fill" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+
+                                <div class="ped-status-action-item" id="ped-filter-concluido"
+                                    data-status-filter="concluido" role="button" tabindex="0"
+                                    aria-label="Concluídos">
+                                    <div class="ped-status-action-icon ped-icon-concluido ped-icon-lg">
+                                        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+
+                                <div class="ped-status-action-item" id="ped-filter-cancelado"
+                                    data-status-filter="cancelado" role="button" tabindex="0"
+                                    aria-label="Cancelados">
+                                    <div class="ped-status-action-icon ped-icon-cancelado ped-icon-lg">
+                                        <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+
+                                <div class="ped-status-action-item" id="ped-filter-pendente_financeiro"
+                                    data-status-filter="pendente_financeiro" role="button" tabindex="0"
+                                    aria-label="A receber">
+                                    <div class="ped-status-action-icon ped-icon-financeiro ped-icon-lg">
+                                        <i class="bi bi-cash-coin" aria-hidden="true"></i>
                                     </div>
                                 </div>
                             </div>
@@ -116,6 +72,11 @@
                                     </button>
                                 </div>
 
+                                <button id="btn-loop-pedidos" class="btn-sync-pedidos" title="Atualizar pedidos"
+                                    aria-label="Atualizar pedidos">
+                                    <i id="icon-loop-pedidos" class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                                </button>
+
                                 <div class="calendario-btn-wrapper">
                                     <input type="date" id="filtro-data-pedidos" class="input-filtro-data-pedidos-hidden"
                                         title="Filtrar por data" aria-label="Data do filtro">
@@ -125,11 +86,8 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
                     <!-- Tabela de Pedidos & Overlay de Carregamento -->
-                    <div class="table-responsive p-3 pedidos-tabela-wrapper">
+                    
                         <div id="pedidos-loading-overlay" class="pedidos-loading-overlay">
                             <div class="pedidos-loading-content" id="pedidos-loading-state">
                                 <i class="bi bi-search pedidos-loading-spin" aria-hidden="true"></i>
@@ -177,24 +135,25 @@
                             </thead>
                             <tbody id="corpo-tabela-pedidos"></tbody>
                         </table>
-                    </div>
+                    
 
                     <!-- Paginação -->
-                    <div class="card-footer bg-white border-0 d-flex justify-content-end pb-3 pe-3">
+                    
+                    <div class="pedidos-paginacao">
                         <div class="btn-group shadow-sm" role="group" aria-label="Navegação de paginação">
-                            <button class="btn btn-light" id="btn-pag-prev-pedidos" aria-label="Página anterior">
-                                <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                            </button>
-                            <button class="btn btn-light" id="info-paginacao-pedidos" disabled>
-                                Pág 1
-                            </button>
-                            <button class="btn btn-light" id="btn-pag-next-pedidos" aria-label="Próxima página">
-                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                            </button>
-                        </div>
+                                                    <button class="btn btn-light" id="btn-pag-prev-pedidos" aria-label="Página anterior">
+                                                        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button class="btn btn-light" id="info-paginacao-pedidos" disabled>
+                                                        Pág 1
+                                                    </button>
+                                                    <button class="btn btn-light" id="btn-pag-next-pedidos" aria-label="Próxima página">
+                                                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
                     </div>
-                </div>
-            </div>
+                
+            
         </div>
 
         <!-- Containers Ocultos de Apoio -->

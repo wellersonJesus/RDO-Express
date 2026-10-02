@@ -9,7 +9,7 @@
         filtroData: '',
         busca: '',
         paginaAtual: 1,
-        itensPorPagina: 5,
+        itensPorPagina: 10,
         dadosCarregados: false,
         emAcao: false,
         sortDesc: true
