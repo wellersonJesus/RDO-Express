@@ -35,6 +35,59 @@ window.MasterAuth = (function () {
         document.body.style.removeProperty('padding-right');
     }
 
+    function _pedidoPodeExcluirSemMaster(id) {
+        try {
+            var idNorm = String(id || '').replace(/^RDO0*/i, '').trim();
+
+            if (!idNorm) return false;
+
+            var caches = [];
+
+            if (window.AppRDO && Array.isArray(window.AppRDO.pedidosCache)) {
+                caches.push(window.AppRDO.pedidosCache);
+            }
+
+            if (window.AppRDO && Array.isArray(window.AppRDO.mensagensCache)) {
+                caches.push(window.AppRDO.mensagensCache);
+            }
+
+            for (var c = 0; c < caches.length; c++) {
+                var lista = caches[c];
+
+                for (var i = 0; i < lista.length; i++) {
+                    var pedido = lista[i];
+                    if (!pedido) continue;
+
+                    var idPedido = String(
+                        pedido.id ||
+                        pedido.pedido_id ||
+                        pedido.id_pedido ||
+                        ''
+                    ).replace(/^RDO0*/i, '').trim();
+
+                    if (idPedido !== idNorm) continue;
+
+                    var status = String(pedido.status || '')
+                        .trim()
+                        .toUpperCase();
+
+                    var situacao = String(
+                        pedido.situacao_financeira ||
+                        pedido.situacao ||
+                        pedido.status_pagamento ||
+                        ''
+                    ).trim().toUpperCase();
+
+                    return status === 'PENDENTE' && situacao === 'PENDENTE';
+                }
+            }
+        } catch (e) {
+            console.warn('[MasterAuth] Não foi possível determinar bypass local:', e);
+        }
+
+        return false;
+    }
+
     async function _executarExclusao(id, senha) {
         var idNorm = String(id).replace(/^RDO0*/i, '').trim();
 
@@ -139,6 +192,22 @@ window.MasterAuth = (function () {
 
         _pedidoId = String(pedidoId).replace(/^RDO0*/i, '').trim();
         _origem = origem || 'chat';
+
+        if (_pedidoPodeExcluirSemMaster(_pedidoId)) {
+            console.log('[MasterAuth] 🟢 Pedido PENDENTE + A RECEBER: exclusão sem master.');
+
+            var idSemMaster = _pedidoId;
+            _pedidoId = null;
+
+            _executarExclusao(idSemMaster, '').then(function () {
+                _origem = null;
+            }).catch(function (err) {
+                console.error('[MasterAuth] ❌ erro na exclusão sem master:', err);
+                _origem = null;
+            });
+
+            return;
+        }
 
         var modalEl = document.getElementById('modalMasterAuth');
         if (!modalEl) {
