@@ -2492,6 +2492,11 @@ function _resolverTextoMensagem(msg, pedido) {
 }
 
 window.remitirPedido = async function () {
+    var idempotencyToken =
+        ((window.crypto && typeof window.crypto.randomUUID === 'function')
+            ? window.crypto.randomUUID()
+            : ('rdo-' + Date.now() + '-' + Math.random().toString(36).slice(2)));
+
     var _validarCampo = function (el) {
         if (!el || !String(el.value || '').trim()) {
             if (el) {
@@ -2561,6 +2566,7 @@ window.remitirPedido = async function () {
         : '';
 
     var payload = {
+        idempotency_token: idempotencyToken,
         id_cliente: String((window.AppRDO && window.AppRDO.clienteId) || ''),
         solicitante: solicitante,
         contato: contato,
